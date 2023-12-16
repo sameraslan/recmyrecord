@@ -1,0 +1,72 @@
+datasource db {
+  provider = "postgresql" // or "mysql", "sqlite", "sqlserver" depending on your database
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Artist {
+  ArtistID   Int      @id @default(autoincrement())
+  Name       String
+  SpotifyURI String?
+  Albums     Album[]
+}
+
+model Album {
+  AlbumID                Int                @id @default(autoincrement())
+  Title                  String
+  ArtistID               Int?
+  ReleaseYear            Int?
+  SpotifyURI             String?
+  Artist                 Artist?            @relation(fields: [ArtistID], references: [ArtistID])
+  SpotifyAudioFeatures   SpotifyAudioFeatures?
+  AlbumDescriptors       AlbumDescriptor[]
+  AlbumRecommendations   AlbumRecommendation[] @relation("AlbumRecommendations_Album")
+  RecommendedAlbums      AlbumRecommendation[] @relation("AlbumRecommendations_RecommendedAlbum")
+}
+
+model SpotifyAudioFeatures {
+  AlbumID           Int     @unique
+  Danceability      Float?
+  Energy            Float?
+  Key               Int?
+  Loudness          Float?
+  Mode              Int?
+  Speechiness       Float?
+  Acousticness      Float?
+  Instrumentalness  Float?
+  Liveness          Float?
+  Valence           Float?
+  Tempo             Float?
+  DurationMs        Int?
+  TimeSignature     Int?
+  Album             Album   @relation(fields: [AlbumID], references: [AlbumID])
+}
+
+model RYMDescriptor {
+  DescriptorID  Int               @id @default(autoincrement())
+  Name          String
+  Description   String?
+  AlbumDescriptors AlbumDescriptor[]
+}
+
+model AlbumDescriptor {
+  AlbumID       Int
+  DescriptorID  Int
+  Weighting     Float?
+  Album         Album            @relation(fields: [AlbumID], references: [AlbumID])
+  Descriptor    RYMDescriptor    @relation(fields: [DescriptorID], references: [DescriptorID])
+  @@id([AlbumID, DescriptorID])
+}
+
+model AlbumRecommendation {
+  RecommendationID      Int    @id @default(autoincrement())
+  AlbumID               Int
+  RecommendedAlbumID    Int
+  SimilarityScore       Float?
+  Album                 Album  @relation("AlbumRecommendations_Album", fields: [AlbumID], references: [AlbumID])
+  RecommendedAlbum      Album  @relation("AlbumRecommendations_RecommendedAlbum", fields: [RecommendedAlbumID], references: [AlbumID])
+}
+
