@@ -1,0 +1,24 @@
+body {
+  background-image: linear-gradient(rgb(248, 155, 142), rgb(255 225 220));
+  background-position: 'center';
+  background-size: 'cover';
+  background-repeat: 'no-repeat';
+  background-attachment: fixed;
+  font-family: sans-serif;
+  margin: 0px
+}
+
+html {
+    height: 100%;
+    margin: 0;
+}
+
+.container {
+  display: flex;
+  justify-content: center;
+  height: '100vh';
+}
+
+#root {
+  height: '100vh';
+}

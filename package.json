@@ -1,0 +1,29 @@
+{
+  "scripts": {
+    "heroku-prebuild": "cd Frontend && npm install --force && npm run build",
+    "start": "flask run && cd Frontend && npm run start"
+  },
+  "name": "album-recommender-website-deploy",
+  "description": "This project was bootstrapped with [Create React App](https://github.com/facebookincubator/create-react-app).",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sameraslan/album-rec-website.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sameraslan/album-rec-website/issues"
+  },
+  "homepage": "https://github.com/sameraslan/album-rec-website#readme",
+  "devDependencies": {
+    "@svgr/webpack": "^8.1.0",
+    "prettier": "3.0.0",
+    "url-loader": "^4.1.1"
+  },
+  "dependencies": {
+    "svg-pan-zoom": "^3.6.1"
+  }
+}

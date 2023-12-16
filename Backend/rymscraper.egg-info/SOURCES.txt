@@ -1,0 +1,6 @@
+README.md
+rymscraper.egg-info/PKG-INFO
+rymscraper.egg-info/SOURCES.txt
+rymscraper.egg-info/dependency_links.txt
+rymscraper.egg-info/requires.txt
+rymscraper.egg-info/top_level.txt
