@@ -1,7 +1,41 @@
 import psycopg2
 import pandas as pd
 
-# Database connection parameters
+def print_table_summary(conn, table_name):
+    try:
+        cur = conn.cursor()
+        cur.execute(f"SELECT COUNT(*) FROM {table_name}")
+        count = cur.fetchone()[0]
+        print(f"Table: {table_name}, Total Rows: {count}")
+        cur.execute(f"SELECT * FROM {table_name} LIMIT 5")
+        rows = cur.fetchall()
+        for row in rows:
+            print(row)
+        cur.close()
+    except Exception as e:
+        print(f"Error in print_table_summary: {e}")
+
+def get_tables(conn):
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'")
+        tables = cur.fetchall()
+        cur.close()
+        return tables
+    except Exception as e:
+        print(f"Error getting tables: {e}")
+
+def clear_tables(conn, table_names):
+    try:
+        cur = conn.cursor()
+        for table in table_names:
+            cur.execute(f"DELETE FROM {table};")
+        conn.commit()
+        print(f"All tables cleared: {', '.join(table_names)}")
+        cur.close()
+    except Exception as e:
+        print(f"Error clearing tables: {e}")
+
 db_params = {
     'dbname': 'recmyrecord-postgres',
     'user': 'sameraslan',
@@ -9,6 +43,8 @@ db_params = {
     'host': 'recmyrecord-postgres.cumpbsaqdzfn.us-east-2.rds.amazonaws.com',
     'port': '5432'
 }
+
+csv_file_path = '../Backend/Recommender/all_data.csv'
 
 def create_connection():
     conn = None
@@ -19,62 +55,113 @@ def create_connection():
         print(f"Error creating database connection: {e}")
     return conn
 
-if __name__ == "__main__":
-    csv_file_path = '../Backend/Recommender/all_data.csv'
-    df = pd.read_csv(csv_file_path)
-    
-    conn = create_connection()
-    for index, row in df.iterrows():
-        pass #do something
-    conn.close()
+def process_row(conn, row):
+    artist_name = row['Artist']
+    album_title = row['Title']
+    album_URI = row['URI']
+    audio_features = {
+        'danceability': row['danceability'],
+        'energy': row['energy'],
+        'key': row['key'],
+        'loudness': row['loudness'],
+        'mode': row['mode'],
+        'speechiness': row['speechiness'],
+        'acousticness': row['acousticness'],
+        'instrumentalness': row['instrumentalness'],
+        'liveness': row['liveness'],
+        'valence': row['valence'],
+        'tempo': row['tempo'],
+        'duration_ms': row['duration_ms'],
+        'time_signature': row['time_signature']
+    }
+    artist_id = insert_artist(conn, artist_name)
+    album_id = insert_album(conn, album_title, artist_id, album_URI)
+    insert_audio_features(conn, album_id, audio_features)
 
-'''
-    for index, row in df.iterrows():
-        artist_id = insert_artist(conn, row['Artist'])
-        album_data = {
-            'title': row['Title'],
-            'artist_id': artist_id,
-            'spotify_uri': row['URI']
-        }
-
-        spotify_features = {
-            # Fill in the extraction logic
-        }
-
-        rym_descriptors = [
-            # Fill in the extraction logic
-        ]
-
-        insert_album(conn, album_data, spotify_features, rym_descriptors)
-    '''
-
-'''
-# Function to insert an artist
 def insert_artist(conn, artist_name):
-    with conn.cursor() as cur:
-        cur.execute("INSERT INTO Artist (Name) VALUES (%s) RETURNING ArtistID;",
-                    (artist_name,))
-        artist_id = cur.fetchone()[0]
-        conn.commit()
+    try:
+        cur = conn.cursor()
+        cur.execute('SELECT "ArtistID" FROM "Artist" WHERE "Name" = %s', (artist_name,))
+        result = cur.fetchone()
+        if result:
+            artist_id = result[0]
+        else:
+            insert_query = 'INSERT INTO "Artist" ("Name") VALUES (%s) RETURNING "ArtistID";'
+            cur.execute(insert_query, (artist_name,)) #TODO CHANGE THIS WHEN YOU REMOVE ARTIST URI
+            artist_id = cur.fetchone()[0]
+            conn.commit()
+        cur.close()
         return artist_id
+    except Exception as e:
+        print(f"Error in insert_artist: {e}")
+        return None
 
-# Function to insert an album and its related data
+def insert_album(conn, album_title, artist_id, album_uri):
+    try:
+        cur = conn.cursor()
+        cur.execute('SELECT "AlbumID" FROM "Album" WHERE "Title" = %s AND "ArtistID" = %s', (album_title, artist_id))
+        result = cur.fetchone()
+        if result:
+            album_id = result[0]
+        else:
+            insert_query = 'INSERT INTO "Album" ("Title", "ArtistID", "SpotifyURI") VALUES (%s, %s, %s) RETURNING "AlbumID";'
+            cur.execute(insert_query, (album_title, artist_id, album_uri))
+            album_id = cur.fetchone()[0]
+            conn.commit()
+        cur.close()
+        return album_id
+    except Exception as e:
+        print(f"Error in insert_album: {e}")
+        return None
 
-def insert_album(conn, album_data, spotify_features, rym_descriptors):
-    # Insert the album
-    with conn.cursor() as cur:
-        cur.execute("INSERT INTO Album (Title, ArtistID, SpotifyURI) VALUES (%s, %s, %s) RETURNING AlbumID;",
-                    (album_data['title'], album_data['artist_id'], album_data['spotify_uri']))
-        album_id = cur.fetchone()[0]
+def insert_audio_features(conn, album_id, audio_features):
+    try:
+        cur = conn.cursor()
+        cur.execute('SELECT "AlbumID" FROM "SpotifyAudioFeatures" WHERE "AlbumID" = %s', (album_id,))
+        result = cur.fetchone()
+        if result:
+            print(f"Audio features for AlbumID {album_id} already exist.")
+        else:
+            insert_query = '''
+                INSERT INTO "SpotifyAudioFeatures" 
+                ("AlbumID", "Danceability", "Energy", "Key", "Loudness", "Mode", "Speechiness", 
+                 "Acousticness", "Instrumentalness", "Liveness", "Valence", "Tempo", 
+                 "DurationMs", "TimeSignature")
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+            '''
+            values = (
+                album_id,
+                audio_features['danceability'],
+                audio_features['energy'],
+                audio_features['key'],
+                audio_features['loudness'],
+                audio_features['mode'],
+                audio_features['speechiness'],
+                audio_features['acousticness'],
+                audio_features['instrumentalness'],
+                audio_features['liveness'],
+                audio_features['valence'],
+                audio_features['tempo'],
+                audio_features['duration_ms'],
+                audio_features['time_signature']
+            )
+            cur.execute(insert_query, values)
+            conn.commit()
+        cur.close()
+    except Exception as e:
+        print(f"Error in insert_audio_features: {e}")
 
-        # # Insert Spotify audio features
-        # cur.execute("INSERT INTO SpotifyAudioFeatures (AlbumID, Danceability, Energy, ...) VALUES (%s, %s, %s, ...);",
-        #             (album_id, spotify_features['danceability'], spotify_features['energy'], ...))
-
-        # # Insert RYM descriptors
-        # for descriptor in rym_descriptors:
-        #     cur.execute("INSERT INTO AlbumDescriptor (AlbumID, DescriptorID, Weighting) VALUES (%s, %s, %s);",
-        #                 (album_id, descriptor['descriptor_id'], descriptor['weighting']))
-
-        conn.commit()
+if __name__ == "__main__":
+    cur_tables = ['"Artist"', '"SpotifyAudioFeatures"', '"Album"']
+    conn = create_connection()
+    if conn:
+        df = pd.read_csv(csv_file_path)
+        for index, row in df.iterrows():
+            process_row(conn, row)
+            break #TODO remove this to run all
+        conn.close()
+    '''
+    clear_tables(conn, cur_tables)
+    for table in cur_tables:
+        print_table_summary(conn, table)
     '''
