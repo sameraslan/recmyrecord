@@ -30,11 +30,18 @@ def clear_tables(conn, table_names):
         cur = conn.cursor()
         for table in table_names:
             cur.execute(f"DELETE FROM {table};")
+            if table == '"Album"':
+                # Replace 'Album_AlbumID_seq' with the actual sequence name for AlbumID
+                cur.execute("ALTER SEQUENCE public.\"Album_AlbumID_seq\" RESTART WITH 1;")
+            elif table == '"Artist"':
+                cur.execute("ALTER SEQUENCE public.\"Artist_ArtistID_seq\" RESTART WITH 1;")
         conn.commit()
-        print(f"All tables cleared: {', '.join(table_names)}")
+        print(f"All tables cleared and sequences reset: {', '.join(table_names)}")
         cur.close()
     except Exception as e:
         print(f"Error clearing tables: {e}")
+
+
 
 db_params = {
     'dbname': 'recmyrecord-postgres',
@@ -59,6 +66,7 @@ def process_row(conn, row):
     artist_name = row['Artist']
     album_title = row['Title']
     album_URI = row['URI']
+    print("processing row:", artist_name, album_title, album_URI)
     audio_features = {
         'danceability': row['danceability'],
         'energy': row['energy'],
@@ -158,10 +166,10 @@ if __name__ == "__main__":
         df = pd.read_csv(csv_file_path)
         for index, row in df.iterrows():
             process_row(conn, row)
-            break #TODO remove this to run all
+            # break  # uncomment to run all
         conn.close()
-    '''
-    clear_tables(conn, cur_tables)
-    for table in cur_tables:
-        print_table_summary(conn, table)
-    '''
+
+        # Clear tables and reset sequences (uncomment for use)
+        # clear_tables(conn, cur_tables)
+        # for table in cur_tables:
+        #     print_table_summary(conn, table)

@@ -7,6 +7,9 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import pandas as pd
 import numpy as np
 from difflib import get_close_matches
+from tqdm import tqdm
+import time
+
 
 cid = 'c480b13ef81c4e6aa0ab0119636eabe5'
 secret = '50826f24c12044448b906de50ac74742'
@@ -14,22 +17,33 @@ client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secr
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 # Prints the 5 most similar albums
-def printSimilar(titles, artists, uris, indices, userAlbumIndex):
-    similarAlbumsList = list(indices[userAlbumIndex])  # Specified Album to find similar albums to
+def printSimilar(titles, artists, uris, indices, userAlbumIndex, distances):
+    similarAlbumsList = list(indices[userAlbumIndex])
+    distancesList = list(distances[userAlbumIndex])
     albums = []
-    recommendedUris = []
-    recommendedTitles = []
-    recommendedArtists = []
 
-    albums.append(['Artist', 'Title', 'URI', 'CoverURL', 'AlbumURL', 'Order'])
+
     for i in range(len(similarAlbumsList)):
+        time.sleep(1)  # To avoid rate limit
         album = sp.album(uris[similarAlbumsList[i]])
-        albums.append([artists[similarAlbumsList[i]], titles[similarAlbumsList[i]], uris[similarAlbumsList[i]], album['images'][0]['url'], album['external_urls']['spotify'], i])
-        recommendedUris.append(uris[similarAlbumsList[i]])
-        recommendedTitles.append(titles[similarAlbumsList[i]])
-        recommendedArtists.append(artists[similarAlbumsList[i]])
+        
+        # Check if the 'images' list is not empty
+        if album['images']:
+            cover_url = album['images'][0]['url']
+        else:
+            cover_url = 'n/a'
+
+
+        albums.append({
+            'Artist': artists[similarAlbumsList[i]], 
+            'Title': titles[similarAlbumsList[i]], 
+            # 'URI': uris[similarAlbumsList[i]], 
+            # 'CoverURL': cover_url, 
+            # 'AlbumURL': album['external_urls']['spotify'], 
+            'Distance': distancesList[i]
+        })
     
-    albums_json = {'results':[dict(zip(albums[0], row)) for row in albums[1:]]}
+    albums_json = {'results': albums}
     return albums_json
     # return tabulate(albums, headers=['Artist', 'Title', 'URI'])
     # visualizeAlbums(recommendedUris, recommendedTitles, recommendedArtists)
@@ -61,12 +75,13 @@ def visualizeAlbums(uris, titles, artists):
     plt.show()
 
 # Using unsupervised KNN to get similar albums (euclidean distance)
-def recommend(albumsDataframe, album_number, sliderVal):
+def recommend(albumsDataframe, album_number, similarCount, sliderVal):
     # Get user album index
     userAlbumIndex = None
     emptyIndex = True
     lowerCaseTitles = albumsDataframe['Title'].str.lower()
     lowerCaseArtists = albumsDataframe['Artist'].str.lower()
+
     
     # Shift slider value by .5 to prevent division by 0
     sliderVal = float(sliderVal) ** 3
@@ -141,10 +156,10 @@ def recommend(albumsDataframe, album_number, sliderVal):
     albumURIs = list(albumsDataframe['URI'])  # List of album artists
 
     albumValues = albumValues.to_numpy(dtype=np.float32)  # np array of all features for albums
-    similarAlbums = NearestNeighbors(n_neighbors=6, algorithm='auto').fit(albumValues)
+    similarAlbums = NearestNeighbors(n_neighbors=(similarCount + 1), algorithm='auto').fit(albumValues)
     distances, indices = similarAlbums.kneighbors(albumValues)
 
-    return printSimilar(albumTitles, albumArtists, albumURIs, indices, userAlbumIndex)  # Print out similar albums
+    return printSimilar(albumTitles, albumArtists, albumURIs, indices, userAlbumIndex, distances)  # Print out similar albums
 
 
 def combineSpotifyWithDescriptors(spotifyPath, descriptorPath):
@@ -180,9 +195,55 @@ def get_similar_by_number(album_number, slider, numAlbums):
     recommended = recommend(all_data, album_number, slider)
     return recommended
 
+def populate_csv_with_similar(dataframe, similarCount=5, sliderVal=1, startRow=0, save_path='test.csv'):
+    if startRow == 0:
+        dataframe_to_return = dataframe.copy()
+    else:
+        dataframe_to_return = pd.read_csv(save_path, index_col=0)
+
+
+    for index in tqdm(range(startRow, len(dataframe)), desc="Processing Albums"):
+        try:
+            album_number = index + 1  # Album number is index + 1
+            album_name = dataframe.iloc[index]['Title']
+            album_artist = dataframe.iloc[index]['Artist']
+            recommended_albums = recommend(dataframe, album_number, similarCount, sliderVal)
+
+            # Add CoverURL and AlbumURL of the current album
+            current_album = recommended_albums['results'][0]
+            dataframe_to_return.at[index, 'CoverURL'] = current_album['CoverURL']
+            dataframe_to_return.at[index, 'AlbumURL'] = current_album['AlbumURL']
+            
+            # Add the most similar albums to the dataframe
+            for i, album in enumerate(recommended_albums['results'][1:]):
+                dataframe_to_return.at[index, f'mostSimilar{i+1}'] = album['Title']
+                dataframe_to_return.at[index, f'mostSimilar{i+1}_Artist'] = album['Artist']
+                dataframe_to_return.at[index, f'mostSimilar{i+1}_Distance'] = round(album['Distance'], 4)
+                dataframe_to_return.at[index, f'mostSimilar{i+1}_URI'] = album['URI']
+                dataframe_to_return.at[index, f'mostSimilar{i+1}_CoverURL'] = album['CoverURL']
+                dataframe_to_return.at[index, f'mostSimilar{i+1}_AlbumURL'] = album['AlbumURL']
+
+
+
+        except Exception as e:
+            print(f"An error occurred processing '{album_name}' by '{album_artist}' at index {index}: {e}")
+
+        if index % 100 == 0:
+            dataframe_to_return.to_csv(save_path, float_format='%.8f')
+
+    return dataframe_to_return
+
+
 def main(albumTitle=None, albumArtist=None, sliderVal=None, numAlbums=None, album_number=None):
-    if album_number is not None:
-        return get_similar_by_number(album_number, sliderVal, numAlbums)
+    all_data = pd.read_pickle('Backend/Recommender/all_data_norm.pkl')
+    updated_data = populate_csv_with_similar(all_data, sliderVal=1)
+    updated_data.to_csv('test.csv', float_format='%.8f')
+
+    # **Usually running this**
+    # if album_number is not None:
+    #     print(get_similar_by_number(album_number, sliderVal, numAlbums))
+    
+    
     # spotifyData = pd.read_pickle('Spotify API Connection/albums_audio_features.pkl')
     # descriptorData = pd.read_pickle("Recommender/descriptors_data_priori_-4415.pkl")
     #
@@ -192,11 +253,12 @@ def main(albumTitle=None, albumArtist=None, sliderVal=None, numAlbums=None, albu
     # all_data.drop_duplicates(subset=['Title', 'Artist'], keep='first', inplace=True) # Used this to remove duplicates and set to pkl
     # all_data.reset_index(drop=True, inplace=True) # Reset the indices since less albums now
 
-    all_data = pd.read_pickle('Backend/Recommender/all_data_norm.pkl')
-    all_data = all_data.head(int(numAlbums))
 
-    recommended = recommend(all_data, albumTitle, albumArtist, sliderVal)
-    return recommended
+    # all_data = pd.read_pickle('Backend/Recommender/all_data_norm.pkl')
+    # all_data = all_data.head(int(numAlbums))
+
+    # recommended = recommend(all_data, albumTitle, albumArtist, sliderVal)
+    # return recommended
 
     # all_data[['Title', 'Artist']].to_json('album_data.json', orient='records') # to create the album_data.json file
 
