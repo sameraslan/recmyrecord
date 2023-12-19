@@ -85,7 +85,7 @@ const Page = () => {
             )}
             {data && (
             <Box>
-                <Text fontSize="md">Results for "{selectedQuery}":</Text>
+               <Text fontSize="md">Results for &quot;{selectedQuery}&quot;:</Text>
                 {/* Render your data here */}
                 <pre>{JSON.stringify(data, null, 2)}</pre>
             </Box>
