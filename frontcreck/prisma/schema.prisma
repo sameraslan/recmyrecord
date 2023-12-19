@@ -18,7 +18,6 @@ model Album {
   AlbumID                Int                @id @default(autoincrement())
   Title                  String
   ArtistID               Int?
-  ReleaseYear            Int?
   SpotifyURI             String?
   Artist                 Artist?            @relation(fields: [ArtistID], references: [ArtistID])
   SpotifyAudioFeatures   SpotifyAudioFeatures?

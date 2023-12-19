@@ -11,8 +11,8 @@ from tqdm import tqdm
 import time
 
 
-cid = 'c480b13ef81c4e6aa0ab0119636eabe5'
-secret = '50826f24c12044448b906de50ac74742'
+cid = '6e15382346114bc89d5c7add9a1910d1'
+secret = 'd7642655e2624cf29b5e6b5506e5f84d'
 client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=secret)
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
@@ -37,9 +37,9 @@ def printSimilar(titles, artists, uris, indices, userAlbumIndex, distances):
         albums.append({
             'Artist': artists[similarAlbumsList[i]], 
             'Title': titles[similarAlbumsList[i]], 
-            # 'URI': uris[similarAlbumsList[i]], 
-            # 'CoverURL': cover_url, 
-            # 'AlbumURL': album['external_urls']['spotify'], 
+            'URI': uris[similarAlbumsList[i]], 
+            'CoverURL': cover_url, 
+            'AlbumURL': album['external_urls']['spotify'], 
             'Distance': distancesList[i]
         })
     
