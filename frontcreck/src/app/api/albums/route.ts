@@ -7,10 +7,9 @@ const prisma = new PrismaClient();
 const handleResponse = (data: any) => {
   return new NextResponse(JSON.stringify(data), {
     status: 200,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
   });
 };
-
 
 export async function GET(req: NextRequest) {
   const query = req.nextUrl.searchParams.get('query');
@@ -27,14 +26,13 @@ export async function GET(req: NextRequest) {
   }
 }
 
-
 // Which albums have a higher than average instrumentalness but lower than average speechiness?
 async function getAlbumsByInstrumentalnessSpeechiness(): Promise<Album[]> {
   const averages = await prisma.spotifyAudioFeatures.aggregate({
     _avg: {
       Instrumentalness: true,
-      Speechiness: true
-    }
+      Speechiness: true,
+    },
   });
 
   return await prisma.album.findMany({
@@ -43,23 +41,22 @@ async function getAlbumsByInstrumentalnessSpeechiness(): Promise<Album[]> {
         AND: [
           {
             Instrumentalness: {
-              gt: averages._avg.Instrumentalness || 0
-            }
+              gt: averages._avg.Instrumentalness || 0,
+            },
           },
           {
             Speechiness: {
-              lt: averages._avg.Speechiness || 0
-            }
-          }
-        ]
-      }
+              lt: averages._avg.Speechiness || 0,
+            },
+          },
+        ],
+      },
     },
     include: {
-      SpotifyAudioFeatures: true
-    }
+      SpotifyAudioFeatures: true,
+    },
   });
 }
-
 
 // What are the 3 longest albums?
 async function getLongestAlbums() {
@@ -67,17 +64,12 @@ async function getLongestAlbums() {
     take: 3,
     orderBy: {
       SpotifyAudioFeatures: {
-        DurationMs: 'desc'
-      }
+        DurationMs: 'desc',
+      },
     },
     include: {
       Artist: true,
-      SpotifyAudioFeatures: true
-    }
+      SpotifyAudioFeatures: true,
+    },
   });
 }
-
-
-
-
-

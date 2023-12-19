@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 const handleResponse = (data: any) => {
   return new NextResponse(JSON.stringify(data), {
     status: 200,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json' },
   });
 };
 
@@ -33,19 +33,19 @@ async function getArtistWithMostTopAlbums(): Promise<Artist | null> {
           Albums: {
             where: {
               AlbumID: {
-                gt: 500
-              }
-            }
-          }
-        }
-      }
+                gt: 500,
+              },
+            },
+          },
+        },
+      },
     },
     orderBy: {
       Albums: {
-        _count: 'desc'
-      }
+        _count: 'desc',
+      },
     },
-    take: 1
+    take: 1,
   });
 
   return artists[0] || null;
@@ -58,13 +58,10 @@ async function getArtistsWithConsistentHighScores(): Promise<Artist[]> {
       Albums: {
         every: {
           SpotifyAudioFeatures: {
-            AND: [
-              { Liveness: { gt: 0.75 } },
-              { Acousticness: { gt: 0.75 } }
-            ]
-          }
-        }
-      }
-    }
+            AND: [{ Liveness: { gt: 0.0 } }, { Acousticness: { gt: 0.0 } }],
+          },
+        },
+      },
+    },
   });
 }
