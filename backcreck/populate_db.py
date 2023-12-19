@@ -41,8 +41,6 @@ def clear_tables(conn, table_names):
     except Exception as e:
         print(f"Error clearing tables: {e}")
 
-
-
 db_params = {
     'dbname': 'recmyrecord-postgres',
     'user': 'sameraslan',
@@ -51,7 +49,38 @@ db_params = {
     'port': '5432'
 }
 
-csv_file_path = '../Backend/Recommender/all_data.csv'
+#csv_file_path = '../Backend/Recommender/all_data.csv'
+csv_file_path = '../test.csv'
+
+descriptor_names = [
+    "melancholic", "anxious", "futuristic", "male vocals", "existential", "alienation", 
+    "atmospheric", "lonely", "cold", "pessimistic", "introspective", "depressive", 
+    "longing", "dense", "sarcastic", "serious", "urban", "progressive", "passionate", 
+    "concept album", "bittersweet", "meditative", "epic", "complex", "sentimental", 
+    "melodic", "political", "conscious", "poetic", "protest", "eclectic", "religious", 
+    "spiritual", "rhythmic", "Christian", "uplifting", "fantasy", "philosophical", 
+    "surreal", "abstract", "technical", "improvisation", "avant-garde", "psychedelic", 
+    "medieval", "sombre", "cryptic", "winter", "hypnotic", "mysterious", "dark", 
+    "nocturnal", "apocalyptic", "ethereal", "apathetic", "noisy", "romantic", "love", 
+    "female vocals", "lush", "Wall of Sound", "warm", "sensual", "sexual", "androgynous vocals", 
+    "soothing", "mellow", "space", "calm", "summer", "happy", "medley", "quirky", 
+    "playful", "optimistic", "energetic", "suite", "sampling", "humorous", "boastful", 
+    "drugs", "deadpan", "crime", "raw", "nihilistic", "rebellious", "hedonistic", 
+    "dissonant", "lo-fi", "science fiction", "anthemic", "rock opera", "triumphant", 
+    "LGBT", "death", "autumn", "polyphonic", "repetitive", "manic", "tribal", 
+    "instrumental", "suspenseful", "acoustic", "violence", "alcohol", "aquatic", "heavy", 
+    "war", "ominous", "funereal", "chamber music", "vocal group", "orchestral", 
+    "history", "vulgar", "aggressive", "uncommon time signatures", "monologue", 
+    "pastoral", "soft", "peaceful", "minimalistic", "sparse", "sad", "rain", "breakup", 
+    "misanthropic", "satirical", "angry", "self-hatred", "chaotic", "folklore", "nature", 
+    "seasonal", "spring", "forest", "choral", "scary", "lethargic", "ballad", "disturbing", 
+    "mechanical", "suicide", "infernal", "occult", "pagan", "tropical", "party", 
+    "anti-religious", "hateful", "mashup", "ritualistic", "desert", "martial", 
+    "mythology", "natural", "satanic", "skit", "parody", "paranormal", "Halloween", 
+    "anarchism", "atonal", "Islamic", "lyrics", "waltz", "jingle", "opera", "symphony", 
+    "sports", "fairy tale", "oratorio", "ensemble", "string quartet", "ideology", 
+    "educational"
+]
 
 def create_connection():
     conn = None
@@ -85,6 +114,36 @@ def process_row(conn, row):
     artist_id = insert_artist(conn, artist_name)
     album_id = insert_album(conn, album_title, artist_id, album_URI)
     insert_audio_features(conn, album_id, audio_features)
+    album_descriptors = extract_album_descriptors(row)
+    insert_album_descriptors(conn, album_id, album_descriptors)
+
+def insert_album_descriptors(conn, album_id, album_descriptors):
+    try:
+        cur = conn.cursor()
+        for descriptor, weighting in album_descriptors.items():
+            if weighting > 0:
+                cur.execute('SELECT "DescriptorID" FROM "RYMDescriptor" WHERE "Name" = %s', (descriptor,))
+                result = cur.fetchone()
+                if result:
+                    descriptor_id = result[0]
+                    cur.execute('SELECT * FROM "AlbumDescriptor" WHERE "AlbumID" = %s AND "DescriptorID" = %s', (album_id, descriptor_id))
+                    if cur.fetchone() is None:
+                        insert_query = '''
+                            INSERT INTO "AlbumDescriptor" ("AlbumID", "DescriptorID", "Weighting")
+                            VALUES (%s, %s, %s);
+                        '''
+                        cur.execute(insert_query, (album_id, descriptor_id, weighting))
+                        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(f"Error in insert_album_descriptors: {e}")
+
+def extract_album_descriptors(row):
+    album_descriptors = {}
+    for descriptor in descriptor_names:
+        if descriptor in row:
+            album_descriptors[descriptor] = row[descriptor]
+    return album_descriptors
 
 def insert_artist(conn, artist_name):
     try:
@@ -159,14 +218,31 @@ def insert_audio_features(conn, album_id, audio_features):
     except Exception as e:
         print(f"Error in insert_audio_features: {e}")
 
+def insert_descriptors(conn, descriptor_names):
+    try:
+        cur = conn.cursor()
+        for descriptor in descriptor_names:
+            cur.execute('SELECT "DescriptorID" FROM "RYMDescriptor" WHERE "Name" = %s', (descriptor,))
+            if cur.fetchone() is None:
+                insert_query = 'INSERT INTO "RYMDescriptor" ("Name") VALUES (%s);'
+                cur.execute(insert_query, (descriptor,))
+                conn.commit()
+        cur.close()
+        print("RYMDescriptor table populated successfully.")
+    except Exception as e:
+        print(f"Error in insert_descriptors: {e}")
+
+
 if __name__ == "__main__":
-    cur_tables = ['"Artist"', '"SpotifyAudioFeatures"', '"Album"']
+    cur_tables = ['"Artist"', '"SpotifyAudioFeatures"', '"AlbumDescriptor"', '"Album"']
     conn = create_connection()
     if conn:
+        insert_descriptors(conn, descriptor_names)
         df = pd.read_csv(csv_file_path)
         for index, row in df.iterrows():
             process_row(conn, row)
-            # break  # uncomment to run all
+            break #comment out and runall
+        #clear_tables(conn, cur_tables)
         conn.close()
 
         # Clear tables and reset sequences (uncomment for use)
