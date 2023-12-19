@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import albumData from '@/public/album_data.json';
+import albumData from '@/public/album_data833.json';
 import { SearchBar } from './SearchBar';
 import { Card } from './Card';
 import { Album } from './SearchBar';

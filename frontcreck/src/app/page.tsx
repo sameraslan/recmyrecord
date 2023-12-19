@@ -39,6 +39,15 @@ export default function CallToActionWithIllustration() {
         </Text>
         <Stack spacing={6} direction={'row'}>
           <Button
+              rounded={'full'}
+              px={6}
+              colorScheme={'orange'}
+              bg={'orange.400'}
+              _hover={{ bg: 'orange.500' }}
+              onClick={() => router.push('/insights')}
+          > Insights
+          </Button>
+          <Button
             rounded={'full'}
             px={6}
             colorScheme={'orange'}
@@ -58,9 +67,9 @@ export default function CallToActionWithIllustration() {
           >
             Browse music map
           </Button>
-          <Button rounded={'full'} px={6}>
+          {/* <Button rounded={'full'} px={6}>
             Learn more
-          </Button>
+          </Button> */}
         </Stack>
         <Flex w={'full'} justifyContent={'center'}>
           <Image
