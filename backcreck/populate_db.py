@@ -31,15 +31,17 @@ def clear_tables(conn, table_names):
         for table in table_names:
             cur.execute(f"DELETE FROM {table};")
             if table == '"Album"':
-                # Replace 'Album_AlbumID_seq' with the actual sequence name for AlbumID
                 cur.execute("ALTER SEQUENCE public.\"Album_AlbumID_seq\" RESTART WITH 1;")
             elif table == '"Artist"':
                 cur.execute("ALTER SEQUENCE public.\"Artist_ArtistID_seq\" RESTART WITH 1;")
+            elif table == '"AlbumRecommendation"':
+                cur.execute("ALTER SEQUENCE public.\"AlbumRecommendation_RecommendationID_seq\" RESTART WITH 1;")
         conn.commit()
         print(f"All tables cleared and sequences reset: {', '.join(table_names)}")
         cur.close()
     except Exception as e:
         print(f"Error clearing tables: {e}")
+
 
 db_params = {
     'dbname': 'recmyrecord-postgres',
@@ -116,6 +118,29 @@ def process_row(conn, row):
     insert_audio_features(conn, album_id, audio_features)
     album_descriptors = extract_album_descriptors(row)
     insert_album_descriptors(conn, album_id, album_descriptors)
+
+    for i in range(1, 6):
+        sim_album_title = row[f'mostSimilar{i}']
+        sim_artist_name = row[f'mostSimilar{i}_Artist']
+        sim_distance = row[f'mostSimilar{i}_Distance']
+
+        sim_artist_id = insert_artist(conn, sim_artist_name)
+        sim_album_id = insert_album(conn, sim_album_title, sim_artist_id, row[f'mostSimilar{i}_URI'])
+
+        insert_album_recommendation(conn, album_id, sim_album_id, sim_distance)
+
+def insert_album_recommendation(conn, album_id, recommended_album_id, similarity_score):
+    try:
+        cur = conn.cursor()
+        insert_query = '''
+            INSERT INTO "AlbumRecommendation" ("AlbumID", "RecommendedAlbumID", "SimilarityScore")
+            VALUES (%s, %s, %s);
+        '''
+        cur.execute(insert_query, (album_id, recommended_album_id, similarity_score))
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        print(f"Error in insert_album_recommendation: {e}")
 
 def insert_album_descriptors(conn, album_id, album_descriptors):
     try:
@@ -232,20 +257,15 @@ def insert_descriptors(conn, descriptor_names):
     except Exception as e:
         print(f"Error in insert_descriptors: {e}")
 
-
 if __name__ == "__main__":
-    cur_tables = ['"Artist"', '"SpotifyAudioFeatures"', '"AlbumDescriptor"', '"Album"']
+    cur_tables = ['"AlbumRecommendation"', '"AlbumDescriptor"', '"SpotifyAudioFeatures"', '"Album"', '"Artist"']
     conn = create_connection()
     if conn:
         insert_descriptors(conn, descriptor_names)
-        df = pd.read_csv(csv_file_path)
+        df = pd.read_csv(csv_file_path, low_memory=False)
         for index, row in df.iterrows():
             process_row(conn, row)
-            break #comment out and runall
+            if index == 10:
+                break #comment out and runall
         #clear_tables(conn, cur_tables)
         conn.close()
-
-        # Clear tables and reset sequences (uncomment for use)
-        # clear_tables(conn, cur_tables)
-        # for table in cur_tables:
-        #     print_table_summary(conn, table)
