@@ -120,6 +120,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         borderRadius="2xl"
         borderWidth={1.5}
         _hover={{ borderColor: 'orange.500', borderWidth: 2 }}
+        color="black"
       />
       {searchCompleted && showSearch && (
         <VStack
@@ -154,7 +155,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({
                 <HStack spacing={4}>
                   <Icon as={IoIosMusicalNotes} color="orange.500" />
                   <Box as="button">
-                    <Text>
+                    <Text
+                      color="black"
+                    >
                       {album.Title} by {album.Artist}
                     </Text>
                   </Box>
@@ -162,7 +165,11 @@ export const SearchBar: React.FC<SearchBarProps> = ({
               </Box>
             ))
           ) : (
-            <Text>No results found</Text>
+            <Text
+              color="black"
+            >
+          No results found
+        </Text>
           )}
           {results.length > showMore && (
             <Box height={'40px'}>
