@@ -37,7 +37,7 @@ export default function CallToActionWithIllustration() {
             "Don't know what to listen to next? We've got you covered. Our unique algorithm combines sonic qualities and mood data to find your next favorite album."
           }
         </Text>
-        <Stack spacing={6} direction={'row'}>
+        <Stack spacing={6} direction={{ base: 'column', md: 'row' }}>
           <Button
             rounded={'full'}
             px={6}
