@@ -48,7 +48,7 @@ export default function CallToActionWithIllustration() {
           >
             Get a recommendation
           </Button>
-          <Button
+          {/* <Button
             rounded={'full'}
             px={6}
             colorScheme={'orange'}
@@ -58,8 +58,8 @@ export default function CallToActionWithIllustration() {
           >
             {' '}
             Some insights
-          </Button>
-          {/* <Button
+          </Button> */}
+          <Button
             rounded={'full'}
             px={6}
             colorScheme={'orange'}
@@ -68,7 +68,7 @@ export default function CallToActionWithIllustration() {
             onClick={() => router.push('/map')}
           >
             Browse music map
-          </Button> */}
+          </Button>
           {/* <Button rounded={'full'} px={6}>
             Learn more
           </Button> */}
