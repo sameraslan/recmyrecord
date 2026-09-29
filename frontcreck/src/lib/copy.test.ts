@@ -56,7 +56,7 @@ describe('copy rules (spec section 8)', () => {
   });
 
   it('keeps em dashes and the owner name out of every source file', () => {
-    const root = path.resolve(__dirname, '..');
+    const root = path.resolve(import.meta.dirname, '..');
     const files = (fs.readdirSync(root, { recursive: true }) as string[]).filter(
       (f) => /\.(tsx?|css)$/.test(f) && !f.endsWith('.test.ts') && !f.endsWith('.test.tsx'),
     );
