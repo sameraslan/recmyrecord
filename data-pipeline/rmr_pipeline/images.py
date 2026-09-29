@@ -4,8 +4,8 @@ from pathlib import Path
 
 from PIL import Image, ImageOps
 
-from .constants import (ATLAS_COLS, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, FALLBACK_TILE, THUMB_COLS, THUMB_ROWS,
-                        THUMB_SPRITE_PX)
+from .constants import (ATLAS_COLS, ATLAS_NAME_RE, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, FALLBACK_TILE, THUMB_COLS,
+                        THUMB_ROWS, THUMB_SPRITE_PX)
 from .mapsource import MapSource
 
 SHEET_FILL = (44, 36, 28)  # #2c241c, the cover fallback background
@@ -73,7 +73,8 @@ def write_sheets(out_dir: Path, sprites: list[Image.Image]) -> dict[str, int]:
         sheet.save(p, "WEBP", quality=80, method=6)
         sizes[p.name] = p.stat().st_size
     for stale in out_dir.glob("atlas-*.webp"):
-        if int(stale.stem.split("-")[1]) >= len(atlases):
+        m = ATLAS_NAME_RE.match(stale.name)
+        if m and int(m[1]) >= len(atlases):  # other atlas-like names are not ours; the validator reports them
             stale.unlink()
     small = [s.resize((THUMB_SPRITE_PX, THUMB_SPRITE_PX), Image.Resampling.LANCZOS) for s in sprites]
     thumbs = pack_sheets(small, THUMB_SPRITE_PX, THUMB_COLS, THUMB_COLS * THUMB_ROWS)[0]

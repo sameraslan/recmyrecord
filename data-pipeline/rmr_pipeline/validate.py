@@ -4,19 +4,18 @@ import json
 import math
 import re
 import sys
-from math import ceil
 from pathlib import Path
 
 from .colors import contrast_ratio, hex_to_rgb
-from .constants import (ATLAS_COLS, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, DEFAULT_OUT, LYRIC_DROP, NON_MOOD, RECS_PER_STOP,
-                        ROOM_RGB, STOPS, THUMB_COLS, THUMB_ROWS, THUMB_SPRITE_PX, TOP_DESCRIPTORS)
+from .constants import (ATLAS_COLS, ATLAS_NAME_RE, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, DEFAULT_OUT, LYRIC_DROP,
+                        MIN_ACCENT_CONTRAST, NON_MOOD, RECS_PER_STOP, ROOM_RGB, STOPS, THUMB_COLS, THUMB_ROWS,
+                        THUMB_SPRITE_PX, TOP_DESCRIPTORS)
 
 ALBUM_KEYS = ["slug", "t", "a", "s", "c", "k", "d", "w"]
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX_RE = re.compile(r"^#[0-9a-f]{6}$")
 SPOTIFY_RE = re.compile(r"^[0-9A-Za-z]{22}$")
 COVER_RE = re.compile(r"^[0-9a-f]{24,64}$")
-MIN_ACCENT_CONTRAST = 4.5
 
 
 class ContractError(Exception):
@@ -24,7 +23,12 @@ class ContractError(Exception):
 
 
 def _load(out: Path, name: str):
-    return json.loads((out / name).read_text(encoding="utf-8"))
+    try:
+        return json.loads((out / name).read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        raise ContractError(f"missing {name}") from None
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        raise ContractError(f"{name} is not valid JSON: {e}") from None
 
 
 def _is_int(v) -> bool:
@@ -34,7 +38,7 @@ def _is_int(v) -> bool:
 def _validate_images(out: Path, n: int, err) -> None:
     from PIL import Image
 
-    sheets = ceil(n / ATLAS_PER_SHEET)
+    sheets = math.ceil(n / ATLAS_PER_SHEET)
     size = ATLAS_COLS * ATLAS_SPRITE_PX
     for i in range(sheets):
         p = out / f"atlas-{i}.webp"
@@ -44,16 +48,20 @@ def _validate_images(out: Path, n: int, err) -> None:
         with Image.open(p) as im:
             if im.format != "WEBP" or im.size != (size, size):
                 err(f"{p.name} must be a {size}x{size} WebP")
-    extra = sorted(q.name for q in out.glob("atlas-*.webp") if int(q.stem.split("-")[1]) >= sheets)
-    if extra:
-        err(f"unexpected atlas files {extra}")
+    for q in sorted(out.glob("atlas-*.webp")):
+        m = ATLAS_NAME_RE.match(q.name)
+        if not m:
+            err(f"unexpected file {q.name}: sprite sheets are named atlas-<n>.webp")
+        elif int(m[1]) >= sheets:
+            err(f"unexpected atlas file {q.name}: {n} albums need {sheets} sheets")
     p = out / "thumbs.webp"
+    tw, th = THUMB_COLS * THUMB_SPRITE_PX, THUMB_ROWS * THUMB_SPRITE_PX
     if not p.exists():
         err("missing thumbs.webp")
     else:
         with Image.open(p) as im:
-            if im.format != "WEBP" or im.size != (THUMB_COLS * THUMB_SPRITE_PX, THUMB_ROWS * THUMB_SPRITE_PX):
-                err("thumbs.webp must be a 3072x3072 WebP")
+            if im.format != "WEBP" or im.size != (tw, th):
+                err(f"thumbs.webp must be a {tw}x{th} WebP")
 
 
 def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
@@ -133,6 +141,7 @@ def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
                    or not math.isfinite(v) or abs(v) > 1.0 or round(v, 3) != v]
             if bad:
                 err(f"positions.{stop}: {len(bad)} values are not finite, 3-decimal and within [-1, 1]")
+                continue
             pairs = {(arr[2 * i], arr[2 * i + 1]) for i in range(n)}
             if len(pairs) != n:
                 err(f"positions.{stop}: {n - len(pairs)} albums share a position")

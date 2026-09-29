@@ -4,8 +4,8 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 
 ## Inputs (read-only)
 
-- `data-retrieval/Recommender/data/all_data_norm.pkl`: the recommender's feature table (4,116 rows in catalog-rank order; `Title`, `Artist`, `URI`, `Descriptor Count`, 13 min-max audio features, 176 descriptor columns). Override with `--table`.
-- The music map worktree of the personal site, passed as `--map-root` (for example `/Users/saslan.19/Desktop/Tengs/codingMiscellaneous/website/.claude/worktrees/music_map`). The pipeline reads:
+- `data-retrieval/Recommender/data/all_data_norm.pkl`: the recommender's feature table (4,000+ rows in catalog-rank order; `Title`, `Artist`, `URI`, `Descriptor Count`, 13 min-max audio features, 176 descriptor columns). Override with `--table`.
+- The music map worktree of the personal site, passed as `--map-root` (for example `/path/to/music_map`). The pipeline reads:
   - `public/data/metadata.json`: cluster id (0 to 7), atlas sheet and UV for each Spotify URI.
   - `public/data/atlas-0.webp` to `atlas-3.webp`: 96 px cover sprites in the map's own order.
   - `pipeline/outputs/spotify_features.parquet`: `cover_url` per `spotify_uri` (the cover source).
@@ -24,8 +24,8 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 
 ## How it works
 
-1. Albums: the feature table, keeping the first row of each Spotify URI (4,081 albums, all on the map).
-2. Recommendations: the live recommender exactly (drop the 56 lyric and theme descriptors, divide the other 120 descriptor columns by `slider ** 3`, euclidean nearest neighbours) at three stops: sonic 5, balanced 2.0, mood 0.5. Ten per album per stop, over the whole catalog. A test checks the live behaviour: "In Rainbows" at slider 0.5 over the first 4,000 rows returns Tindersticks, Avalon, So, You Will Never Know Why, Imperial Bedroom.
+1. Albums: the feature table, keeping the first row of each Spotify URI; every album present in both the feature table and the map.
+2. Recommendations: the live recommender exactly (drop the 56 lyric and theme descriptors, divide the other 120 descriptor columns by `slider ** 3`, euclidean nearest neighbours) at three stops: sonic 5, balanced 2.0, mood 0.5. Ten per album per stop, over the whole catalog. A test checks the live behaviour: "In Rainbows" at slider 0.5, over the same leading rows the live recommender searches (`LIVE_POOL`), returns Tindersticks, Avalon, So, You Will Never Know Why, Imperial Bedroom.
 3. Layouts: UMAP (n_neighbors 15, min_dist 0.1, random_state 42) of the recommender's matrix at each stop, outliers softly compressed, sonic and mood Procrustes-aligned to balanced, scaled to [-1, 1], stacked points spread.
 4. Slugs: `kebab(title)-kebab(artist)`, ASCII-folded (Cyrillic transliterated), `-2`, `-3` on collision in catalog order.
 5. Vocabulary: kept descriptors minus vocals descriptors, "instrumental" and "concept album", most frequent first.
@@ -40,7 +40,10 @@ cd data-pipeline
 .venv/bin/python -m rmr_pipeline.build --map-root /path/to/music_map   # about 1 to 2 minutes
 .venv/bin/python -m rmr_pipeline.validate                               # checks every output against the contract
 .venv/bin/python -m pytest
+RMR_MAP_ROOT=/path/to/music_map .venv/bin/python -m pytest   # also compares sprites with the map's atlases
 ```
+
+`--skip-images` is a faster development run that keeps the fallback ambient colours and writes no sprite sheets. It needs an explicit `--out` folder so it never overwrites the committed `albums.json`; check that folder with `.venv/bin/python -m rmr_pipeline.validate --data <folder> --no-images`.
 
 UMAP output depends on the exact versions of umap-learn, pynndescent and numba; keep `requirements.txt` pinned so the layouts stay reproducible.
 

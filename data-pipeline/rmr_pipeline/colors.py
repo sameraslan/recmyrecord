@@ -5,7 +5,7 @@ from collections.abc import Sequence
 import numpy as np
 from PIL import Image
 
-from .constants import FALLBACK_AMBIENT, ROOM_RGB
+from .constants import FALLBACK_AMBIENT, MIN_ACCENT_CONTRAST, ROOM_RGB
 
 
 def hex_to_rgb(h: str) -> tuple[int, int, int]:
@@ -33,7 +33,6 @@ def contrast_ratio(a: Sequence[float], b: Sequence[float]) -> float:
     return (hi + 0.05) / (lo + 0.05)
 
 
-MIN_ACCENT_CONTRAST = 4.5
 MONO_ACCENT = "#d9a066"
 
 

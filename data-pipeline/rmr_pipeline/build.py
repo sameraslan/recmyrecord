@@ -24,11 +24,19 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--map-root", type=Path, required=True,
                    help="Root of the personal-site music_map worktree (has public/data and pipeline/outputs).")
     p.add_argument("--table", type=Path, default=DEFAULT_TABLE, help="Feature table pickle (read-only).")
-    p.add_argument("--out", type=Path, default=DEFAULT_OUT, help="Output folder (frontcreck/public/data).")
+    p.add_argument("--out", type=Path, default=None,
+                   help="Output folder (default frontcreck/public/data). Required with --skip-images.")
     p.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES, help="Manual corrections keyed by slug.")
     p.add_argument("--skip-images", action="store_true",
-                   help="Fast run for development: keep fallback ambient colours and do not write sprite sheets.")
-    return p.parse_args(argv)
+                   help="Fast run for development: keep fallback ambient colours and do not write sprite sheets. "
+                        "Needs an explicit --out so the committed albums.json keeps its extracted colours.")
+    args = p.parse_args(argv)
+    if args.out is None:
+        if args.skip_images:
+            p.error("--skip-images writes fallback ambient colours; pass an explicit --out folder so the "
+                    "committed albums.json is not overwritten")
+        args.out = DEFAULT_OUT
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:

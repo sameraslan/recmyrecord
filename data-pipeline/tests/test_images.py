@@ -1,7 +1,7 @@
 from PIL import Image
 
 from rmr_pipeline.constants import ATLAS_COLS, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, THUMB_COLS, THUMB_ROWS, THUMB_SPRITE_PX
-from rmr_pipeline.images import SHEET_FILL, crop_uv, pack_sheets, square, tile
+from rmr_pipeline.images import SHEET_FILL, crop_uv, pack_sheets, square, tile, write_sheets
 
 
 def test_sheet_geometry_constants():
@@ -38,3 +38,12 @@ def test_square_and_tile():
     t = tile(4, 48)
     assert t.size == (48, 48)
     assert t.getpixel((0, 0)) == tile(1, 48).getpixel((0, 0))
+
+
+def test_write_sheets_ignores_unrelated_atlas_names_and_removes_stale_sheets(tmp_path):
+    (tmp_path / "atlas-old.webp").write_bytes(b"keep me")
+    (tmp_path / "atlas-7.webp").write_bytes(b"stale")
+    sizes = write_sheets(tmp_path, [tile(0, ATLAS_SPRITE_PX)] * 3)
+    assert sorted(sizes) == ["atlas-0.webp", "thumbs.webp"]
+    assert (tmp_path / "atlas-old.webp").read_bytes() == b"keep me"
+    assert not (tmp_path / "atlas-7.webp").exists()

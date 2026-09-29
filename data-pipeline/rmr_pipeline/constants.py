@@ -1,4 +1,5 @@
 """Constants shared by the pipeline. Column lists are copied verbatim from the live recommender."""
+import re
 from pathlib import Path
 
 PIPELINE_DIR = Path(__file__).resolve().parents[1]
@@ -43,6 +44,7 @@ IN_RAINBOWS_LIVE = ["Tindersticks", "Avalon", "So", "You Will Never Know Why", "
 
 COVER_PREFIX = "https://i.scdn.co/image/"
 ROOM_RGB = (21, 17, 13)  # --color-room #15110d
+MIN_ACCENT_CONTRAST = 4.5  # WCAG AA for the accent on ROOM_RGB
 # Cluster fallbacks (mockup AMB_CL), indexed by k % 3: [wash, wash, accent].
 FALLBACK_AMBIENT = [
     ("#4a2c20", "#2a2019", "#d49677"),
@@ -58,3 +60,5 @@ ATLAS_PER_SHEET = 1024
 THUMB_SPRITE_PX = 48
 THUMB_COLS = 64
 THUMB_ROWS = 64
+# Served atlas file names: atlas-0.webp, atlas-1.webp, ... (no leading zeros).
+ATLAS_NAME_RE = re.compile(r"^atlas-(0|[1-9][0-9]*)\.webp$")
