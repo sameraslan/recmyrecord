@@ -45,9 +45,14 @@ function sameFocus(a: Focus | null, b: Focus | null): boolean {
   return a.recs.every((r, i) => r === b.recs[i]);
 }
 
+function sameCamera(a: MapCamera | null, b: MapCamera | null): boolean {
+  if (a === b) return true;
+  return !!a && !!b && a.x === b.x && a.y === b.y && a.zoom === b.zoom;
+}
+
 let toastSeq = 0;
 
-export const useAppStore = create<AppState>()((set) => ({
+export const useAppStore = create<AppState>()((set, get) => ({
   stop: DEFAULT_STOP,
   focus: null,
   hot: null,
@@ -63,17 +68,20 @@ export const useAppStore = create<AppState>()((set) => ({
   setFocus: (focus) => set((s) => (sameFocus(s.focus, focus) ? s : { focus })),
   setHot: (hot) => set((s) => (s.hot === hot ? s : { hot })),
   setSelected: (selected) => set((s) => (s.selected === selected ? s : { selected })),
-  saveExploreCamera: (exploreCamera) => set({ exploreCamera }),
+  saveExploreCamera: (exploreCamera) => set((s) => (sameCamera(s.exploreCamera, exploreCamera) ? s : { exploreCamera })),
   setMapMode: (mapMode) => set((s) => (s.mapMode === mapMode ? s : { mapMode })),
   setPanelInset: (panelInset) => set((s) => (s.panelInset === panelInset ? s : { panelInset })),
   setWebgl: (webgl) => set((s) => (s.webgl === webgl ? s : { webgl })),
   setAmbient: (ambient) => set((s) => (s.ambient?.join() === ambient?.join() ? s : { ambient })),
-  visit: (item) =>
-    set((s) => {
-      const trail = pushTrail(s.trail.length ? s.trail : readTrail(), item);
-      writeTrail(trail);
-      return { trail };
-    }),
+  visit: (item) => {
+    const current = get().trail;
+    // Already the last album visited in this page load: nothing changes.
+    if (current.at(-1)?.slug === item.slug) return;
+    // First visit of a page load: continue the trail saved earlier in this tab.
+    const trail = pushTrail(current.length ? current : readTrail(), item);
+    set({ trail });
+    writeTrail(trail);
+  },
   showToast: (message) => set({ toast: { message, id: ++toastSeq } }),
   clearToast: () => set({ toast: null }),
 }));

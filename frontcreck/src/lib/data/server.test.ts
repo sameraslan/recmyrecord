@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { getAlbumPageData, getAllSlugs, getServerCatalog, getShelf } from './server';
+import type { Positions, Recs } from '@/lib/types';
+import { assertDataConsistent, getAlbumPageData, getAllSlugs, getServerCatalog, getShelf } from './server';
 
 describe('build-time data access (real public/data)', () => {
   it('lists every slug once', () => {
@@ -23,6 +24,9 @@ describe('build-time data access (real public/data)', () => {
       expect(page!.recs[stop].map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }
     expect(page!.seed.ambient).toHaveLength(3);
+    for (const stop of ['sonic', 'balanced', 'mood'] as const) {
+      for (const row of page!.recs[stop]) for (const w of row.shared) expect(page!.seed.tags).toContain(w);
+    }
   });
 
   it('returns null for an unknown slug', () => {
@@ -38,5 +42,29 @@ describe('build-time data access (real public/data)', () => {
 
   it('exposes the vocabulary', () => {
     expect(getServerCatalog().vocab).toHaveLength(114);
+  });
+});
+
+describe('data consistency check', () => {
+  const recs: Recs = { sonic: [[1], [0]], balanced: [[1], [0]], mood: [[1], [0]] };
+  const positions: Positions = { sonic: [0, 0, 1, 1], balanced: [0, 0, 1, 1], mood: [0, 0, 1, 1] };
+
+  it('accepts files that agree with albums.json', () => {
+    expect(() => assertDataConsistent(2, recs, positions)).not.toThrow();
+  });
+
+  it('names recs.json and both counts when a stop has the wrong number of rows', () => {
+    expect(() => assertDataConsistent(2, { ...recs, mood: [[1]] }, positions)).toThrow(
+      'recs.json: mood has 1 rows but albums.json has 2 albums',
+    );
+    expect(() => assertDataConsistent(2, { sonic: recs.sonic, balanced: recs.balanced } as Recs, positions)).toThrow(
+      'recs.json: mood has 0 rows but albums.json has 2 albums',
+    );
+  });
+
+  it('names positions.json and both counts when a stop has the wrong number of values', () => {
+    expect(() => assertDataConsistent(2, recs, { ...positions, sonic: [0, 0, 1] })).toThrow(
+      'positions.json: sonic has 3 values but albums.json has 2 albums (expected 4)',
+    );
   });
 });

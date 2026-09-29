@@ -1,9 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TRAIL_KEY, TRAIL_MAX, pushTrail, readTrail, visibleTrail, writeTrail } from './trail';
 
 const it_ = (slug: string) => ({ slug, title: slug.toUpperCase() });
 
 beforeEach(() => window.sessionStorage.clear());
+afterEach(() => vi.restoreAllMocks());
 
 describe('trail', () => {
   it('appends new albums and cuts back to a revisited one', () => {
@@ -36,5 +37,15 @@ describe('trail', () => {
     expect(visibleTrail(t).items.map((x) => x.slug)).toEqual(['b', 'c', 'd', 'e']);
     expect(visibleTrail(t).truncated).toBe(true);
     expect(visibleTrail(t.slice(0, 2)).truncated).toBe(false);
+  });
+
+  it('survives sessionStorage throwing on read and on write', () => {
+    const denied = () => {
+      throw new DOMException('denied', 'SecurityError');
+    };
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(denied);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(denied);
+    expect(readTrail()).toEqual([]);
+    expect(() => writeTrail([it_('a')])).not.toThrow();
   });
 });

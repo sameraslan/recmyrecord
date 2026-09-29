@@ -31,17 +31,24 @@ export function replaceBy(by: StopId): void {
   if (next !== current) window.history.replaceState(null, '', next);
 }
 
+/** An album view is exactly a pathname that `slugFromPathname` accepts. */
 export function viewFromPathname(pathname: string | null): View {
   if (!pathname || pathname === '/') return 'home';
   if (pathname === '/map') return 'explore';
-  if (pathname.startsWith('/album/')) return 'album';
+  if (slugFromPathname(pathname) !== null) return 'album';
   if (pathname === '/about') return 'about';
   return 'other';
 }
 
+/** Slug of `/album/<slug>` (one segment, optional trailing slash); null otherwise or when the escape is malformed. */
 export function slugFromPathname(pathname: string | null): string | null {
-  const m = pathname?.match(/^\/album\/([^/?#]+)/);
-  return m ? decodeURIComponent(m[1]) : null;
+  const m = pathname?.match(/^\/album\/([^/?#]+)\/?$/);
+  if (!m) return null;
+  try {
+    return decodeURIComponent(m[1]);
+  } catch {
+    return null;
+  }
 }
 
 export function absoluteUrl(

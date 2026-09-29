@@ -1,3 +1,4 @@
+import { COPY } from '@/lib/copy';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumId, AlbumPageData, AlbumRecord, AlbumSummary, Catalog, RecRow, Recs, StopId, Vocab } from '@/lib/types';
 
@@ -23,23 +24,24 @@ export function toSummary(albums: readonly AlbumRecord[], id: AlbumId): AlbumSum
 export function moodTags(album: AlbumRecord, vocab: Vocab, max = TAGS_MAX): string[] {
   const out: string[] = [];
   for (const k of album.d) {
+    if (out.length >= max) break;
     const w = vocab[k];
     if (w && !out.includes(w)) out.push(w);
-    if (out.length === max) break;
   }
   return out;
 }
 
-/** Mood words both albums carry, in the seed's order (strongest first), at most `max`. */
+/**
+ * The seed's visible mood tags (`moodTags`) that the other album also carries anywhere in its
+ * descriptors, in the seed's order (strongest first), at most `max`. Every word returned is one
+ * of the seed's visible tags, so the UI can light it up.
+ */
 export function sharedWords(seed: AlbumRecord, other: AlbumRecord, vocab: Vocab, max = SHARED_MAX): string[] {
-  const theirs = new Set(other.d);
-  const out: string[] = [];
-  for (const k of seed.d) {
-    const w = vocab[k];
-    if (w && theirs.has(k)) out.push(w);
-    if (out.length === max) break;
-  }
-  return out;
+  const theirs = new Set<string>();
+  for (const k of other.d) if (vocab[k]) theirs.add(vocab[k]);
+  return moodTags(seed, vocab)
+    .filter((w) => theirs.has(w))
+    .slice(0, Math.max(0, max));
 }
 
 export function buildAlbumPageData(catalog: Catalog, recs: Recs, id: AlbumId): AlbumPageData {
@@ -49,7 +51,9 @@ export function buildAlbumPageData(catalog: Catalog, recs: Recs, id: AlbumId): A
   const seed = { ...toSummary(albums, id), tags: moodTags(seedRecord, vocab), ambient: seedRecord.w };
   const byStop = {} as Record<StopId, RecRow[]>;
   for (const stop of STOP_IDS) {
-    const ids = (recs[stop][id] ?? []).filter((j) => Number.isInteger(j) && j >= 0 && j < albums.length && j !== id);
+    const ids = [...new Set(recs[stop][id] ?? [])].filter(
+      (j) => Number.isInteger(j) && j >= 0 && j < albums.length && j !== id,
+    );
     byStop[stop] = ids.slice(0, REC_MAX).map((j, n) => ({
       ...toSummary(albums, j),
       rank: n + 1,
@@ -80,14 +84,27 @@ export function pickShelf(albums: readonly AlbumRecord[], count = SHELF_SIZE): A
   return out;
 }
 
+/**
+ * A random album that has a cover and is not `exclude`. The return type has no empty value, so
+ * when no such album exists (never the case with the real catalog) it returns 0, which may then be
+ * the excluded or a coverless album.
+ */
 export function pickSurprise(albums: readonly AlbumRecord[], rand: () => number = Math.random, exclude?: AlbumId): AlbumId {
   const pool: AlbumId[] = [];
   for (let i = 0; i < albums.length; i++) if (albums[i].c && i !== exclude) pool.push(i);
   if (!pool.length) return 0;
-  return pool[Math.min(pool.length - 1, Math.floor(rand() * pool.length))];
+  return pool[Math.min(pool.length - 1, Math.max(0, Math.floor(rand() * pool.length)))];
 }
 
-/** Letter for the typographic cover tile. */
+/**
+ * Letter for the typographic cover tile: the first letter or digit after a leading "The ",
+ * upper-cased (whole code points, so astral characters stay intact). Falls back to
+ * `COPY.cover.noInitial` when the title has no letter or digit.
+ */
 export function initialLetter(title: string): string {
-  return title.replace(/^the\s+/i, '').charAt(0).toUpperCase() || '·';
+  const m = title.replace(/^the\s+/i, '').match(/[\p{L}\p{N}]/u);
+  if (!m) return COPY.cover.noInitial;
+  const upper = m[0].toUpperCase();
+  // Some letters upper-case to two (for example the sharp s); keep the tile to one character.
+  return [...upper].length === 1 ? upper : m[0];
 }

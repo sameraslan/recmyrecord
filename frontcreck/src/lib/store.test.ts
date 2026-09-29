@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAppStore } from './store';
 
 const initial = useAppStore.getState();
@@ -7,6 +7,16 @@ beforeEach(() => {
   window.sessionStorage.clear();
   useAppStore.setState(initial, true);
 });
+
+afterEach(() => vi.restoreAllMocks());
+
+function countNotifications(run: () => void): number {
+  let calls = 0;
+  const unsub = useAppStore.subscribe(() => calls++);
+  run();
+  unsub();
+  return calls;
+}
 
 describe('app store', () => {
   it('defaults to the balanced stop and an empty session', () => {
@@ -36,6 +46,47 @@ describe('app store', () => {
     visit({ slug: 'a', title: 'A' });
     expect(useAppStore.getState().trail.map((t) => t.slug)).toEqual(['a']);
     expect(JSON.parse(window.sessionStorage.getItem('rmr-trail') ?? '[]')).toHaveLength(1);
+  });
+
+  it('does not notify or write again when the album is already last on the trail', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const calls = countNotifications(() => {
+      useAppStore.getState().visit({ slug: 'a', title: 'A' });
+      useAppStore.getState().visit({ slug: 'a', title: 'A' });
+    });
+    expect(calls).toBe(1);
+    expect(setItem).toHaveBeenCalledTimes(1);
+    expect(useAppStore.getState().trail.map((t) => t.slug)).toEqual(['a']);
+  });
+
+  it('writes the trail outside the state updater', () => {
+    let trailWhenWritten: string[] | null = null;
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      trailWhenWritten = useAppStore.getState().trail.map((t) => t.slug);
+    });
+    useAppStore.getState().visit({ slug: 'a', title: 'A' });
+    expect(trailWhenWritten).toEqual(['a']);
+  });
+
+  it('keeps the trail in memory when sessionStorage throws', () => {
+    const denied = () => {
+      throw new DOMException('denied', 'SecurityError');
+    };
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(denied);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(denied);
+    useAppStore.getState().visit({ slug: 'a', title: 'A' });
+    useAppStore.getState().visit({ slug: 'b', title: 'B' });
+    expect(useAppStore.getState().trail.map((t) => t.slug)).toEqual(['a', 'b']);
+  });
+
+  it('does not notify when the saved explore camera is unchanged', () => {
+    const calls = countNotifications(() => {
+      useAppStore.getState().saveExploreCamera({ x: 1, y: 2, zoom: 3 });
+      useAppStore.getState().saveExploreCamera({ x: 1, y: 2, zoom: 3 });
+      useAppStore.getState().saveExploreCamera(null);
+      useAppStore.getState().saveExploreCamera(null);
+    });
+    expect(calls).toBe(2);
   });
 
   it('restores the trail from sessionStorage on the first visit of a page load', () => {

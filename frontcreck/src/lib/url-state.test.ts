@@ -20,6 +20,11 @@ describe('url state', () => {
     expect(albumHref('in-rainbows-radiohead', 'mood')).toBe('/album/in-rainbows-radiohead?by=mood');
   });
 
+  it('encodes special characters in album hrefs', () => {
+    expect(albumHref('a b/c?d#e%')).toBe('/album/a%20b%2Fc%3Fd%23e%25');
+    expect(albumHref('sigur-r\u00f3s', 'sonic')).toBe('/album/sigur-r%C3%B3s?by=sonic');
+  });
+
   it('rewrites by while keeping other params and the hash', () => {
     expect(hrefWithBy('/album/x?by=mood&q=1#top', 'sonic')).toBe('/album/x?by=sonic&q=1#top');
     expect(hrefWithBy('/album/x?by=mood', 'balanced')).toBe('/album/x');
@@ -43,6 +48,25 @@ describe('url state', () => {
     expect(viewFromPathname('/nope')).toBe('other');
     expect(slugFromPathname('/album/in-rainbows-radiohead')).toBe('in-rainbows-radiohead');
     expect(slugFromPathname('/map')).toBeNull();
+  });
+
+  it('decodes encoded slugs and returns null for malformed escapes', () => {
+    expect(slugFromPathname('/album/sigur-r%C3%B3s')).toBe('sigur-r\u00f3s');
+    expect(slugFromPathname(albumHref('a b/c?d#e%'))).toBe('a b/c?d#e%');
+    expect(slugFromPathname('/album/100%')).toBeNull();
+    expect(slugFromPathname('/album/%zz')).toBeNull();
+    expect(viewFromPathname('/album/100%')).toBe('other');
+  });
+
+  it('agrees with slugFromPathname on what is an album view', () => {
+    expect(slugFromPathname('/album/')).toBeNull();
+    expect(viewFromPathname('/album/')).toBe('other');
+    expect(slugFromPathname('/album/x/y')).toBeNull();
+    expect(viewFromPathname('/album/x/y')).toBe('other');
+    expect(slugFromPathname('/album/x/')).toBe('x');
+    expect(viewFromPathname('/album/x/')).toBe('album');
+    expect(viewFromPathname(null)).toBe('home');
+    expect(slugFromPathname(null)).toBeNull();
   });
 
   it('makes absolute URLs', () => {

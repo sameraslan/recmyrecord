@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { COPY } from '@/lib/copy';
 import type { AlbumRecord, Recs } from '@/lib/types';
 import {
   buildAlbumPageData, buildCatalog, coverUrl, initialLetter, moodTags, pickShelf, pickSurprise, sharedWords, spotifyUrl, toSummary,
@@ -34,6 +35,19 @@ describe('catalog helpers', () => {
     expect(moodTags(albums[2], vocab)).toEqual([]);
   });
 
+  it('returns no tags or shared words when max is 0', () => {
+    expect(moodTags(albums[0], vocab, 0)).toEqual([]);
+    expect(sharedWords(albums[0], albums[1], vocab, 0)).toEqual([]);
+  });
+
+  it('shares only words that are among the seed\'s visible tags', () => {
+    // 'epic' (index 6) is the seed's seventh descriptor, so it is not a visible tag.
+    expect(sharedWords(albums[0], { ...albums[1], d: [6, 1] }, vocab)).toEqual(['melancholic']);
+    expect(sharedWords(albums[0], { ...albums[1], d: [6] }, vocab)).toEqual([]);
+    // duplicate or out-of-range seed indexes do not repeat or invent words
+    expect(sharedWords({ ...albums[1], d: [2, 2, 99, 1] }, albums[0], vocab)).toEqual(['warm', 'melancholic']);
+  });
+
   it('lists shared words in the seed order, at most four', () => {
     expect(sharedWords(albums[0], albums[1], vocab)).toEqual(['melancholic', 'warm', 'calm']);
     expect(sharedWords(albums[1], albums[0], vocab)).toEqual(['warm', 'melancholic', 'calm']);
@@ -48,6 +62,17 @@ describe('catalog helpers', () => {
     expect(page.recs.balanced.map((r) => [r.id, r.rank])).toEqual([[2, 1], [1, 2]]);
     expect(page.recs.mood.map((r) => r.id)).toEqual([1]);
     expect(page.recs.sonic[0].shared).toEqual(['melancholic', 'warm', 'calm']);
+    for (const stop of ['sonic', 'balanced', 'mood'] as const) {
+      for (const row of page.recs[stop]) for (const w of row.shared) expect(page.seed.tags).toContain(w);
+    }
+  });
+
+  it('drops duplicate recommendation ids and keeps ranks contiguous', () => {
+    const dup: Recs = { sonic: [[1, 1, 2, 2, 1]], balanced: [[2, 0, 2]], mood: [[]] };
+    const page = buildAlbumPageData(catalog, dup, 0);
+    expect(page.recs.sonic.map((r) => [r.id, r.rank])).toEqual([[1, 1], [2, 2]]);
+    expect(page.recs.balanced.map((r) => r.id)).toEqual([2]);
+    expect(page.recs.mood).toEqual([]);
   });
 
   it('makes Spotify and cover URLs', () => {
@@ -69,9 +94,29 @@ describe('catalog helpers', () => {
     expect(pickSurprise(albums, () => 0, 0)).toBe(2);
   });
 
+  it('never picks the excluded album or one without a cover', () => {
+    for (const r of [0, 0.25, 0.5, 0.75, 0.999999, 1, -0.5]) {
+      expect(pickSurprise(albums, () => r, 0)).toBe(2);
+      expect(pickSurprise(albums, () => r, 2)).toBe(0);
+      expect([0, 2]).toContain(pickSurprise(albums, () => r));
+    }
+  });
+
+  it('returns 0 when no other album has a cover', () => {
+    expect(pickSurprise([albums[1]], () => 0.5)).toBe(0);
+    expect(pickSurprise([albums[0]], () => 0.5, 0)).toBe(0);
+  });
+
   it('makes a typographic initial', () => {
     expect(initialLetter('The Beatles')).toBe('B');
-    expect(initialLetter('( )')).toBe('(');
-    expect(initialLetter('')).toBe('·');
+    expect(initialLetter('"Heroes"')).toBe('H');
+    expect(initialLetter('1989')).toBe('1');
+    expect(initialLetter('...and justice')).toBe('A');
+    expect(initialLetter('\u{1D504}lpha')).toBe('\u{1D504}');
+    expect(initialLetter('\u{1F3B8} rock')).toBe('R');
+    expect(initialLetter('stra\u00dfe')).toBe('S');
+    expect(initialLetter('\u00dfe')).toBe('\u00df');
+    expect(initialLetter('( )')).toBe(COPY.cover.noInitial);
+    expect(initialLetter('')).toBe(COPY.cover.noInitial);
   });
 });

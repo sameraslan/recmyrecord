@@ -71,6 +71,8 @@ export const COPY = {
     openMap: 'Open map',
   },
   phone: { map: 'Map', list: 'List', mapLabel: 'Open the map', listLabel: 'Back to the list' },
+  /** Typographic cover tile when the title has no letter or digit. */
+  cover: { noInitial: '·' },
   error: {
     body: "The albums didn't load. Check your connection, then try again.",
     retry: 'Try again',
