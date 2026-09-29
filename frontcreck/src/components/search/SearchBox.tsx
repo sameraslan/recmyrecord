@@ -1,13 +1,25 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState, type FocusEvent, type KeyboardEvent } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from 'react';
 import { Cover } from '@/components/Cover';
 import { Icon } from '@/components/Icon';
 import { getSearch, type LoadedSearch } from '@/components/search/searchIndex';
 import { registerSearchTarget } from '@/components/search/shortcut';
 import { COPY } from '@/lib/copy';
 import { toSummary } from '@/lib/data/catalog';
+import { useCatalog } from '@/lib/data/useData';
 import { suppressGhostClick } from '@/lib/ghost-click';
 import { splitHighlights, type HighlightRange } from '@/lib/highlight';
 import { isNarrow } from '@/lib/media';
@@ -16,6 +28,16 @@ import type { AlbumId } from '@/lib/types';
 import { albumHref } from '@/lib/url-state';
 
 let readyMarked = false;
+
+/** The search fields accept at most this many characters (kept here, not in the lazily loaded search module). */
+export const QUERY_MAX_CHARS = 80;
+
+const ignore = (): void => {};
+
+/** A press that opens the context menu instead of choosing: any button but the primary, or Ctrl+click on macOS. */
+function isMenuPress(e: { button: number; ctrlKey: boolean }): boolean {
+  return e.button !== 0 || (e.ctrlKey && /Mac/i.test(navigator.platform));
+}
 
 export interface SearchBoxProps {
   variant: 'hero' | 'header' | 'sheet' | 'page';
@@ -62,31 +84,49 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
   const hintId = `${uid}-hint`;
   const boxRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  /** True between a pointerdown inside the popover and the matching pointerup (or pointercancel). */
   const pressing = useRef(false);
+  const stopPressing = useRef<(() => void) | null>(null);
+  /** In the phone sheet the results stay until the sheet closes or the query is cleared. */
+  const persistent = variant === 'sheet';
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
+  /** Index of the active option, or -1 for none. */
+  const [active, setActive] = useState(-1);
+  /** Set on first focus or input: only then are the catalog and the search module loaded. */
+  const [wanted, setWanted] = useState(false);
   const [loaded, setLoaded] = useState<LoadedSearch | null>(null);
-  const [loadFailed, setLoadFailed] = useState(false);
   const [announce, setAnnounce] = useState('');
+  // The shared catalog state: every consumer sees the same error, and any consumer's retry recovers all.
+  const { status: catalogStatus, retry: retryCatalog } = useCatalog(wanted);
 
-  const ensureIndex = useCallback(() => {
-    if (loaded) return;
-    getSearch().then(
-      (s) => {
-        setLoaded(s);
-        setLoadFailed(false);
-      },
-      () => setLoadFailed(true),
-    );
-  }, [loaded]);
+  useEffect(() => {
+    if (!wanted || loaded || catalogStatus === 'error') return;
+    let live = true;
+    getSearch().then((s) => {
+      if (live) setLoaded(s);
+    }, ignore);
+    return () => {
+      live = false;
+    };
+  }, [wanted, loaded, catalogStatus]);
 
   const trimmed = query.trim();
+  const shown = persistent || open;
   const hits = useMemo(() => (loaded && trimmed ? loaded.search(loaded.index, query) : []), [loaded, query, trimmed]);
-  const activeIndex = hits.length ? Math.min(active, hits.length - 1) : -1;
-  const listShown = open && trimmed !== '' && hits.length > 0;
-  const emptyShown = open && trimmed !== '' && !!loaded && hits.length === 0;
-  const errorShown = open && trimmed !== '' && !loaded && loadFailed;
+  const activeIndex = hits.length && active >= 0 ? Math.min(active, hits.length - 1) : -1;
+  const listShown = shown && trimmed !== '' && hits.length > 0;
+  const emptyShown = shown && trimmed !== '' && !!loaded && hits.length === 0;
+  const errorShown = shown && trimmed !== '' && !loaded && catalogStatus === 'error';
+
+  const close = useCallback(() => {
+    setOpen(false);
+    setActive(-1);
+  }, []);
+
+  const closeIfOutside = useCallback(() => {
+    if (!persistent && !pressing.current && !boxRef.current?.contains(document.activeElement)) close();
+  }, [persistent, close]);
 
   useEffect(() => {
     if (readyMarked) return;
@@ -103,6 +143,9 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
     return registerSearchTarget({ el: () => inputRef.current, focus: () => inputRef.current?.focus() });
   }, [shortcut]);
 
+  useEffect(() => () => stopPressing.current?.(), []);
+
+  // The region is cleared on every edit (onChange), so this sets it from empty and it is announced again.
   useEffect(() => {
     if (!trimmed || !loaded) return;
     const t = window.setTimeout(() => setAnnounce(hits.length ? COPY.search.found : COPY.search.none), 350);
@@ -116,12 +159,12 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
 
   const choose = useCallback(
     (id: AlbumId) => {
-      pressing.current = false;
+      stopPressing.current?.();
       if (!loaded) return;
       const slug = loaded.catalog.albums[id].slug;
       setOpen(false);
       setQuery('');
-      setActive(0);
+      setActive(-1);
       inputRef.current?.blur();
       router.push(albumHref(slug, useAppStore.getState().stop));
       onChosen?.(id);
@@ -129,39 +172,64 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
     [loaded, router, onChosen],
   );
 
+  /** Marks a press inside the popover so a blur during it does not close the list; ends on pointerup. */
+  const startPress = () => {
+    pressing.current = true;
+    if (stopPressing.current) return;
+    const stop = () => {
+      document.removeEventListener('pointerup', end, true);
+      document.removeEventListener('pointercancel', end, true);
+      stopPressing.current = null;
+      pressing.current = false;
+    };
+    const end = () => {
+      stop();
+      window.setTimeout(closeIfOutside, 0);
+    };
+    stopPressing.current = stop;
+    document.addEventListener('pointerup', end, true);
+    document.addEventListener('pointercancel', end, true);
+  };
+
   const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    // Keys that confirm or navigate an IME composition belong to the IME.
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       if (!hits.length) return;
       const d = e.key === 'ArrowDown' ? 1 : -1;
+      const n = hits.length;
       setOpen(true);
-      setActive((a) => (Math.min(a, hits.length - 1) + d + hits.length) % hits.length);
+      setActive((a) => (a < 0 ? (d > 0 ? 0 : n - 1) : (Math.min(a, n - 1) + d + n) % n));
     } else if (e.key === 'Enter') {
-      if (listShown && activeIndex >= 0) {
-        e.preventDefault();
-        choose(hits[activeIndex].id);
-      }
+      if (!hits.length) return;
+      e.preventDefault();
+      choose(hits[activeIndex >= 0 ? activeIndex : 0].id);
     } else if (e.key === 'Escape') {
       e.stopPropagation();
-      if (listShown || emptyShown || errorShown) {
+      if (!persistent && (listShown || emptyShown || errorShown)) {
         e.preventDefault();
-        setOpen(false);
+        close();
       } else if (query) {
         setQuery('');
+        setActive(-1);
       } else {
         inputRef.current?.blur();
         onEscapeEmpty?.();
       }
     } else if (e.key === 'Tab') {
-      setOpen(false);
+      if (!persistent) close();
     }
   };
 
   const onBlur = (e: FocusEvent<HTMLDivElement>) => {
     if (boxRef.current?.contains(e.relatedTarget as Node | null)) return;
-    window.setTimeout(() => {
-      if (!pressing.current && !boxRef.current?.contains(document.activeElement)) setOpen(false);
-    }, 0);
+    window.setTimeout(closeIfOutside, 0);
+  };
+
+  const onOptionClick = (e: ReactMouseEvent, id: AlbumId) => {
+    if (isMenuPress(e)) return;
+    choose(id);
   };
 
   return (
@@ -180,6 +248,7 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="go"
+          maxLength={QUERY_MAX_CHARS}
           aria-autocomplete="list"
           aria-expanded={listShown}
           aria-controls={listId}
@@ -191,10 +260,11 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
             setQuery(e.target.value);
             setOpen(true);
             setActive(0);
-            ensureIndex();
+            setAnnounce('');
+            setWanted(true);
           }}
           onFocus={() => {
-            ensureIndex();
+            setWanted(true);
             if (query.trim()) setOpen(true);
           }}
           onKeyDown={onKeyDown}
@@ -211,12 +281,7 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
       <div
         className="combo-pop"
         hidden={!(listShown || emptyShown || errorShown)}
-        onPointerDown={() => {
-          pressing.current = true;
-        }}
-        onPointerCancel={() => {
-          pressing.current = false;
-        }}
+        onPointerDown={startPress}
         onMouseDown={(e) => e.preventDefault()}
       >
         <ul role="listbox" id={listId} aria-label={COPY.search.listLabel} hidden={!listShown}>
@@ -232,7 +297,7 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
                     className="opt"
                     data-album={a.slug}
                     onPointerDown={(e) => {
-                      if (e.pointerType === 'mouse' && e.button === 0) {
+                      if (e.pointerType === 'mouse' && !isMenuPress(e)) {
                         e.preventDefault();
                         choose(h.id);
                       }
@@ -244,7 +309,7 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
                         choose(h.id);
                       }
                     }}
-                    onClick={() => choose(h.id)}
+                    onClick={(e) => onOptionClick(e, h.id)}
                     onMouseMove={() => {
                       if (k !== activeIndex) setActive(k);
                     }}
@@ -267,7 +332,7 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
         {errorShown ? (
           <div className="combo-error" role="alert">
             <p>{COPY.error.body}</p>
-            <button type="button" className="btn btn-line" onClick={ensureIndex}>
+            <button type="button" className="btn btn-line" onClick={retryCatalog}>
               {COPY.error.retry}
             </button>
           </div>

@@ -25,3 +25,9 @@ export function getSearch(): Promise<LoadedSearch> {
   }
   return pending;
 }
+
+/** Tests only. */
+export function resetSearchCache(): void {
+  pending = null;
+  delete document.documentElement.dataset.searchIndex;
+}

@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { isPhone, shot } from './helpers';
+import { coversSettled, isPhone, shot } from './helpers';
+
+const BODY_SPOT = { x: 700, y: 600 };
 
 test.describe('desktop header search', () => {
   test.skip(({ isMobile }) => isMobile, 'desktop only');
@@ -25,6 +27,7 @@ test.describe('desktop header search', () => {
     await expect(input).toHaveAttribute('aria-activedescendant', /.+/);
     await expect(options.first().locator('mark')).toHaveText('Loveless');
     await expect(options.first().locator('.cover')).toBeVisible();
+    await coversSettled(page, '.combo-pop');
     await shot(page, info, 'search-open');
     await input.press('Enter');
     await expect(page).toHaveURL(/\/album\/loveless-my-bloody-valentine$/);
@@ -58,6 +61,80 @@ test.describe('desktop header search', () => {
     await shot(page, info, 'search-none');
   });
 
+  test('a press on the message or a right-click on an option does not keep the popover open', async ({ page }) => {
+    await page.goto('/nope');
+    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
+    await input.click();
+    await input.pressSequentially('zzkq');
+    const pop = page.locator('.top-search .combo-pop');
+    await page.locator('.combo-empty').click();
+    await expect(pop).toBeVisible();
+    await page.mouse.click(BODY_SPOT.x, BODY_SPOT.y);
+    await expect(pop).toBeHidden();
+
+    await input.fill('');
+    await input.pressSequentially('radiohead');
+    await page.getByRole('option').first().click({ button: 'right' });
+    await expect(page).toHaveURL(/\/nope$/);
+    await page.mouse.click(BODY_SPOT.x, BODY_SPOT.y);
+    await expect(page.getByRole('listbox')).toBeHidden();
+  });
+
+  test('a Ctrl+click on an option on macOS opens no album', async ({ page }) => {
+    await page.goto('/nope');
+    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
+    await input.click();
+    await input.pressSequentially('radiohead');
+    const isMac = await page.evaluate(() => /Mac/i.test(navigator.platform));
+    await page.getByRole('option').nth(1).click({ modifiers: ['Control'] });
+    if (isMac) await expect(page).toHaveURL(/\/nope$/);
+    else await expect(page).toHaveURL(/\/album\/kid-a-radiohead$/);
+  });
+
+  test('Tab and a click elsewhere close the list', async ({ page }) => {
+    await page.goto('/nope');
+    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
+    await input.click();
+    await input.pressSequentially('radiohead');
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await input.press('Tab');
+    await expect(page.getByRole('listbox')).toBeHidden();
+    await expect(input).toHaveAttribute('aria-expanded', 'false');
+    await input.click();
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await page.mouse.click(BODY_SPOT.x, BODY_SPOT.y);
+    await expect(page.getByRole('listbox')).toBeHidden();
+  });
+
+  test('the focused field shows a 2 px lamp indicator without moving', async ({ page }) => {
+    await page.goto('/nope');
+    const field = page.locator('.top-search .combo-field');
+    const before = await field.boundingBox();
+    await field.locator('input').focus();
+    // Retrying assertions: the border colour eases in over 0.2 s.
+    await expect(field).toHaveCSS('border-top-color', 'rgb(230, 168, 86)');
+    await expect(field).toHaveCSS('border-top-width', '1px');
+    await expect(field).toHaveCSS('box-shadow', 'rgb(230, 168, 86) 0px 0px 0px 1px');
+    expect(await field.boundingBox()).toEqual(before);
+  });
+
+  test('slash is ignored while typing in a field and with modifier keys', async ({ page }) => {
+    await page.goto('/nope');
+    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
+    await input.click();
+    await page.keyboard.type('a/b');
+    await expect(input).toHaveValue('a/b');
+    await input.fill('');
+    await page.locator('header.top').click({ position: { x: 300, y: 5 } });
+    await expect(input).not.toBeFocused();
+    for (const combo of ['Control+/', 'Meta+/', 'Alt+/']) {
+      await page.keyboard.press(combo);
+      await expect(input, combo).not.toBeFocused();
+    }
+    await page.keyboard.press('/');
+    await expect(input).toBeFocused();
+  });
+
   test('slash focuses search from anywhere and a click chooses', async ({ page }) => {
     await page.goto('/nope');
     await page.locator('header.top').click({ position: { x: 300, y: 5 } });
@@ -68,6 +145,71 @@ test.describe('desktop header search', () => {
     await expect(page.getByRole('option').first()).toContainText('Björk');
     await page.getByRole('option').first().click();
     await expect(page).toHaveURL(/\/album\/.+-bjork$/);
+  });
+});
+
+test.describe('covers', () => {
+  test.skip(({ isMobile }) => isMobile, 'desktop only');
+
+  async function searchFor(page: import('@playwright/test').Page, q: string) {
+    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
+    await input.click();
+    await input.pressSequentially(q);
+    await expect(page.getByRole('option').first()).toBeVisible();
+  }
+
+  test('while the remote image loads the box is empty, with no letter', async ({ page }) => {
+    let release: () => void = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    await page.route('https://i.scdn.co/**', async (route) => {
+      await held;
+      await route.continue().catch(() => {});
+    });
+    await page.goto('/nope');
+    await searchFor(page, 'kid a');
+    const cover = page.getByRole('option').first().locator('.cover');
+    await expect(cover).toHaveAttribute('data-state', 'remote');
+    await expect(cover.locator('.fb')).toHaveCount(0);
+    await expect(cover).toHaveCSS('background-color', 'rgb(38, 32, 25)');
+    release();
+    await expect(cover.locator('img.ok')).toBeVisible();
+  });
+
+  test('falls back to the sprite, then to the lettered tile', async ({ page }) => {
+    await page.route('https://i.scdn.co/**', (route) => route.abort());
+    await page.goto('/nope');
+    await searchFor(page, 'kid a');
+    const cover = page.getByRole('option').first().locator('.cover');
+    await expect(cover).toHaveAttribute('data-state', 'sprite');
+    await expect(cover.locator('.spr')).toBeVisible();
+    await expect(cover.locator('.fb')).toHaveCount(0);
+
+    const next = await page.context().newPage();
+    await next.route('https://i.scdn.co/**', (route) => route.abort());
+    await next.route('**/data/thumbs.webp', (route) => route.abort());
+    await next.goto('/nope');
+    await searchFor(next, 'kid a');
+    const tile = next.getByRole('option').first().locator('.cover');
+    await expect(tile).toHaveAttribute('data-state', 'tile');
+    await expect(tile.locator('.fb')).toHaveText('K');
+    await expect(tile.locator('.spr')).toHaveCount(0);
+    await next.close();
+  });
+
+  test('an album without a cover shows its tile and requests nothing', async ({ page }) => {
+    const requests: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().startsWith('https://i.scdn.co/') || r.url().endsWith('/data/thumbs.webp')) requests.push(r.url());
+    });
+    await page.goto('/nope');
+    await searchFor(page, 'spiritual unity albert');
+    await expect(page.getByRole('option')).toHaveCount(1);
+    const cover = page.getByRole('option').first().locator('.cover');
+    await expect(cover).toHaveAttribute('data-state', 'tile');
+    await expect(cover.locator('.fb')).toHaveText('S');
+    await expect(cover.locator('img, .spr')).toHaveCount(0);
+    await page.waitForTimeout(300);
+    expect(requests).toEqual([]);
   });
 });
 
@@ -86,6 +228,7 @@ test.describe('phone search sheet', () => {
     await expect(input).toBeFocused();
     await input.pressSequentially('kid a');
     await expect(sheet.getByRole('option').first()).toContainText('Kid A');
+    await coversSettled(page, '.search-sheet');
     await shot(page, info, 'search-sheet');
     const box = await sheet.getByRole('option').first().boundingBox();
     expect(box!.height).toBeGreaterThanOrEqual(44);
@@ -97,5 +240,70 @@ test.describe('phone search sheet', () => {
     await page.getByRole('dialog').getByRole('option').first().tap();
     await expect(page).toHaveURL(/\/album\/kid-a-radiohead$/);
     await expect(page.getByRole('dialog')).toBeHidden();
+  });
+
+  test('the sheet makes the page behind inert, locks scrolling and restores only what it changed', async ({ page }) => {
+    await page.goto('/nope');
+    // Another owner has already made main inert: the sheet must leave that alone.
+    await page.evaluate(() => {
+      document.getElementById('main')!.inert = true;
+    });
+    const toggle = page.getByRole('button', { name: COPY.search.open });
+    const tbox = await toggle.boundingBox();
+    expect(tbox!.width).toBeGreaterThanOrEqual(44);
+    expect(tbox!.height).toBeGreaterThanOrEqual(44);
+    await toggle.tap();
+    const sheet = page.getByRole('dialog', { name: COPY.search.sheetLabel });
+    await expect(sheet).toBeVisible();
+    const cbox = await sheet.getByRole('button', { name: COPY.search.close }).boundingBox();
+    expect(cbox!.width).toBeGreaterThanOrEqual(44);
+    expect(cbox!.height).toBeGreaterThanOrEqual(44);
+    const open = await page.evaluate(() => ({
+      skip: document.querySelector<HTMLElement>('a.skip')!.inert,
+      header: document.querySelector<HTMLElement>('header.top')!.inert,
+      main: document.getElementById('main')!.inert,
+      overflow: document.body.style.overflow,
+      overscroll: getComputedStyle(document.querySelector('.search-sheet')!).overscrollBehaviorY,
+    }));
+    expect(open).toEqual({ skip: true, header: true, main: true, overflow: 'hidden', overscroll: 'contain' });
+
+    const input = sheet.getByRole('combobox');
+    await input.pressSequentially('kid a');
+    await expect(sheet.getByRole('option').first()).toBeVisible();
+    // The on-screen keyboard's Done blurs the field; the results stay.
+    await input.evaluate((el) => (el as HTMLInputElement).blur());
+    await page.waitForTimeout(100);
+    await expect(sheet.getByRole('option').first()).toBeVisible();
+
+    await sheet.getByRole('button', { name: COPY.search.close }).tap();
+    await expect(sheet).toBeHidden();
+    await expect(toggle).toBeFocused();
+    const closed = await page.evaluate(() => ({
+      skip: document.querySelector<HTMLElement>('a.skip')!.inert,
+      header: document.querySelector<HTMLElement>('header.top')!.inert,
+      main: document.getElementById('main')!.inert,
+      overflow: document.body.style.overflow,
+    }));
+    expect(closed).toEqual({ skip: false, header: false, main: true, overflow: '' });
+  });
+
+  test('the no-match message wraps a long unbroken query without horizontal overflow', async ({ page }, info) => {
+    await page.goto('/nope');
+    await page.getByRole('button', { name: COPY.search.open }).tap();
+    const sheet = page.getByRole('dialog', { name: COPY.search.sheetLabel });
+    await sheet.getByRole('combobox').pressSequentially('zzkq');
+    await expect(sheet.locator('.combo-empty b')).toHaveText('zzkq');
+    await shot(page, info, 'search-none');
+    await sheet.getByRole('combobox').fill('q'.repeat(60));
+    await expect(sheet.locator('.combo-empty b')).toHaveText('q'.repeat(60));
+    const overflow = await page.evaluate(() => {
+      const over = (el: Element) => el.scrollWidth - el.clientWidth;
+      return {
+        page: over(document.documentElement),
+        sheet: over(document.querySelector('.search-sheet')!),
+        message: over(document.querySelector('.search-sheet .combo-empty')!),
+      };
+    });
+    expect(overflow).toEqual({ page: 0, sheet: 0, message: 0 });
   });
 });

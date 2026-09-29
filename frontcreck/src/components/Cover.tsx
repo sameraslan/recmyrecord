@@ -3,6 +3,7 @@
 import { useState, type CSSProperties } from 'react';
 import { coverUrl, initialLetter } from '@/lib/data/catalog';
 import { thumbStyle } from '@/lib/data/sprites';
+import { useThumbSheet } from '@/lib/thumb-sheet';
 import type { AlbumSummary } from '@/lib/types';
 
 /** Tile background by `cluster % 3`; the one definition, reused by every other tile drawing (Task 11). */
@@ -18,15 +19,17 @@ export interface CoverProps {
   fluid?: boolean;
 }
 
-/** Remote cover; on error the 48 px sprite from thumbs.webp; with no cover id (or under both) a lettered tile.
- * The lettered tile is also the loading placeholder: the sprite element, the only reference to the 2.3 MB
- * thumbs.webp, is rendered only after the remote image failed, so a normal page load never fetches the sheet. */
+/** Remote cover; on error the 48 px sprite from thumbs.webp; with no cover id, or when the sprite sheet
+ * fails too, a lettered tile. The tile is a failure state only: while the remote image (or the sheet)
+ * loads, the box is empty. The sprite element, the only reference to the 2.3 MB thumbs.webp, is rendered
+ * only after the remote image failed and the sheet has loaded, so a normal page load never fetches it. */
 export function Cover({ album, size, className = '', eager = false, fluid = false }: CoverProps) {
   const url = coverUrl(album.coverId, size);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null);
   const failed = url !== null && failedFor === url;
-  const state = url && !failed ? 'remote' : album.coverId ? 'sprite' : 'tile';
+  const sheet = useThumbSheet(failed);
+  const state = url && !failed ? 'remote' : url && sheet !== 'error' ? 'sprite' : 'tile';
   const style = {
     ...(fluid ? null : { width: size }),
     '--fb': TILE[album.cluster % 3],
@@ -34,10 +37,12 @@ export function Cover({ album, size, className = '', eager = false, fluid = fals
   } as CSSProperties;
   return (
     <div className={`cover ${className}`.trim()} style={style} data-state={state}>
-      <span className="fb" aria-hidden="true">
-        {initialLetter(album.title)}
-      </span>
-      {state === 'sprite' ? <span className="spr" style={thumbStyle(album.id)} aria-hidden="true" /> : null}
+      {state === 'tile' ? (
+        <span className="fb" aria-hidden="true">
+          {initialLetter(album.title)}
+        </span>
+      ) : null}
+      {state === 'sprite' && sheet === 'ready' ? <span className="spr" style={thumbStyle(album.id)} aria-hidden="true" /> : null}
       {state === 'remote' && url ? (
         // eslint-disable-next-line @next/next/no-img-element -- the Spotify CDN already serves sized covers; proxying 4,000+ covers through next/image adds cost and no benefit
         <img

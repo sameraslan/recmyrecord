@@ -24,10 +24,42 @@ describe('fold', () => {
     expect(queryWords('   ')).toEqual([]);
   });
 
+  it('drops straight and curly apostrophes, keeping the map to the original', () => {
+    expect(fold("Don't").text).toBe('dont');
+    expect(fold('Don\u2019t').text).toBe('dont');
+    expect(fold('\u2018Allelujah').text).toBe('allelujah');
+    expect(queryWords("don't stop")).toEqual(['dont', 'stop']);
+    expect(highlightRanges(fold("Don't"), ['dont'])).toEqual([{ start: 0, end: 5 }]);
+    expect(highlightRanges(fold("Don't"), ['don'])).toEqual([{ start: 0, end: 3 }]);
+  });
+
   it('maps highlight ranges back to original characters', () => {
     expect(highlightRanges(fold('Björk'), ['bjork'])).toEqual([{ start: 0, end: 5 }]);
     expect(highlightRanges(fold('Æther'), ['a'])).toEqual([{ start: 0, end: 1 }]);
     expect(highlightRanges(fold('In Rainbows'), ['rain', 'in'])).toEqual([{ start: 0, end: 2 }, { start: 3, end: 7 }]);
+  });
+
+  it('highlights word prefixes only, never letters inside a word', () => {
+    expect(highlightRanges(fold('Radiohead'), ['a'])).toEqual([]);
+    expect(highlightRanges(fold('Slave to the Grind'), ['kid', 'a'])).toEqual([]);
+    expect(highlightRanges(fold('Aesop Rock'), ['kid', 'a'])).toEqual([{ start: 0, end: 1 }]);
+    expect(highlightRanges(fold('The Impossible Kid'), ['kid', 'a'])).toEqual([{ start: 15, end: 18 }]);
+  });
+
+  it('highlights a contiguous whole-query run at a word start as one range', () => {
+    expect(highlightRanges(fold('Kid A'), ['kid', 'a'])).toEqual([{ start: 0, end: 5 }]);
+    expect(highlightRanges(fold('Sigur Rós'), ['sigur', 'ros'])).toEqual([{ start: 0, end: 9 }]);
+    expect(highlightRanges(fold('Kid Amnesiae'), ['kid', 'a'])).toEqual([{ start: 0, end: 5 }]);
+  });
+
+  it('gives repeated query words distinct words when it can', () => {
+    expect(highlightRanges(fold('good kid, m.A.A.d city'), ['kid', 'a'])).toEqual([{ start: 5, end: 8 }, { start: 12, end: 13 }]);
+    expect(highlightRanges(fold('good kid, m.A.A.d city'), ['m', 'a', 'a', 'd'])).toEqual([
+      { start: 10, end: 11 },
+      { start: 12, end: 13 },
+      { start: 14, end: 15 },
+      { start: 16, end: 17 },
+    ]);
   });
 });
 
@@ -66,9 +98,90 @@ describe('searchAlbums (real catalog)', () => {
     expect(searchAlbums(index, 'the').length).toBe(6);
   });
 
+  it('matches every query word as a word prefix of the title or artist', () => {
+    const t = titles('kid a');
+    expect(t[0]).toBe('Kid A');
+    expect(t).toContain('The Impossible Kid');
+    expect(t).toContain('good kid, m.A.A.d city');
+    expect(t).not.toContain('Slave to the Grind');
+    expect(t).not.toContain('Man on the Moon: The End of Day');
+    expect(artists('sigur ros')[0]).toBe('Sigur Rós');
+    expect(searchAlbums(index, 'sigur ros')[0].artist).toEqual([{ start: 0, end: 9 }]);
+  });
+
+  it('ranks all-in-title matches above matches split with the artist', () => {
+    const t = titles('kid a');
+    expect(t.indexOf('good kid, m.A.A.d city')).toBeLessThan(t.indexOf('The Impossible Kid'));
+    const hit = searchAlbums(index, 'kid a').find((h) => albums[h.id].t === 'The Impossible Kid')!;
+    expect(hit.title).toEqual([{ start: 15, end: 18 }]);
+    expect(hit.artist).toEqual([{ start: 0, end: 1 }]);
+  });
+
+  it('highlights a single-letter query only at word starts', () => {
+    const hits = searchAlbums(index, 'a');
+    expect(hits.length).toBe(6);
+    for (const h of hits) {
+      for (const [text, ranges] of [
+        [albums[h.id].t, h.title],
+        [albums[h.id].a, h.artist],
+      ] as const) {
+        for (const r of ranges) {
+          expect(r.end - r.start, text).toBe(1);
+          expect(fold(text.slice(r.start, r.end)).text, text).toBe('a');
+          expect(r.start === 0 || !/[\p{L}\p{N}]/u.test(text[r.start - 1]), text).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('finds titles with apostrophes without typing them, and ignores punctuation-only queries', () => {
+    expect(titles('dont go outside')[0]).toBe("I Don't Like Shit, I Don't Go Outside");
+    expect(titles("don\u2019t mess")[0]).toBe("You Don't Mess Around With Jim");
+    expect(searchAlbums(index, "' \u2019 . , ! ?")).toEqual([]);
+    expect(searchAlbums(index, '&')).toEqual([]);
+    expect(searchAlbums(index, '...')).toEqual([]);
+  });
+
+  it('keeps typo matches free of highlight ranges', () => {
+    const hit = searchAlbums(index, 'radiohed').find((h) => albums[h.id].a === 'Radiohead')!;
+    expect(hit.title).toEqual([]);
+    expect(hit.artist).toEqual([]);
+  });
+
+  it('answers a very long query with no match quickly and emptily', () => {
+    const long = 'qzxv'.repeat(50);
+    searchAlbums(index, long);
+    const t0 = performance.now();
+    expect(searchAlbums(index, long)).toEqual([]);
+    expect(performance.now() - t0).toBeLessThan(20);
+    const words = Array.from({ length: 40 }, (_, i) => `zq${i}x`).join(' ');
+    const t1 = performance.now();
+    expect(searchAlbums(index, words)).toEqual([]);
+    expect(performance.now() - t1).toBeLessThan(20);
+  });
+
   it('returns highlight ranges on the original strings', () => {
     const hit = searchAlbums(index, 'bjork')[0];
     expect(hit.artist).toEqual([{ start: 0, end: 5 }]);
     expect(hit.title).toEqual([]);
+  });
+});
+
+describe('searchAlbums ranking (fixture)', () => {
+  const rec = (t: string, a: string): AlbumRecord => ({ slug: `${t}-${a}`, t, a, s: '', c: '', k: 0, d: [], w: ['#111111', '#222222', '#d9a066'] });
+  const fixture = [
+    rec('Songs', 'Blue Train'), // 0: all in the artist
+    rec('Blue Nights', 'Train'), // 1: split between title and artist
+    rec('Train of Blue', 'Z'), // 2: all words in the title
+    rec('Blue Trains Forever', 'Z'), // 3: title starts with the query
+    rec('Blue Train', 'Z'), // 4: title equals the query
+    rec('Blue Train', 'Y'), // 5: title equals the query, later in the catalog
+    rec('Bluegrass', 'Strain'), // 6: no match ("train" is not a word prefix of "Strain")
+  ];
+  const fx = buildSearchIndex(fixture);
+
+  it('orders exact title, title prefix, all in title, split, all in artist, then catalog order', () => {
+    expect(searchAlbums(fx, 'blue train').map((h) => h.id)).toEqual([4, 5, 3, 2, 1, 0]);
+    expect(searchAlbums(fx, 'Blue Train', 3).map((h) => h.id)).toEqual([4, 5, 3]);
   });
 });

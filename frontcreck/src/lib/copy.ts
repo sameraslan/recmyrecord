@@ -19,7 +19,7 @@ export const COPY = {
     open: 'Search albums',
     close: 'Close search',
     sheetLabel: 'Search albums',
-    noMatches: (q: string) => `No album matches ${q}. Try the artist's name, or fewer words.`,
+    noMatches: (q: string) => `No album matches ${q}. Try the artist’s name, or fewer words.`,
     found: 'Matching albums listed',
     none: 'No albums found',
   },
@@ -74,18 +74,18 @@ export const COPY = {
   /** Typographic cover tile when the title has no letter or digit. */
   cover: { noInitial: '·' },
   error: {
-    body: "The albums didn't load. Check your connection, then try again.",
+    body: 'The albums didn’t load. Check your connection, then try again.',
     retry: 'Try again',
   },
   notFound: {
     title: 'Not found',
-    body: "That page isn't here. Search for an album, or explore the map.",
+    body: 'That page isn’t here. Search for an album, or explore the map.',
     mapLink: 'Explore the map',
   },
   about: {
     title: 'How it works',
     body: [
-      "Every album here is described two ways. Its sound comes from Spotify's audio values, such as energy, tempo and acousticness. Its mood comes from handpicked RateYourMusic descriptors, such as melancholic, lush or atmospheric.",
+      'Every album here is described two ways. Its sound comes from Spotify’s audio values, such as energy, tempo and acousticness. Its mood comes from handpicked RateYourMusic descriptors, such as melancholic, lush or atmospheric.',
       'Pick an album and you get the ones closest to it once both are combined. The slider leans the comparison toward sound or toward mood.',
       `The map places ${CATALOG_SIZE_LABEL} albums so that ones that sound or feel alike sit close together.`,
     ],

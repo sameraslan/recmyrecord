@@ -31,7 +31,7 @@ describe('copy rules (spec section 8)', () => {
     expect(COPY.hero).toBe('Start with an album you like.');
     expect(COPY.heroSub).toBe('Get the albums closest to it, by sound and by mood.');
     expect(COPY.search.placeholder).toBe('Search albums or artists');
-    expect(COPY.search.noMatches('zzkq')).toBe("No album matches zzkq. Try the artist's name, or fewer words.");
+    expect(COPY.search.noMatches('zzkq')).toBe('No album matches zzkq. Try the artist\u2019s name, or fewer words.');
     expect(COPY.album.listHeading).toBe('Closest albums');
     expect(COPY.album.shares(['lush', 'melancholic'])).toBe('Shares lush, melancholic');
     expect(COPY.slider.notes).toEqual({ sonic: 'Closest in sound.', balanced: 'Sound and mood together.', mood: 'Closest in mood.' });
@@ -45,6 +45,10 @@ describe('copy rules (spec section 8)', () => {
       expect(s, s).not.toMatch(/[\u2013\u2014]/);
       expect(s, s).not.toMatch(/\p{Extended_Pictographic}/u);
     }
+  });
+
+  it('uses the typographic apostrophe, never the straight one', () => {
+    for (const s of ALL) expect(s, s).not.toContain("'");
   });
 
   it('never names the owner or counts recommendations or the catalog', () => {
