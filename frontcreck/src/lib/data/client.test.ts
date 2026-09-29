@@ -65,6 +65,17 @@ describe('client loaders', () => {
     await expect(loadPositions()).rejects.toBeInstanceOf(DataLoadError);
   });
 
+  it('rejects with DataLoadError when albums.json holds a null album', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) =>
+      new Response(JSON.stringify(url.endsWith('albums.json') ? [null] : VOCAB), { status: 200 }),
+    ));
+    const err = await loadCatalog().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(DataLoadError);
+    expect((err as DataLoadError).url).toBe('/data/albums.json');
+    expect((err as DataLoadError).cause).toBeInstanceOf(TypeError);
+    expect(peekCatalog()).toBeNull();
+  });
+
   it('fetches positions once and memoises them', async () => {
     const f = okFetch();
     vi.stubGlobal('fetch', f);

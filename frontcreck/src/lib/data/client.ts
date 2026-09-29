@@ -40,15 +40,30 @@ const isPositions = (v: unknown): boolean =>
 /** Shared state of one data file, the same for every consumer. */
 export type DataStatus = 'idle' | 'loading' | 'ready' | 'error';
 
+/**
+ * Status plus the number of loads started so far (the current or last attempt). Replaced, never
+ * mutated, so it is a stable useSyncExternalStore snapshot.
+ */
+export interface DataState {
+  status: DataStatus;
+  attempt: number;
+}
+
+export const IDLE_DATA_STATE: DataState = { status: 'idle', attempt: 0 };
+
 interface Resource<T> {
   promise: Promise<T> | null;
   value: T | null;
-  status: DataStatus;
+  state: DataState;
 }
 
 const listeners = new Set<() => void>();
 
-/** Called whenever a load starts, succeeds or fails (and on reset). For useSyncExternalStore. */
+/**
+ * Called whenever a load starts, succeeds or fails (and on reset). For useSyncExternalStore.
+ * Listeners run synchronously inside loadCatalog / loadPositions, which is why those must not be
+ * called during render: React would see a store update while rendering.
+ */
 export function subscribeData(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
@@ -61,7 +76,7 @@ function emit(): void {
 }
 
 function idle<T>(): Resource<T> {
-  return { promise: null, value: null, status: 'idle' };
+  return { promise: null, value: null, state: IDLE_DATA_STATE };
 }
 
 let catalog = idle<Catalog>();
@@ -73,19 +88,19 @@ function load<T>(get: () => Resource<T>, fetcher: () => Promise<T>): Promise<T> 
   if (res.promise) return res.promise;
   const p = fetcher();
   res.promise = p;
-  res.status = 'loading';
+  res.state = { status: 'loading', attempt: res.state.attempt + 1 };
   // Registered before any caller can await p, so peek*() is set when callers resume.
   p.then(
     (v) => {
       if (res !== get() || res.promise !== p) return;
       res.value = v;
-      res.status = 'ready';
+      res.state = { status: 'ready', attempt: res.state.attempt };
       emit();
     },
     () => {
       if (res !== get() || res.promise !== p) return;
       res.promise = null;
-      res.status = 'error';
+      res.state = { status: 'error', attempt: res.state.attempt };
       emit();
     },
   );
@@ -93,7 +108,18 @@ function load<T>(get: () => Resource<T>, fetcher: () => Promise<T>): Promise<T> 
   return p;
 }
 
-/** albums.json + vocab.json, fetched once per page load. */
+function buildOrFail(albums: AlbumRecord[], vocab: Vocab): Catalog {
+  try {
+    return buildCatalog(albums, vocab);
+  } catch (cause) {
+    throw new DataLoadError('/data/albums.json', null, { cause });
+  }
+}
+
+/**
+ * albums.json + vocab.json, fetched once per page load. Call from effects or event handlers, never
+ * during render: starting a load notifies subscribeData listeners synchronously.
+ */
 export function loadCatalog(): Promise<Catalog> {
   return load(
     () => catalog,
@@ -101,10 +127,14 @@ export function loadCatalog(): Promise<Catalog> {
       Promise.all([
         fetchJson<AlbumRecord[]>('/data/albums.json', isArray),
         fetchJson<Vocab>('/data/vocab.json', isArray),
-      ]).then(([albums, vocab]) => buildCatalog(albums, vocab)),
+      ]).then(([albums, vocab]) => buildOrFail(albums, vocab)),
   );
 }
 
+/**
+ * positions.json, fetched once per page load. Call from effects or event handlers, never during
+ * render: starting a load notifies subscribeData listeners synchronously.
+ */
 export function loadPositions(): Promise<Positions> {
   return load(
     () => positions,
@@ -120,12 +150,20 @@ export function peekPositions(): Positions | null {
   return positions.value;
 }
 
+export function catalogState(): DataState {
+  return catalog.state;
+}
+
+export function positionsState(): DataState {
+  return positions.state;
+}
+
 export function catalogStatus(): DataStatus {
-  return catalog.status;
+  return catalog.state.status;
 }
 
 export function positionsStatus(): DataStatus {
-  return positions.status;
+  return positions.state.status;
 }
 
 /** Tests only. */

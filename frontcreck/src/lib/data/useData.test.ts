@@ -60,6 +60,77 @@ describe('data hooks', () => {
     expect(a.result.current.positions).toBe(b.result.current.positions);
   });
 
+  it('a consumer mounted after a failure makes its own attempt without flashing the error', async () => {
+    const { state, fn } = switchableFetch();
+    vi.stubGlobal('fetch', fn);
+    const first = renderHook(() => usePositions());
+    await waitFor(() => expect(first.result.current.status).toBe('error'));
+    first.unmount();
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    state.ok = true;
+    const seen: string[] = [];
+    const next = renderHook(() => {
+      const r = usePositions();
+      seen.push(r.status);
+      return r;
+    });
+    await waitFor(() => expect(next.result.current.status).toBe('ready'));
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(seen[0]).toBe('loading');
+    expect(seen).not.toContain('error');
+  });
+
+  it('a newly mounted consumer shows the error once its own attempt fails', async () => {
+    const { fn } = switchableFetch();
+    vi.stubGlobal('fetch', fn);
+    const first = renderHook(() => usePositions());
+    await waitFor(() => expect(first.result.current.status).toBe('error'));
+    const next = renderHook(() => usePositions());
+    expect(next.result.current.status).toBe('loading');
+    await waitFor(() => expect(next.result.current.status).toBe('error'));
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(first.result.current.status).toBe('error');
+  });
+
+  it('a consumer enabled after another consumer failed makes its own attempt', async () => {
+    const { state, fn } = switchableFetch();
+    vi.stubGlobal('fetch', fn);
+    const albumRequests = () => fn.mock.calls.filter(([url]) => url.endsWith('albums.json')).length;
+    const a = renderHook(() => useCatalog());
+    const seen: string[] = [];
+    const b = renderHook(
+      ({ on }) => {
+        const r = useCatalog(on);
+        seen.push(r.status);
+        return r;
+      },
+      { initialProps: { on: false } },
+    );
+    await waitFor(() => expect(a.result.current.status).toBe('error'));
+    expect(b.result.current.status).toBe('idle');
+    expect(albumRequests()).toBe(1);
+
+    state.ok = true;
+    b.rerender({ on: true });
+    await waitFor(() => expect(b.result.current.status).toBe('ready'));
+    expect(albumRequests()).toBe(2);
+    expect(seen).not.toContain('error');
+    expect(a.result.current.status).toBe('ready');
+  });
+
+  it('never retries a failed load on its own', async () => {
+    const { fn } = switchableFetch();
+    vi.stubGlobal('fetch', fn);
+    const h = renderHook(() => usePositions());
+    await waitFor(() => expect(h.result.current.status).toBe('error'));
+    expect(fn).toHaveBeenCalledTimes(1);
+    h.rerender();
+    await act(() => new Promise((r) => setTimeout(r, 20)));
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(h.result.current.status).toBe('error');
+  });
+
   it('does not fetch while disabled and starts when enabled', async () => {
     const { state, fn } = switchableFetch();
     state.ok = true;
