@@ -1,13 +1,16 @@
-"""CLI: python -m rmr_pipeline.build --map-root PATH [--table PATH] [--out PATH]"""
+"""CLI: python -m rmr_pipeline.build --map-root PATH [--table PATH] [--out PATH] [--overrides PATH] [--skip-images]"""
 import argparse
 import sys
 import time
 from pathlib import Path
 
-from .constants import DEFAULT_OUT, DEFAULT_TABLE, FALLBACK_AMBIENT, STOPS
+from .colors import ambient_from_image
+from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, STOPS
+from .images import load_album_sprites, write_sheets
 from .io import write_json
 from .layout import build_layouts, flat_positions
 from .mapsource import MapSource, load_cover_ids, load_metadata
+from .overrides import apply_overrides, load_overrides
 from .recs import build_recs
 from .slugs import make_slugs
 from .table import dedupe_table, load_table
@@ -22,6 +25,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                    help="Root of the personal-site music_map worktree (has public/data and pipeline/outputs).")
     p.add_argument("--table", type=Path, default=DEFAULT_TABLE, help="Feature table pickle (read-only).")
     p.add_argument("--out", type=Path, default=DEFAULT_OUT, help="Output folder (frontcreck/public/data).")
+    p.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES, help="Manual corrections keyed by slug.")
+    p.add_argument("--skip-images", action="store_true",
+                   help="Fast run for development: keep fallback ambient colours and do not write sprite sheets.")
     return p.parse_args(argv)
 
 
@@ -29,7 +35,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     t0 = time.time()
     src = MapSource(args.map_root)
-    src.check(need_atlases=False)
+    src.check(need_atlases=not args.skip_images)
 
     df = load_table(args.table)
     sub, rows = dedupe_table(df)
@@ -41,31 +47,39 @@ def main(argv: list[str] | None = None) -> int:
         sub = sub.iloc[keep].reset_index(drop=True)
         rows = [rows[i] for i in keep]
     uris = [str(u) for u in sub["URI"]]
-    covers = load_cover_ids(src)
+    clusters = [int(meta[u]["clusterId"]) for u in uris]
+    cover_by_uri = load_cover_ids(src)
     print(f"catalog: {len(sub)} albums ({len(df) - len(sub)} table rows dropped)")
 
     slugs = make_slugs(sub["Title"].astype(str), sub["Artist"].astype(str))
+    covers, spotify_ids, override_images = apply_overrides(
+        slugs, [cover_by_uri.get(u, "") for u in uris], [u.split(":")[-1] for u in uris],
+        load_overrides(args.overrides), args.overrides.parent)
     vocab, tops = build_vocab(sub)
     recs = build_recs(sub)
-    print(f"recs done ({time.time() - t0:.0f}s)")
     layouts = build_layouts(sub)
-    print(f"layouts done ({time.time() - t0:.0f}s)")
+    print(f"recs and layouts done ({time.time() - t0:.0f}s)")
 
-    albums = []
-    for r in range(len(sub)):
-        k = int(meta[uris[r]]["clusterId"])
-        albums.append({
-            "slug": slugs[r],
-            "t": str(sub.loc[r, "Title"]),
-            "a": str(sub.loc[r, "Artist"]),
-            "s": uris[r].split(":")[-1],
-            "c": covers.get(uris[r], ""),
-            "k": k,
-            "d": tops[r],
-            "w": list(FALLBACK_AMBIENT[k % 3]),
-        })
-
+    ambient = [FALLBACK_AMBIENT[k % 3] for k in clusters]
     out = args.out
+    if not args.skip_images:
+        sprites = load_album_sprites(src, uris, meta, covers, clusters, override_images)
+        ambient = [ambient_from_image(sprites[i], clusters[i]) if (covers[i] or i in override_images)
+                   else FALLBACK_AMBIENT[clusters[i] % 3] for i in range(len(uris))]
+        for name, size in write_sheets(out, sprites).items():
+            print(f"wrote {name}: {size / 1e6:.2f} MB")
+
+    albums = [{
+        "slug": slugs[r],
+        "t": str(sub.loc[r, "Title"]),
+        "a": str(sub.loc[r, "Artist"]),
+        "s": spotify_ids[r],
+        "c": covers[r],
+        "k": clusters[r],
+        "d": tops[r],
+        "w": list(ambient[r]),
+    } for r in range(len(sub))]
+
     sizes = {
         "albums.json": write_json(out / "albums.json", albums),
         "vocab.json": write_json(out / "vocab.json", vocab),
@@ -74,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     for name, size in sizes.items():
         print(f"wrote {name}: {size / 1e6:.2f} MB")
-    print(validate_dir(out))
+    print(validate_dir(out, images=not args.skip_images))
     print(f"done in {time.time() - t0:.0f}s")
     return 0
 

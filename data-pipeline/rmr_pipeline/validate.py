@@ -4,10 +4,12 @@ import json
 import math
 import re
 import sys
+from math import ceil
 from pathlib import Path
 
 from .colors import contrast_ratio, hex_to_rgb
-from .constants import DEFAULT_OUT, LYRIC_DROP, NON_MOOD, RECS_PER_STOP, ROOM_RGB, STOPS, TOP_DESCRIPTORS
+from .constants import (ATLAS_COLS, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, DEFAULT_OUT, LYRIC_DROP, NON_MOOD, RECS_PER_STOP,
+                        ROOM_RGB, STOPS, THUMB_COLS, THUMB_ROWS, THUMB_SPRITE_PX, TOP_DESCRIPTORS)
 
 ALBUM_KEYS = ["slug", "t", "a", "s", "c", "k", "d", "w"]
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -29,7 +31,32 @@ def _is_int(v) -> bool:
     return type(v) is int
 
 
-def validate_dir(out: Path = DEFAULT_OUT) -> dict:
+def _validate_images(out: Path, n: int, err) -> None:
+    from PIL import Image
+
+    sheets = ceil(n / ATLAS_PER_SHEET)
+    size = ATLAS_COLS * ATLAS_SPRITE_PX
+    for i in range(sheets):
+        p = out / f"atlas-{i}.webp"
+        if not p.exists():
+            err(f"missing {p.name}")
+            continue
+        with Image.open(p) as im:
+            if im.format != "WEBP" or im.size != (size, size):
+                err(f"{p.name} must be a {size}x{size} WebP")
+    extra = sorted(q.name for q in out.glob("atlas-*.webp") if int(q.stem.split("-")[1]) >= sheets)
+    if extra:
+        err(f"unexpected atlas files {extra}")
+    p = out / "thumbs.webp"
+    if not p.exists():
+        err("missing thumbs.webp")
+    else:
+        with Image.open(p) as im:
+            if im.format != "WEBP" or im.size != (THUMB_COLS * THUMB_SPRITE_PX, THUMB_ROWS * THUMB_SPRITE_PX):
+                err("thumbs.webp must be a 3072x3072 WebP")
+
+
+def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
     errs: list[str] = []
 
     def err(msg: str) -> None:
@@ -123,6 +150,9 @@ def validate_dir(out: Path = DEFAULT_OUT) -> dict:
                         or i in row or not all(_is_int(j) and 0 <= j < n for j in row)):
                     err(f"recs.{stop}[{i}] must be {RECS_PER_STOP} unique album ids other than {i}")
 
+    if images:
+        _validate_images(out, n, err)
+
     if errs:
         raise ContractError("\n".join(errs))
     return {"albums": n, "vocab": len(vocab), "no_cover": no_cover, "empty_descriptors": empty_d}
@@ -132,9 +162,10 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m rmr_pipeline.validate",
                                      description="Check frontcreck/public/data against the data contract.")
     parser.add_argument("--data", type=Path, default=DEFAULT_OUT)
+    parser.add_argument("--no-images", action="store_true", help="Skip the sprite sheet checks.")
     args = parser.parse_args(argv)
     try:
-        summary = validate_dir(args.data)
+        summary = validate_dir(args.data, images=not args.no_images)
     except ContractError as e:
         print("FAIL\n" + str(e), file=sys.stderr)
         return 1
