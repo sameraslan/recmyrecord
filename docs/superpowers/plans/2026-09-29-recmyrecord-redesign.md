@@ -6,7 +6,7 @@
 
 **Architecture:** A Python pipeline (`data-pipeline/`) reads the recommender's feature table and the personal site's map outputs and writes every file the site serves into `frontcreck/public/data/` (JSON plus WebP sprite sheets), which are committed. The Next.js 16 App Router app prerenders every route (including one static page per album via `generateStaticParams`), mounts the three.js map once in the root layout (loaded on the client after first paint, rendering on demand), and moves between Home, Explore, Album and About by changing only the panels around that map; all shared client state lives in one zustand store. There is no runtime API, database or secret.
 
-**Tech Stack:** Node 20.20.2, Next.js 16.2.6 (App Router, Turbopack), React 19.2.6, TypeScript 6.0.3 (strict), Tailwind CSS 4.3.0 (`@tailwindcss/postcss` 4.3.0), three 0.169.0, @react-three/fiber 9.6.1, zustand 5.0.13, fuse.js 7.3.0, Vitest 4.1.6 (+ jsdom 29.1.1, @vitejs/plugin-react 6.0.2, @testing-library/react 16.3.2, @testing-library/jest-dom 6.9.1), @playwright/test 1.60.0 against installed Google Chrome (`channel: 'chrome'`), @axe-core/playwright 4.11.0, ESLint 9.39.4 + eslint-config-next 16.2.6. Python 3.11 with pandas 3.0.6, numpy 2.4.6, scikit-learn 1.9.1, umap-learn 0.5.12 (pynndescent 0.6.0, numba 0.67.0, llvmlite 0.49.0), scipy 1.17.1, pillow 12.3.0, pyarrow 25.0.1, pytest 9.1.1.
+**Tech Stack:** Node 20.20.2, Next.js 16.3.3 (App Router, Turbopack), React 19.2.6, TypeScript 6.0.3 (strict), Tailwind CSS 4.3.0 (`@tailwindcss/postcss` 4.3.0), three 0.169.0, @react-three/fiber 9.6.1, zustand 5.0.13, fuse.js 7.3.0, Vitest 4.1.6 (+ jsdom 29.1.1, @vitejs/plugin-react 6.0.2, @testing-library/react 16.3.2, @testing-library/jest-dom 6.9.1), @playwright/test 1.60.0 against installed Google Chrome (`channel: 'chrome'`), @axe-core/playwright 4.11.0, ESLint 9.39.4 + eslint-config-next 16.3.3. Python 3.11 with pandas 3.0.6, numpy 2.4.6, scikit-learn 1.9.1, umap-learn 0.5.12 (pynndescent 0.6.0, numba 0.67.0, llvmlite 0.49.0), scipy 1.17.1, pillow 12.3.0, pyarrow 25.0.1, pytest 9.1.1.
 
 **Spec:** docs/superpowers/specs/2026-09-29-recmyrecord-redesign-design.md
 
@@ -16,6 +16,10 @@
 - Node: every shell that runs `node`, `npm`, `npx`, `next`, `vitest` or `playwright` starts with `export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"`. Verify with `node -v` printing `v20.20.2` and `node -p process.arch` printing `arm64`. The machine is an Apple M1 Pro: the shell's default Node 18.18.2 is an x64 binary running under Rosetta 2, which Next 16 rejects and which makes Playwright launch a translated (x86_64) Chrome that inflates every timing about 50x. The Node 20.20.2 above is native arm64. Playwright's global setup and the perf script both call `assertNativeChrome` (Task 3) and abort if Node or Chrome is not native. `.nvmrc` files contain `20.20.2`.
 - Python: always the pipeline's own virtualenv, `data-pipeline/.venv/bin/python` (created in Task 1 from `data-pipeline/requirements.txt` with `python3.11 -m venv`). Never use the scratchpad venv and never use `recVenv/`.
 - Dependency versions are exact (no `^` or `~`) and are the ones in **Tech Stack**. Do not add any dependency not listed in a task.
+- `next` and `eslint-config-next` are pinned at 16.3.3 (versions below that have critical advisories). `frontcreck/package.json` has `"type": "module"`: every config, script and test file uses `import.meta.dirname` (never `__dirname`) and `import` (never `require`); any new plain `.js` file must be ESM, or be named `.cjs`.
+- The lockfile was generated with npm 11, because stock npm 10 crashes resolving the pinned vitest. A task that adds or changes a dependency regenerates the lockfile with `npx npm@11 install`, then confirms that stock `npm ci` still works.
+- Every internal link target must exist at every commit: Next prefetches `<Link>` targets, and a prefetch that 404s logs a console error that the e2e suites catch. A task that adds a link to a route a later task creates must also add a placeholder page for that route. Placeholder pages already exist at `frontcreck/src/app/map/page.tsx` and `frontcreck/src/app/about/page.tsx` (a hidden h1 and metadata); the tasks that build those routes replace them.
+- `frontcreck/public/data/thumbs.webp` is 2.3 MB. It must never be requested during the first load of `/`: the thumbnail sprite is only a fallback, loaded lazily on first need (a cover that failed to load). Task 12's perf script fails if it appears among the first-load requests of `/`.
 - Removed for good: Chakra UI, Emotion, framer-motion, react-icons, react-use, Prisma (and the `postinstall` script), the `/insights` page, `/api/albums`, `/api/artists`, `public/map.jpg`, every other unused asset.
 - Fully static: no runtime fetch to Heroku, Spotify's API or any database; no environment variables; no secrets. External requests at runtime are only cover images from `https://i.scdn.co/image/` and outbound links to `https://open.spotify.com/`.
 - Copy rules (spec section 8): every visible string comes from `frontcreck/src/lib/copy.ts`. No em dashes or en dashes, no hype, no emoji, never the owner's name (no "Samer", no "Aslan", no "Made by"), never the exact catalog size (the only catalog number allowed is "4,000+"), never a count of recommendations (never "five", "5 closest", "ten", "top 10" in copy or ARIA labels), plain and precise.
@@ -28,6 +32,7 @@
 - Performance engineering rules (lessons from profiling the mockup; every task that touches the code named here must follow them):
   - Never draw an image to a canvas or upload it as a texture before it is decoded; decode off the main thread (`img.decode()`, `createImageBitmap`, or three's `ImageBitmapLoader`).
   - Keep large data out of JS literals, HTML attributes and the RSC payload of `/`; fetch JSON and images as files and parse JSON with `fetch().json()`.
+  - RSC payload rule: `server-only` blocks client imports, not props. No server component may pass the full catalog (the `getServerCatalog()` result, the albums array, recs or positions) as a prop to a client component. Only the small results of `getShelf()` and `getAlbumPageData()` may cross the server-to-client boundary; client components that need the catalog get it from `useCatalog()` / `usePositions()` (shared loaders: every consumer sees one load state and any consumer's `retry` recovers all of them, so never wrap them in per-component failure flags). Task 12's perf script asserts that the HTML of `/` and of an album page stays under 150 KB and contains no slug of an unrelated album.
   - Build lookup structures lazily: the search index on first focus; the map attributes after first paint.
   - Exactly one `requestAnimationFrame` loop drives the map: R3F's `frameloop="demand"`. Animations (camera, inset, morph, dot alpha) are `useFrame` callbacks that update state and call `invalidate()` only while unsettled; the map draws at most once per frame and never while idle.
   - Do not animate CSS custom properties on `:root`; do not put `filter: blur()`, `backdrop-filter` or `mix-blend-mode` over the full-screen canvas (the grain layer is a plain low-opacity overlay); dim the Home map in the shader (a uniform) plus an opacity-only veil; cross-fade ambient colour with two gradient layers animated by opacity only.
@@ -37,9 +42,11 @@
 - Accessibility bar: WCAG AA contrast, visible focus rings (`2px solid var(--color-lamp)`, offset 3 px), labelled inputs, skip link, landmarks, a `<title>` per route, full keyboard path to every action, tap targets at least 44 px on phones. Zero axe violations for tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`.
 - Robustness: cover failure falls back to the thumbnail sprite, then to a typographic tile; no WebGL shows a static message while search, lists and links keep working; data fetch failure shows an inline error with retry; no horizontal scroll from 360 to 1600 px; no console errors.
 - Layout breakpoint: the mockup's narrow layout (single column album, search icon in header, bottom-sheet card, map mode button) applies below 900 px (`@media (max-width: 899px)`, `NARROW_MEDIA_QUERY = '(max-width: 899px)'`). Every phone requirement of spec 4.4 ("under 640 px") holds there. Between 900 and 1100 px the album panel is 480 px wide and the "Shares" line is hidden (mockup `@media (max-width: 1100px) and (min-width: 900px)`).
+- `design/` is untracked on purpose and stays out of every commit and of the PR (never `git add` it). It is a read-only input at the absolute path `/Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/recmyrecord-redesign-16ce4b/design/`; every `design/...` path in this plan means that absolute location, including from another worktree.
 - Visual reference: `design/mockups/final/src.html` (CSS in lines 13 to 461, markup 464 to 585, behaviour 586 to 1755) and screenshots in `design/mockups/final/shots/` (`d1440-*` desktop 1440x900, `d1280-*` 1280x800, `m390-*` phone 390x844). Two approved changes the mockup does not show: Home combines the map background (Home A) with the cover shelf (Home B) plus "Explore the map" and "Surprise me" buttons; and copy never mentions "five" (the mockup's "Five closest", "See five closest" and "You get the five closest" are wrong; use `copy.ts`).
 - Never read, print, copy or modify: the contents of `frontcreck/.env` (Task 3 stops tracking it with `git rm --cached` only), anything in `recVenv/`, anything outside the worktree except the read-only inputs named in Tasks 1, 2 and 6. `data-retrieval/` is read-only: the pipeline reads `data-retrieval/Recommender/data/all_data_norm.pkl` and nothing there is ever modified. The personal site `/Users/saslan.19/Desktop/Tengs/codingMiscellaneous/website/` and its worktree `.claude/worktrees/music_map/` are read-only; never copy `.cache` or `pipeline/.env` from them.
-- Commits: conventional messages (`feat:`, `fix:`, `test:`, `chore:`, `docs:`, `build:`, `perf:`), one per task at minimum, each message ending with a blank line and then `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>`. Commit with `git commit -F <file>` or a heredoc so the trailer is exact. Never `git push`, never open a PR, never deploy, never run `vercel`. Never `git stash` without a unique message.
+- Commits: conventional messages (`feat:`, `fix:`, `test:`, `chore:`, `docs:`, `build:`, `perf:`), one per task at minimum. End the message with a blank line and then the Co-Authored-By trailer given by your session's system reminder (the heredocs below mark its place with `<Co-Authored-By trailer from your session's system reminder>`; replace that placeholder line with the exact trailer). Commit with `git commit -F <file>` or a heredoc so the trailer is exact. Never `git push`, never open a PR, never deploy, never run `vercel`. Never `git stash` without a unique message.
+- Publishable text (READMEs, PR notes, code comments, test titles) follows the copy rules too: no exact catalog count (say "4,000+" or "one page per album"), no count of recommendations ("the same list"), no owner name or username, and no absolute home-directory paths (use placeholders such as `<personal-site-repo>` and `--map-root <path>`).
 - Screenshots produced by tests go to `frontcreck/test-results/shots/` (gitignored); when a step says "look at" a screenshot, open it with the Read tool and compare it with the named mockup screenshot, then fix any difference in spacing, size, colour or state before committing.
 
 ---
@@ -52,7 +59,7 @@
 |---|---|---|
 | `.gitignore` | Modify (Task 1) | Add `data-pipeline/.venv/`, `**/__pycache__/`, `.pytest_cache/` |
 | `.nvmrc` | Create (Task 3) | `20.20.2` |
-| `README.md` | Modify (Task 14) | What the site is, repo layout, how to run the app and the pipeline |
+| `README.md` | Modify (Task 14) | What the site is, repo layout (without `design/`, which stays untracked), how to run the app and the pipeline |
 
 ### `data-pipeline/` (Tasks 1 and 2)
 
@@ -96,7 +103,7 @@
 
 | Path | Action | Responsibility |
 |---|---|---|
-| `frontcreck/package.json` | Rewrite (Task 3), Modify (Tasks 12, 14) | Exact dependencies, scripts (`dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:e2e`, `perf`, `shots`), `engines.node` |
+| `frontcreck/package.json` | Rewrite (Task 3), Modify (Tasks 12, 14; Task 14 bumps exact pins only if the audit finds patched versions) | Exact dependencies, scripts (`dev`, `build`, `start`, `lint`, `typecheck`, `test`, `test:e2e`, `perf`, `shots`), `engines.node` |
 | `frontcreck/package-lock.json` | Regenerate (Task 3) | Lockfile |
 | `frontcreck/.nvmrc` | Create (Task 3) | `20.20.2` |
 | `frontcreck/.gitignore` | Modify (Task 3) | Ignore `.env`, `.env*`, `/test-results/`, `/playwright-report/`, `/scripts/perf/out/` |
@@ -111,6 +118,7 @@
 | `frontcreck/src/test/server-only-stub.ts` | Create (Task 3) | Vitest alias target for `server-only` |
 | `frontcreck/src/types/global.d.ts` | Create (Task 4), Modify (Task 6) | `window.__rmr` test hook typing |
 | `frontcreck/scripts/perf/budgets.json`, `lib.mjs`, `lib.test.mjs`, `perf.mjs` | Create (Task 12) | Budget measurement (`npm run perf`) |
+| `frontcreck/scripts/serve.mjs` | Create (Task 12) | The one `startServer(port)` for `perf.mjs` and `review-shots.mjs` |
 | `frontcreck/scripts/review-shots.mjs` | Create (Task 14) | Review screenshots (`npm run shots`) |
 | `frontcreck/README.md` | Rewrite (Task 14) | App docs |
 
@@ -118,13 +126,13 @@
 
 | Path | Action | Responsibility |
 |---|---|---|
-| `layout.tsx` | Rewrite (Task 3), Modify (Tasks 6, 8, 10) | Fonts, metadata, skip link, grain, header, route tracker, persistent `MapStage`, `<main>`, toast |
+| `layout.tsx` | Rewrite (Task 3), Modify (Tasks 6, 8, 10; Task 10 takes the title template from `COPY`) | Fonts, metadata, skip link, grain, header, route tracker, persistent `MapStage`, `<main>`, toast |
 | `globals.css` | Rewrite (Task 3), Modify (Tasks 5, 6, 8, 11) | Tailwind import, `@theme` tokens, imports of `src/styles/*.css` |
 | `page.tsx` | Rewrite (Task 3), Modify (Task 10) | Home |
-| `map/page.tsx` | Create (Task 6), Modify (Task 9) | Explore |
+| `map/page.tsx` | Placeholder (committed), Replace (Task 6), Modify (Task 9) | Explore |
 | `album/[slug]/page.tsx` | Create (Task 8) | Album (SSG for every slug, per-album metadata) |
 | `album/[slug]/loading.tsx` | Create (Task 10) | Album skeleton |
-| `about/page.tsx` | Create (Task 10) | About |
+| `about/page.tsx` | Placeholder (committed), Replace (Task 10) | About |
 | `not-found.tsx` | Create (Task 10) | 404 |
 | `error.tsx` | Create (Task 10) | Route error with retry |
 
@@ -143,7 +151,7 @@
 
 | Path | Action | Responsibility |
 |---|---|---|
-| `copy.ts` (+ `copy.test.ts`) | Create (Task 3) | Every user-visible string and ARIA label; copy-rule tests |
+| `copy.ts` (+ `copy.test.ts`) | Create (Task 3), Modify (Task 8 `album.trailMore`, Task 10 `titles.template`) | Every user-visible string and ARIA label; copy-rule tests |
 | `types.ts` | Create (Task 4) | `StopId`, `STOP_IDS`, `DEFAULT_STOP`, `AlbumId`, `Ambient`, `AlbumRecord`, `Vocab`, `Positions`, `Recs`, `Catalog`, `AlbumSummary`, `RecRow`, `SeedData`, `AlbumPageData`, `Focus`, `MapCamera`, `TrailItem` |
 | `data/catalog.ts` (+ test) | Create (Task 4) | Pure data helpers |
 | `data/server.ts` (+ test) | Create (Task 4) | Build-time reads of `public/data` (`server-only`) |
@@ -157,8 +165,9 @@
 | `highlight.ts` (+ test) | Create (Task 5) | Highlight ranges to marked segments |
 | `search.ts` (+ test) | Create (Task 5) | Accent-folding search with a Fuse typo fallback |
 | `ghost-click.ts` (+ test) | Create (Task 5) | Swallow the compatibility click after a touch selection |
-| `nav-history.ts` (+ test) | Create (Task 10), Modify (Task 11) | Previous in-app path (About close, panel entry motion) |
-| `contrast.ts` (+ test) | Create (Task 13) | WCAG contrast for tokens and album accents |
+| `nav-history.ts` (+ test) | Create (Task 10), Modify (Task 11: `recordedPath`, `entryFrom`, extended test) | Previous in-app path (About close, panel entry motion) |
+| `color.ts` (+ test) | Create (Task 6) | `hexToRgb`, the one hex parser (map dots, ambient washes, contrast) |
+| `contrast.ts` (+ test) | Create (Task 13) | WCAG contrast for tokens and album accents (uses `color.ts`) |
 
 ### `frontcreck/src/components/`
 
@@ -168,9 +177,10 @@
 | `shell/Toast.tsx` | Create (Task 8) | Polite status toast driven by the store |
 | `shell/RouteTracker.tsx` | Create (Task 10) | Records pathnames for `nav-history` |
 | `Icon.tsx` | Create (Task 5) | Inline SVG icons from the mockup |
-| `Cover.tsx` | Create (Task 5) | Remote cover, sprite fallback, typographic tile |
+| `Cover.tsx` | Create (Task 5) | Remote cover, lazy sprite fallback, typographic tile; exports `TILE` |
 | `FocusOnMount.tsx` | Create (Task 9) | Move focus to a route heading on arrival |
-| `ErrorPanel.tsx` (+ test) | Create (Task 10) | Inline error with retry |
+| `ErrorPanel.tsx` (+ test) | Create (Task 6) | The one inline data error with retry (`map-msg` on the map, `rec-error` in the route error boundary of Task 10) |
+| `DocumentTitle.tsx` | Create (Task 10) | Keeps `document.title` right on the 404 page |
 | `AboutClose.tsx` | Create (Task 10) | About close button and Escape |
 | `search/SearchBox.tsx` | Create (Task 5) | ARIA combobox |
 | `search/searchIndex.ts` | Create (Task 5) | Lazy index loader (`getSearch`) |
@@ -183,10 +193,11 @@
 | `map/canvas/PickController.tsx`, `CameraTween.tsx`, `OverlayDriver.tsx`, `FrameCounter.tsx` | Create (Task 6) | Pick, camera tweens and API, hover label and selected ring placement, frame counter |
 | `map/canvas/MorphDriver.tsx`, `FocusFramer.tsx`, `MarkerDriver.tsx` | Create (Task 7) | Morph animation, focus framing, marker placement |
 | `map/shaders/album.ts` (+ test) | Port (Task 6) | Dark point-sprite shaders and size curve |
-| `map/state/invalidate.ts`, `view.ts`, `bounds.ts`, `hitTest.ts`, `projection.ts`, `zoomMath.ts` (+ tests) | Port (Task 6) | Ported pure modules |
-| `map/state/mapStore.ts`, `overlayEls.ts`, `webgl.ts`, `screen.test.ts` | Create (Task 6), Modify (Task 7) | Map-internal store, overlay registry, WebGL check, screen/world tests |
+| `map/state/invalidate.ts`, `view.ts`, `bounds.ts`, `hitTest.ts`, `zoomMath.ts` (+ tests) | Port (Task 6) | Ported pure modules |
+| `map/state/projection.ts` | Rewrite of the ported file (Task 6) | The only screen/world conversion (`viewBounds`, `worldToScreen`, `screenToWorld`, `canvasRect`), mirroring three's projection including the inset view offset |
+| `map/state/mapStore.ts`, `overlayEls.ts`, `webgl.ts`, `screen.test.ts` | Create (Task 6), Modify (Task 7) | Map-internal store, overlay registry, WebGL check, screen/world tests against `Vector3.project` |
 | `map/state/focusLayout.ts` (+ test) | Create (Task 7) | Non-overlapping marker placement |
-| `map/overlays/HoverLabel.tsx`, `ZoomControls.tsx`, `NoWebGL.tsx`, `MapError.tsx` | Create (Task 6) | Hover label, zoom buttons, no-WebGL message, data error |
+| `map/overlays/HoverLabel.tsx`, `ZoomControls.tsx`, `NoWebGL.tsx` | Create (Task 6) | Hover label, zoom buttons, no-WebGL message (the data error is `ErrorPanel`) |
 | `map/overlays/FocusMarkers.tsx`, `SimilaritySlider.tsx` | Create (Task 7) | Numbered covers and lines; three-stop slider |
 | `map/overlays/MapHint.tsx`, `MapCard.tsx` | Create (Task 9) | Explore hint and card |
 | `album/AlbumView.tsx`, `AlbumPanel.tsx`, `Trail.tsx`, `SeedHeader.tsx`, `RecList.tsx`, `RecRow.tsx`, `CopyLinkButton.tsx`, `AmbientWash.tsx` (+ test), `useFlipList.ts` | Create (Task 8), `AlbumPanel` modified in Task 11 | Album panel |
@@ -3821,7 +3832,7 @@ EOF
 
 ### Task 5: Covers and search (Cover, icons, search engine, combobox, header search, phone sheet, `/` shortcut)
 
-**Context for the implementer.** Search is one of the two entry points (the map is the other). Spec 4.5: Fuse.js over title and artist, accent-insensitive, at most 6 results, each with a cover thumbnail, title, artist and the matched text highlighted; ARIA combobox with Up, Down, Enter, Escape; `/` focuses search from anywhere; no matches shows "No album matches {query}. Try the artist's name, or fewer words."; the index is built lazily on first focus (so Fuse and the index stay out of first-load JavaScript). Phones (under 900 px) get a search icon in the header that opens a full-screen search sheet. Choosing a result navigates to `/album/<slug>` keeping the current similarity stop (`albumHref(slug, stop)`). Covers everywhere use one `Cover` component: the remote Spotify image, falling back on error to the 48 px thumbnail sprite, then to a typographic tile (first letter on a muted cluster colour). Visual reference in `design/mockups/final/src.html`: CSS lines 85 to 127 (`.combo*`, `.opt*`, `.kbd`, `.cover*`), 371 to 383 (phone header search), behaviour lines 801 to 919 (`search`, `hl`, `makeCombo`) and 1675 to 1700 (`/` key, header search); screenshots `d1440-a2-homeA-search.png`, `d1440-a3-search-none.png`, `m390-a2-homeA-search.png`, `m390-a3-search-none.png` (those show the hero field; the header field has the same popover). Until Task 8 exists, album URLs render the 404 page; tests only check the URL. The header search is hidden on Home (the hero gets its own field in Task 10), so e2e tests here use an unknown path such as `/nope`, which renders the root layout with the header.
+**Context for the implementer.** Search is one of the two entry points (the map is the other). Spec 4.5: Fuse.js over title and artist, accent-insensitive, at most 6 results, each with a cover thumbnail, title, artist and the matched text highlighted; ARIA combobox with Up, Down, Enter, Escape; `/` focuses search from anywhere; no matches shows "No album matches {query}. Try the artist's name, or fewer words."; the index is built lazily on first focus (so Fuse and the index stay out of first-load JavaScript). Phones (under 900 px) get a search icon in the header that opens a full-screen search sheet. Choosing a result navigates to `/album/<slug>` keeping the current similarity stop (`albumHref(slug, stop)`). Covers everywhere use one `Cover` component: the remote Spotify image, falling back on error to the 48 px thumbnail sprite, then to a typographic tile (first letter on a muted cluster colour). The sprite sheet `thumbs.webp` is 2.3 MB, so it is loaded lazily: `Cover` renders the sprite element (the only thing that references `thumbs.webp`) only after the remote image has failed, never while it loads (the lettered tile is the loading placeholder), and nothing on the first load of `/` may request it. `Cover` exports its tile colours as `TILE`, the single definition every other drawing of a tile reuses (Task 11's map preview strip). Visual reference in `design/mockups/final/src.html`: CSS lines 85 to 127 (`.combo*`, `.opt*`, `.kbd`, `.cover*`), 371 to 383 (phone header search), behaviour lines 801 to 919 (`search`, `hl`, `makeCombo`) and 1675 to 1700 (`/` key, header search); screenshots `d1440-a2-homeA-search.png`, `d1440-a3-search-none.png`, `m390-a2-homeA-search.png`, `m390-a3-search-none.png` (those show the hero field; the header field has the same popover). Until Task 8 exists, album URLs render the 404 page; tests only check the URL. (SearchBox prefetches the active option's album URL; before Task 8 that prefetch 404s. No test before Task 8 listens for console errors during search, and there is no `<Link>` to album pages yet, so no placeholder album route is needed.) The header search is hidden on Home (the hero gets its own field in Task 10), so e2e tests here use an unknown path such as `/nope`, which renders the root layout with the header.
 
 **Files:**
 - Create: `frontcreck/src/components/Icon.tsx`, `frontcreck/src/components/Cover.tsx`, `frontcreck/src/lib/ghost-click.ts`, `frontcreck/src/lib/highlight.ts`, `frontcreck/src/lib/search.ts`, `frontcreck/src/components/search/searchIndex.ts`, `frontcreck/src/components/search/shortcut.ts`, `frontcreck/src/components/search/SearchBox.tsx`, `frontcreck/src/components/search/SearchSheet.tsx`, `frontcreck/src/components/search/HeaderSearch.tsx`, `frontcreck/src/styles/search.css`
@@ -3832,7 +3843,7 @@ EOF
 - Consumes (Task 4): `AlbumRecord`, `AlbumSummary`, `AlbumId` from `@/lib/types`; `toSummary`, `coverUrl`, `initialLetter` from `@/lib/data/catalog`; `thumbStyle` from `@/lib/data/sprites`; `loadCatalog` from `@/lib/data/client`; `albumHref` from `@/lib/url-state`; `useAppStore` from `@/lib/store`; `isNarrow` from `@/lib/media`. (Task 3): `COPY`, `Header`.
 - Produces:
   - `Icon({ name, strokeWidth? })` with `IconName = 'ext' | 'link' | 'search' | 'plus' | 'minus' | 'fit' | 'x' | 'map' | 'list'`
-  - `Cover({ album, size, className?, eager?, fluid? })` where `album: Pick<AlbumSummary, 'id' | 'title' | 'coverId' | 'cluster'>`; root element `div.cover` with `data-state="remote" | "sprite" | "tile"`
+  - `Cover({ album, size, className?, eager?, fluid? })` where `album: Pick<AlbumSummary, 'id' | 'title' | 'coverId' | 'cluster'>`; root element `div.cover` with `data-state="remote" | "sprite" | "tile"`; `TILE: readonly string[]` (tile background colours by `cluster % 3`, exported from `@/components/Cover`)
   - `@/lib/highlight`: `HighlightRange { start; end }`, `splitHighlights(text, ranges): { text: string; mark: boolean }[]`
   - `@/lib/ghost-click`: `suppressGhostClick(x: number, y: number): void` (used here by touch selections in `SearchBox` and in Task 6 by touch map picks)
   - `@/lib/search`: `SEARCH_LIMIT = 6`, `Folded`, `fold(s): Folded`, `queryWords(q): string[]`, `highlightRanges(f, words): HighlightRange[]`, `SearchIndex`, `SearchHit { id: AlbumId; title: HighlightRange[]; artist: HighlightRange[] }`, `buildSearchIndex(albums): SearchIndex`, `searchAlbums(index, query, limit?): SearchHit[]`
@@ -3993,7 +4004,13 @@ test.describe('desktop header search', () => {
   test.skip(({ isMobile }) => isMobile, 'desktop only');
 
   test('builds the index lazily, suggests, highlights and navigates with the keyboard', async ({ page }, info) => {
+    const thumbRequests: string[] = [];
+    page.on('request', (r) => {
+      if (r.url().endsWith('/data/thumbs.webp')) thumbRequests.push(r.url());
+    });
     await page.goto('/nope');
+    await page.waitForLoadState('networkidle');
+    expect(thumbRequests, 'the thumbnail sprite is a lazy fallback, never part of a page load').toEqual([]);
     const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
     await expect(page.locator('html')).not.toHaveAttribute('data-search-index', 'ready');
     await input.focus();
@@ -4035,6 +4052,7 @@ test.describe('desktop header search', () => {
     await input.click();
     await input.pressSequentially('zzkq');
     await expect(page.getByText(COPY.search.noMatches('zzkq'))).toBeVisible();
+    await expect(page.locator('.combo-empty b')).toHaveText('zzkq');
     await shot(page, info, 'search-none');
   });
 
@@ -4139,7 +4157,8 @@ import { coverUrl, initialLetter } from '@/lib/data/catalog';
 import { thumbStyle } from '@/lib/data/sprites';
 import type { AlbumSummary } from '@/lib/types';
 
-const TILE = ['#3b2a22', '#2c3024', '#3b3120'];
+/** Tile background by `cluster % 3`; the one definition, reused by every other tile drawing (Task 11). */
+export const TILE: readonly string[] = ['#3b2a22', '#2c3024', '#3b3120'];
 
 export interface CoverProps {
   album: Pick<AlbumSummary, 'id' | 'title' | 'coverId' | 'cluster'>;
@@ -4151,7 +4170,9 @@ export interface CoverProps {
   fluid?: boolean;
 }
 
-/** Remote cover; on error the 48 px sprite from thumbs.webp; with no cover id (or under both) a lettered tile. */
+/** Remote cover; on error the 48 px sprite from thumbs.webp; with no cover id (or under both) a lettered tile.
+ * The lettered tile is also the loading placeholder: the sprite element, the only reference to the 2.3 MB
+ * thumbs.webp, is rendered only after the remote image failed, so a normal page load never fetches the sheet. */
 export function Cover({ album, size, className = '', eager = false, fluid = false }: CoverProps) {
   const url = coverUrl(album.coverId, size);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
@@ -4506,14 +4527,17 @@ function Marked({ text, ranges }: { text: string; ranges: HighlightRange[] }) {
   );
 }
 
+/** The no-match sentence with the query in bold. The copy is split on a sentinel, not searched for the
+ * query, so a query that also occurs in the sentence itself (for example "al") is bolded in the right place. */
+const NO_MATCH_SENTINEL = '\u0000';
+const [NO_MATCH_BEFORE, NO_MATCH_AFTER] = COPY.search.noMatches(NO_MATCH_SENTINEL).split(NO_MATCH_SENTINEL);
+
 function NoMatches({ query }: { query: string }) {
-  const text = COPY.search.noMatches(query);
-  const at = text.indexOf(query);
   return (
     <p className="combo-empty">
-      {text.slice(0, at)}
+      {NO_MATCH_BEFORE}
       <b>{query}</b>
-      {text.slice(at + query.length)}
+      {NO_MATCH_AFTER}
     </p>
   );
 }
@@ -4932,7 +4956,7 @@ search index (exact word matching with a Fuse.js typo fallback and
 highlight ranges), an ARIA combobox, the header search, a full-screen
 phone search sheet and the / shortcut.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 
@@ -4945,22 +4969,25 @@ Visual reference: `design/mockups/final/src.html` CSS lines 147 to 205 (`.map-pa
 Budgets and rules that apply here: three.js loads only on the client, after first paint (dynamic import after two animation frames and an idle callback); atlases load only when zoom passes the cover threshold and are decoded off the main thread by `THREE.ImageBitmapLoader` before upload (never upload an undecoded image); R3F's demand frame loop is the only animation loop, every `useFrame` animation calls `invalidate()` only while it is unsettled, and zero frames render while idle; no CSS filter, backdrop-filter or blend mode sits over the canvas; `prefers-reduced-motion` makes camera animations instant.
 
 **Files:**
-- Create (new code, given in full below): `frontcreck/src/components/map/types.ts`, `frontcreck/src/components/map/data.ts`, `frontcreck/src/components/map/state/mapStore.ts`, `frontcreck/src/components/map/state/overlayEls.ts`, `frontcreck/src/components/map/state/webgl.ts`, `frontcreck/src/components/map/canvas/PickController.tsx`, `frontcreck/src/components/map/canvas/CameraTween.tsx`, `frontcreck/src/components/map/canvas/OverlayDriver.tsx`, `frontcreck/src/components/map/canvas/FrameCounter.tsx`, `frontcreck/src/components/map/MusicMap.tsx`, `frontcreck/src/components/map/MapStage.tsx`, `frontcreck/src/components/map/overlays/HoverLabel.tsx`, `frontcreck/src/components/map/overlays/ZoomControls.tsx`, `frontcreck/src/components/map/overlays/NoWebGL.tsx`, `frontcreck/src/components/map/overlays/MapError.tsx`, `frontcreck/src/app/map/page.tsx`, `frontcreck/src/styles/map.css`
+- Create (new code, given in full below): `frontcreck/src/components/map/types.ts`, `frontcreck/src/components/map/data.ts`, `frontcreck/src/components/map/state/mapStore.ts`, `frontcreck/src/components/map/state/overlayEls.ts`, `frontcreck/src/components/map/state/webgl.ts`, `frontcreck/src/components/map/canvas/PickController.tsx`, `frontcreck/src/components/map/canvas/CameraTween.tsx`, `frontcreck/src/components/map/canvas/OverlayDriver.tsx`, `frontcreck/src/components/map/canvas/FrameCounter.tsx`, `frontcreck/src/components/map/MusicMap.tsx`, `frontcreck/src/components/map/MapStage.tsx`, `frontcreck/src/components/map/overlays/HoverLabel.tsx`, `frontcreck/src/components/map/overlays/ZoomControls.tsx`, `frontcreck/src/components/map/overlays/NoWebGL.tsx`, `frontcreck/src/components/ErrorPanel.tsx` (the one inline data error with retry, used here on the map and in Task 10 by the route error boundary), `frontcreck/src/lib/color.ts` (the one hex parser), `frontcreck/src/styles/map.css`
+- Replace (a placeholder already exists: a hidden h1 and metadata): `frontcreck/src/app/map/page.tsx`
 - Port (copy from SRC, then apply the modification list): `SRC/state/invalidate.ts` → `frontcreck/src/components/map/state/invalidate.ts`; `SRC/state/view.ts` (+ `view.test.ts`) → `map/state/view.ts`; `SRC/state/bounds.ts` (+ test) → `map/state/bounds.ts`; `SRC/state/hitTest.ts` (+ test) → `map/state/hitTest.ts`; `SRC/state/projection.ts` (+ test) → `map/state/projection.ts`; `SRC/state/zoomMath.ts` (+ test) → `map/state/zoomMath.ts`; `SRC/shaders/album.ts` (+ test) → `map/shaders/album.ts`; `SRC/canvas/Scene.tsx`, `AlbumField.tsx`, `AtlasManager.tsx`, `InitialFrame.tsx`, `CameraRig.tsx`, `CameraBounds.tsx`, `CursorTracker.tsx` → `frontcreck/src/components/map/canvas/` (same names)
 - Not ported (do not copy): `SRC/MusicMapClient.tsx`, `SRC/index.ts`, `SRC/canvas/AmbientDrift.tsx`, `SRC/canvas/FocusController.tsx`, `SRC/canvas/FlyToFocus.tsx`, `SRC/canvas/TooltipDriver.tsx`, everything in `SRC/overlays/`, `SRC/data/`, `SRC/state/store.ts` (+ test), `SRC/state/tuning.ts`, `SRC/state/clusterColors.ts` (+ test), `SRC/state/breakpoints.ts`, `SRC/state/debug.ts`, `SRC/state/tooltipEl.ts`
-- Modify: `frontcreck/src/app/layout.tsx`, `frontcreck/src/app/globals.css`, `frontcreck/src/types/global.d.ts`, `frontcreck/playwright.config.ts`, `frontcreck/e2e/helpers.ts`
-- Test: `frontcreck/src/components/map/data.test.ts`, `frontcreck/src/components/map/state/screen.test.ts`, the ported unit tests above, `frontcreck/e2e/map.spec.ts`, `frontcreck/e2e/nowebgl.spec.ts`
+- Modify: `frontcreck/src/app/layout.tsx`, `frontcreck/src/app/globals.css`, `frontcreck/src/styles/shell.css` (the `.map-pane` rule moves to map.css), `frontcreck/src/types/global.d.ts`, `frontcreck/playwright.config.ts`, `frontcreck/e2e/helpers.ts`
+- Test: `frontcreck/src/components/map/data.test.ts`, `frontcreck/src/components/map/state/screen.test.ts`, `frontcreck/src/components/ErrorPanel.test.tsx`, `frontcreck/src/lib/color.test.ts`, the ported unit tests above (except `projection.test.ts`, whose remaining cases are deleted), `frontcreck/e2e/map.spec.ts`, `frontcreck/e2e/nowebgl.spec.ts`
 
 **Interfaces:**
 - Consumes (Task 4): `AlbumRecord`, `Positions`, `StopId`, `STOP_IDS`, `AlbumId`, `Focus`, `MapCamera` (`@/lib/types`); `atlasCount`, `atlasUrl`, `ATLAS_PER_SHEET`, `atlasSlot` (`@/lib/data/sprites`); `toSummary`, `COPY`; `useCatalog`, `usePositions` (`@/lib/data/useData`); `useAppStore` (`selected`, `setSelected`, `stop`, `focus`, `hot`, `setHot`, `panelInset`, `mapMode`, `webgl`, `setWebgl`); `viewFromPathname`, `albumHref`; `useIsNarrow`, `prefersReducedMotion`, `DURATION`, `easeOutCubic`. (Task 5): `Cover`, `Icon`.
 - Produces (used by Tasks 7 to 13):
   - `@/components/map/types`: `MapPadding`, `MapInput`, `MapCallbacks`, `MapApi`, `MusicMapProps` (code below)
   - `@/components/map/data`: `STOP_T`, `CLUSTER_RGB`, `MapData`, `normalizePositions`, `buildMapData`, `interpolateInto`, `interpolated`
-  - `useMapStore` (map-internal store, `@/components/map/state/mapStore`): `data`, `input`, `callbacks`, `sliderT`, `hoveredIndex`, `insetCurrent`, `lastInteraction`, `lastCameraGrab`, `dragging`, `animating` and setters (code below)
+  - `useMapStore` (map-internal store, `@/components/map/state/mapStore`): `data`, `input`, `callbacks`, `sliderT`, `hoveredIndex`, `insetCurrent`, `lastInteraction`, `lastCameraGrab`, `dragging`, `animating`, `nudging`, `rigMoving` and setters (code below)
   - `setOverlayEl(key, el)`, `getOverlayEl(key)`, `markerKey(id)` (`state/overlayEls.ts`)
   - `isWebGLAvailable(): boolean` (`state/webgl.ts`)
-  - `screenToWorld(clientX, clientY, rect, camera)`, `worldToScreen(wx, wy, rect, camera)` (`state/projection.ts`)
-  - `applyFrustum(camera, width, height, insetPx)`, `FRUSTUM_HALF_HEIGHT` (`canvas/InitialFrame.tsx`); `clampZoom(z)`, `MAX_ZOOM` (`canvas/CameraRig.tsx`); `focusCamera(ids, positions, width, height, insetPx, pad)` (`canvas/CameraTween.tsx`); `spriteCssSize`, `renderedSpriteCssSize` (`shaders/album.ts`)
+  - `@/components/map/state/projection` (the ONLY screen/world conversion; every overlay placement, pick, focus framing and marker layout in Tasks 6, 7, 9 and 11 imports from it): `ScreenRect`, `OrthoCameraLike`, `viewBounds(camera)`, `worldToScreen(wx, wy, rect, camera): { x, y }`, `screenToWorld(clientX, clientY, rect, camera): [x, y]`, `canvasRect(width, height): ScreenRect`
+  - `@/lib/color`: `hexToRgb(hex): [r, g, b]` (0..255; the one hex parser, reused by Tasks 8 and 13)
+  - `@/components/ErrorPanel`: `ErrorPanel({ onRetry, className? })` (`div[role=alert]` with `p.e1` and a retry button; `className` defaults to `rec-error`, the map uses `map-msg`)
+  - `applyFrustum(camera, width, height, insetPx)`, `FRUSTUM_HALF_HEIGHT` (`canvas/InitialFrame.tsx`); `clampZoom(z)`, `MAX_ZOOM`, `stopCameraRig()` (`canvas/CameraRig.tsx`); `getCameraControl(): MapApi | null` (`canvas/CameraTween.tsx`); `focusCamera(ids, positions, width, height, insetPx, pad)` (`canvas/CameraTween.tsx`); `spriteCssSize`, `renderedSpriteCssSize` (`shaders/album.ts`)
   - `MusicMap` (default export of `map/MusicMap.tsx`, loaded with `next/dynamic`), `MapStage()` (mounted in the root layout)
   - Test hooks: `window.__rmr.map: MapApi | null`, `window.__rmr.frames: number` (frames rendered)
   - DOM: the canvas has class `map-canvas`, `role="img"`, `aria-label={COPY.map.canvasLabel}`, `tabIndex` 0 when interactive and -1 otherwise; `.map-pane[data-view="<view>"]`; `.map-ui` overlay container; `.map-tip` hover label; `.map-sel` selected ring; `.map-msg` for the no-WebGL and error messages.
@@ -5019,43 +5046,96 @@ describe('map data', () => {
 });
 ```
 
-`frontcreck/src/components/map/state/screen.test.ts` (screen and world conversions with the inset-shifted frustum):
+`frontcreck/src/components/map/state/screen.test.ts` (the conversions must agree with what three.js actually draws, including a non-zero inset at zoom other than 1; a formula that divides the inset shift by the zoom fails here):
 ```ts
-import { OrthographicCamera } from 'three';
+import { OrthographicCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { applyFrustum } from '../canvas/InitialFrame';
 import { screenToWorld, worldToScreen } from './projection';
 
 const rect = { left: 10, top: 20, width: 800, height: 500 };
 
-describe('screen and world conversions', () => {
-  it('round-trips with a symmetric frustum', () => {
-    const cam = new OrthographicCamera();
-    applyFrustum(cam, rect.width, rect.height, 0);
-    cam.position.set(0.3, -0.2, 5);
-    cam.zoom = 2;
-    cam.updateProjectionMatrix();
-    const [wx, wy] = screenToWorld(410, 270, rect, cam);
-    expect(wx).toBeCloseTo(0.3, 6);
-    expect(wy).toBeCloseTo(-0.2, 6);
-    const p = worldToScreen(0.5, 0.1, rect, cam);
-    const [bx, by] = screenToWorld(p.x, p.y, rect, cam);
-    expect(bx).toBeCloseTo(0.5, 6);
-    expect(by).toBeCloseTo(0.1, 6);
+function camera(insetPx: number, zoom: number, x: number, y: number): OrthographicCamera {
+  const cam = new OrthographicCamera();
+  cam.position.set(x, y, 5);
+  cam.zoom = zoom;
+  applyFrustum(cam, rect.width, rect.height, insetPx);
+  cam.updateMatrixWorld();
+  return cam;
+}
+
+/** Where three.js itself draws a world point, in client pixels. */
+function drawnAt(cam: OrthographicCamera, wx: number, wy: number): { x: number; y: number } {
+  const v = new Vector3(wx, wy, 0).project(cam);
+  return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
+}
+
+describe('screen and world conversions match three.js', () => {
+  for (const [inset, zoom] of [[0, 1], [0, 2.5], [300, 1], [300, 3.2], [540, 0.8]] as const) {
+    it(`agree with Vector3.project at inset ${inset} px and zoom ${zoom}`, () => {
+      const cam = camera(inset, zoom, 0.3, -0.2);
+      for (const [wx, wy] of [[0.3, -0.2], [0.5, 0.1], [-0.4, 0.35]] as const) {
+        const want = drawnAt(cam, wx, wy);
+        const got = worldToScreen(wx, wy, rect, cam);
+        expect(got.x).toBeCloseTo(want.x, 4);
+        expect(got.y).toBeCloseTo(want.y, 4);
+        const [bx, by] = screenToWorld(got.x, got.y, rect, cam);
+        expect(bx).toBeCloseTo(wx, 6);
+        expect(by).toBeCloseTo(wy, 6);
+      }
+    });
+  }
+
+  it('draws camera.position at the centre of the area right of the inset, at every zoom', () => {
+    for (const zoom of [0.8, 1, 3.2]) {
+      const p = drawnAt(camera(300, zoom, 1, 1), 1, 1);
+      expect(p.x).toBeCloseTo(rect.left + 300 + (800 - 300) / 2, 4);
+      expect(p.y).toBeCloseTo(rect.top + 250, 4);
+    }
   });
 
-  it('puts the camera position at the centre of the visible area when the left side is covered', () => {
-    const cam = new OrthographicCamera();
-    applyFrustum(cam, rect.width, rect.height, 300);
-    cam.position.set(1, 1, 5);
-    cam.zoom = 1.5;
-    cam.updateProjectionMatrix();
-    const p = worldToScreen(1, 1, rect, cam);
-    expect(p.x).toBeCloseTo(rect.left + 300 + (800 - 300) / 2, 4);
-    expect(p.y).toBeCloseTo(rect.top + 250, 4);
-    const [wx, wy] = screenToWorld(p.x, p.y, rect, cam);
-    expect(wx).toBeCloseTo(1, 6);
-    expect(wy).toBeCloseTo(1, 6);
+  it('keeps the world scale independent of the inset', () => {
+    const a = camera(0, 2, 0, 0);
+    const b = camera(300, 2, 0, 0);
+    const span = (cam: OrthographicCamera) => drawnAt(cam, 0.2, 0).x - drawnAt(cam, 0, 0).x;
+    expect(span(b)).toBeCloseTo(span(a), 6);
+  });
+});
+```
+
+`frontcreck/src/lib/color.test.ts`:
+```ts
+import { describe, expect, it } from 'vitest';
+import { hexToRgb } from './color';
+
+describe('hexToRgb', () => {
+  it('parses #rrggbb in either case', () => {
+    expect(hexToRgb('#15110d')).toEqual([21, 17, 13]);
+    expect(hexToRgb('#E6A856')).toEqual([230, 168, 86]);
+  });
+});
+```
+
+`frontcreck/src/components/ErrorPanel.test.tsx`:
+```tsx
+import { fireEvent, render, screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { COPY } from '@/lib/copy';
+import { ErrorPanel } from './ErrorPanel';
+
+describe('ErrorPanel', () => {
+  it('shows the approved message and retries', () => {
+    const onRetry = vi.fn();
+    render(<ErrorPanel onRetry={onRetry} />);
+    expect(screen.getByRole('alert')).toHaveTextContent(COPY.error.body);
+    expect(screen.getByRole('alert')).toHaveClass('rec-error');
+    fireEvent.click(screen.getByRole('button', { name: COPY.error.retry }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('takes the map message class', () => {
+    render(<ErrorPanel onRetry={() => {}} className="map-msg" />);
+    expect(screen.getByRole('alert')).toHaveClass('map-msg');
   });
 });
 ```
@@ -5119,9 +5199,9 @@ test('the map is a lazily loaded WebGL canvas that renders on demand', async ({ 
   await expect(canvas).toHaveAttribute('tabindex', '0');
   expect(await page.evaluate(() => window.__rmr!.getState().webgl)).toBe('ok');
   await waitForCameraIdle(page);
-  const f1 = await page.evaluate(() => window.__rmr!.frames);
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
   await page.waitForTimeout(1200);
-  const f2 = await page.evaluate(() => window.__rmr!.frames);
+  const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
   expect(f2 - f1).toBeLessThanOrEqual(1);
   expect(atlasRequests).toEqual([]);
   await shot(page, info, 'explore');
@@ -5220,7 +5300,8 @@ test('Home shows the map dimmed and not interactive', async ({ page }) => {
   await waitForMap(page);
   await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'home');
   await expect(page.locator('canvas.map-canvas')).toHaveAttribute('tabindex', '-1');
-  expect(await page.locator('.map-host').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+  // R3F puts an inline pointer-events style on its wrapper; the canvas itself must inherit `none` here.
+  expect(await page.locator('canvas.map-canvas').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
   await expect(page.getByRole('button', { name: COPY.map.zoomIn })).toHaveCount(0);
 });
 ```
@@ -5245,10 +5326,13 @@ test('without WebGL the map shows a message and search still works', async ({ pa
 });
 
 // Once Task 8 exists this test also covers the album list without WebGL (it 404s before that task, so it is skipped until then).
-test('without WebGL the album list and links still work', async ({ page }) => {
+test('without WebGL the album list, the similarity slider and links still work', async ({ page }) => {
   const res = await page.goto('/album/in-rainbows-radiohead');
   test.skip(res?.status() === 404, 'album pages arrive in Task 8');
   await expect(page.locator('li.rec')).toHaveCount(5);
+  // The slider (Task 7) is rendered without the map, so the list still switches stops.
+  await page.getByRole('button', { name: COPY.slider.stops.mood, exact: true }).click();
+  await expect(page.locator('li.rec').first()).toContainText('Tindersticks');
   await page.locator('li.rec').first().locator('a.rec-main').click();
   await expect(page.getByRole('heading', { level: 1 })).not.toHaveText('In Rainbows');
 });
@@ -5267,9 +5351,9 @@ In `frontcreck/playwright.config.ts`, add a third project to `projects` (the `no
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
-cd frontcreck && npm test -- src/components/map
+cd frontcreck && npm test -- src/components/map src/lib/color.test.ts src/components/ErrorPanel.test.tsx
 ```
-Expected: FAIL, `Failed to resolve import "./data"`, `"../canvas/InitialFrame"`, `"./projection"`. (The e2e specs are run in Step 4; right now `/map` is a 404.)
+Expected: FAIL, `Failed to resolve import "./data"`, `"../canvas/InitialFrame"`, `"./projection"`, `"./color"`, `"./ErrorPanel"`. (The e2e specs are run in Step 4; right now `/map` is only a placeholder page.)
 
 - [ ] **Step 3: Implement**
 
@@ -5341,6 +5425,7 @@ export interface MusicMapProps {
 
 `frontcreck/src/components/map/data.ts`:
 ```ts
+import { hexToRgb } from '@/lib/color';
 import { atlasCount, atlasUrl } from '@/lib/data/sprites';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumRecord, Positions, StopId } from '@/lib/types';
@@ -5348,7 +5433,7 @@ import type { AlbumRecord, Positions, StopId } from '@/lib/types';
 /** Slider position of each stop in the shader (0 sonic, 0.5 balanced, 1 mood). */
 export const STOP_T: Record<StopId, number> = { sonic: 0, balanced: 0.5, mood: 1 };
 
-const rgb = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255) as [number, number, number];
+const rgb = (hex: string): [number, number, number] => hexToRgb(hex).map((v) => v / 255) as [number, number, number];
 
 /** Dot colours by cluster k (k % 3: clay, moss, ochre), written straight to the framebuffer as sRGB literals. */
 export const CLUSTER_RGB: [number, number, number][] = Array.from({ length: 8 }, (_, k) => rgb(['#c4886f', '#97a077', '#c8a560'][k % 3]));
@@ -5461,6 +5546,8 @@ export interface MapStore {
   animating: boolean;
   /** True while CameraBounds eases the camera back towards the cloud. */
   nudging: boolean;
+  /** True while CameraRig's own wheel-zoom easing or drag fling is still moving the camera. */
+  rigMoving: boolean;
   setData: (data: MapData | null) => void;
   setInput: (input: MapInput) => void;
   setCallbacks: (callbacks: MapCallbacks) => void;
@@ -5472,6 +5559,7 @@ export interface MapStore {
   setDragging: (dragging: boolean) => void;
   setAnimating: (animating: boolean) => void;
   setNudging: (nudging: boolean) => void;
+  setRigMoving: (rigMoving: boolean) => void;
 }
 
 export const useMapStore = create<MapStore>()((set) => ({
@@ -5486,6 +5574,7 @@ export const useMapStore = create<MapStore>()((set) => ({
   dragging: false,
   animating: false,
   nudging: false,
+  rigMoving: false,
   setData: (data) => set({ data }),
   setInput: (input) => {
     set({ input });
@@ -5503,6 +5592,7 @@ export const useMapStore = create<MapStore>()((set) => ({
   setDragging: (dragging) => set({ dragging }),
   setAnimating: (animating) => set((s) => (s.animating === animating ? s : { animating })),
   setNudging: (nudging) => set((s) => (s.nudging === nudging ? s : { nudging })),
+  setRigMoving: (rigMoving) => set((s) => (s.rigMoving === rigMoving ? s : { rigMoving })),
 }));
 ```
 
@@ -5528,7 +5618,10 @@ export const markerKey = (id: number): string => `marker-${id}`;
 export function isWebGLAvailable(): boolean {
   try {
     const c = document.createElement('canvas');
-    return !!(c.getContext('webgl2') || c.getContext('webgl'));
+    const gl = c.getContext('webgl2') ?? c.getContext('webgl');
+    // Release the probe context at once: browsers cap live WebGL contexts, and the map needs one.
+    gl?.getExtension('WEBGL_lose_context')?.loseContext();
+    return !!gl;
   } catch {
     return false;
   }
@@ -5540,34 +5633,80 @@ export function isWebGLAvailable(): boolean {
 - `state/view.ts` and `view.test.ts`: replace `import { TUNING } from "./tuning"` with a local `const OVERVIEW_ZOOM = 2.4;` and use it for the default framing zoom. No other change.
 - `state/hitTest.ts` and test: no changes.
 - `state/zoomMath.ts` and test: no changes.
-- `state/projection.ts` and test: rename the `audio` parameter of `interpolatePosition` to `sonic`; delete `kNearestNeighbors` and its test cases; move `screenToWorld` here from `SRC/canvas/CursorTracker.tsx` and replace its body with the general (asymmetric frustum) form; add `worldToScreen`:
+- `state/projection.ts`: this module becomes the single home of screen and world conversion. Do not keep SRC's contents: `easeOutCubic` and `easeInOutCubic` duplicate `@/lib/media`, `interpolatePosition` duplicates `interpolateInto` in `../data`, and `kNearestNeighbors` is unused. Delete them and delete `projection.test.ts` (the new `screen.test.ts` tests this module). The whole file is:
 ```ts
-export function screenToWorld(
-  clientX: number,
-  clientY: number,
-  rect: { left: number; top: number; width: number; height: number },
-  camera: { position: { x: number; y: number }; zoom: number; left: number; right: number; top: number; bottom: number },
-): [number, number] {
-  const fx = (clientX - rect.left) / rect.width;
-  const fy = (clientY - rect.top) / rect.height;
-  return [
-    camera.position.x + (camera.left + fx * (camera.right - camera.left)) / camera.zoom,
-    camera.position.y + (camera.top - fy * (camera.top - camera.bottom)) / camera.zoom,
-  ];
+/** Screen and world conversion for the map's orthographic camera: the one implementation behind overlay
+ * placement, picking, focus framing and marker layout. It mirrors three r169's
+ * OrthographicCamera.updateProjectionMatrix exactly, including zoom and the view offset that applyFrustum
+ * (canvas/InitialFrame.tsx) uses to centre the camera right of the album panel. */
+
+export interface ScreenRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }
 
-export function worldToScreen(
-  wx: number,
-  wy: number,
-  rect: { left: number; top: number; width: number; height: number },
-  camera: { position: { x: number; y: number }; zoom: number; left: number; right: number; top: number; bottom: number },
-): { x: number; y: number } {
-  const fx = ((wx - camera.position.x) * camera.zoom - camera.left) / (camera.right - camera.left);
-  const fy = (camera.top - (wy - camera.position.y) * camera.zoom) / (camera.top - camera.bottom);
-  return { x: rect.left + fx * rect.width, y: rect.top + fy * rect.height };
+export interface OrthoCameraLike {
+  position: { x: number; y: number };
+  zoom: number;
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+  view: { enabled: boolean; fullWidth: number; fullHeight: number; offsetX: number; offsetY: number; width: number; height: number } | null;
 }
+
+export interface ViewBounds {
+  left: number;
+  right: number;
+  top: number;
+  bottom: number;
+}
+
+/** The camera-space rectangle three.js projects onto the whole canvas (same steps as updateProjectionMatrix). */
+export function viewBounds(c: OrthoCameraLike): ViewBounds {
+  const dx = (c.right - c.left) / (2 * c.zoom);
+  const dy = (c.top - c.bottom) / (2 * c.zoom);
+  const cx = (c.right + c.left) / 2;
+  const cy = (c.top + c.bottom) / 2;
+  let left = cx - dx;
+  let right = cx + dx;
+  let top = cy + dy;
+  let bottom = cy - dy;
+  const v = c.view;
+  if (v && v.enabled) {
+    const scaleW = (c.right - c.left) / v.fullWidth / c.zoom;
+    const scaleH = (c.top - c.bottom) / v.fullHeight / c.zoom;
+    left += scaleW * v.offsetX;
+    right = left + scaleW * v.width;
+    top -= scaleH * v.offsetY;
+    bottom = top - scaleH * v.height;
+  }
+  return { left, right, top, bottom };
+}
+
+/** Client (or canvas-local, with `canvasRect`) pixel position of a world point. */
+export function worldToScreen(wx: number, wy: number, rect: ScreenRect, c: OrthoCameraLike): { x: number; y: number } {
+  const b = viewBounds(c);
+  return {
+    x: rect.left + ((wx - c.position.x - b.left) / (b.right - b.left)) * rect.width,
+    y: rect.top + ((b.top - (wy - c.position.y)) / (b.top - b.bottom)) * rect.height,
+  };
+}
+
+/** World point under a client (or canvas-local) pixel position. */
+export function screenToWorld(clientX: number, clientY: number, rect: ScreenRect, c: OrthoCameraLike): [number, number] {
+  const b = viewBounds(c);
+  const fx = (clientX - rect.left) / rect.width;
+  const fy = (clientY - rect.top) / rect.height;
+  return [c.position.x + b.left + fx * (b.right - b.left), c.position.y + b.top - fy * (b.top - b.bottom)];
+}
+
+/** The canvas's own rectangle, for drivers that position DOM overlays inside the map pane. */
+export const canvasRect = (width: number, height: number): ScreenRect => ({ left: 0, top: 0, width, height });
 ```
-- `state/bounds.ts` and test: change `import type { MapData } from "../data/types"` to `import type { MapData } from "../data"`; replace `interpolatedPositions` with `export function interpolatedPositions(data: MapData, sliderT: number): Float32Array { return interpolated(data, sliderT); }` (import `interpolated` from `../data`); `getCloudBounds` is unchanged. In `bounds.test.ts` replace the site-shaped `MapData` fixtures with a helper `function fixtureData(xy: Array<[number, number]>): MapData { const flat = new Float32Array(xy.flat()); return { n: xy.length, albums: [], pos: { sonic: flat, balanced: flat, mood: flat }, atlasUrls: [] }; }` and keep every assertion.
+- `state/bounds.ts` and test: change `import type { MapData } from "../data/types"` to `import type { MapData } from "../data"`; delete the `import { interpolatePosition } from "./projection"` line; replace `interpolatedPositions` with `export function interpolatedPositions(data: MapData, sliderT: number): Float32Array { return interpolated(data, sliderT); }` (import `interpolated` from `../data`); `getCloudBounds` is unchanged. In `bounds.test.ts` replace the site-shaped `MapData` fixtures with a helper `function fixtureData(xy: Array<[number, number]>): MapData { const flat = new Float32Array(xy.flat()); return { n: xy.length, albums: [], pos: { sonic: flat, balanced: flat, mood: flat }, atlasUrls: [] }; }` and keep every assertion.
 
 3c. `shaders/album.ts` (+ `album.test.ts`), port with these exact changes:
 - Constants: `SIZE_CURVE_POWER = 1.9`; add `export const SIZE_BASE_PX = 5;` `export const SIZE_MIN_PX = 3;` `export const SIZE_MAX_PX = 90;`. `spriteCssSize(zoom, fitZoom)` becomes `clamp(SIZE_BASE_PX * (zoom / max(fitZoom, 1e-4)) ** SIZE_CURVE_POWER, SIZE_MIN_PX, SIZE_MAX_PX)`. `renderedSpriteCssSize` is unchanged apart from using this.
@@ -5607,28 +5746,40 @@ export function worldToScreen(
     gl_FragColor = vec4(col, alpha);
 ```
   (`discEdge` stays `0.5 - 3.0 * pxR` when hovered; delete `inkOuter`.)
-- `album.test.ts`: replace the size checkpoints with: `spriteCssSize(1, 1) === 5`; `spriteCssSize(2.283, 1)` within 0.5 of 24 (cross-fade start); `spriteCssSize(3, 1)` within 1 of 40.5 (covers complete); `spriteCssSize(10, 1) === 90`; `spriteCssSize(0.1, 1) === 3`; keep the `renderedSpriteCssSize` cap tests (240 device px and 18% of the viewport height).
+- `album.test.ts`: replace the size checkpoints with: `spriteCssSize(1, 1) === 5`; `spriteCssSize(2.283, 1)` within 0.5 of 24 (cross-fade start); `spriteCssSize(3, 1)` within 1 of 40.5 (covers complete); `spriteCssSize(10, 1) === 90`; `spriteCssSize(0.1, 1) === 3`; keep the `renderedSpriteCssSize` cap tests (240 device px and 18% of the viewport height), and change SRC's uncapped checkpoint `expect(renderedSpriteCssSize(1, 1, 900, 1)).toBeCloseTo(10, 10)` to `toBeCloseTo(5, 10)` (the base size is now 5 px).
 
 3d. Canvas components, port with these exact changes (all files get `'use client'`, double quotes may stay):
 - `canvas/InitialFrame.tsx`: import `useMapStore` from `../state/mapStore` and `MapData` from `../data`; add and export
 ```ts
 export function applyFrustum(camera: THREE.OrthographicCamera, width: number, height: number, insetPx: number): void {
   const halfW = FRUSTUM_HALF_HEIGHT * (width / height);
-  const shift = halfW * (Math.min(Math.max(insetPx, 0), width * 0.9) / width);
-  camera.left = -halfW - shift;
-  camera.right = halfW - shift;
+  camera.left = -halfW;
+  camera.right = halfW;
   camera.top = FRUSTUM_HALF_HEIGHT;
   camera.bottom = -FRUSTUM_HALF_HEIGHT;
+  const inset = Math.min(Math.max(insetPx, 0), width * 0.9);
+  // Draw the canvas shifted left by half the inset (CSS px of the full canvas). three scales a view offset by
+  // 1 / zoom itself, so camera.position stays at the centre of the visible area right of the inset at every zoom.
+  if (inset > 0) camera.setViewOffset(width, height, -inset / 2, 0, width, height);
+  else if (camera.view) camera.view.enabled = false;
   camera.updateProjectionMatrix();
 }
 ```
-  (this shifts the frustum so `camera.position` sits at the centre of the area right of the inset); in the resize layout effect call `applyFrustum(camera, width, height, useMapStore.getState().insetCurrent)` instead of setting left/right/top/bottom; `data.positions.length` becomes `data.n`; compute `fitZoom` against the visible frustum `{ left: -halfW * (1 - f), right: halfW * (1 - f), top, bottom }` where `f = insetCurrent / width` and `halfW = FRUSTUM_HALF_HEIGHT * width / height`; the untouched test becomes `lastCameraGrab === 0 && input.focus === null` (read `input` from `useMapStore.getState()`); `sliderT` still triggers a throttled reframing (no camera move).
-- `canvas/CameraRig.tsx`: import from `../state/mapStore` and `screenToWorld` from `../state/projection`; export `MAX_ZOOM` and make `clampZoom` exported (`export function clampZoom(z: number): number`, same body); every pointer and wheel handler returns immediately when `!useMapStore.getState().input.interactive`; replace the pan scale `PAN_SENSITIVITY / camera.zoom` with the exact world-per-pixel `(camera.top - camera.bottom) / (canvas.getBoundingClientRect().height * camera.zoom)` so a drag follows the pointer, and delete `PAN_SENSITIVITY`; add a `keydown` listener on the canvas (only when interactive) that calls the camera API published by `CameraTween` through `getCameraControl()` (import from `./CameraTween`): `ArrowLeft` → `panBy(-70, 0)`, `ArrowRight` → `panBy(70, 0)`, `ArrowUp` → `panBy(0, 70)`, `ArrowDown` → `panBy(0, -70)`, `+` or `=` → `zoomBy(1.4)`, `-` or `_` → `zoomBy(1 / 1.4)`, `0` → `reset()`, each with `preventDefault()`; the `zoomRef` prop is removed (AlbumField reads `camera.zoom` directly).
-- `canvas/CameraBounds.tsx`: import from `../state/mapStore`; the gate `mode === "idle"` becomes `input.interactive && input.focus === null && !animating` (all from `useMapStore.getState()`); `data.positions.length` becomes `data.n`; call `setNudging(true)` on the frame a correction starts and `setNudging(false)` when it settles or the gate closes, so `MapApi.isAnimating()` covers nudges.
-- `canvas/CursorTracker.tsx`: import from `../state/mapStore` and `screenToWorld` from `../state/projection` (delete the local copy and `indexOfId`); ids become indexes: `albumAt(...)` uses `useMapStore.getState().input.focus?.seed ?? -1` for the priority album; ignore all pointer events when `!input.interactive`; `setHoveredId(id)` becomes `setHoveredIndex(index)` followed by `useMapStore.getState().callbacks.onHover(index)` (both after the 80 ms settle, and both with `null` immediately on leave or when the hit is `-1`); delete `registerDebug` and `markFirstDraw`; keep `HOVER_TOOLTIP_DELAY_MS = 80` and `HOVER_RESUME_MOVE_PX = 4`.
-- `canvas/AtlasManager.tsx`: `useAtlasTextures(data: MapData, positionsRef)` with `MapData` from `../data`; sheet of album `i` is `Math.floor(i / ATLAS_PER_SHEET)` (import from `@/lib/data/sprites`) instead of `data.metadata[i].atlasIndex`; `ATLAS_ZOOM_THRESHOLD_FIT_MULTIPLE` becomes `2.1`; keep ImageBitmapLoader, one sheet at a time, most-visible first, `flipY = false`, `NoColorSpace`, mipmaps, disposal.
-- `canvas/AlbumField.tsx`: props become `{ data: MapData; atlasTextures; hoverRef; positionsRef }` (delete `zoomRef`, `cursorRef`, `focusedIndex`, `neighborIndices`); build attributes from our data: `a_pos_sonic/a_pos_balanced/a_pos_mood` from `data.pos.*`, `a_atlasUV` from `atlasSlot(i)` (`[u, v, size, size]`), `a_atlasIndex` from `atlasSlot(i).sheet`, `a_clusterId` from `data.albums[i].k`; `u_clusterColors` from `CLUSTER_RGB`; add uniforms `u_dotAlpha` and `u_focusDim` (0.45); delete `u_cursor`, `u_cursorActive`, `u_zoomT` stays; in `useFrame` read `const { input, sliderT, hoveredIndex } = useMapStore.getState()` and set `u_sliderT = sliderT`, `u_zoom = camera.zoom`, `u_dotAlpha = input.dimmed ? 0.34 : 0.78`, `u_focusedAlbumIndex = input.focus ? input.focus.seed : -1`, `u_neighborMask = [seed, ...recs.slice(0, 10)]` padded with -1 to 12, and `u_hoverIndex = hoveredIndex ?? -1`; recompute `positionsRef.current` with `interpolateInto(positionsRef.current, data, sliderT)` whenever `sliderT` changes (subscribe to the map store; allocate the array once); delete `markFirstDraw` and `registerDebug`.
-- `canvas/Scene.tsx`: `SceneInner` keeps SRC's `cursorRef`, `hoverRef` and `positionsRef` (initialise `positionsRef` with `interpolated(data, useMapStore.getState().sliderT)`) and `const textures = useAtlasTextures(data, positionsRef)`, delete `zoomRef`; pass `cursorRef`/`hoverRef`/`positionsRef` to `CursorTracker`, `hoverRef`/`positionsRef` to `PickController` and `AlbumField`, `positionsRef` to `CameraTween` and `OverlayDriver`. Delete `DebugExpose`, `AmbientDrift`, `FocusController`, `FlyToFocus`, `TooltipDriver`, `idIndexById`, the focus state and `bumpCommitCounter`; `Scene({ initialCamera, onApi })` takes `data` from `useMapStore`; Canvas props stay (orthographic, `frameloop="demand"`, manual camera with `zoom: 2.4`, `gl={{ alpha: true, antialias: false, powerPreference: 'high-performance' }}` (transparent, so the pane's `#17120e` background and the album's ambient wash show through; three's normal blending writes premultiplied colour, which matches the browser's default compositing), `dpr={[1, isNarrow() ? 1.5 : 2]}`), and `onCreated` sets `gl.outputColorSpace = THREE.LinearSRGBColorSpace`, `gl.setClearColor(0x000000, 0)` and `gl.domElement.classList.add('map-canvas')`, `role="img"`, `aria-label={COPY.map.canvasLabel}`; an effect keeps `gl.domElement.tabIndex = input.interactive ? 0 : -1` in sync (subscribe to the map store); children in this order: `InvalidateBridge`, `InitialFrame`, `CameraRig`, `CameraTween`, `CursorTracker`, `PickController`, `AlbumField`, `OverlayDriver`, `FrameCounter`, `CameraBounds` (last, as in SRC).
+  (the frustum stays symmetric; only the view offset moves, so `state/projection.ts` and three.js agree at every zoom, which `screen.test.ts` checks against `Vector3.project`); in the resize layout effect call `applyFrustum(camera, width, height, useMapStore.getState().insetCurrent)` instead of setting left/right/top/bottom; `data.positions.length` becomes `data.n`; compute `fitZoom` against the visible frustum `{ left: -halfW * (1 - f), right: halfW * (1 - f), top, bottom }` where `f = insetCurrent / width` and `halfW = FRUSTUM_HALF_HEIGHT * width / height`; the untouched test becomes `lastCameraGrab === 0 && input.focus === null` (read `input` from `useMapStore.getState()`); `sliderT` still triggers a throttled reframing (no camera move).
+- `canvas/CameraRig.tsx`: import from `../state/mapStore` and `screenToWorld` from `../state/projection` (delete the import from `./CursorTracker`); export `MAX_ZOOM` and make `clampZoom` exported (`export function clampZoom(z: number): number`, same body); publish the rig's own motion so `MapApi.isAnimating()` sees it: at the end of the existing `useFrame` callback add `const moving = zooming.current || velocity.current.x * velocity.current.x + velocity.current.y * velocity.current.y > VELOCITY_EPSILON_SQ; if (moving !== useMapStore.getState().rigMoving) useMapStore.getState().setRigMoving(moving);`; add a module-level stopper that camera tweens call before they start, so a leftover wheel easing or fling can never undo a tween:
+```ts
+let stopRig: (() => void) | null = null;
+/** Cancels any wheel-zoom easing and drag fling in progress (CameraTween calls this before every tween). */
+export function stopCameraRig(): void {
+  stopRig?.();
+}
+```
+  and inside the component `useEffect(() => { stopRig = () => { zooming.current = false; zoomAnchor.current = null; velocity.current.x = 0; velocity.current.y = 0; targetZoom.current = camera.zoom; useMapStore.getState().setRigMoving(false); }; return () => { stopRig = null; }; }, [camera]);`; under `prefersReducedMotion()` (from `@/lib/media`) a released drag keeps no velocity (no fling) and a wheel step sets `camera.zoom` to its target in the same frame (no easing); every pointer and wheel handler returns immediately when `!useMapStore.getState().input.interactive`; replace the pan scale `PAN_SENSITIVITY / camera.zoom` with the exact world-per-pixel `(camera.top - camera.bottom) / (canvas.getBoundingClientRect().height * camera.zoom)` so a drag follows the pointer, and delete `PAN_SENSITIVITY`; add a `keydown` listener on the canvas (only when interactive) that calls the camera API published by `CameraTween` through `getCameraControl()` (import from `./CameraTween`): `ArrowLeft` → `panBy(-70, 0)`, `ArrowRight` → `panBy(70, 0)`, `ArrowUp` → `panBy(0, 70)`, `ArrowDown` → `panBy(0, -70)`, `+` or `=` → `zoomBy(1.4)`, `-` or `_` → `zoomBy(1 / 1.4)`, `0` → `reset()`, each with `preventDefault()`; the `zoomRef` prop is removed (AlbumField reads `camera.zoom` directly).
+- `canvas/CameraBounds.tsx`: import from `../state/mapStore`; SRC reads `mode` in three places (the `stateRef` initial value, the store subscription's change check and its copy, SRC lines 44, 58 and 62, and the gate): replace `mode` everywhere with the three values the new gate needs, so the gate `mode === "idle"` becomes `input.interactive && input.focus === null && !animating` (all from `useMapStore.getState()`, and the subscription compares `input` and `animating` instead of `mode`); `data.positions.length` becomes `data.n`; call `setNudging(true)` on the frame a correction starts, and `setNudging(false)` when it settles, when the gate closes and on every early `return` of the frame callback, so `MapApi.isAnimating()` covers nudges and never stays stuck true.
+- `canvas/CursorTracker.tsx`: import from `../state/mapStore`, and `screenToWorld` and `canvasRect` from `../state/projection`; delete the local `screenToWorld` and `indexOfId`; keep `cursorToWorld` but make its body `return screenToWorld(cursorPx[0], cursorPx[1], canvasRect(size.width, size.height), camera);`; ids become indexes: `albumAt(...)` uses `useMapStore.getState().input.focus?.seed ?? -1` for the priority album; ignore all pointer events when `!input.interactive`; `setHoveredId(id)` becomes `setHoveredIndex(index)` followed by `useMapStore.getState().callbacks.onHover(index)` (both after the 80 ms settle, and both with `null` immediately on leave or when the hit is `-1`); delete `registerDebug` and `markFirstDraw`; replace the local `HOVER_TOOLTIP_DELAY_MS = 80` with `DURATION.hoverLabel` from `@/lib/media` (one definition of the 80 ms settle); keep `HOVER_RESUME_MOVE_PX = 4`.
+- `canvas/AtlasManager.tsx`: `useAtlasTextures(data: MapData, positionsRef)` with `MapData` from `../data`; sheet of album `i` is `Math.floor(i / ATLAS_PER_SHEET)` (import from `@/lib/data/sprites`) instead of `data.metadata[i].atlasIndex`; every `data.positions.length` (SRC lines 88 and 89) becomes `data.n`; `ATLAS_ZOOM_THRESHOLD_FIT_MULTIPLE` becomes `2.1`; keep ImageBitmapLoader, one sheet at a time, most-visible first, `flipY = false`, `NoColorSpace`, mipmaps, disposal.
+- `canvas/AlbumField.tsx`: props become `{ data: MapData; atlasTextures; positionsRef }` (delete `zoomRef`, `cursorRef`, `hoverRef`, `focusedIndex`, `neighborIndices`; the hover uniform now comes from the map store); delete the cursor-pull code with its `cursorToWorld` import, SRC's local `prefersReducedMotion` helper and `reducedMotionRef` (nothing uses them once the cursor pull is gone); keep the frame callback's signature `useFrame((state) => ...)` because `state.size` is still used; build attributes from our data: `a_pos_sonic/a_pos_balanced/a_pos_mood` from `data.pos.*`, `a_atlasUV` from `atlasSlot(i)` (`[u, v, size, size]`), `a_atlasIndex` from `atlasSlot(i).sheet`, `a_clusterId` from `data.albums[i].k`; `u_clusterColors` from `CLUSTER_RGB`; add uniforms `u_dotAlpha` and `u_focusDim` (0.45); delete `u_cursor`, `u_cursorActive`, `u_zoomT` stays; in `useFrame` read `const { input, sliderT, hoveredIndex } = useMapStore.getState()` and set `u_sliderT = sliderT`, `u_zoom = camera.zoom`, `u_dotAlpha = input.dimmed ? 0.34 : 0.78`, `u_focusedAlbumIndex = input.focus ? input.focus.seed : -1`, `u_neighborMask = [seed, ...recs.slice(0, 10)]` padded with -1 to 12, and `u_hoverIndex = hoveredIndex ?? -1`; recompute `positionsRef.current` with `interpolateInto(positionsRef.current, data, sliderT)` whenever `sliderT` changes (subscribe to the map store; allocate the array once); delete `markFirstDraw` and `registerDebug`.
+- `canvas/Scene.tsx`: `SceneInner` keeps SRC's `cursorRef`, `hoverRef` and `positionsRef` (initialise `positionsRef` with `interpolated(data, useMapStore.getState().sliderT)`) and `const textures = useAtlasTextures(data, positionsRef)`, delete `zoomRef`; pass `cursorRef`/`hoverRef`/`positionsRef` to `CursorTracker`, `hoverRef`/`positionsRef` to `PickController`, `positionsRef` to `AlbumField`, `CameraTween` and `OverlayDriver`. Delete `DebugExpose`, `AmbientDrift`, `FocusController`, `FlyToFocus`, `TooltipDriver`, `idIndexById`, the focus state and `bumpCommitCounter`, and every import that only they used (`screenToWorld` from `./CursorTracker`, which no longer exports it, `interpolatePosition`, `interpolatedPositions`, `getOverviewFraming`, `registerDebug`, `bumpCommitCounter`); `Scene({ initialCamera, onApi })` takes `data` from `useMapStore`; Canvas props stay (orthographic, `frameloop="demand"`, manual camera with `zoom: 2.4`, `gl={{ alpha: true, antialias: false, powerPreference: 'high-performance' }}` (transparent, so the pane's `#17120e` background and the album's ambient wash show through; three's normal blending writes premultiplied colour, which matches the browser's default compositing), `dpr={[1, isNarrow() ? 1.5 : 2]}`, and `style={{ position: 'absolute', inset: 0, pointerEvents: 'inherit' }}`, because R3F otherwise puts an inline `pointer-events: auto` on its wrapper, which would override `.map-host { pointer-events: none }` on Home, About and 404), and `onCreated` sets `gl.outputColorSpace = THREE.LinearSRGBColorSpace`, `gl.setClearColor(0x000000, 0)` and `gl.domElement.classList.add('map-canvas')`, `role="img"`, `aria-label={COPY.map.canvasLabel}`; an effect keeps `gl.domElement.tabIndex = input.interactive ? 0 : -1` in sync (subscribe to the map store); children in this order: `InvalidateBridge`, `InitialFrame`, `CameraRig`, `CameraTween`, `CursorTracker`, `PickController`, `AlbumField`, `OverlayDriver`, `FrameCounter`, `CameraBounds` (last, as in SRC).
 
 Lint note for all map code: the react-hooks plugin in eslint-config-next 16 reports in-place mutation of R3F objects (`react-hooks/immutability`) such as `camera.position.x = ...`, `camera.zoom = ...`, `gl.domElement.tabIndex = ...` and `material.uniforms.x.value = ...`. SRC silences it line by line with `// eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design`. Do exactly the same in the new files below (`CameraTween`, `Scene`, `AlbumField`) and in Task 7 and 11 code wherever lint reports it; never restructure the code to avoid the rule.
 
@@ -5715,7 +5866,7 @@ import { useMapStore } from '../state/mapStore';
 import { worldToScreen } from '../state/projection';
 import { getOverviewFraming } from '../state/view';
 import type { MapApi, MapPadding } from '../types';
-import { clampZoom } from './CameraRig';
+import { clampZoom, stopCameraRig } from './CameraRig';
 import { FRUSTUM_HALF_HEIGHT, applyFrustum } from './InitialFrame';
 
 const FLY_FIT_MULTIPLE = 3.2; // zoom (relative to the overview) at which covers are fully shown
@@ -5727,7 +5878,8 @@ let control: MapApi | null = null;
 /** The camera API for code outside React (CameraRig's keyboard handler). */
 export const getCameraControl = (): MapApi | null => control;
 
-/** Camera that fits `ids` inside the padded visible area (the area right of `insetPx`). */
+/** Camera that fits `ids` inside the padded visible area (the area right of `insetPx`). applyFrustum keeps
+ * `camera.position` at the centre of that area at every zoom, so the fit is computed around it. */
 export function focusCamera(ids: readonly number[], positions: Float32Array, width: number, height: number, insetPx: number, pad: MapPadding): MapCamera {
   let x0 = Infinity;
   let x1 = -Infinity;
@@ -5781,6 +5933,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       camera.updateProjectionMatrix();
     };
     const start = (to: MapCamera, duration: number) => {
+      stopCameraRig(); // a leftover wheel easing or fling must not pull the camera back during the tween
       const target = { ...to, zoom: clampZoom(to.zoom) };
       if (duration <= 0 || prefersReducedMotion()) {
         tween.current = null;
@@ -5838,7 +5991,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       },
       isAnimating: () => {
         const m = useMapStore.getState();
-        return tween.current !== null || m.animating || m.nudging;
+        return tween.current !== null || m.animating || m.nudging || m.rigMoving;
       },
     };
     control = api;
@@ -5912,9 +6065,11 @@ import type * as THREE from 'three';
 import { renderedSpriteCssSize } from '../shaders/album';
 import { useMapStore } from '../state/mapStore';
 import { getOverlayEl } from '../state/overlayEls';
+import { canvasRect, worldToScreen } from '../state/projection';
 import { getOverviewFraming } from '../state/view';
 
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
+/** Shared with MarkerDriver (Task 7). */
+export const clamp = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));
 
 /** Every rendered frame: positions the hover label and the selected-album ring (DOM, no React state). */
 export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<Float32Array> }) {
@@ -5926,10 +6081,8 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
     const { input, hoveredIndex } = useMapStore.getState();
     const pos = positionsRef.current;
     const { width, height } = get().size;
-    const toScreen = (i: number) => ({
-      x: (((pos[2 * i] - camera.position.x) * camera.zoom - camera.left) / (camera.right - camera.left)) * width,
-      y: ((camera.top - (pos[2 * i + 1] - camera.position.y) * camera.zoom) / (camera.top - camera.bottom)) * height,
-    });
+    const rect = canvasRect(width, height);
+    const toScreen = (i: number) => worldToScreen(pos[2 * i], pos[2 * i + 1], rect, camera);
     const sprite = renderedSpriteCssSize(camera.zoom, getOverviewFraming().zoom, height, gl.getPixelRatio());
     const focusIds = input.focus ? [input.focus.seed, ...input.focus.recs] : [];
 
@@ -6108,14 +6261,23 @@ export function NoWebGL() {
 }
 ```
 
-`frontcreck/src/components/map/overlays/MapError.tsx`:
+`frontcreck/src/lib/color.ts`:
+```ts
+/** '#rrggbb' to [r, g, b] in 0..255: the one hex parser (map dot colours, ambient washes, contrast checks). */
+export function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)) as [number, number, number];
+}
+```
+
+`frontcreck/src/components/ErrorPanel.tsx` (the one inline data error with retry: the map uses it with the mockup's `map-msg` class, the route error boundary in Task 10 with the default `rec-error`):
 ```tsx
 import { COPY } from '@/lib/copy';
 
-export function MapError({ onRetry }: { onRetry: () => void }) {
+export function ErrorPanel({ onRetry, className = 'rec-error' }: { onRetry: () => void; className?: string }) {
   return (
-    <div className="map-msg" role="alert">
-      <p>{COPY.error.body}</p>
+    <div className={className} role="alert">
+      <p className="e1">{COPY.error.body}</p>
       <button type="button" className="btn btn-line" onClick={onRetry}>
         {COPY.error.retry}
       </button>
@@ -6135,8 +6297,8 @@ import { useCatalog, usePositions } from '@/lib/data/useData';
 import { useIsNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
 import { albumHref, viewFromPathname, type View } from '@/lib/url-state';
+import { ErrorPanel } from '@/components/ErrorPanel';
 import { buildMapData } from './data';
-import { MapError } from './overlays/MapError';
 import { NoWebGL } from './overlays/NoWebGL';
 import { ZoomControls } from './overlays/ZoomControls';
 import { isWebGLAvailable } from './state/webgl';
@@ -6254,7 +6416,8 @@ export function MapStage() {
       </div>
       {webgl === 'unavailable' && view !== 'home' ? <NoWebGL /> : null}
       {failed && view !== 'home' ? (
-        <MapError
+        <ErrorPanel
+          className="map-msg"
           onRetry={() => {
             retryCatalog();
             retryPositions();
@@ -6267,7 +6430,7 @@ export function MapStage() {
 }
 ```
 
-`frontcreck/src/app/map/page.tsx` (Task 9 adds the card and hint):
+`frontcreck/src/app/map/page.tsx`, replace the placeholder (Task 9 adds the card and hint):
 ```tsx
 import type { Metadata } from 'next';
 import { COPY } from '@/lib/copy';
@@ -6285,11 +6448,11 @@ export default function MapPage() {
 
 3g. Wiring and styles.
 - `frontcreck/src/app/layout.tsx`: import `MapStage` from `@/components/map/MapStage` and replace `<div className="map-pane" aria-hidden="true" />` with `<MapStage />`.
-- `frontcreck/src/types/global.d.ts`: extend `__rmr` with `map?: MapApi | null;` and `frames?: number;` (import type `MapApi` from `@/components/map/types`).
-- Delete the `.map-pane` rule from `shell.css` (it moves to `map.css`) and add `@import "../styles/map.css";` to `globals.css`.
+- `frontcreck/src/types/global.d.ts`: extend `__rmr` with `map?: MapApi | null;` and `frames?: number;` (import type `MapApi` from `@/components/map/types`). Both are optional, so tests read them as `window.__rmr!.frames ?? 0`.
+- Delete the `.map-pane` rule from `shell.css` (it moves to `map.css`, which keeps its `transition: opacity var(--dur) var(--out)`) and add `@import "../styles/map.css";` to `globals.css`.
 - `frontcreck/src/styles/map.css` (mockup lines 148 to 205, tokens renamed, plus new `.map-sel`, `.map-msg`, dimmed and view rules):
 ```css
-.map-pane { position: absolute; inset: 0; background: var(--color-pane); }
+.map-pane { position: absolute; inset: 0; background: var(--color-pane); transition: opacity var(--dur) var(--out); }
 .map-host { position: absolute; inset: 0; }
 .map-pane[data-view="home"] .map-host,
 .map-pane[data-view="about"] .map-host,
@@ -6326,7 +6489,7 @@ export default function MapPage() {
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 cd frontcreck && npm test && npm run lint && npm run typecheck && npm run test:e2e
 ```
-Expected: Vitest all green (ported bounds, hitTest, projection, zoomMath, view, album shader tests plus `data.test.ts`); Playwright all green for `desktop`, `phone` and `nowebgl` (map, search, smoke). If `window.__rmr.getState().webgl` is `'unavailable'` in the desktop project, headless Chrome has no software WebGL: check `chrome://gpu` flags and try `--use-gl=angle --use-angle=swiftshader-webgl --enable-unsafe-swiftshader` in `WEBGL_ARGS`; do not weaken the assertions. Look at `desktop-explore.png`, `desktop-explore-zoomed.png`, `desktop-explore-hover.png`, `phone-explore-tap.png` and compare with `d1440-c1-explore.png`, `d1440-c3-explore-zoomed.png`, `m390-c1-explore.png`, `m390-c3-explore-zoomed.png`: dot size about 5 px and three muted colours at the overview, dark background `#17120e`, covers crisp and fully opaque when zoomed, no paper tint anywhere, label dark with serif title. Also check the bundle split: `npm run build` output must show the three.js code in a chunk that `/` does not load before first paint (the Task 12 perf script measures this; here just confirm `grep -l WebGLRenderer .next/static/chunks/*.js` lists a chunk that is not referenced by `.next/server/app/index.html`).
+Expected: Vitest all green (ported bounds, hitTest, zoomMath, view, album shader tests plus `data.test.ts`, `screen.test.ts`, `color.test.ts`, `ErrorPanel.test.tsx`); Playwright all green for `desktop`, `phone` and `nowebgl` (map, search, smoke). If `window.__rmr.getState().webgl` is `'unavailable'` in the desktop project, headless Chrome has no software WebGL: check `chrome://gpu` flags and try `--use-gl=angle --use-angle=swiftshader-webgl --enable-unsafe-swiftshader` in `WEBGL_ARGS`; do not weaken the assertions. Look at `desktop-explore.png`, `desktop-explore-zoomed.png`, `desktop-explore-hover.png`, `phone-explore-tap.png` and compare with `d1440-c1-explore.png`, `d1440-c3-explore-zoomed.png`, `m390-c1-explore.png`, `m390-c3-explore-zoomed.png`: dot size about 5 px and three muted colours at the overview, dark background `#17120e`, covers crisp and fully opaque when zoomed, no paper tint anywhere, label dark with serif title. Also check the bundle split: `npm run build` output must show the three.js code in a chunk that `/` does not load before first paint (the Task 12 perf script measures this; here just confirm `grep -l WebGLRenderer .next/static/chunks/*.js` lists a chunk that is not referenced by `.next/server/app/index.html`).
 
 - [ ] **Step 5: Commit**
 
@@ -6342,13 +6505,13 @@ Adds exact drag panning, keyboard pan and zoom, fly-to, a hover label,
 zoom controls, a no-WebGL message and a stage mounted once in the root
 layout that loads three.js after first paint.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 
 ### Task 7: Map focus mode, three-stop morph and similarity slider
 
-**Context for the implementer.** Task 6 ported the map engine (`frontcreck/src/components/map/`). This task adds what album view needs from the map (spec 4.3 "Map (right)"): the seed and its visible recommendations drawn as covers with numbers matching the list (seed 64 px, recommendations 46 px), joined to the seed by faint lines, all other points dimmed (the shader already dims them and turns focus albums into small anchor dots when `input.focus` is set); markers pushed apart when they would overlap, with a leader line back to the true position; a hot state (row hover in the list, or pointer on a marker) that enlarges the marker 1.16x, outlines it and its badge in the album accent `var(--acc)`, and accents its line; the camera fitting the seed and visible recommendations inside a padded area clear of the slider panel and of the album panel inset (animated about 420 ms, instant under reduced motion, not re-done after the user has moved the camera unless the seed changes); the three-stop morph (sonic 0, balanced 0.5, mood 1 in `u_sliderT`) animated over 520 ms with ease-in-out, instant under reduced motion; and the "Similarity" slider panel (top-left of the map; three stops Sonic, Balanced, Mood; one line under it describing the stop). Focus comes from the app store (`useAppStore.focus`, set by the album panel in Task 8), so this task is tested on `/map` by setting the store from the test.
+**Context for the implementer.** Task 6 ported the map engine (`frontcreck/src/components/map/`). This task adds what album view needs from the map (spec 4.3 "Map (right)"): the seed and its visible recommendations drawn as covers with numbers matching the list (seed 64 px, recommendations 46 px), joined to the seed by faint lines, all other points dimmed (the shader already dims them and turns focus albums into small anchor dots when `input.focus` is set); markers pushed apart when they would overlap and kept inside the visible map area (right of the album panel, inside the canvas), with a leader line back to the true position; a hot state (row hover in the list, or pointer on a marker) that enlarges the marker 1.16x, outlines it and its badge in the album accent `var(--acc)`, and accents its line; the camera fitting the seed and visible recommendations inside a padded area clear of the slider panel and of the album panel inset (animated about 420 ms, instant under reduced motion, not re-done after the user has moved the camera unless the seed changes); the three-stop morph (sonic 0, balanced 0.5, mood 1 in `u_sliderT`) animated over 520 ms with ease-in-out, instant under reduced motion; and the "Similarity" slider panel (top-left of the map; three stops Sonic, Balanced, Mood; one line under it describing the stop). Focus comes from the app store (`useAppStore.focus`, set by the album panel in Task 8), so this task is tested on `/map` by setting the store from the test.
 
 Visual reference: `design/mockups/final/src.html` lines 1064 to 1091 (`layout()`: marker placement), 1146 to 1185 (lines, covers, outlines, number badges), 921 to 958 (slider markup and behaviour), CSS lines 180 to 198 (`.mode*`); screenshots `d1440-d1-album.png`, `d1440-d2-album-sonic.png`, `d1440-d3-album-mood.png` (right half), `m390-h1-album-mapmode.png`. Two fixes over the mockup: marker separation resolves box overlaps along the axis of least overlap (the mockup's version can pull diagonal neighbours together), and the ring radius grows with the number of markers so up to 11 fit.
 
@@ -6358,11 +6521,11 @@ Visual reference: `design/mockups/final/src.html` lines 1064 to 1091 (`layout()`
 - Test: `frontcreck/src/components/map/state/focusLayout.test.ts`, `frontcreck/e2e/focus.spec.ts`
 
 **Interfaces:**
-- Consumes (Task 6): `useMapStore`, `MapInput`, `MapApi`, `getCameraControl`, `STOP_T`, `setOverlayEl`, `getOverlayEl`, `markerKey`, `requestRender`, `interpolated`; (Task 4) `STOP_IDS`, `StopId`, `useAppStore` (`stop`, `setStop`, `focus`, `hot`), `replaceBy`, `DURATION`, `easeInOutCubic`, `prefersReducedMotion`, `toSummary`; (Task 5) `Cover`; (Task 3) `COPY.slider`.
+- Consumes (Task 6): `useMapStore`, `MapInput`, `MapApi`, `getCameraControl`, `STOP_T`, `setOverlayEl`, `getOverlayEl`, `markerKey`, `requestRender`, `interpolated`, `worldToScreen` and `canvasRect` (`state/projection.ts`, the only projection), `clamp` (`canvas/OverlayDriver.tsx`); (Task 4) `STOP_IDS`, `StopId`, `useAppStore` (`stop`, `setStop`, `focus`, `hot`), `replaceBy`, `DURATION`, `easeInOutCubic`, `prefersReducedMotion`, `toSummary`; (Task 5) `Cover`; (Task 3) `COPY.slider`.
 - Produces:
-  - `@/components/map/state/focusLayout`: `MARKER_SIZE = { seed: 64, rec: 46 }`, `MARKER_GAP = 10`, `MarkerAnchor`, `MarkerItem`, `layoutMarkers(anchors, seedSize, recSize): MarkerItem[]`
+  - `@/components/map/state/focusLayout`: `MARKER_SIZE = { seed: 64, rec: 46 }`, `MARKER_GAP = 10`, `MarkerAnchor`, `MarkerItem`, `MarkerBounds`, `LayoutOptions { bounds?, gap? }`, `layoutMarkers(anchors, seedSize, recSize, options?): MarkerItem[]` (with `bounds`, every marker box stays inside them)
   - `useMapStore` gains `morphing: boolean` and `setMorphing(b)`; `MapApi.isAnimating()` is true while the camera tweens or the layout morphs
-  - `SimilaritySlider({ stop, onChange }: { stop: StopId; onChange: (stop: StopId) => void })`, rendered by `MapStage` in `.map-ui` whenever the map is interactive; changing it calls `useAppStore.setStop` and, in album view, `replaceBy(stop)`
+  - `SimilaritySlider({ stop, onChange }: { stop: StopId; onChange: (stop: StopId) => void })`, rendered by `MapStage` in `.map-ui` whenever the view is interactive, even when WebGL is unavailable or the map data failed to load (the list must still switch stops); changing it calls `useAppStore.setStop` and, in album view, `replaceBy(stop)`
   - DOM: `.mk-layer` containing `.mk.mk--seed` and `.mk.mk--rec` elements (`data-album-id`, `data-hot="true"` when hot) with `.mk-n` rank badges `1..n`, and `svg.mk-lines` with `line[data-to]` per recommendation and `line[data-leader]` per marker
 
 - [ ] **Step 1: Write the failing test**
@@ -6370,17 +6533,21 @@ Visual reference: `design/mockups/final/src.html` lines 1064 to 1091 (`layout()`
 `frontcreck/src/components/map/state/focusLayout.test.ts`:
 ```ts
 import { describe, expect, it } from 'vitest';
-import { MARKER_GAP, MARKER_SIZE, layoutMarkers, type MarkerItem } from './focusLayout';
+import { MARKER_GAP, MARKER_SIZE, layoutMarkers, type MarkerBounds, type MarkerItem } from './focusLayout';
 
-function overlaps(items: MarkerItem[]): number {
+function overlaps(items: MarkerItem[], gap = MARKER_GAP): number {
   let bad = 0;
   for (let a = 0; a < items.length; a++) {
     for (let b = a + 1; b < items.length; b++) {
-      const need = (items[a].size + items[b].size) / 2 + MARKER_GAP;
+      const need = (items[a].size + items[b].size) / 2 + gap;
       if (Math.abs(items[b].x - items[a].x) < need - 1 && Math.abs(items[b].y - items[a].y) < need - 1) bad++;
     }
   }
   return bad;
+}
+
+function outside(items: MarkerItem[], b: MarkerBounds): number {
+  return items.filter((it) => it.x - it.size / 2 < b.left - 0.01 || it.x + it.size / 2 > b.right + 0.01 || it.y - it.size / 2 < b.top - 0.01 || it.y + it.size / 2 > b.bottom + 0.01).length;
 }
 
 describe('layoutMarkers', () => {
@@ -6408,6 +6575,42 @@ describe('layoutMarkers', () => {
       const anchors = Array.from({ length: 11 }, (_, i) => ({ id: i, x: 300 + rand() * 80, y: 300 + rand() * 80 }));
       expect(overlaps(layoutMarkers(anchors, 64, 46))).toBe(0);
     }
+  });
+
+  it('keeps a pile at an edge or a corner inside the bounds without overlaps', () => {
+    const bounds = { left: 0, top: 0, right: 400, bottom: 400 };
+    for (const [x, y] of [[10, 200], [0, 0], [395, 395], [200, 5]]) {
+      const pile = Array.from({ length: 11 }, (_, i) => ({ id: i, x: x + (i % 3), y: y + (i % 2) }));
+      const out = layoutMarkers(pile, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+      expect(outside(out, bounds), `${x},${y}`).toBe(0);
+      expect(overlaps(out), `${x},${y}`).toBe(0);
+    }
+  });
+
+  it('keeps spread recommendations right of an album panel', () => {
+    let seed = 7;
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const bounds = { left: 652, top: 4, right: 1436, bottom: 836 };
+    for (let t = 0; t < 200; t++) {
+      const cx = 748 + rand() * 592;
+      const cy = 262 + rand() * 400;
+      const anchors = Array.from({ length: 11 }, (_, i) => ({
+        id: i,
+        x: Math.min(Math.max(cx + (i ? (rand() - 0.5) * 300 : 0), bounds.left + 60), bounds.right - 60),
+        y: cy + (i ? (rand() - 0.5) * 300 : 0),
+      }));
+      const out = layoutMarkers(anchors, 64, 46, { bounds });
+      expect(outside(out, bounds)).toBe(0);
+      expect(overlaps(out)).toBe(0);
+    }
+  });
+
+  it('takes a smaller gap for small markers', () => {
+    const pile = Array.from({ length: 11 }, (_, i) => ({ id: i, x: 195, y: 86 }));
+    const bounds = { left: 2, top: 2, right: 388, bottom: 170 };
+    const out = layoutMarkers(pile, 32, 22, { bounds, gap: 6 });
+    expect(outside(out, bounds)).toBe(0);
+    expect(overlaps(out, 6)).toBe(0);
   });
 });
 ```
@@ -6476,7 +6679,7 @@ test('the slider morphs the layout and changes the stop', async ({ page }, info)
   await expect(slider).toHaveAttribute('aria-valuetext', 'Balanced');
   await expect(page.getByText(COPY.slider.notes.balanced)).toBeVisible();
   const before = await page.evaluate(() => window.__rmr!.map!.screenPoint(11));
-  await page.getByRole('button', { name: COPY.slider.stops.mood }).click();
+  await page.getByRole('button', { name: COPY.slider.stops.mood, exact: true }).click();
   expect(await page.evaluate(() => window.__rmr!.getState().stop)).toBe('mood');
   await expect(slider).toHaveAttribute('aria-valuetext', 'Mood');
   await expect(page.getByText(COPY.slider.notes.mood)).toBeVisible();
@@ -6499,9 +6702,13 @@ test('the morph is animated, and instant under reduced motion', async ({ page })
   expect(await page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(true);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  const before = await page.evaluate(() => window.__rmr!.map!.screenPoint(11));
   await page.evaluate(() => window.__rmr!.getState().setStop('sonic'));
   await page.waitForTimeout(80);
   expect(await page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  // The morph really happened, at once: album 11 already sits at its sonic position.
+  const after = await page.evaluate(() => window.__rmr!.map!.screenPoint(11));
+  expect(Math.hypot(after!.x - before!.x, after!.y - before!.y)).toBeGreaterThan(1);
 });
 ```
 The panel inset (markers kept right of the album panel) is asserted in `e2e/album.spec.ts` in Task 8, where the panel sets it.
@@ -6543,56 +6750,113 @@ export interface MarkerItem {
   seed: boolean;
 }
 
-/** anchors[0] is the seed. Recommendations too close to the seed go to a ring around it; then overlapping
- * boxes are separated along the axis of least overlap (the seed moves less than the others). */
-export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number): MarkerItem[] {
+/** Area every marker box must stay inside (CSS px, same space as the anchors). */
+export interface MarkerBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
+export interface LayoutOptions {
+  bounds?: MarkerBounds;
+  /** Minimum space between two marker boxes; defaults to MARKER_GAP (the preview strip uses a smaller one). */
+  gap?: number;
+}
+
+type Axis = 'x' | 'y';
+
+/** anchors[0] is the seed. Recommendations too close to the seed go to a ring around it; overlapping boxes are
+ * then separated along the axis of least overlap (the seed moves less than the others). With `bounds`, the
+ * separated group is first shifted inside them as a whole (which keeps it overlap free), then any marker still
+ * outside is held at the wall and separation runs again, a marker that is held passing its share of each push
+ * to the other one. */
+export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, options: LayoutOptions = {}): MarkerItem[] {
+  const gap = options.gap ?? MARKER_GAP;
+  const bounds = options.bounds ?? null;
   const items: MarkerItem[] = anchors.map((a, n) => ({ id: a.id, rank: n, ax: a.x, ay: a.y, x: a.x, y: a.y, size: n === 0 ? seedSize : recSize, seed: n === 0 }));
-  if (items.length < 2) return items;
-  const s0 = items[0];
-  const recs = items.length - 1;
-  const ring = Math.max(s0.size / 2 + recSize / 2 + 22, (recs * (recSize + 16)) / (2 * Math.PI));
-  items.slice(1).forEach((it, n) => {
-    let dx = it.ax - s0.ax;
-    let dy = it.ay - s0.ay;
-    let d = Math.hypot(dx, dy);
-    if (d >= ring) return;
-    if (d < 3) {
-      const a = -Math.PI / 2 + (n * Math.PI * 2) / recs;
-      dx = Math.cos(a);
-      dy = Math.sin(a);
-      d = 1;
-    }
-    it.x = s0.ax + (dx / d) * ring;
-    it.y = s0.ay + (dy / d) * ring;
-  });
-  for (let iter = 0; iter < 200; iter++) {
-    let moved = false;
-    for (let a = 0; a < items.length; a++) {
-      for (let b = a + 1; b < items.length; b++) {
-        const p = items[a];
-        const q = items[b];
-        const need = (p.size + q.size) / 2 + MARKER_GAP;
-        const dx = q.x - p.x;
-        const dy = q.y - p.y;
-        const ox = need - Math.abs(dx);
-        const oy = need - Math.abs(dy);
-        if (ox <= 0 || oy <= 0) continue;
-        const wp = p.seed ? 0.2 : 0.5;
-        const wq = q.seed ? 0.2 : 0.5;
-        const k = 1 / (wp + wq);
-        if (ox < oy) {
-          const sx = dx === 0 ? (b % 2 ? 1 : -1) : Math.sign(dx);
-          p.x -= sx * (ox + 0.5) * wp * k;
-          q.x += sx * (ox + 0.5) * wq * k;
-        } else {
-          const sy = dy === 0 ? (b % 2 ? 1 : -1) : Math.sign(dy);
-          p.y -= sy * (oy + 0.5) * wp * k;
-          q.y += sy * (oy + 0.5) * wq * k;
-        }
-        moved = true;
+  if (items.length > 1) {
+    const s0 = items[0];
+    const recs = items.length - 1;
+    const ring = Math.max(s0.size / 2 + recSize / 2 + 22, (recs * (recSize + 16)) / (2 * Math.PI));
+    items.slice(1).forEach((it, n) => {
+      let dx = it.ax - s0.ax;
+      let dy = it.ay - s0.ay;
+      let d = Math.hypot(dx, dy);
+      if (d >= ring) return;
+      if (d < 3) {
+        const a = -Math.PI / 2 + (n * Math.PI * 2) / recs;
+        dx = Math.cos(a);
+        dy = Math.sin(a);
+        d = 1;
       }
+      it.x = s0.ax + (dx / d) * ring;
+      it.y = s0.ay + (dy / d) * ring;
+    });
+  }
+
+  const range = (it: MarkerItem, axis: Axis, walls: boolean): [number, number] => {
+    if (!walls || !bounds) return [-Infinity, Infinity];
+    const h = it.size / 2;
+    return axis === 'x' ? [bounds.left + h, bounds.right - h] : [bounds.top + h, bounds.bottom - h];
+  };
+  /** Moves `it` by `d` along `axis`, held by the walls when `walls`; returns how far it actually moved. */
+  const moveBy = (it: MarkerItem, axis: Axis, d: number, walls: boolean): number => {
+    const [lo, hi] = range(it, axis, walls);
+    const before = it[axis];
+    it[axis] = Math.min(Math.max(before + d, lo), hi);
+    return it[axis] - before;
+  };
+  const separate = (walls: boolean) => {
+    for (let iter = 0; iter < 300; iter++) {
+      let moved = false;
+      for (let a = 0; a < items.length; a++) {
+        for (let b = a + 1; b < items.length; b++) {
+          const p = items[a];
+          const q = items[b];
+          const need = (p.size + q.size) / 2 + gap;
+          const ox = need - Math.abs(q.x - p.x);
+          const oy = need - Math.abs(q.y - p.y);
+          if (ox <= 0 || oy <= 0) continue;
+          const axis: Axis = ox < oy ? 'x' : 'y';
+          const d = q[axis] - p[axis];
+          const sign = d === 0 ? (b % 2 ? 1 : -1) : Math.sign(d);
+          const total = (axis === 'x' ? ox : oy) + 0.5;
+          const wp = p.seed ? 0.2 : 0.5;
+          const wq = q.seed ? 0.2 : 0.5;
+          const movedP = -sign * moveBy(p, axis, (-sign * total * wp) / (wp + wq), walls);
+          const movedQ = sign * moveBy(q, axis, sign * (total - movedP), walls);
+          if (movedP + movedQ < total) moveBy(p, axis, -sign * (total - movedP - movedQ), walls);
+          moved = true;
+        }
+      }
+      if (!moved) return;
     }
-    if (!moved) break;
+  };
+
+  separate(false);
+  if (bounds) {
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    let y0 = Infinity;
+    let y1 = -Infinity;
+    for (const it of items) {
+      const h = it.size / 2;
+      x0 = Math.min(x0, it.x - h);
+      x1 = Math.max(x1, it.x + h);
+      y0 = Math.min(y0, it.y - h);
+      y1 = Math.max(y1, it.y + h);
+    }
+    const shift = (lo: number, hi: number, min: number, max: number) => (hi - lo > max - min ? 0 : lo < min ? min - lo : hi > max ? max - hi : 0);
+    const sx = shift(x0, x1, bounds.left, bounds.right);
+    const sy = shift(y0, y1, bounds.top, bounds.bottom);
+    for (const it of items) {
+      it.x += sx;
+      it.y += sy;
+      moveBy(it, 'x', 0, true);
+      moveBy(it, 'y', 0, true);
+    }
+    separate(true);
   }
   return items;
 }
@@ -6639,7 +6903,8 @@ export function MorphDriver() {
     const a = anim.current;
     if (!a) return;
     const p = Math.min(1, (performance.now() - a.start) / DURATION.morph);
-    store.setSliderT(a.from + (a.to - a.from) * easeInOutCubic(p));
+    // Land exactly on the target, or the next frame would see a tiny difference and start another morph.
+    store.setSliderT(p >= 1 ? a.to : a.from + (a.to - a.from) * easeInOutCubic(p));
     if (p < 1) invalidate();
     else {
       anim.current = null;
@@ -6710,9 +6975,12 @@ import type * as THREE from 'three';
 import { MARKER_SIZE, layoutMarkers } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
 import { getOverlayEl, markerKey } from '../state/overlayEls';
+import { canvasRect, worldToScreen } from '../state/projection';
+import { clamp } from './OverlayDriver';
 
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const HOT_SCALE = 1.16;
+/** Keeps a hot marker (scaled 1.16) and its badge clear of the canvas edges. */
+const EDGE = 8;
 
 function setLine(l: SVGLineElement, x1: number, y1: number, x2: number, y2: number) {
   l.setAttribute('x1', x1.toFixed(1));
@@ -6732,11 +7000,14 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
     if (!f) return;
     const pos = positionsRef.current;
     const { width, height } = get().size;
-    const toScreen = (i: number) => ({
-      x: (((pos[2 * i] - camera.position.x) * camera.zoom - camera.left) / (camera.right - camera.left)) * width,
-      y: ((camera.top - (pos[2 * i + 1] - camera.position.y) * camera.zoom) / (camera.top - camera.bottom)) * height,
-    });
-    const placed = layoutMarkers([f.seed, ...f.recs].map((id) => ({ id, ...toScreen(id) })), MARKER_SIZE.seed, MARKER_SIZE.rec);
+    const rect = canvasRect(width, height);
+    const bounds = { left: input.insetLeft + EDGE, top: EDGE, right: width - EDGE, bottom: height - EDGE };
+    const placed = layoutMarkers(
+      [f.seed, ...f.recs].map((id) => ({ id, ...worldToScreen(pos[2 * id], pos[2 * id + 1], rect, camera) })),
+      MARKER_SIZE.seed,
+      MARKER_SIZE.rec,
+      { bounds },
+    );
     for (const it of placed) {
       const el = getOverlayEl(markerKey(it.id));
       if (!el) continue;
@@ -6835,7 +7106,10 @@ export function FocusMarkers({ albums }: { albums: AlbumRecord[] }) {
           ref={(el) => { setOverlayEl(markerKey(id), el); }}
           onPointerEnter={() => enter(id)}
           onPointerLeave={leave}
-          onClick={() => useMapStore.getState().callbacks.onPick(id)}
+          onClick={() => {
+            leave(); // the marker is about to move or unmount under a resting pointer, so pointerleave may never fire
+            useMapStore.getState().callbacks.onPick(id);
+          }}
         >
           <Cover album={toSummary(albums, id)} size={n === 0 ? MARKER_SIZE.seed : MARKER_SIZE.rec} eager />
           {n > 0 ? <span className="mk-n">{n}</span> : null}
@@ -6904,11 +7178,11 @@ export function SimilaritySlider({ stop, onChange }: { stop: StopId; onChange: (
 
 `frontcreck/src/components/map/canvas/Scene.tsx`: import and mount `<MorphDriver />` directly before `<AlbumField />` (its frame callback must run first), `<FocusFramer />` directly after `<CameraTween />`, and `<MarkerDriver positionsRef={positionsRef} />` directly after `<OverlayDriver />`.
 
-`frontcreck/src/components/map/MusicMap.tsx`: render `<FocusMarkers albums={data.albums} />` between `<Scene .../>` and `<HoverLabel .../>`.
+`frontcreck/src/components/map/MusicMap.tsx`: add `import { FocusMarkers } from './overlays/FocusMarkers';` and render `<FocusMarkers albums={data.albums} />` between `<Scene .../>` and `<HoverLabel .../>`.
 
 `frontcreck/src/components/map/MapStage.tsx`:
 - import `SimilaritySlider` from `./overlays/SimilaritySlider`, `replaceBy` from `@/lib/url-state` and `type StopId` from `@/lib/types`;
-- add inside the component:
+- add inside the component, directly after the `onApi` callback (so everything it reads is declared above it):
 ```tsx
   // The list and the map react to the store at once; the URL is written a frame later, off the interaction path.
   const onStop = useCallback((s: StopId) => {
@@ -6924,14 +7198,15 @@ export function SimilaritySlider({ stop, onChange }: { stop: StopId; onChange: (
 - change the `.map-ui` content to:
 ```tsx
       <div className="map-ui">
-        {interactive && mapData ? (
+        {interactive ? (
           <>
             <SimilaritySlider stop={stop} onChange={onStop} />
-            <ZoomControls api={apiRef} />
+            {mapData ? <ZoomControls api={apiRef} /> : null}
           </>
         ) : null}
       </div>
 ```
+  The slider does not depend on the map: without WebGL, or while the map data is loading or has failed, it still switches the album list between stops (spec 7: lists keep working without WebGL).
 
 Append to `frontcreck/src/styles/map.css` (mockup lines 180 to 198 for the slider; marker styles from the canvas drawing in lines 1146 to 1185):
 ```css
@@ -6981,7 +7256,7 @@ Append to `frontcreck/src/styles/map.css` (mockup lines 180 to 198 for the slide
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 cd frontcreck && npm test && npm run lint && npm run typecheck && npm run test:e2e
 ```
-Expected: Vitest green (4 new layout tests); Playwright green for `focus.spec.ts` on both projects plus all earlier specs. Look at `desktop-focus.png` and `phone-focus.png` and compare with the map half of `d1440-d1-album.png` and with `m390-h1-album-mapmode.png`: seed cover 64 px with an accent outline 4 px out, recommendation covers 46 px with a hairline, square rank badges top-left, faint lines to the seed, other dots dimmed to about a third, markers never overlapping. Look at `desktop-slider-sonic.png` against the slider panel in `d1440-d2-album-sonic.png`.
+Expected: Vitest green (7 layout tests); Playwright green for `focus.spec.ts` on both projects plus all earlier specs. Look at `desktop-focus.png` and `phone-focus.png` and compare with the map half of `d1440-d1-album.png` and with `m390-h1-album-mapmode.png`: seed cover 64 px with an accent outline 4 px out, recommendation covers 46 px with a hairline, square rank badges top-left, faint lines to the seed, other dots dimmed to about a third, markers never overlapping. Look at `desktop-slider-sonic.png` against the slider panel in `d1440-d2-album-sonic.png`.
 
 - [ ] **Step 5: Commit**
 
@@ -6996,19 +7271,19 @@ inset; hot albums light up in the album accent; the layout morphs between
 the sonic, balanced and mood stops over 520 ms (instant under reduced
 motion) from a three-stop slider.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 
 ### Task 8: Album page (static page per album, panel, rows, show more, hover linking, slider sync, ambient colour, trail, copy link, close)
 
-**Context for the implementer.** `/album/[slug]` is the split view (spec 4.3): the panel on the left (about 45 %, `var(--panel)`), the persistent map on the right. Every album page is prerendered at build time (`generateStaticParams` over all 4,081 slugs, `dynamicParams = false` so unknown slugs 404) with per-album metadata. The page gets everything it shows from `getAlbumPageData(slug)` (seed plus 10 rows at each of the three stops, with shared words), so changing the stop is a pure client re-render (budget: under 150 ms) and never fetches. `?by=sonic|balanced|mood` sets the stop (absent means balanced); the slider on the map (Task 7) writes it with `history.replaceState`. The panel: breadcrumb trail "Visited" (session, clickable), close control (and Escape) back to `/map`, seed header (116 px cover, artist, title in the display face, up to 6 mood tags, "Open in Spotify", a quiet "Copy link" icon button), heading "Closest albums", ranked rows (number, 60 px cover, title, artist, "Shares lush, melancholic" with up to 4 shared words, omitted when none; the whole row links deeper keeping `by`; a small Spotify icon link per row), "Show more" / "Show fewer" for rows 6 to 10. Hovering or focusing a row highlights its map marker and lights the shared tags in the seed header; hovering a marker highlights its row. The album's ambient colours wash the top of the panel and the map (two dominant colours, cross-fading over about 400 ms between albums) and its accent becomes `--acc` (row bar, lit tags, marker outlines). When the stop changes, rows that stay glide to their new rank and newcomers fade in (instant under reduced motion). The panel publishes its width as the map inset so the map re-centres on the right part.
+**Context for the implementer.** `/album/[slug]` is the split view (spec 4.3): the panel on the left (about 45 %, `var(--panel)`), the persistent map on the right. Every album page is prerendered at build time (`generateStaticParams` over all 4,081 slugs, `dynamicParams = false` so unknown slugs 404) with per-album metadata. The page gets everything it shows from `getAlbumPageData(slug)` (seed plus 10 rows at each of the three stops, with shared words), so changing the stop is a pure client re-render (budget: under 150 ms) and never fetches. `?by=sonic|balanced|mood` sets the stop (absent means balanced); the slider on the map (Task 7) writes it with `history.replaceState`. The panel: breadcrumb trail "Visited" (session, clickable), close control (and Escape) back to `/map`, seed header (116 px cover, artist, title in the display face, up to 6 mood tags, "Open in Spotify", a quiet "Copy link" icon button), heading "Closest albums", ranked rows (number, 60 px cover, title, artist, "Shares lush, melancholic" with up to 4 shared words, omitted when none; since Task 4, `RecRow.shared` holds only the seed's visible tags (the first 6 descriptors) that the other album also has, in the seed's order, so every shared word is a tag in the header and can light up; the whole row links deeper keeping `by`; a small Spotify icon link per row), "Show more" / "Show fewer" for rows 6 to 10. Hovering or focusing a row highlights its map marker and lights the shared tags in the seed header; hovering a marker highlights its row. The album's ambient colours wash the top of the panel and the map (two dominant colours, cross-fading over about 400 ms between albums) and its accent becomes `--acc` (row bar, lit tags, marker outlines). When the stop changes, rows that stay glide to their new rank and newcomers fade in (instant under reduced motion). The panel publishes its width as the map inset so the map re-centres on the right part. Leaving the album view (close control, Escape, or any route change away from the album) must leave the store clean: `focus`, `hot` and `ambient` null, `mapMode` false, `panelInset` 0 and `--acc` removed. Exactly one place does this, the AlbumPanel unmount cleanup, because all three ways of leaving unmount the panel. RSC payload rule: the page passes only `getAlbumPageData(slug)` (the seed plus 30 rows) to client components, never the catalog.
 
 Visual reference: `design/mockups/final/src.html` CSS lines 251 to 323 and 366 to 369; behaviour 1448 to 1575 (`trailHTML`, `seedHTML`, `recsHTML`, `renderAlbumView`, `reorderAnimation`, `litTags`), 711 to 736 (`setAmbient`), 779 to 799 (copy link, toast); screenshots `d1440-d1-album.png`, `d1440-d2-album-sonic.png`, `d1440-d3-album-mood.png`, `d1440-d4-album-deeper.png`, `d1440-d5-album-longtitle.png`, `d1280-d1-album.png`. Remember the approved copy: "Closest albums", not "Five closest". Phone layout of this page is Task 11; here it must merely work at 390 px (the panel is full width there).
 
 **Files:**
 - Create: `frontcreck/src/app/album/[slug]/page.tsx`, `frontcreck/src/components/album/AlbumView.tsx`, `frontcreck/src/components/album/AlbumPanel.tsx`, `frontcreck/src/components/album/Trail.tsx`, `frontcreck/src/components/album/SeedHeader.tsx`, `frontcreck/src/components/album/RecList.tsx`, `frontcreck/src/components/album/RecRow.tsx`, `frontcreck/src/components/album/CopyLinkButton.tsx`, `frontcreck/src/components/album/AmbientWash.tsx`, `frontcreck/src/components/album/useFlipList.ts`, `frontcreck/src/components/shell/Toast.tsx`, `frontcreck/src/styles/album.css`
-- Modify: `frontcreck/src/app/layout.tsx`, `frontcreck/src/app/globals.css`, `frontcreck/src/components/map/MapStage.tsx`, `frontcreck/src/styles/map.css`
+- Modify: `frontcreck/src/app/layout.tsx`, `frontcreck/src/app/globals.css`, `frontcreck/src/lib/copy.ts` (one key, `album.trailMore`), `frontcreck/src/components/map/MapStage.tsx`, `frontcreck/src/styles/map.css`
 - Test: `frontcreck/src/components/album/AmbientWash.test.ts`, `frontcreck/e2e/album.spec.ts`
 
 **Interfaces:**
@@ -7047,6 +7322,14 @@ import { shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helper
 
 const IR = '/album/in-rainbows-radiohead';
 const titles = (page: Page) => page.locator('ol.rec-list .rec-title').allTextContents();
+
+/** The accent colour of an album, read from the served data. */
+async function accentOf(page: Page, slug: string): Promise<string> {
+  return page.evaluate(async (s) => {
+    const albums: { slug: string; w: string[] }[] = await (await fetch('/data/albums.json')).json();
+    return albums.find((a) => a.slug === s)!.w[2];
+  }, slug);
+}
 
 test('renders the seed, tags and the closest albums (balanced by default)', async ({ page }, info) => {
   const res = await page.goto(IR);
@@ -7094,13 +7377,13 @@ test.describe('desktop split view', () => {
     await page.goto(IR);
     await waitForMap(page);
     const historyBefore = await page.evaluate(() => history.length);
-    await page.getByRole('button', { name: COPY.slider.stops.sonic }).click();
+    await page.getByRole('button', { name: COPY.slider.stops.sonic, exact: true }).click();
     await expect(page).toHaveURL(`${IR}?by=sonic`);
     expect((await titles(page))[0]).toBe('Music for the Masses');
     expect(await page.evaluate(() => history.length)).toBe(historyBefore);
     await waitForCameraIdle(page);
     await shot(page, info, 'album-sonic');
-    await page.getByRole('button', { name: COPY.slider.stops.balanced }).click();
+    await page.getByRole('button', { name: COPY.slider.stops.balanced, exact: true }).click();
     await expect(page).toHaveURL(IR);
   });
 
@@ -7108,12 +7391,15 @@ test.describe('desktop split view', () => {
     await page.goto(IR);
     await waitForMap(page);
     await waitForCameraIdle(page);
-    const row = page.locator('li.rec').nth(1);
+    // Any row with a "Shares" line: its words are exactly the header tags that light up.
+    const row = page.locator('li.rec').filter({ has: page.locator('.rec-shared') }).first();
+    await expect(row).toHaveCount(1);
     const id = await row.getAttribute('data-album-id');
+    const words = (await row.locator('.rec-shared').innerText()).replace(COPY.album.shares([]), '').split(', ');
     await row.locator('a.rec-main').hover();
     await expect(row).toHaveClass(/hot/);
     await expect(page.locator(`.mk[data-album-id="${id}"]`)).toHaveAttribute('data-hot', 'true');
-    expect(await page.locator('.tags li.lit').count()).toBeGreaterThan(0);
+    await expect(page.locator('.tags li.lit')).toHaveText(words);
     await page.mouse.move(5, 890);
     const other = page.locator('li.rec').nth(3);
     const otherId = await other.getAttribute('data-album-id');
@@ -7150,14 +7436,23 @@ test.describe('desktop split view', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toMatch(/\/album\/in-rainbows-radiohead\?by=mood$/);
   });
 
-  test('close and Escape return to the map', async ({ page }) => {
+  test('close and Escape return to the map and leave the store clean', async ({ page }) => {
+    const albumState = () =>
+      page.evaluate(() => {
+        const s = window.__rmr!.getState();
+        return { focus: s.focus, hot: s.hot, ambient: s.ambient, mapMode: s.mapMode, panelInset: s.panelInset, acc: document.documentElement.style.getPropertyValue('--acc') };
+      });
+    const clean = { focus: null, hot: null, ambient: null, mapMode: false, panelInset: 0, acc: '' };
     await page.goto(IR);
-    await page.getByRole('button', { name: COPY.album.close }).click();
+    await page.locator('li.rec').first().locator('a.rec-main').hover(); // make `hot` non-null first
+    await page.getByRole('button', { name: COPY.album.close, exact: true }).click();
     await expect(page).toHaveURL('/map');
+    await expect.poll(albumState).toEqual(clean);
     await page.goto(IR);
     await page.locator('#seed-title').focus();
     await page.keyboard.press('Escape');
     await expect(page).toHaveURL('/map');
+    await expect.poll(albumState).toEqual(clean);
   });
 });
 
@@ -7179,11 +7474,16 @@ test('going deeper keeps by, fills the trail, and the trail goes back', async ({
 });
 
 test('ambient colour and accent follow the album', async ({ page }) => {
+  const acc = () => page.evaluate(() => document.documentElement.style.getPropertyValue('--acc').trim());
   await page.goto(IR);
-  const accent = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--acc').trim());
-  expect(accent).toMatch(/^#[0-9a-f]{6}$/);
+  await expect.poll(acc).toBe(await accentOf(page, 'in-rainbows-radiohead'));
   await expect(page.locator('.amb i.on')).toHaveCount(1);
   expect(await page.locator('.amb i.on').evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('radial-gradient');
+  const next = page.locator('li.rec').first().locator('a.rec-main');
+  const nextSlug = (await next.getAttribute('href'))!.replace(/^\/album\//, '').replace(/\?.*$/, '');
+  await next.click();
+  await expect(page).toHaveURL(new RegExp(`/album/${nextSlug}`));
+  await expect.poll(acc).toBe(await accentOf(page, nextSlug));
 });
 
 test('unknown album slugs are 404s', async ({ page }) => {
@@ -7232,7 +7532,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description: COPY.metaDescription,
     alternates: { canonical: `/album/${slug}` },
-    openGraph: { title, description: COPY.metaDescription, images: image ? [{ url: image, width: 640, height: 640 }] : [] },
+    openGraph: {
+      title,
+      description: COPY.metaDescription,
+      siteName: COPY.wordmark,
+      type: 'website',
+      images: image ? [{ url: image, width: 640, height: 640 }] : [],
+    },
   };
 }
 
@@ -7329,6 +7635,8 @@ export function AlbumPanel({ data, stop, syncStop }: { data: AlbumPageData; stop
     return () => ro.disconnect();
   }, []);
 
+  // The one place that clears the album view's state: the close control, Escape and every route change away
+  // from this album (including to another album) unmount this panel.
   useEffect(
     () => () => {
       const s = useAppStore.getState();
@@ -7383,6 +7691,12 @@ export function AlbumPanel({ data, stop, syncStop }: { data: AlbumPageData; stop
 }
 ```
 
+`frontcreck/src/lib/copy.ts`: in `album`, directly after `trailNav`, add the one visible glyph this task introduces:
+```ts
+    /** Shown before the trail when older albums are cut off. */
+    trailMore: '…',
+```
+
 `frontcreck/src/components/album/Trail.tsx`:
 ```tsx
 'use client';
@@ -7402,7 +7716,7 @@ export function Trail({ current, stop }: { current: string; stop: StopId }) {
     <nav className="trail" aria-label={COPY.album.trailNav}>
       <span className="cap">{COPY.album.trailLabel}</span>
       <ol>
-        {truncated ? <li aria-hidden="true">…</li> : null}
+        {truncated ? <li aria-hidden="true">{COPY.album.trailMore}</li> : null}
         {items.map((t) => (
           <li key={t.slug}>
             {t.slug === current ? <span aria-current="page">{t.title}</span> : <Link href={albumHref(t.slug, stop)}>{t.title}</Link>}
@@ -7625,12 +7939,10 @@ export function useFlipList(listRef: RefObject<HTMLElement | null>, group: numbe
 'use client';
 
 import { useEffect, useState } from 'react';
+import { hexToRgb } from '@/lib/color';
 import type { Ambient } from '@/lib/types';
 
-const rgba = (hex: string, a: number) => {
-  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
-  return `rgba(${r},${g},${b},${a})`;
-};
+const rgba = (hex: string, a: number) => `rgba(${hexToRgb(hex).join(',')},${a})`;
 
 export function ambientBackground(a: Ambient, variant: 'panel' | 'map'): string {
   return variant === 'panel'
@@ -7762,6 +8074,8 @@ Add `@import "../styles/album.css";` to `globals.css`, and append to `map.css` (
 .map-ui { transition: left var(--dur) var(--out); }
 @media (min-width: 900px) {
   .map-pane[data-view="album"] .map-ui { left: var(--panel); }
+  /* the no-WebGL and data-error messages sit in the visible map area, not half under the panel */
+  .map-pane[data-view="album"] .map-msg { left: calc(var(--panel) + (100% - var(--panel)) / 2); }
 }
 ```
 
@@ -7771,7 +8085,7 @@ Add `@import "../styles/album.css";` to `globals.css`, and append to `map.css` (
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 cd frontcreck && npm test && npm run lint && npm run typecheck && npm run build && npm run test:e2e
 ```
-Expected: `next build` prerenders 4,081 `/album/[slug]` pages (the build log lists `● /album/[slug]` with `(4081 paths)`; allow a few minutes); Vitest and Playwright green (album spec on both projects, all earlier specs). Look at `desktop-album.png`, `desktop-album-sonic.png`, `desktop-album-deeper.png` next to `d1440-d1-album.png`, `d1440-d2-album-sonic.png`, `d1440-d4-album-deeper.png`: panel width, seed grid (116 px cover, 48 px title, lamp button, quiet link button), tag chips, italic serif heading, row rhythm (60 px covers, 23 px titles, 2 px accent bar on the hot row), wash colours behind the seed header, map fitted right of the panel with the slider clear of the covers. Also run `ls .next/server/app/album | wc -l` and `du -sh .next/server/app/album` and note both numbers in the commit body (static output size is a deployment risk to watch).
+Expected: `next build` prerenders 4,081 `/album/[slug]` pages (the build log lists `● /album/[slug]` with `(4081 paths)`; allow a few minutes); Vitest and Playwright green (album spec on both projects, all earlier specs). Look at `desktop-album.png`, `desktop-album-sonic.png`, `desktop-album-deeper.png` next to `d1440-d1-album.png`, `d1440-d2-album-sonic.png`, `d1440-d4-album-deeper.png`: panel width, seed grid (116 px cover, 48 px title, lamp button, quiet link button), tag chips, italic serif heading, row rhythm (60 px covers, 23 px titles, 2 px accent bar on the hot row), wash colours behind the seed header, map fitted right of the panel with the slider clear of the covers. Also run `du -sh .next/server/app/album` and put the size in the commit body where the message below says so (static output size is a deployment risk to watch; do not write the page count, which is the exact catalog size).
 
 - [ ] **Step 5: Commit**
 
@@ -7786,7 +8100,9 @@ more, copy link and close; rows and map markers highlight each other,
 the slider swaps the list in place and writes ?by=, rows glide to their
 new rank, and the album's ambient colours wash the panel and the map.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+Static album output: <size printed by du -sh .next/server/app/album>.
+
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 
@@ -7852,7 +8168,7 @@ test('the card closes with its button and with Escape', async ({ page, isMobile 
   await waitForMap(page);
   await waitForCameraIdle(page);
   await pick(page, isMobile);
-  await page.getByRole('button', { name: COPY.map.cardClose }).click();
+  await page.getByRole('button', { name: COPY.map.cardClose, exact: true }).click();
   await expect(page.locator('.card')).toHaveCount(0);
   await waitForCameraIdle(page);
   await pick(page, isMobile);
@@ -7875,7 +8191,7 @@ test('closing an album returns to the map where it was', async ({ page, isMobile
   await page.getByRole('link', { name: COPY.map.cardPrimary }).click();
   await expect(page).toHaveURL(/\/album\//);
   await waitForCameraIdle(page);
-  await page.getByRole('button', { name: COPY.album.close }).click();
+  await page.getByRole('button', { name: COPY.album.close, exact: true }).click();
   await expect(page).toHaveURL('/map');
   await waitForCameraIdle(page);
   const back = await camera(page);
@@ -7883,6 +8199,33 @@ test('closing an album returns to the map where it was', async ({ page, isMobile
   expect(Math.abs(back.x - saved.x)).toBeLessThan(0.01);
   expect(Math.abs(back.y - saved.y)).toBeLessThan(0.01);
   await expect(page.locator('.card')).toHaveCount(0);
+});
+
+test('leaving an album by the header nav leaves the album state clean and frames the whole map', async ({ page }) => {
+  await page.goto('/album/in-rainbows-radiohead');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await page.getByRole('navigation', { name: COPY.nav.label }).getByRole('link', { name: COPY.nav.map, exact: true }).click();
+  await expect(page).toHaveURL('/map');
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const s = window.__rmr!.getState();
+        return [s.focus, s.hot, s.ambient, s.mapMode, s.panelInset];
+      }),
+    )
+    .toEqual([null, null, null, false, 0]);
+  await waitForCameraIdle(page);
+  // With no saved Explore camera, the map resets to the overview, not to the album's old framing.
+  const overview = await page.evaluate(() => {
+    const api = window.__rmr!.map!;
+    const now = api.getCamera();
+    api.reset();
+    return now;
+  });
+  await waitForCameraIdle(page);
+  const again = await camera(page);
+  expect(again.zoom).toBeCloseTo(overview.zoom, 2);
 });
 ```
 Note: `pick` flies the camera to the album; "where it was" means the camera at the moment Explore was left, so it is read after the flight.
@@ -7986,7 +8329,7 @@ export function MapCard({ album, stop, onClose }: { album: AlbumSummary; stop: S
 
 `frontcreck/src/components/map/MapStage.tsx`, exact edits:
 1. Imports: `MapCard` from `./overlays/MapCard`, `MapHint` from `./overlays/MapHint`, `toSummary` from `@/lib/data/catalog`.
-2. After the `viewRef` effect, add the Explore camera memory and the Escape handler:
+2. Directly after the `onApi` callback (so `apiRef` is declared above it), add the Explore camera memory and the Escape handler:
 ```tsx
   const prevView = useRef<View>(view);
   useEffect(() => {
@@ -8000,7 +8343,9 @@ export function MapCard({ album, stop, onClose }: { album: AlbumSummary; stop: S
     }
     if (view === 'explore' && prev === 'album') {
       if (s.exploreCamera) apiRef.current?.setCamera(s.exploreCamera, true);
-      else apiRef.current?.reset();
+      // The map store still holds the album's focus until MusicMap's layout effect applies the new input on
+      // the next render; reset one frame later so it frames the whole map, not the album that was just left.
+      else requestAnimationFrame(() => apiRef.current?.reset());
     }
   }, [view]);
 
@@ -8075,7 +8420,7 @@ and Spotify (a bottom sheet on phones); Escape, the close button or an
 empty click closes it; the camera is saved on leaving Explore and
 restored when an album is closed.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 
@@ -8084,33 +8429,16 @@ EOF
 **Context for the implementer.** Home (spec 4.1) combines the two mockup variants, which the owner approved: the live map dimmed behind everything (mockup "Home A": `design/mockups/final/shots/d1440-a1-homeA.png`) and a shelf of covers at the bottom (mockup "Home B": `d1440-b1-homeB.png`, `m390-b1-homeB.png`). Hero, centred: the display line "Start with an album you like.", the supporting line "Get the albums closest to it, by sound and by mood." (the mockup's "You get the five closest..." is wrong), one search field (autofocus on desktop only), and under it two quiet buttons side by side, "Explore the map" and "Surprise me". The shelf: label "Or start from one of these", two rows of 12 covers on desktop (8 per row between 900 and 1179 px), two rows of 4 on phones; covers dimmed until hover or focus, when the title and artist replace the label in one line above the shelf; each cover opens its album; the albums are the top-ranked catalog albums with a cover (`getShelf(24)`). The map behind takes no pointer input, except that clicking empty map area goes to `/map`. "Surprise me" opens a random album. About (spec 4.6, copy in `COPY.about`): a short page over the dimmed map, no owner name, "4,000+" only. 404: "That page isn't here. Search for an album, or explore the map." with a search field and a link to the map. Errors: a route error boundary with "The albums didn't load. Check your connection, then try again." and "Try again"; the album route gets a loading skeleton (mockup `skeletonHTML`, lines 1497 to 1507; screenshot `d1440-e1-loading.png`) for navigations whose data is not prefetched yet. Visual reference for the hero and shelf: CSS lines 218 to 249 and 360 to 399; About: lines 326 to 340 (drop the `dl` with "Made by" and the axis canvases); error: 317 to 323, `d1440-e2-error.png`.
 
 **Files:**
-- Create: `frontcreck/src/lib/nav-history.ts`, `frontcreck/src/components/shell/RouteTracker.tsx`, `frontcreck/src/components/DocumentTitle.tsx`, `frontcreck/src/components/home/HomeHero.tsx`, `frontcreck/src/components/home/Shelf.tsx`, `frontcreck/src/components/ErrorPanel.tsx`, `frontcreck/src/components/album/AlbumSkeleton.tsx`, `frontcreck/src/components/AboutClose.tsx`, `frontcreck/src/app/about/page.tsx`, `frontcreck/src/app/not-found.tsx`, `frontcreck/src/app/error.tsx`, `frontcreck/src/app/album/[slug]/loading.tsx`
-- Modify: `frontcreck/src/app/layout.tsx`, `frontcreck/src/app/page.tsx`, `frontcreck/src/components/map/MapStage.tsx`, `frontcreck/src/styles/home.css`, `frontcreck/src/styles/album.css`, `frontcreck/src/styles/map.css`
-- Test: `frontcreck/src/components/ErrorPanel.test.tsx`, `frontcreck/src/components/album/AlbumSkeleton.test.tsx`, `frontcreck/src/lib/nav-history.test.ts`, `frontcreck/e2e/pages.spec.ts`
+- Create: `frontcreck/src/lib/nav-history.ts`, `frontcreck/src/components/shell/RouteTracker.tsx`, `frontcreck/src/components/DocumentTitle.tsx`, `frontcreck/src/components/home/HomeHero.tsx`, `frontcreck/src/components/home/Shelf.tsx`, `frontcreck/src/components/album/AlbumSkeleton.tsx`, `frontcreck/src/components/AboutClose.tsx`, `frontcreck/src/app/not-found.tsx`, `frontcreck/src/app/error.tsx`, `frontcreck/src/app/album/[slug]/loading.tsx`
+- Replace (a placeholder already exists: a hidden h1 and metadata): `frontcreck/src/app/about/page.tsx`
+- Modify: `frontcreck/src/app/layout.tsx` (also takes its title template from `COPY`), `frontcreck/src/lib/copy.ts` (one key, `titles.template`), `frontcreck/src/app/page.tsx`, `frontcreck/src/components/map/MapStage.tsx`, `frontcreck/src/styles/home.css`, `frontcreck/src/styles/album.css`, `frontcreck/src/styles/map.css`
+- Test: `frontcreck/src/components/album/AlbumSkeleton.test.tsx`, `frontcreck/src/lib/nav-history.test.ts`, `frontcreck/e2e/pages.spec.ts`
 
 **Interfaces:**
-- Consumes: (Task 4) `getShelf`, `loadCatalog`, `pickSurprise`, `albumHref`, `AlbumSummary`, `useAppStore` (`stop`, `showToast`); (Task 5) `SearchBox` (`variant="hero"` and `"page"`), `Cover`, `Icon`; (Task 9) `FocusOnMount`; (Task 3) `COPY`.
-- Produces: `recordPath(path)`, `previousPath(): string | null` (`@/lib/nav-history`, also used by Task 11), `RouteTracker()` (mounted in the root layout), `HomeHero()`, `Shelf({ albums })`, `ErrorPanel({ onRetry })`, `AlbumSkeleton()`, `AboutClose()`; routes `/about`, 404, error boundary, album loading state; DOM `.home`, `.hero`, `.hero-row`, `.shelf`, `.shelf-now`, `.mosaic`, `.veil` (inside `.map-pane` on Home), `.about-page`, `.notfound`, `section.album[aria-busy="true"]` skeleton.
+- Consumes: (Task 4) `getShelf`, `loadCatalog`, `pickSurprise`, `albumHref`, `AlbumSummary`, `useAppStore` (`stop`, `showToast`); (Task 5) `SearchBox` (`variant="hero"` and `"page"`), `Cover`, `Icon`; (Task 9) `FocusOnMount`; (Task 6) `ErrorPanel({ onRetry, className? })` (`@/components/ErrorPanel`, default class `rec-error`); (Task 3) `COPY`.
+- Produces: `recordPath(path)`, `previousPath(): string | null` (`@/lib/nav-history`, also used by Task 11), `RouteTracker()` (mounted in the root layout), `HomeHero()`, `Shelf({ albums })`, `DocumentTitle({ title })`, `AlbumSkeleton()`, `AboutClose()`; routes `/about`, 404, error boundary, album loading state; DOM `.home`, `.hero`, `.hero-row`, `.shelf`, `.shelf-now`, `.mosaic`, `.veil` (inside `.map-pane` on Home), `.about-page`, `.notfound`, `section.album[aria-busy="true"]` skeleton.
 
 - [ ] **Step 1: Write the failing test**
-
-`frontcreck/src/components/ErrorPanel.test.tsx`:
-```tsx
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
-import { COPY } from '@/lib/copy';
-import { ErrorPanel } from './ErrorPanel';
-
-describe('ErrorPanel', () => {
-  it('shows the approved message and retries', () => {
-    const onRetry = vi.fn();
-    render(<ErrorPanel onRetry={onRetry} />);
-    expect(screen.getByRole('alert')).toHaveTextContent(COPY.error.body);
-    fireEvent.click(screen.getByRole('button', { name: COPY.error.retry }));
-    expect(onRetry).toHaveBeenCalledTimes(1);
-  });
-});
-```
 
 `frontcreck/e2e/pages.spec.ts`:
 ```ts
@@ -8130,8 +8458,9 @@ test.describe('Home', () => {
     await expect(page.getByRole('link', { name: COPY.home.explore })).toBeVisible();
     await expect(page.getByRole('button', { name: COPY.home.surprise })).toBeVisible();
     const shelf = page.getByRole('list', { name: COPY.home.shelfListLabel });
-    await expect(shelf.getByRole('link')).toHaveCount(24);
-    const visible = await shelf.getByRole('link').evaluateAll((els) => els.filter((e) => e.getClientRects().length > 0).length);
+    // `getByRole` skips links hidden by `display: none` (16 of 24 on phones), so count the elements themselves.
+    await expect(shelf.locator('a')).toHaveCount(24);
+    const visible = await shelf.locator('a').evaluateAll((els) => els.filter((e) => e.getClientRects().length > 0).length);
     expect(visible).toBe(isMobile ? 8 : 24);
     await expect(page.locator('.shelf-now')).toContainText(COPY.home.shelfLabel);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -8178,7 +8507,7 @@ test('About explains the site and closes back', async ({ page }, info) => {
   await expect(page.getByText(COPY.about.credits)).toBeVisible();
   await expect(page.locator('body')).not.toContainText(/Samer|Aslan/);
   await shot(page, info, 'about');
-  await page.getByRole('button', { name: COPY.about.close }).click();
+  await page.getByRole('button', { name: COPY.about.close, exact: true }).click();
   await expect(page).toHaveURL('/');
   await page.goto('/about');
   await page.keyboard.press('Escape');
@@ -8248,27 +8577,11 @@ describe('nav history', () => {
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
-cd frontcreck && npm test -- src/components/ErrorPanel.test.tsx && E2E_DEV=1 npx playwright test e2e/pages.spec.ts --project=desktop
+cd frontcreck && npm test -- src/components/album/AlbumSkeleton.test.tsx src/lib/nav-history.test.ts; E2E_DEV=1 npx playwright test e2e/pages.spec.ts --project=desktop
 ```
-Expected: Vitest fails resolving `./ErrorPanel`, `./AlbumSkeleton` and `./nav-history`; Playwright fails on the missing search, buttons and shelf, on `/about` (404) and on the 404 title.
+Expected: Vitest fails resolving `./AlbumSkeleton` and `./nav-history`; Playwright (run regardless, hence `;`) fails on the missing search, buttons and shelf, on the About placeholder (no body text, no close button) and on the 404 title.
 
 - [ ] **Step 3: Implement**
-
-`frontcreck/src/components/ErrorPanel.tsx`:
-```tsx
-import { COPY } from '@/lib/copy';
-
-export function ErrorPanel({ onRetry }: { onRetry: () => void }) {
-  return (
-    <div className="rec-error" role="alert">
-      <p className="e1">{COPY.error.body}</p>
-      <button type="button" className="btn btn-line" onClick={onRetry}>
-        {COPY.error.retry}
-      </button>
-    </div>
-  );
-}
-```
 
 `frontcreck/src/components/home/HomeHero.tsx`:
 ```tsx
@@ -8417,7 +8730,12 @@ export function RouteTracker() {
   return null;
 }
 ```
-Mount `<RouteTracker />` in `frontcreck/src/app/layout.tsx` directly after `<Header />`.
+Mount `<RouteTracker />` in `frontcreck/src/app/layout.tsx` directly after `<Header />`. In the same file, take the title template from `COPY` instead of the literal separator: `title: { default: COPY.titles.home, template: COPY.titles.template },`, after adding to `titles` in `frontcreck/src/lib/copy.ts`:
+```ts
+    /** Every page title except Home's: '{page} · recmyrecord'. */
+    template: '%s · recmyrecord',
+```
+(the wordmark is written out because `COPY` cannot refer to itself while it is being defined; `copy.test.ts` already checks every string for the copy rules). The 404 page builds its document title from the same template.
 
 `frontcreck/src/components/AboutClose.tsx`:
 ```tsx
@@ -8452,7 +8770,7 @@ export function AboutClose() {
 }
 ```
 
-`frontcreck/src/app/about/page.tsx`:
+`frontcreck/src/app/about/page.tsx`, replace the placeholder:
 ```tsx
 import type { Metadata } from 'next';
 import { AboutClose } from '@/components/AboutClose';
@@ -8494,7 +8812,7 @@ export default function NotFound() {
   return (
     <section className="notfound" aria-labelledby="nf-h">
       {/* Belt and braces: some Next versions ignore metadata on not-found; this keeps document.title right. */}
-      <DocumentTitle title={`${COPY.notFound.title} · ${COPY.wordmark}`} />
+      <DocumentTitle title={COPY.titles.template.replace('%s', COPY.notFound.title)} />
       <h1 id="nf-h">{COPY.notFound.body}</h1>
       <SearchBox variant="page" shortcut />
       <Link className="textbtn u" href="/map">
@@ -8694,7 +9012,7 @@ with the approved copy; unknown pages get search and a way to the map;
 data failures show an inline error with retry and album navigations a
 skeleton.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 
@@ -8705,10 +9023,10 @@ EOF
 **Files:**
 - Create: `frontcreck/src/components/album/MapPreviewStrip.tsx`, `frontcreck/src/components/album/MapModeButton.tsx`, `frontcreck/src/styles/phone.css`
 - Modify: `frontcreck/src/lib/nav-history.ts`, `frontcreck/src/components/album/AlbumPanel.tsx`, `frontcreck/src/components/map/MapStage.tsx`, `frontcreck/src/components/map/canvas/AlbumField.tsx`, `frontcreck/src/styles/album.css`, `frontcreck/src/styles/map.css`, `frontcreck/src/app/globals.css`
-- Test: `frontcreck/src/components/album/MapPreviewStrip.test.ts`, `frontcreck/e2e/phone.spec.ts`
+- Test: `frontcreck/src/components/album/MapPreviewStrip.test.ts`, `frontcreck/src/lib/nav-history.test.ts` (extend), `frontcreck/e2e/phone.spec.ts`
 
 **Interfaces:**
-- Consumes: (Task 10) `recordPath`, `previousPath`; (Task 8) `AlbumPanel`; (Task 7) `layoutMarkers`, `SimilaritySlider`; (Task 6) `MapStage`, `AlbumField`; (Task 4) `useAppStore` (`mapMode`, `setMapMode`, `focus`), `useCatalog`, `usePositions`, `coverUrl`, `Focus`, `StopId`, `AlbumRecord`; (Task 5) `Icon`; `COPY.phone`, `COPY.map.preview`, `COPY.map.openMap`.
+- Consumes: (Task 10) `nav-history` (`recordPath`, `previousPath`, extended here with `recordedPath`); (Task 8) `AlbumPanel`; (Task 7) `layoutMarkers(anchors, seedSize, recSize, { bounds, gap })`; (Task 6) `MapStage`, `AlbumField`, `CLUSTER_RGB` (`@/components/map/data`); (Task 4) `useAppStore` (`mapMode`, `setMapMode`), `useCatalog(enabled)`, `usePositions(enabled)`, `coverUrl`, `Focus`, `StopId`, `AlbumRecord`, `useIsNarrow`, `prefersReducedMotion`; (Task 5) `Icon`, `TILE` (`@/components/Cover`); `COPY.phone`, `COPY.map.preview`, `COPY.map.openMap`.
 - Produces: `recordedPath(): string | null` (the path recorded before the current render commits); `drawStrip(ctx, w, h, albums, pos, focus, accent, onReady)`; `MapPreviewStrip({ focus, stop, onOpen })`; `MapModeButton({ on, onToggle })`; `.map-pane[data-mapmode]`; `.album.is-entering`, `.album.album--hidden`, `.fade-in`; `.fab-map`, `.strip`.
 
 - [ ] **Step 1: Write the failing test**
@@ -8796,6 +9114,15 @@ test.describe('phone album', () => {
     await expect(page).toHaveURL(IR);
   });
 
+  test('an album entered from Home still slides away for the map', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('list', { name: COPY.home.shelfListLabel }).locator('a').first().tap();
+    await expect(page.locator('section.album')).toHaveClass(/is-entering/);
+    await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
+    await expect(page.locator('section.album')).toBeHidden();
+    await expect.poll(() => page.locator('section.album').evaluate((el) => el.getBoundingClientRect().right)).toBeLessThanOrEqual(0);
+  });
+
   test('tap targets are at least 44 px', async ({ page }) => {
     for (const url of ['/', IR, '/map', '/about']) {
       await page.goto(url);
@@ -8858,21 +9185,65 @@ test.describe('motion', () => {
 });
 ```
 
+`frontcreck/src/lib/nav-history.test.ts`, replace the file (module state is shared between tests, so the history is read in one test, in order):
+```ts
+import { describe, expect, it } from 'vitest';
+import { entryFrom, previousPath, recordPath, recordedPath } from './nav-history';
+
+describe('nav history', () => {
+  it('remembers the previous distinct path and the last recorded one', () => {
+    expect(previousPath()).toBeNull();
+    expect(recordedPath()).toBeNull();
+    recordPath('/');
+    recordPath('/');
+    expect(previousPath()).toBeNull();
+    expect(recordedPath()).toBe('/');
+    recordPath('/about');
+    expect(previousPath()).toBe('/');
+    expect(recordedPath()).toBe('/about');
+  });
+});
+
+describe('entryFrom (how an album panel arrived)', () => {
+  it('slides in from another route, fades between albums, and is still on a direct load', () => {
+    expect(entryFrom('/album/a', null, null)).toBe('none');
+    expect(entryFrom('/album/a', '/map', null)).toBe('slide');
+    expect(entryFrom('/album/a', '/', '/map')).toBe('slide');
+    expect(entryFrom('/album/b', '/album/a', '/map')).toBe('fade');
+  });
+
+  it('looks past the path of the album itself when the route tracker already recorded it', () => {
+    // after the loading skeleton committed the new URL, or on a direct load whose content renders late
+    expect(entryFrom('/album/a', '/album/a', '/map')).toBe('slide');
+    expect(entryFrom('/album/b', '/album/b', '/album/a')).toBe('fade');
+    expect(entryFrom('/album/a', '/album/a', null)).toBe('none');
+  });
+});
+```
+
 - [ ] **Step 2: Run it to verify it fails**
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
-cd frontcreck && npm test -- src/components/album/MapPreviewStrip.test.ts && E2E_DEV=1 npx playwright test e2e/phone.spec.ts
+cd frontcreck && npm test -- src/components/album/MapPreviewStrip.test.ts src/lib/nav-history.test.ts; E2E_DEV=1 npx playwright test e2e/phone.spec.ts
 ```
-Expected: Vitest fails resolving `./MapPreviewStrip`; Playwright fails on the 92 px cover, the missing strip and Map button, small tap targets (trail links, slider stop buttons, zoom buttons, the wordmark) and the missing `is-entering` class.
+Expected: Vitest fails resolving `./MapPreviewStrip` and on the missing `recordedPath` and `entryFrom`; Playwright (run regardless, hence `;`) fails on the 92 px cover, the missing strip and Map button, small tap targets (trail links, slider stop buttons, zoom buttons, the wordmark) and the missing `is-entering` class.
 
 - [ ] **Step 3: Implement**
 
 `frontcreck/src/lib/nav-history.ts`: add
 ```ts
-/** The last recorded path. During the render of a new route this is still the route being left. */
+/** The last recorded path. During the render of a new route this is usually still the route being left. */
 export function recordedPath(): string | null {
   return current;
+}
+
+/** How an album panel for `path` arrived: 'slide' from any other route, 'fade' from another album, 'none' on a
+ * direct load. The route tracker may already have recorded `path` itself (the loading skeleton committed the
+ * URL first, or a direct load's content rendered after the first commit); then the path before it counts. */
+export function entryFrom(path: string, recorded: string | null, previous: string | null): 'slide' | 'fade' | 'none' {
+  const from = recorded === path ? previous : recorded;
+  return from === null ? 'none' : from.startsWith('/album/') ? 'fade' : 'slide';
 }
 ```
 
@@ -8882,15 +9253,22 @@ export function recordedPath(): string | null {
 
 import { useEffect, useRef } from 'react';
 import { Icon } from '@/components/Icon';
+import { TILE } from '@/components/Cover';
+import { CLUSTER_RGB } from '@/components/map/data';
 import { layoutMarkers } from '@/components/map/state/focusLayout';
 import { COPY } from '@/lib/copy';
 import { coverUrl } from '@/lib/data/catalog';
 import { useCatalog, usePositions } from '@/lib/data/useData';
+import { useIsNarrow } from '@/lib/media';
 import type { AlbumRecord, Focus, StopId } from '@/lib/types';
 
-const DOT = ['rgba(196,136,112,.42)', 'rgba(151,160,119,.42)', 'rgba(200,165,96,.42)'];
-const TILE = ['#3b2a22', '#2c3024', '#3b3120'];
-const images = new Map<string, { im: HTMLImageElement; decoded: boolean; waiting: Set<() => void> }>();
+/** The map's three dot colours (CLUSTER_RGB, by cluster % 3) at the strip's lower opacity. */
+const DOT = CLUSTER_RGB.slice(0, 3).map(([r, g, b]) => `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},.42)`);
+/** Strip covers are smaller than the map's markers (64 / 46), and so is the gap between them. */
+const STRIP_SEED = 32;
+const STRIP_REC = 22;
+const STRIP_GAP = 6;
+const images = new Map<string, { im: HTMLImageElement; decoded: boolean; failed: boolean; waiting: Set<() => void> }>();
 
 /** A cover is drawn only after img.decode() resolved (off the main thread); until then the tile is drawn. */
 function readyImage(url: string, onReady: () => void): HTMLImageElement | null {
@@ -8899,7 +9277,7 @@ function readyImage(url: string, onReady: () => void): HTMLImageElement | null {
     const im = new Image();
     im.decoding = 'async';
     im.src = url;
-    const e = { im, decoded: false, waiting: new Set<() => void>() };
+    const e = { im, decoded: false, failed: false, waiting: new Set<() => void>() };
     entry = e;
     images.set(url, e);
     im.decode().then(
@@ -8908,15 +9286,21 @@ function readyImage(url: string, onReady: () => void): HTMLImageElement | null {
         e.waiting.forEach((f) => f());
         e.waiting.clear();
       },
-      () => e.waiting.clear(),
+      // A cover that cannot be decoded keeps its tile: drawing a lettered tile is the designed fallback, so the
+      // failure is recorded (no retry, no redraw) rather than reported.
+      () => {
+        e.failed = true;
+        e.waiting.clear();
+      },
     );
   }
   if (entry.decoded) return entry.im;
-  entry.waiting.add(onReady);
+  if (!entry.failed) entry.waiting.add(onReady);
   return null;
 }
 
-/** Mockup's compact MapView: nearby dots, lines, small covers (seed 38 px, recs 28 px) with rank badges. */
+/** Mockup's compact MapView: nearby dots, lines, small covers (seed 32 px, recs 22 px, kept inside the canvas)
+ * with rank badges. */
 export function drawStrip(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -8958,7 +9342,10 @@ export function drawStrip(
     ctx.fillStyle = DOT[c];
     ctx.fill();
   }
-  const placed = layoutMarkers(ids.map((id) => ({ id, x: sx(pos[2 * id]), y: sy(pos[2 * id + 1]) })), 38, 28);
+  const placed = layoutMarkers(ids.map((id) => ({ id, x: sx(pos[2 * id]), y: sy(pos[2 * id + 1]) })), STRIP_SEED, STRIP_REC, {
+    bounds: { left: 6, top: 6, right: w - 2, bottom: h - 2 }, // 6 px on the badge side (top-left)
+    gap: STRIP_GAP,
+  });
   ctx.strokeStyle = 'rgba(237,229,213,.22)';
   ctx.lineWidth = 1;
   for (const it of placed.slice(1)) {
@@ -8998,8 +9385,10 @@ export function drawStrip(
 
 export function MapPreviewStrip({ focus, stop, onOpen }: { focus: Focus; stop: StopId; onOpen: () => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
-  const { catalog } = useCatalog();
-  const { positions } = usePositions();
+  // The strip only exists under 900 px; on wider screens it is display:none, so load nothing for it there.
+  const narrow = useIsNarrow();
+  const { catalog } = useCatalog(narrow);
+  const { positions } = usePositions(narrow);
   const recsKey = focus.recs.join(',');
 
   useEffect(() => {
@@ -9060,14 +9449,11 @@ export function MapModeButton({ on, onToggle }: { on: boolean; onToggle: () => v
 ```
 
 `frontcreck/src/components/album/AlbumPanel.tsx`, exact edits:
-1. Imports: `recordedPath` from `@/lib/nav-history`; `MapPreviewStrip` from `./MapPreviewStrip`; `MapModeButton` from `./MapModeButton`.
+1. Imports: `entryFrom`, `previousPath` and `recordedPath` from `@/lib/nav-history`; `MapPreviewStrip` from `./MapPreviewStrip`; `MapModeButton` from `./MapModeButton`.
 2. After the `useState` for `expandedFor`, add:
 ```tsx
   // How this panel arrived: slide in from Home/Explore/About, fade when coming from another album, none on a direct load.
-  const [entry] = useState<'slide' | 'fade' | 'none'>(() => {
-    const from = recordedPath();
-    return from === null ? 'none' : from.startsWith('/album/') ? 'fade' : 'slide';
-  });
+  const [entry] = useState(() => entryFrom(`/album/${seed.slug}`, recordedPath(), previousPath()));
   const mapMode = useAppStore((s) => s.mapMode);
   const toggleMapMode = useCallback(() => useAppStore.getState().setMapMode(!useAppStore.getState().mapMode), []);
 ```
@@ -9117,21 +9503,26 @@ export function MapModeButton({ on, onToggle }: { on: boolean; onToggle: () => v
 
 `frontcreck/src/components/map/MapStage.tsx`: add `data-mapmode={mapMode ? 'true' : 'false'}` to the `.map-pane` element.
 
-`frontcreck/src/components/map/canvas/AlbumField.tsx`: ease the dot alpha instead of switching it. Add `const dotAlpha = useRef(-1);` and in `useFrame((_, delta) => ...)` replace `u_dotAlpha = input.dimmed ? 0.34 : 0.78` with:
+`frontcreck/src/components/map/canvas/AlbumField.tsx`: ease the dot alpha instead of switching it. Add `const dotAlpha = useRef(-1);`, change the frame callback's signature from `useFrame((state) => ...)` to `useFrame((state, delta) => ...)` (`state.size` is still used), and replace `u_dotAlpha = input.dimmed ? 0.34 : 0.78` with:
 ```ts
       const targetAlpha = input.dimmed ? 0.34 : 0.78;
+      // With frameloop="demand", the first frame after an idle period has a delta of seconds; clamp it, or the
+      // dim would jump to its target instead of easing.
+      const dt = Math.min(delta, 1 / 30);
       if (dotAlpha.current < 0 || prefersReducedMotion()) dotAlpha.current = targetAlpha;
-      else dotAlpha.current += (targetAlpha - dotAlpha.current) * (1 - Math.exp(-delta / 0.12));
+      else dotAlpha.current += (targetAlpha - dotAlpha.current) * (1 - Math.exp(-dt / 0.12));
       if (Math.abs(targetAlpha - dotAlpha.current) < 0.002) dotAlpha.current = targetAlpha;
       else invalidate();
       material.uniforms.u_dotAlpha.value = dotAlpha.current;
 ```
-(import `prefersReducedMotion` from `@/lib/media`; it replaces SRC's local helper of the same name, which you delete).
+(import `prefersReducedMotion` from `@/lib/media`; Task 6 already removed SRC's local helper of that name).
 
 Append to `frontcreck/src/styles/album.css`:
 ```css
-.album.is-entering { animation: panel-in var(--dur) var(--out) both; }
+.album.is-entering { animation: panel-in var(--dur) var(--out) backwards; }
 @keyframes panel-in { from { transform: translateX(-101%); } to { transform: none; } }
+/* `backwards`, not `both`: a filled end state would override .album--hidden's transform, so the phone Map
+   button could no longer slide the panel away on an album entered from Home or Explore. */
 .fade-in { animation: fade-in .38s var(--out) both; }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 .strip, .fab-map { display: none; }
@@ -9213,36 +9604,37 @@ at least 44 px. Entering an album slides the panel in while the map
 shifts, album to album fades, the home map dims smoothly, and reduced
 motion makes every transition instant.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 
 ### Task 12: Performance verification script and budget fixes
 
-**Context for the implementer.** Spec section 7 sets performance budgets, measured in headless Chrome at 1440x900 and 390x844: search field usable after load under 1 s; any single long task at startup under 250 ms; typing to suggestions under 100 ms; selecting an album to album content visible under 200 ms; slider stop to list change under 150 ms; frame gaps during pan, zoom and morph under 50 ms (GPU); no long tasks while idle; JavaScript for the first load of `/` excluding the three.js chunk under 200 KB gzipped. This task adds `npm run perf`, which builds if needed, serves the production build, measures every budget in two browser modes (software rendering, and GPU with `--use-angle=metal`), prints a table, writes JSON, and exits non-zero on any breach. Then it fixes whatever breaches. Timings are only meaningful in a native arm64 Chrome driven by the native arm64 Node 20 (see Global Constraints; the script aborts otherwise). The mockup, measured natively with its own `design/mockups/final/perf.js`, met every budget except occasional GPU raster spikes on desktop transitions, so the budgets are realistic. The measuring approach follows that script (read it): in-page `PerformanceObserver` for long tasks, synthetic events, and `requestAnimationFrame` polling so Playwright's own waits are not timed. "Search field usable" is the `rmr-search-ready` performance mark set by the first `SearchBox` mount (Task 5). First-load JavaScript is the gzipped size of every `<script src>` in the server HTML of `/` (the three.js chunk, identified by containing `WebGLRenderer`, is loaded later by `MapStage` and is reported separately).
+**Context for the implementer.** Spec section 7 sets performance budgets, measured in headless Chrome at 1440x900 and 390x844: search field usable after load under 1 s; any single long task at startup under 250 ms; typing to suggestions under 100 ms; selecting an album to album content visible under 200 ms; slider stop to list change under 150 ms; frame gaps during pan, zoom and morph under 50 ms (GPU); no long tasks while idle; JavaScript for the first load of `/` excluding the three.js chunk under 200 KB gzipped. This task adds `npm run perf`, which builds if needed, serves the production build, measures every budget in two browser modes (software rendering, and GPU with `--use-angle=metal`), prints a table, writes JSON, and exits non-zero on any breach. Then it fixes whatever breaches. Timings are only meaningful in a native arm64 Chrome driven by the native arm64 Node 20 (see Global Constraints; the script aborts otherwise). The mockup, measured natively with its own `design/mockups/final/perf.js`, met every budget except occasional GPU raster spikes on desktop transitions, so the budgets are realistic. The measuring approach follows that script (read it): in-page `PerformanceObserver` for long tasks, synthetic events, and `requestAnimationFrame` polling so Playwright's own waits are not timed. "Search field usable" is the `rmr-search-ready` performance mark set by the first `SearchBox` mount (Task 5). First-load JavaScript is the gzipped size of every `<script src>` in the server HTML of `/`; the three.js chunk (identified by containing `WebGLRenderer`) must not be among them, because `MapStage` loads it after first paint, so finding it there is a failure. The script also enforces two first-load rules from the Global Constraints: `thumbs.webp` (2.3 MB) must not be requested while `/` loads, and the server HTML of `/` and of an album page must stay under 150 KB and must not contain the slug of an album that page does not show (proof that no server component passed the catalog to a client component). A measurement that cannot be taken (for example, long-task timing unsupported) is a failure, never a zero.
 
 **Files:**
-- Create: `frontcreck/scripts/perf/budgets.json`, `frontcreck/scripts/perf/lib.mjs`, `frontcreck/scripts/perf/perf.mjs`
+- Create: `frontcreck/scripts/perf/budgets.json`, `frontcreck/scripts/perf/lib.mjs`, `frontcreck/scripts/perf/perf.mjs`, `frontcreck/scripts/serve.mjs` (the one `startServer`, shared with Task 14's `review-shots.mjs`)
 - Modify: `frontcreck/package.json` (script `perf`), `frontcreck/vitest.config.ts` (also run `scripts/**/*.test.mjs`), `frontcreck/eslint.config.mjs` (Node globals for `scripts/**`)
 - Test: `frontcreck/scripts/perf/lib.test.mjs`
 
 **Interfaces:**
 - Consumes: `assertNativeChrome` (Task 3); the production build; `performance.mark('rmr-search-ready')` (Task 5); `document.documentElement.dataset.searchIndex` (Task 5); `window.__rmr.map` and `window.__rmr.frames` (Task 6); DOM contracts `.hero input[role="combobox"]`, `[role="option"]`, `#seed-title`, `a.rec-main`, `ol.rec-list .rec-title`, `.mode-stops button`, `.fab-map`, `canvas.map-canvas` (Tasks 5 to 11).
-- Produces: `npm run perf` (flags: `--build` forces a fresh build, `--mode software|gpu`, `--viewport desktop|phone`, `--allow-software-gpu`); `scripts/perf/out/perf-<ISO time>.json`; `lib.mjs` exports `BUDGET_KEYS`, `checkBudgets(result, mode, budgets, { allowSoftwareGpu })`, `formatTable(rows)`.
+- Produces: `npm run perf` (flags: `--build` forces a fresh build, `--mode software|gpu`, `--viewport desktop|phone`, `--allow-software-gpu`); `scripts/perf/out/perf-<ISO time>.json`; `lib.mjs` exports `BUDGET_KEYS`, `checkBudgets(result, mode, budgets, { allowSoftwareGpu })`, `checkPages(pages, budgets)`, `formatTable(rows)`; `scripts/serve.mjs` exports `startServer(port): Promise<{ base, stop }>`.
 
 - [ ] **Step 1: Write the failing test**
 
 `frontcreck/scripts/perf/lib.test.mjs`:
 ```js
 import { describe, expect, it } from 'vitest';
-import { checkBudgets, formatTable } from './lib.mjs';
+import { checkBudgets, checkPages, formatTable } from './lib.mjs';
 
 const budgets = {
   searchUsableMs: 1000, startupLongTaskMs: 250, typeToSuggestionsMs: 100, selectToAlbumMs: 200,
-  sliderToListMs: 150, frameGapMs: 50, idleLongTasks: 0, idleFrames: 1, firstLoadJsKb: 200,
+  sliderToListMs: 150, frameGapMs: 50, idleLongTasks: 0, idleFrames: 1, firstLoadJsKb: 200, pageHtmlKb: 150,
 };
 const ok = {
   vp: 'desktop', renderer: 'ANGLE (Apple, ANGLE Metal Renderer: Apple M1, Unspecified Version)', errors: [],
+  longTasksSupported: true, thumbsOnFirstLoad: false,
   searchUsableMs: 400, startupLongTaskMs: 120, typeToSuggestionsMs: 30, selectToAlbumMs: 90, sliderToListMs: 20,
   transitionGapMs: 30, morphGapMs: 25, dragGapMs: 20, zoomGapMs: 22, idleLongTasks: 0, idleFrames: 0,
 };
@@ -9272,6 +9664,25 @@ describe('checkBudgets', () => {
 
   it('treats a missing measurement as a failure', () => {
     expect(checkBudgets({ ...ok, selectToAlbumMs: null }, 'software', budgets)[0]).toMatch(/select to album/);
+    expect(checkBudgets({ ...ok, idleLongTasks: undefined }, 'software', budgets).join('\n')).toMatch(/long tasks while idle/);
+    expect(checkBudgets({ ...ok, longTasksSupported: false }, 'software', budgets).join('\n')).toMatch(/long tasks could not be measured/);
+  });
+
+  it('fails when the thumbnail sprite loads with the page', () => {
+    expect(checkBudgets({ ...ok, thumbsOnFirstLoad: true }, 'software', budgets).join('\n')).toMatch(/thumbs\.webp/);
+  });
+});
+
+describe('checkPages', () => {
+  it('passes small pages that show only their own albums', () => {
+    expect(checkPages([{ path: '/', kb: 60, unrelatedSlug: null }], budgets)).toEqual([]);
+  });
+
+  it('reports a heavy page and a leaked catalog', () => {
+    const fails = checkPages([{ path: '/', kb: 900, unrelatedSlug: 'zz-album-zz-artist' }], budgets);
+    expect(fails).toHaveLength(2);
+    expect(fails.join('\n')).toMatch(/900 KB > 150 KB/);
+    expect(fails.join('\n')).toMatch(/zz-album-zz-artist/);
   });
 
   it('formats a markdown table', () => {
@@ -9304,7 +9715,8 @@ Expected: FAIL, `Failed to resolve import "./lib.mjs"`.
   "frameGapMs": 50,
   "idleLongTasks": 0,
   "idleFrames": 1,
-  "firstLoadJsKb": 200
+  "firstLoadJsKb": 200,
+  "pageHtmlKb": 150
 }
 ```
 
@@ -9333,13 +9745,25 @@ export function checkBudgets(r, mode, budgets, { allowSoftwareGpu = false } = {}
     if (typeof value !== 'number' || !Number.isFinite(value) || value > limit) fails.push(`${where}: ${label} ${value ?? 'missing'} ${unit} > ${limit} ${unit}`);
   };
   for (const [key, label, budgetKey, unit] of BUDGET_KEYS) over(label, r[key], budgets[budgetKey], unit);
-  if (r.idleLongTasks > budgets.idleLongTasks) fails.push(`${where}: ${r.idleLongTasks} long tasks while idle (budget ${budgets.idleLongTasks})`);
+  if (!r.longTasksSupported) fails.push(`${where}: long tasks could not be measured (PerformanceObserver 'longtask' unsupported)`);
+  if (typeof r.idleLongTasks !== 'number' || r.idleLongTasks > budgets.idleLongTasks) fails.push(`${where}: ${r.idleLongTasks ?? 'missing'} long tasks while idle (budget ${budgets.idleLongTasks})`);
+  if (r.thumbsOnFirstLoad !== false) fails.push(`${where}: thumbs.webp was requested during the first load of / (it must load lazily, only after a cover fails)`);
   if (typeof r.idleFrames !== 'number' || r.idleFrames > budgets.idleFrames) fails.push(`${where}: ${r.idleFrames ?? 'missing'} frames while idle (budget ${budgets.idleFrames})`);
   if (mode === 'gpu') {
     if (SOFTWARE_RENDERER.test(r.renderer ?? '') && !allowSoftwareGpu) fails.push(`${where}: GPU mode ran without a GPU (renderer "${r.renderer}")`);
     else for (const [key, label] of GAP_KEYS) over(label, r[key], budgets.frameGapMs, 'ms');
   }
   if (r.errors?.length) fails.push(`${where}: console errors: ${r.errors.slice(0, 3).join(' | ')}`);
+  return fails;
+}
+
+/** Server HTML weight and catalog-leak check (Global Constraints, RSC payload rule). */
+export function checkPages(pages, budgets) {
+  const fails = [];
+  for (const p of pages) {
+    if (typeof p.kb !== 'number' || p.kb > budgets.pageHtmlKb) fails.push(`${p.path}: server HTML ${p.kb ?? 'missing'} KB > ${budgets.pageHtmlKb} KB`);
+    if (p.unrelatedSlug) fails.push(`${p.path}: server HTML contains the slug of an album it does not show (${p.unrelatedSlug}); the catalog reached the RSC payload`);
+  }
   return fails;
 }
 
@@ -9372,16 +9796,16 @@ export function formatTable(rows) {
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import zlib from 'node:zlib';
 import { chromium } from '@playwright/test';
 import { assertNativeChrome } from '../check-native.mjs';
-import { checkBudgets, formatTable } from './lib.mjs';
+import { startServer } from '../serve.mjs';
+import { checkBudgets, checkPages, formatTable } from './lib.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const ROOT = path.resolve(import.meta.dirname, '../..');
 const BUDGETS = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/perf/budgets.json'), 'utf8'));
 const PORT = 3200;
-const BASE = `http://127.0.0.1:${PORT}`;
+let BASE = `http://127.0.0.1:${PORT}`;
 const args = process.argv.slice(2);
 const opt = (name) => {
   const i = args.indexOf(name);
@@ -9403,20 +9827,6 @@ function sh(cmd, cmdArgs) {
   });
 }
 
-async function startServer() {
-  const child = spawn('npx', ['next', 'start', '--port', String(PORT)], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] });
-  for (let i = 0; i < 120; i++) {
-    try {
-      if ((await fetch(BASE)).ok) return child;
-    } catch {
-      // not up yet
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  child.kill();
-  throw new Error('next start did not come up');
-}
-
 async function firstLoadJs() {
   const html = await (await fetch(`${BASE}/`)).text();
   const srcs = [...new Set([...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]))];
@@ -9432,6 +9842,24 @@ async function firstLoadJs() {
     else kb += gz;
   }
   return { kb: Math.round(kb * 10) / 10, threeKb: Math.round(threeKb * 10) / 10, files };
+}
+
+/** Server HTML of `/` and of In Rainbows: size, and whether it names an album the page does not show. */
+async function pageChecks() {
+  const albums = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/albums.json'), 'utf8'));
+  const recs = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/recs.json'), 'utf8'));
+  const ir = albums.findIndex((a) => a.slug === 'in-rainbows-radiohead');
+  const shown = new Set([ir, ...Object.values(recs).flatMap((rows) => rows[ir])]);
+  // A low-ranked album: never on the Home shelf (the top albums with a cover) and not among In Rainbows' rows.
+  let unrelated = albums.length - 1;
+  while (shown.has(unrelated)) unrelated--;
+  const slug = albums[unrelated].slug;
+  const pages = [];
+  for (const p of ['/', '/album/in-rainbows-radiohead']) {
+    const html = await (await fetch(`${BASE}${p}`)).text();
+    pages.push({ path: p, kb: Math.round((Buffer.byteLength(html) / 1024) * 10) / 10, unrelatedSlug: html.includes(`"${slug}"`) || html.includes(`/album/${slug}`) ? slug : null });
+  }
+  return pages;
 }
 
 /* In-page steps. Each returns plain numbers; timing uses performance.now and rAF polling. */
@@ -9460,12 +9888,11 @@ const PAGE_HELPERS = () => {
     },
   };
   window.__lt = [];
-  try {
+  window.__ltSupported = PerformanceObserver.supportedEntryTypes?.includes('longtask') ?? false;
+  if (window.__ltSupported) {
     new PerformanceObserver((l) => {
       for (const e of l.getEntries()) window.__lt.push([Math.round(e.startTime), Math.round(e.duration)]);
     }).observe({ type: 'longtask', buffered: true });
-  } catch {
-    // long tasks unsupported
   }
 };
 
@@ -9483,6 +9910,7 @@ async function albumFlow(page, isPhone) {
     const typed = await P.until(() => [...document.querySelectorAll('[role="option"]')].some(P.vis));
     res.typeToSuggestionsMs = typed ? Math.round(performance.now() - t) : null;
     const opt = [...document.querySelectorAll('[role="option"]')].find(P.vis);
+    if (!opt) return res; // the missing measurements are reported as failures by checkBudgets
     t = performance.now();
     opt.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, isPrimary: true }));
     const shown = await P.until(() => document.querySelector('#seed-title')?.textContent === 'Loveless' && [...document.querySelectorAll('a.rec-main')].some(P.vis));
@@ -9496,6 +9924,7 @@ async function albumFlow(page, isPhone) {
     const list = () => [...document.querySelectorAll('ol.rec-list .rec-title')].map((e) => e.textContent).join('|');
     const before = list();
     const sonic = [...document.querySelectorAll('.mode-stops button')].find((b) => P.vis(b) && b.textContent.trim() === 'Sonic');
+    if (!sonic) return res;
     t = performance.now();
     sonic.click();
     const changed = await P.until(() => list() !== before);
@@ -9564,8 +9993,14 @@ async function measure(mode, vpName) {
     if (m.type() === 'error') errors.push(m.text());
   });
   await page.addInitScript(PAGE_HELPERS);
+  let thumbsOnFirstLoad = false;
+  const onRequest = (r) => {
+    if (r.url().endsWith('/data/thumbs.webp')) thumbsOnFirstLoad = true;
+  };
+  page.on('request', onRequest);
   await page.goto(`${BASE}/`, { waitUntil: 'load' });
   await page.waitForTimeout(4000);
+  page.off('request', onRequest);
   const renderer = await page.evaluate(() => {
     try {
       const g = document.createElement('canvas').getContext('webgl');
@@ -9574,12 +10009,14 @@ async function measure(mode, vpName) {
       return 'n/a';
     }
   });
-  const startup = await page.evaluate(() => ({ lt: window.__lt.slice(), ready: performance.getEntriesByName('rmr-search-ready')[0]?.startTime ?? null }));
+  const startup = await page.evaluate(() => ({ lt: window.__lt.slice(), supported: window.__ltSupported, ready: performance.getEntriesByName('rmr-search-ready')[0]?.startTime ?? null }));
   const result = {
     mode,
     vp: vpName,
     renderer,
     errors,
+    longTasksSupported: startup.supported,
+    thumbsOnFirstLoad,
     searchUsableMs: startup.ready === null ? null : Math.round(startup.ready),
     startupLongTaskMs: Math.max(0, ...startup.lt.map((x) => x[1])),
     ...(await albumFlow(page, vpName === 'phone')),
@@ -9591,13 +10028,18 @@ async function measure(mode, vpName) {
 
 async function main() {
   if (args.includes('--build') || !fs.existsSync(path.join(ROOT, '.next/BUILD_ID'))) await sh('npm', ['run', 'build']);
-  const server = await startServer();
+  const server = await startServer(PORT);
+  BASE = server.base;
   const rows = [];
   const fails = [];
   try {
     const js = await firstLoadJs();
     console.log(`First-load JS of / (gzip): ${js.kb} KB (budget ${BUDGETS.firstLoadJsKb} KB); three.js chunk on first load: ${js.threeKb} KB`);
     if (js.kb > BUDGETS.firstLoadJsKb) fails.push(`first-load JS ${js.kb} KB > ${BUDGETS.firstLoadJsKb} KB`);
+    if (js.threeKb > 0) fails.push(`the three.js chunk (${js.threeKb} KB) is in the first-load scripts of /; MapStage must load it after first paint`);
+    const pages = await pageChecks();
+    console.log(`Server HTML: ${pages.map((p) => `${p.path} ${p.kb} KB`).join(', ')} (budget ${BUDGETS.pageHtmlKb} KB each)`);
+    fails.push(...checkPages(pages, BUDGETS));
     for (const mode of opt('--mode') ? [opt('--mode')] : Object.keys(MODES)) {
       for (const vp of opt('--viewport') ? [opt('--viewport')] : Object.keys(VIEWPORTS)) {
         const r = await measure(mode, vp);
@@ -9610,7 +10052,7 @@ async function main() {
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(path.join(outDir, `perf-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ js, rows, fails }, null, 1));
   } finally {
-    server.kill();
+    await server.stop();
   }
   if (fails.length) {
     console.error(`FAIL\n${fails.join('\n')}`);
@@ -9625,20 +10067,61 @@ main().catch((e) => {
 });
 ```
 
+`frontcreck/scripts/serve.mjs` (the one production-server helper, also used by Task 14's `review-shots.mjs`):
+```js
+/** Starts `next start` for the built app on `port` and resolves once it answers. Refuses a port that is already
+ * serving, so a stale server from an older build is never measured, and stops the real `next` process (not an
+ * `npx` wrapper that would leave it running). */
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const ROOT = path.resolve(import.meta.dirname, '..');
+
+async function answers(base) {
+  try {
+    return (await fetch(base)).ok;
+  } catch {
+    return false; // connection refused: nothing is listening yet
+  }
+}
+
+export async function startServer(port) {
+  if (!fs.existsSync(path.join(ROOT, '.next/BUILD_ID'))) throw new Error('no production build: run npm run build first');
+  const base = `http://127.0.0.1:${port}`;
+  if (await answers(base)) throw new Error(`port ${port} is already serving; stop that server first`);
+  const child = spawn(path.join(ROOT, 'node_modules/.bin/next'), ['start', '--port', String(port)], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] });
+  const stop = () =>
+    new Promise((resolve) => {
+      if (child.exitCode !== null) return resolve();
+      child.once('exit', () => resolve());
+      child.kill('SIGTERM');
+    });
+  for (let i = 0; i < 120; i++) {
+    if (await answers(base)) return { base, stop };
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  await stop();
+  throw new Error('next start did not come up');
+}
+```
+
 `frontcreck/package.json`: add `"perf": "node scripts/perf/perf.mjs"` to `scripts`.
 
-`frontcreck/eslint.config.mjs`: add a config object `{ files: ['scripts/**/*.mjs'], languageOptions: { globals: { ...globals.node, ...globals.browser } } }` only if lint reports `no-undef` there (eslint-config-next already allows browser and node globals in most setups; do not add the `globals` package unless lint fails, and if you must, it is already a transitive dependency of eslint, import it as `import globals from 'globals'`).
+`frontcreck/eslint.config.mjs`: no change is expected, because eslint-config-next 16.3.3 already declares browser and node globals for every `.mjs` file. If lint still reports `no-undef` for a page-side global in `scripts/**` (for example `window.__perf`), add a config object `{ files: ['scripts/**/*.mjs'], languageOptions: { globals: { window: 'readonly', document: 'readonly', performance: 'readonly', requestAnimationFrame: 'readonly' } } }`; never import the `globals` package, which is not a declared dependency.
 
 Then run the full measurement:
 ```bash
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 cd frontcreck && npm run perf -- --build
 ```
-Fix every breach at its cause, re-running `npm run perf` after each fix. Likely causes and the fixes to apply:
+Fix every breach at its cause, re-running `npm run perf` after each fix (every shell starts with `export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"`; subagent shells do not keep it between calls). Likely causes and the fixes to apply:
 - First-load JS over 200 KB: find the heavy chunk in the printed `files` list; check it does not contain `fuse.js` (search must be a dynamic import), `three` or `@react-three/fiber` (only via `next/dynamic` in `MapStage`), or the album/map components on `/` (they should be route or dynamic chunks).
 - Startup long task over 250 ms: the JSON parse and `buildMapData` of `albums.json` and `positions.json` happen after first paint in `MapStage`; if one task is still too long, split `normalizePositions` and the attribute building in `AlbumField` across two `requestIdleCallback` slots, and make sure the hero autofocus does not build the search index synchronously on the same task as hydration (the index build is inside a promise; move it behind `await new Promise(requestAnimationFrame)` in `getSearch`).
 - Long tasks or frames while idle: something calls `invalidate()` every frame (a tween that never settles, `CameraBounds` nudging, the dot-alpha easing); every animation must stop invalidating once settled.
 - Frame gaps: `OverlayDriver` or `MarkerDriver` reading layout (`offsetWidth`) after writing styles in the same frame; read sizes first, then write.
+- `thumbs.webp` requested on first load: something rendered a `.spr` element (a Cover in the `sprite` state) or preloaded the sheet; the sprite element may only render after a remote cover fails (Task 5).
+- Server HTML over 150 KB, or an unrelated slug in it: a server component passed catalog data to a client component; pass only `getShelf()` / `getAlbumPageData()` results and let client code use `useCatalog()`.
 - Select to album over 200 ms: make sure `router.prefetch` runs for the active option (Task 5) and that `AlbumPanel` does no synchronous work proportional to the catalog.
 
 - [ ] **Step 4: Run tests to verify they pass**
@@ -9647,30 +10130,34 @@ Fix every breach at its cause, re-running `npm run perf` after each fix. Likely 
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 cd frontcreck && npm test && npm run lint && npm run typecheck && npm run perf -- --build && npm run test:e2e
 ```
-Expected: Vitest green including `lib.test.mjs` (6 tests); `npm run perf` prints the table for `software desktop`, `software phone`, `gpu desktop`, `gpu phone`, then `All budgets met.` with exit code 0. The GPU rows must show a hardware renderer (for example `ANGLE Metal Renderer: Apple ...`); if the machine offers none in headless mode, say so in the commit message and run with `--allow-software-gpu` only as a last resort, reporting the frame-gap numbers as unverified. Put the final table into the commit message: write the message below to `frontcreck/test-results/perf-commit.txt` (gitignored), insert the printed table after the line "Budget table from the final npm run perf run is appended below." and commit with `git commit -F frontcreck/test-results/perf-commit.txt` instead of the heredoc.
+Expected: Vitest green including `lib.test.mjs` (9 tests); `npm run perf` prints the table for `software desktop`, `software phone`, `gpu desktop`, `gpu phone`, then `All budgets met.` with exit code 0. The GPU rows must show a hardware renderer (for example `ANGLE Metal Renderer: Apple ...`); if the machine offers none in headless mode, say so in the commit message and run with `--allow-software-gpu` only as a last resort, reporting the frame-gap numbers as unverified. Put the final table into the commit message as Step 5 describes.
 
 - [ ] **Step 5: Commit**
 
+Write the message below to `frontcreck/test-results/perf-commit.txt` (gitignored), paste the printed table after the line "Budget table from the final npm run perf run is appended below.", replace the trailer placeholder with your session's trailer, then commit from the worktree root:
 ```bash
-git add frontcreck/scripts/perf/budgets.json frontcreck/scripts/perf/lib.mjs frontcreck/scripts/perf/lib.test.mjs frontcreck/scripts/perf/perf.mjs frontcreck/package.json frontcreck/vitest.config.ts frontcreck/eslint.config.mjs frontcreck/src
-git commit -F - <<'EOF'
+git add frontcreck/scripts/serve.mjs frontcreck/scripts/perf/budgets.json frontcreck/scripts/perf/lib.mjs frontcreck/scripts/perf/lib.test.mjs frontcreck/scripts/perf/perf.mjs frontcreck/package.json frontcreck/vitest.config.ts frontcreck/eslint.config.mjs frontcreck/src
+git commit -F frontcreck/test-results/perf-commit.txt
+```
+Message:
+```text
 perf(frontcreck): add budget script and meet every performance budget
 
 npm run perf serves the production build and measures, in software and
 GPU headless Chrome at 1440x900 and 390x844: search ready, startup long
 tasks, typing to suggestions, select to album, slider to list, frame gaps
 during transition, morph, drag and zoom, idle long tasks and frames, and
-first-load JS of / without three.js. It fails on any breach.
+first-load JS of / without three.js, the lazy thumbnail sheet and the
+server HTML weight of / and an album page. It fails on any breach.
 
 Budget table from the final npm run perf run is appended below.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
-EOF
+<Co-Authored-By trailer from your session's system reminder>
 ```
 
 ### Task 13: End-to-end flow suite and accessibility verification
 
-**Context for the implementer.** Tasks 3 to 11 each tested their own feature. This task adds the two suites the spec names explicitly (section 7) and fixes whatever they find. `e2e/flows.spec.ts` runs every listed flow at 1440x900 and 390x844 with real clicks on desktop and real taps on the phone: search to album, going deeper, breadcrumb back, slider change, show more, map click to album, Home shelf, Surprise me, old URL redirects, 404, keyboard-only search; plus two robustness runs: the core flow with web storage blocked (the trail then lives in memory; navigation must not depend on storage), and the core flow inside a same-origin sandboxed iframe of the built site. Every flow fails on any console error or page error (network errors for remote cover images are tolerated because covers fall back by design). `e2e/a11y.spec.ts` runs axe (`@axe-core/playwright`, tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`) on every route and on the open states (search results, map card, show more, phone map mode, phone search sheet), checks one `<h1>` and a distinct `<title>` per route, landmarks, visible focus rings, and keyboard-only paths to every action (the list is the keyboard route to albums; the map supports pan and zoom keys). A unit test checks the colour tokens and every album accent for WCAG AA contrast.
+**Context for the implementer.** Tasks 3 to 11 each tested their own feature. This task adds the two suites the spec names explicitly (section 7) and fixes whatever they find. `e2e/flows.spec.ts` runs every listed flow at 1440x900 and 390x844 with real clicks on desktop and real taps on the phone: search to album, going deeper, breadcrumb back, slider change, show more, map click to album, Home shelf, Surprise me, old URL redirects, 404, keyboard-only search; plus robustness runs: the core flow with web storage blocked (the trail then lives in memory; navigation must not depend on storage), the core flow inside a same-origin sandboxed iframe of the built site, and the cover fallbacks (remote cover blocked: the thumbnail sprite; no cover id: the lettered tile). Every flow fails on any console error or page error; the only tolerated one is Chrome's "Failed to load resource" for a remote cover under `https://i.scdn.co/` (covers fall back by design), identified by the message's URL, not its text. `e2e/a11y.spec.ts` runs axe (`@axe-core/playwright`, tags `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`) on every route and on the open states (search results, map card, show more, phone map mode, phone search sheet), checks one `<h1>` and a distinct `<title>` per route, landmarks, visible focus rings, and keyboard-only paths to every action (the list is the keyboard route to albums; the map supports pan and zoom keys). A unit test checks the colour tokens and every album accent for WCAG AA contrast.
 
 **Files:**
 - Create: `frontcreck/src/lib/contrast.ts`, `frontcreck/e2e/flows.spec.ts`, `frontcreck/e2e/a11y.spec.ts`
@@ -9678,8 +10165,8 @@ EOF
 - Test: `frontcreck/src/lib/contrast.test.ts`, `frontcreck/e2e/flows.spec.ts`, `frontcreck/e2e/a11y.spec.ts`
 
 **Interfaces:**
-- Consumes: everything user-facing from Tasks 3 to 11 and their DOM contracts; `COPY`; `waitForMap`, `waitForCameraIdle`, `visibleAlbumPoint`, `shot` (helpers).
-- Produces: `contrastRatio(a: string, b: string): number` and `relativeLuminance(hex: string): number` (`@/lib/contrast`); helpers `act(locator, isMobile)` (tap on phones, click on desktop) and `tabTo(page, predicate, max?)`.
+- Consumes: everything user-facing from Tasks 3 to 11 and their DOM contracts (including `Cover`'s `data-state="remote" | "sprite" | "tile"`, Task 5); `COPY`; `waitForMap`, `waitForCameraIdle`, `visibleAlbumPoint`, `camera`, `shot` (helpers); `hexToRgb` (`@/lib/color`, Task 6).
+- Produces: `contrastRatio(a: string, b: string): number` and `relativeLuminance(hex: string): number` (`@/lib/contrast`); helpers `act(locator, isMobile)` (tap on phones, click on desktop) and `tabTo(page, predicate, max?, arg?)`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -9730,11 +10217,12 @@ export async function act(target: Locator, isMobile: boolean): Promise<void> {
   else await target.click();
 }
 
-/** Presses Tab until `predicate` holds for the focused element; fails after `max` presses. */
-export async function tabTo(page: Page, predicate: (el: Element) => boolean, max = 40): Promise<void> {
+/** Presses Tab until `predicate(focusedElement, arg)` holds; fails after `max` presses. The predicate runs in the
+ * page, so it may use only its parameters: pass any outside value (for example a `COPY` label) as `arg`. */
+export async function tabTo<A = undefined>(page: Page, predicate: (el: Element, arg: A) => boolean, max = 40, arg?: A): Promise<void> {
   for (let i = 0; i < max; i++) {
     await page.keyboard.press('Tab');
-    if (await page.evaluate(`(${predicate.toString()})(document.activeElement)`)) return;
+    if (await page.evaluate(`(${predicate.toString()})(document.activeElement, ${JSON.stringify(arg ?? null)})`)) return;
   }
   throw new Error('element not reachable with Tab');
 }
@@ -9754,7 +10242,10 @@ const test = base.extend<{ errors: string[] }>({
       const errors: string[] = [];
       page.on('pageerror', (e) => errors.push(e.message));
       page.on('console', (m) => {
-        if (m.type() === 'error' && !/Failed to load resource|i\.scdn\.co/.test(m.text())) errors.push(m.text());
+        if (m.type() !== 'error') return;
+        // Chrome's text for a failed resource never contains its URL; the URL is in the message location.
+        const remoteCover = m.text().startsWith('Failed to load resource') && /^https:\/\/i\.scdn\.co\//.test(m.location().url);
+        if (!remoteCover) errors.push(m.text());
       });
       await use(errors);
       expect(errors).toEqual([]);
@@ -9798,7 +10289,7 @@ test('slider change', async ({ page, isMobile }) => {
   await page.goto(IR);
   await waitForMap(page);
   if (isMobile) await act(page.getByRole('button', { name: COPY.phone.mapLabel }), true);
-  await act(page.getByRole('button', { name: COPY.slider.stops.mood }), isMobile);
+  await act(page.getByRole('button', { name: COPY.slider.stops.mood, exact: true }), isMobile);
   await expect(page).toHaveURL(`${IR}?by=mood`);
   if (isMobile) await act(page.getByRole('button', { name: COPY.phone.listLabel }), true);
   await expect.poll(() => titles(page)).toEqual(['Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom']);
@@ -9845,8 +10336,11 @@ test('old URL redirects', async ({ page }) => {
   }
 });
 
-test('404', async ({ page, isMobile }) => {
+test('404', async ({ page, isMobile, errors }) => {
   const res = await page.goto('/nothing-here');
+  // The document's own 404 status is logged as a failed resource load: that one is expected here.
+  const own = errors.findIndex((e) => e.startsWith('Failed to load resource') && e.includes('404'));
+  if (own >= 0) errors.splice(own, 1);
   expect(res?.status()).toBe(404);
   await expect(page.getByText(COPY.notFound.body)).toBeVisible();
   await act(page.getByRole('link', { name: COPY.notFound.mapLink }), isMobile);
@@ -9874,6 +10368,24 @@ test('keyboard-only search, deeper and back to the map', async ({ page, isMobile
   await page.locator('#seed-title').focus();
   await page.keyboard.press('Escape');
   await expect(page).toHaveURL('/map');
+});
+
+test('covers fall back to the thumbnail sprite, then to the lettered tile', async ({ page, isMobile }) => {
+  await page.route('https://i.scdn.co/**', (route) => route.abort());
+  await page.goto(IR);
+  await expect(page.locator('.seed .cover')).toHaveAttribute('data-state', 'sprite');
+  await expect(page.locator('li.rec .cover').first()).toHaveAttribute('data-state', 'sprite');
+  // "Spiritual Unity" is the one album without a cover id: its tile shows at once, with no request at all.
+  const input = page.locator('.top-search').getByRole('combobox');
+  if (isMobile) {
+    await page.getByRole('button', { name: COPY.search.open, exact: true }).tap();
+    await page.getByRole('dialog').getByRole('combobox').pressSequentially('spiritual unity');
+  } else {
+    await input.click();
+    await input.pressSequentially('spiritual unity');
+  }
+  const option = page.getByRole('option').filter({ hasText: 'Spiritual Unity' }).first();
+  await expect(option.locator('.cover')).toHaveAttribute('data-state', 'tile');
 });
 
 test('works with web storage blocked', async ({ page, isMobile }) => {
@@ -9909,7 +10421,7 @@ test('the core flow works inside a sandboxed iframe', async ({ page, baseURL, is
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { camera, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
@@ -9973,17 +10485,19 @@ test('open states pass axe', async ({ page, isMobile }) => {
   }
 });
 
-test('keyboard: skip link, then every Home action in order, with visible focus', async ({ page, isMobile }) => {
+test('keyboard: the skip link comes first and targets main', async ({ page, isMobile }) => {
   test.skip(isMobile, 'keyboard');
-  await page.goto('/');
-  await expect(page.locator('.hero input')).toBeFocused(); // wait for the desktop autofocus before moving focus away
-  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  await page.goto('/nothing-here'); // no autofocused field on this page
   await page.keyboard.press('Tab');
-  await expect(page.getByRole('link', { name: COPY.skip })).toBeFocused();
+  await expect(page.getByRole('link', { name: COPY.skip, exact: true })).toBeFocused();
   await page.keyboard.press('Enter');
   await expect(page.locator('main#main')).toBeFocused();
-  await page.keyboard.press('Tab');
-  await expect(page.locator('.hero').getByRole('combobox')).toBeFocused();
+});
+
+test('keyboard: every Home action in order, with visible focus', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'keyboard');
+  await page.goto('/');
+  await expect(page.locator('.hero').getByRole('combobox')).toBeFocused(); // the desktop autofocus is the start
   await page.keyboard.press('Tab');
   const explore = page.getByRole('link', { name: COPY.home.explore });
   await expect(explore).toBeFocused();
@@ -9998,12 +10512,16 @@ test('keyboard: the map, its controls and the album list are all reachable', asy
   test.skip(isMobile, 'keyboard');
   await page.goto('/map');
   await waitForMap(page);
+  await waitForCameraIdle(page);
   await tabTo(page, (el) => el.classList.contains('map-canvas'));
-  const before = await page.evaluate(() => window.__rmr!.map!.getCamera());
+  const before = await camera(page);
   await page.keyboard.press('ArrowLeft');
-  expect((await page.evaluate(() => window.__rmr!.map!.getCamera())).x).toBeLessThan(before.x);
-  await tabTo(page, (el) => el.getAttribute('aria-label') === 'Zoom in');
+  expect((await camera(page)).x).toBeLessThan(before.x);
+  await tabTo(page, (el, label) => el.getAttribute('aria-label') === label, 40, COPY.map.zoomIn);
+  const z0 = (await camera(page)).zoom;
   await page.keyboard.press('Enter');
+  await waitForCameraIdle(page);
+  expect((await camera(page)).zoom).toBeGreaterThan(z0);
   await page.goto('/album/in-rainbows-radiohead');
   await tabTo(page, (el) => el.classList.contains('show-more'));
   await page.keyboard.press('Enter');
@@ -10026,14 +10544,15 @@ Expected: Vitest fails resolving `./contrast`. The Playwright run is expected to
 `frontcreck/src/lib/contrast.ts`:
 ```ts
 /** WCAG 2 relative luminance and contrast ratio for #rrggbb colours. */
+import { hexToRgb } from '@/lib/color';
+
 function channel(c: number): number {
   const v = c / 255;
   return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
 }
 
 export function relativeLuminance(hex: string): number {
-  const h = hex.replace('#', '');
-  const [r, g, b] = [0, 2, 4].map((i) => channel(parseInt(h.slice(i, i + 2), 16)));
+  const [r, g, b] = hexToRgb(hex).map(channel);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
@@ -10070,21 +10589,21 @@ landmarks, focus rings and keyboard-only paths; token and album accent
 contrast. The fixes found along the way are listed below, one line each
 as "file: rule or failing flow".
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 
 ### Task 14: Final UX review, READMEs, full green run and PR preparation notes
 
-**Context for the implementer.** Everything is built and tested. This task is the final gate before the orchestrator opens the pull request (you do not push or open it). It has four parts: (1) a complete screenshot set of the built site in the same states and sizes as the approved mockup, reviewed side by side with `design/mockups/final/shots/` and written up as a punch list whose items are then fixed; (2) rewritten READMEs for `frontcreck/` and the repository root; (3) every check green in one run; (4) PR notes: title, body outline, the full copy table for the owner's sign-off, and the deployment note. The owner signs off copy before merge, so README and PR text must follow the same copy rules (no em dashes, plain and precise, no hype, no emoji in prose; the only emoji allowed is the required attribution line at the very end of the PR body).
+**Context for the implementer.** Everything is built and tested. This task is the final gate before the orchestrator opens the pull request (you do not push or open it). It has four parts: (1) a complete screenshot set of the built site in the same states and sizes as the approved mockup, reviewed side by side with `design/mockups/final/shots/` and written up as a punch list whose items are then fixed; (2) rewritten READMEs for `frontcreck/` and the repository root; (3) every check green in one run; (4) PR notes: title, body outline, the full copy table for the owner's sign-off, and the deployment note. The owner signs off copy before merge, so README and PR text must follow the same copy rules (no em dashes, plain and precise, no hype, no emoji in prose; the only emoji allowed is the required attribution line at the very end of the PR body), and the publishable-text rule in Global Constraints: no exact catalog count ("4,000+", "one page per album"), no count of recommendations ("the same list"), no owner name or username, no absolute home-directory paths. `design/` stays untracked and out of the PR: the review reads the mockup screenshots from its absolute path, and neither README mentions the folder.
 
 **Files:**
 - Create: `frontcreck/scripts/review-shots.mjs`, `docs/superpowers/plans/2026-09-29-recmyrecord-redesign-pr-notes.md`
-- Modify: `frontcreck/README.md` (rewrite), `README.md` (rewrite), `frontcreck/package.json` (script `shots`), and any source files the punch list fixes
+- Modify: `frontcreck/README.md` (rewrite), `README.md` (rewrite), `frontcreck/package.json` (script `shots`; exact pins bumped only if Step 3e finds patched versions) and `frontcreck/package-lock.json` (only then), and any source files the punch list fixes
 - Test: all suites (`npm run lint`, `npm run typecheck`, `npm test`, `npm run test:e2e`, `npm run perf`, `npm run build`, pipeline `pytest` and `rmr_pipeline.validate`)
 
 **Interfaces:**
-- Consumes: everything; `assertNativeChrome` (Task 3); test hooks `window.__rmr` (Tasks 4, 6).
+- Consumes: everything; `assertNativeChrome` (Task 3); `startServer(port)` (`scripts/serve.mjs`, Task 12); test hooks `window.__rmr` (Tasks 4, 6).
 - Produces: `npm run shots` writing `frontcreck/test-results/review/<size>-<state>.png` for sizes `d1440`, `d1280`, `m390` and states `a1-home`, `a2-home-search`, `a3-search-none`, `c1-explore`, `c2-explore-card`, `c3-explore-zoomed`, `d1-album`, `d2-album-sonic`, `d3-album-mood`, `d4-album-deeper`, `d5-album-longtitle`, `e2-error`, `f1-about`, `g1-transition-mid` (desktop sizes), `h1-album-mapmode` (phone); the PR notes file.
 
 - [ ] **Step 1: Write the failing test**
@@ -10095,17 +10614,16 @@ The failing check for this task is the review itself: write the screenshot scrip
 ```js
 #!/usr/bin/env node
 /** npm run shots: screenshots of every reviewed state, named like design/mockups/final/shots/. */
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { chromium } from '@playwright/test';
 import { assertNativeChrome } from './check-native.mjs';
+import { startServer } from './serve.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const ROOT = path.resolve(import.meta.dirname, '..');
 const OUT = path.join(ROOT, 'test-results/review');
 const PORT = 3300;
-const BASE = `http://127.0.0.1:${PORT}`;
+let BASE = `http://127.0.0.1:${PORT}`;
 const IR = '/album/in-rainbows-radiohead';
 const SIZES = {
   d1440: { viewport: { width: 1440, height: 900 } },
@@ -10161,7 +10679,8 @@ const STATES = {
   'e2-error': async (p) => {
     await p.route('**/data/albums.json', (r) => r.abort());
     await p.goto(`${BASE}/map`);
-    await p.getByRole('alert').waitFor();
+    // Not getByRole('alert'): Next's route announcer is an alert too, which would make the locator ambiguous.
+    await p.locator('.map-msg[role="alert"]').waitFor();
   },
   'f1-about': async (p) => p.goto(`${BASE}/about`),
   'g1-transition-mid': async (p, size) => {
@@ -10183,24 +10702,11 @@ const STATES = {
   },
 };
 
-async function startServer() {
-  if (!fs.existsSync(path.join(ROOT, '.next/BUILD_ID'))) throw new Error('run npm run build first');
-  const child = spawn('npx', ['next', 'start', '--port', String(PORT)], { cwd: ROOT, stdio: ['ignore', 'ignore', 'inherit'] });
-  for (let i = 0; i < 120; i++) {
-    try {
-      if ((await fetch(BASE)).ok) return child;
-    } catch {
-      // not up yet
-    }
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  child.kill();
-  throw new Error('next start did not come up');
-}
-
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
-  const server = await startServer();
+  const server = await startServer(PORT);
+  BASE = server.base;
+  const failed = [];
   const browser = await chromium.launch({ channel: 'chrome', args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
   try {
     await assertNativeChrome(browser);
@@ -10210,24 +10716,34 @@ async function main() {
         if (only && !`${size}-${name}`.includes(only)) continue;
         const ctx = await browser.newContext(opts);
         const page = await ctx.newPage();
-        const result = await run(page, size);
-        if (result !== false) {
-          if (result !== 'now') {
-            await page.evaluate(() => document.fonts.ready);
-            await page.waitForFunction(() => !window.__rmr?.map || !window.__rmr.map.isAnimating(), null, { timeout: 15000 }).catch(() => {});
-            await page.waitForTimeout(900);
+        try {
+          const result = await run(page, size);
+          if (result !== false) {
+            if (result !== 'now') {
+              await page.evaluate(() => document.fonts.ready);
+              await page.waitForFunction(() => !window.__rmr?.map || !window.__rmr.map.isAnimating(), null, { timeout: 15000 }).catch((e) => {
+                console.warn(`${size}-${name}: the map was still animating after 15 s; shooting anyway (${e.message})`);
+              });
+              await page.waitForTimeout(900);
+            }
+            const file = path.join(OUT, `${size}-${name}.png`);
+            await page.screenshot({ path: file });
+            console.log('wrote', path.relative(ROOT, file));
           }
-          const file = path.join(OUT, `${size}-${name}.png`);
-          await page.screenshot({ path: file });
-          console.log('wrote', path.relative(ROOT, file));
+        } catch (e) {
+          // One broken state must not cost every later screenshot; the run still fails at the end.
+          failed.push(`${size}-${name}: ${e.message}`);
+          console.error(`${size}-${name} failed: ${e.message}`);
+        } finally {
+          await ctx.close();
         }
-        await ctx.close();
       }
     }
   } finally {
     await browser.close();
-    server.kill();
+    await server.stop();
   }
+  if (failed.length) throw new Error(`${failed.length} state(s) failed:\n${failed.join('\n')}`);
 }
 
 main().catch((e) => {
@@ -10242,7 +10758,7 @@ Run it:
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 cd frontcreck && npm run build && npm run shots
 ```
-Then open each pair with the Read tool, `frontcreck/test-results/review/<size>-<state>.png` against `design/mockups/final/shots/<size>-<state-like-name>.png` (mapping: `a1-home` vs both `a1-homeA` and `b1-homeB`; `a2-home-search` vs `a2-homeA-search`; the others share names; `e2-error` vs `e2-error` for the message style only). For every visible difference in spacing, size, type, colour, alignment, state, clipping, overflow or motion that is not one of the approved changes (combined Home; "Closest albums" instead of "Five closest"; no "Made by" or catalog count on About), add an item to a punch list in the PR notes file (section "UX review punch list"), each item as `- [ ] <size>-<state>: <what differs> -> <fix>`.
+Then open each pair with the Read tool, `frontcreck/test-results/review/<size>-<state>.png` against `/Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/recmyrecord-redesign-16ce4b/design/mockups/final/shots/<size>-<state-like-name>.png` (mapping: `a1-home` vs both `a1-homeA` and `b1-homeB`; `a2-home-search` vs `a2-homeA-search`; the others share names; `e2-error` vs `e2-error` for the message style only). The mockup has `d1280` shots only for `a1`, `b1`, `c1`, `d1`, `d5`, `e1` and `f1`; compare every other `d1280` state against the `d1440` mockup shot of the same state. For every visible difference in spacing, size, type, colour, alignment, state, clipping, overflow or motion that is not one of the approved changes (combined Home; "Closest albums" instead of "Five closest"; no "Made by" or catalog count on About), add an item to a punch list in the PR notes file (section "UX review punch list"), each item as `- [ ] <size>-<state>: <what differs> -> <fix>`.
 
 - [ ] **Step 2: Run it to verify it fails**
 
@@ -10252,11 +10768,11 @@ export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 cd frontcreck && npm run lint && npm run typecheck && npm test && npm run test:e2e && npm run perf
 cd ../data-pipeline && .venv/bin/python -m pytest && .venv/bin/python -m rmr_pipeline.validate
 ```
-Expected: the suites pass (Tasks 1 to 13 left them green); the punch list has open items.
+Run the block as one shell call. Expected: the suites pass (Tasks 1 to 13 left them green); the punch list has open items.
 
 - [ ] **Step 3: Implement**
 
-3a. Fix every punch-list item in the source and tick it (`- [x]`), re-running `npm run shots <size>-<state>` for the affected state and looking at the new screenshot each time.
+3a. Fix every punch-list item in the source and tick it (`- [x]`), re-running `npm run shots <size>-<state>` for the affected state (in a shell that starts with `export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"`) and looking at the new screenshot each time.
 
 3b. Rewrite `frontcreck/README.md` with these sections (plain, precise prose, no em dashes, no emoji, no owner name):
 - "recmyrecord web app": one paragraph on what the site does (pick an album, get the closest albums by sound and mood; a map of 4,000+ albums).
@@ -10265,29 +10781,39 @@ Expected: the suites pass (Tasks 1 to 13 left them green); the punch list has op
 - "How it works": fully static; data in `public/data/` generated by `../data-pipeline` (link its README); the persistent map (`src/components/map/`, ported from a WebGL point-sprite map, three.js loaded after first paint, demand rendering); routes (`/`, `/map`, `/album/[slug]?by=`, `/about`); the store (`src/lib/store.ts`); copy in `src/lib/copy.ts`.
 - "Deployment": the Vercel project root is `frontcreck/`; `engines.node` is `20.x`; production currently deploys from the `recmyrecord` branch, not `main`.
 
-3c. Rewrite the root `README.md`: what recmyrecord is (two sentences), the repository layout (`frontcreck/` the site; `data-pipeline/` builds the site's data; `data-retrieval/` the original scraping and recommender code, kept for reference and read by the pipeline; `design/` the approved mockups; `docs/superpowers/` the design spec and this plan; `recVenv/` a legacy committed virtualenv, out of scope here), and how to run the site and the pipeline (link both READMEs). Keep the existing screenshot link out (it shows the old design).
+3c. Rewrite the root `README.md`: what recmyrecord is (two sentences), the repository layout (`frontcreck/` the site; `data-pipeline/` builds the site's data; `data-retrieval/` the original scraping and recommender code, kept for reference and read by the pipeline; `docs/superpowers/` the design spec and this plan; `recVenv/` a legacy committed virtualenv, out of scope here; do not mention `design/`, which is not part of the repository), and how to run the site and the pipeline (link both READMEs; the pipeline command is written with placeholders, `python -m rmr_pipeline.build --map-root <path>`, never a home-directory path). Keep the existing screenshot link out (it shows the old design).
 
 3d. Write `docs/superpowers/plans/2026-09-29-recmyrecord-redesign-pr-notes.md` with:
 - **Title:** `Redesign recmyrecord: a static, dark listening-room site built around one persistent map`
 - **Body outline** (sections, each a few plain bullets):
   1. Summary (what a visitor can now do; fully static; no API, database or secrets at runtime).
   2. What changed: data pipeline; app rewrite (Next 16, React 19, Tailwind 4, three.js map); Home, Explore, Album, About, 404; phone layouts; search; removed Chakra, Emotion, framer-motion, react-icons, react-use, Prisma, `/insights`, `/api/albums`, `/api/artists`, unused assets; old URLs redirect to `/`.
-  3. Recommendations and map now agree: stops sonic 5, balanced 2.0 (default), mood 0.5 (the old live behaviour, verified: In Rainbows returns the same five as the live site); regenerated UMAP layouts put recommendations in the seed's neighbourhood.
+  3. Recommendations and map now agree: stops sonic 5, balanced 2.0 (default), mood 0.5 (the old live behaviour, verified: In Rainbows returns the same list as the live site); regenerated UMAP layouts put recommendations in the seed's neighbourhood.
   4. Quality: the final `npm run perf` table; accessibility (axe clean on every route and open state, keyboard paths); test counts (Vitest, Playwright desktop, phone, no-WebGL; pytest).
   5. Copy for sign-off: the full table below.
   6. Screenshots: the list of `test-results/review/*.png` states (the orchestrator attaches them).
   7. Known data problems (from `data-pipeline/README.md`), including that no cover correction could be verified, so `overrides.json` is empty.
   8. Owner actions, out of scope: rotate the credentials that were committed in `frontcreck/.env` and in history (the file is now untracked and ignored); remove `recVenv/`; shut down the Heroku app; production deploys from the `recmyrecord` branch, so merging to `main` does not deploy (point Vercel at `main` or merge `main` into `recmyrecord` when ready).
   9. The UX review punch list (all items ticked).
-  10. Last line of the body exactly: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
-- **Copy table for sign-off**: every row of spec section 8, with the text as shipped, plus every other string in `src/lib/copy.ts` (ARIA labels, search hint and live messages, slider labels, map labels, phone labels, error and not-found strings, copy-link failure text). Generate the second part from `copy.ts` so nothing is missed:
+  10. For the owner to decide (each a plain bullet with the choice made and the alternative): search matches every query word exactly first and uses Fuse.js only as a typo fallback when nothing matches (the spec says "Fuse.js over title and artist"); the keyboard-only search flow and the sandboxed-iframe flow run at desktop size only (the spec asks for the listed flows at desktop and phone sizes); slug generation is tested in the Python pipeline (pytest), not with Vitest (the spec lists slugs among the Vitest unit tests).
+  11. Dependency audit: the result of Step 3e (versions bumped, or the advisories that remain and why they are dev-only).
+  12. Last line of the body exactly: `🤖 Generated with [Claude Code](https://claude.com/claude-code)`
+- **Copy table for sign-off**: every row of spec section 8, with the text as shipped, plus every other string in `src/lib/copy.ts`, including every ARIA label and helper string (search hint and live messages, slider labels, map and canvas labels, phone labels, error and not-found strings, copy-link failure text, the title template, the tile and trail glyphs). Generate the second part from `copy.ts` so nothing is missed, with the TypeScript compiler already in devDependencies (no tool is downloaded; `copy.ts` has no imports, so it compiles alone):
 ```bash
 export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
-cd frontcreck && npx --yes tsx@4 -e "import { COPY } from './src/lib/copy'; const walk = (o, p = '') => Object.entries(o).forEach(([k, v]) => typeof v === 'string' ? console.log('| ' + p + k + ' | ' + v + ' |') : typeof v === 'function' ? console.log('| ' + p + k + '() | ' + (() => { try { return v('{query}', '{artist}', ['{words}']); } catch { return v(['{words}']); } })() + ' |') : Array.isArray(v) ? v.forEach((x, i) => console.log('| ' + p + k + '[' + i + '] | ' + x + ' |')) : walk(v, p + k + '.')); walk(COPY);"
+cd frontcreck && npx tsc src/lib/copy.ts --outDir test-results/copy --module es2022 --target es2022 --skipLibCheck && node --input-type=module -e "import { COPY } from './test-results/copy/copy.js'; const walk = (o, p = '') => Object.entries(o).forEach(([k, v]) => typeof v === 'string' ? console.log('| ' + p + k + ' | ' + v + ' |') : typeof v === 'function' ? console.log('| ' + p + k + '() | ' + (() => { try { return v('{query}', '{artist}', ['{words}']); } catch { return v(['{words}']); } })() + ' |') : Array.isArray(v) ? v.forEach((x, i) => console.log('| ' + p + k + '[' + i + '] | ' + x + ' |')) : walk(v, p + k + '.')); walk(COPY);"
 ```
+  (`test-results/` is gitignored.)
   Mark any string that differs from the spec's draft with "(differs from spec: reason)".
-- **Deployment note** (its own short section): Vercel root `frontcreck/`; Node `20.x`; no environment variables needed (remove the old ones from the Vercel project when convenient; they are unused); `next build` prerenders 4,081 album pages (note the build time and the size of `.next/server/app/album` from Task 8); production deploys from the `recmyrecord` branch today.
+- **Deployment note** (its own short section): Vercel root `frontcreck/`; Node `20.x`; no environment variables needed (remove the old ones from the Vercel project when convenient; they are unused); `next build` prerenders one page per album, 4,000+ pages (note the build time and the size of `.next/server/app/album` from Task 8); production deploys from the `recmyrecord` branch today.
 - **README drafts for review**: say that both READMEs were rewritten and ask the owner to read them with the copy table.
+
+3e. Dependency audit. `npm audit` flags dev-only packages: `vitest` 4.1.6 with its `@vitest/mocker` (moderate) and `postcss` 8.5.14 (high). Check for patched releases and bump the exact pins if they exist:
+```bash
+export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
+cd frontcreck && npm audit --json > test-results/audit.json; npm audit; npm view vitest@4 version; npm view postcss@8 version
+```
+For each flagged package, if a newer version inside the same major clears the advisory (`npm audit` names the fixed range), set that exact version in `package.json` (no `^` or `~`; `@vitest/mocker` follows `vitest`, so bump `vitest` only), regenerate the lockfile with `npx npm@11 install` (stock npm 10 crashes resolving vitest), confirm stock `npm ci` still installs cleanly, and re-run the full green run of Step 4. If no patched version exists yet, change nothing and record the remaining advisories, and why they do not reach the served site, in the PR notes section "Dependency audit".
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -10296,23 +10822,24 @@ export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
 node -p process.arch
 cd frontcreck && npm run lint && npm run typecheck && npm test && npm run build && npm run test:e2e && npm run perf
 cd ../data-pipeline && .venv/bin/python -m pytest && .venv/bin/python -m rmr_pipeline.validate
-cd .. && git status --short && git ls-files frontcreck/.env | wc -l
-grep -rn --include='*.ts' --include='*.tsx' --include='*.css' --include='*.md' -e $'\u2014' -e $'\u2013' frontcreck/src frontcreck/README.md README.md data-pipeline/README.md || echo "no dashes"
+cd .. && git status --short | grep -v '^?? design/$'; git ls-files frontcreck/.env | wc -l
+grep -rn --include='*.ts' --include='*.tsx' --include='*.mts' --include='*.mjs' --include='*.css' --include='*.md' -e $'\u2014' -e $'\u2013' frontcreck/src frontcreck/e2e frontcreck/scripts frontcreck/README.md README.md data-pipeline/README.md docs/superpowers/plans/2026-09-29-recmyrecord-redesign-pr-notes.md || echo "no dashes"
 ```
-Expected: `arm64`; every command succeeds; `perf` prints `All budgets met.`; pytest green and the validator prints its summary; `git status` shows only the files of this task; `git ls-files frontcreck/.env` counts `0`; the grep prints `no dashes`. Every punch-list item is ticked.
+Run the block as one shell call (the working directory does not persist between agent shell calls). Expected: `arm64`; every command succeeds; `perf` prints `All budgets met.`; pytest green and the validator prints its summary; `git status` (minus the untracked `design/` folder, which is clean by definition because it stays out of the repository) shows only the files of this task; `git ls-files frontcreck/.env` counts `0`; the grep prints `no dashes`. Every punch-list item is ticked.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add frontcreck/scripts/review-shots.mjs frontcreck/package.json frontcreck/README.md README.md docs/superpowers/plans/2026-09-29-recmyrecord-redesign-pr-notes.md frontcreck/src
+git add frontcreck/scripts/review-shots.mjs frontcreck/package.json frontcreck/package-lock.json frontcreck/README.md README.md docs/superpowers/plans/2026-09-29-recmyrecord-redesign-pr-notes.md frontcreck/src
 git commit -F - <<'EOF'
 docs: final UX review fixes, READMEs and PR notes
 
 Adds a screenshot script for the review states, fixes the review punch
 list, rewrites the app and repository READMEs, and records the PR title,
-body outline, copy table for sign-off and the deployment note.
+body outline, copy table for sign-off, the dependency audit and the
+deployment note.
 
-Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+<Co-Authored-By trailer from your session's system reminder>
 EOF
 ```
 Do not push and do not open the pull request; report the PR notes path to the orchestrator.
@@ -10339,7 +10866,7 @@ Do not push and do not open the pull request; report the PR notes path to the or
 | 6.3 Known data problems | duplicate URIs, wrong covers and `overrides.json`, frozen catalog documented | 2 |
 | 7 Performance | every budget measured in software and GPU runs at both sizes, fails on regression | 12 |
 | 7 Accessibility | AA contrast, focus rings, labels, skip link, landmarks, titles, keyboard paths | 3, 5, 8, 13 |
-| 7 Robustness | cover fallbacks, no-WebGL message, data error with retry, no horizontal scroll, no console errors | 5, 6, 10, 11, 13 |
-| 7 Tests | Vitest units (data access, slugs, search, shared descriptors, URL state), Playwright flows at both sizes, data validation script, lint, typecheck, test, build | 1, 2, 4, 5, 13, 14 |
+| 7 Robustness | cover fallbacks (tested in Task 13 flows), no-WebGL message and a working list and slider without WebGL, data error with retry, no horizontal scroll, no console errors | 5, 6, 7, 10, 11, 13 |
+| 7 Tests | Vitest units (data access, search, shared descriptors, URL state; slugs are unit-tested in the Python pipeline with pytest), Playwright flows at both sizes (keyboard-only and iframe flows at desktop size only; both listed for the owner in the PR notes), data validation script, lint, typecheck, test, build | 1, 2, 4, 5, 13, 14 |
 | 8 Copy | every string from `copy.ts`, rules enforced by tests, owner sign-off table | 3, 14 |
 | 9 Out of scope | credential rotation, `recVenv/`, Heroku, Vercel branch settings, personal-site map, new features | noted in 14 (PR notes); nothing implemented |
