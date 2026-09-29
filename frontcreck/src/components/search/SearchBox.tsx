@@ -19,11 +19,13 @@ import { getSearch, type LoadedSearch } from '@/components/search/searchIndex';
 import { registerSearchTarget } from '@/components/search/shortcut';
 import { COPY } from '@/lib/copy';
 import { toSummary } from '@/lib/data/catalog';
+import { DataLoadError } from '@/lib/data/client';
 import { useCatalog } from '@/lib/data/useData';
 import { suppressGhostClick } from '@/lib/ghost-click';
 import { splitHighlights, type HighlightRange } from '@/lib/highlight';
 import { isNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
+import type { SearchHit } from '@/lib/search';
 import type { AlbumId } from '@/lib/types';
 import { albumHref } from '@/lib/url-state';
 
@@ -32,7 +34,10 @@ let readyMarked = false;
 /** The search fields accept at most this many characters (kept here, not in the lazily loaded search module). */
 export const QUERY_MAX_CHARS = 80;
 
-const ignore = (): void => {};
+/** The typo step waits for this pause in typing, then runs when the browser is idle (or after IDLE_MAX_MS). */
+const TYPO_PAUSE_MS = 160;
+const IDLE_MAX_MS = 200;
+const NO_HITS: SearchHit[] = [];
 
 /** A press that opens the context menu instead of choosing: any button but the primary, or Ctrl+click on macOS. */
 function isMenuPress(e: { button: number; ctrlKey: boolean }): boolean {
@@ -97,27 +102,43 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
   const [wanted, setWanted] = useState(false);
   const [loaded, setLoaded] = useState<LoadedSearch | null>(null);
   const [announce, setAnnounce] = useState('');
+  /** The search code (a separate chunk) failed to load; local to this field, unlike the shared catalog state. */
+  const [chunkFailed, setChunkFailed] = useState(false);
+  /** Result of the last typo run, for the query it ran on. */
+  const [typo, setTypo] = useState<{ query: string; hits: SearchHit[] } | null>(null);
   // The shared catalog state: every consumer sees the same error, and any consumer's retry recovers all.
   const { status: catalogStatus, retry: retryCatalog } = useCatalog(wanted);
 
   useEffect(() => {
-    if (!wanted || loaded || catalogStatus === 'error') return;
+    if (!wanted || loaded || catalogStatus === 'error' || chunkFailed) return;
     let live = true;
-    getSearch().then((s) => {
-      if (live) setLoaded(s);
-    }, ignore);
+    getSearch().then(
+      (s) => {
+        if (live) setLoaded(s);
+      },
+      (err: unknown) => {
+        // Catalog failures show through the shared state; anything else is the search chunk.
+        if (live && !(err instanceof DataLoadError)) setChunkFailed(true);
+      },
+    );
     return () => {
       live = false;
     };
-  }, [wanted, loaded, catalogStatus]);
+  }, [wanted, loaded, catalogStatus, chunkFailed]);
 
   const trimmed = query.trim();
   const shown = persistent || open;
-  const hits = useMemo(() => (loaded && trimmed ? loaded.search(loaded.index, query) : []), [loaded, query, trimmed]);
+  // The keystroke path: prefix matches only. The typo step never runs in render.
+  const prefixHits = useMemo(() => (loaded && trimmed ? loaded.prefix(loaded.index, query) : NO_HITS), [loaded, query, trimmed]);
+  const typoWanted = useMemo(() => !!loaded && prefixHits.length === 0 && trimmed !== '' && loaded.fuzzyEligible(query), [loaded, prefixHits, trimmed, query]);
+  const typoHits = typo && typo.query === query ? typo.hits : null;
+  const typoPending = typoWanted && typoHits === null;
+  const hits = prefixHits.length ? prefixHits : (typoWanted && typoHits) || NO_HITS;
   const activeIndex = hits.length && active >= 0 ? Math.min(active, hits.length - 1) : -1;
   const listShown = shown && trimmed !== '' && hits.length > 0;
-  const emptyShown = shown && trimmed !== '' && !!loaded && hits.length === 0;
-  const errorShown = shown && trimmed !== '' && !loaded && catalogStatus === 'error';
+  // While a typo run is pending the list shows nothing, so the no-match sentence never flashes.
+  const emptyShown = shown && trimmed !== '' && !!loaded && hits.length === 0 && !typoPending;
+  const errorShown = shown && trimmed !== '' && !loaded && (catalogStatus === 'error' || chunkFailed);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -145,12 +166,36 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
 
   useEffect(() => () => stopPressing.current?.(), []);
 
-  // The region is cleared on every edit (onChange), so this sets it from empty and it is announced again.
+  // The typo step: only after prefix matching found nothing, for a short enough query, once the user has
+  // paused, and when the browser is idle. A new keystroke, a selection, closing the list or unmounting
+  // cancels it; a result for a query that is no longer current is dropped (here and in `typoHits`).
   useEffect(() => {
-    if (!trimmed || !loaded) return;
+    if (!typoPending || !shown || !loaded) return;
+    let cancelled = false;
+    let idle: number | null = null;
+    const go = () => {
+      idle = null;
+      const found = loaded.fuzzy(loaded.index, query);
+      if (!cancelled) setTypo({ query, hits: found });
+    };
+    const timer = window.setTimeout(() => {
+      if (typeof window.requestIdleCallback === 'function') idle = window.requestIdleCallback(go, { timeout: IDLE_MAX_MS });
+      else go();
+    }, TYPO_PAUSE_MS);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      if (idle !== null) window.cancelIdleCallback(idle);
+    };
+  }, [typoPending, shown, loaded, query]);
+
+  // Only settled states are announced. The region is cleared on every edit (onChange), so this sets it
+  // from empty and an unchanged message is announced again.
+  useEffect(() => {
+    if (!trimmed || !loaded || typoPending) return;
     const t = window.setTimeout(() => setAnnounce(hits.length ? COPY.search.found : COPY.search.none), 350);
     return () => window.clearTimeout(t);
-  }, [hits, trimmed, loaded]);
+  }, [hits, trimmed, loaded, typoPending]);
 
   useEffect(() => {
     const h = activeIndex >= 0 ? hits[activeIndex] : undefined;
@@ -207,7 +252,7 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
       choose(hits[activeIndex >= 0 ? activeIndex : 0].id);
     } else if (e.key === 'Escape') {
       e.stopPropagation();
-      if (!persistent && (listShown || emptyShown || errorShown)) {
+      if (!persistent && (listShown || emptyShown || errorShown || (open && typoPending))) {
         e.preventDefault();
         close();
       } else if (query) {
@@ -217,9 +262,17 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
         inputRef.current?.blur();
         onEscapeEmpty?.();
       }
-    } else if (e.key === 'Tab') {
-      if (!persistent) close();
     }
+    // Tab is left to the browser: the list closes on blur only when focus leaves the combobox, so Tab
+    // from the field reaches Retry in the error block.
+  };
+
+  /** Retry moves focus back to the field (the button unmounts once loading starts) and re-announces. */
+  const onRetry = () => {
+    inputRef.current?.focus();
+    setAnnounce('');
+    setChunkFailed(false);
+    if (catalogStatus === 'error') retryCatalog();
   };
 
   const onBlur = (e: FocusEvent<HTMLDivElement>) => {
@@ -332,7 +385,7 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
         {errorShown ? (
           <div className="combo-error" role="alert">
             <p>{COPY.error.body}</p>
-            <button type="button" className="btn btn-line" onClick={retryCatalog}>
+            <button type="button" className="btn btn-line" onClick={onRetry}>
               {COPY.error.retry}
             </button>
           </div>

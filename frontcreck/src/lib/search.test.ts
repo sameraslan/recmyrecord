@@ -1,8 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { AlbumRecord } from '@/lib/types';
-import { buildSearchIndex, fold, highlightRanges, queryWords, searchAlbums } from './search';
+import { FUZZY_MAX_CHARS, buildSearchIndex, fold, fuzzyEligible, fuzzySearch, highlightRanges, prefixSearch, queryWords, searchAlbums } from './search';
 
 const albums = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public/data/albums.json'), 'utf8')) as AlbumRecord[];
 const index = buildSearchIndex(albums);
@@ -14,7 +14,7 @@ describe('fold', () => {
     expect(fold('Björk').text).toBe('bjork');
     expect(fold('Korowód').text).toBe('korowod');
     const f = fold('Æther & Sons');
-    expect(f.text).toBe('aether and sons');
+    expect(f.text).toBe('aether & sons');
     expect(f.map.slice(0, 3)).toEqual([0, 0, 1]);
     expect(f.map[f.text.length]).toBe('Æther & Sons'.length);
   });
@@ -160,6 +160,52 @@ describe('searchAlbums (real catalog)', () => {
     expect(performance.now() - t1).toBeLessThan(20);
   });
 
+  it('matches each occurrence of a repeated query word with a different word of one field', () => {
+    const all = searchAlbums(index, 'the the', 5000);
+    const found = all.map((h) => `${albums[h.id].t} / ${albums[h.id].a}`);
+    expect(found).toContain('Soul Mining / The The');
+    expect(found).toContain('The Dark Side of the Moon / Pink Floyd');
+    expect(found).not.toContain('The Velvet Underground & Nico / The Velvet Underground & Nico');
+    expect(titles('the the soul')[0]).toBe('Soul Mining');
+  });
+
+  it('treats and and & as optional connectors, never as a word that a or an can match', () => {
+    const hit = searchAlbums(index, 'marley and the wailers')[0];
+    expect(albums[hit.id].a).toBe('Bob Marley & The Wailers');
+    expect(hit.artist).toEqual([{ start: 4, end: 24 }]);
+    expect(artists('marley & the wailers')[0]).toBe('Bob Marley & The Wailers');
+    expect(artists('bob marley the wailers')[0]).toBe('Bob Marley & The Wailers');
+    expect(titles('velvet underground and nico')[0]).toBe('The Velvet Underground & Nico');
+    expect(titles('rise and fall ziggy')[0]).toBe('The Rise and Fall of Ziggy Stardust and the Spiders From Mars');
+  });
+
+  it('keeps the typo fallback out of prefix search and limits it to short queries', () => {
+    const spy = vi.spyOn(index.fuse, 'search');
+    expect(prefixSearch(index, 'radiohed')).toEqual([]);
+    expect(prefixSearch(index, 'q'.repeat(32))).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+    expect(FUZZY_MAX_CHARS).toBe(16);
+    expect(fuzzyEligible('abc')).toBe(false);
+    expect(fuzzyEligible('radiohed')).toBe(true);
+    expect(fuzzyEligible('a'.repeat(16))).toBe(true);
+    expect(fuzzyEligible('a'.repeat(17))).toBe(false);
+    expect(fuzzySearch(index, 'a'.repeat(17))).toEqual([]);
+    expect(spy).not.toHaveBeenCalled();
+    expect(fuzzySearch(index, 'radiohed').map((h) => albums[h.id].a)).toContain('Radiohead');
+    expect(spy).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  it('answers the synchronous prefix step for a 32-character no-match query in under 5 ms', () => {
+    const q = 'qzxvbnmkqzxvbnmkqzxvbnmkqzxvbnmk';
+    prefixSearch(index, q);
+    fuzzyEligible(q);
+    const t0 = performance.now();
+    expect(prefixSearch(index, q)).toEqual([]);
+    fuzzyEligible(q);
+    expect(performance.now() - t0).toBeLessThan(5);
+  });
+
   it('returns highlight ranges on the original strings', () => {
     const hit = searchAlbums(index, 'bjork')[0];
     expect(hit.artist).toEqual([{ start: 0, end: 5 }]);
@@ -177,11 +223,19 @@ describe('searchAlbums ranking (fixture)', () => {
     rec('Blue Train', 'Z'), // 4: title equals the query
     rec('Blue Train', 'Y'), // 5: title equals the query, later in the catalog
     rec('Bluegrass', 'Strain'), // 6: no match ("train" is not a word prefix of "Strain")
+    rec('Rock & Roll', 'Z'), // 7: "&" is not a word
   ];
   const fx = buildSearchIndex(fixture);
 
   it('orders exact title, title prefix, all in title, split, all in artist, then catalog order', () => {
     expect(searchAlbums(fx, 'blue train').map((h) => h.id)).toEqual([4, 5, 3, 2, 1, 0]);
     expect(searchAlbums(fx, 'Blue Train', 3).map((h) => h.id)).toEqual([4, 5, 3]);
+  });
+
+  it('never lets a or an match a bare &', () => {
+    expect(prefixSearch(fx, 'rock a')).toEqual([]);
+    expect(prefixSearch(fx, 'rock an')).toEqual([]);
+    expect(prefixSearch(fx, 'rock and roll').map((h) => h.id)).toEqual([7]);
+    expect(prefixSearch(fx, 'rock & roll')[0].title).toEqual([{ start: 0, end: 11 }]);
   });
 });

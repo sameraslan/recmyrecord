@@ -1,8 +1,26 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
 import { coversSettled, isPhone, shot } from './helpers';
 
 const BODY_SPOT = { x: 700, y: 600 };
+
+/** Requests that navigate to an album page (a document load or an RSC navigation, not a prefetch). */
+function albumNavigations(page: Page): string[] {
+  const found: string[] = [];
+  page.on('request', (r) => {
+    if (!new URL(r.url()).pathname.startsWith('/album/')) return;
+    const h = r.headers();
+    if (h['next-router-prefetch'] || h['next-router-segment-prefetch']) return;
+    found.push(r.url());
+  });
+  return found;
+}
+
+/** Gives a navigation every chance to start: router.push issues its request within milliseconds, so a
+ * fixed pause is enough (network idle is not used: it can wait on unrelated cover requests). */
+async function settle(page: Page): Promise<void> {
+  await page.waitForTimeout(750);
+}
 
 test.describe('desktop header search', () => {
   test.skip(({ isMobile }) => isMobile, 'desktop only');
@@ -74,8 +92,11 @@ test.describe('desktop header search', () => {
 
     await input.fill('');
     await input.pressSequentially('radiohead');
+    const navigations = albumNavigations(page);
     await page.getByRole('option').first().click({ button: 'right' });
+    await settle(page);
     await expect(page).toHaveURL(/\/nope$/);
+    expect(navigations).toEqual([]);
     await page.mouse.click(BODY_SPOT.x, BODY_SPOT.y);
     await expect(page.getByRole('listbox')).toBeHidden();
   });
@@ -86,9 +107,15 @@ test.describe('desktop header search', () => {
     await input.click();
     await input.pressSequentially('radiohead');
     const isMac = await page.evaluate(() => /Mac/i.test(navigator.platform));
+    const navigations = albumNavigations(page);
     await page.getByRole('option').nth(1).click({ modifiers: ['Control'] });
-    if (isMac) await expect(page).toHaveURL(/\/nope$/);
-    else await expect(page).toHaveURL(/\/album\/kid-a-radiohead$/);
+    if (isMac) {
+      await settle(page);
+      await expect(page).toHaveURL(/\/nope$/);
+      expect(navigations).toEqual([]);
+    } else {
+      await expect(page).toHaveURL(/\/album\/kid-a-radiohead$/);
+    }
   });
 
   test('Tab and a click elsewhere close the list', async ({ page }) => {
@@ -106,7 +133,7 @@ test.describe('desktop header search', () => {
     await expect(page.getByRole('listbox')).toBeHidden();
   });
 
-  test('the focused field shows a 2 px lamp indicator without moving', async ({ page }) => {
+  test('the focused field shows a lamp border with a softer halo, without moving', async ({ page }) => {
     await page.goto('/nope');
     const field = page.locator('.top-search .combo-field');
     const before = await field.boundingBox();
@@ -114,8 +141,34 @@ test.describe('desktop header search', () => {
     // Retrying assertions: the border colour eases in over 0.2 s.
     await expect(field).toHaveCSS('border-top-color', 'rgb(230, 168, 86)');
     await expect(field).toHaveCSS('border-top-width', '1px');
-    await expect(field).toHaveCSS('box-shadow', 'rgb(230, 168, 86) 0px 0px 0px 1px');
+    await expect(field).toHaveCSS('box-shadow', /^(color\(srgb 0\.90\d* 0\.65\d* 0\.33\d* \/ 0\.45\)|rgba\(230, 168, 86, 0\.45\)) 0px 0px 0px 1px$/);
     expect(await field.boundingBox()).toEqual(before);
+  });
+
+  test('in forced-colors mode the focused field gets a system outline', async ({ page }) => {
+    await page.emulateMedia({ forcedColors: 'active' });
+    await page.goto('/nope');
+    const field = page.locator('.top-search .combo-field');
+    await field.locator('input').focus();
+    await expect(field).toHaveCSS('outline-style', 'solid');
+    await expect(field).toHaveCSS('outline-width', '2px');
+  });
+
+  test('when the albums fail to load, Tab reaches Retry and Retry returns focus to the field', async ({ page }) => {
+    await page.route('**/data/albums.json', (route) => route.abort());
+    await page.goto('/nope');
+    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
+    await input.click();
+    await input.pressSequentially('kid a');
+    const alert = page.locator('.top-search').getByRole('alert');
+    await expect(alert).toContainText(COPY.error.body);
+    await input.press('Tab');
+    const retry = alert.getByRole('button', { name: COPY.error.retry });
+    await expect(retry).toBeFocused();
+    await page.unroute('**/data/albums.json');
+    await page.keyboard.press('Enter');
+    await expect(input).toBeFocused();
+    await expect(page.getByRole('option').first()).toContainText('Kid A');
   });
 
   test('slash is ignored while typing in a field and with modifier keys', async ({ page }) => {
@@ -258,6 +311,13 @@ test.describe('phone search sheet', () => {
     const cbox = await sheet.getByRole('button', { name: COPY.search.close }).boundingBox();
     expect(cbox!.width).toBeGreaterThanOrEqual(44);
     expect(cbox!.height).toBeGreaterThanOrEqual(44);
+    // Result rows span the sheet's full content width, under the close button too.
+    await sheet.getByRole('combobox').pressSequentially('kid a');
+    const row = await sheet.getByRole('option').first().boundingBox();
+    const field = await sheet.locator('.combo-field').boundingBox();
+    expect(row!.x).toBeCloseTo(field!.x, 0);
+    expect(row!.x + row!.width).toBeGreaterThanOrEqual(cbox!.x + cbox!.width - 1);
+    await sheet.getByRole('combobox').fill('');
     const open = await page.evaluate(() => ({
       skip: document.querySelector<HTMLElement>('a.skip')!.inert,
       header: document.querySelector<HTMLElement>('header.top')!.inert,

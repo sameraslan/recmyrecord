@@ -34,7 +34,8 @@ export function SearchSheet({ onClose }: { onClose: () => void }) {
       aria-modal="true"
       aria-label={COPY.search.sheetLabel}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') onClose();
+        // An Escape that ends an IME composition belongs to the IME, not to the sheet.
+        if (e.key === 'Escape' && !e.nativeEvent.isComposing && e.keyCode !== 229) onClose();
       }}
     >
       <div className="search-sheet-top">
