@@ -56,3 +56,19 @@ def test_umap_embed_small():
     E = umap_embed(X)
     assert E.shape == (120, 2)
     assert np.isfinite(E).all()
+
+
+def test_stack_detection_uses_the_written_rounding():
+    # -0.9985 is written as -0.999 by flat_positions (Python round) but np.round(-0.9985 / 1e-3) gives -998
+    # (half-even), so a key built that way would put it apart from -0.999 and the validator would see a shared position.
+    E = np.array([[-0.9985, 0.2], [-0.999, 0.2], [0.5, 0.5]])
+    fixed, moved = fix_stacks(E)
+    flat = flat_positions(fixed)
+    pairs = {(flat[2 * i], flat[2 * i + 1]) for i in range(len(E))}
+    assert len(pairs) == len(E)
+    assert stacked3(fixed) == 0
+
+
+def test_points_that_differ_beyond_three_decimals_count_as_stacked():
+    E = np.array([[0.1231, 0.4], [0.1234, 0.4], [0.9, 0.9]])
+    assert stacked3(E) == 2

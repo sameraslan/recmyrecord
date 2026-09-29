@@ -35,12 +35,18 @@ def fix_outliers(E: np.ndarray, k: float = 3.0) -> tuple[np.ndarray, int]:
     return c + v * (r2 / np.maximum(r, 1e-12))[:, None], int(out.sum())
 
 
-def fix_stacks(E: np.ndarray, eps: float = 0.004, grid: float = 1e-3) -> tuple[np.ndarray, int]:
+def _key(p) -> tuple[float, ...]:
+    """The position as written to positions.json (flat_positions rounding), so stack detection and the
+    validator agree on which albums share a position."""
+    return tuple(flat_positions(np.asarray(p, dtype=float).reshape(1, 2)))
+
+
+def fix_stacks(E: np.ndarray, eps: float = 0.004) -> tuple[np.ndarray, int]:
     """Points that coincide after rounding to 3 decimals are spread on a small ring."""
     E = E.copy()
-    groups: dict[tuple[int, int], list[int]] = {}
+    groups: dict[tuple[float, ...], list[int]] = {}
     for i, p in enumerate(E):
-        groups.setdefault(tuple(np.round(p / grid).astype(int).tolist()), []).append(i)
+        groups.setdefault(_key(p), []).append(i)
     moved = 0
     for g in groups.values():
         if len(g) > 1:
@@ -53,7 +59,7 @@ def fix_stacks(E: np.ndarray, eps: float = 0.004, grid: float = 1e-3) -> tuple[n
 
 
 def stacked3(E: np.ndarray) -> int:
-    c = Counter(tuple(np.round(p, 3).tolist()) for p in E)
+    c = Counter(_key(p) for p in E)
     return sum(n for n in c.values() if n > 1)
 
 
