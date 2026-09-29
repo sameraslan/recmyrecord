@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { HeaderSearch } from '@/components/search/HeaderSearch';
 import { COPY } from '@/lib/copy';
 
 export function Header() {
@@ -12,7 +13,7 @@ export function Header() {
       <Link className="wordmark" href="/">
         {COPY.wordmark}
       </Link>
-      <div className="top-search" />
+      <HeaderSearch />
       <nav aria-label={COPY.nav.label}>
         <Link className="navbtn" href="/map" aria-current={pathname === '/map' ? 'page' : undefined}>
           {COPY.nav.map}
