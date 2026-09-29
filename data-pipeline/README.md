@@ -27,9 +27,10 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 1. Albums: the feature table, keeping the first row of each Spotify URI; every album present in both the feature table and the map.
 2. Recommendations: the live recommender exactly (drop the 56 lyric and theme descriptors, divide the other 120 descriptor columns by `slider ** 3`, euclidean nearest neighbours) at three stops: sonic 5, balanced 2.0, mood 0.5. Ten per album per stop, over the whole catalog. A test checks the live behaviour: "In Rainbows" at slider 0.5, over the same leading rows the live recommender searches (`LIVE_POOL`), returns Tindersticks, Avalon, So, You Will Never Know Why, Imperial Bedroom.
 3. Layouts: UMAP (n_neighbors 15, min_dist 0.1, random_state 42) of the recommender's matrix at each stop, outliers softly compressed, sonic and mood Procrustes-aligned to balanced, scaled to [-1, 1], stacked points spread.
-4. Slugs: `kebab(title)-kebab(artist)`, ASCII-folded (Cyrillic transliterated), `-2`, `-3` on collision in catalog order.
-5. Vocabulary: kept descriptors minus vocals descriptors, "instrumental" and "concept album", most frequent first.
-6. Sprites: each album's map sprite re-packed in album order; ambient colours from the two dominant colours of the sprite (darkened, desaturated) plus an accent with at least 4.5:1 contrast on `#15110d`.
+4. Artists: the feature table sometimes glues the member names onto the billed credit with no separator ("Bob Marley & The WailersBob MarleyThe Wailers"). `artists.py` keeps the billed credit: it cuts at the first case or script boundary inside a word when the text before it joins several names ("&", ",", "/", "and", "with", ...) and the glued-on tail repeats one of them. Whitespace is collapsed. Every string it changes in the feature table is listed in `tests/test_artists.py`.
+5. Slugs: `kebab(title)-kebab(artist)` from the cleaned artist, ASCII-folded (Cyrillic transliterated), `-2`, `-3` on collision in catalog order.
+6. Vocabulary: kept descriptors minus vocals descriptors, "instrumental" and "concept album", most frequent first.
+7. Sprites: each album's map sprite re-packed in album order; ambient colours from the two dominant colours of the sprite (darkened, desaturated) plus an accent with at least 4.5:1 contrast on `#15110d`.
 
 ## Commands
 
@@ -65,4 +66,5 @@ It ships empty because no correction can be verified from the data on disk.
 - 73 albums have no mood descriptors and 2,169 have fewer than ten.
 - The feature table has 176 descriptor columns (the design spec says 175).
 - Cluster ids come from the map pipeline and are unbalanced (three clusters hold almost every album); the site only uses them for dot colours.
+- Artist cleaning only drops a glued tail that repeats a name from the credit. A credit glued to an unrelated name, or to member names spelled too differently, would stay as it is; none is known in the current table. The member names in the dropped tail are not kept.
 - The catalog is frozen because Spotify no longer serves audio features.

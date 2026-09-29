@@ -4,6 +4,7 @@ import sys
 import time
 from pathlib import Path
 
+from .artists import clean_artist
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, STOPS
 from .images import load_album_sprites, write_sheets
@@ -59,7 +60,8 @@ def main(argv: list[str] | None = None) -> int:
     cover_by_uri = load_cover_ids(src)
     print(f"catalog: {len(sub)} albums ({len(df) - len(sub)} table rows dropped)")
 
-    slugs = make_slugs(sub["Title"].astype(str), sub["Artist"].astype(str))
+    artists = [clean_artist(a) for a in sub["Artist"].astype(str)]
+    slugs = make_slugs(sub["Title"].astype(str), artists)
     covers, spotify_ids, override_images = apply_overrides(
         slugs, [cover_by_uri.get(u, "") for u in uris], [u.split(":")[-1] for u in uris],
         load_overrides(args.overrides), args.overrides.parent)
@@ -80,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
     albums = [{
         "slug": slugs[r],
         "t": str(sub.loc[r, "Title"]),
-        "a": str(sub.loc[r, "Artist"]),
+        "a": artists[r],
         "s": spotify_ids[r],
         "c": covers[r],
         "k": clusters[r],

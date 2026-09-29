@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from rmr_pipeline.artists import clean_artist
 from rmr_pipeline.constants import (ATLAS_COLS, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, DEFAULT_OUT, FALLBACK_AMBIENT,
                                     IN_RAINBOWS_LIVE, THUMB_COLS, THUMB_ROWS, THUMB_SPRITE_PX)
 from rmr_pipeline.images import SHEET_FILL, crop_uv, square
@@ -48,6 +49,14 @@ def test_in_rainbows_record_and_recs():
     assert [albums[i]["t"] for i in recs["mood"][11][:5]] == IN_RAINBOWS_LIVE
     assert albums[42]["slug"] == "vespertine-bjork"
     assert albums[5]["slug"] == "loveless-my-bloody-valentine"
+
+
+def test_committed_artists_are_clean():
+    albums = _albums()
+    assert [a["a"] for a in albums if clean_artist(a["a"]) != a["a"]] == []
+    springsteen = [a for a in albums if a["t"] == "Live in New York City"]
+    assert [(a["a"], a["slug"]) for a in springsteen] == [
+        ("Bruce Springsteen & the E Street Band", "live-in-new-york-city-bruce-springsteen-and-the-e-street-band")]
 
 
 def test_sprite_sheets_are_full_size_and_filled_after_the_last_album():
