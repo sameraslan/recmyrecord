@@ -1,0 +1,11 @@
+.home { position: absolute; inset: 0; z-index: 8; overflow-y: auto; pointer-events: none; display: flex; flex-direction: column; }
+.home > * { pointer-events: auto; }
+.hero { position: relative; width: min(640px, 100%); margin: 0 auto; padding: clamp(40px, 12vh, 132px) 0 0; text-align: center; }
+.hero h1 { font-family: var(--font-serif); font-weight: 500; font-size: clamp(42px, 5.8vw, 80px); line-height: .98; letter-spacing: -.015em; }
+.hero .lede { margin: 16px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); }
+
+@media (max-width: 899px) {
+  .hero { padding: 40px 16px 0; }
+  .hero h1 { font-size: clamp(38px, 11vw, 52px); }
+  .hero .lede { font-size: 15.5px; }
+}
