@@ -14,7 +14,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "perf": "node scripts/perf/perf.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.6.1",
