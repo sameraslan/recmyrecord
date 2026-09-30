@@ -5,6 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 import { atlasSlot } from "@/lib/data/sprites";
+import { prefersReducedMotion } from "@/lib/media";
 import { CLUSTER_RGB, interpolateInto, type MapData } from "../data";
 import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, MAX_SPRITE_VIEWPORT_FRACTION, SELECTION_DIM } from "../shaders/album";
 import { useMapStore } from "../state/mapStore";
@@ -36,6 +37,8 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
   // Tracks the previous frame's hover uniform so we only invalidate() (under
   // frameloop="demand") on an actual change, not every frame.
   const prevHoverRef = useRef(-1);
+  // The dot alpha eases between the dimmed (Home, About, 404) and the full map; -1 until the first frame.
+  const dotAlpha = useRef(-1);
 
   const { geometry, material } = useMemo(() => {
     const pointsGeom = new THREE.InstancedBufferGeometry();
@@ -133,7 +136,7 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
   }, [atlasTextures, material, invalidate]);
 
   // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-  useFrame((state) => {
+  useFrame((state, delta) => {
     const { input, sliderT, hoveredIndex } = useMapStore.getState();
     const u = material.uniforms;
     const zoom = (camera as THREE.OrthographicCamera).zoom;
@@ -149,7 +152,15 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     u.u_pixelRatio.value = dpr;
     u.u_canvasHeight.value = state.size.height;
     u.u_maxSpritePx.value = state.size.height * MAX_SPRITE_VIEWPORT_FRACTION * dpr;
-    u.u_dotAlpha.value = input.dimmed ? DOT_ALPHA_DIMMED : DOT_ALPHA;
+    const targetAlpha = input.dimmed ? DOT_ALPHA_DIMMED : DOT_ALPHA;
+    // With frameloop="demand", the first frame after an idle period has a delta of seconds; clamp it, or the
+    // dim would jump to its target instead of easing. Settled (or reduced motion), no further frame is asked for.
+    const dt = Math.min(delta, 1 / 30);
+    if (dotAlpha.current < 0 || prefersReducedMotion()) dotAlpha.current = targetAlpha;
+    else dotAlpha.current += (targetAlpha - dotAlpha.current) * (1 - Math.exp(-dt / 0.12));
+    if (Math.abs(targetAlpha - dotAlpha.current) < 0.002) dotAlpha.current = targetAlpha;
+    else invalidate();
+    u.u_dotAlpha.value = dotAlpha.current;
     const focus = input.focus;
     u.u_focusedAlbumIndex.value = focus ? focus.seed : -1;
     // The Explore pick; never in album view, where the focus markers take over.

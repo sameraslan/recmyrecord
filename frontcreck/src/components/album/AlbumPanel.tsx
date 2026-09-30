@@ -5,10 +5,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { COPY } from '@/lib/copy';
 import { REC_DEFAULT_VISIBLE, REC_MAX } from '@/lib/data/catalog';
-import { previousPath } from '@/lib/nav-history';
+import { prefersReducedMotion, useIsNarrow } from '@/lib/media';
+import { entryFrom, previousPath, recordedPath } from '@/lib/nav-history';
 import { useAppStore } from '@/lib/store';
 import type { AlbumPageData, StopId } from '@/lib/types';
 import { AmbientLayers } from './AmbientWash';
+import { MapModeButton } from './MapModeButton';
+import { MapPreviewStrip } from './MapPreviewStrip';
 import { RecList } from './RecList';
 import { SeedHeader } from './SeedHeader';
 import { Trail } from './Trail';
@@ -22,6 +25,15 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [expandedFor, setExpandedFor] = useState<string | null>(null);
   const expanded = expandedFor === seed.slug;
+  // How this panel arrived: slide in from Home, Explore or About, fade in from another album, still on a direct
+  // load, and still under reduced motion (the CSS rule shortens animations, but a first frame could still show
+  // the panel's start position).
+  const [entry] = useState(() => (prefersReducedMotion() ? 'none' : entryFrom(`/album/${seed.slug}`, recordedPath(), previousPath())));
+  // Phone map mode (the Map button, the strip): the panel slides away and the full map takes the screen. It only
+  // exists under 900 px; a phone turned wide leaves it.
+  const narrow = useIsNarrow();
+  const mapMode = useAppStore((s) => s.mapMode) && narrow;
+  const fabRef = useRef<HTMLButtonElement>(null);
   const rows = data.recs[stop];
   const visible = rows.slice(0, expanded ? REC_MAX : REC_DEFAULT_VISIBLE);
   const visibleKey = visible.map((r) => r.id).join(',');
@@ -29,6 +41,16 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
   const lit = new Set(rows.find((r) => r.id === hot)?.shared ?? []);
 
   const close = useCallback(() => router.push('/map'), [router]);
+  const setMapMode = useCallback((on: boolean) => {
+    useAppStore.getState().setMapMode(on);
+    // The control that switched may be inside the panel that is becoming inert (the strip), so focus follows to
+    // the one button that switches back.
+    requestAnimationFrame(() => fabRef.current?.focus({ preventScroll: true }));
+  }, []);
+
+  useEffect(() => {
+    if (!narrow && useAppStore.getState().mapMode) useAppStore.getState().setMapMode(false);
+  }, [narrow]);
 
   useEffect(() => {
     useAppStore.getState().visit({ slug: seed.slug, title: seed.title });
@@ -74,31 +96,48 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
       if (t instanceof HTMLInputElement && t.type !== 'range') return;
       // Dialogs (the phone search sheet) and the search popover handle their own Escape.
       if (t?.closest('[aria-modal="true"], .combo')) return;
-      if (useAppStore.getState().mapMode) return; // phone map mode handles its own Escape (Task 11)
+      // Phone map mode: Escape goes back to the list, not away from the album.
+      if (useAppStore.getState().mapMode) {
+        setMapMode(false);
+        return;
+      }
       close();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [close]);
+  }, [close, setMapMode]);
 
   return (
-    <section className="album" ref={panelRef} aria-label={COPY.album.regionLabel(seed.title)}>
-      <AmbientLayers ambient={seed.ambient} variant="panel" />
-      <button type="button" className="album-close" aria-label={COPY.album.close} onClick={close}>
-        <Icon name="x" strokeWidth={1.6} />
-      </button>
-      <div className="album-scroll" ref={scrollRef}>
-        <Trail current={seed.slug} stop={stop} />
-        <SeedHeader seed={seed} lit={lit} titleRef={titleRef} stop={stop} />
-        <RecList
-          seedId={seed.id}
-          rows={visible}
-          total={rows.length}
-          stop={stop}
-          expanded={expanded}
-          onToggle={() => setExpandedFor(expanded ? null : seed.slug)}
-        />
-      </div>
-    </section>
+    <>
+      <section
+        className={`album${entry === 'slide' ? ' is-entering' : ''}${mapMode ? ' album--hidden' : ''}`}
+        ref={panelRef}
+        aria-label={COPY.album.regionLabel(seed.title)}
+        aria-hidden={mapMode || undefined}
+        inert={mapMode || undefined}
+      >
+        <AmbientLayers ambient={seed.ambient} variant="panel" />
+        <button type="button" className="album-close" aria-label={COPY.album.close} onClick={close}>
+          <Icon name="x" strokeWidth={1.6} />
+        </button>
+        <div className="album-scroll" ref={scrollRef}>
+          {/* The element the album to album fade animates (only when this panel replaced another album's). */}
+          <div className={entry === 'fade' ? 'fade-in' : undefined}>
+            <Trail current={seed.slug} stop={stop} />
+            <SeedHeader seed={seed} lit={lit} titleRef={titleRef} stop={stop} />
+            <RecList
+              seedId={seed.id}
+              rows={visible}
+              total={rows.length}
+              stop={stop}
+              expanded={expanded}
+              onToggle={() => setExpandedFor(expanded ? null : seed.slug)}
+            />
+          </div>
+          <MapPreviewStrip focus={{ seed: seed.id, recs: visible.map((r) => r.id) }} stop={stop} onOpen={() => setMapMode(true)} />
+        </div>
+      </section>
+      <MapModeButton on={mapMode} onToggle={() => setMapMode(!mapMode)} buttonRef={fabRef} />
+    </>
   );
 }

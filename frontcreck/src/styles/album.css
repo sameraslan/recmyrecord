@@ -64,3 +64,13 @@
 .page-msg .rec-error { justify-items: center; }
 .rec-error .e1 { font-family: var(--font-serif); font-size: 26px; font-weight: 500; max-width: 22em; }
 .rec-error .btn { margin-top: 12px; }
+
+/* Motion (spec 4.3, 5): entering from Home, Explore or About slides the panel in while the map inset tweens
+ * (CameraTween); album to album fades the content. The reduced-motion rule in shell.css makes both instant. */
+.album.is-entering { animation: panel-in var(--dur) var(--out) backwards; }
+@keyframes panel-in { from { transform: translateX(-101%); } to { transform: none; } }
+/* `backwards`, not `both`: a filled end state would override .album--hidden's transform, so the phone Map
+   button could no longer slide the panel away on an album entered from Home or Explore. */
+.fade-in { animation: fade-in .38s var(--out) both; }
+@keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.strip, .fab-map { display: none; }

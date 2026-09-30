@@ -306,6 +306,7 @@ export function MapStage() {
       ref={paneRef}
       className={`map-pane${dimmed ? ' is-dimmed' : ''}`}
       data-view={view}
+      data-mapmode={view === 'album' && narrow && mapMode ? 'true' : 'false'}
       // The phone zoom controls sit above the measured slider panel (styles/map.css).
       style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
     >
@@ -316,8 +317,9 @@ export function MapStage() {
           <MusicMap data={mapData} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
         ) : null}
       </div>
-      {/* Home (mockup .veil): dims the map further round the hero; a click on empty map area opens the map. */}
-      {view === 'home' ? <div className="veil" aria-hidden="true" onClick={() => router.push('/map')} /> : null}
+      {/* Home (mockup .veil): dims the map further round the hero; a click on empty map area opens the map. Always
+       * mounted so it fades in and out with the dots' own easing (AlbumField) instead of switching. */}
+      <div className={`veil${view === 'home' ? '' : ' veil--off'}`} aria-hidden="true" onClick={view === 'home' ? () => router.push('/map') : undefined} />
       {webgl === 'unavailable' && view !== 'home' ? <NoWebGL /> : null}
       {failed && view !== 'home' ? (
         <ErrorPanel

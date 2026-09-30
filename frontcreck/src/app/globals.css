@@ -4,6 +4,7 @@
 @import "../styles/search.css";
 @import "../styles/map.css";
 @import "../styles/album.css";
+@import "../styles/phone.css";
 
 @theme {
   --color-room: #15110d;
