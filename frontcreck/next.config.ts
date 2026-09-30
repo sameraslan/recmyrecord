@@ -3,6 +3,8 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
+  // Playwright's dev mode (E2E_DEV=1) opens 127.0.0.1; without this, next dev blocks its scripts and pages never hydrate.
+  allowedDevOrigins: ['127.0.0.1'],
   turbopack: { root: process.cwd() },
   async redirects() {
     return [
