@@ -93,9 +93,10 @@ export const COPY = {
   about: {
     title: 'How it works',
     body: [
-      'Every album here is described two ways. Its sound comes from Spotify’s audio values, such as energy, tempo and acousticness. Its mood comes from handpicked RateYourMusic descriptors, such as melancholic, lush or atmospheric.',
+      'Every album here is described two ways. Sonic values come from the audio: measurements such as energy, tempo, danceability and acousticness, taken from the recording itself. Mood descriptors are words listeners use for an album’s feeling and atmosphere, such as melancholic or nocturnal.',
       'Pick an album and you get the ones closest to it once both are combined. The slider leans the comparison toward sound or toward mood.',
       `The map places ${CATALOG_SIZE_LABEL} albums so that ones that sound or feel alike sit close together.`,
+      'Recommendations use more features than a two-dimensional map can show, so placing albums on it means giving up some accuracy. An album’s closest albums sit nearby, but not always right beside it.',
     ],
     credits: 'Mood descriptors handpicked from RateYourMusic. Sound values from Spotify. Cover art from Spotify.',
     close: 'Close',

@@ -41,6 +41,8 @@ describe('copy rules (spec section 8)', () => {
     expect(COPY.map.cardPrimary).toBe('See closest albums');
     expect(COPY.titles.album('In Rainbows', 'Radiohead')).toBe('In Rainbows by Radiohead');
     expect(COPY.about.body[2]).toContain(CATALOG_SIZE_LABEL);
+    expect(COPY.about.body).toHaveLength(4);
+    expect(COPY.about.body[3]).toBe('Recommendations use more features than a two-dimensional map can show, so placing albums on it means giving up some accuracy. An album\u2019s closest albums sit nearby, but not always right beside it.');
   });
 
   it('never uses em or en dashes or emoji', () => {
