@@ -76,8 +76,9 @@ describe('catalog helpers', () => {
   });
 
   it('makes Spotify and cover URLs', () => {
-    expect(spotifyUrl({ spotifyId: 'A'.repeat(22), title: 'T', artist: 'A' })).toBe(`https://open.spotify.com/album/${'A'.repeat(22)}`);
-    expect(spotifyUrl({ spotifyId: '', title: 'Beta', artist: 'Y' })).toBe('https://open.spotify.com/search/Beta%20Y');
+    expect(spotifyUrl({ spotifyId: 'A'.repeat(22) })).toBe(`https://open.spotify.com/album/${'A'.repeat(22)}`);
+    // No Spotify release: no link at all (the page hides it), never a search link.
+    expect(spotifyUrl({ spotifyId: '' })).toBeNull();
     expect(coverUrl('', 60)).toBeNull();
     expect(coverUrl(albums[0].c, 22)).toBe('https://i.scdn.co/image/ab67616d00004851' + 'a'.repeat(24));
     expect(coverUrl(albums[0].c, 116)).toBe('https://i.scdn.co/image/ab67616d00001e02' + 'a'.repeat(24));

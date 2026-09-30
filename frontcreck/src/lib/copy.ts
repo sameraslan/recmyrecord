@@ -33,6 +33,8 @@ export const COPY = {
   album: {
     trailLabel: 'Visited',
     trailNav: 'Albums visited',
+    /** Shown before the trail when older albums are cut off. */
+    trailMore: '…',
     openInSpotify: 'Open in Spotify',
     newTab: '(opens in a new tab)',
     copyLink: 'Copy link',

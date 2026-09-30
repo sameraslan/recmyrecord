@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Schibsted_Grotesk } from 'next/font/google';
 import { MapStage } from '@/components/map/MapStage';
 import { Header } from '@/components/shell/Header';
+import { Toast } from '@/components/shell/Toast';
 import { COPY } from '@/lib/copy';
 import './globals.css';
 
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </div>
         </main>
+        <Toast />
       </body>
     </html>
   );

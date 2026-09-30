@@ -63,10 +63,9 @@ export function buildAlbumPageData(catalog: Catalog, recs: Recs, id: AlbumId): A
   return { seed, recs: byStop };
 }
 
-export function spotifyUrl(a: Pick<AlbumSummary, 'spotifyId' | 'title' | 'artist'>): string {
-  return a.spotifyId
-    ? `https://open.spotify.com/album/${a.spotifyId}`
-    : `https://open.spotify.com/search/${encodeURIComponent(`${a.title} ${a.artist}`)}`;
+/** The album's Spotify page; null when it has no Spotify release (the page then shows no Spotify link). */
+export function spotifyUrl(a: Pick<AlbumSummary, 'spotifyId'>): string | null {
+  return a.spotifyId ? `https://open.spotify.com/album/${a.spotifyId}` : null;
 }
 
 /** Remote cover sized for `px` CSS pixels at 2x density; null when the album has no cover id. */

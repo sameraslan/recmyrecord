@@ -89,3 +89,9 @@
   .mode input[type=range]::-webkit-slider-thumb { margin-top: 14px; }
   .mode-stops button { min-height: 44px; margin-bottom: -7px; }
 }
+
+/* The map overlays follow the visible map right of the album panel (.map-ui gets its left inline from MapStage);
+ * the no-WebGL and data-error messages sit in the visible map area, not half under the panel. */
+@media (min-width: 900px) {
+  .map-pane[data-view="album"] .map-msg { left: calc(var(--panel) + (100% - var(--panel)) / 2); }
+}

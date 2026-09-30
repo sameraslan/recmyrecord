@@ -8,6 +8,7 @@ import { useIsNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
 import type { StopId } from '@/lib/types';
 import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-state';
+import { AmbientLayers } from '@/components/album/AmbientWash';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { buildMapData } from './data';
 import { NoWebGL } from './overlays/NoWebGL';
@@ -104,6 +105,7 @@ export function MapStage() {
   const selected = useAppStore((s) => s.selected);
   const panelInset = useAppStore((s) => s.panelInset);
   const mapMode = useAppStore((s) => s.mapMode);
+  const ambient = useAppStore((s) => s.ambient);
 
   useEffect(() => {
     // After first paint, like the rest of the map: the probe creates (and releases) a WebGL context.
@@ -197,6 +199,8 @@ export function MapStage() {
       // The phone zoom controls sit above the measured slider panel (styles/map.css).
       style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
     >
+      {/* Under the transparent canvas: the album's ambient wash shows beneath the dots. */}
+      <AmbientLayers ambient={view === 'album' ? ambient : null} variant="map" />
       <div className="map-host">
         {enabled && mapData ? (
           <MusicMap data={mapData} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
