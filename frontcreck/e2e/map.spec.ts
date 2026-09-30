@@ -22,9 +22,14 @@ test('the map is a lazily loaded WebGL canvas that renders on demand', async ({ 
   expect(atlasRequests).toEqual([]);
   await shot(page, info, 'explore');
   await canvas.focus();
-  for (let i = 0; i < 6; i++) await page.keyboard.press('+');
-  await waitForCameraIdle(page);
+  // Zoom in step by step: atlases load only once covers are about to show, then two more steps fade them in.
+  for (let i = 0; i < 14 && atlasRequests.length === 0; i++) {
+    await page.keyboard.press('+');
+    await waitForCameraIdle(page);
+  }
   await expect.poll(() => atlasRequests.length).toBeGreaterThan(0);
+  for (let i = 0; i < 2; i++) await page.keyboard.press('+');
+  await waitForCameraIdle(page);
   await page.waitForTimeout(800);
   await shot(page, info, 'explore-zoomed');
 });
@@ -118,7 +123,15 @@ test('Home shows the map dimmed and not interactive', async ({ page }) => {
   await waitForMap(page);
   await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'home');
   await expect(page.locator('canvas.map-canvas')).toHaveAttribute('tabindex', '-1');
+  // A backdrop that takes no input must not announce drag and key controls.
+  await expect(page.locator('canvas.map-canvas')).toHaveAttribute('aria-label', COPY.map.canvasLabelStatic);
+  await expect(page.getByRole('img', { name: COPY.map.canvasLabel })).toHaveCount(0);
   // R3F puts an inline pointer-events style on its wrapper; the canvas itself must inherit `none` here.
   expect(await page.locator('canvas.map-canvas').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
   await expect(page.getByRole('button', { name: COPY.map.zoomIn })).toHaveCount(0);
+  // The same canvas becomes the interactive map on /map.
+  await page.getByRole('navigation', { name: COPY.nav.label }).getByRole('link', { name: COPY.nav.map, exact: true }).click();
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
+  await expect(page.locator('canvas.map-canvas')).toHaveAttribute('aria-label', COPY.map.canvasLabel);
+  await expect(page.locator('canvas.map-canvas')).toHaveAttribute('tabindex', '0');
 });

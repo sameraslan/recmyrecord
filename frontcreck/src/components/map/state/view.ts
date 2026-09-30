@@ -3,19 +3,18 @@ import type { Bounds } from "./bounds";
 const OVERVIEW_ZOOM = 2.4;
 
 /**
- * The fitted overview framing: the album cloud's percentile bounds
- * (state/bounds.ts getCloudBounds), their midpoint (cloudCenter), and the
- * zoom at which that box fits the frustum with margin (fitZoom). Written by
+ * The fitted overview framing: the album cloud's full extent
+ * (state/bounds.ts getCloudBounds) and the camera centre and zoom that fit it
+ * inside the padded visible area (fitView). Written by
  * canvas/InitialFrame.tsx once per data load and again (without moving the
  * camera) on every sliderT change, since each slider stop has its own extent.
  *
  * This is the single published source of the fitted zoom. Consumers:
- * CameraRig (MIN_ZOOM = 0.8 * zoom), AlbumField (u_fitZoom), AtlasManager
- * (lazy-load gate), CameraBounds (idle nudge box) and FlyToFocus
- * (focus-release zoom).
+ * CameraRig (zoom-out floor, 0.8x the fit), CameraBounds (idle nudge box) and
+ * CameraTween (reset to the overview).
  *
  * Plain module-level bridge, not Zustand state, mirroring state/invalidate.ts
- * and state/tooltipEl.ts: consumers read it synchronously inside wheel
+ * and state/overlayEls.ts: consumers read it synchronously inside wheel
  * handlers and per-frame closures, not through a React subscription.
  *
  * `OVERVIEW_ZOOM` is only the fallback before any MapData has loaded;

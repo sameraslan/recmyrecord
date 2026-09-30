@@ -9,29 +9,10 @@ import { renderedSpriteCssSize } from "../shaders/album";
 import { cssPxToWorld, pickAlbum, spriteHitRadiusCssPx } from "../state/hitTest";
 import { useMapStore } from "../state/mapStore";
 import { canvasRect, screenToWorld } from "../state/projection";
-import { getOverviewFraming } from "../state/view";
 
 /** After a mouse press, hover resumes once the pointer moves this far (CSS
  * px) from where it was pressed, so click jitter doesn't count as a move. */
 const HOVER_RESUME_MOVE_PX = 4;
-
-/**
- * Mouse hover/click radius in CSS px at the camera's current zoom: the drawn
- * sprite's radius once covers outgrow the 14px minimum (state/hitTest.ts).
- */
-export function mouseHitRadiusCssPx(
-  camera: THREE.OrthographicCamera,
-  viewportHeightCssPx: number,
-  pixelRatio: number,
-): number {
-  const sprite = renderedSpriteCssSize(
-    camera.zoom,
-    getOverviewFraming().zoom,
-    viewportHeightCssPx,
-    pixelRatio,
-  );
-  return spriteHitRadiusCssPx("mouse", sprite);
-}
 
 /**
  * The album under a world point, shared by hover (CursorTracker) and
@@ -50,22 +31,20 @@ export function albumAt(
   positions: Float32Array,
   hoverIndex: number,
 ): number {
-  const fitZoom = getOverviewFraming().zoom;
   const toWorld = (px: number) =>
     cssPxToWorld(px, viewportHeightCssPx, camera.zoom, camera.top - camera.bottom);
-  const drawnRadius = (scale: number) =>
-    renderedSpriteCssSize(camera.zoom, fitZoom, viewportHeightCssPx, pixelRatio, scale) / 2;
+  const drawnRadius = renderedSpriteCssSize(camera.zoom, viewportHeightCssPx, pixelRatio) / 2;
   const focusedIndex = useMapStore.getState().input.focus?.seed ?? -1;
   return pickAlbum(
     positions,
     positions.length / 2,
     worldX,
     worldY,
-    toWorld(spriteHitRadiusCssPx(pointerType, drawnRadius(1) * 2)),
+    toWorld(spriteHitRadiusCssPx(pointerType, drawnRadius * 2)),
     [
-      // Shader scales: focused (in its own highlight set) 1.15, hovered 1.25.
-      { index: focusedIndex, radiusWorld: toWorld(drawnRadius(1.15)) },
-      { index: hoverIndex, radiusWorld: toWorld(drawnRadius(1.25)) },
+      // The hover marks (ring, stroke) are drawn outside the album; hits stay on the album itself.
+      { index: focusedIndex, radiusWorld: toWorld(drawnRadius) },
+      { index: hoverIndex, radiusWorld: toWorld(drawnRadius) },
     ],
   );
 }

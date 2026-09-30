@@ -2,11 +2,13 @@
 
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
+import { ATLAS_PER_SHEET } from '@/lib/data/sprites';
 import { renderedSpriteCssSize } from '../shaders/album';
 import { useMapStore } from '../state/mapStore';
-import { getOverlayEl } from '../state/overlayEls';
+import { getOverlayEl, getOverlaySize } from '../state/overlayEls';
 import { canvasRect, worldToScreen } from '../state/projection';
-import { getOverviewFraming } from '../state/view';
+import { coverFade } from '../state/zoomLimits';
+import { isAtlasSheetLoaded } from './AtlasManager';
 
 /** Shared with MarkerDriver (Task 7). */
 export const clamp = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));
@@ -23,7 +25,6 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
     const { width, height } = get().size;
     const rect = canvasRect(width, height);
     const toScreen = (i: number) => worldToScreen(pos[2 * i], pos[2 * i + 1], rect, camera);
-    const sprite = renderedSpriteCssSize(camera.zoom, getOverviewFraming().zoom, height, gl.getPixelRatio());
     const focusIds = input.focus ? [input.focus.seed, ...input.focus.recs] : [];
 
     const tip = getOverlayEl('hover');
@@ -31,8 +32,8 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
       if (hoveredIndex === null) tip.style.opacity = '0';
       else {
         const p = toScreen(hoveredIndex);
-        const tw = tip.offsetWidth;
-        const th = tip.offsetHeight;
+        // Measured by HoverLabel after each content change, so no layout read per frame.
+        const { width: tw, height: th } = getOverlaySize('hover');
         let lx = p.x + 16;
         let ly = p.y - th - 12;
         if (lx + tw > width - 8) lx = p.x - tw - 16;
@@ -50,11 +51,14 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
       if (i === null || focusIds.includes(i)) sel.style.opacity = '0';
       else {
         const p = toScreen(i);
+        // Mirrors the shader: the album is a cover only once its atlas sheet is loaded.
+        const loaded = isAtlasSheetLoaded(Math.floor(i / ATLAS_PER_SHEET));
+        const sprite = renderedSpriteCssSize(camera.zoom, height, gl.getPixelRatio(), 1, loaded);
         const s = Math.max(18, sprite + 8);
         sel.style.width = `${s}px`;
         sel.style.height = `${s}px`;
         sel.style.transform = `translate3d(${p.x - s / 2}px, ${p.y - s / 2}px, 0)`;
-        sel.dataset.shape = sprite >= 24 ? 'square' : 'ring';
+        sel.dataset.shape = loaded && coverFade(camera.zoom, height) >= 0.5 ? 'square' : 'ring';
         sel.style.opacity = '1';
       }
     }

@@ -8,27 +8,18 @@ import { prefersReducedMotion } from "@/lib/media";
 import { useMapStore } from "../state/mapStore";
 import { screenToWorld } from "../state/projection";
 import { getOverviewFraming } from "../state/view";
+import { MAX_ZOOM, MIN_ZOOM_FIT_MULTIPLE } from "../state/zoomLimits";
 import { anchoredZoom, pinchZoom } from "../state/zoomMath";
 import { getCameraControl } from "./CameraTween";
 
-// Capped at 5 so a high-DPR viewport stays under the ~256 GL_POINTS sprite
-// limit (see album.ts gl_PointSize clamp). 5x lets you read a single cover
-// without losing the focused dot.
-export const MAX_ZOOM = 5.0;
-// Fraction of the fitted overview zoom (state/view.ts) below which the user
-// can't zoom out further: 0.8x fit still shows the whole cloud with room to
-// spare, but doesn't let the camera wander out to where the cloud is a speck
-// (a fixed floor would mean nothing, since the overview zoom itself varies
-// with the data and the viewport).
-const MIN_ZOOM_FIT_MULTIPLE = 0.8;
+export { MAX_ZOOM };
 
-/** Dynamic zoom-out floor: 0.8x the fitted overview zoom. fitZoom is already
- * clamped to [0.5, 5] (state/bounds.ts), so this never exceeds MAX_ZOOM. */
+/** Dynamic zoom-out floor: 0.8x the fitted overview zoom (the fit is clamped
+ * to FIT_ZOOM_MAX, far below MAX_ZOOM). */
 function getMinZoom(): number {
   return MIN_ZOOM_FIT_MULTIPLE * getOverviewFraming().zoom;
 }
-// Trackpad pinch (ctrlKey) uses half the sensitivity of a mouse wheel notch
-//.
+// Trackpad pinch (ctrlKey) uses half the sensitivity of a mouse wheel notch.
 const WHEEL_SENSITIVITY = 0.0015;
 const PINCH_SENSITIVITY = 0.00075;
 // Exponential time constant (seconds) the frame loop uses to approach
@@ -163,9 +154,9 @@ export function CameraRig() {
       // driven by whichever two/one pointers were already tracked.
     };
     const onMove = (e: PointerEvent) => {
-      if (!interactive()) return;
+      // Only moves that are part of a drag or pinch count as interaction (not plain hovering).
+      if (!interactive() || !pointers.current.has(e.pointerId)) return;
       registerInteraction();
-      if (!pointers.current.has(e.pointerId)) return;
       pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
       if (pinchActive.current && pointers.current.size === 2) {
@@ -363,7 +354,8 @@ export function CameraRig() {
       const prevX = camera.position.x;
       const prevY = camera.position.y;
       const diff = targetZoom.current - prevZoom;
-      let nextZoom = prevZoom + diff * (1 - Math.exp(-delta / ZOOM_TIME_CONSTANT_S));
+      // Clamped: the first frame after an idle stretch reports a long delta, which would jump.
+      let nextZoom = prevZoom + diff * (1 - Math.exp(-Math.min(delta, 1 / 30) / ZOOM_TIME_CONSTANT_S));
       const settled = Math.abs(targetZoom.current - nextZoom) < ZOOM_SETTLE_EPSILON;
       if (settled) nextZoom = targetZoom.current;
 

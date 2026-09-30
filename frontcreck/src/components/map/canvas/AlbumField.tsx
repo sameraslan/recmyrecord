@@ -8,7 +8,6 @@ import { atlasSlot } from "@/lib/data/sprites";
 import { CLUSTER_RGB, interpolateInto, type MapData } from "../data";
 import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, MAX_SPRITE_VIEWPORT_FRACTION } from "../shaders/album";
 import { useMapStore } from "../state/mapStore";
-import { getOverviewFraming } from "../state/view";
 
 interface AlbumFieldProps {
   data: MapData;
@@ -22,8 +21,6 @@ interface AlbumFieldProps {
 }
 
 const MAX_ATLASES = 5;
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 5.0;
 /** Alpha of the dots at the overview, and on the dimmed Home, About and 404 map. */
 const DOT_ALPHA = 0.78;
 const DOT_ALPHA_DIMMED = 0.34;
@@ -81,10 +78,8 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
       depthFunc: THREE.LessEqualDepth,
       uniforms: {
         u_sliderT: { value: useMapStore.getState().sliderT },
-        u_zoomT: { value: 0 },
+        u_canvasHeight: { value: 800 },
         u_zoom: { value: 2.4 },
-        // Published by InitialFrame before the first frame; never 0.
-        u_fitZoom: { value: getOverviewFraming().zoom },
         u_pixelRatio: { value: gl.getPixelRatio() },
         u_focusedAlbumIndex: { value: -1 },
         u_neighborMask: { value: new Float32Array(MASK_SIZE).fill(-1) },
@@ -142,17 +137,15 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     const zoom = (camera as THREE.OrthographicCamera).zoom;
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
     u.u_sliderT.value = sliderT;
-    u.u_zoomT.value = Math.max(0, Math.min(1, (zoom - MIN_ZOOM) / (MAX_ZOOM - MIN_ZOOM)));
-    // Real camera.zoom (not normalized): drives the sprite-size power curve,
-    // relative to the fitted overview zoom.
+    // Real camera.zoom and canvas height drive the dot and cover sizes (state/zoomLimits.ts).
     u.u_zoom.value = zoom;
-    u.u_fitZoom.value = getOverviewFraming().zoom;
     // Pixel ratio and the viewport-relative sprite cap (see the gl_PointSize
     // clamp in shaders/album.ts), read live each frame so a dpr change or a
     // resize can't leave them stale; renderedSpriteCssSize, which hit testing
     // and label placement use, reads the same live values.
     const dpr = gl.getPixelRatio();
     u.u_pixelRatio.value = dpr;
+    u.u_canvasHeight.value = state.size.height;
     u.u_maxSpritePx.value = state.size.height * MAX_SPRITE_VIEWPORT_FRACTION * dpr;
     u.u_dotAlpha.value = input.dimmed ? DOT_ALPHA_DIMMED : DOT_ALPHA;
     const focus = input.focus;

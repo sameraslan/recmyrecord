@@ -21,6 +21,8 @@ export interface MapInput {
   /** CSS px covered by the album panel on the left; the map re-centres on the rest. */
   insetLeft: number;
   framePadding: MapPadding;
+  /** CSS px kept clear around the whole cloud in the overview (clear of the header, slider and hint). */
+  fitPadding: MapPadding;
 }
 
 export interface MapCallbacks {
@@ -30,6 +32,8 @@ export interface MapCallbacks {
   onPick: (id: AlbumId) => void;
   /** Click or tap on empty map. */
   onEmpty: () => void;
+  /** The WebGL context was lost and not restored within a few seconds. */
+  onContextLost: () => void;
 }
 
 export interface MapApi {

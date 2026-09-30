@@ -6,6 +6,8 @@
  * camera position that preserves that projection.
  */
 
+import { MAX_ZOOM, MIN_ZOOM } from "./zoomLimits";
+
 export interface CameraLike {
   x: number;
   y: number;
@@ -33,15 +35,9 @@ export function anchoredZoom(
   };
 }
 
-/** Fixed clamp range for a raw two-finger pinch gesture (Task 11, spec 4.7).
- * Distinct from CameraRig's dynamic MIN_ZOOM_FIT_MULTIPLE floor, which
- * depends on the loaded dataset's fitted overview zoom; `pinchZoom` is pure
- * math with no access to that state, so it clamps to the same fixed [0.5, 5]
- * range the rest of the zoom pipeline (state/bounds.ts) uses as its outer
- * bound. CameraRig clamps again with its own dynamic floor after calling
- * this, so the two clamps compose correctly. */
-export const MIN_ZOOM = 0.5;
-export const MAX_ZOOM = 5.0;
+/** A raw two-finger pinch is clamped to the absolute zoom range (state/zoomLimits.ts); CameraRig
+ * clamps again with its dynamic floor (0.8x the fitted overview) after calling this. */
+export { MAX_ZOOM, MIN_ZOOM } from "./zoomLimits";
 
 /**
  * Two-finger pinch zoom: the zoom factor is the ratio of the current

@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
 import { COPY } from "@/lib/copy";
-import { isNarrow } from "@/lib/media";
+import { useIsNarrow } from "@/lib/media";
 import type { MapCamera } from "@/lib/types";
 import { interpolated } from "../data";
 import { setInvalidate } from "../state/invalidate";
@@ -34,13 +34,14 @@ function InvalidateBridge() {
   return null;
 }
 
-/** Keeps the canvas in the tab order only while the map takes input. */
+/** Keeps the canvas in the tab order, and its label promising drag and keys, only while the map takes input. */
 function CanvasFocusability() {
   const gl = useThree((s) => s.gl);
   useEffect(() => {
     const sync = (interactive: boolean) => {
       // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
       gl.domElement.tabIndex = interactive ? 0 : -1;
+      gl.domElement.setAttribute("aria-label", interactive ? COPY.map.canvasLabel : COPY.map.canvasLabelStatic);
     };
     sync(useMapStore.getState().input.interactive);
     return useMapStore.subscribe((s, prev) => {
@@ -50,8 +51,39 @@ function CanvasFocusability() {
   return null;
 }
 
+/** How long a lost WebGL context may take to come back before the map gives way to the no-WebGL message. */
+const CONTEXT_RESTORE_MS = 3000;
+
+/** A lost context redraws once restored; one that stays lost reports itself (MapCallbacks.onContextLost). */
+function ContextLossGuard() {
+  const gl = useThree((s) => s.gl);
+  const invalidate = useThree((s) => s.invalidate);
+  useEffect(() => {
+    const canvas = gl.domElement;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const onLost = (e: Event) => {
+      e.preventDefault(); // allows the browser to restore the context
+      if (timer === null) timer = setTimeout(() => useMapStore.getState().callbacks.onContextLost(), CONTEXT_RESTORE_MS);
+    };
+    const onRestored = () => {
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
+      invalidate();
+    };
+    canvas.addEventListener("webglcontextlost", onLost);
+    canvas.addEventListener("webglcontextrestored", onRestored);
+    return () => {
+      if (timer !== null) clearTimeout(timer);
+      canvas.removeEventListener("webglcontextlost", onLost);
+      canvas.removeEventListener("webglcontextrestored", onRestored);
+    };
+  }, [gl, invalidate]);
+  return null;
+}
+
 export function Scene({ initialCamera, onApi }: { initialCamera: MapCamera | null; onApi: (api: MapApi | null) => void }) {
   const data = useMapStore((s) => s.data);
+  const narrow = useIsNarrow();
   if (!data) return null;
   return (
     <Canvas
@@ -75,7 +107,7 @@ export function Scene({ initialCamera, onApi }: { initialCamera: MapCamera | nul
       gl={{ alpha: true, antialias: false, powerPreference: "high-performance" }}
       // Narrow (touch) layouts cap dpr at 1.5: phones already push more pixels per point, and pinch and pan
       // draw every frame, so fill-rate matters more there.
-      dpr={[1, isNarrow() ? 1.5 : 2]}
+      dpr={[1, narrow ? 1.5 : 2]}
       // R3F puts an inline `pointer-events: auto` on its wrapper otherwise, which would override
       // `.map-host { pointer-events: none }` on Home, About and 404.
       style={{ position: "absolute", inset: 0, pointerEvents: "inherit" }}
@@ -90,8 +122,9 @@ export function Scene({ initialCamera, onApi }: { initialCamera: MapCamera | nul
         const canvas = gl.domElement;
         canvas.classList.add("map-canvas");
         canvas.setAttribute("role", "img");
-        canvas.setAttribute("aria-label", COPY.map.canvasLabel);
-        canvas.tabIndex = useMapStore.getState().input.interactive ? 0 : -1;
+        const interactive = useMapStore.getState().input.interactive;
+        canvas.setAttribute("aria-label", interactive ? COPY.map.canvasLabel : COPY.map.canvasLabelStatic);
+        canvas.tabIndex = interactive ? 0 : -1;
       }}
     >
       <SceneInner initialCamera={initialCamera} onApi={onApi} />
@@ -118,6 +151,7 @@ function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null;
     <>
       <InvalidateBridge />
       <CanvasFocusability />
+      <ContextLossGuard />
       {/* Snaps the camera to the fitted overview once per data load and
           publishes the framing (state/view.ts) that CameraRig, AlbumField,
           AtlasManager, CameraBounds and CameraTween read. */}

@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { ATLAS_PER_SHEET } from "@/lib/data/sprites";
 import type { MapData } from "../data";
 import { requestRender } from "../state/invalidate";
-import { getOverviewFraming } from "../state/view";
+import { ATLAS_LOAD_PX, zoomForCoverPx } from "../state/zoomLimits";
 
 // ImageBitmapLoader decodes off the main thread (a worker + createImageBitmap),
 // avoiding the 50-150ms main-thread decode hitch TextureLoader causes per
@@ -17,17 +17,14 @@ import { getOverviewFraming } from "../state/view";
 const loader = new THREE.ImageBitmapLoader();
 loader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none" });
 
-// Atlases load only once the camera is actually zoomed past the point where
-// covers are legible; at the overview zoom nothing benefits from the download
-// and decode of a sheet. Real camera.zoom, not the normalized zoomT used for
-// shader uniforms, expressed as a multiple of the fitted overview zoom: at
-// 2.1x fit the sprite is about 20px, just before the shader's disc-to-cover
-// cross-fade starts at 24px (see SIZE_CURVE_POWER in shaders/album.ts), so no
-// atlas request lands before the visitor has actually zoomed in.
-const ATLAS_ZOOM_THRESHOLD_FIT_MULTIPLE = 2.1;
-// Absolute cap on the gate so it is always reachable below CameraRig's
-// MAX_ZOOM (5): with fitZoom clamped as high as 5, 2.1x fit would be 10.5.
-const ATLAS_ZOOM_THRESHOLD_MAX = 4.5;
+// Atlases load only once the camera is zoomed in far enough that covers are
+// about to show: covers would be ATLAS_LOAD_PX (13) CSS px, just before the
+// cross-fade starts at 16 px (state/zoomLimits.ts). At the overview nothing
+// benefits from the download and decode of a sheet.
+
+/** Sheets whose texture is uploaded, for overlays that mirror the shader (OverlayDriver). */
+const loadedSheets = new Set<number>();
+export const isAtlasSheetLoaded = (sheet: number): boolean => loadedSheets.has(sheet);
 
 function configureAtlasTexture(bitmap: ImageBitmap): THREE.Texture {
   const tex = new THREE.Texture(bitmap as unknown as HTMLImageElement);
@@ -113,7 +110,7 @@ function countVisibleSpritesByAtlas(
 }
 
 /**
- * Loads atlas-0 once the camera crosses ATLAS_ZOOM_THRESHOLD, then the
+ * Loads atlas-0 once covers are about to show (ATLAS_LOAD_PX), then the
  * remaining sheets one at a time, always picking whichever not-yet-loaded
  * sheet currently covers the most on-screen sprites (recomputed each time a
  * sheet finishes, since the camera may have moved during the load). Reads
@@ -168,8 +165,10 @@ export function useAtlasTextures(
       disposeLoadedAtlas(loaded);
     }
     loadedAtlasesRef.current = new Map();
+    loadedSheets.clear();
 
     return () => {
+      loadedSheets.clear();
       epochRef.current += 1;
       for (const loaded of loadedAtlasesRef.current.values()) {
         disposeLoadedAtlas(loaded);
@@ -220,6 +219,7 @@ export function useAtlasTextures(
         }
         loadedRef.current.add(nextIndex);
         loadedAtlasesRef.current.set(nextIndex, loaded);
+        loadedSheets.add(nextIndex);
         setTextures((prev) => {
           const next = [...prev];
           next[nextIndex] = loaded.texture;
@@ -240,13 +240,9 @@ export function useAtlasTextures(
       });
   }
 
-  useFrame(() => {
+  useFrame((state) => {
     if (startedRef.current) return;
-    const threshold = Math.min(
-      ATLAS_ZOOM_THRESHOLD_FIT_MULTIPLE * getOverviewFraming().zoom,
-      ATLAS_ZOOM_THRESHOLD_MAX,
-    );
-    if (camera.zoom < threshold) return;
+    if (camera.zoom < zoomForCoverPx(ATLAS_LOAD_PX, state.size.height)) return;
     startedRef.current = true;
     loadNext();
   });

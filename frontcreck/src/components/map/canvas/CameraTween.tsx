@@ -9,11 +9,11 @@ import { STOP_T, interpolated } from '../data';
 import { useMapStore } from '../state/mapStore';
 import { worldToScreen } from '../state/projection';
 import { getOverviewFraming } from '../state/view';
+import { COVER_FADE_END_PX, zoomForCoverPx } from '../state/zoomLimits';
 import type { MapApi, MapPadding } from '../types';
 import { clampZoom, stopCameraRig } from './CameraRig';
 import { FRUSTUM_HALF_HEIGHT, applyFrustum } from './InitialFrame';
 
-const FLY_FIT_MULTIPLE = 3.2; // zoom (relative to the overview) at which covers are fully shown
 const FLY_MS = 450;
 const ZOOM_STEP_MS = 240;
 const MIN_FOCUS_SPAN = 0.15; // world units, so a tight cluster is not zoomed to the maximum
@@ -95,8 +95,9 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
     };
     const flyTarget = (id: number): MapCamera => {
       const p = positionsRef.current;
-      const fit = getOverviewFraming().zoom;
-      return { x: p[2 * id], y: p[2 * id + 1], zoom: Math.max(camera.zoom, FLY_FIT_MULTIPLE * fit) };
+      // Zoom in (never out) to where covers are fully shown.
+      const covers = zoomForCoverPx(COVER_FADE_END_PX, get().size.height);
+      return { x: p[2 * id], y: p[2 * id + 1], zoom: Math.max(camera.zoom, covers) };
     };
     const focusTarget = (): MapCamera | null => {
       const { input, data } = useMapStore.getState();

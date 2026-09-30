@@ -1,42 +1,54 @@
 import { describe, expect, it } from "vitest";
 
+import { COVER_MAX_PX, COVER_WORLD, coverCssPx, pxPerWorld, zoomForCoverPx } from "../state/zoomLimits";
 import { renderedSpriteCssSize, spriteCssSize } from "./album";
 
-describe("spriteCssSize (JS mirror of the vertex shader's size curve)", () => {
-  it("is 5px at the fitted overview zoom", () => {
-    expect(spriteCssSize(1, 1)).toBe(5);
+const H = 836; // canvas height of a 1440 x 900 window, CSS px
+const FIT = 0.784; // its fitted overview zoom (whole cloud, mockup padding)
+const PHONE_H = 784;
+const PHONE_FIT = 0.347;
+
+describe("spriteCssSize (JS mirror of the vertex shader's sizes)", () => {
+  it("is a dot of about 5 px at the desktop overview and 4 px at the phone overview", () => {
+    expect(spriteCssSize(FIT, H)).toBeCloseTo(5, 1);
+    expect(spriteCssSize(PHONE_FIT, PHONE_H)).toBeCloseTo(4.2, 1);
   });
 
-  it("starts the cover cross-fade (24px) near 2.28x the fit zoom", () => {
-    expect(Math.abs(spriteCssSize(2.283, 1) - 24)).toBeLessThan(0.5);
+  it("grows the dot gently until covers start", () => {
+    const z = zoomForCoverPx(16, H);
+    expect(spriteCssSize(z, H)).toBeGreaterThan(6);
+    expect(spriteCssSize(z, H)).toBeLessThanOrEqual(7.2);
   });
 
-  it("completes the covers (40px) near 3x the fit zoom", () => {
-    expect(Math.abs(spriteCssSize(3, 1) - 40.5)).toBeLessThan(1);
+  it("is the cover size, linear in the map scale, once covers are fully shown", () => {
+    const z = zoomForCoverPx(32, H);
+    expect(spriteCssSize(z, H)).toBeCloseTo(32, 6);
+    expect(spriteCssSize(1.5 * z, H)).toBeCloseTo(48, 6);
+    expect(coverCssPx(z, H)).toBeCloseTo(COVER_WORLD * pxPerWorld(z, H), 10);
   });
 
-  it("clamps to [3, 90]", () => {
-    expect(spriteCssSize(10, 1)).toBe(90);
-    expect(spriteCssSize(0.1, 1)).toBe(3);
+  it("caps covers at 64 px", () => {
+    expect(spriteCssSize(100, H)).toBe(COVER_MAX_PX);
   });
 
-  it("guards a zero fit zoom like the shader's max(u_fitZoom, 0.0001)", () => {
-    expect(spriteCssSize(1, 0)).toBe(90);
+  it("stays a dot while the album's atlas sheet is not loaded", () => {
+    const z = zoomForCoverPx(48, H);
+    expect(spriteCssSize(z, H, false)).toBeLessThanOrEqual(7.2);
   });
 });
 
-describe("renderedSpriteCssSize (size curve plus the shader's device-px caps)", () => {
-  it("matches the curve when no cap applies", () => {
-    expect(renderedSpriteCssSize(1, 1, 900, 1)).toBeCloseTo(5, 10);
+describe("renderedSpriteCssSize (sizes plus the shader's device-px caps)", () => {
+  it("matches the base size when no cap applies", () => {
+    expect(renderedSpriteCssSize(FIT, H, 1)).toBeCloseTo(spriteCssSize(FIT, H), 10);
   });
 
-  it("applies the 18%-of-viewport cap after the per-instance scale", () => {
-    // 90px * 1.25 = 112.5px, capped at 0.18 * 500 = 90px.
-    expect(renderedSpriteCssSize(50, 1, 500, 1, 1.25)).toBeCloseTo(90, 10);
+  it("applies the 18%-of-viewport cap", () => {
+    // 64 px cover on a 300 px canvas: capped at 0.18 * 300 = 54 px.
+    expect(renderedSpriteCssSize(100, 300, 1)).toBeCloseTo(54, 10);
   });
 
   it("applies the 240 device-px cap on a high-dpr screen", () => {
-    // 90px * 1.25 * dpr 3 = 337.5 device px, capped at 240 -> 80 CSS px.
-    expect(renderedSpriteCssSize(50, 1, 2000, 3, 1.25)).toBeCloseTo(80, 10);
+    // 64 px * 1.5 * dpr 3 = 288 device px, capped at 240 -> 80 CSS px.
+    expect(renderedSpriteCssSize(100, 2000, 3, 1.5)).toBeCloseTo(80, 10);
   });
 });

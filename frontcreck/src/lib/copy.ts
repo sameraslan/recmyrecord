@@ -60,6 +60,8 @@ export const COPY = {
     heading: 'Map of albums',
     hint: 'Albums that sit close together sound or feel alike.',
     canvasLabel: 'Map of albums. Drag or use arrow keys to pan, plus and minus to zoom.',
+    /** The canvas label while the map is only a backdrop (Home, About, 404) and takes no input. */
+    canvasLabelStatic: 'Map of albums',
     zoomIn: 'Zoom in',
     zoomOut: 'Zoom out',
     reset: 'Reset view',

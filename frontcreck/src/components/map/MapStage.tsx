@@ -19,6 +19,9 @@ const MusicMap = dynamic(() => import('./MusicMap'), { ssr: false, loading: () =
 /** Album framing: clear of the slider panel (top-left on desktop, bottom on phones). */
 const DESKTOP_PADDING: MapPadding = { top: 262, right: 96, bottom: 90, left: 96 };
 const PHONE_PADDING: MapPadding = { top: 80, right: 60, bottom: 150, left: 60 };
+/** Overview framing of the whole cloud (mockup fitTarget); on phones clear of the bottom slider. */
+const DESKTOP_FIT_PADDING: MapPadding = { top: 85, right: 40, bottom: 85, left: 40 };
+const PHONE_FIT_PADDING: MapPadding = { top: 80, right: 40, bottom: 160, left: 40 };
 
 /** True after first paint (two animation frames) plus an idle slot: three.js never competes with it. */
 function useAfterFirstPaint(): boolean {
@@ -60,8 +63,9 @@ export function MapStage() {
   const mapMode = useAppStore((s) => s.mapMode);
 
   useEffect(() => {
-    useAppStore.getState().setWebgl(isWebGLAvailable() ? 'ok' : 'unavailable');
-  }, []);
+    // After first paint, like the rest of the map: the probe creates (and releases) a WebGL context.
+    if (painted) useAppStore.getState().setWebgl(isWebGLAvailable() ? 'ok' : 'unavailable');
+  }, [painted]);
 
   const enabled = painted && webgl === 'ok';
   const { status: catalogStatus, catalog, retry: retryCatalog } = useCatalog(enabled);
@@ -80,6 +84,7 @@ export function MapStage() {
       dimmed,
       insetLeft: view === 'album' && !narrow ? panelInset : 0,
       framePadding: narrow ? PHONE_PADDING : DESKTOP_PADDING,
+      fitPadding: narrow ? PHONE_FIT_PADDING : DESKTOP_FIT_PADDING,
     }),
     [stop, focus, hot, selected, view, interactive, dimmed, narrow, panelInset],
   );
@@ -112,6 +117,7 @@ export function MapStage() {
       onEmpty: () => {
         if (viewRef.current === 'explore') useAppStore.getState().setSelected(null);
       },
+      onContextLost: () => useAppStore.getState().setWebgl('unavailable'),
     }),
     [catalog, router],
   );

@@ -251,14 +251,13 @@ test.describe('covers', () => {
 
   test('an album without a cover shows its tile and requests nothing', async ({ page }) => {
     const requests: string[] = [];
+    // Only requests this album could cause: the sprite sheet, or a cover URL with no cover id (at most the size prefix). Typing key
+    // by key lists (and loads covers for) other albums matching each prefix, which is fine.
     page.on('request', (r) => {
-      if (r.url().startsWith('https://i.scdn.co/') || r.url().endsWith('/data/thumbs.webp')) requests.push(r.url());
+      if (/^https:\/\/i\.scdn\.co\/image\/(ab67616d[0-9a-f]{8})?$/.test(r.url()) || r.url().endsWith('/data/thumbs.webp')) requests.push(r.url());
     });
     await page.goto('/nope');
-    // One input event: typing key by key would list (and load covers for) the albums matching each prefix.
-    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
-    await input.click();
-    await input.fill('spiritual unity albert');
+    await searchFor(page, 'spiritual unity albert');
     await expect(page.getByRole('option')).toHaveCount(1);
     const cover = page.getByRole('option').first().locator('.cover');
     await expect(cover).toHaveAttribute('data-state', 'tile');

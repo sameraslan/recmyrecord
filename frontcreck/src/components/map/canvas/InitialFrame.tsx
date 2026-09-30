@@ -5,16 +5,16 @@ import { useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 
 import type { MapData } from "../data";
-import { cloudCenter, fitZoom, getCloudBounds } from "../state/bounds";
+import { fitView, getCloudBounds } from "../state/bounds";
 import { useMapStore } from "../state/mapStore";
 import { setFramed, setOverviewFraming } from "../state/view";
+import { FRUSTUM_HALF_HEIGHT } from "../state/zoomLimits";
 
 /**
- * Half the frustum height in world units. Fixed; the half-width follows the
- * canvas aspect (FRUSTUM_HALF_HEIGHT * width / height) so world units are
- * square on screen and a round cluster renders round.
+ * Half the frustum height in world units (state/zoomLimits.ts). Fixed; the
+ * half-width follows the canvas aspect so world units are square on screen.
  */
-export const FRUSTUM_HALF_HEIGHT = 0.55;
+export { FRUSTUM_HALF_HEIGHT };
 
 /**
  * Symmetric frustum for a `width` x `height` CSS px canvas, with the drawing shifted so `camera.position`
@@ -41,8 +41,8 @@ export function applyFrustum(camera: THREE.OrthographicCamera, width: number, he
  *   `left/right` to `±FRUSTUM_HALF_HEIGHT * aspect` (top/bottom stay
  *   `±FRUSTUM_HALF_HEIGHT`) with the current panel inset. The camera is
  *   `manual`, so R3F never touches these itself.
- * - Framing: computes the cloud's percentile bounds, their centre and the
- *   fitted zoom for the live frustum, and publishes them (state/view.ts) for
+ * - Framing: computes the cloud's full extent and the camera that fits it
+ *   inside the visible area less MapInput.fitPadding, and publishes them (state/view.ts) for
  *   CameraRig, AlbumField, AtlasManager, CameraBounds and CameraTween. Recomputed on data, sliderT and size changes.
  * - Snap: once per MapData the camera jumps, without animation, to the
  *   framing centre and fitted zoom. A resize re-snaps only while the user
@@ -86,22 +86,20 @@ export function InitialFrame() {
     }
 
     const bounds = getCloudBounds(data, currentSliderT);
-    const center = cloudCenter(bounds);
-    // Fit the visible area only (right of the album panel), which is centred on camera.position.
-    const halfW = FRUSTUM_HALF_HEIGHT * (width / Math.max(height, 1));
-    const f = width > 0 ? Math.min(useMapStore.getState().insetCurrent / width, 0.9) : 0;
-    const zoom = fitZoom(bounds, {
-      left: -halfW * (1 - f),
-      right: halfW * (1 - f),
-      top: FRUSTUM_HALF_HEIGHT,
-      bottom: -FRUSTUM_HALF_HEIGHT,
+    // Fit the whole cloud inside the visible area (right of the album panel), less the overview padding.
+    const { input } = useMapStore.getState();
+    const { zoom, center } = fitView(bounds, {
+      width,
+      height,
+      insetLeft: useMapStore.getState().insetCurrent,
+      padding: input.fitPadding,
     });
     setOverviewFraming({ zoom, center, bounds });
 
     const newData = framedData.current !== data;
     // New data invalidates the previous snap until the one below lands.
     if (newData) setFramed(false);
-    const { lastCameraGrab, input } = useMapStore.getState();
+    const { lastCameraGrab } = useMapStore.getState();
     const untouched = lastCameraGrab === 0 && input.focus === null;
     if (newData || (sizeChanged && untouched)) {
       framedData.current = data;

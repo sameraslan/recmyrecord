@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 import type { MapData } from "../data";
 import {
   cloudCenter,
-  fitZoom,
+  fitView,
   getCloudBounds,
   nudgeVector,
   percentileBounds,
   viewportWorldRect,
   visibleFractionThreshold,
 } from "./bounds";
+import { FIT_ZOOM_MAX, FIT_ZOOM_MIN } from "./zoomLimits";
 
 function fixtureData(xy: Array<[number, number]>): MapData {
   const flat = new Float32Array(xy.flat());
@@ -98,9 +99,13 @@ describe("percentileBounds", () => {
 });
 
 describe("getCloudBounds", () => {
-  it("is the percentile box of the interpolated positions", () => {
+  it("is the full extent of the interpolated positions, outliers included", () => {
     const pts = gridWithOutlier();
-    expect(getCloudBounds(fixtureData(pts), 0.6)).toEqual(percentileBounds(flat(pts)));
+    const b = getCloudBounds(fixtureData(pts), 0.6);
+    expect(b.minX).toBe(0);
+    expect(b.maxX).toBe(50);
+    expect(b.minY).toBe(-50);
+    expect(b.maxY).toBeCloseTo(0.98, 6);
   });
 });
 
@@ -114,32 +119,41 @@ describe("cloudCenter", () => {
   });
 });
 
-describe("fitZoom", () => {
-  const frustum = { left: -0.75, right: 0.75, top: 0.55, bottom: -0.55 };
+describe("fitView", () => {
+  const even = { top: 0, right: 0, bottom: 0, left: 0 };
 
-  it("fits a known rectangle on its tighter axis with an 8% margin per side", () => {
-    // 1.0 x 0.5 cloud, padded to 1.16 x 0.58. zoomX = 1.5 / 1.16 = 1.2931,
-    // zoomY = 1.1 / 0.58 = 1.8966, so the width is the tighter axis.
+  it("fits the box on its tighter axis", () => {
+    // 1.0 x 0.5 cloud on 1000 x 1100 px: 1000 px per world unit across, 2200 down, so the width
+    // limits: zoom = 1000 * 1.1 / 1100 = 1.
     const cloud = { minX: -0.5, maxX: 0.5, minY: -0.25, maxY: 0.25 };
-    expect(fitZoom(cloud, frustum)).toBeCloseTo(1.5 / 1.16, 10);
+    const v = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, padding: even });
+    expect(v.zoom).toBeCloseTo(1, 10);
+    expect(v.center).toEqual({ x: 0, y: 0 });
   });
 
-  it("uses the height when that is the tighter axis", () => {
-    // 0.5 x 1.0 cloud: zoomX = 1.5 / 0.58 = 2.586, zoomY = 1.1 / 1.16 = 0.948.
-    const cloud = { minX: -0.25, maxX: 0.25, minY: -0.5, maxY: 0.5 };
-    expect(fitZoom(cloud, frustum)).toBeCloseTo(1.1 / 1.16, 10);
+  it("keeps the padding clear and centres the box in the padded area", () => {
+    const cloud = { minX: 0, maxX: 1, minY: 0, maxY: 1 };
+    const pad = { top: 100, right: 40, bottom: 200, left: 40 };
+    const v = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, padding: pad });
+    // 800 px available both ways: 800 px per world unit, zoom = 800 * 1.1 / 1100.
+    expect(v.zoom).toBeCloseTo(0.8, 10);
+    // Bottom padding is 100 px larger, so the camera sits 50 px (1/16 world unit) below the box centre.
+    expect(v.center.x).toBeCloseTo(0.5, 10);
+    expect(v.center.y).toBeCloseTo(0.5 - 50 / 800, 10);
   });
 
-  it("clamps to [0.5, 5]", () => {
+  it("fits only the area right of the album panel", () => {
+    const cloud = { minX: 0, maxX: 1, minY: 0, maxY: 0.1 };
+    const a = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, padding: even });
+    const b = fitView(cloud, { width: 1000, height: 1100, insetLeft: 500, padding: even });
+    expect(b.zoom).toBeCloseTo(a.zoom / 2, 10);
+  });
+
+  it("clamps the zoom to the fit range", () => {
     const huge = { minX: -100, maxX: 100, minY: -100, maxY: 100 };
     const tiny = { minX: -0.001, maxX: 0.001, minY: -0.001, maxY: 0.001 };
-    expect(fitZoom(huge, frustum)).toBe(0.5);
-    expect(fitZoom(tiny, frustum)).toBe(5);
-  });
-
-  it("defaults margin to 0.08", () => {
-    const cloud = { minX: -1, maxX: 1, minY: -1, maxY: 1 };
-    expect(fitZoom(cloud, frustum)).toBeCloseTo(fitZoom(cloud, frustum, 0.08), 10);
+    expect(fitView(huge, { width: 400, height: 800, insetLeft: 0, padding: even }).zoom).toBe(FIT_ZOOM_MIN);
+    expect(fitView(tiny, { width: 400, height: 800, insetLeft: 0, padding: even }).zoom).toBe(FIT_ZOOM_MAX);
   });
 });
 

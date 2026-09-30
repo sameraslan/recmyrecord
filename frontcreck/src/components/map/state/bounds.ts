@@ -1,4 +1,6 @@
 import { interpolated, type MapData } from "../data";
+import type { MapPadding } from "../types";
+import { FIT_ZOOM_MAX, FIT_ZOOM_MIN, pxPerWorld, zoomForPxPerWorld } from "./zoomLimits";
 
 export interface Bounds {
   minX: number;
@@ -8,7 +10,9 @@ export interface Bounds {
 }
 
 /**
- * Percentiles that define the album cloud's framing box. The real data has a
+ * Default percentiles of `percentileBounds`, for callers that want a box
+ * that ignores outliers (the overview itself frames the full extent, see
+ * getCloudBounds). In the personal site's data there was a
  * far outlier group (nearly all in the "ambient" cluster, near x = -3.7,
  * y = -2.3 once normalized) holding 2.0% to 2.45% of all albums at slider
  * positions 0.25 to 0.75. A 2nd percentile lands
@@ -19,10 +23,6 @@ export interface Bounds {
  */
 export const FRAME_PERCENTILE_LO = 0.03;
 export const FRAME_PERCENTILE_HI = 0.97;
-
-/** Zoom range the fitted overview zoom is clamped to (CameraRig's MAX_ZOOM is 5). */
-export const FIT_ZOOM_MIN = 0.5;
-export const FIT_ZOOM_MAX = 5;
 
 /**
  * Percentile bounding box of a flat `[x0, y0, x1, y1, ...]` position array
@@ -57,41 +57,52 @@ export function interpolatedPositions(data: MapData, sliderT: number): Float32Ar
 }
 
 /**
- * The album cloud's framing box at `sliderT`: the percentile bounds of the
- * interpolated positions. Used for the overview framing (fitZoom and
- * cloudCenter) and for CameraBounds' idle nudge, so both keep the bulk of
- * the cloud on screen rather than its outliers.
+ * The album cloud's framing box at `sliderT`: the full min/max extent of the
+ * interpolated positions, so the overview shows every album (as the mockup
+ * does). Used for the overview framing (fitView) and CameraBounds' idle nudge.
  */
 export function getCloudBounds(data: MapData, sliderT: number): Bounds {
-  return percentileBounds(interpolatedPositions(data, sliderT));
+  return percentileBounds(interpolatedPositions(data, sliderT), 0, 1);
 }
 
-/** Midpoint of a bounding box (the framing centre when given percentile bounds). */
+/** Midpoint of a bounding box. */
 export function cloudCenter(cloud: Bounds): { x: number; y: number } {
   return { x: (cloud.minX + cloud.maxX) / 2, y: (cloud.minY + cloud.maxY) / 2 };
 }
 
-export interface FitFrustum {
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
+export interface FitArea {
+  /** Canvas size in CSS px. */
+  width: number;
+  height: number;
+  /** CSS px covered by the album panel on the left. */
+  insetLeft: number;
+  /** CSS px kept clear around the cloud inside the visible area. */
+  padding: MapPadding;
 }
 
 /**
- * The largest camera zoom at which the `cloud` box, padded by `margin` of its
- * own size on each side, fits inside `frustum`, clamped to
- * [FIT_ZOOM_MIN, FIT_ZOOM_MAX]:
- * `min((right - left) / (w * (1 + 2 * margin)), (top - bottom) / (h * (1 + 2 * margin)))`.
+ * The overview camera: the zoom at which the `cloud` box fits the visible
+ * area (right of `insetLeft`) less `padding`, clamped to
+ * [FIT_ZOOM_MIN, FIT_ZOOM_MAX], and the camera position that centres the box
+ * in the padded area. camera.position is the centre of the visible area
+ * (canvas/InitialFrame.tsx applyFrustum), so uneven padding shifts it.
  */
-export function fitZoom(cloud: Bounds, frustum: FitFrustum, margin = 0.08): number {
+export function fitView(cloud: Bounds, area: FitArea): { zoom: number; center: { x: number; y: number } } {
+  const { width, height, insetLeft, padding: pad } = area;
   // Guard against a degenerate (zero-size) cloud so a single-point dataset
   // never divides by zero; the clamp then caps it at FIT_ZOOM_MAX.
-  const width = Math.max(cloud.maxX - cloud.minX, 1e-6);
-  const height = Math.max(cloud.maxY - cloud.minY, 1e-6);
-  const zoomX = (frustum.right - frustum.left) / (width * (1 + 2 * margin));
-  const zoomY = (frustum.top - frustum.bottom) / (height * (1 + 2 * margin));
-  return Math.max(FIT_ZOOM_MIN, Math.min(FIT_ZOOM_MAX, Math.min(zoomX, zoomY)));
+  const w = Math.max(cloud.maxX - cloud.minX, 1e-6);
+  const h = Math.max(cloud.maxY - cloud.minY, 1e-6);
+  const availW = Math.max(width - insetLeft - pad.left - pad.right, 40);
+  const availH = Math.max(height - pad.top - pad.bottom, 40);
+  const scale = Math.min(availW / w, availH / h);
+  const zoom = Math.max(FIT_ZOOM_MIN, Math.min(FIT_ZOOM_MAX, zoomForPxPerWorld(scale, height)));
+  const wpp = 1 / pxPerWorld(zoom, height);
+  const c = cloudCenter(cloud);
+  return {
+    zoom,
+    center: { x: c.x - ((pad.left - pad.right) / 2) * wpp, y: c.y + ((pad.top - pad.bottom) / 2) * wpp },
+  };
 }
 
 export interface ViewportWorldRect {
