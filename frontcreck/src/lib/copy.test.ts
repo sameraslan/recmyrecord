@@ -32,7 +32,7 @@ const ALL = collect(COPY, []);
 describe('copy rules (spec section 8)', () => {
   it('has the approved key strings', () => {
     expect(COPY.hero).toBe('Start with an album you like.');
-    expect(COPY.heroSub).toBe('Get the most similar albums to it, by sound and by mood.');
+    expect(COPY.heroSub).toBe('Get the most similar albums, by sound and by mood.');
     expect(COPY.search.placeholder).toBe('Search albums or artists');
     expect(COPY.search.noMatches('zzkq')).toBe('No album matches zzkq. Try the artist\u2019s name, or fewer words.');
     expect(COPY.album.listHeading).toBe('Closest albums');
@@ -45,6 +45,7 @@ describe('copy rules (spec section 8)', () => {
       'Every album here has two core properties that make it what it is: sound and mood. Sound (sonic values) comes from the audio itself: measurements such as energy, tempo, danceability and acousticness, taken from the recording. Mood descriptors are words listeners use for the feelings or atmosphere an album evokes, such as melancholic or warm.',
       'Pick an album and you get the ones most similar to it. By default that means similar in both sound and mood; use the slider to match on sound only or mood only.',
       `The map places ${CATALOG_SIZE_LABEL} albums so that similar ones sit near one another and different ones sit further apart.`,
+      'Genres and genre tags play no part in finding similar albums; it all comes from the sound and the mood each album evokes. Albums from the same genre often cluster together anyway, but the albums around a given one are not always from its genre. That can help you get into a new genre, since you start from something that sounds and feels a lot like music you already like.',
       'An album\u2019s closest albums sit nearby on the map, but not always right beside it. Recommendations use more features than a two-dimensional map can show, so placing albums on it means giving up some accuracy.',
     ]);
     expect(COPY.about.signoff).toBe('Time for exploration!');
