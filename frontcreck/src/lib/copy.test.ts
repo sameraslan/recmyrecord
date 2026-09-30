@@ -32,7 +32,7 @@ const ALL = collect(COPY, []);
 describe('copy rules (spec section 8)', () => {
   it('has the approved key strings', () => {
     expect(COPY.hero).toBe('Start with an album you like.');
-    expect(COPY.heroSub).toBe('Get the albums closest to it, by sound and by mood.');
+    expect(COPY.heroSub).toBe('Get the most similar albums to it, by sound and by mood.');
     expect(COPY.search.placeholder).toBe('Search albums or artists');
     expect(COPY.search.noMatches('zzkq')).toBe('No album matches zzkq. Try the artist\u2019s name, or fewer words.');
     expect(COPY.album.listHeading).toBe('Closest albums');
