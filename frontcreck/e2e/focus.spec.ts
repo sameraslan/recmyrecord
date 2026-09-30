@@ -171,8 +171,7 @@ test('the morph is animated, and instant under reduced motion', async ({ page })
   await waitForMap(page);
   await waitForCameraIdle(page);
   await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
-  await page.waitForTimeout(120);
-  expect(await page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(true);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(true);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
   // Frame by frame: record album 11 and isAnimating() on every animation frame from the stop change until it settles.

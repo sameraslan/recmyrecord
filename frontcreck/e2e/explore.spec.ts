@@ -346,8 +346,9 @@ test('the hint stays hidden over covers after a trip to About and back', async (
   // Sample the hint's opacity every frame from before it mounts: it must never show, not even for the frames
   // before the map draws again and then fade out.
   await page.evaluate(() => {
-    const w = window as unknown as { __hintMax: number };
+    const w = window as unknown as { __hintMax: number; __hintDone: boolean };
     w.__hintMax = 0;
+    w.__hintDone = false;
     const until = performance.now() + 1500;
     const tick = () => {
       const el = document.querySelector('.map-hint');
@@ -356,6 +357,7 @@ test('the hint stays hidden over covers after a trip to About and back', async (
         if (cs.visibility !== 'hidden') w.__hintMax = Math.max(w.__hintMax, Number(cs.opacity));
       }
       if (performance.now() < until) requestAnimationFrame(tick);
+      else w.__hintDone = true;
     };
     requestAnimationFrame(tick);
   });
@@ -363,6 +365,6 @@ test('the hint stays hidden over covers after a trip to About and back', async (
   await expect(page).toHaveURL('/map');
   expect(await page.evaluate(() => window.__rmr!.map!.getCamera().zoom)).toBeCloseTo(zoomed, 5);
   await expect(page.locator('.map-hint')).toBeHidden();
-  await page.waitForTimeout(1600);
+  await page.waitForFunction(() => (window as unknown as { __hintDone: boolean }).__hintDone, null, { timeout: 5000 });
   expect(await page.evaluate(() => (window as unknown as { __hintMax: number }).__hintMax)).toBeLessThan(0.05);
 });

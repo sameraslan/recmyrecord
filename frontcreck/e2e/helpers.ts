@@ -33,10 +33,36 @@ export async function waitForMap(page: Page): Promise<void> {
   await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 20_000 });
 }
 
-/** Waits until no camera animation is running. */
+/** Waits until no camera animation is running and the map has stopped drawing. */
 export async function waitForCameraIdle(page: Page): Promise<void> {
   await page.waitForFunction(() => window.__rmr?.map && !window.__rmr.map.isAnimating(), null, { timeout: 10_000 });
-  await page.waitForTimeout(120);
+  await waitForMapQuiet(page, 120);
+}
+
+/** Waits until the map has drawn no frame for `quietMs` (cover fades and other redraws have finished). */
+export async function waitForMapQuiet(page: Page, quietMs = 200): Promise<void> {
+  await page.waitForFunction(
+    (quiet) => {
+      const w = window as unknown as { __quietF?: number; __quietT?: number };
+      const f = window.__rmr?.frames ?? 0;
+      const now = performance.now();
+      if (w.__quietF !== f) {
+        w.__quietF = f;
+        w.__quietT = now;
+        return false;
+      }
+      return now - (w.__quietT ?? now) >= quiet;
+    },
+    quietMs,
+    { polling: 40, timeout: 15_000 },
+  );
+}
+
+/** Waits until every finite CSS animation and transition on the page has finished. */
+export async function waitForAnimations(page: Page): Promise<void> {
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().endTime === Infinity),
+  );
 }
 
 /** Client coordinates of an album that is on screen and not covered by another element. */

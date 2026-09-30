@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { shot, waitForMap } from './helpers';
+import { shot, waitForAnimations, waitForMap, waitForMapQuiet } from './helpers';
 
 // The owner's first and last name, stored encoded so this guard never spells them.
 const OWNER_NAME_RE = new RegExp(Buffer.from('c2FtZXJ8YXNsYW4=', 'base64').toString('utf8'), 'i');
@@ -26,7 +26,8 @@ test.describe('Home', () => {
     expect(overflow).toBeLessThanOrEqual(0);
     await waitForMap(page);
     await expect(page.locator('.map-pane .veil')).toHaveCount(1);
-    await page.waitForTimeout(600);
+    await waitForMapQuiet(page);
+    await waitForAnimations(page);
     await shot(page, info, 'home');
   });
 
@@ -66,7 +67,7 @@ test.describe('Home', () => {
     // Below-the-fold and hidden (phone) shelf covers too: scroll the page to its end and let lazy images settle.
     await page.locator('.home').evaluate((el) => el.scrollTo({ top: el.scrollHeight }));
     await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(500); // nothing should happen: no late heavy request once the network is idle
     expect(heavy).toEqual([]);
     const states = await page.locator('.mosaic .cover').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset.state));
     expect(states.every((s) => s === 'remote')).toBe(true);
@@ -91,7 +92,8 @@ test('About explains the site and closes back', async ({ page }, info) => {
   await expect(page.getByText(COPY.about.credits)).toBeVisible();
   await expect(page.locator('body')).not.toContainText(OWNER_NAME_RE);
   await waitForMap(page);
-  await page.waitForTimeout(400);
+  await waitForMapQuiet(page);
+  await waitForAnimations(page);
   await shot(page, info, 'about');
   await page.getByRole('button', { name: COPY.about.close, exact: true }).click();
   await expect(page).toHaveURL('/');
@@ -128,7 +130,8 @@ test('unknown pages are a 404 with search and a way to the map', async ({ page }
   await expect(page.getByText(COPY.notFound.body)).toBeVisible();
   await expect(page.locator('.notfound').getByRole('combobox')).toBeVisible();
   await waitForMap(page);
-  await page.waitForTimeout(400);
+  await waitForMapQuiet(page);
+  await waitForAnimations(page);
   await shot(page, info, 'not-found');
   await page.getByRole('link', { name: COPY.notFound.mapLink }).click();
   await expect(page).toHaveURL('/map');
@@ -194,7 +197,7 @@ test.describe('album to album', () => {
     await row.click();
     await expect(page).toHaveURL(href);
     await expect.poll(() => page.evaluate(() => window.__rmr!.getState().focus?.seed)).not.toBe(seed);
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(100); // a few more sampled frames after the new focus
     const samples = await stopSampling(page);
     expect(samples.length).toBeGreaterThan(2);
     expect(samples.filter((s) => s.seed === null || !s.ambient || (!isMobile && s.inset === 0))).toEqual([]);

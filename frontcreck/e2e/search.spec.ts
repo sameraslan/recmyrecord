@@ -16,8 +16,9 @@ function albumNavigations(page: Page): string[] {
   return found;
 }
 
-/** Gives a navigation every chance to start: router.push issues its request within milliseconds, so a
- * fixed pause is enough (network idle is not used: it can wait on unrelated cover requests). */
+/** A "nothing happens" wait, not a settle: it gives a navigation that must not happen every chance to start.
+ * router.push issues its request within milliseconds, so a fixed pause is enough (there is no condition to
+ * wait for when nothing is expected, and network idle can wait on unrelated cover requests). */
 async function settle(page: Page): Promise<void> {
   await page.waitForTimeout(750);
 }
@@ -263,7 +264,7 @@ test.describe('covers', () => {
     await expect(cover).toHaveAttribute('data-state', 'tile');
     await expect(cover.locator('.fb')).toHaveText('S');
     await expect(cover.locator('img, .spr')).toHaveCount(0);
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(300); // nothing should happen: no cover request for a tile
     expect(requests).toEqual([]);
   });
 });
@@ -334,7 +335,7 @@ test.describe('phone search sheet', () => {
     await expect(sheet.getByRole('option').first()).toBeVisible();
     // The on-screen keyboard's Done blurs the field; the results stay.
     await input.evaluate((el) => (el as HTMLInputElement).blur());
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(100); // nothing should happen: the blur must not close the results
     await expect(sheet.getByRole('option').first()).toBeVisible();
 
     await sheet.getByRole('button', { name: COPY.search.close }).tap();

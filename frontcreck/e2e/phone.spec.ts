@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { shot, visibleAlbumPoint, waitForAnimations, waitForCameraIdle, waitForMap } from './helpers';
 
 const IR = '/album/in-rainbows-radiohead';
 
@@ -121,7 +121,7 @@ test.describe('phone album', () => {
   test('tap targets are at least 44 px', async ({ page }) => {
     for (const url of ['/', IR, '/map', '/about', '/nothing-here']) {
       await page.goto(url);
-      await page.waitForTimeout(300);
+      await waitForAnimations(page);
       expect(await smallTargets(page), url).toEqual([]);
     }
     // Open states: the tapped Explore card, the search sheet and album map mode.
@@ -140,7 +140,7 @@ test.describe('phone album', () => {
     await page.goto(IR);
     await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
     await expect(page.getByRole('button', { name: COPY.phone.listLabel })).toBeVisible();
-    await page.waitForTimeout(500); // the panel slides out
+    await expect(page.locator('section.album')).toHaveCSS('visibility', 'hidden'); // the panel has slid out
     expect(await smallTargets(page), 'map mode').toEqual([]);
   });
 });
@@ -163,7 +163,7 @@ test('no horizontal scroll at 360 and 1600 px', async ({ page, isMobile }) => {
   await page.setViewportSize(isMobile ? { width: 360, height: 740 } : { width: 1600, height: 900 });
   for (const url of ['/', '/map', IR, `${IR}?by=mood`, '/about', '/no-such-page']) {
     await page.goto(url);
-    await page.waitForTimeout(200);
+    await waitForAnimations(page);
     await noHorizontalScroll(page);
   }
 });
@@ -178,7 +178,7 @@ test.describe('motion', () => {
     await expect(page.getByRole('option').first()).toContainText('In Rainbows');
     await page.keyboard.press('Enter');
     await expect(page.locator('section.album')).toHaveClass(/is-entering/);
-    await page.waitForTimeout(180);
+    await page.waitForTimeout(180); // a fixed point inside the slide, for the mid-transition screenshot
     await shot(page, info, 'transition-mid');
     await expect(page.locator('section.album')).not.toHaveCSS('transform', /matrix\(1, 0, 0, 1, -/, { timeout: 2000 });
     await page.locator('li.rec').first().locator('a.rec-main').click();
@@ -194,7 +194,7 @@ test.describe('motion', () => {
     await expect(page.getByRole('option').first()).toContainText('In Rainbows');
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(IR);
-    await page.waitForTimeout(40);
+    await page.waitForTimeout(40); // nothing should move: a slide would still be well off 0 here
     const x = await page.locator('section.album').evaluate((el) => el.getBoundingClientRect().left);
     expect(x).toBe(0);
     expect(await page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);

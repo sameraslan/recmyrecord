@@ -254,7 +254,7 @@ test('a direct load leaves focus alone: the first Tab reaches the skip link', as
   await expect(page.locator('li.rec')).toHaveCount(5);
   // The panel's effects have run once the accent is set.
   await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--acc'))).not.toBe('');
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(200); // nothing should happen: no late focus call moves focus off the body
   expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
   await page.keyboard.press('Tab');
   await expect(page.getByRole('link', { name: COPY.skip })).toBeFocused();
@@ -283,7 +283,7 @@ test('Escape inside the search popover or the phone search sheet keeps the album
     await page.keyboard.press('Escape');
     await expect(input).toBeFocused();
   }
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(500); // nothing should happen: that Escape must not close the album
   await expect(page).toHaveURL(IR);
   await expect(page.locator('section.album')).toBeVisible();
 });

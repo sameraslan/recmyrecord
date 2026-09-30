@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { camera, coversSettled, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { camera, coversSettled, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet } from './helpers';
 
 test('the map is a lazily loaded WebGL canvas that renders on demand', async ({ page }, info) => {
   const atlasRequests: string[] = [];
@@ -16,7 +16,7 @@ test('the map is a lazily loaded WebGL canvas that renders on demand', async ({ 
   expect(await page.evaluate(() => window.__rmr!.getState().webgl)).toBe('ok');
   await waitForCameraIdle(page);
   const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1200); // nothing should happen: the idle window in which the map must not draw
   const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
   expect(f2 - f1).toBeLessThanOrEqual(1);
   expect(atlasRequests).toEqual([]);
@@ -30,7 +30,7 @@ test('the map is a lazily loaded WebGL canvas that renders on demand', async ({ 
   await expect.poll(() => atlasRequests.length).toBeGreaterThan(0);
   for (let i = 0; i < 2; i++) await page.keyboard.press('+');
   await waitForCameraIdle(page);
-  await page.waitForTimeout(800);
+  await waitForMapQuiet(page, 300); // covers have loaded and faded in
   await shot(page, info, 'explore-zoomed');
 });
 
