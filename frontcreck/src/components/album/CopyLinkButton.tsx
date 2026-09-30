@@ -7,19 +7,22 @@ import type { StopId } from '@/lib/types';
 import { absoluteUrl, albumHref } from '@/lib/url-state';
 
 function legacyCopy(text: string): boolean {
+  // Selecting the textarea moves focus to it; give it back to the control that had it (the copy button).
+  const focused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const ta = document.createElement('textarea');
   try {
-    const ta = document.createElement('textarea');
     ta.value = text;
     ta.setAttribute('readonly', '');
     ta.style.position = 'fixed';
     ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
-    const ok = document.execCommand('copy');
-    ta.remove();
-    return ok;
+    return document.execCommand('copy');
   } catch {
     return false;
+  } finally {
+    ta.remove();
+    focused?.focus({ preventScroll: true });
   }
 }
 
