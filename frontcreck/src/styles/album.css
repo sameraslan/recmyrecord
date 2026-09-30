@@ -63,6 +63,8 @@
 .rec-error { display: grid; align-content: start; justify-items: start; gap: 6px; padding: 26px 0; }
 .page-msg .rec-error { justify-items: center; }
 .rec-error .e1 { font-family: var(--font-serif); font-size: 26px; font-weight: 500; max-width: 22em; }
+.rec-error .e2 { color: var(--color-dust); font-size: 15px; max-width: 32em; }
+.page-msg .rec-error p { text-align: center; }
 .rec-error .btn { margin-top: 12px; }
 
 /* Motion (spec 4.3, 5): entering from Home, Explore or About slides the panel in while the map inset tweens

@@ -77,7 +77,10 @@ export const COPY = {
   /** Typographic cover tile when the title has no letter or digit. */
   cover: { noInitial: '·' },
   error: {
+    /** The whole message, where it is one line (search list, toast); `title` and `detail` are its two sentences. */
     body: 'The albums didn’t load. Check your connection, then try again.',
+    title: 'The albums didn’t load.',
+    detail: 'Check your connection, then try again.',
     retry: 'Try again',
   },
   notFound: {

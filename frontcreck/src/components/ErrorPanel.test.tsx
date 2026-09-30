@@ -11,6 +11,9 @@ describe('ErrorPanel', () => {
     render(<ErrorPanel onRetry={onRetry} />);
     expect(screen.getByRole('alert')).toHaveTextContent(COPY.error.body);
     expect(screen.getByRole('alert')).toHaveClass('rec-error');
+    // Mockup: the first sentence is the heading line, the second the detail under it.
+    expect(screen.getByText(COPY.error.title)).toHaveClass('e1');
+    expect(screen.getByText(COPY.error.detail)).toHaveClass('e2');
     fireEvent.click(screen.getByRole('button', { name: COPY.error.retry }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
