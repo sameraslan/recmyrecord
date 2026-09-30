@@ -39,7 +39,7 @@ async function firstLoadJs() {
   // The budget counts every script of the page (the brief's definition); modern browsers skip `nomodule` ones.
   const tags = new Map();
   for (const m of html.matchAll(/<script([^>]*)\ssrc="([^"]+)"([^>]*)>/g)) {
-    if (!tags.has(m[2])) tags.set(m[2], /\snomodule\b/.test(`${m[1]} ${m[3]}`));
+    if (!tags.has(m[2])) tags.set(m[2], /\snomodule\b/i.test(`${m[1]} ${m[3]}`));
   }
   let kb = 0;
   let nomoduleKb = 0;
