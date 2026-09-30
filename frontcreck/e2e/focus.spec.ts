@@ -215,7 +215,8 @@ test('a zoom from the buttons survives a stop change until Reset re-arms the foc
   await page.getByRole('button', { name: COPY.map.reset }).click();
   await waitForCameraIdle(page);
   const reset = await camera(page);
-  expect(reset.zoom).toBeLessThan(zoomed.zoom);
+  // Reset drops the manual zoom for the focus framing at the current stop, which can be wider or tighter.
+  expect(Math.abs(reset.zoom - zoomed.zoom)).toBeGreaterThan(1e-3);
   await page.evaluate(() => window.__rmr!.getState().setStop('sonic'));
   await waitForCameraIdle(page);
   const reframed = await camera(page);
