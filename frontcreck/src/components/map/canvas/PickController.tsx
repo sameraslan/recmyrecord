@@ -4,7 +4,9 @@ import { useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
 import type * as THREE from 'three';
 import { suppressGhostClick } from '@/lib/ghost-click';
+import { markerAt } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
+import { getPlacedMarkers } from '../state/overlayEls';
 import { screenToWorld } from '../state/projection';
 import { albumAt } from './CursorTracker';
 
@@ -38,10 +40,20 @@ export function PickController({ positionsRef, hoverRef }: { positionsRef: React
       const touch = d.type !== 'mouse';
       if (moved > (touch ? TOUCH_MOVE_PX : MOUSE_MOVE_PX) || (touch && performance.now() - d.t > TOUCH_MAX_MS)) return;
       const rect = canvas.getBoundingClientRect();
+      const store = useMapStore.getState();
+      const { callbacks } = store;
+      if (touch) suppressGhostClick(e.clientX, e.clientY); // the card or album may appear under the finger
+      // Focus markers first: they are drawn over the albums but take no pointer events themselves.
+      const marker = markerAt(getPlacedMarkers(), e.clientX - rect.left, e.clientY - rect.top, d.type);
+      if (marker >= 0) {
+        // The marker is about to move or unmount under a resting pointer, so end its hover now.
+        store.setHoveredIndex(null);
+        callbacks.onHover(null);
+        callbacks.onPick(marker);
+        return;
+      }
       const [wx, wy] = screenToWorld(e.clientX, e.clientY, rect, camera);
       const id = albumAt(wx, wy, camera, rect.height, gl.getPixelRatio(), d.type, positionsRef.current, hoverRef.current);
-      const { callbacks } = useMapStore.getState();
-      if (touch) suppressGhostClick(e.clientX, e.clientY); // the card or album may appear under the finger
       if (id >= 0) callbacks.onPick(id);
       else callbacks.onEmpty();
     };

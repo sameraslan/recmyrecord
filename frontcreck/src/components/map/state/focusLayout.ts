@@ -144,6 +144,25 @@ export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number
   return items;
 }
 
+/** A marker as MarkerDriver last drew it: `drawn` is its box edge on screen (1.16x when hot). */
+export interface PlacedMarker extends MarkerItem {
+  drawn: number;
+}
+
+/** CSS px of slack around a marker box for a hit: a mouse gets the mockup's 4 px, a finger more. */
+const HIT_SLACK = { mouse: 4, touch: 8 } as const;
+
+/** The album whose marker box contains the canvas point (x, y), or -1. The markers never overlap; the seed,
+ * drawn on top, is tested first. */
+export function markerAt(placed: readonly PlacedMarker[], x: number, y: number, pointerType = 'mouse'): number {
+  const slack = pointerType === 'mouse' ? HIT_SLACK.mouse : HIT_SLACK.touch;
+  for (const it of placed) {
+    const h = it.drawn / 2 + slack;
+    if (Math.abs(x - it.x) <= h && Math.abs(y - it.y) <= h) return it.id;
+  }
+  return -1;
+}
+
 /** World units: a tight cluster is framed as if it spanned at least this much, so it is not zoomed to the maximum. */
 const MIN_FOCUS_SPAN = 0.15;
 /** Rounds of "lay the markers out, zoom out until they fit". */

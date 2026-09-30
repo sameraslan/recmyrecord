@@ -1,3 +1,5 @@
+import type { PlacedMarker } from './focusLayout';
+
 /** DOM overlays positioned every rendered frame by the drivers (no React state per frame). */
 const els = new Map<string, Element>();
 
@@ -22,3 +24,16 @@ export function getOverlaySize(key: string): { width: number; height: number } {
 }
 
 export const markerKey = (id: number): string => `marker-${id}`;
+export const badgeKey = (id: number): string => `badge-${id}`;
+
+let placedMarkers: readonly PlacedMarker[] = [];
+
+/** The focus markers as MarkerDriver last placed them (canvas CSS px), for hover and pick hit tests. The markers
+ * themselves take no pointer events, so a drag or pinch that starts on a cover still reaches the canvas. */
+export function setPlacedMarkers(placed: readonly PlacedMarker[]): void {
+  placedMarkers = placed;
+}
+
+export function getPlacedMarkers(): readonly PlacedMarker[] {
+  return placedMarkers;
+}

@@ -7,8 +7,10 @@ import type * as THREE from "three";
 import { DURATION } from "@/lib/media";
 import { ATLAS_PER_SHEET } from "@/lib/data/sprites";
 import { renderedSpriteCssSize } from "../shaders/album";
+import { markerAt } from "../state/focusLayout";
 import { cssPxToWorld, pickAlbum, spriteHitRadiusCssPx } from "../state/hitTest";
 import { useMapStore } from "../state/mapStore";
+import { getPlacedMarkers } from "../state/overlayEls";
 import { canvasRect, screenToWorld } from "../state/projection";
 import { isAtlasSheetLoaded } from "./AtlasManager";
 
@@ -172,11 +174,9 @@ export function CursorTracker({
 
     if (!c) {
       if (hoverRef.current !== -1) {
-        const prev = hoverRef.current;
         hoverRef.current = -1;
         clearHoverTimer();
-        // Leaving the canvas onto a focus marker: the marker has already set its own hover, keep it.
-        if (useMapStore.getState().hoveredIndex === prev) setHover(null);
+        setHover(null);
       }
       // eslint-disable-next-line react-hooks/immutability -- see the useFrame-level comment above.
       canvas.style.cursor = "";
@@ -189,9 +189,13 @@ export function CursorTracker({
     // and some unrelated album slides under the resting cursor; hover stays
     // off until the pointer actually moves, so that album doesn't pop up a
     // second label next to the one just clicked.
+    // Focus markers are drawn over the canvas but take no pointer events: their boxes are hit first.
+    const marker = hoverSuppressedRef.current ? -1 : markerAt(getPlacedMarkers(), c[0], c[1]);
     const idx = hoverSuppressedRef.current
       ? -1
-      : albumAt(
+      : marker >= 0
+        ? marker
+        : albumAt(
           wx,
           wy,
           cam,
@@ -206,7 +210,10 @@ export function CursorTracker({
     if (idx !== hoverRef.current) {
       hoverRef.current = idx;
       clearHoverTimer();
-      if (idx >= 0) {
+      if (marker >= 0) {
+        // A marker lights up at once, as the DOM markers did (no 80 ms settle).
+        setHover(idx);
+      } else if (idx >= 0) {
         hoverTimerRef.current = setTimeout(() => {
           hoverTimerRef.current = null;
           setHover(idx);

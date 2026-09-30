@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MARKER_GAP, MARKER_SIZE, focusCamera, layoutMarkers, ringRadius, type MarkerBounds, type MarkerItem } from './focusLayout';
+import { MARKER_GAP, MARKER_SIZE, focusCamera, layoutMarkers, markerAt, ringRadius, type MarkerBounds, type MarkerItem } from './focusLayout';
 import { FRUSTUM_HALF_HEIGHT } from './zoomLimits';
 
 function overlaps(items: MarkerItem[], gap = MARKER_GAP): number {
@@ -140,5 +140,26 @@ describe('focusCamera', () => {
   it('passes the zoom through the clamp', () => {
     const pos = new Float32Array([0, 0, 0.3, 0.1]);
     expect(focusCamera([0, 1], pos, W, H, 0, pad, () => 1.5).zoom).toBe(1.5);
+  });
+});
+
+describe('markerAt', () => {
+  const placed = [
+    { id: 11, rank: 0, ax: 100, ay: 100, x: 100, y: 100, size: 64, seed: true, drawn: 64 },
+    { id: 4, rank: 1, ax: 200, ay: 100, x: 200, y: 100, size: 46, seed: false, drawn: 46 },
+    { id: 9, rank: 2, ax: 100, ay: 220, x: 100, y: 220, size: 46, seed: false, drawn: 46 * 1.16 },
+  ];
+
+  it('finds the marker under a point, with a few px of slack', () => {
+    expect(markerAt(placed, 100, 100)).toBe(11);
+    expect(markerAt(placed, 200 + 23 + 3, 100)).toBe(4);
+    expect(markerAt(placed, 200 + 23 + 6, 100)).toBe(-1);
+    expect(markerAt(placed, 150, 160)).toBe(-1);
+  });
+
+  it('uses the drawn (hot) size and a larger slack for touch', () => {
+    expect(markerAt(placed, 100 + 26.68 + 3, 220)).toBe(9);
+    expect(markerAt(placed, 200 + 23 + 7, 100)).toBe(-1);
+    expect(markerAt(placed, 200 + 23 + 7, 100, 'touch')).toBe(4);
   });
 });

@@ -13,7 +13,8 @@ function focusKey(s: MapStore): string {
 }
 
 /** Frames the seed and visible recommendations whenever they, the stop, the inset or the padding change,
- * unless the user has moved the camera since this seed was focused. A new seed always frames. */
+ * unless the user has moved the camera since this seed was focused or since the last Reset
+ * (`focusRearmedAt`). A new seed always frames. */
 export function FocusFramer() {
   const width = useThree((s) => s.size.width);
   const height = useThree((s) => s.size.height);
@@ -29,7 +30,7 @@ export function FocusFramer() {
         return;
       }
       const newSeed = seed !== last.current.seed;
-      const userMoved = !newSeed && s.lastCameraGrab > last.current.since;
+      const userMoved = !newSeed && s.lastCameraGrab > Math.max(last.current.since, s.focusRearmedAt);
       last.current = { key, seed, since: newSeed ? Date.now() : last.current.since };
       if (!userMoved) getCameraControl()?.frameFocus(true);
     };
@@ -39,7 +40,7 @@ export function FocusFramer() {
 
   useEffect(() => {
     const s = useMapStore.getState();
-    if (s.input.focus && s.lastCameraGrab <= last.current.since) getCameraControl()?.frameFocus(false);
+    if (s.input.focus && s.lastCameraGrab <= Math.max(last.current.since, s.focusRearmedAt)) getCameraControl()?.frameFocus(false);
   }, [width, height]);
 
   return null;

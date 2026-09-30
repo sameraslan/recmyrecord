@@ -2,9 +2,9 @@
 
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
-import { MARKER_SIZE, layoutMarkers } from '../state/focusLayout';
+import { MARKER_SIZE, layoutMarkers, type PlacedMarker } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
-import { getOverlayEl, getOverlaySize, markerKey } from '../state/overlayEls';
+import { badgeKey, getOverlayEl, getOverlaySize, getPlacedMarkers, markerKey, setPlacedMarkers } from '../state/overlayEls';
 import { canvasRect, visibleArea, worldToScreen } from '../state/projection';
 import { TIP_EDGE, clamp } from './OverlayDriver';
 
@@ -13,6 +13,8 @@ const HOT_SCALE = 1.16;
 const MARKER_EDGE = 8;
 /** A marker moved further than this from its album gets a leader line back to it (mockup: 6 px). */
 const LEADER_MIN_PX = 6;
+/** Rank badge offset from the cover's top-left corner (mockup: 6 px up and left). */
+const BADGE_OFFSET = 6;
 
 function setLine(l: SVGLineElement, x1: number, y1: number, x2: number, y2: number) {
   l.setAttribute('x1', x1.toFixed(1));
@@ -29,7 +31,10 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
   useFrame(() => {
     const { input, hoveredIndex, insetCurrent } = useMapStore.getState();
     const f = input.focus;
-    if (!f) return;
+    if (!f) {
+      if (getPlacedMarkers().length) setPlacedMarkers([]);
+      return;
+    }
     const pos = positionsRef.current;
     const { width, height } = get().size;
     const rect = canvasRect(width, height);
@@ -41,14 +46,26 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
       MARKER_SIZE.rec,
       { bounds: visibleArea(inset, width, height, MARKER_EDGE) },
     );
+    const drawn: PlacedMarker[] = [];
     for (const it of placed) {
       const el = getOverlayEl(markerKey(it.id));
+      const s = el?.dataset.hot === 'true' ? it.size * HOT_SCALE : it.size;
+      drawn.push({ ...it, drawn: s });
       if (!el) continue;
-      const s = el.dataset.hot === 'true' ? it.size * HOT_SCALE : it.size;
+      const x0 = it.x - s / 2;
+      const y0 = it.y - s / 2;
       el.style.width = `${s}px`;
       el.style.height = `${s}px`;
-      el.style.transform = `translate3d(${(it.x - s / 2).toFixed(1)}px, ${(it.y - s / 2).toFixed(1)}px, 0)`;
+      el.style.transform = `translate3d(${x0.toFixed(1)}px, ${y0.toFixed(1)}px, 0)`;
+      el.style.visibility = '';
+      const badge = getOverlayEl(badgeKey(it.id));
+      if (badge) {
+        badge.style.transform = `translate3d(${(x0 - BADGE_OFFSET).toFixed(1)}px, ${(y0 - BADGE_OFFSET).toFixed(1)}px, 0)`;
+        badge.style.visibility = '';
+      }
     }
+    // Hover and pick hit-test these boxes (CursorTracker, PickController): the markers take no pointer events.
+    setPlacedMarkers(drawn);
     const svg = getOverlayEl<SVGSVGElement>('lines');
     if (svg && placed.length) {
       const seed = placed[0];
@@ -70,7 +87,7 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
       // Measured by HoverLabel after each content change, so no layout read per frame.
       const { width: tw, height: th } = getOverlaySize('hover');
       const area = visibleArea(inset, width, height, TIP_EDGE);
-      const half = (it.size * (it.seed ? 1 : HOT_SCALE)) / 2;
+      const half = (drawn.find((d) => d.id === it.id)?.drawn ?? it.size) / 2;
       let lx = it.x + half + 14;
       if (lx + tw > area.right) lx = it.x - half - 14 - tw;
       lx = clamp(lx, area.left, area.right - tw);

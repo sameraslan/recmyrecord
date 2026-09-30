@@ -81,6 +81,8 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       zoomBy: (factor) => {
         // compound from the pending target, so repeated presses keep zooming instead of restarting from the live value
         const base = tween.current?.to ?? current();
+        // A zoom from the buttons is the visitor's own camera move: a stop change must not undo it (FocusFramer).
+        useMapStore.getState().registerCameraGrab();
         start({ ...base, zoom: base.zoom * factor }, ZOOM_STEP_MS);
       },
       panBy: (dx, dy) => {
@@ -90,7 +92,9 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
         start({ x: camera.position.x + dx * wpp, y: camera.position.y + dy * wpp, zoom: camera.zoom }, 0);
       },
       reset: () => {
-        const { input } = useMapStore.getState();
+        const { input, rearmFocus } = useMapStore.getState();
+        // Back to the focus framing, and FocusFramer follows stop and inset changes again.
+        if (input.focus) rearmFocus();
         start(focusTarget() ?? (input.selected !== null ? flyTarget(input.selected) : overview()), DURATION.camera);
       },
       flyTo: (id) => start(flyTarget(id), FLY_MS),

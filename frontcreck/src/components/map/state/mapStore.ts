@@ -37,6 +37,8 @@ export interface MapStore {
   rigMoving: boolean;
   /** True while MorphDriver animates sliderT towards the current stop. */
   morphing: boolean;
+  /** Date.now() of the last Reset while focused: camera grabs before it no longer stop the focus framing. */
+  focusRearmedAt: number;
   setData: (data: MapData | null) => void;
   setInput: (input: MapInput) => void;
   setCallbacks: (callbacks: MapCallbacks) => void;
@@ -50,6 +52,7 @@ export interface MapStore {
   setNudging: (nudging: boolean) => void;
   setRigMoving: (rigMoving: boolean) => void;
   setMorphing: (morphing: boolean) => void;
+  rearmFocus: () => void;
 }
 
 export const useMapStore = create<MapStore>()((set) => ({
@@ -66,6 +69,7 @@ export const useMapStore = create<MapStore>()((set) => ({
   nudging: false,
   rigMoving: false,
   morphing: false,
+  focusRearmedAt: 0,
   setData: (data) => set({ data }),
   setInput: (input) => {
     set({ input });
@@ -85,4 +89,5 @@ export const useMapStore = create<MapStore>()((set) => ({
   setNudging: (nudging) => set((s) => (s.nudging === nudging ? s : { nudging })),
   setRigMoving: (rigMoving) => set((s) => (s.rigMoving === rigMoving ? s : { rigMoving })),
   setMorphing: (morphing) => set((s) => (s.morphing === morphing ? s : { morphing })),
+  rearmFocus: () => set({ focusRearmedAt: Date.now() }),
 }));

@@ -55,7 +55,8 @@
 .mk-lines line { stroke: rgba(237, 229, 213, .22); stroke-width: 1; stroke-linecap: round; }
 .mk-lines line[data-hot] { stroke: var(--acc); stroke-opacity: .9; stroke-width: 1.5; }
 .mk-lines line[data-leader] { stroke: rgba(237, 229, 213, .35); }
-.mk { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; will-change: transform; }
+/* Markers take no pointer events: the canvas hit-tests their boxes, so drags and pinches that start on a cover reach it. */
+.mk { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
 .mk .cover { width: 100% !important; box-shadow: 1px 3px 0 rgba(10, 8, 6, .55); }
 /* Square rings (an outline would follow the cover's 2 px radius): a hairline on the cover edge, the seed's
  * 2 px accent ring 3 px out, a hot recommendation's 2 px out. */
@@ -64,13 +65,23 @@
 .mk--seed::after { inset: -5px; border: 2px solid var(--acc); }
 .mk[data-hot] { z-index: 2; }
 .mk[data-hot]::after { inset: -4px; border: 2px solid var(--acc); }
+/* Badges in their own layer above every cover and ring (the mockup draws them last). */
+.mk-badges { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mk-n {
-  position: absolute; left: -6px; top: -6px; z-index: 2; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center;
+  position: absolute; left: 0; top: 0; min-width: 18px; will-change: transform; height: 18px; padding: 0 4px; display: grid; place-items: center;
   background: var(--color-float); border: 1px solid rgba(237, 229, 213, .35); color: var(--color-paper); font: 600 11px/1 var(--font-sans);
 }
-.mk[data-hot] .mk-n { background: var(--acc); border-color: var(--acc); color: var(--color-lamp-ink); }
+.mk-n[data-hot] { background: var(--acc); border-color: var(--acc); color: var(--color-lamp-ink); }
 
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
   .map-zoom { right: 12px; bottom: calc(130px + env(safe-area-inset-bottom)); }
+  /* 44 px tap targets that look like the desktop ones: the hit areas grow into the panel's spacing. */
+  .mode-track { height: 44px; margin: -9px 0 -11px; }
+  .mode-track::before { top: 21px; }
+  .mode-track i { top: 18px; }
+  .mode input[type=range], .mode input[type=range]::-webkit-slider-runnable-track, .mode input[type=range]::-moz-range-track { height: 44px; }
+  .mode input[type=range]::-webkit-slider-thumb { margin-top: 14px; }
+  .mode-stops { position: relative; }
+  .mode-stops button { min-height: 44px; margin: -7px 0; }
 }
