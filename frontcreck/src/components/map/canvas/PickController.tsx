@@ -42,7 +42,12 @@ export function PickController({ positionsRef, hoverRef }: { positionsRef: React
       const rect = canvas.getBoundingClientRect();
       const store = useMapStore.getState();
       const { callbacks } = store;
-      if (touch) suppressGhostClick(e.clientX, e.clientY); // the card or album may appear under the finger
+      // A pick shows the card or the album under the finger: swallow the tap's follow-up mousedown and click
+      // there. A tap on empty map arms nothing, so it moves focus off the focused control as usual.
+      const picked = (id: number) => {
+        if (touch) suppressGhostClick(e.clientX, e.clientY);
+        callbacks.onPick(id);
+      };
       // Focus markers first: they are drawn over the albums but take no pointer events themselves.
       // The boxes are from MarkerDriver's last frame: none count once the focus has gone.
       const marker = store.input.focus ? markerAt(getPlacedMarkers(), e.clientX - rect.left, e.clientY - rect.top, d.type) : -1;
@@ -50,12 +55,12 @@ export function PickController({ positionsRef, hoverRef }: { positionsRef: React
         // The marker is about to move or unmount under a resting pointer, so end its hover now.
         store.setHoveredIndex(null);
         callbacks.onHover(null);
-        callbacks.onPick(marker);
+        picked(marker);
         return;
       }
       const [wx, wy] = screenToWorld(e.clientX, e.clientY, rect, camera);
       const id = albumAt(wx, wy, camera, rect.height, gl.getPixelRatio(), d.type, positionsRef.current, hoverRef.current);
-      if (id >= 0) callbacks.onPick(id);
+      if (id >= 0) picked(id);
       else callbacks.onEmpty();
     };
     const onCancel = () => {

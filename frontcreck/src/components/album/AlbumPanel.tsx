@@ -97,8 +97,8 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
       if (t instanceof HTMLInputElement && t.type !== 'range') return;
       // Dialogs (the phone search sheet) and the search popover handle their own Escape.
       if (t?.closest('[aria-modal="true"], .combo')) return;
-      // Phone map mode: Escape goes back to the list, not away from the album.
-      if (useAppStore.getState().mapModeFor === seed.slug) {
+      // Phone map mode: Escape goes back to the list, not away from the album. Map mode exists only when narrow.
+      if (narrow && useAppStore.getState().mapModeFor === seed.slug) {
         setMapMode(false);
         return;
       }
@@ -106,7 +106,7 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [close, setMapMode, seed.slug]);
+  }, [close, setMapMode, seed.slug, narrow]);
 
   return (
     <>

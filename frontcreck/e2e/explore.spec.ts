@@ -167,6 +167,20 @@ test('the card closes with its button, with Escape and with a click on empty map
   await expect(page.locator('.card')).toHaveCount(0);
 });
 
+test('a tap on empty map moves focus off the focused control', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'touch taps only');
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  const range = page.getByRole('slider', { name: COPY.slider.label });
+  await range.focus();
+  const empty = await emptyMapPoint(page);
+  await page.touchscreen.tap(empty.x, empty.y);
+  // Only a pick guards against the tap's follow-up mousedown; on empty map it moves focus as usual.
+  await expect(range).not.toBeFocused();
+  await expect(page.locator('canvas.map-canvas')).toBeFocused();
+});
+
 test('Escape in the header search does not close the card', async ({ page, isMobile }) => {
   test.skip(isMobile, 'uses the desktop header search field');
   await page.goto('/map');
