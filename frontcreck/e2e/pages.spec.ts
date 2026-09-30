@@ -97,6 +97,19 @@ test('About explains the site and closes back', async ({ page }, info) => {
   await expect(page).toHaveURL('/');
 });
 
+test('a press on the backdrop around the About card closes it; a press on the card does not', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the card fills the screen on a phone');
+  await page.goto('/');
+  await page.getByRole('navigation', { name: COPY.nav.label }).getByRole('link', { name: COPY.nav.about }).click();
+  await expect(page).toHaveURL('/about');
+  const card = page.locator('.about');
+  await card.click({ position: { x: 60, y: 200 } });
+  await expect(page).toHaveURL('/about');
+  const box = (await card.boundingBox())!;
+  await page.mouse.click(box.x - 60, box.y + 100);
+  await expect(page).toHaveURL('/');
+});
+
 test('a direct load of About or a 404 leaves focus alone: the first Tab reaches the skip link', async ({ page }) => {
   for (const path of ['/about', '/no-such-page']) {
     await page.goto(path);
@@ -144,7 +157,6 @@ async function sampleFrames(page: Page): Promise<void> {
         seed: s.focus?.seed ?? null,
         ambient: s.ambient !== null,
         inset: s.panelInset,
-        skeleton: !!document.querySelector('section.album[aria-busy="true"]'),
       });
       requestAnimationFrame(tick);
     };
@@ -152,7 +164,7 @@ async function sampleFrames(page: Page): Promise<void> {
   });
 }
 
-type Sample = { path: string; seed: number | null; ambient: boolean; inset: number; skeleton: boolean };
+type Sample = { path: string; seed: number | null; ambient: boolean; inset: number };
 
 async function stopSampling(page: Page): Promise<Sample[]> {
   return page.evaluate(() => {
@@ -171,22 +183,21 @@ test.describe('album to album', () => {
     await page.waitForLoadState('networkidle');
     const row = page.locator('ol.rec-list .rec-main').first();
     const href = (await row.getAttribute('href'))!;
+    const seed = await page.evaluate(() => window.__rmr!.getState().focus!.seed);
     await sampleFrames(page);
     await row.click();
     await expect(page).toHaveURL(href);
-    await expect(page.locator('section.album[aria-busy="true"]')).toHaveCount(0);
-    await expect.poll(() => page.evaluate(() => window.__rmr!.getState().focus?.seed)).not.toBe(11);
+    await expect.poll(() => page.evaluate(() => window.__rmr!.getState().focus?.seed)).not.toBe(seed);
     await page.waitForTimeout(100);
     const samples = await stopSampling(page);
     expect(samples.length).toBeGreaterThan(2);
-    expect(samples.filter((s) => s.seed === null || !s.ambient || s.skeleton || (!isMobile && s.inset === 0))).toEqual([]);
+    expect(samples.filter((s) => s.seed === null || !s.ambient || (!isMobile && s.inset === 0))).toEqual([]);
   });
 
   test('a slow navigation whose prefetch failed keeps the map inset while it waits', async ({ page, isMobile }) => {
     test.skip(isMobile, 'the phone has no map inset');
     // The first row of In Rainbows (balanced). Its page prefetch fails and the navigation request is slow; the
-    // current panel and the map inset stay until the new album arrives (album pages have no loading boundary;
-    // see AlbumSkeleton.tsx).
+    // current panel and the map inset stay until the new album arrives (album pages have no loading boundary).
     const target = '/album/undun-the-roots';
     await page.route(
       (url) => url.pathname === target,

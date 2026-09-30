@@ -50,7 +50,6 @@ export const COPY = {
     rowLabel: (title: string, artist: string, shared: readonly string[]) =>
       `${title} by ${artist}${shared.length ? `. Shares ${shared.join(', ')}` : ''}`,
     rowSpotify: (title: string) => `Open ${title} in Spotify (opens in a new tab)`,
-    loading: 'Loading the closest albums',
     regionLabel: (title: string) => `${title} and the closest albums`,
   },
   slider: {

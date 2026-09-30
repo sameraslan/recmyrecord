@@ -2,10 +2,11 @@
 
 import { ErrorPanel } from '@/components/ErrorPanel';
 
-export default function RouteError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
+/** Route error boundary. `retry` re-fetches and re-renders the segment (a failed RSC or chunk fetch). */
+export default function RouteError({ retry }: { error: Error & { digest?: string }; retry: () => void }) {
   return (
     <section className="page-msg">
-      <ErrorPanel onRetry={reset} />
+      <ErrorPanel onRetry={retry} />
     </section>
   );
 }

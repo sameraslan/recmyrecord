@@ -59,11 +59,8 @@
   .rec-shared { display: none; }
 }
 
-/* Inline data error and loading placeholders (mockup lines 317 to 323). */
+/* Inline data error (mockup lines 317 to 323). */
 .rec-error { display: grid; align-content: start; justify-items: start; gap: 6px; padding: 26px 0; }
 .page-msg .rec-error { justify-items: center; }
 .rec-error .e1 { font-family: var(--font-serif); font-size: 26px; font-weight: 500; max-width: 22em; }
 .rec-error .btn { margin-top: 12px; }
-.sk { display: block; background: var(--color-room-3); border-radius: 2px; }
-.sk-pulse { animation: pulse 1.8s ease-in-out infinite; }
-@keyframes pulse { 50% { opacity: .55; } }
