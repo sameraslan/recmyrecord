@@ -23,12 +23,13 @@ export function hrefWithBy(href: string, by: StopId): string {
   return u.pathname + u.search + u.hash;
 }
 
-/** The stop the app itself last wrote with replaceBy, until the URL has caught up with it (see isOwnBy). */
-let ownBy: StopId | null = null;
+/** Stops the app itself wrote with replaceBy that the URL has not caught up with yet, oldest first (see isOwnBy).
+ * Several can be pending: Next may apply an older write after a newer one was already made. */
+let ownBys: StopId[] = [];
 if (typeof window !== 'undefined') {
   // Back and forward bring back URLs the app did not just write.
   window.addEventListener('popstate', () => {
-    ownBy = null;
+    ownBys = [];
   });
 }
 
@@ -38,24 +39,25 @@ export function replaceBy(by: StopId): void {
   const current = window.location.pathname + window.location.search + window.location.hash;
   const next = hrefWithBy(current, by);
   if (next === current) return;
-  ownBy = by;
+  ownBys = [...ownBys.slice(-7), by];
   window.history.replaceState(null, '', next);
 }
 
 /**
- * True when `by` is the stop the app itself last wrote with replaceBy, and forgets it. Next applies that URL
- * in a transition, so it can arrive after the slider has already moved on; the store is then ahead of the
- * URL and must not be set back to it.
+ * True when `by` is a stop the app itself wrote with replaceBy that the URL had not caught up with, and forgets
+ * it with every older one. Next applies such a URL in a transition, so it can arrive after the slider has
+ * already moved on; the store is then ahead of the URL and must not be set back to it.
  */
 export function isOwnBy(by: StopId): boolean {
-  if (ownBy !== by) return false;
-  ownBy = null;
+  const i = ownBys.indexOf(by);
+  if (i < 0) return false;
+  ownBys = ownBys.slice(i + 1);
   return true;
 }
 
-/** isOwnBy without forgetting, for rendering. */
-export function peekOwnBy(): StopId | null {
-  return ownBy;
+/** Whether isOwnBy(by) would be true, without forgetting anything, for rendering. */
+export function isPendingOwnBy(by: StopId): boolean {
+  return ownBys.includes(by);
 }
 
 /** An album view is exactly a pathname that `slugFromPathname` accepts. */

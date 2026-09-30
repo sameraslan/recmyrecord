@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import type { AlbumPageData } from '@/lib/types';
-import { isOwnBy, parseBy, peekOwnBy } from '@/lib/url-state';
+import { isOwnBy, isPendingOwnBy, parseBy } from '@/lib/url-state';
 import { AlbumPanel } from './AlbumPanel';
 
 /** The list renders from the store's stop once the store has caught up with `?by=`, and from `?by=` until then.
@@ -22,7 +22,7 @@ export function AlbumView({ data }: { data: AlbumPageData }) {
   if (urlSeen !== urlStop) {
     setUrlSeen(urlStop);
     // The app's own slider write arriving late is not a new `?by=`: the store stays ahead of it.
-    setCaughtUp(storeStop === urlStop || peekOwnBy() === urlStop);
+    setCaughtUp(storeStop === urlStop || isPendingOwnBy(urlStop));
   } else if (!caughtUp && storeStop === urlStop) {
     setCaughtUp(true);
   }

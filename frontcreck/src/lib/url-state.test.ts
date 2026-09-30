@@ -6,7 +6,7 @@ import {
   isOwnBy,
   isStopId,
   parseBy,
-  peekOwnBy,
+  isPendingOwnBy,
   replaceBy,
   slugFromPathname,
   viewFromPathname,
@@ -51,18 +51,33 @@ describe('url state', () => {
     expect(window.history.length).toBe(before);
   });
 
-  it('remembers the stop it wrote until the URL catches up, and forgets it on back or forward', () => {
+  it('remembers the stops it wrote until the URL catches up, and forgets them on back or forward', () => {
     window.history.replaceState(null, '', '/album/x');
+    window.dispatchEvent(new PopStateEvent('popstate')); // forget earlier tests' writes
     replaceBy('mood');
-    expect(peekOwnBy()).toBe('mood');
+    expect(isPendingOwnBy('mood')).toBe(true);
     expect(isOwnBy('sonic')).toBe(false);
     expect(isOwnBy('mood')).toBe(true);
     expect(isOwnBy('mood')).toBe(false);
     replaceBy('mood'); // already in the URL: nothing written, nothing remembered
-    expect(peekOwnBy()).toBeNull();
+    expect(isPendingOwnBy('mood')).toBe(false);
     replaceBy('sonic');
     window.dispatchEvent(new PopStateEvent('popstate'));
     expect(isOwnBy('sonic')).toBe(false);
+  });
+
+  it('recognises an older own write that Next applies after a newer one', () => {
+    window.history.replaceState(null, '', '/album/x');
+    window.dispatchEvent(new PopStateEvent('popstate')); // forget earlier tests' writes
+    replaceBy('mood');
+    replaceBy('sonic');
+    expect(isOwnBy('mood')).toBe(true);
+    expect(isOwnBy('sonic')).toBe(true);
+    // A newer write catching up also forgets the older ones Next skipped.
+    replaceBy('mood');
+    replaceBy('balanced');
+    expect(isOwnBy('balanced')).toBe(true);
+    expect(isOwnBy('mood')).toBe(false);
   });
 
   it('derives the view and slug from a pathname', () => {
