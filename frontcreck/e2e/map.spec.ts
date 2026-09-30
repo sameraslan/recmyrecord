@@ -99,6 +99,11 @@ test.describe('desktop pointer', () => {
     await expect.poll(() => page.evaluate(() => window.__rmr!.getState().selected)).not.toBeNull();
     await waitForCameraIdle(page);
     expect((await camera(page)).zoom).toBeGreaterThan(z1);
+    // Covers show after the fly: the shader draws the pick large and framed (explore.spec), not the DOM ring.
+    await expect(page.locator('.map-sel')).toHaveCSS('opacity', '0');
+    // Back among dots, the ring with its centre dot marks it.
+    for (let i = 0; i < 3; i++) await page.getByRole('button', { name: COPY.map.zoomOut }).click();
+    await waitForCameraIdle(page);
     await expect(page.locator('.map-sel')).toHaveCSS('opacity', '1');
   });
 });

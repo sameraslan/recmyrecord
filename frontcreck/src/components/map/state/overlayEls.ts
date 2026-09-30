@@ -37,3 +37,15 @@ export function setPlacedMarkers(placed: readonly PlacedMarker[]): void {
 export function getPlacedMarkers(): readonly PlacedMarker[] {
   return placedMarkers;
 }
+
+let mapZoomed = false;
+
+/** Whether the last drawn frame showed covers (OverlayDriver), so Explore's hint can start hidden when it mounts
+ * over a map that is already zoomed in and no new frame is drawn (demand frameloop). */
+export function setMapZoomed(zoomed: boolean): void {
+  mapZoomed = zoomed;
+}
+
+export function isMapZoomed(): boolean {
+  return mapZoomed;
+}

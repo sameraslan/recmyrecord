@@ -16,8 +16,6 @@
 .map-tip .a { font-size: 13px; color: var(--color-dust); }
 .map-sel { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; opacity: 0; border: 2px solid var(--color-lamp); border-radius: 50%; }
 .map-sel::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--color-lamp); }
-.map-sel[data-shape="square"] { border-radius: 2px; }
-.map-sel[data-shape="square"]::after { display: none; }
 .map-ui { position: absolute; inset: 0; z-index: 6; pointer-events: none; transition: left var(--dur) var(--out); }
 .map-ui > * { pointer-events: auto; }
 .panel { background: var(--color-float); border: 1px solid var(--color-rule); border-radius: 2px; box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .8); }

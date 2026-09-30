@@ -3,7 +3,7 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
-import { DURATION, easeOutCubic, prefersReducedMotion } from '@/lib/media';
+import { DURATION, easeOutCubic, isNarrow, prefersReducedMotion } from '@/lib/media';
 import type { MapCamera } from '@/lib/types';
 import { STOP_T, interpolated } from '../data';
 import { focusCamera } from '../state/focusLayout';
@@ -70,13 +70,14 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       const { height } = get().size;
       const covers = zoomForCoverPx(COVER_FADE_END_PX, height);
       const zoom = Math.max(camera.zoom, covers);
-      // Centred, unless the centre falls outside the framing band (the phone Explore card raises framePadding
-      // bottom while it is open): then the album sits in the middle of the band, above the card.
+      // Centred. On phones, where the Explore card is a bottom sheet (it raises framePadding bottom while open),
+      // an album whose centred position would fall outside the framing band sits in the middle of the band,
+      // above the sheet. Desktop keeps the centre: its card sits in the corner.
       const pad = useMapStore.getState().input.framePadding;
       const top = pad.top;
       const bottom = height - pad.bottom;
       let y = p[2 * id + 1];
-      if (bottom > top && (height / 2 < top || height / 2 > bottom)) {
+      if (isNarrow() && bottom > top && (height / 2 < top || height / 2 > bottom)) {
         const wpp = (camera.top - camera.bottom) / (height * zoom);
         y -= (height / 2 - (top + bottom) / 2) * wpp;
       }

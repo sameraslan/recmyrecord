@@ -49,6 +49,30 @@ export function renderedSpriteCssSize(
   return Math.min(spriteCssSize(zoom, canvasHeightCssPx, loaded) * scale * pixelRatio, capDevicePx) / pixelRatio;
 }
 
+/** The album picked in Explore, once covers show (coverT > 0.5), is drawn this much larger than the other
+ * covers and at least SELECTED_MIN_PX, on top, with a SELECTED_FRAME_PX lamp frame SELECTED_FRAME_GAP_PX
+ * outside it (mockup: max(cs * 1.8, 64), strokeRect 4 px out, line width 2). */
+export const SELECTED_SCALE = 1.8;
+export const SELECTED_MIN_PX = 64;
+export const SELECTED_FRAME_GAP_PX = 4;
+export const SELECTED_FRAME_PX = 2;
+/** CSS px the selected sprite adds around the cover for its frame (both sides, plus a pixel for antialiasing). */
+const SELECTED_QUAD_EXTRA = 2 * (SELECTED_FRAME_GAP_PX + SELECTED_FRAME_PX / 2) + 2;
+/** Alpha factor of the other covers while an album is picked (mockup coverA * .5); dots are unaffected. */
+export const SELECTION_DIM = 0.5;
+
+/** True when the picked album is drawn large and framed by the shader (else OverlayDriver's DOM ring marks it). */
+export function selectedIsProminent(zoom: number, canvasHeightCssPx: number, loaded: boolean): boolean {
+  return loaded && coverFade(zoom, canvasHeightCssPx) > 0.5;
+}
+
+/** JS mirror of the shader: CSS px of the picked album's cover while it is prominent (hit testing uses it). */
+export function selectedSpriteCssSize(zoom: number, canvasHeightCssPx: number, pixelRatio: number): number {
+  const s = Math.max(spriteCssSize(zoom, canvasHeightCssPx, true) * SELECTED_SCALE, SELECTED_MIN_PX);
+  const capCss = Math.min(240, canvasHeightCssPx * MAX_SPRITE_VIEWPORT_FRACTION * pixelRatio) / pixelRatio;
+  return s + SELECTED_QUAD_EXTRA > capCss ? capCss - SELECTED_QUAD_EXTRA : s;
+}
+
 const f = (v: number) => v.toFixed(4);
 
 export const ALBUM_VERTEX_SHADER = /* glsl */ `
@@ -66,6 +90,7 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   uniform float u_focusedAlbumIndex;
   uniform float u_neighborMask[12];  // focus album indices (seed first), padded with -1
   uniform float u_hoverIndex;   // -1 = no hover target
+  uniform float u_selectedIndex; // album picked in Explore, -1 = none (always -1 in album view)
   uniform float u_maxSpritePx;  // device px cap, viewportHeightCssPx * 0.18 * dpr
   uniform float u_atlasLoaded[5];
 
@@ -81,6 +106,8 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   varying float v_quadCss;      // CSS px of the point sprite (larger when hovered, for the ring)
   varying float v_dotCss;       // CSS px of the dot at this zoom (hover core dot)
   varying float v_markGap;      // CSS px between the drawn album and the hover mark
+  varying float v_sel;          // 1 = the picked album, drawn large and framed (cover mode)
+  varying float v_selDim;       // 1 = another album while one is picked
 
   vec2 interpolatePos() {
     if (u_sliderT <= 0.5) {
@@ -124,10 +151,15 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
     // instance paints over an earlier one. Layers, toward the camera:
     // focused 0.3 > hovered 0.2 > highlighted neighbour 0.1 > everything
     // else 0.0. Same-layer sprites keep plain painter's order.
+    // The picked album in cover mode (Explore) is above everything: 0.4.
     float layer = 0.0;
     if (u_focusedAlbumIndex >= 0.0 && isHighlighted(instanceIndex)) layer = 0.1;
     if (abs(u_hoverIndex - instanceIndex) < 0.5) layer = 0.2;
     if (abs(u_focusedAlbumIndex - instanceIndex) < 0.5) layer = 0.3;
+    float isSelected = (u_selectedIndex >= 0.0 && abs(u_selectedIndex - instanceIndex) < 0.5) ? 1.0 : 0.0;
+    v_sel = (isSelected > 0.5 && coverT > 0.5) ? 1.0 : 0.0;
+    v_selDim = (u_selectedIndex >= 0.0 && isSelected < 0.5) ? 1.0 : 0.0;
+    if (v_sel > 0.5) layer = 0.4;
 
     vec4 mvPos = modelViewMatrix * vec4(worldPos, layer, 1.0);
     gl_Position = projectionMatrix * mvPos;
@@ -144,15 +176,21 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
         baseCss *= 0.85;
       }
     }
-    v_hovered = (abs(u_hoverIndex - instanceIndex) < 0.5 && v_anchor < 0.5) ? 1.0 : 0.0;
+    v_hovered = (abs(u_hoverIndex - instanceIndex) < 0.5 && v_anchor < 0.5 && v_sel < 0.5) ? 1.0 : 0.0;
+    if (v_sel > 0.5) baseCss = max(baseCss * ${f(SELECTED_SCALE)}, ${f(SELECTED_MIN_PX)});
     // Hover mark (mockup): a ring of radius 7 around a dot, a square stroke 3 px outside a cover, and in
     // between a stroke that follows the drawn shape at a gap that shrinks to 3 px. The sprite grows to hold it.
     float markGap = mix(max(7.0 - 0.5 * baseCss, 3.0), 3.0, coverT);
     float quadCss = v_hovered > 0.5 ? max(baseCss + 2.0 * markGap + 2.0, 17.0) : baseCss;
+    if (v_sel > 0.5) quadCss = baseCss + ${f(SELECTED_QUAD_EXTRA)};
     // Clamp at 240 device-px (most GPUs cap GL_POINTS sprites around 256) and at u_maxSpritePx (a
     // viewport-relative cap so a single cover never dominates a short window).
     float capCss = min(240.0, u_maxSpritePx) / u_pixelRatio;
-    if (quadCss > capCss) {
+    if (v_sel > 0.5 && quadCss > capCss) {
+      // The frame keeps its size; the cover gives way (selectedSpriteCssSize mirrors this).
+      baseCss = capCss - ${f(SELECTED_QUAD_EXTRA)};
+      quadCss = capCss;
+    } else if (quadCss > capCss) {
       baseCss *= capCss / quadCss;
       quadCss = capCss;
     }
@@ -182,8 +220,11 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
   uniform float u_pixelRatio;
   uniform float u_dotAlpha;   // 0.78, 0.34 when the map is dimmed
   uniform float u_focusDim;   // alpha factor of albums outside the focus
+  uniform float u_selDim;     // alpha factor of the other covers while an album is picked
 
   const vec3 PAPER = vec3(0.929, 0.898, 0.835); // #ede5d5
+  const vec3 LAMP = vec3(0.902, 0.659, 0.337);  // #e6a856
+  const vec3 ROOM = vec3(0.082, 0.067, 0.051);  // #15110d
 
   varying vec2 v_atlasOrigin;
   varying vec2 v_atlasSize;
@@ -197,6 +238,14 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
   varying float v_quadCss;
   varying float v_dotCss;
   varying float v_markGap;
+  varying float v_sel;
+  varying float v_selDim;
+
+  /** Signed distance to a sharp-cornered square of half size h. */
+  float squareSd(vec2 p, float h) {
+    vec2 q = abs(p) - vec2(h);
+    return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0);
+  }
 
   vec3 sampleAtlas(int idx, vec2 uv) {
     if (idx == 0) return texture2D(u_atlas0, uv).rgb;
@@ -243,6 +292,18 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
     }
     float alpha = mask * mix(u_dotAlpha, 1.0, v_coverT);
     if (v_dim > 0.5) alpha *= u_focusDim;
+    // Only the cover part dims, so dots stay as they are.
+    if (v_selDim > 0.5) alpha *= mix(1.0, u_selDim, v_coverT);
+    if (v_sel > 0.5) {
+      // Mockup: a 1 px room-coloured backing around the cover, then a 2 px lamp frame 4 px outside it.
+      float back = 1.0 - smoothstep(1.0 - 0.5 * aa, 1.0 + 0.5 * aa, squareSd(p, halfSize));
+      col = mix(ROOM, col, mask);
+      alpha = max(alpha, back);
+      float a = band(squareSd(p, halfSize + ${f(SELECTED_FRAME_GAP_PX)}), ${f(SELECTED_FRAME_PX)}, aa);
+      float outA = a + alpha * (1.0 - a);
+      col = (LAMP * a + col * alpha * (1.0 - a)) / max(outA, 0.0001);
+      alpha = outA;
+    }
     if (v_anchor > 0.5) {
       col = PAPER;
       alpha = mask * 0.8;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { COVER_MAX_PX, COVER_WORLD, coverCssPx, pxPerWorld, zoomForCoverPx } from "../state/zoomLimits";
-import { renderedSpriteCssSize, spriteCssSize } from "./album";
+import { renderedSpriteCssSize, selectedIsProminent, selectedSpriteCssSize, spriteCssSize } from "./album";
 
 const H = 836; // canvas height of a 1440 x 900 window, CSS px
 const FIT = 0.784; // its fitted overview zoom (whole cloud, mockup padding)
@@ -50,5 +50,23 @@ describe("renderedSpriteCssSize (sizes plus the shader's device-px caps)", () =>
   it("applies the 240 device-px cap on a high-dpr screen", () => {
     // 64 px * 1.5 * dpr 3 = 288 device px, capped at 240 -> 80 CSS px.
     expect(renderedSpriteCssSize(100, 2000, 3, 1.5)).toBeCloseTo(80, 10);
+  });
+});
+
+describe("the picked album in cover mode (mockup max(cs * 1.8, 64))", () => {
+  it("is prominent only once covers are more than half faded in, and only with its atlas sheet", () => {
+    expect(selectedIsProminent(zoomForCoverPx(16, H), H, true)).toBe(false);
+    expect(selectedIsProminent(zoomForCoverPx(32, H), H, true)).toBe(true);
+    expect(selectedIsProminent(zoomForCoverPx(32, H), H, false)).toBe(false);
+  });
+
+  it("is at least 64 px, then 1.8 times the cover", () => {
+    expect(selectedSpriteCssSize(zoomForCoverPx(32, H), H, 1)).toBeCloseTo(64, 5);
+    expect(selectedSpriteCssSize(zoomForCoverPx(48, H), H, 1)).toBeCloseTo(86.4, 3);
+  });
+
+  it("keeps its frame inside the viewport-relative sprite cap", () => {
+    // 64 px covers on a 400 px tall canvas: the cap is 72 px, the frame takes 12 of it.
+    expect(selectedSpriteCssSize(zoomForCoverPx(64, 400), 400, 2)).toBeCloseTo(60, 5);
   });
 });

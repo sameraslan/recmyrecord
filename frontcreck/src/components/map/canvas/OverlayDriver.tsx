@@ -3,9 +3,9 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
 import { ATLAS_PER_SHEET } from '@/lib/data/sprites';
-import { renderedSpriteCssSize } from '../shaders/album';
+import { renderedSpriteCssSize, selectedIsProminent } from '../shaders/album';
 import { useMapStore } from '../state/mapStore';
-import { getOverlayEl, getOverlaySize } from '../state/overlayEls';
+import { getOverlayEl, getOverlaySize, setMapZoomed } from '../state/overlayEls';
 import { canvasRect, visibleArea, worldToScreen } from '../state/projection';
 import { coverFade } from '../state/zoomLimits';
 import { isAtlasSheetLoaded } from './AtlasManager';
@@ -49,26 +49,28 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
     }
 
     // Explore's hint line gives way once covers show (mockup `.zoomed .map-hint`: cover alpha above .25).
+    const zoomedNow = coverFade(camera.zoom, height) > 0.25;
+    setMapZoomed(zoomedNow);
     const hint = getOverlayEl('hint');
     if (hint) {
-      const zoomed = coverFade(camera.zoom, height) > 0.25 ? '1' : '0';
+      const zoomed = zoomedNow ? '1' : '0';
       if (hint.dataset.zoomed !== zoomed) hint.dataset.zoomed = zoomed;
     }
 
+    // The dot-mode ring; once covers show, the shader draws the picked album large and framed instead.
     const sel = getOverlayEl('selected');
     if (sel) {
       const i = input.selected;
-      if (i === null || focusIds.includes(i)) sel.style.opacity = '0';
+      // Mirrors the shader: the album is a cover only once its atlas sheet is loaded.
+      const loaded = i !== null && isAtlasSheetLoaded(Math.floor(i / ATLAS_PER_SHEET));
+      if (i === null || focusIds.includes(i) || selectedIsProminent(camera.zoom, height, loaded)) sel.style.opacity = '0';
       else {
         const p = toScreen(i);
-        // Mirrors the shader: the album is a cover only once its atlas sheet is loaded.
-        const loaded = isAtlasSheetLoaded(Math.floor(i / ATLAS_PER_SHEET));
         const sprite = renderedSpriteCssSize(camera.zoom, height, gl.getPixelRatio(), 1, loaded);
         const s = Math.max(18, sprite + 8);
         sel.style.width = `${s}px`;
         sel.style.height = `${s}px`;
         sel.style.transform = `translate3d(${p.x - s / 2}px, ${p.y - s / 2}px, 0)`;
-        sel.dataset.shape = loaded && coverFade(camera.zoom, height) >= 0.5 ? 'square' : 'ring';
         sel.style.opacity = '1';
       }
     }

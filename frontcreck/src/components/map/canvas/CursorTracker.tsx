@@ -6,7 +6,7 @@ import type * as THREE from "three";
 
 import { DURATION } from "@/lib/media";
 import { ATLAS_PER_SHEET } from "@/lib/data/sprites";
-import { renderedSpriteCssSize } from "../shaders/album";
+import { SELECTED_FRAME_GAP_PX, SELECTED_FRAME_PX, renderedSpriteCssSize, selectedIsProminent, selectedSpriteCssSize } from "../shaders/album";
 import { markerAt } from "../state/focusLayout";
 import { cssPxToWorld, pickAlbum, spriteHitRadiusCssPx } from "../state/hitTest";
 import { useMapStore } from "../state/mapStore";
@@ -44,7 +44,11 @@ export function albumAt(
   const loadedAt = (i: number) => isAtlasSheetLoaded(Math.floor(i / ATLAS_PER_SHEET));
   const hitCover = toWorld(spriteHitRadiusCssPx(pointerType, coverR * 2));
   const hitDot = toWorld(spriteHitRadiusCssPx(pointerType, dotR * 2));
-  const focusedIndex = useMapStore.getState().input.focus?.seed ?? -1;
+  const { input } = useMapStore.getState();
+  const focusedIndex = input.focus?.seed ?? -1;
+  // The Explore pick, drawn large on top of everything once covers show: it wins anywhere inside its cover.
+  const sel = !input.focus && input.selected !== null ? input.selected : -1;
+  const selProminent = sel >= 0 && selectedIsProminent(camera.zoom, viewportHeightCssPx, loadedAt(sel));
   const drawnWorld = (i: number) => toWorld(i >= 0 && loadedAt(i) ? coverR : dotR);
   return pickAlbum(
     positions,
@@ -53,6 +57,8 @@ export function albumAt(
     worldY,
     hitCover === hitDot ? hitCover : (i) => (loadedAt(i) ? hitCover : hitDot),
     [
+      // Out to the outer edge of its lamp frame, so the whole drawn square but its far corners is a hit.
+      { index: selProminent ? sel : -1, radiusWorld: toWorld(selectedSpriteCssSize(camera.zoom, viewportHeightCssPx, pixelRatio) / 2 + SELECTED_FRAME_GAP_PX + SELECTED_FRAME_PX) },
       // The hover marks (ring, stroke) are drawn outside the album; hits stay on the album itself.
       { index: focusedIndex, radiusWorld: drawnWorld(focusedIndex) },
       { index: hoverIndex, radiusWorld: drawnWorld(hoverIndex) },

@@ -6,7 +6,7 @@ import * as THREE from "three";
 
 import { atlasSlot } from "@/lib/data/sprites";
 import { CLUSTER_RGB, interpolateInto, type MapData } from "../data";
-import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, MAX_SPRITE_VIEWPORT_FRACTION } from "../shaders/album";
+import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, MAX_SPRITE_VIEWPORT_FRACTION, SELECTION_DIM } from "../shaders/album";
 import { useMapStore } from "../state/mapStore";
 
 interface AlbumFieldProps {
@@ -84,6 +84,8 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
         u_focusedAlbumIndex: { value: -1 },
         u_neighborMask: { value: new Float32Array(MASK_SIZE).fill(-1) },
         u_hoverIndex: { value: -1 },
+        u_selectedIndex: { value: -1 },
+        u_selDim: { value: SELECTION_DIM },
         u_maxSpritePx: { value: 240 },
         u_dotAlpha: { value: DOT_ALPHA },
         u_focusDim: { value: FOCUS_DIM },
@@ -150,6 +152,8 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     u.u_dotAlpha.value = input.dimmed ? DOT_ALPHA_DIMMED : DOT_ALPHA;
     const focus = input.focus;
     u.u_focusedAlbumIndex.value = focus ? focus.seed : -1;
+    // The Explore pick; never in album view, where the focus markers take over.
+    u.u_selectedIndex.value = !focus && input.selected !== null ? input.selected : -1;
     const mask = u.u_neighborMask.value as Float32Array;
     mask.fill(-1);
     if (focus) {
