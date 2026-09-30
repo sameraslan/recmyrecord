@@ -74,10 +74,39 @@ def dominant_colors(img: Image.Image, k: int = 5, iters: int = 12) -> list[tuple
     return [(tuple(c), int(n)) for c, n in merged]
 
 
-def wash_hex(rgb: Sequence[float]) -> str:
-    """Darkened, desaturated version of a cover colour for the ambient wash."""
-    h, l, s = _hls(rgb)
-    return rgb_to_hex(_rgb(h, min(max(l * 0.45, 0.10), 0.22), min(s, 0.55) * 0.8))
+# Washes, tuned against the mockup's hand-picked pairs (design mockup AMB table).
+WASH_L_MIN, WASH_L_GAIN, WASH_L_MAX = 0.15, 0.10, 0.25  # lightness = 0.15 + 0.10 x cover lightness
+WASH2_L_MAX = 0.18  # the second (top-right, map) wash sits a little darker, as in the mockup
+WASH_S_GAIN, WASH_S_MAX = 2.0, 0.45  # saturation = 2 x cover chroma, so near-grey stays near grey
+WASH_CHROMA_WEIGHT = 1.5  # ranking: share x (0.35 + 1.5 x chroma)
+WASH_MIN_SHARE = 0.04  # a second wash must cover at least 4% of the sprite
+WASH_HUED_CHROMA = 0.06  # below this chroma a colour has no reliable hue
+WASH_HUE_GAP = 40.0  # degrees between the two washes' hues when the cover has them
+WASH_LIGHTNESS_GAP = 0.2  # otherwise, a clearly lighter or darker colour
+WASH_VISIBILITY_SAT = 0.3  # visibility = lightness + 0.3 x saturation; the more visible wash is w0
+
+
+def chroma(rgb: Sequence[float]) -> float:
+    """max - min channel, 0..1. Unlike HLS saturation it stays near 0 for near-white and near-black."""
+    return (max(float(v) for v in rgb[:3]) - min(float(v) for v in rgb[:3])) / 255.0
+
+
+def hue_distance(a: Sequence[float], b: Sequence[float]) -> float:
+    d = abs(_hls(a)[0] - _hls(b)[0]) * 360.0
+    return min(d, 360.0 - d)
+
+
+def wash_hex(rgb: Sequence[float], max_lightness: float = WASH_L_MAX) -> str:
+    """A dark, muted version of a cover colour for the ambient wash: same hue, lightness in
+    [WASH_L_MIN, max_lightness] rising slowly with the cover's lightness, saturation from the cover's chroma."""
+    h, l, _ = _hls(rgb)
+    light = min(max(WASH_L_MIN + WASH_L_GAIN * l, WASH_L_MIN), max_lightness)
+    return rgb_to_hex(_rgb(h, light, min(chroma(rgb) * WASH_S_GAIN, WASH_S_MAX)))
+
+
+def _visibility(hexv: str) -> float:
+    _, l, s = _hls(hex_to_rgb(hexv))
+    return l + WASH_VISIBILITY_SAT * s
 
 
 def accent_hex(rgb: Sequence[float]) -> str:
@@ -94,17 +123,29 @@ def accent_hex(rgb: Sequence[float]) -> str:
 
 
 def ambient_from_image(img: Image.Image, cluster: int) -> tuple[str, str, str]:
-    """Washes: colours ranked by share x (0.35 + saturation), so a colourful area beats a larger
-    black or white one; the first, then the next clearly different one. Accent: the most saturated
-    colour covering at least 4% of the cover. Grey covers get MONO_ACCENT."""
+    """Washes: colours ranked by share x (0.35 + 1.5 x chroma), so a colourful area beats a larger black or
+    white one. The second wash is the best-ranked other colour (at least 4% of the cover) of a clearly
+    different hue; on a cover with one hue or none, the best-ranked clearly lighter or darker one. The more
+    visible wash after shaping goes first (the large panel blob). Accent: the most saturated colour covering
+    at least 4% of the cover. Grey covers get MONO_ACCENT."""
     cols = dominant_colors(img)
     if not cols:
         return FALLBACK_AMBIENT[cluster % 3]
     total = sum(n for _, n in cols)
-    ranked = sorted(cols, key=lambda cn: -(cn[1] / total) * (0.35 + _hls(cn[0])[2]))
+    ranked = sorted(cols, key=lambda cn: -(cn[1] / total) * (0.35 + WASH_CHROMA_WEIGHT * chroma(cn[0])))
     first = ranked[0][0]
-    second = next((c for c, _ in ranked[1:] if float(np.linalg.norm(np.subtract(c, first))) > 40.0), first)
+    pool = [c for c, n in ranked[1:] if n / total >= WASH_MIN_SHARE]
+    first_hued = chroma(first) >= WASH_HUED_CHROMA
+
+    def other_hue(c: Sequence[float]) -> bool:
+        return chroma(c) >= WASH_HUED_CHROMA and (not first_hued or hue_distance(c, first) >= WASH_HUE_GAP)
+
+    second = next((c for c in pool if other_hue(c)), None)
+    if second is None:
+        second = next((c for c in pool if abs(_hls(c)[1] - _hls(first)[1]) >= WASH_LIGHTNESS_GAP),
+                      pool[0] if pool else first)
+    a, b = (first, second) if _visibility(wash_hex(first)) >= _visibility(wash_hex(second)) else (second, first)
     candidates = [c for c, n in cols if n / total >= 0.04] or [first]
     acc = max(candidates, key=lambda c: _hls(c)[2])
     accent = MONO_ACCENT if _hls(acc)[2] < 0.08 else accent_hex(acc)
-    return wash_hex(first), wash_hex(second), accent
+    return wash_hex(a), wash_hex(b, WASH2_L_MAX), accent

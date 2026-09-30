@@ -30,7 +30,7 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 4. Artists: the feature table sometimes glues the member names onto the billed credit with no separator ("Bob Marley & The WailersBob MarleyThe Wailers"). `artists.py` keeps the billed credit: it cuts at the first case or script boundary inside a word when the text before it joins several names ("&", ",", "/", "and", "with", ...) and the glued-on tail repeats one of them. Whitespace is collapsed. Every string it changes in the feature table is listed in `tests/test_artists.py`.
 5. Slugs: `kebab(title)-kebab(artist)` from the cleaned artist, ASCII-folded (Cyrillic transliterated), `-2`, `-3` on collision in catalog order.
 6. Vocabulary: kept descriptors minus vocals descriptors, "instrumental" and "concept album", most frequent first.
-7. Sprites: each album's map sprite re-packed in album order; ambient colours from the two dominant colours of the sprite (darkened, desaturated) plus an accent with at least 4.5:1 contrast on `#15110d`.
+7. Sprites: each album's map sprite re-packed in album order; ambient colours from the sprite plus an accent with at least 4.5:1 contrast on `#15110d`. The two washes are the leading colour and the next one of a clearly different hue (or, on a cover with one hue or none, a clearly lighter or darker one), made dark and muted with saturation taken from the colour's chroma so grey covers stay grey; the more visible of the two comes first. The constants in `colors.py` were tuned against the hand-picked pairs of the design mockup.
 
 ## Commands
 
