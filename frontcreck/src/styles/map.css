@@ -75,8 +75,9 @@
 
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
-  /* Clear of the slider panel, which is 18 px taller here than on desktop (see below). */
-  .map-zoom { right: 12px; bottom: calc(148px + env(safe-area-inset-bottom)); }
+  /* 8 px above the slider panel: --slider-cover is its measured cover of the pane (MapStage), safe-area inset
+   * included; the fallback is the panel's 12 px offset plus its 152.5 px height. */
+  .map-zoom { right: 12px; bottom: calc(var(--slider-cover, calc(165px + env(safe-area-inset-bottom))) + 8px); }
   /* 44 px tap targets that do not overlap: the range band (44 px, its line where the desktop one is) is followed
    * by the stop buttons' 44 px band; the panel grows by 18 px to make the room. */
   .mode-track { height: 44px; margin: -9px 0 0; }

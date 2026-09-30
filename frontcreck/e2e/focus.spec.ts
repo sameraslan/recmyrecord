@@ -246,14 +246,10 @@ test('the slider has 44 px tap targets on a phone', async ({ page, isMobile }) =
   }
 });
 
-test('on a phone the focus markers stay above the slider panel', async ({ page, isMobile }) => {
-  test.skip(!isMobile, 'phone only');
-  await page.goto('/map');
-  await waitForMap(page);
-  await waitForCameraIdle(page);
-  // A focus that reaches the bottom edge: the lowest album on the map as the seed, with the albums closest to it on
-  // screen (which the ring pushes around it) and the highest album (so the framing is limited vertically).
-  const focus = await page.evaluate(() => {
+/** A focus that reaches the bottom edge: the lowest album on screen as the seed, with the albums closest to it
+ * on screen (which the ring pushes around it) and the highest album (so the framing is limited vertically). */
+async function bottomEdgeFocus(page: Page): Promise<{ seed: number; recs: number[] }> {
+  return page.evaluate(() => {
     const api = window.__rmr!.map!;
     const pts: { id: number; x: number; y: number }[] = [];
     for (let id = 0; ; id++) {
@@ -270,6 +266,14 @@ test('on a phone the focus markers stay above the slider panel', async ({ page, 
       .map((p) => p.id);
     return { seed: low.id, recs: [...near, high.id] };
   });
+}
+
+test('on a phone the focus markers stay above the slider panel', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone only');
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  const focus = await bottomEdgeFocus(page);
   const cases = [focus, { seed: 11, recs: await recsOf(page, 11, 'balanced', 10) }];
   for (const f of cases) {
     await setFocus(page, f.seed, f.recs);
@@ -296,4 +300,25 @@ test('on a phone the focus markers stay above the slider panel', async ({ page, 
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   const bottoms = await page.locator('.mk').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom));
   for (const b of bottoms) expect(b, 'after the camera moved').toBeLessThanOrEqual(panelTop);
+});
+
+test('on a phone a larger bottom inset still keeps markers and zoom controls above the slider panel', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone only');
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  const focus = await bottomEdgeFocus(page);
+  // Stands in for env(safe-area-inset-bottom) on an iPhone with a home indicator (about 34 px). Safari changes
+  // the inset when its toolbar collapses, and fires a window resize with it; so does this test.
+  await page.addStyleTag({ content: '.mode { bottom: 46px !important; }' });
+  await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+  await setFocus(page, focus.seed, focus.recs);
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(focus.recs.length + 1);
+  const panelTop = (await page.locator('.mode').boundingBox())!.y;
+  expect(panelTop).toBeLessThan(844 - 46 - 100);
+  const bottoms = await page.locator('.mk').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom));
+  for (const b of bottoms) expect(b).toBeLessThanOrEqual(panelTop);
+  const zoom = (await page.locator('.map-zoom').boundingBox())!;
+  expect(zoom.y + zoom.height).toBeLessThanOrEqual(panelTop);
 });

@@ -18,21 +18,53 @@ import type { MapApi, MapCallbacks, MapInput, MapPadding } from './types';
 
 const MusicMap = dynamic(() => import('./MusicMap'), { ssr: false, loading: () => null });
 
-/** CSS px of the map the phone slider panel covers from the bottom: its 12 px offset plus its 152.5 px height
- * (styles/map.css, `@media (max-width: 899px)` `.mode`, with 44 px tap targets). Update it with that CSS. */
-export const PHONE_SLIDER_COVER_PX = 165;
 /** Space kept between framed albums and the top of the phone slider panel. */
 const PHONE_SLIDER_MARGIN_PX = 4;
-const PHONE_BOTTOM_PADDING = PHONE_SLIDER_COVER_PX + PHONE_SLIDER_MARGIN_PX;
+/** CSS px the phone slider panel covers from the bottom of the map before it is first measured, and on phone
+ * views without it (its 12 px offset plus its 152.5 px height, without a safe-area inset). */
+const PHONE_SLIDER_COVER_FALLBACK_PX = 165;
 
-/** Album framing: clear of the slider panel (top-left on desktop, bottom on phones). */
+/** Album framing: clear of the slider panel (top-left on desktop, bottom on phones, where the bottom is measured). */
 const DESKTOP_PADDING: MapPadding = { top: 262, right: 96, bottom: 90, left: 96 };
-const PHONE_PADDING: MapPadding = { top: 80, right: 60, bottom: PHONE_BOTTOM_PADDING, left: 60 };
+const PHONE_PADDING: MapPadding = { top: 80, right: 60, bottom: PHONE_SLIDER_COVER_FALLBACK_PX + PHONE_SLIDER_MARGIN_PX, left: 60 };
 /** Overview framing of the whole cloud (mockup fitTarget); on phones clear of the bottom slider. */
 // The mockup's fitTarget fits h - 170 and shifts the cloud up 30 px: top 85 - 30, bottom 85 + 30.
 const DESKTOP_FIT_PADDING: MapPadding = { top: 55, right: 40, bottom: 115, left: 40 };
-// Phone: clear of the bottom slider panel.
-const PHONE_FIT_PADDING: MapPadding = { top: 90, right: 40, bottom: PHONE_BOTTOM_PADDING, left: 40 };
+// Phone: clear of the bottom slider panel (bottom measured).
+const PHONE_FIT_PADDING: MapPadding = { top: 90, right: 40, bottom: PHONE_SLIDER_COVER_FALLBACK_PX + PHONE_SLIDER_MARGIN_PX, left: 40 };
+
+/**
+ * CSS px of the map pane the phone slider panel covers from the bottom (pane bottom minus the panel's top), so the
+ * framing, the marker bounds and the zoom controls follow its real height and `env(safe-area-inset-bottom)`.
+ * Measured with a ResizeObserver on the panel and the pane plus window resizes (a collapsing Safari toolbar changes
+ * the inset without resizing the panel). Changes under 1 px are ignored. null until first measured, and while
+ * `active` is false (desktop, or no slider rendered).
+ */
+function useSliderCover(paneRef: React.RefObject<HTMLDivElement | null>, active: boolean): number | null {
+  const [cover, setCover] = useState<number | null>(null);
+  useEffect(() => {
+    const pane = paneRef.current;
+    const panel = active ? pane?.querySelector<HTMLElement>('.mode') : null;
+    if (!pane || !panel) {
+      setCover(null);
+      return;
+    }
+    const measure = () => {
+      const v = Math.max(0, pane.getBoundingClientRect().bottom - panel.getBoundingClientRect().top);
+      setCover((prev) => (prev !== null && Math.abs(prev - v) < 1 ? prev : v));
+    };
+    measure();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    ro?.observe(panel);
+    ro?.observe(pane);
+    window.addEventListener('resize', measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [paneRef, active]);
+  return active ? cover : null;
+}
 
 /** True after first paint (two animation frames) plus an idle slot: three.js never competes with it. */
 function useAfterFirstPaint(): boolean {
@@ -85,6 +117,16 @@ export function MapStage() {
 
   const interactive = view === 'explore' || (view === 'album' && (!narrow || mapMode));
   const dimmed = view === 'home' || view === 'about' || view === 'other';
+  const paneRef = useRef<HTMLDivElement>(null);
+  // The full-width phone slider panel (rendered whenever the phone map is interactive).
+  const sliderShown = narrow && interactive;
+  const measuredCover = useSliderCover(paneRef, sliderShown);
+  const sliderCover = sliderShown ? (measuredCover ?? PHONE_SLIDER_COVER_FALLBACK_PX) : 0;
+  const phonePadding = useMemo(() => {
+    // Without the slider (Home, the phone album list), phone framing keeps the fallback clearance.
+    const bottom = (sliderShown ? sliderCover : PHONE_SLIDER_COVER_FALLBACK_PX) + PHONE_SLIDER_MARGIN_PX;
+    return { frame: { ...PHONE_PADDING, bottom }, fit: { ...PHONE_FIT_PADDING, bottom } };
+  }, [sliderShown, sliderCover]);
   const input = useMemo<MapInput>(
     () => ({
       stop,
@@ -94,12 +136,12 @@ export function MapStage() {
       interactive,
       dimmed,
       insetLeft: view === 'album' && !narrow ? panelInset : 0,
-      framePadding: narrow ? PHONE_PADDING : DESKTOP_PADDING,
-      fitPadding: narrow ? PHONE_FIT_PADDING : DESKTOP_FIT_PADDING,
+      framePadding: narrow ? phonePadding.frame : DESKTOP_PADDING,
+      fitPadding: narrow ? phonePadding.fit : DESKTOP_FIT_PADDING,
       // The full-width phone slider panel; the desktop corner card stays out of the marker bounds.
-      bottomCover: narrow && interactive ? PHONE_SLIDER_COVER_PX : 0,
+      bottomCover: sliderCover,
     }),
-    [stop, focus, hot, selected, view, interactive, dimmed, narrow, panelInset],
+    [stop, focus, hot, selected, view, interactive, dimmed, narrow, panelInset, phonePadding, sliderCover],
   );
 
   const viewRef = useRef<View>(view);
@@ -148,7 +190,13 @@ export function MapStage() {
 
   const failed = catalogStatus === 'error' || positionsStatus === 'error';
   return (
-    <div className={`map-pane${dimmed ? ' is-dimmed' : ''}`} data-view={view}>
+    <div
+      ref={paneRef}
+      className={`map-pane${dimmed ? ' is-dimmed' : ''}`}
+      data-view={view}
+      // The phone zoom controls sit above the measured slider panel (styles/map.css).
+      style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
+    >
       <div className="map-host">
         {enabled && mapData ? (
           <MusicMap data={mapData} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
