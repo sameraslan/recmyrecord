@@ -137,10 +137,13 @@ test('a failed data load shows an inline error that retries', async ({ page }) =
   await page.goto('/map');
   const alert = page.getByRole('alert').filter({ hasText: COPY.error.body });
   await expect(alert).toBeVisible();
+  // No hint line over the empty map.
+  await expect(page.locator('.map-hint')).toHaveCount(0);
   fail = false;
   await alert.getByRole('button', { name: COPY.error.retry }).click();
   await waitForMap(page);
   await expect(alert).toHaveCount(0);
+  await expect(page.locator('.map-hint')).toHaveCount(1);
 });
 
 /** Records the album view state once per frame (what is painted, not the store's synchronous steps). */

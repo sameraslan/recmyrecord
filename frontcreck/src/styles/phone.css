@@ -1,6 +1,9 @@
 /* Phones and narrow tablets (mockup lines 372 to 440), plus 44 px tap targets. The slider, zoom controls and
  * Explore card positions live in map.css, where they follow the measured slider cover (--slider-cover). */
 @media (max-width: 899px) {
+  /* Home: the fitted cloud is denser on a phone, and overlapping WebGL dots add up where the mockup's canvas
+   * fills each cluster once, so the veil is darker here and centred on the map to keep the backdrop as quiet. */
+  .veil { background: radial-gradient(60% 50% at 50% 55%, rgba(21, 17, 13, .8), rgba(21, 17, 13, .52) 70%, rgba(21, 17, 13, .4)); }
   .wordmark { display: inline-flex; align-items: center; min-height: 44px; }
   .skip { display: inline-flex; align-items: center; min-height: 44px; }
 

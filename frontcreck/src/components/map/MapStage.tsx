@@ -346,7 +346,8 @@ export function MapStage() {
           <>
             <SimilaritySlider stop={stop} onChange={onStop} />
             {mapData ? <ZoomControls api={apiRef} /> : null}
-            {view === 'explore' || view === 'album' ? <MapHint hidden={view === 'explore' && selected !== null} album={view === 'album'} /> : null}
+            {/* No hint over an empty map: the data is still loading or failed to load. */}
+            {mapData && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'explore' && selected !== null} album={view === 'album'} /> : null}
             {cardShown && selected !== null && catalog ? (
               <MapCard
                 key={selected}

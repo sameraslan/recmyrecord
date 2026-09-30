@@ -36,7 +36,8 @@ export const MAX_SPRITE_VIEWPORT_FRACTION = 0.18;
  * JS mirror of the sprite size the vertex shader actually draws, in CSS px:
  * the base size times `scale`, then the
  * 240 device-px and u_maxSpritePx caps. Hit testing and overlay placement use
- * it so both track the sprite on screen at every zoom.
+ * it so both track the sprite on screen at every zoom. The dimmed map's MUTED_DOT_SCALE is not mirrored here:
+ * the dimmed map (Home, About, 404) takes no pointer input, so nothing hit-tests it.
  */
 export function renderedSpriteCssSize(
   zoom: number,
