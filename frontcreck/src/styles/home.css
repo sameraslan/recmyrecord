@@ -28,12 +28,21 @@
 .about .x svg { width: 18px; height: 18px; }
 .about h1 { font-family: var(--font-serif); font-weight: 500; font-size: 48px; line-height: 1; letter-spacing: -.015em; padding-right: 32px; }
 .about p { font-size: 16.5px; line-height: 1.65; color: #d9d0bf; margin-top: 16px; }
+.about .about-h2 { margin-top: 36px; margin-bottom: -4px; }
+.about .about-signoff { margin-top: 24px; font-family: var(--font-serif); font-style: italic; font-size: 20px; line-height: 1.3; color: var(--color-lamp); }
 .about .about-credits { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--color-rule); font-size: 14.5px; color: var(--color-dust); }
 
 /* 404 and the route error boundary: a message over the dimmed map. */
 .notfound, .page-msg { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 24px; text-align: center; background: rgba(12, 10, 8, .55); }
 .notfound h1 { max-width: 20em; font-family: var(--font-serif); font-weight: 500; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; }
+.notfound .notfound-sub { margin: 14px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
 .notfound .combo { width: min(480px, 100%); text-align: left; }
+
+/* Short laptop screens (1280x800, 1366x768): a smaller hero top so the full shelf stays on screen without the home
+   layer scrolling, and the gap between the buttons and the shelf stays close to the gap above the heading. */
+@media (min-width: 900px) and (max-height: 860px) {
+  .hero { padding-top: clamp(24px, 6vh, 112px); }
+}
 
 @media (max-width: 1179px) {
   .mosaic { grid-template-columns: repeat(8, minmax(0, 1fr)); }
@@ -44,13 +53,14 @@
 @media (max-width: 899px) {
   .hero { padding-top: 40px; }
   .hero h1 { font-size: clamp(38px, 11vw, 52px); }
-  .hero .lede { font-size: 15.5px; }
+  .hero .lede, .notfound .notfound-sub { font-size: 15.5px; }
   .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .mosaic li:nth-child(n+9) { display: none; }
   .mosaic li:nth-child(n+5) .cover { opacity: .55; }
   .shelf { padding: 32px 16px calc(28px + env(safe-area-inset-bottom)); }
   .shelf-now .t { font-size: 19px; }
-  .about-page { padding: 0; place-items: stretch; }
-  .about { width: 100%; min-height: 100%; border: 0; padding: 28px 20px 40px; }
+  /* Block, not grid: a grid row stays one screen tall, so a card taller than the screen would lose its background below the fold. */
+  .about-page { padding: 0; display: block; }
+  .about { width: 100%; min-height: 100%; border: 0; padding: 28px 20px calc(40px + env(safe-area-inset-bottom)); }
   .about h1 { font-size: 40px; }
 }

@@ -13,9 +13,16 @@ export default function AboutPage() {
         <h1 id="about-h" tabIndex={-1}>
           {COPY.about.title}
         </h1>
-        {COPY.about.body.map((p) => (
-          <p key={p}>{p}</p>
+        <p>{COPY.about.intro}</p>
+        {COPY.about.sections.map((section) => (
+          <section key={section.heading}>
+            <h2 className="cap about-h2">{section.heading}</h2>
+            {section.body.map((p) => (
+              <p key={p}>{p}</p>
+            ))}
+          </section>
         ))}
+        <p className="about-signoff">{COPY.about.signoff}</p>
         <p className="about-credits">{COPY.about.credits}</p>
       </article>
       <FocusOnMount selector="#about-h" />

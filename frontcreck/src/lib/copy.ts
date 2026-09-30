@@ -10,7 +10,7 @@ export const COPY = {
   skip: 'Skip to content',
   nav: { label: 'Main', map: 'Map', about: 'About' },
   hero: 'Start with an album you like.',
-  heroSub: 'Get the most similar albums to it, by sound and by mood.',
+  heroSub: 'Get the most similar albums, by sound and by mood.',
   search: {
     placeholder: 'Search albums or artists',
     label: 'Search albums or artists',
@@ -26,6 +26,7 @@ export const COPY = {
   home: {
     explore: 'Explore the map',
     surprise: 'Surprise me',
+    /** Small line under the Explore / Surprise buttons. */
     shelfLabel: 'Or start from one of these',
     shelfListLabel: 'Albums to start from',
     albumLabel: (title: string, artist: string) => `${title} by ${artist}`,
@@ -87,16 +88,35 @@ export const COPY = {
   },
   notFound: {
     title: 'Not found',
-    body: 'That page isn’t here. Search for an album, or explore the map.',
+    heading: 'That page isn’t here.',
+    sub: 'Search for an album, or explore the map. Experimental exploration!',
     mapLink: 'Explore the map',
   },
   about: {
     title: 'How it works',
-    body: [
-      'Every album here is described two ways. Its sound comes from Spotify’s audio values, such as energy, tempo and acousticness. Its mood comes from handpicked RateYourMusic descriptors, such as melancholic, lush or atmospheric.',
-      'Pick an album and you get the ones closest to it once both are combined. The slider leans the comparison toward sound or toward mood.',
-      `The map places ${CATALOG_SIZE_LABEL} albums so that ones that sound or feel alike sit close together.`,
+    /** Opening paragraph, directly under the title. */
+    intro: 'recmyrecord helps you find new music you may like, or step out of your comfort zone into music far outside your usual territory. Pick an album you love to get ones similar to it, and use the map to wander as far from it as you want.',
+    /** Grouped paragraphs, each under a small heading. */
+    sections: [
+      {
+        heading: 'Sound and mood',
+        body: [
+          'Every album here has two core properties that make it what it is: sound and mood. Sound (sonic values) comes from the audio itself: measurements such as energy, tempo, danceability and acousticness, taken from the recording. Mood descriptors are words listeners use for the feelings or atmosphere an album evokes, such as melancholic or warm.',
+          'Pick an album and you get the ones most similar to it. By default that means similar in both sound and mood; use the slider to match on sound only or mood only.',
+          'Listening history plays no part in finding similar albums. Most streaming services base their recommendations on songs the same listeners play together, which reflects listening habits more than the music itself.',
+          'Neither do genres or genre tags; it all comes from the sound and the mood each album evokes. Albums from the same genre often cluster together anyway, but the albums around a given one are not always from its genre. That can help you get into a new genre, since you start from something that sounds and feels a lot like music you already like.',
+        ],
+      },
+      {
+        heading: 'The map',
+        body: [
+          `The map places ${CATALOG_SIZE_LABEL} albums so that similar ones sit near one another and different ones sit further apart.`,
+          'An album’s closest albums sit nearby on the map, but not always right beside it. Recommendations use more features than a two-dimensional map can show, so placing albums on it means giving up some accuracy.',
+        ],
+      },
     ],
+    /** Closing line under the body, above the credits divider. */
+    signoff: 'Time for exploration! Enjoy!',
     credits: 'Mood descriptors handpicked from RateYourMusic. Sound values from Spotify. Cover art from Spotify.',
     close: 'Close',
   },

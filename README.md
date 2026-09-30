@@ -1,7 +1,7 @@
 <h1 align="center">recmyrecord</h1>
 
 <p align="center">
-  Start with an album you like. Get the most similar albums to it, by sound and by mood. Time for exploration!
+  Start with an album you like. Get the most similar albums, by sound and by mood. Time for exploration!
   <br><br>
   <a href="https://www.recmyrecord.com"><b>recmyrecord.com</b></a>
 </p>

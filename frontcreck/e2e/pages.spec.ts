@@ -88,7 +88,12 @@ test('About explains the site and closes back', async ({ page }, info) => {
   await expect(page).toHaveURL('/about');
   await expect(page).toHaveTitle('About · recmyrecord');
   await expect(page.getByRole('heading', { level: 1, name: COPY.about.title })).toBeFocused();
-  for (const p of COPY.about.body) await expect(page.getByText(p)).toBeVisible();
+  await expect(page.getByText(COPY.about.intro)).toBeVisible();
+  for (const section of COPY.about.sections) {
+    await expect(page.getByRole('heading', { level: 2, name: section.heading })).toBeVisible();
+    for (const p of section.body) await expect(page.getByText(p)).toBeVisible();
+  }
+  await expect(page.getByText(COPY.about.signoff)).toBeVisible();
   await expect(page.getByText(COPY.about.credits)).toBeVisible();
   await expect(page.locator('body')).not.toContainText(OWNER_NAME_RE);
   await waitForMap(page);
@@ -127,7 +132,8 @@ test('unknown pages are a 404 with search and a way to the map', async ({ page }
   const res = await page.goto('/no-such-page');
   expect(res?.status()).toBe(404);
   await expect(page).toHaveTitle('Not found · recmyrecord');
-  await expect(page.getByText(COPY.notFound.body)).toBeVisible();
+  await expect(page.getByRole('heading', { name: COPY.notFound.heading })).toBeVisible();
+  await expect(page.getByText(COPY.notFound.sub)).toBeVisible();
   await expect(page.locator('.notfound').getByRole('combobox')).toBeVisible();
   await waitForMap(page);
   await waitForMapQuiet(page);
@@ -207,7 +213,7 @@ test.describe('album to album', () => {
     test.skip(isMobile, 'the phone has no map inset');
     // The first row of In Rainbows (balanced). Its page prefetch fails and the navigation request is slow; the
     // current panel and the map inset stay until the new album arrives (album pages have no loading boundary).
-    const target = '/album/undun-the-roots';
+    const target = '/album/you-will-never-know-why-sweet-trip';
     await page.route(
       (url) => url.pathname === target,
       async (route) => {
@@ -228,7 +234,7 @@ test.describe('album to album', () => {
     await page.waitForLoadState('networkidle');
     await sampleFrames(page);
     await row.click();
-    await expect(page.locator('#seed-title')).toHaveText('undun', { timeout: 10_000 });
+    await expect(page.locator('#seed-title')).toHaveText('You Will Never Know Why', { timeout: 10_000 });
     const samples = await stopSampling(page);
     expect(samples.length).toBeGreaterThan(10);
     expect(samples.filter((s) => s.inset === 0)).toEqual([]);
