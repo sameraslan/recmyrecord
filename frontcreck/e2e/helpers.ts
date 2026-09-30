@@ -1,4 +1,4 @@
-import type { Page, TestInfo } from '@playwright/test';
+import type { Locator, Page, TestInfo } from '@playwright/test';
 
 /** Saves a viewport screenshot to test-results/shots/<project>-<name>.png and returns the path. */
 export async function shot(page: Page, info: TestInfo, name: string): Promise<string> {
@@ -60,4 +60,20 @@ export async function visibleAlbumPoint(page: Page, from = 0, to = 600): Promise
 
 export async function camera(page: Page): Promise<{ x: number; y: number; zoom: number }> {
   return page.evaluate(() => window.__rmr!.map!.getCamera());
+}
+
+/** A real tap on phones and a real click on desktop. */
+export async function act(target: Locator, isMobile: boolean): Promise<void> {
+  if (isMobile) await target.tap();
+  else await target.click();
+}
+
+/** Presses Tab until `predicate(focusedElement, arg)` holds; fails after `max` presses. The predicate runs in the
+ * page, so it may use only its parameters: pass any outside value (for example a `COPY` label) as `arg`. */
+export async function tabTo<A = undefined>(page: Page, predicate: (el: Element, arg: A) => boolean, max = 40, arg?: A): Promise<void> {
+  for (let i = 0; i < max; i++) {
+    await page.keyboard.press('Tab');
+    if (await page.evaluate(`(${predicate.toString()})(document.activeElement, ${JSON.stringify(arg ?? null)})`)) return;
+  }
+  throw new Error('element not reachable with Tab');
 }
