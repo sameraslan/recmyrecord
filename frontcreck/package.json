@@ -47,6 +47,6 @@
     "vitest": "4.1.6"
   },
   "overrides": {
-    "playwright-core": "1.60.0"
+    "playwright-core": "$@playwright/test"
   }
 }
