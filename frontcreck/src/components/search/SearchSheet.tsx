@@ -35,7 +35,10 @@ export function SearchSheet({ onClose }: { onClose: () => void }) {
       aria-label={COPY.search.sheetLabel}
       onKeyDown={(e) => {
         // An Escape that ends an IME composition belongs to the IME, not to the sheet.
-        if (e.key === 'Escape' && !e.nativeEvent.isComposing && e.keyCode !== 229) onClose();
+        if (e.key === 'Escape' && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+          e.preventDefault(); // handled: the album panel's Escape must not also close the album
+          onClose();
+        }
       }}
     >
       <div className="search-sheet-top">

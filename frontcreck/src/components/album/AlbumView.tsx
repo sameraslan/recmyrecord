@@ -1,16 +1,33 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useAppStore } from '@/lib/store';
 import type { AlbumPageData } from '@/lib/types';
 import { parseBy } from '@/lib/url-state';
 import { AlbumPanel } from './AlbumPanel';
 
-/** The store holds the stop; the list renders from it. `?by=` feeds the store when it changes (direct
- * load, back and forward); the slider writes the store first and the URL a frame later (Task 7), and in-app
- * links always carry the store's stop, so the two only differ for the first frame of a direct ?by= load. */
+/** The list renders from the store's stop once the store has caught up with `?by=`, and from `?by=` until then.
+ * A direct `?by=` load and back or forward to an entry with another `by` therefore render the right list on the
+ * first render: no balanced list first, no rows gliding into place, one focus for the map. After that the store
+ * leads: the slider writes the store first and the URL a frame later (Task 7), and in-app links carry the
+ * store's stop. */
 export function AlbumView({ data }: { data: AlbumPageData }) {
   const urlStop = parseBy(useSearchParams().get('by'));
-  const stop = useAppStore((s) => s.stop);
-  return <AlbumPanel data={data} stop={stop} syncStop={urlStop} />;
+  const storeStop = useAppStore((s) => s.stop);
+  // Whether the store has reached `?by=` since `?by=` last changed (state adjusted while rendering, React's
+  // pattern for deriving from changed inputs).
+  const [urlSeen, setUrlSeen] = useState(urlStop);
+  const [caughtUp, setCaughtUp] = useState(storeStop === urlStop);
+  if (urlSeen !== urlStop) {
+    setUrlSeen(urlStop);
+    setCaughtUp(storeStop === urlStop);
+  } else if (!caughtUp && storeStop === urlStop) {
+    setCaughtUp(true);
+  }
+  useEffect(() => {
+    useAppStore.getState().setStop(urlStop);
+  }, [urlStop]);
+  const stop = caughtUp ? storeStop : urlStop;
+  return <AlbumPanel data={data} stop={stop} />;
 }

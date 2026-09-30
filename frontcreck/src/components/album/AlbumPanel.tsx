@@ -6,6 +6,7 @@ import { Icon } from '@/components/Icon';
 import { COPY } from '@/lib/copy';
 import { REC_DEFAULT_VISIBLE, REC_MAX } from '@/lib/data/catalog';
 import { isNarrow } from '@/lib/media';
+import { previousPath } from '@/lib/nav-history';
 import { useAppStore } from '@/lib/store';
 import type { AlbumPageData, StopId } from '@/lib/types';
 import { AmbientLayers } from './AmbientWash';
@@ -13,7 +14,7 @@ import { RecList } from './RecList';
 import { SeedHeader } from './SeedHeader';
 import { Trail } from './Trail';
 
-export function AlbumPanel({ data, stop, syncStop }: { data: AlbumPageData; stop: StopId; syncStop?: StopId }) {
+export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }) {
   const { seed } = data;
   const router = useRouter();
   const panelRef = useRef<HTMLElement>(null);
@@ -28,10 +29,6 @@ export function AlbumPanel({ data, stop, syncStop }: { data: AlbumPageData; stop
   const lit = new Set(rows.find((r) => r.id === hot)?.shared ?? []);
 
   const close = useCallback(() => router.push('/map'), [router]);
-
-  useEffect(() => {
-    if (syncStop) useAppStore.getState().setStop(syncStop);
-  }, [syncStop]);
 
   useEffect(() => {
     useAppStore.getState().visit({ slug: seed.slug, title: seed.title });
@@ -73,7 +70,9 @@ export function AlbumPanel({ data, stop, syncStop }: { data: AlbumPageData; stop
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-    titleRef.current?.focus({ preventScroll: true });
+    // Only after an in-app navigation (mockup focusQuiet): a direct load leaves focus alone, so the first Tab
+    // still reaches the skip link and the search.
+    if (previousPath() !== null) titleRef.current?.focus({ preventScroll: true });
   }, [seed.slug]);
 
   useEffect(() => {
@@ -82,6 +81,8 @@ export function AlbumPanel({ data, stop, syncStop }: { data: AlbumPageData; stop
       const t = e.target as HTMLElement | null;
       if (t?.closest('textarea, select, [contenteditable="true"]')) return;
       if (t instanceof HTMLInputElement && t.type !== 'range') return;
+      // Dialogs (the phone search sheet) and the search popover handle their own Escape.
+      if (t?.closest('[aria-modal="true"], .combo')) return;
       if (useAppStore.getState().mapMode) return; // phone map mode handles its own Escape (Task 11)
       close();
     };

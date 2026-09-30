@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Schibsted_Grotesk } from 'next/font/google';
 import { MapStage } from '@/components/map/MapStage';
 import { Header } from '@/components/shell/Header';
+import { RouteTracker } from '@/components/shell/RouteTracker';
 import { Toast } from '@/components/shell/Toast';
 import { COPY } from '@/lib/copy';
 import './globals.css';
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <div className="grain" aria-hidden="true" />
         <Header />
+        <RouteTracker />
         <main id="main" tabIndex={-1}>
           <div className="stage" id="stage">
             <MapStage />

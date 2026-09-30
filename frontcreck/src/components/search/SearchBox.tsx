@@ -336,6 +336,13 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
         hidden={!(listShown || emptyShown || errorShown)}
         onPointerDown={startPress}
         onMouseDown={(e) => e.preventDefault()}
+        onKeyDown={(e) => {
+          // Escape on Retry (the only focusable control in the popover) goes back to the field; handled here so
+          // no page-level Escape (the album panel's close) acts on it.
+          if (e.key !== 'Escape' || e.nativeEvent.isComposing || e.keyCode === 229) return;
+          e.preventDefault();
+          inputRef.current?.focus();
+        }}
       >
         <ul role="listbox" id={listId} aria-label={COPY.search.listLabel} hidden={!listShown}>
           {loaded

@@ -173,6 +173,86 @@ test('ambient colour and accent follow the album', async ({ page }) => {
   await expect.poll(acc).toBe(await accentOf(page, nextSlug));
 });
 
+test('a direct ?by=mood load renders the mood list at once: no row animation, one focus', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __rowAnims: number; __focusSets: string[]; __rmr?: unknown };
+    w.__rowAnims = 0;
+    w.__focusSets = [];
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (this: Element, ...args: Parameters<Element['animate']>) {
+      if (this.matches('li.rec')) w.__rowAnims++;
+      return animate.apply(this, args);
+    };
+    // The store assigns window.__rmr when it loads: subscribe then, before any component renders.
+    let hooks: { subscribe?: (fn: (s: { focus: { recs: number[] } | null }, p: { focus: unknown }) => void) => void } | undefined;
+    let subscribed = false;
+    Object.defineProperty(window, '__rmr', {
+      configurable: true,
+      get: () => hooks,
+      set: (v) => {
+        hooks = v;
+        if (!subscribed && v?.subscribe) {
+          subscribed = true;
+          v.subscribe((s: { focus: { recs: number[] } | null }, p: { focus: unknown }) => {
+            if (s.focus && s.focus !== p.focus) w.__focusSets.push(s.focus.recs.join());
+          });
+        }
+      },
+    });
+  });
+  await page.goto(`${IR}?by=mood`);
+  await expect.poll(() => titles(page)).toEqual(['Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom']);
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  const seen = await page.evaluate(() => {
+    const w = window as unknown as { __rowAnims: number; __focusSets: string[] };
+    return { anims: w.__rowAnims, focusSets: w.__focusSets, running: [...document.querySelectorAll('li.rec')].some((r) => r.getAnimations().length > 0) };
+  });
+  expect(seen.running).toBe(false);
+  expect(seen.anims, 'no row glides or fades in on the first client render').toBe(0);
+  const moodIds = await page.locator('li.rec').evaluateAll((els) => els.map((e) => e.getAttribute('data-album-id')).join());
+  expect(seen.focusSets, 'the map gets one focus (the mood list), so it frames once').toEqual([moodIds]);
+});
+
+test('a direct load leaves focus alone: the first Tab reaches the skip link', async ({ page }) => {
+  await page.goto(IR);
+  await expect(page.locator('li.rec')).toHaveCount(5);
+  // The panel's effects have run once the accent is set.
+  await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--acc'))).not.toBe('');
+  await page.waitForTimeout(200);
+  expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('link', { name: COPY.skip })).toBeFocused();
+});
+
+test('Escape inside the search popover or the phone search sheet keeps the album open', async ({ page, isMobile }) => {
+  if (isMobile) {
+    await page.goto(IR);
+    await page.getByRole('button', { name: COPY.search.open }).tap();
+    const sheet = page.getByRole('dialog', { name: COPY.search.sheetLabel });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('button', { name: COPY.search.close }).focus();
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+  } else {
+    await page.route('**/data/albums.json', (route) => route.abort());
+    await page.goto(IR);
+    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
+    await input.click();
+    await input.pressSequentially('kid a');
+    const alert = page.locator('.top-search').getByRole('alert');
+    await expect(alert).toContainText(COPY.error.body);
+    const retry = alert.getByRole('button', { name: COPY.error.retry });
+    await input.press('Tab');
+    await expect(retry).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(input).toBeFocused();
+  }
+  await page.waitForTimeout(500);
+  await expect(page).toHaveURL(IR);
+  await expect(page.locator('section.album')).toBeVisible();
+});
+
 test('an album with no Spotify release shows no Spotify links', async ({ page }) => {
   // The KLF's Chill Out has no Spotify release: no "Open in Spotify", never a search link.
   await page.goto('/album/chill-out-the-klf');

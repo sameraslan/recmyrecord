@@ -87,5 +87,5 @@ export const useAppStore = create<AppState>()((set, get) => ({
 }));
 
 if (typeof window !== 'undefined') {
-  window.__rmr = { ...window.__rmr, getState: useAppStore.getState };
+  window.__rmr = { ...window.__rmr, getState: useAppStore.getState, subscribe: useAppStore.subscribe };
 }

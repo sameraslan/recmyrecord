@@ -71,7 +71,7 @@ Only the Spotify link, the cover, the sprites, the ambient colours and (for `a`)
 - 34 Spotify URIs in the feature table are assigned to two or three different albums (69 rows). The pipeline keeps the first row and drops the other 35.
 - Some Spotify URIs in the feature table point at a different album. The verified ones are corrected in `overrides.json` (see Overrides); their positions and recommendations still come from the wrong album's features.
 - "One" by Neal Morse shows a Neal Francis sleeve. Unverified, so not corrected.
-- "Chill Out" (The KLF), "Gimix" (The Avalanches) and "Dark & Long" (Underworld) have no Spotify release, so they have no Spotify id and no cover id. The site turns an empty Spotify id into a Spotify search link rather than hiding the link. Their sprites and ambient colours use the corrected cover, but the site's cover component shows a cover id's image, then the sprite only when that image fails, so with no cover id it shows the typographic tile, not the sprite.
+- "Chill Out" (The KLF), "Gimix" (The Avalanches) and "Dark & Long" (Underworld) have no Spotify release, so they have no Spotify id and no cover id. The site shows no Spotify link for an album with an empty Spotify id. Their sprites and ambient colours use the corrected cover, but the site's cover component shows a cover id's image, then the sprite only when that image fails, so with no cover id it shows the typographic tile, not the sprite.
 - "Spiritual Unity" (Albert Ayler Trio) has no cover; the site shows a typographic tile.
 - 73 albums have no mood descriptors and 2,169 have fewer than ten.
 - The feature table has 176 descriptor columns (the design spec says 175).
