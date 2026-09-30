@@ -109,7 +109,8 @@ test('404', async ({ page, isMobile, errors }) => {
   const own = errors.findIndex((e) => e.startsWith('Failed to load resource') && e.includes('404'));
   if (own >= 0) errors.splice(own, 1);
   expect(res?.status()).toBe(404);
-  await expect(page.getByText(COPY.notFound.body)).toBeVisible();
+  await expect(page.getByRole('heading', { name: COPY.notFound.heading })).toBeVisible();
+  await expect(page.getByText(COPY.notFound.sub)).toBeVisible();
   await act(page.getByRole('link', { name: COPY.notFound.mapLink }), isMobile);
   await expect(page).toHaveURL('/map');
 });

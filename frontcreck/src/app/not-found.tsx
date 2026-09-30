@@ -12,9 +12,12 @@ export default function NotFound() {
     <section className="notfound" aria-labelledby="nf-h">
       {/* Belt and braces: some Next versions ignore metadata on not-found; this keeps document.title right. */}
       <DocumentTitle title={COPY.titles.template.replace('%s', COPY.notFound.title)} />
-      <h1 id="nf-h" tabIndex={-1}>
-        {COPY.notFound.body}
-      </h1>
+      <div className="notfound-msg">
+        <h1 id="nf-h" tabIndex={-1}>
+          {COPY.notFound.heading}
+        </h1>
+        <p className="notfound-sub">{COPY.notFound.sub}</p>
+      </div>
       {/* The header field keeps the `/` shortcut, as on every page but Home. */}
       <SearchBox variant="page" />
       <Link className="textbtn u" href="/map">

@@ -6,7 +6,6 @@
 .hero h1 { font-family: var(--font-serif); font-weight: 500; font-size: clamp(42px, 5.8vw, 80px); line-height: .98; letter-spacing: -.015em; }
 .hero .lede { margin: 16px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
 .hero-row { margin-top: 14px; display: flex; justify-content: center; gap: 4px; align-items: center; flex-wrap: wrap; }
-.hero-wander { margin: 4px auto 0; max-width: 34em; font-size: 14.5px; color: var(--color-ash); text-wrap: balance; }
 .hero-row .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-ash); opacity: .6; }
 
 .shelf { margin: auto auto 0; width: 100%; max-width: calc(1240px + 2 * var(--gut)); padding: 36px var(--gut) 28px; }
@@ -35,13 +34,13 @@
 /* 404 and the route error boundary: a message over the dimmed map. */
 .notfound, .page-msg { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 24px; text-align: center; background: rgba(12, 10, 8, .55); }
 .notfound h1 { max-width: 20em; font-family: var(--font-serif); font-weight: 500; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; }
+.notfound .notfound-sub { margin: 14px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
 .notfound .combo { width: min(480px, 100%); text-align: left; }
 
-/* Short laptop screens (1280x800, 1366x768): tighten the hero top and the shelf padding so the full shelf stays
-   on screen under the hero's line below the buttons, instead of the home layer scrolling a few pixels. */
+/* Short laptop screens (1280x800, 1366x768): a smaller hero top so the full shelf stays on screen without the home
+   layer scrolling, and the gap between the buttons and the shelf stays close to the gap above the heading. */
 @media (min-width: 900px) and (max-height: 860px) {
   .hero { padding-top: clamp(24px, 6vh, 112px); }
-  .shelf { padding-top: 28px; padding-bottom: 20px; }
 }
 
 @media (max-width: 1179px) {
@@ -53,7 +52,7 @@
 @media (max-width: 899px) {
   .hero { padding-top: 40px; }
   .hero h1 { font-size: clamp(38px, 11vw, 52px); }
-  .hero .lede { font-size: 15.5px; }
+  .hero .lede, .notfound .notfound-sub { font-size: 15.5px; }
   .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
   .mosaic li:nth-child(n+9) { display: none; }
   .mosaic li:nth-child(n+5) .cover { opacity: .55; }

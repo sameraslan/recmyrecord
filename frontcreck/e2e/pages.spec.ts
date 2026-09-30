@@ -16,7 +16,6 @@ test.describe('Home', () => {
     else await expect(search).not.toBeFocused();
     await expect(page.getByRole('link', { name: COPY.home.explore })).toBeVisible();
     await expect(page.getByRole('button', { name: COPY.home.surprise })).toBeVisible();
-    await expect(page.getByText(COPY.home.wander)).toBeVisible();
     const shelf = page.getByRole('list', { name: COPY.home.shelfListLabel });
     // `getByRole` skips links hidden by `display: none` (16 of 24 on phones), so count the elements themselves.
     await expect(shelf.locator('a')).toHaveCount(24);
@@ -129,7 +128,8 @@ test('unknown pages are a 404 with search and a way to the map', async ({ page }
   const res = await page.goto('/no-such-page');
   expect(res?.status()).toBe(404);
   await expect(page).toHaveTitle('Not found · recmyrecord');
-  await expect(page.getByText(COPY.notFound.body)).toBeVisible();
+  await expect(page.getByRole('heading', { name: COPY.notFound.heading })).toBeVisible();
+  await expect(page.getByText(COPY.notFound.sub)).toBeVisible();
   await expect(page.locator('.notfound').getByRole('combobox')).toBeVisible();
   await waitForMap(page);
   await waitForMapQuiet(page);
