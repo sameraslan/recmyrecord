@@ -34,7 +34,8 @@ export function AboutClose() {
     const layer = ref.current?.closest<HTMLElement>('.about-page');
     if (!layer) return;
     const onDown = (e: PointerEvent) => {
-      if (e.target === layer) close();
+      // A press on the layer's own scrollbar (right of its padding box) is scrolling, not a backdrop press.
+      if (e.target === layer && e.offsetX < layer.clientWidth) close();
     };
     layer.addEventListener('pointerdown', onDown);
     return () => layer.removeEventListener('pointerdown', onDown);
