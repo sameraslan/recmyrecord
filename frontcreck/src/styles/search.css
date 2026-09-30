@@ -14,7 +14,8 @@
   .combo-field:focus-within { outline: 2px solid Highlight; }
 }
 .combo-field svg { width: 18px; height: 18px; flex: none; color: var(--color-ash); }
-.combo input { flex: 1; min-width: 0; height: 100%; border: 0; background: none; outline: none; font-size: 15px; color: var(--color-paper); }
+/* padding: the mockup keeps the browser's default input padding (1px 2px), which Tailwind's preflight resets. */
+.combo input { flex: 1; min-width: 0; height: 100%; padding: 1px 2px; border: 0; background: none; outline: none; font-size: 15px; color: var(--color-paper); }
 .combo input::placeholder { color: var(--color-ash); opacity: 1; }
 .combo input::-webkit-search-cancel-button { display: none; }
 .kbd { flex: none; font-size: 12px; line-height: 1; color: var(--color-ash); border: 1px solid var(--color-rule-2); border-radius: 2px; padding: 4px 6px; }
