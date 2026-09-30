@@ -17,7 +17,8 @@ export default defineConfig({
   globalSetup: './e2e/global-setup.ts',
   use: {
     baseURL: `http://127.0.0.1:${PORT}`,
-    channel: 'chrome',
+    // Playwright's bundled Chromium, not the system Chrome channel: Chrome starts GoogleUpdater, which kept
+    // worker teardown from finishing. Only GPU runs (npm run perf, npm run shots) use the Chrome channel.
     trace: 'retain-on-failure',
     launchOptions: { args: WEBGL_ARGS },
   },

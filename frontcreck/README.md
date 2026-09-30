@@ -12,7 +12,7 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
   ```
 
   An x64 Node under Rosetta is rejected by Next 16 and makes Playwright start a translated Chrome whose timings are far too slow. The end-to-end tests and the performance script check for this and stop.
-- Google Chrome installed, for the end-to-end tests, the performance script and the review screenshots.
+- Google Chrome installed, for the performance script and the review screenshots (both use the GPU). The end-to-end tests use Playwright's own Chromium, the revision that `@playwright/test` expects (`npx playwright install chromium` fetches it).
 - No environment variables. The site has no API, database or secrets.
 
 ## Commands

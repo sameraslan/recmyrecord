@@ -7,14 +7,20 @@ export async function assertNativeChrome(browser) {
   if (process.arch !== 'arm64') {
     throw new Error(`Node is ${process.arch}, not arm64. Run: export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"`);
   }
-  const page = await browser.newPage();
+  let page = await browser.newPage();
   try {
     let text = '';
     try {
       await page.goto('chrome://version');
       text = await page.locator('body').innerText();
     } catch {
-      await page.goto('about:blank');
+      // Playwright's bundled headless shell has no chrome://version (the tab lands on an error page): ask
+      // the browser for its CPU architecture instead, from a fresh page on a locally fulfilled localhost URL
+      // (userAgentData needs a secure context; nothing goes over the network).
+      await page.close();
+      page = await browser.newPage();
+      await page.route('http://localhost/', (route) => route.fulfill({ contentType: 'text/html', body: '' }));
+      await page.goto('http://localhost/');
       const arch = await page.evaluate(async () => {
         const uad = navigator.userAgentData;
         return uad ? (await uad.getHighEntropyValues(['architecture'])).architecture : 'unknown';
