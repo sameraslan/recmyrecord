@@ -17,7 +17,7 @@ import { MapHint } from './overlays/MapHint';
 import { NoWebGL } from './overlays/NoWebGL';
 import { SimilaritySlider } from './overlays/SimilaritySlider';
 import { ZoomControls } from './overlays/ZoomControls';
-import { isWebGLAvailable } from './state/webgl';
+import { isWebGLAvailable, warmUpWebGL } from './state/webgl';
 import type { MapApi, MapCallbacks, MapInput, MapPadding } from './types';
 
 const MusicMap = dynamic(() => import('./MusicMap'), { ssr: false, loading: () => null });
@@ -152,8 +152,16 @@ export function MapStage() {
   const ambient = useAppStore((s) => s.ambient);
 
   useEffect(() => {
-    // After first paint, like the rest of the map: the probe creates (and releases) a WebGL context.
-    if (painted) useAppStore.getState().setWebgl(isWebGLAvailable() ? 'ok' : 'unavailable');
+    // After first paint, like the rest of the map: the probe creates (and releases) a WebGL context. A worker
+    // starts the GPU backend first, so neither the probe nor the renderer blocks the main thread on it.
+    if (!painted) return;
+    let live = true;
+    void warmUpWebGL().then(() => {
+      if (live) useAppStore.getState().setWebgl(isWebGLAvailable() ? 'ok' : 'unavailable');
+    });
+    return () => {
+      live = false;
+    };
   }, [painted]);
 
   const enabled = painted && webgl === 'ok';
