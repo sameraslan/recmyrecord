@@ -68,3 +68,9 @@ export function screenToWorld(clientX: number, clientY: number, rect: ScreenRect
 
 /** The canvas's own rectangle, for drivers that position DOM overlays inside the map pane. */
 export const canvasRect = (width: number, height: number): ScreenRect => ({ left: 0, top: 0, width, height });
+
+/** The part of the canvas that shows the map (right of the album panel inset), less `edge` CSS px on every
+ * side: the one area the hover label and the focus markers are kept inside. */
+export function visibleArea(insetLeft: number, width: number, height: number, edge: number): ViewBounds {
+  return { left: insetLeft + edge, top: edge, right: width - edge, bottom: height - edge };
+}

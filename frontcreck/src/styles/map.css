@@ -18,7 +18,7 @@
 .map-sel::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--color-lamp); }
 .map-sel[data-shape="square"] { border-radius: 2px; }
 .map-sel[data-shape="square"]::after { display: none; }
-.map-ui { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.map-ui { position: absolute; inset: 0; z-index: 6; pointer-events: none; transition: left var(--dur) var(--out); }
 .map-ui > * { pointer-events: auto; }
 .panel { background: var(--color-float); border: 1px solid var(--color-rule); border-radius: 2px; box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .8); }
 .map-zoom { position: absolute; right: 20px; bottom: 20px; display: grid; }
@@ -27,3 +27,50 @@
 .map-zoom button:hover { color: var(--color-paper); }
 .map-zoom svg { width: 16px; height: 16px; }
 .map-msg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 7; width: min(420px, calc(100% - 32px)); padding: 18px 20px; display: grid; gap: 12px; justify-items: start; background: var(--color-float); border: 1px solid var(--color-rule-2); border-radius: 2px; color: var(--color-dust); font-size: 15px; }
+
+/* similarity slider (mockup .mode) */
+.mode { position: absolute; left: 20px; top: 20px; width: 244px; padding: 12px 16px 10px; }
+.mode-track { position: relative; height: 22px; margin-top: 2px; }
+.mode-track::before { content: ""; position: absolute; left: 8px; right: 8px; top: 10px; height: 2px; background: var(--color-rule-2); }
+.mode-track i { position: absolute; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-room-4); border: 1px solid var(--color-rule-2); transform: translateX(-50%); }
+.mode input[type=range] { -webkit-appearance: none; appearance: none; position: absolute; inset: 0; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; }
+.mode input[type=range]::-webkit-slider-runnable-track { height: 22px; background: transparent; }
+.mode input[type=range]::-moz-range-track { height: 22px; background: transparent; }
+.mode input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: 3px; border-radius: 50%; background: var(--color-lamp); border: 3px solid var(--color-float); box-shadow: 0 0 0 1px var(--color-lamp); }
+.mode input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--color-lamp); border: 3px solid var(--color-float); box-shadow: 0 0 0 1px var(--color-lamp); }
+.mode input[type=range]:focus-visible { outline: none; }
+.mode input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--color-lamp), 0 0 0 5px rgba(230, 168, 86, .35); }
+.mode input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 1px var(--color-lamp), 0 0 0 5px rgba(230, 168, 86, .35); }
+.mode-stops { display: grid; grid-template-columns: repeat(3, 1fr); }
+.mode-stops button { padding: 2px 0; font-size: 13.5px; color: var(--color-ash); min-height: 30px; }
+.mode-stops button:nth-child(1) { text-align: left; }
+.mode-stops button:nth-child(2) { text-align: center; }
+.mode-stops button:nth-child(3) { text-align: right; }
+.mode-stops button[aria-pressed="true"], .mode-stops button:hover { color: var(--color-paper); }
+.mode-note { font-size: 13px; color: var(--color-dust); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--color-rule); }
+
+/* focus markers: the mockup's canvas drawing (seed ring 4 px out, hot ring 3 px out, hairline on the others) */
+.mk-layer { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
+.mk-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.mk-lines line { stroke: rgba(237, 229, 213, .22); stroke-width: 1; stroke-linecap: round; }
+.mk-lines line[data-hot] { stroke: var(--acc); stroke-opacity: .9; stroke-width: 1.5; }
+.mk-lines line[data-leader] { stroke: rgba(237, 229, 213, .35); }
+.mk { position: absolute; left: 0; top: 0; pointer-events: auto; cursor: pointer; will-change: transform; }
+.mk .cover { width: 100% !important; box-shadow: 1px 3px 0 rgba(10, 8, 6, .55); }
+/* Square rings (an outline would follow the cover's 2 px radius): a hairline on the cover edge, the seed's
+ * 2 px accent ring 3 px out, a hot recommendation's 2 px out. */
+.mk::after { content: ""; position: absolute; inset: -1px; border: 1px solid rgba(237, 229, 213, .28); pointer-events: none; }
+.mk--seed { z-index: 3; }
+.mk--seed::after { inset: -5px; border: 2px solid var(--acc); }
+.mk[data-hot] { z-index: 2; }
+.mk[data-hot]::after { inset: -4px; border: 2px solid var(--acc); }
+.mk-n {
+  position: absolute; left: -6px; top: -6px; z-index: 2; min-width: 18px; height: 18px; padding: 0 4px; display: grid; place-items: center;
+  background: var(--color-float); border: 1px solid rgba(237, 229, 213, .35); color: var(--color-paper); font: 600 11px/1 var(--font-sans);
+}
+.mk[data-hot] .mk-n { background: var(--acc); border-color: var(--acc); color: var(--color-lamp-ink); }
+
+@media (max-width: 899px) {
+  .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
+  .map-zoom { right: 12px; bottom: calc(130px + env(safe-area-inset-bottom)); }
+}

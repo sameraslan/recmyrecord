@@ -172,9 +172,11 @@ export function CursorTracker({
 
     if (!c) {
       if (hoverRef.current !== -1) {
+        const prev = hoverRef.current;
         hoverRef.current = -1;
         clearHoverTimer();
-        setHover(null);
+        // Leaving the canvas onto a focus marker: the marker has already set its own hover, keep it.
+        if (useMapStore.getState().hoveredIndex === prev) setHover(null);
       }
       // eslint-disable-next-line react-hooks/immutability -- see the useFrame-level comment above.
       canvas.style.cursor = "";

@@ -35,6 +35,8 @@ export interface MapStore {
   nudging: boolean;
   /** True while CameraRig's own wheel-zoom easing or drag fling is still moving the camera. */
   rigMoving: boolean;
+  /** True while MorphDriver animates sliderT towards the current stop. */
+  morphing: boolean;
   setData: (data: MapData | null) => void;
   setInput: (input: MapInput) => void;
   setCallbacks: (callbacks: MapCallbacks) => void;
@@ -47,6 +49,7 @@ export interface MapStore {
   setAnimating: (animating: boolean) => void;
   setNudging: (nudging: boolean) => void;
   setRigMoving: (rigMoving: boolean) => void;
+  setMorphing: (morphing: boolean) => void;
 }
 
 export const useMapStore = create<MapStore>()((set) => ({
@@ -62,6 +65,7 @@ export const useMapStore = create<MapStore>()((set) => ({
   animating: false,
   nudging: false,
   rigMoving: false,
+  morphing: false,
   setData: (data) => set({ data }),
   setInput: (input) => {
     set({ input });
@@ -80,4 +84,5 @@ export const useMapStore = create<MapStore>()((set) => ({
   setAnimating: (animating) => set((s) => (s.animating === animating ? s : { animating })),
   setNudging: (nudging) => set((s) => (s.nudging === nudging ? s : { nudging })),
   setRigMoving: (rigMoving) => set((s) => (s.rigMoving === rigMoving ? s : { rigMoving })),
+  setMorphing: (morphing) => set((s) => (s.morphing === morphing ? s : { morphing })),
 }));

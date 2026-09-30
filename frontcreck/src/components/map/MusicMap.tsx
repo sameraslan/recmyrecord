@@ -2,6 +2,7 @@
 
 import { useLayoutEffect } from 'react';
 import { Scene } from './canvas/Scene';
+import { FocusMarkers } from './overlays/FocusMarkers';
 import { HoverLabel } from './overlays/HoverLabel';
 import { useMapStore } from './state/mapStore';
 import { setOverlayEl } from './state/overlayEls';
@@ -35,6 +36,7 @@ export default function MusicMap({ data, input, callbacks, initialCamera, onApi 
   return (
     <>
       <Scene initialCamera={initialCamera} onApi={onApi} />
+      <FocusMarkers albums={data.albums} />
       <HoverLabel albums={data.albums} />
       <SelectedRing />
     </>

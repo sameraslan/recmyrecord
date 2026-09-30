@@ -6,50 +6,21 @@ import type * as THREE from 'three';
 import { DURATION, easeOutCubic, prefersReducedMotion } from '@/lib/media';
 import type { MapCamera } from '@/lib/types';
 import { STOP_T, interpolated } from '../data';
+import { focusCamera } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
 import { worldToScreen } from '../state/projection';
 import { getOverviewFraming } from '../state/view';
 import { COVER_FADE_END_PX, zoomForCoverPx } from '../state/zoomLimits';
-import type { MapApi, MapPadding } from '../types';
+import type { MapApi } from '../types';
 import { clampZoom, stopCameraRig } from './CameraRig';
-import { FRUSTUM_HALF_HEIGHT, applyFrustum } from './InitialFrame';
+import { applyFrustum } from './InitialFrame';
 
 const FLY_MS = 450;
 const ZOOM_STEP_MS = 240;
-const MIN_FOCUS_SPAN = 0.15; // world units, so a tight cluster is not zoomed to the maximum
 
 let control: MapApi | null = null;
 /** The camera API for code outside React (CameraRig's keyboard handler). */
 export const getCameraControl = (): MapApi | null => control;
-
-/** Camera that fits `ids` inside the padded visible area (the area right of `insetPx`). applyFrustum keeps
- * `camera.position` at the centre of that area at every zoom, so the fit is computed around it. */
-export function focusCamera(ids: readonly number[], positions: Float32Array, width: number, height: number, insetPx: number, pad: MapPadding): MapCamera {
-  let x0 = Infinity;
-  let x1 = -Infinity;
-  let y0 = Infinity;
-  let y1 = -Infinity;
-  for (const id of ids) {
-    const x = positions[2 * id];
-    const y = positions[2 * id + 1];
-    x0 = Math.min(x0, x);
-    x1 = Math.max(x1, x);
-    y0 = Math.min(y0, y);
-    y1 = Math.max(y1, y);
-  }
-  const spanX = Math.max(x1 - x0, MIN_FOCUS_SPAN);
-  const spanY = Math.max(y1 - y0, MIN_FOCUS_SPAN);
-  const availW = Math.max(width - insetPx - pad.left - pad.right, 80);
-  const availH = Math.max(height - pad.top - pad.bottom, 80);
-  const worldH = 2 * FRUSTUM_HALF_HEIGHT;
-  const zoom = clampZoom((Math.min(availW / spanX, availH / spanY) * worldH) / height);
-  const wpp = worldH / (height * zoom);
-  return {
-    x: (x0 + x1) / 2 - ((pad.left - pad.right) / 2) * wpp,
-    y: (y0 + y1) / 2 + ((pad.top - pad.bottom) / 2) * wpp,
-    zoom,
-  };
-}
 
 interface Tween {
   from: MapCamera;
@@ -104,7 +75,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       if (!input.focus || !data) return null;
       const { width, height } = get().size;
       const target = interpolated(data, STOP_T[input.stop]);
-      return focusCamera([input.focus.seed, ...input.focus.recs], target, width, height, input.insetLeft, input.framePadding);
+      return focusCamera([input.focus.seed, ...input.focus.recs], target, width, height, input.insetLeft, input.framePadding, clampZoom);
     };
     const api: MapApi = {
       zoomBy: (factor) => {
@@ -136,7 +107,9 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       },
       isAnimating: () => {
         const m = useMapStore.getState();
-        return tween.current !== null || m.animating || m.nudging || m.rigMoving;
+        // A stop change counts from the moment it lands in the input, before the frame that starts the morph.
+        const morphPending = m.sliderT !== STOP_T[m.input.stop];
+        return tween.current !== null || m.animating || m.nudging || m.rigMoving || m.morphing || morphPending;
       },
     };
     control = api;

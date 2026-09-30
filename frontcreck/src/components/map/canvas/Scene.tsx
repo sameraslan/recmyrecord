@@ -18,7 +18,10 @@ import { CameraRig } from "./CameraRig";
 import { CameraTween } from "./CameraTween";
 import { CursorTracker } from "./CursorTracker";
 import { FrameCounter } from "./FrameCounter";
+import { FocusFramer } from "./FocusFramer";
 import { FRUSTUM_HALF_HEIGHT, InitialFrame } from "./InitialFrame";
+import { MarkerDriver } from "./MarkerDriver";
+import { MorphDriver } from "./MorphDriver";
 import { OverlayDriver } from "./OverlayDriver";
 import { PickController } from "./PickController";
 
@@ -158,10 +161,14 @@ function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null;
       <InitialFrame />
       <CameraRig />
       <CameraTween positionsRef={positionsRef} initialCamera={initialCamera} onApi={onApi} />
+      <FocusFramer />
       <CursorTracker cursorRef={cursorRef} hoverRef={hoverRef} positionsRef={positionsRef} />
       <PickController positionsRef={positionsRef} hoverRef={hoverRef} />
+      {/* Before AlbumField: its frame callback moves sliderT, which AlbumField draws in the same frame. */}
+      <MorphDriver />
       <AlbumField data={data} atlasTextures={textures} positionsRef={positionsRef} />
       <OverlayDriver positionsRef={positionsRef} />
+      <MarkerDriver positionsRef={positionsRef} />
       <FrameCounter />
       {/* Mounted last so its frame callback runs after every other camera
           writer, reining the idle camera back into the album cloud. */}

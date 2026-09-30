@@ -6,10 +6,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCatalog, usePositions } from '@/lib/data/useData';
 import { useIsNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
-import { albumHref, viewFromPathname, type View } from '@/lib/url-state';
+import type { StopId } from '@/lib/types';
+import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-state';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { buildMapData } from './data';
 import { NoWebGL } from './overlays/NoWebGL';
+import { SimilaritySlider } from './overlays/SimilaritySlider';
 import { ZoomControls } from './overlays/ZoomControls';
 import { isWebGLAvailable } from './state/webgl';
 import type { MapApi, MapCallbacks, MapInput, MapPadding } from './types';
@@ -101,6 +103,17 @@ export function MapStage() {
     if (window.__rmr) window.__rmr.map = api;
   }, []);
 
+  // The list and the map react to the store at once; the URL is written a frame later, off the interaction path.
+  const onStop = useCallback((s: StopId) => {
+    useAppStore.getState().setStop(s);
+    if (viewRef.current !== 'album') return;
+    requestAnimationFrame(() =>
+      window.setTimeout(() => {
+        if (viewRef.current === 'album' && useAppStore.getState().stop === s) replaceBy(s);
+      }, 0),
+    );
+  }, []);
+
   const callbacks = useMemo<MapCallbacks>(
     () => ({
       onHover: (id) => {
@@ -142,7 +155,15 @@ export function MapStage() {
           }}
         />
       ) : null}
-      <div className="map-ui">{interactive && mapData ? <ZoomControls api={apiRef} /> : null}</div>
+      {/* Follows the visible map, right of the album panel (mockup body[data-view="album"] .map-ui). */}
+      <div className="map-ui" style={{ left: input.insetLeft }}>
+        {interactive ? (
+          <>
+            <SimilaritySlider stop={stop} onChange={onStop} />
+            {mapData ? <ZoomControls api={apiRef} /> : null}
+          </>
+        ) : null}
+      </div>
     </div>
   );
 }

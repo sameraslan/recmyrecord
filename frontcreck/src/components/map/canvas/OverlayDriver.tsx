@@ -6,12 +6,14 @@ import { ATLAS_PER_SHEET } from '@/lib/data/sprites';
 import { renderedSpriteCssSize } from '../shaders/album';
 import { useMapStore } from '../state/mapStore';
 import { getOverlayEl, getOverlaySize } from '../state/overlayEls';
-import { canvasRect, worldToScreen } from '../state/projection';
+import { canvasRect, visibleArea, worldToScreen } from '../state/projection';
 import { coverFade } from '../state/zoomLimits';
 import { isAtlasSheetLoaded } from './AtlasManager';
 
 /** Shared with MarkerDriver (Task 7). */
 export const clamp = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));
+/** CSS px the hover label keeps from the edges of the visible map (shared with MarkerDriver). */
+export const TIP_EDGE = 8;
 
 /** Every rendered frame: positions the hover label and the selected-album ring (DOM, no React state). */
 export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<Float32Array> }) {
@@ -36,10 +38,11 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
         const { width: tw, height: th } = getOverlaySize('hover');
         let lx = p.x + 16;
         let ly = p.y - th - 12;
-        if (lx + tw > width - 8) lx = p.x - tw - 16;
+        if (lx + tw > width - TIP_EDGE) lx = p.x - tw - 16;
         if (ly < 8) ly = p.y + 18;
-        lx = clamp(lx, input.insetLeft + 8, width - tw - 8);
-        ly = clamp(ly, 8, height - th - 8);
+        const area = visibleArea(input.insetLeft, width, height, TIP_EDGE);
+        lx = clamp(lx, area.left, area.right - tw);
+        ly = clamp(ly, area.top, area.bottom - th);
         tip.style.transform = `translate3d(${lx}px, ${ly}px, 0)`;
         tip.style.opacity = '1';
       }
