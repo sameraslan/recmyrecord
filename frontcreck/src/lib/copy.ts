@@ -104,7 +104,7 @@ export const COPY = {
       'An album’s closest albums sit nearby on the map, but not always right beside it. Recommendations use more features than a two-dimensional map can show, so placing albums on it means giving up some accuracy.',
     ],
     /** Closing line under the body, above the credits divider. */
-    signoff: 'Time for exploration!',
+    signoff: 'Time for exploration! Enjoy!',
     credits: 'Mood descriptors handpicked from RateYourMusic. Sound values from Spotify. Cover art from Spotify.',
     close: 'Close',
   },

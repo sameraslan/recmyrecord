@@ -49,7 +49,7 @@ describe('copy rules (spec section 8)', () => {
       'Neither do genres or genre tags; it all comes from the sound and the mood each album evokes. Albums from the same genre often cluster together anyway, but the albums around a given one are not always from its genre. That can help you get into a new genre, since you start from something that sounds and feels a lot like music you already like.',
       'An album\u2019s closest albums sit nearby on the map, but not always right beside it. Recommendations use more features than a two-dimensional map can show, so placing albums on it means giving up some accuracy.',
     ]);
-    expect(COPY.about.signoff).toBe('Time for exploration!');
+    expect(COPY.about.signoff).toBe('Time for exploration! Enjoy!');
     expect(COPY.notFound.heading).toBe('That page isn\u2019t here.');
     expect(COPY.notFound.sub).toBe('Search for an album, or explore the map. Experimental exploration!');
     expect(COPY).not.toHaveProperty('home.wander');
