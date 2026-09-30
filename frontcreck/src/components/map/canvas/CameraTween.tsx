@@ -67,8 +67,20 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
     const flyTarget = (id: number): MapCamera => {
       const p = positionsRef.current;
       // Zoom in (never out) to where covers are fully shown.
-      const covers = zoomForCoverPx(COVER_FADE_END_PX, get().size.height);
-      return { x: p[2 * id], y: p[2 * id + 1], zoom: Math.max(camera.zoom, covers) };
+      const { height } = get().size;
+      const covers = zoomForCoverPx(COVER_FADE_END_PX, height);
+      const zoom = Math.max(camera.zoom, covers);
+      // Centred, unless the centre falls outside the framing band (the phone Explore card raises framePadding
+      // bottom while it is open): then the album sits in the middle of the band, above the card.
+      const pad = useMapStore.getState().input.framePadding;
+      const top = pad.top;
+      const bottom = height - pad.bottom;
+      let y = p[2 * id + 1];
+      if (bottom > top && (height / 2 < top || height / 2 > bottom)) {
+        const wpp = (camera.top - camera.bottom) / (height * zoom);
+        y -= (height / 2 - (top + bottom) / 2) * wpp;
+      }
+      return { x: p[2 * id], y, zoom };
     };
     const focusTarget = (): MapCamera | null => {
       const { input, data } = useMapStore.getState();

@@ -2,7 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { toSummary } from '@/lib/data/catalog';
 import { useCatalog, usePositions } from '@/lib/data/useData';
 import { useIsNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
@@ -11,6 +12,8 @@ import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-sta
 import { AmbientLayers } from '@/components/album/AmbientWash';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { buildMapData } from './data';
+import { MapCard } from './overlays/MapCard';
+import { MapHint } from './overlays/MapHint';
 import { NoWebGL } from './overlays/NoWebGL';
 import { SimilaritySlider } from './overlays/SimilaritySlider';
 import { ZoomControls } from './overlays/ZoomControls';
@@ -24,6 +27,9 @@ const PHONE_SLIDER_MARGIN_PX = 4;
 /** CSS px the phone slider panel covers from the bottom of the map before it is first measured, and on phone
  * views without it (its 12 px offset plus its 152.5 px height, without a safe-area inset). */
 const PHONE_SLIDER_COVER_FALLBACK_PX = 165;
+
+/** Space kept between a flown-to album and the top of the phone card (bottom sheet). */
+const PHONE_CARD_MARGIN_PX = 16;
 
 /** Album framing: clear of the slider panel (top-left on desktop, bottom on phones, where the bottom is measured). */
 const DESKTOP_PADDING: MapPadding = { top: 262, right: 96, bottom: 90, left: 96 };
@@ -65,6 +71,42 @@ function useSliderCover(paneRef: React.RefObject<HTMLDivElement | null>, active:
     };
   }, [paneRef, active]);
   return active ? cover : null;
+}
+
+/**
+ * CSS px of the map pane the phone Explore card covers from the bottom (pane bottom minus the card's top, so the
+ * slider panel under it is included), for the album it shows. Measured synchronously when the card mounts (before
+ * the fly to the album starts) and again when it resizes (a web font, a longer title). null without a card, and
+ * on desktop, where the card sits in the corner away from the centred album.
+ */
+function useCardCover(
+  paneRef: React.RefObject<HTMLDivElement | null>,
+  id: number | null,
+  active: boolean,
+): { id: number; px: number } | null {
+  const [cover, setCover] = useState<{ id: number; px: number } | null>(null);
+  useLayoutEffect(() => {
+    const pane = paneRef.current;
+    const card = active && id !== null ? pane?.querySelector<HTMLElement>('.card') : null;
+    if (!pane || !card || id === null) {
+      setCover(null);
+      return;
+    }
+    const measure = () => {
+      const px = Math.max(0, pane.getBoundingClientRect().bottom - card.getBoundingClientRect().top);
+      setCover((prev) => (prev !== null && prev.id === id && Math.abs(prev.px - px) < 1 ? prev : { id, px }));
+    };
+    measure();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    ro?.observe(card);
+    return () => ro?.disconnect();
+  }, [paneRef, id, active]);
+  return active && id !== null && cover?.id === id ? cover : null;
+}
+
+/** Moves focus off a control that is about to unmount with the card (its close button, its links) to the map. */
+function keepFocusOnMap(pane: HTMLElement | null): void {
+  if (document.activeElement?.closest('.card')) pane?.querySelector<HTMLElement>('canvas.map-canvas')?.focus({ preventScroll: true });
 }
 
 /** True after first paint (two animation frames) plus an idle slot: three.js never competes with it. */
@@ -124,11 +166,15 @@ export function MapStage() {
   const sliderShown = narrow && interactive;
   const measuredCover = useSliderCover(paneRef, sliderShown);
   const sliderCover = sliderShown ? (measuredCover ?? PHONE_SLIDER_COVER_FALLBACK_PX) : 0;
+  const cardShown = view === 'explore' && selected !== null;
+  const cardCover = useCardCover(paneRef, cardShown ? selected : null, narrow);
   const phonePadding = useMemo(() => {
     // Without the slider (Home, the phone album list), phone framing keeps the fallback clearance.
     const bottom = (sliderShown ? sliderCover : PHONE_SLIDER_COVER_FALLBACK_PX) + PHONE_SLIDER_MARGIN_PX;
-    return { frame: { ...PHONE_PADDING, bottom }, fit: { ...PHONE_FIT_PADDING, bottom } };
-  }, [sliderShown, sliderCover]);
+    // The Explore card (a bottom sheet above the slider): a flown-to album stays above it.
+    const frameBottom = cardCover ? Math.max(bottom, cardCover.px + PHONE_CARD_MARGIN_PX) : bottom;
+    return { frame: { ...PHONE_PADDING, bottom: frameBottom }, fit: { ...PHONE_FIT_PADDING, bottom } };
+  }, [sliderShown, sliderCover, cardCover]);
   const input = useMemo<MapInput>(
     () => ({
       stop,
@@ -156,6 +202,66 @@ export function MapStage() {
     if (window.__rmr) window.__rmr.map = api;
   }, []);
 
+  // Explore camera memory (mockup render: exploreCam). Leaving Explore saves the camera and drops the card;
+  // coming back from an album (its close control, Escape or the header nav) restores it, or frames the whole map.
+  const prevView = useRef<View>(view);
+  const pendingReturn = useRef(false);
+  // A layout effect, declared before the one below, so both see the same commit.
+  useLayoutEffect(() => {
+    const prev = prevView.current;
+    prevView.current = view;
+    if (prev === view) return;
+    const s = useAppStore.getState();
+    if (prev === 'explore') {
+      if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
+      s.setSelected(null);
+    }
+    pendingReturn.current = view === 'explore' && prev === 'album';
+  }, [view]);
+  // The pathname can change a commit before the album panel unmounts and clears the focus, so the camera moves
+  // only once the map input has no focus (MusicMap applies the input in its layout effect, before this one);
+  // otherwise Reset would frame the album just left and the album framing could follow the restore.
+  useLayoutEffect(() => {
+    if (!pendingReturn.current || view !== 'explore' || input.focus !== null || !apiRef.current) return;
+    pendingReturn.current = false;
+    const saved = useAppStore.getState().exploreCamera;
+    if (saved) apiRef.current.setCamera(saved, true);
+    else apiRef.current.reset();
+  }, [view, input]);
+
+  // Escape closes the card (mockup keydown order: after the About layer and the album view, both other routes).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || viewRef.current !== 'explore') return;
+      if (useAppStore.getState().selected === null) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest('textarea, select, [contenteditable="true"]')) return;
+      if (t instanceof HTMLInputElement && t.type !== 'range') return;
+      // Dialogs (the phone search sheet) and the search popover handle their own Escape.
+      if (t?.closest('[aria-modal="true"], .combo')) return;
+      keepFocusOnMap(paneRef.current);
+      useAppStore.getState().setSelected(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
+  // A pick flies to the album once the map input carries the card's height (phones: the sheet's measured
+  // cover), so the album lands above the sheet. MusicMap applies the input in its own layout effect, which runs
+  // before this one in the same commit.
+  const pendingFly = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const id = pendingFly.current;
+    if (id === null) return;
+    if (view !== 'explore' || selected !== id) {
+      pendingFly.current = null;
+      return;
+    }
+    if (narrow && cardCover?.id !== id) return; // the sheet is measured in this commit; the next one flies
+    pendingFly.current = null;
+    apiRef.current?.flyTo(id);
+  }, [input, view, selected, narrow, cardCover]);
+
   // The list and the map react to the store at once; the URL is written a frame later, off the interaction path.
   const onStop = useCallback((s: StopId) => {
     useAppStore.getState().setStop(s);
@@ -175,8 +281,12 @@ export function MapStage() {
       onPick: (id) => {
         const v = viewRef.current;
         if (v === 'explore') {
-          useAppStore.getState().setSelected(id);
-          apiRef.current?.flyTo(id);
+          const s = useAppStore.getState();
+          if (s.selected === id) apiRef.current?.flyTo(id);
+          else {
+            pendingFly.current = id;
+            s.setSelected(id);
+          }
         } else if (v === 'album' && catalog) {
           const s = useAppStore.getState();
           if (s.focus?.seed !== id) router.push(albumHref(catalog.albums[id].slug, s.stop));
@@ -217,11 +327,23 @@ export function MapStage() {
         />
       ) : null}
       {/* Follows the visible map, right of the album panel (mockup body[data-view="album"] .map-ui). */}
-      <div className="map-ui" style={{ left: input.insetLeft }}>
+      <div className={`map-ui${cardShown ? ' has-card' : ''}`} style={{ left: input.insetLeft }}>
         {interactive ? (
           <>
             <SimilaritySlider stop={stop} onChange={onStop} />
             {mapData ? <ZoomControls api={apiRef} /> : null}
+            {view === 'explore' ? <MapHint hidden={selected !== null} /> : null}
+            {cardShown && selected !== null && catalog ? (
+              <MapCard
+                key={selected}
+                album={toSummary(catalog.albums, selected)}
+                stop={stop}
+                onClose={() => {
+                  keepFocusOnMap(paneRef.current);
+                  useAppStore.getState().setSelected(null);
+                }}
+              />
+            ) : null}
           </>
         ) : null}
       </div>

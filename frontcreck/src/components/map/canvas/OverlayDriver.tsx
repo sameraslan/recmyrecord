@@ -48,6 +48,13 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
       }
     }
 
+    // Explore's hint line gives way once covers show (mockup `.zoomed .map-hint`: cover alpha above .25).
+    const hint = getOverlayEl('hint');
+    if (hint) {
+      const zoomed = coverFade(camera.zoom, height) > 0.25 ? '1' : '0';
+      if (hint.dataset.zoomed !== zoomed) hint.dataset.zoomed = zoomed;
+    }
+
     const sel = getOverlayEl('selected');
     if (sel) {
       const i = input.selected;
