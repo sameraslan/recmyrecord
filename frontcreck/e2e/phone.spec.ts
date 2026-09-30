@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { shot, waitForCameraIdle, waitForMap } from './helpers';
+import { shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 const IR = '/album/in-rainbows-radiohead';
 
@@ -119,23 +119,45 @@ test.describe('phone album', () => {
   });
 
   test('tap targets are at least 44 px', async ({ page }) => {
-    for (const url of ['/', IR, '/map', '/about']) {
+    for (const url of ['/', IR, '/map', '/about', '/nothing-here']) {
       await page.goto(url);
       await page.waitForTimeout(300);
-      const small = await page.evaluate(() => {
-        const out: string[] = [];
-        for (const el of document.querySelectorAll<HTMLElement>('a[href], button, input:not([type="range"]), [role="option"]')) {
-          const r = el.getBoundingClientRect();
-          if (!r.width || !r.height || getComputedStyle(el).visibility === 'hidden') continue;
-          if (el.closest('.mosaic')) continue; // shelf covers are large squares
-          if (r.height < 44 || (el.getAttribute('aria-label') && el.tagName === 'BUTTON' && r.width < 44)) out.push(`${el.tagName} ${el.className} ${el.textContent?.trim().slice(0, 20)} ${Math.round(r.width)}x${Math.round(r.height)}`);
-        }
-        return out;
-      });
-      expect(small, url).toEqual([]);
+      expect(await smallTargets(page), url).toEqual([]);
     }
+    // Open states: the tapped Explore card, the search sheet and album map mode.
+    await page.goto('/map');
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    const p = await visibleAlbumPoint(page);
+    await page.touchscreen.tap(p.x, p.y);
+    await expect(page.locator('.card')).toBeVisible();
+    expect(await smallTargets(page), 'Explore card').toEqual([]);
+    await page.getByRole('button', { name: COPY.search.open, exact: true }).tap();
+    const sheet = page.getByRole('dialog');
+    await sheet.getByRole('combobox').pressSequentially('radiohead');
+    await expect(page.getByRole('option').first()).toBeVisible();
+    expect(await smallTargets(page), 'search sheet').toEqual([]);
+    await page.goto(IR);
+    await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
+    await expect(page.getByRole('button', { name: COPY.phone.listLabel })).toBeVisible();
+    await page.waitForTimeout(500); // the panel slides out
+    expect(await smallTargets(page), 'map mode').toEqual([]);
   });
 });
+
+/** Visible tap targets under 44 px high (or, for icon buttons, under 44 px wide). */
+function smallTargets(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const out: string[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>('a[href], button, input:not([type="range"]), [role="option"]')) {
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height || getComputedStyle(el).visibility === 'hidden') continue;
+      if (el.closest('.mosaic')) continue; // shelf covers are large squares
+      if (r.height < 44 || (el.getAttribute('aria-label') && el.tagName === 'BUTTON' && r.width < 44)) out.push(`${el.tagName} ${el.className} ${el.textContent?.trim().slice(0, 20)} ${Math.round(r.width)}x${Math.round(r.height)}`);
+    }
+    return out;
+  });
+}
 
 test('no horizontal scroll at 360 and 1600 px', async ({ page, isMobile }) => {
   await page.setViewportSize(isMobile ? { width: 360, height: 740 } : { width: 1600, height: 900 });

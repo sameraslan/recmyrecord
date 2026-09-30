@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { contrastRatio } from '../src/lib/contrast';
 import { COPY } from '../src/lib/copy';
 import { camera, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
@@ -7,7 +8,18 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
 async function audit(page: Page, label: string) {
   // Audit the settled state: mid-fade colours (a card sliding in, a panel cross-fading) are blends, not the design.
-  await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'));
+  // Bounded: a looping animation would otherwise hold the audit until the test times out.
+  await page
+    .waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 2000 })
+    .catch(async () => {
+      const running = await page.evaluate(() =>
+        document.getAnimations().filter((a) => a.playState === 'running').map((a) => {
+          const t = (a.effect as KeyframeEffect | null)?.target;
+          return `${a.constructor.name} on ${t instanceof Element ? `${t.tagName.toLowerCase()}.${[...t.classList].join('.')}` : '?'}`;
+        }),
+      );
+      throw new Error(`${label}: animations still running after 2 s, so the audit would see blended colours: ${running.join(', ')}`);
+    });
   const r = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   expect(
     r.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.slice(0, 3).map((n) => n.target.join(' ')).join(' | ')}`),
@@ -26,7 +38,7 @@ const ROUTES: Array<[string, string]> = [
 test('every route passes axe, has its own title, one h1 and landmarks', async ({ page }) => {
   for (const [url, title] of ROUTES) {
     await page.goto(url);
-    await page.waitForTimeout(500);
+    await waitForMap(page); // every route draws the map (a dimmed backdrop outside /map and albums): the page has hydrated
     await expect(page, url).toHaveTitle(title);
     await expect(page.locator('h1'), url).toHaveCount(1);
     await expect(page.getByRole('banner'), url).toHaveCount(1);
@@ -65,6 +77,32 @@ test('open states pass axe', async ({ page, isMobile }) => {
     await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
     await audit(page, 'phone map mode');
   }
+});
+
+test('the hot rank badge on the map passes axe', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'a row turns its marker hot on hover or focus; the phone list and map are not shown together');
+  // The accent with the lowest contrast against the badge's old dark text.
+  await page.goto('/album/making-movies-dire-straits');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await page.locator('li.rec').first().locator('a.rec-main').hover();
+  const badge = page.locator('.mk-n[data-hot]');
+  await expect(badge).toBeVisible();
+  await audit(page, 'album, hot rank badge');
+  // axe leaves the badge "incomplete" (a transformed overlay over a canvas), so measure its own two colours too.
+  const [fg, bg] = await badge.evaluate((el) => {
+    const hex = (c: string) => `#${(c.match(/\d+/g) ?? []).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`;
+    const cs = getComputedStyle(el);
+    return [hex(cs.color), hex(cs.backgroundColor)];
+  });
+  expect(contrastRatio(fg, bg), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+});
+
+test('the data error state passes axe', async ({ page }) => {
+  await page.route('**/data/albums.json', (route) => route.abort());
+  await page.goto('/map');
+  await expect(page.getByRole('alert').filter({ hasText: COPY.error.body })).toBeVisible();
+  await audit(page, 'data error');
 });
 
 test('keyboard: the skip link comes first and targets main', async ({ page, isMobile }) => {

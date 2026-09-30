@@ -162,6 +162,19 @@ test('works with web storage blocked', async ({ page, isMobile }) => {
     }
   });
   await searchFromHome(page, isMobile, 'in rainbows', 'In Rainbows');
+  // The block really holds: both accessors throw in the page.
+  expect(
+    await page.evaluate(() =>
+      (['sessionStorage', 'localStorage'] as const).map((n) => {
+        try {
+          void window[n];
+          return `${n} readable`;
+        } catch (e) {
+          return (e as DOMException).name;
+        }
+      }),
+    ),
+  ).toEqual(['SecurityError', 'SecurityError']);
   await expect(page).toHaveURL(IR);
   await act(page.locator('li.rec').first().locator('a.rec-main'), isMobile);
   await expect(page.getByRole('navigation', { name: COPY.album.trailNav }).getByRole('link', { name: 'In Rainbows' })).toBeVisible();
