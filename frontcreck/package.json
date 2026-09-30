@@ -45,5 +45,8 @@
     "tailwindcss": "4.3.0",
     "typescript": "6.0.3",
     "vitest": "4.1.6"
+  },
+  "overrides": {
+    "playwright-core": "1.60.0"
   }
 }
