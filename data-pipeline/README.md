@@ -50,18 +50,28 @@ UMAP output depends on the exact versions of umap-learn, pynndescent and numba; 
 
 ## Overrides
 
-`overrides.json` maps a slug to corrections: `c` (cover id), `s` (Spotify album id), `image` (path to a replacement cover image, relative to this folder, used for the sprites and ambient colours) and `note` (why). Example:
+`overrides.json` holds the corrections of a verified list kept in the owner's personal-site repository (`<personal-site-repo>/scripts/music-catalog/cover-fixes.json`): albums whose Spotify URI in the feature table points at a different album (for example Joni Mitchell, "Blue" pointed at a tribute single). Each key is the slug the pipeline derives from the feature table (after artist cleaning, before any correction). Fields, all strings, all optional:
+
+- `s`: the right Spotify album id (22 characters), or `""` when the album has no Spotify release.
+- `c`: the right cover id (the last part of its `https://i.scdn.co/image/` URL), or `""` when there is no Spotify cover. A cover correction needs `image`.
+- `a`: the credited artist, when the feature table has the wrong one. The album's slug is rebuilt from it; the key stays the feature-table slug. The build fails if the new slug would change any other album's slug.
+- `image`: a replacement cover image relative to this folder (`overrides/<slug>.jpg`), used for the sprites and the ambient colours. The images are cropped from the personal site's cover atlas, or taken from its Cover Art Archive covers for the albums with no Spotify release.
+- `note`: why (the wrong album the URI points at, and the right one).
+
+`overrides.py` checks every field and names the entry and the field in its error. Example:
 
 ```json
-{ "blue-joni-mitchell": { "c": "<cover id>", "s": "<22-character album id>", "image": "overrides/blue.jpg", "note": "Spotify URI points at a tribute album" } }
+{ "blue-joni-mitchell": { "s": "<22-character album id>", "c": "<cover id>", "image": "overrides/blue-joni-mitchell.jpg", "note": "Spotify URI points at a tribute single" } }
 ```
 
-It ships empty because no correction can be verified from the data on disk.
+Only the Spotify link, the cover, the sprites, the ambient colours and (for `a`) the artist and slug change. All 19 corrections of the list match an album in this catalog. Positions and recommendations still use the wrong album's audio features, because Spotify no longer serves audio features to refetch them.
 
 ## Known data problems (documented, not fixed)
 
 - 34 Spotify URIs in the feature table are assigned to two or three different albums (69 rows). The pipeline keeps the first row and drops the other 35.
-- Some covers are wrong because the Spotify URI itself is wrong. For example Joni Mitchell, "Blue" shows a tribute album. The URI is the same in every source on disk, so the fix needs a verified id added to `overrides.json`.
+- Some Spotify URIs in the feature table point at a different album. The verified ones are corrected in `overrides.json` (see Overrides); their positions and recommendations still come from the wrong album's features.
+- "One" by Neal Morse shows a Neal Francis sleeve. Unverified, so not corrected.
+- "Chill Out" (The KLF), "Gimix" (The Avalanches) and "Dark & Long" (Underworld) have no Spotify release, so they have no Spotify id and no cover id. The site turns an empty Spotify id into a Spotify search link rather than hiding the link. Their sprites and ambient colours use the corrected cover, but the site's cover component shows a cover id's image, then the sprite only when that image fails, so with no cover id it shows the typographic tile, not the sprite.
 - "Spiritual Unity" (Albert Ayler Trio) has no cover; the site shows a typographic tile.
 - 73 albums have no mood descriptors and 2,169 have fewer than ten.
 - The feature table has 176 descriptor columns (the design spec says 175).

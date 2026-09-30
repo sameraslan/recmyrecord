@@ -11,7 +11,7 @@ from .images import load_album_sprites, write_sheets
 from .io import write_json
 from .layout import build_layouts, flat_positions
 from .mapsource import MapSource, load_cover_ids, load_metadata
-from .overrides import apply_overrides, load_overrides
+from .overrides import apply_overrides, load_overrides, slugs_after_overrides
 from .recs import build_recs
 from .slugs import make_slugs
 from .table import dedupe_table, load_table
@@ -60,11 +60,14 @@ def main(argv: list[str] | None = None) -> int:
     cover_by_uri = load_cover_ids(src)
     print(f"catalog: {len(sub)} albums ({len(df) - len(sub)} table rows dropped)")
 
+    titles = [str(t) for t in sub["Title"]]
     artists = [clean_artist(a) for a in sub["Artist"].astype(str)]
-    slugs = make_slugs(sub["Title"].astype(str), artists)
-    covers, spotify_ids, override_images = apply_overrides(
+    slugs = make_slugs(titles, artists)  # overrides.json is keyed by these
+    overrides = load_overrides(args.overrides)
+    covers, spotify_ids, override_images, artists = apply_overrides(
         slugs, [cover_by_uri.get(u, "") for u in uris], [u.split(":")[-1] for u in uris],
-        load_overrides(args.overrides), args.overrides.parent)
+        overrides, args.overrides.parent, artists=artists)
+    slugs = slugs_after_overrides(titles, artists, slugs, {slugs.index(k) for k, e in overrides.items() if "a" in e})
     vocab, tops = build_vocab(sub)
     recs = build_recs(sub)
     layouts = build_layouts(sub)

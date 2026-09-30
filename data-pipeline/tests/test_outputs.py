@@ -7,10 +7,12 @@ import pytest
 from PIL import Image
 
 from rmr_pipeline.artists import clean_artist
-from rmr_pipeline.constants import (ATLAS_COLS, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, DEFAULT_OUT, FALLBACK_AMBIENT,
-                                    IN_RAINBOWS_LIVE, THUMB_COLS, THUMB_ROWS, THUMB_SPRITE_PX)
+from rmr_pipeline.constants import (ATLAS_COLS, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, DEFAULT_OUT, DEFAULT_OVERRIDES,
+                                    FALLBACK_AMBIENT, IN_RAINBOWS_LIVE, THUMB_COLS, THUMB_ROWS, THUMB_SPRITE_PX)
 from rmr_pipeline.images import SHEET_FILL, crop_uv, square
 from rmr_pipeline.mapsource import MapSource, load_metadata
+from rmr_pipeline.overrides import load_overrides
+from rmr_pipeline.slugs import make_slugs
 from rmr_pipeline.validate import validate_dir
 
 MAP_ROOT = os.environ.get("RMR_MAP_ROOT", "")
@@ -93,3 +95,23 @@ def test_ambient_colours_are_extracted():
     extracted = [a for a in albums if a["c"] and a["w"] != list(FALLBACK_AMBIENT[a["k"] % 3])]
     assert len(extracted) > 4000
     assert albums[11]["w"] != list(FALLBACK_AMBIENT[albums[11]["k"] % 3])
+
+
+def test_committed_outputs_apply_every_override(deduped):
+    """Each correction in overrides.json is in albums.json and in its atlas cell."""
+    sub, _ = deduped
+    table_slugs = make_slugs([str(t) for t in sub["Title"]], [clean_artist(a) for a in sub["Artist"].astype(str)])
+    index = {s: i for i, s in enumerate(table_slugs)}
+    albums = _albums()
+    overrides = load_overrides(DEFAULT_OVERRIDES)
+    assert overrides
+    for slug, e in overrides.items():
+        a = albums[index[slug]]
+        assert (a["s"], a["c"]) == (e.get("s", a["s"]), e.get("c", a["c"])), slug
+        assert a["a"] == e.get("a", a["a"]), slug
+        assert a["slug"] == make_slugs([a["t"]], [a["a"]])[0], slug
+        with Image.open(DEFAULT_OVERRIDES.parent / e["image"]) as im:
+            ref = np.asarray(square(im, ATLAS_SPRITE_PX), dtype=float)
+        assert np.abs(_atlas_cell(index[slug]) - ref).mean() < 10, f"atlas cell of {slug} is not its override image"
+    magnolia = albums[index["the-magnolia-electric-co-magnolia-electric-co"]]
+    assert (magnolia["slug"], magnolia["a"]) == ("the-magnolia-electric-co-songs-ohia", "Songs: Ohia")

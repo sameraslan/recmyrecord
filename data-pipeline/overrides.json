@@ -1,1 +1,117 @@
-{}
+{
+  "suicide-suicide": {
+    "s": "46kw5FsFdJhNRL8wfHM9Bp",
+    "c": "ab67616d00001e029707d3e2f2406aab2282cf9e",
+    "image": "overrides/suicide-suicide.jpg",
+    "note": "Spotify URI spotify:album:5rOHrnrRomvSJhQLGVtfJ8 is Various Artists - Suicide Squad: The Album. Right album: Suicide - Suicide (2019 - Remaster)."
+  },
+  "this-heat-this-heat": {
+    "s": "2TpINAe20tnGvADxQkUI7V",
+    "c": "ab67616d00001e0287451cd8cd08844a537419cf",
+    "image": "overrides/this-heat-this-heat.jpg",
+    "note": "Spotify URI spotify:album:7t3cNyHUPwJNIchIg6xVU8 is Heather Headley - This Is Who I Am. Right album: This Heat - This Heat."
+  },
+  "the-doors-the-doors": {
+    "s": "1jWmEhn3ggaL6isoyLfwBn",
+    "c": "ab67616d00001e0200d037dd3dfb578da4692088",
+    "image": "overrides/the-doors-the-doors.jpg",
+    "note": "Spotify URI spotify:album:5gO2acKSOaJnP0Mcy8IpU6 is 3 Doors Down - The Better Life. Right album: The Doors - The Doors."
+  },
+  "you-gong": {
+    "s": "6lj2wSd3gWooFc19K5xr4W",
+    "c": "ab67616d00001e021da23035fa69dad554aef341",
+    "image": "overrides/you-gong.jpg",
+    "note": "Spotify URI spotify:album:3xP4sRiFGlSeoSw5t3Q567 is YEИDRY, Damian Marley - YOU (feat. Damian Marley). Right album: Gong - You (Deluxe Edition)."
+  },
+  "neu-neu": {
+    "s": "1aKOQpS6TrGd3wTQooaIBH",
+    "c": "ab67616d00001e027c4dafea59399470cce454c3",
+    "image": "overrides/neu-neu.jpg",
+    "note": "Spotify URI spotify:album:7C0499YNyKXYczyKagdhip is Three Days Grace, Lukas Rossi - Neurotic (feat. Lukas Rossi). Right album: NEU! - NEU!."
+  },
+  "computerwelt-kraftwerk": {
+    "s": "07BPkQfT4B5xjDwjCxRiN2",
+    "c": "ab67616d00001e025b303cb895a745c5ddcde485",
+    "image": "overrides/computerwelt-kraftwerk.jpg",
+    "note": "Spotify URI spotify:album:3Pc4EGiXwEsg6bGpoG5D1u is marstal:lidell - Computerwelt (Kraftwerk Cover). Right album: Kraftwerk - Computer World (2009 Remaster)."
+  },
+  "merry-christmas-mr-lawrence-ryuichi-sakamoto": {
+    "s": "0BlM8Qd8rxj4wLd9ioGZZU",
+    "c": "ab67616d00001e0247fb216584150198418bdcb5",
+    "image": "overrides/merry-christmas-mr-lawrence-ryuichi-sakamoto.jpg",
+    "note": "Spotify URI spotify:album:2Q15bdTn337lqsf4zXhH18 is Jess Gillam - Merry Christmas Mr. Lawrence. Right album: Ryuichi Sakamoto - Merry Christmas, Mr. Lawrence."
+  },
+  "the-magnolia-electric-co-magnolia-electric-co": {
+    "a": "Songs: Ohia",
+    "s": "5MqGZZtQ36zsETrTK2uy04",
+    "c": "ab67616d00001e0289b54a2385458cbe68bc35c6",
+    "image": "overrides/the-magnolia-electric-co-magnolia-electric-co.jpg",
+    "note": "Spotify URI spotify:album:0D9FANbUo4R1eyn9MZQBOa is Magnolia Electric Co., Jason Molina - What Comes After The Blues. Right album: Songs: Ohia - Magnolia Electric Co. (Deluxe Edition); credited to Songs: Ohia, the band name at release (it became Magnolia Electric Co. afterwards)."
+  },
+  "blue-joni-mitchell": {
+    "s": "1vz94WpXDVYIEGja8cjFNa",
+    "c": "ab67616d00001e02e79dc1438d650f426b5e99a7",
+    "image": "overrides/blue-joni-mitchell.jpg",
+    "note": "Spotify URI spotify:album:33di4GLoFlzPl5zooUXbxU is Blue Motel Room with Strings Attached - Blue Motel Room - Joni Mitchell Tribute - Single. Right album: Joni Mitchell - Blue."
+  },
+  "deluxe-harmonia": {
+    "s": "0QBa0kBNV0mS8XQpaMxO7D",
+    "c": "ab67616d00001e020bab2de9f294799e742079c7",
+    "image": "overrides/deluxe-harmonia.jpg",
+    "note": "Spotify URI spotify:album:7lrNfxBCYeqkZoycEODjPW is Orkidea - Harmonia (Deluxe Edition). Right album: Harmonia - Deluxe."
+  },
+  "monster-movie-the-can": {
+    "s": "3aMBDb72H0wrXO5iARzsWc",
+    "c": "ab67616d00001e02a497b961fb08edeb705c83fa",
+    "image": "overrides/monster-movie-the-can.jpg",
+    "note": "Spotify URI spotify:album:4cvCazAnjMnrFsvA1AhpVI is Richard Rossi - Lucy and the Lake Monster Main Movie Theme (You, Champ, and Me). Right album: CAN - Monster Movie (Remastered Version)."
+  },
+  "hi-scores-boards-of-canada": {
+    "s": "7khd4wP2FmUO6uPVSQ9r8y",
+    "c": "ab67616d00001e02a48a466ca8a021dea5c340a9",
+    "image": "overrides/hi-scores-boards-of-canada.jpg",
+    "note": "Spotify URI spotify:album:3FabCzGQgFLqkCqzceB5ii is an untitled Various Artists release. Right album: Boards of Canada - Hi Scores."
+  },
+  "africa-brasil-jorge-ben": {
+    "s": "0esHQqYklDPje00NUNq6py",
+    "c": "ab67616d00001e022a3e351bbab659d55a2fadec",
+    "image": "overrides/africa-brasil-jorge-ben.jpg",
+    "note": "Spotify URI spotify:album:1jJXtCHztoIKiSG8IbLmq0 is Jorge Ben Jor - Favourites: From Samba Esquema Novo 1963 To Africa Brasil 1976. Right album: Jorge Ben Jor - Africa Brasil."
+  },
+  "un-canto-por-mexico-vol-1-natalia-lafourcade": {
+    "s": "6yDcHjoEqNkkl9UC6KSlFE",
+    "c": "ab67616d00001e026b949365b6d447dc8ee21ce0",
+    "image": "overrides/un-canto-por-mexico-vol-1-natalia-lafourcade.jpg",
+    "note": "Spotify URI spotify:album:0Ece1my4kjbR0frvMUzRT0 is Natalia Lafourcade - Un Canto por México, Vol. II. Right album: Natalia Lafourcade - Un Canto por México, Vol. 1."
+  },
+  "on-the-corner-miles-davis": {
+    "s": "4K7w2LiKZz0CyHXl6OtkOu",
+    "c": "ab67616d00001e0217fe3d55d1f122817c8b2f35",
+    "image": "overrides/on-the-corner-miles-davis.jpg",
+    "note": "Spotify URI spotify:album:4ORrWT9p5FH1jhTCATKEcj is Miles Davis - The Complete On The Corner Sessions. Right album: Miles Davis - On The Corner."
+  },
+  "music-axe": {
+    "s": "2hor40tV5e39h6lVVpgIWa",
+    "c": "ab67616d00001e02e27b1f673d2787f0f80d5f90",
+    "image": "overrides/music-axe.jpg",
+    "note": "Spotify URI spotify:album:2AqzvX37cFHXH5eW7PIlQZ is Various Artists - Small Axe (Music Inspired By The Original TV Series). Right album: Crystalline - Axe Music (Guerssen reissue of Axe - Music, same 5 tracks)."
+  },
+  "chill-out-the-klf": {
+    "s": "",
+    "c": "",
+    "image": "overrides/chill-out-the-klf.jpg",
+    "note": "Spotify URI spotify:album:0wgejBvzezpUFeT2poozr4 is Various Artists - Chill the F#@K Out!. Right album: The KLF - Chill Out (1990); not on Spotify, link removed. Cover from https://coverartarchive.org/release-group/a415fc9b-1516-303e-b354-fc3a5b269f1b."
+  },
+  "gimix-the-avalanches": {
+    "s": "",
+    "c": "",
+    "image": "overrides/gimix-the-avalanches.jpg",
+    "note": "Spotify URI spotify:album:3OQshkQDiLAMxFKCfw7H6o is D3adhand - Good for the gimix. Right album: The Avalanches - Gimix (2000); not on Spotify, link removed. Cover from https://coverartarchive.org/release-group/0aa6bdbd-b8fe-3640-a14e-5729fecb3d5e."
+  },
+  "dark-and-long-underworld": {
+    "s": "",
+    "c": "",
+    "image": "overrides/dark-and-long-underworld.jpg",
+    "note": "Spotify URI spotify:album:3jp2nBhfeHODGumUVPeyHK is Underworld - Dark & Long 3 (2021). Right album: Underworld - Dark & Long (1994); not on Spotify, link removed. Cover from https://coverartarchive.org/release-group/bc1d192c-5e81-34a9-9118-3b5a23cdde08."
+  }
+}
