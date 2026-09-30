@@ -231,10 +231,10 @@ test('leaving an album by the header nav leaves the album state clean and frames
     .poll(() =>
       page.evaluate(() => {
         const s = window.__rmr!.getState();
-        return [s.focus, s.hot, s.ambient, s.mapMode, s.panelInset];
+        return [s.focus, s.hot, s.ambient, s.mapModeFor, s.panelInset];
       }),
     )
-    .toEqual([null, null, null, false, 0]);
+    .toEqual([null, null, null, null, 0]);
   await waitForCameraIdle(page);
   // With no saved Explore camera, the map resets to the overview, not to the album's old framing.
   const overview = await page.evaluate(() => {

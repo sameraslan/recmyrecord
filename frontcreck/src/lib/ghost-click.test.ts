@@ -33,4 +33,16 @@ describe('suppressGhostClick', () => {
     now.mockReturnValue(1800);
     expect(click(100, 200)).toBe(false);
   });
+
+  it('keeps the compatibility mousedown at the same spot from moving focus, and does not disarm on it', () => {
+    suppressGhostClick(100, 200);
+    const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: 102, clientY: 201 });
+    document.body.dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+    expect(click(102, 201)).toBe(true);
+    const away = new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX: 300, clientY: 200 });
+    suppressGhostClick(100, 200);
+    document.body.dispatchEvent(away);
+    expect(away.defaultPrevented).toBe(false);
+  });
 });

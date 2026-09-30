@@ -146,7 +146,9 @@ export function MapStage() {
   const hot = useAppStore((s) => s.hot);
   const selected = useAppStore((s) => s.selected);
   const panelInset = useAppStore((s) => s.panelInset);
-  const mapMode = useAppStore((s) => s.mapMode);
+  const mapModeFor = useAppStore((s) => s.mapModeFor);
+  // Phone map mode belongs to one album: on a pick the new URL turns it off before the old panel unmounts.
+  const mapMode = mapModeFor !== null && pathname === `/album/${mapModeFor}`;
   const ambient = useAppStore((s) => s.ambient);
 
   useEffect(() => {

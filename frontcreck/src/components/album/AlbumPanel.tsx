@@ -30,9 +30,10 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
   // the panel's start position).
   const [entry] = useState(() => (prefersReducedMotion() ? 'none' : entryFrom(`/album/${seed.slug}`, recordedPath(), previousPath())));
   // Phone map mode (the Map button, the strip): the panel slides away and the full map takes the screen. It only
-  // exists under 900 px; a phone turned wide leaves it.
+  // exists under 900 px (a phone turned wide leaves it) and only for this album: a map pick opens the next album
+  // as a list, which must not render hidden and inert while this panel's cleanup is still to come.
   const narrow = useIsNarrow();
-  const mapMode = useAppStore((s) => s.mapMode) && narrow;
+  const mapMode = useAppStore((s) => s.mapModeFor === seed.slug) && narrow;
   const fabRef = useRef<HTMLButtonElement>(null);
   const rows = data.recs[stop];
   const visible = rows.slice(0, expanded ? REC_MAX : REC_DEFAULT_VISIBLE);
@@ -42,14 +43,14 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
 
   const close = useCallback(() => router.push('/map'), [router]);
   const setMapMode = useCallback((on: boolean) => {
-    useAppStore.getState().setMapMode(on);
+    useAppStore.getState().setMapModeFor(on ? seed.slug : null);
     // The control that switched may be inside the panel that is becoming inert (the strip), so focus follows to
     // the one button that switches back.
     requestAnimationFrame(() => fabRef.current?.focus({ preventScroll: true }));
-  }, []);
+  }, [seed.slug]);
 
   useEffect(() => {
-    if (!narrow && useAppStore.getState().mapMode) useAppStore.getState().setMapMode(false);
+    if (!narrow && useAppStore.getState().mapModeFor !== null) useAppStore.getState().setMapModeFor(null);
   }, [narrow]);
 
   useEffect(() => {
@@ -75,7 +76,7 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
       s.setFocus(null);
       s.setHot(null);
       s.setAmbient(null);
-      s.setMapMode(false);
+      s.setMapModeFor(null);
       document.documentElement.style.removeProperty('--acc');
     },
     [],
@@ -97,7 +98,7 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
       // Dialogs (the phone search sheet) and the search popover handle their own Escape.
       if (t?.closest('[aria-modal="true"], .combo')) return;
       // Phone map mode: Escape goes back to the list, not away from the album.
-      if (useAppStore.getState().mapMode) {
+      if (useAppStore.getState().mapModeFor === seed.slug) {
         setMapMode(false);
         return;
       }
@@ -105,7 +106,7 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [close, setMapMode]);
+  }, [close, setMapMode, seed.slug]);
 
   return (
     <>

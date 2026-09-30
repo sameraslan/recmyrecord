@@ -14,7 +14,7 @@ test.describe('phone album', () => {
 
   test('list first, then the map strip; the Map button toggles a full-screen map', async ({ page }, info) => {
     await page.goto(IR);
-    await expect(page.locator('.seed .cover')).toHaveCSS('width', '92px');
+    await expect(page.locator('section.album .seed .cover')).toHaveCSS('width', '92px');
     await expect(page.locator('.album-close')).toBeHidden();
     const strip = page.getByRole('img', { name: COPY.map.preview });
     await strip.scrollIntoViewIfNeeded();
@@ -55,6 +55,67 @@ test.describe('phone album', () => {
     await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
     await expect(page.locator('section.album')).toBeHidden();
     await expect.poll(() => page.locator('section.album').evaluate((el) => el.getBoundingClientRect().right)).toBeLessThanOrEqual(0);
+  });
+
+  test('a map pick in map mode opens that album as a list, focused, with a fade', async ({ page }) => {
+    await page.goto(IR);
+    await waitForMap(page);
+    await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
+    await expect(page.locator('section.album')).toBeHidden();
+    await expect(page.locator('.mk')).toHaveCount(6);
+    await waitForCameraIdle(page);
+    // Markers take no pointer events: the tap reaches the canvas, which hit-tests their boxes.
+    const box = (await page.locator('.mk:not(.mk--seed)').first().boundingBox())!;
+    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await expect(page).not.toHaveURL(IR);
+    await expect(page).toHaveURL(/\/album\//);
+    const album = page.locator('section.album');
+    // The panel must never slide in from the left: sample its position for 500 ms from the new URL on.
+    const minLeft = await album.evaluate(
+      (el) =>
+        new Promise<number>((resolve) => {
+          let min = el.getBoundingClientRect().left;
+          const t0 = performance.now();
+          const tick = () => {
+            min = Math.min(min, document.querySelector('section.album')!.getBoundingClientRect().left);
+            if (performance.now() - t0 < 500) requestAnimationFrame(tick);
+            else resolve(min);
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
+    expect(minLeft).toBe(0);
+    await expect(album).toBeVisible();
+    await expect(album).not.toHaveClass(/album--hidden|is-entering/);
+    await expect(album).not.toHaveAttribute('inert');
+    await expect(page.locator('#seed-title')).toBeFocused();
+    await expect(page.locator('.album-scroll > .fade-in')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: COPY.phone.mapLabel })).toBeVisible();
+  });
+
+  test('under reduced motion the Map and List buttons switch within a frame', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(IR);
+    await waitForMap(page);
+    const afterClick = (label: string) =>
+      page.evaluate(
+        (name) =>
+          new Promise<{ right: number; left: number; visibility: string }>((resolve) => {
+            document.querySelector<HTMLButtonElement>(`.fab-map[aria-label="${name}"]`)!.click();
+            requestAnimationFrame(() => {
+              const el = document.querySelector('section.album')!;
+              const r = el.getBoundingClientRect();
+              resolve({ right: r.right, left: r.left, visibility: getComputedStyle(el).visibility });
+            });
+          }),
+        label,
+      );
+    const hidden = await afterClick(COPY.phone.mapLabel);
+    expect(hidden.right).toBeLessThanOrEqual(0);
+    expect(hidden.visibility).toBe('hidden');
+    const shown = await afterClick(COPY.phone.listLabel);
+    expect(shown.left).toBe(0);
+    expect(shown.visibility).toBe('visible');
   });
 
   test('tap targets are at least 44 px', async ({ page }) => {

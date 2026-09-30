@@ -125,9 +125,9 @@ test.describe('desktop split view', () => {
     const albumState = () =>
       page.evaluate(() => {
         const s = window.__rmr!.getState();
-        return { focus: s.focus, hot: s.hot, ambient: s.ambient, mapMode: s.mapMode, panelInset: s.panelInset, acc: document.documentElement.style.getPropertyValue('--acc') };
+        return { focus: s.focus, hot: s.hot, ambient: s.ambient, mapModeFor: s.mapModeFor, panelInset: s.panelInset, acc: document.documentElement.style.getPropertyValue('--acc') };
       });
-    const clean = { focus: null, hot: null, ambient: null, mapMode: false, panelInset: 0, acc: '' };
+    const clean = { focus: null, hot: null, ambient: null, mapModeFor: null, panelInset: 0, acc: '' };
     await page.goto(IR);
     await page.locator('li.rec').first().locator('a.rec-main').hover(); // make `hot` non-null first
     await page.getByRole('button', { name: COPY.album.close, exact: true }).click();

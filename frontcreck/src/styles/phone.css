@@ -42,3 +42,9 @@
 
   .map-zoom button { width: 44px; height: 44px; }
 }
+
+/* Reduced motion: the global rule only shortens transitions to .01ms, which still leaves the panel's first frame at
+ * its old position; the Map and List switch takes effect in the same frame instead. */
+@media (max-width: 899px) and (prefers-reduced-motion: reduce) {
+  .album, .album.album--hidden, .album.album--hidden .album-scroll { transition-property: none !important; }
+}

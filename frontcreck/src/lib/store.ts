@@ -16,8 +16,9 @@ export interface AppState {
   selected: AlbumId | null;
   /** Camera saved when leaving Explore, restored when coming back (close / Escape). */
   exploreCamera: MapCamera | null;
-  /** Phone album view: full-screen map instead of the list. */
-  mapMode: boolean;
+  /** Phone album view: the slug of the album whose full-screen map replaced the list, null for the list. Scoped
+   * to that album, so the next album's panel (a map pick) never renders in map mode before this one's cleanup. */
+  mapModeFor: string | null;
   /** CSS px of the map covered by the album panel on the left (0 when there is none). */
   panelInset: number;
   webgl: WebglStatus;
@@ -30,7 +31,7 @@ export interface AppState {
   setHot: (id: AlbumId | null) => void;
   setSelected: (id: AlbumId | null) => void;
   saveExploreCamera: (camera: MapCamera | null) => void;
-  setMapMode: (on: boolean) => void;
+  setMapModeFor: (slug: string | null) => void;
   setPanelInset: (px: number) => void;
   setWebgl: (status: WebglStatus) => void;
   setAmbient: (ambient: Ambient | null) => void;
@@ -58,7 +59,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   hot: null,
   selected: null,
   exploreCamera: null,
-  mapMode: false,
+  mapModeFor: null,
   panelInset: 0,
   webgl: 'unknown',
   ambient: null,
@@ -69,7 +70,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setHot: (hot) => set((s) => (s.hot === hot ? s : { hot })),
   setSelected: (selected) => set((s) => (s.selected === selected ? s : { selected })),
   saveExploreCamera: (exploreCamera) => set((s) => (sameCamera(s.exploreCamera, exploreCamera) ? s : { exploreCamera })),
-  setMapMode: (mapMode) => set((s) => (s.mapMode === mapMode ? s : { mapMode })),
+  setMapModeFor: (mapModeFor) => set((s) => (s.mapModeFor === mapModeFor ? s : { mapModeFor })),
   setPanelInset: (panelInset) => set((s) => (s.panelInset === panelInset ? s : { panelInset })),
   setWebgl: (webgl) => set((s) => (s.webgl === webgl ? s : { webgl })),
   setAmbient: (ambient) => set((s) => (s.ambient?.join() === ambient?.join() ? s : { ambient })),
