@@ -34,7 +34,7 @@ export const MAX_SPRITE_VIEWPORT_FRACTION = 0.18;
 
 /**
  * JS mirror of the sprite size the vertex shader actually draws, in CSS px:
- * the base size times `scale` (0.85 for albums outside the focus), then the
+ * the base size times `scale`, then the
  * 240 device-px and u_maxSpritePx caps. Hit testing and overlay placement use
  * it so both track the sprite on screen at every zoom.
  */
@@ -172,8 +172,7 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
         baseCss = 5.0;
         coverT = 0.0;
       } else {
-        v_dim = 1.0;
-        baseCss *= 0.85;
+        v_dim = 1.0;   // same size as in the overview (mockup), only fainter
       }
     }
     v_hovered = (abs(u_hoverIndex - instanceIndex) < 0.5 && v_anchor < 0.5 && v_sel < 0.5) ? 1.0 : 0.0;

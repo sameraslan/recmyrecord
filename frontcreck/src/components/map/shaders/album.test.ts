@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { COVER_MAX_PX, COVER_WORLD, coverCssPx, pxPerWorld, zoomForCoverPx } from "../state/zoomLimits";
-import { renderedSpriteCssSize, selectedIsProminent, selectedSpriteCssSize, spriteCssSize } from "./album";
+import { ALBUM_VERTEX_SHADER, renderedSpriteCssSize, selectedIsProminent, selectedSpriteCssSize, spriteCssSize } from "./album";
 
 const H = 836; // canvas height of a 1440 x 900 window, CSS px
 const FIT = 0.784; // its fitted overview zoom (whole cloud, mockup padding)
@@ -68,5 +68,12 @@ describe("the picked album in cover mode (mockup max(cs * 1.8, 64))", () => {
   it("keeps its frame inside the viewport-relative sprite cap", () => {
     // 64 px covers on a 400 px tall canvas: the cap is 72 px, the frame takes 12 of it.
     expect(selectedSpriteCssSize(zoomForCoverPx(64, 400), 400, 2)).toBeCloseTo(60, 5);
+  });
+});
+
+describe("albums outside the focus in album view", () => {
+  it("keep their overview size, as in the mockup, and only fade (hit tests use the same size)", () => {
+    const dimBranch = ALBUM_VERTEX_SHADER.slice(ALBUM_VERTEX_SHADER.indexOf("v_dim = 1.0;"));
+    expect(dimBranch.slice(0, dimBranch.indexOf("}"))).not.toMatch(/baseCss\s*\*=/);
   });
 });
