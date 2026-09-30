@@ -2,6 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
 import { shot, waitForMap } from './helpers';
 
+// The owner's first and last name, stored encoded so this guard never spells them.
+const OWNER_NAME_RE = new RegExp(Buffer.from('c2FtZXJ8YXNsYW4=', 'base64').toString('utf8'), 'i');
+
 test.describe('Home', () => {
   test('hero, search, buttons and shelf over the dimmed map', async ({ page, isMobile }, info) => {
     await page.goto('/');
@@ -86,7 +89,7 @@ test('About explains the site and closes back', async ({ page }, info) => {
   await expect(page.getByRole('heading', { level: 1, name: COPY.about.title })).toBeFocused();
   for (const p of COPY.about.body) await expect(page.getByText(p)).toBeVisible();
   await expect(page.getByText(COPY.about.credits)).toBeVisible();
-  await expect(page.locator('body')).not.toContainText(/Samer|Aslan/);
+  await expect(page.locator('body')).not.toContainText(OWNER_NAME_RE);
   await waitForMap(page);
   await page.waitForTimeout(400);
   await shot(page, info, 'about');

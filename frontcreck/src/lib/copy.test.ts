@@ -3,6 +3,9 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CATALOG_SIZE_LABEL, COPY } from './copy';
 
+// The owner's first and last name, stored encoded so this guard never spells them.
+const OWNER_NAME_RE = new RegExp(Buffer.from('c2FtZXJ8YXNsYW4=', 'base64').toString('utf8'), 'i');
+
 // Sample arguments for the copy functions: (text, text, words) first, then (words).
 const ARG_SETS: unknown[][] = [['zzkq', 'Radiohead', ['lush', 'warm']], [['lush', 'warm']]];
 
@@ -53,7 +56,8 @@ describe('copy rules (spec section 8)', () => {
 
   it('never names the owner or counts recommendations or the catalog', () => {
     for (const s of ALL) {
-      expect(s, s).not.toMatch(/samer|aslan|made by/i);
+      expect(s, s).not.toMatch(OWNER_NAME_RE);
+      expect(s, s).not.toMatch(/made by/i);
       expect(s, s).not.toMatch(/\b(five|ten|top 10|top ten)\b/i);
       expect(s.replace(CATALOG_SIZE_LABEL, ''), s).not.toMatch(/\d/);
     }
@@ -68,7 +72,7 @@ describe('copy rules (spec section 8)', () => {
     for (const f of files) {
       const text = fs.readFileSync(path.join(root, f), 'utf8');
       expect(text, f).not.toMatch(/[\u2013\u2014]/);
-      expect(text, f).not.toMatch(/Samer|Aslan/);
+      expect(text, f).not.toMatch(OWNER_NAME_RE);
     }
   });
 });
