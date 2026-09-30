@@ -88,7 +88,11 @@ test('About explains the site and closes back', async ({ page }, info) => {
   await expect(page).toHaveURL('/about');
   await expect(page).toHaveTitle('About · recmyrecord');
   await expect(page.getByRole('heading', { level: 1, name: COPY.about.title })).toBeFocused();
-  for (const p of COPY.about.body) await expect(page.getByText(p)).toBeVisible();
+  await expect(page.getByText(COPY.about.intro)).toBeVisible();
+  for (const section of COPY.about.sections) {
+    await expect(page.getByRole('heading', { level: 2, name: section.heading })).toBeVisible();
+    for (const p of section.body) await expect(page.getByText(p)).toBeVisible();
+  }
   await expect(page.getByText(COPY.about.signoff)).toBeVisible();
   await expect(page.getByText(COPY.about.credits)).toBeVisible();
   await expect(page.locator('body')).not.toContainText(OWNER_NAME_RE);

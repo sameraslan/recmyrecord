@@ -28,6 +28,7 @@
 .about .x svg { width: 18px; height: 18px; }
 .about h1 { font-family: var(--font-serif); font-weight: 500; font-size: 48px; line-height: 1; letter-spacing: -.015em; padding-right: 32px; }
 .about p { font-size: 16.5px; line-height: 1.65; color: #d9d0bf; margin-top: 16px; }
+.about .about-h2 { margin-top: 36px; margin-bottom: -4px; }
 .about .about-signoff { margin-top: 24px; font-family: var(--font-serif); font-style: italic; font-size: 20px; line-height: 1.3; color: var(--color-lamp); }
 .about .about-credits { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--color-rule); font-size: 14.5px; color: var(--color-dust); }
 
