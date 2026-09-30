@@ -30,7 +30,7 @@ NON_MOOD = {
 }
 
 STOPS = ("sonic", "balanced", "mood")
-SLIDER = {"sonic": 5.0, "balanced": 2.0, "mood": 0.5}
+SLIDER = {"sonic": 5.0, "balanced": 1.765, "mood": 0.5}  # balanced: the original site's tuned default (1.765 ** 3 ≈ 5.5)
 RECS_PER_STOP = 10
 TOP_DESCRIPTORS = 10
 LIVE_POOL = 4000

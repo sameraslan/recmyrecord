@@ -207,7 +207,7 @@ test.describe('album to album', () => {
     test.skip(isMobile, 'the phone has no map inset');
     // The first row of In Rainbows (balanced). Its page prefetch fails and the navigation request is slow; the
     // current panel and the map inset stay until the new album arrives (album pages have no loading boundary).
-    const target = '/album/undun-the-roots';
+    const target = '/album/you-will-never-know-why-sweet-trip';
     await page.route(
       (url) => url.pathname === target,
       async (route) => {
@@ -228,7 +228,7 @@ test.describe('album to album', () => {
     await page.waitForLoadState('networkidle');
     await sampleFrames(page);
     await row.click();
-    await expect(page.locator('#seed-title')).toHaveText('undun', { timeout: 10_000 });
+    await expect(page.locator('#seed-title')).toHaveText('You Will Never Know Why', { timeout: 10_000 });
     const samples = await stopSampling(page);
     expect(samples.length).toBeGreaterThan(10);
     expect(samples.filter((s) => s.inset === 0)).toEqual([]);

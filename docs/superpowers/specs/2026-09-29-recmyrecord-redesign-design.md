@@ -31,7 +31,7 @@ Success means: a visitor can go from "an album I like" to a list of close albums
 |---|---|---|
 | Runtime architecture | Fully static. Recommendations, map positions and metadata are precomputed JSON served from `public/data`. No Heroku call, no Spotify call, no database at runtime. | Instant results, no cold starts, removes the album 4001+ crash, the fetch race and every runtime secret. |
 | Default slider stop | Balanced. | The owner intended the default to be a mix. The old live setting behaved as mood-only. |
-| Slider values | Sonic = 5, Balanced = 2.0, Mood = 0.5, in the recommender's own `descriptors / slider**3` weighting. | Mood reproduces what the live site returns today. 2.0 is the measured midpoint. 5 is effectively sound-only. |
+| Slider values | Sonic = 5, Balanced = 1.765, Mood = 0.5, in the recommender's own `descriptors / slider**3` weighting. | Mood reproduces what the live site returns today. 1.765 (a descriptor divisor of about 5.5) is the owner's tuned value from the original site: the old React frontend's default slider position. 5 is effectively sound-only. |
 | Map layouts | Regenerated with UMAP (n_neighbors 15, min_dist 0.1, random_state 42) from the recommender's exact feature matrix at each stop, Procrustes-aligned to the balanced layout, scaled to [-1, 1], stacked points spread. | Puts recommendations in the seed's neighbourhood (median map rank about 21 to 35 instead of about 800). |
 | Recommendations shown | 5 by default, "Show more" reveals up to 10. 10 are stored per album per stop. | All default rows fit without scrolling on a laptop. |
 | Candidate pool | All albums present in both the feature table and the map (about 4,081). | Removes the 4,000-row cap bug. |

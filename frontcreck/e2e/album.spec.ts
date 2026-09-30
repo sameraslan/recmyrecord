@@ -22,7 +22,7 @@ test('renders the seed, tags and the closest albums (balanced by default)', asyn
   await expect(page.locator('.tags li')).toHaveText(['lush', 'melancholic', 'bittersweet', 'mellow', 'atmospheric', 'warm']);
   await expect(page.getByRole('heading', { level: 2, name: COPY.album.listHeading })).toBeVisible();
   await expect(page.locator('li.rec')).toHaveCount(5);
-  expect((await titles(page))[0]).toBe('undun');
+  expect((await titles(page))[0]).toBe('You Will Never Know Why');
   await expect(page.locator('li.rec').first().locator('.rec-shared')).toContainText('Shares ');
   await expect(page.getByRole('link', { name: new RegExp(`^${COPY.album.openInSpotify}`) })).toHaveAttribute('href', /^https:\/\/open\.spotify\.com\/album\//);
   await expect(page.locator('li.rec').first().locator('a.rec-sp')).toHaveAttribute('target', '_blank');

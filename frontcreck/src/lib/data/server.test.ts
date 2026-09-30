@@ -18,7 +18,7 @@ describe('build-time data access (real public/data)', () => {
     expect(page!.recs.mood.slice(0, 5).map((r) => r.title)).toEqual([
       'Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom',
     ]);
-    expect(page!.recs.balanced[0].title).toBe('undun');
+    expect(page!.recs.balanced[0].title).toBe('You Will Never Know Why');
     for (const stop of ['sonic', 'balanced', 'mood'] as const) {
       expect(page!.recs[stop]).toHaveLength(10);
       expect(page!.recs[stop].map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);

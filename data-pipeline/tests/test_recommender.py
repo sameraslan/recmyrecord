@@ -56,6 +56,6 @@ def test_catalog_recs_for_in_rainbows(deduped):
         assert all(len(set(row.tolist())) == 10 for row in recs[stop])
     assert titles(recs["mood"][11][:5]) == IN_RAINBOWS_LIVE
     assert titles(recs["balanced"][11][:5]) == [
-        "undun", "You Will Never Know Why", "Korowód", "Brilliant Trees", "Music for the Masses",
+        "You Will Never Know Why", "Korowód", "Avalon", "Alligator", "undun",
     ]
     assert titles(recs["sonic"][11][:1]) == ["Music for the Masses"]
