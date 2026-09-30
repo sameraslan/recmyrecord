@@ -1,6 +1,7 @@
 'use client';
 
 import { useFrame, useThree } from '@react-three/fiber';
+import { useEffect } from 'react';
 import type * as THREE from 'three';
 import { MARKER_SIZE, layoutMarkers, type PlacedMarker } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
@@ -27,6 +28,9 @@ function setLine(l: SVGLineElement, x1: number, y1: number, x2: number, y2: numb
 export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<Float32Array> }) {
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const get = useThree((s) => s.get);
+
+  // A remounted Scene must not hit-test the markers of the previous one.
+  useEffect(() => () => setPlacedMarkers([]), []);
 
   useFrame(() => {
     const { input, hoveredIndex, insetCurrent } = useMapStore.getState();

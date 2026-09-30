@@ -75,13 +75,16 @@
 
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
-  .map-zoom { right: 12px; bottom: calc(130px + env(safe-area-inset-bottom)); }
-  /* 44 px tap targets that look like the desktop ones: the hit areas grow into the panel's spacing. */
-  .mode-track { height: 44px; margin: -9px 0 -11px; }
+  /* Clear of the slider panel, which is 18 px taller here than on desktop (see below). */
+  .map-zoom { right: 12px; bottom: calc(148px + env(safe-area-inset-bottom)); }
+  /* 44 px tap targets that do not overlap: the range band (44 px, its line where the desktop one is) is followed
+   * by the stop buttons' 44 px band; the panel grows by 18 px to make the room. */
+  .mode-track { height: 44px; margin: -9px 0 0; }
   .mode-track::before { top: 21px; }
   .mode-track i { top: 18px; }
-  .mode input[type=range], .mode input[type=range]::-webkit-slider-runnable-track, .mode input[type=range]::-moz-range-track { height: 44px; }
+  .mode input[type=range] { height: 44px; }
+  .mode input[type=range]::-webkit-slider-runnable-track { height: 44px; }
+  .mode input[type=range]::-moz-range-track { height: 44px; }
   .mode input[type=range]::-webkit-slider-thumb { margin-top: 14px; }
-  .mode-stops { position: relative; }
-  .mode-stops button { min-height: 44px; margin: -7px 0; }
+  .mode-stops button { min-height: 44px; margin-bottom: -7px; }
 }

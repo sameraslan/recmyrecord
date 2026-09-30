@@ -173,13 +173,31 @@ test('the morph is animated, and instant under reduced motion', async ({ page })
   expect(await page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(true);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
-  const before = await page.evaluate(() => window.__rmr!.map!.screenPoint(11));
-  await page.evaluate(() => window.__rmr!.getState().setStop('sonic'));
-  await page.waitForTimeout(80);
-  expect(await page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
-  // The morph really happened, at once: album 11 already sits at its sonic position.
-  const after = await page.evaluate(() => window.__rmr!.map!.screenPoint(11));
-  expect(Math.hypot(after!.x - before!.x, after!.y - before!.y)).toBeGreaterThan(1);
+  // Frame by frame: record album 11 and isAnimating() on every animation frame from the stop change until it settles.
+  const run = await page.evaluate(
+    () =>
+      new Promise<{ before: { x: number; y: number }; f0: number; log: { f: number; p: { x: number; y: number }; a: boolean }[] }>((resolve) => {
+        const rmr = window.__rmr!;
+        const api = rmr.map!;
+        const before = api.screenPoint(11)!;
+        const f0 = rmr.frames ?? 0;
+        const log: { f: number; p: { x: number; y: number }; a: boolean }[] = [];
+        const tick = () => {
+          log.push({ f: rmr.frames ?? 0, p: api.screenPoint(11)!, a: api.isAnimating() });
+          if (!log[log.length - 1].a || log.length > 240) resolve({ before, f0, log });
+          else requestAnimationFrame(tick);
+        };
+        rmr.getState().setStop('sonic');
+        requestAnimationFrame(tick);
+      }),
+  );
+  const last = run.log[run.log.length - 1];
+  expect(last.a, 'settled').toBe(false);
+  expect(last.f - run.f0, 'rendered frames to settle').toBeLessThanOrEqual(3);
+  // The morph really happened, at once: album 11 moved, and every frame shows it at the old or the sonic position.
+  const d = (p: { x: number; y: number }, q: { x: number; y: number }) => Math.hypot(p.x - q.x, p.y - q.y);
+  expect(d(last.p, run.before)).toBeGreaterThan(1);
+  for (const e of run.log) expect(Math.min(d(e.p, run.before), d(e.p, last.p)), `frame ${e.f}`).toBeLessThan(0.5);
 });
 
 test('a zoom from the buttons survives a stop change until Reset re-arms the focus framing', async ({ page }) => {
@@ -204,6 +222,21 @@ test('the slider has 44 px tap targets on a phone', async ({ page, isMobile }) =
   test.skip(!isMobile, 'phone only');
   await page.goto('/map');
   await waitForMap(page);
-  const targets = [page.getByRole('slider', { name: COPY.slider.label }), ...Object.values(COPY.slider.stops).map((n) => page.getByRole('button', { name: n, exact: true }))];
-  for (const t of targets) expect((await t.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  const range = page.getByRole('slider', { name: COPY.slider.label });
+  const buttons = Object.values(COPY.slider.stops).map((n) => page.getByRole('button', { name: n, exact: true }));
+  // Every point of each 44 px band down the target's centre line reaches that target, not a neighbour.
+  for (const t of [range, ...buttons]) {
+    const box = (await t.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    const misses = await t.evaluate((el, b) => {
+      const out: number[] = [];
+      const x = b.x + b.width / 2;
+      for (let dy = 0.5; dy < 44; dy += 1) {
+        const hit = document.elementFromPoint(x, b.y + dy);
+        if (!hit || !(hit === el || el.contains(hit))) out.push(dy);
+      }
+      return out;
+    }, box);
+    expect(misses, await t.evaluate((el) => el.outerHTML.slice(0, 60))).toEqual([]);
+  }
 });

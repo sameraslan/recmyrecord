@@ -44,7 +44,8 @@ export function PickController({ positionsRef, hoverRef }: { positionsRef: React
       const { callbacks } = store;
       if (touch) suppressGhostClick(e.clientX, e.clientY); // the card or album may appear under the finger
       // Focus markers first: they are drawn over the albums but take no pointer events themselves.
-      const marker = markerAt(getPlacedMarkers(), e.clientX - rect.left, e.clientY - rect.top, d.type);
+      // The boxes are from MarkerDriver's last frame: none count once the focus has gone.
+      const marker = store.input.focus ? markerAt(getPlacedMarkers(), e.clientX - rect.left, e.clientY - rect.top, d.type) : -1;
       if (marker >= 0) {
         // The marker is about to move or unmount under a resting pointer, so end its hover now.
         store.setHoveredIndex(null);

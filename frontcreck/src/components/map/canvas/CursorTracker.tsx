@@ -190,7 +190,9 @@ export function CursorTracker({
     // off until the pointer actually moves, so that album doesn't pop up a
     // second label next to the one just clicked.
     // Focus markers are drawn over the canvas but take no pointer events: their boxes are hit first.
-    const marker = hoverSuppressedRef.current ? -1 : markerAt(getPlacedMarkers(), c[0], c[1]);
+    // The boxes are from MarkerDriver's last frame (it runs after this callback): none count without a focus.
+    const focused = useMapStore.getState().input.focus !== null;
+    const marker = hoverSuppressedRef.current || !focused ? -1 : markerAt(getPlacedMarkers(), c[0], c[1]);
     const idx = hoverSuppressedRef.current
       ? -1
       : marker >= 0
