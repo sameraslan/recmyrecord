@@ -94,7 +94,7 @@ From `data-pipeline/README.md`:
 
 ### 9. UX review punch list
 
-All items are ticked; see "UX review punch list" below.
+All items but one are ticked; the open one is a layout choice for the owner. See "UX review punch list" below.
 
 ### 10. For the owner to decide
 
@@ -126,7 +126,7 @@ Both READMEs were rewritten: `README.md` (what the project is, the repository la
 
 ## UX review punch list
 
-Every state at every size was compared with the approved mockup's screenshot of the same state (`d1280` states without a mockup shot were compared with the `d1440` shot). Each difference is either fixed, with its commit, or marked approved with the reason. No item is open.
+Every state at every size was compared with the approved mockup's screenshot of the same state (`d1280` states without a mockup shot were compared with the `d1440` shot). Each difference is either fixed, with its commit, or marked approved with the reason. One item is left open for the owner.
 
 Fixed:
 
@@ -136,6 +136,8 @@ Fixed:
 - [x] d1440, d1280, m390 every state with a search field: the placeholder and query sat 2 px left of the mockup's (Tailwind's preflight removes the browser's default input padding that the mockup keeps) -> the padding is restored (`fix(frontcreck): restore the search input's inner padding`).
 - [x] d1440, d1280 d1-album to d5-album-longtitle, g1-transition-mid: the mockup keeps the hint line under the map beside an album ("... Select one to start from it."); ours only showed it in Explore -> shown beside an album on desktop with the mockup's wording, a new `copy.ts` string listed in the copy table (`fix(frontcreck): show the map hint beside an album on desktop`).
 - [x] d1440, d1280 c3-explore-zoomed: the mockup shot hovers In Rainbows and shows its label; the review script did not hover -> the script now points at In Rainbows once the zoom settles; the label, its position and the hover mark match the mockup (script change only).
+- [x] m390 a1-home: the phone Home map read clearly brighter than mockup Home A (overlapping WebGL dots add up where the mockup's canvas fills each cluster once, and the fitted cloud is denser on a phone) -> a darker phone veil centred on the map; the dots now measure as the mockup's (`fix(frontcreck): quiet the phone Home map and hide the hint without map data`).
+- [x] d1440, d1280 e2-error: the hint line showed over the empty map when the data failed to load -> the hint shows only once the map has data (same commit, with an end-to-end check).
 
 Approved differences (not changed):
 
@@ -143,9 +145,9 @@ Approved differences (not changed):
 - [x] all sizes a1-home: the hero sub reads "Get the albums closest to it, by sound and by mood." and the link reads "Explore the map" -> approved copy (no count of recommendations).
 - [x] d1440, d1280 a1-home: the search field is focused on load, so its border is lamp and the "/" key hint is hidden -> spec 4.1 (desktop Home autofocuses the hero search). The focus border's strength is listed for the owner below.
 - [x] d1440, d1280 a1-home: the shelf shows 12 covers per row and reaches the page gutters (the mockup shows 10) -> spec 4.1 (12 per row), controller ruling.
+- [ ] m390 a1-home, for the owner: on the combined Home the top of the phone map sits behind the "Explore the map" and "Surprise me" links (mockup Home A put the hero below the map). Moving it needs a Home-only phone framing, which would move the camera on every trip between Home and the map; listed under "For the owner to decide".
 - [x] m390 a2-home-search: suggestions open under the field near the top of the page, where mockup Home A had its hero at the bottom -> follows from the combined Home layout.
 - [x] m390 a1-home: the lede wraps to two short, even lines -> `text-wrap: balance`; listed for the owner below.
-- [x] m390 a1-home: the Home map sits lower and reads a little brighter than in mockup Home A, where the hero sits at the bottom of the screen -> follows from the combined Home layout; the dot size is fixed above.
 - [x] d1440, d1280, m390 c2-explore-card: a pick flies in until covers show, and the pick is drawn large, framed in lamp, with the other covers dimmed; the mockup shot was staged at dot level -> controller ruling (the mockup's own pick path lands in cover mode); listed for the owner below.
 - [x] d1440, d1280 c2-explore-card: the card is 400 px wide (mockup 380 px) -> room for the label "See closest albums" (approved copy).
 - [x] d1440, d1280, m390 c3-explore-zoomed: the zoom level differs a little from the mockup shot -> a capture difference (the script zooms from In Rainbows by a fixed factor), not a layout difference.
@@ -176,6 +178,7 @@ Design and behaviour:
 - A pick on the map flies in until covers show and draws the pick large and framed, with the other covers dimmed (the mockup's own pick path lands there; its screenshot was staged at dot level). Alternative: stop at dot level. If wrong: one zoom target.
 - Phone map mode: a pick in the album's full-screen map opens that album in list view, and map mode belongs to the album it was opened on. Alternative: the mockup's Explore-style card on the map. If wrong: a change in the album panel and map mode state.
 - Phone Map / List button: accessible names are "Open the map" and "Back to the list" (they contain the visible words, as WCAG 2.5.3 asks, and match the mockup). Alternative: names equal to the visible "Map" and "List". If wrong: two strings.
+- Phone Home map placement: on the combined Home the top of the fitted map sits behind the "Explore the map" and "Surprise me" links. Alternative: a Home-only phone framing that keeps the cloud below the links. Cost: the camera would then move on every trip between Home and the map, instead of the map staying put. If the current choice is wrong: a framing rule for Home on phones.
 - Phone Home lede uses `text-wrap: balance`, so it breaks into two short, even lines. Alternative: normal wrapping (one long line and a short one). If wrong: one CSS property.
 - Default slider stop is Balanced (2.0). Alternative: Mood (0.5), which is what the old live site returned. If wrong: one default; album URLs without `?by=` would show the other list.
 - Trail: revisiting an album already on the trail cuts the trail back to it (as the mockup does). Alternative: keep appending. If wrong: a small change in `trail.ts`.
@@ -184,8 +187,9 @@ Design and behaviour:
 - The hover label appears after an 80 ms settle (a show delay, not a transition). If wrong: one constant.
 - A cover shows an empty reserved box while its image loads; the letter tile is only for failures. Alternative: a letter tile while loading. If wrong: one state in `Cover.tsx`.
 - The three albums with no Spotify release, and "Spiritual Unity", show a letter tile instead of their sprite; no Spotify link is shown for them. Alternative: a data field so the cover component can use the sprite. If wrong: a data-contract field and a few lines in `Cover.tsx`.
-- Visible copy uses the typographic apostrophe, as the mockup does.
-- Map drawing follows the mockup over the plan's sprite formulas (cover size linear in map scale, dots of 3 to 7 px that grow gently with zoom, maximum zoom 28). If wrong: constants in one module.
+- Visible copy uses the typographic apostrophe, as the mockup does. Alternative: the straight apostrophe. If wrong: a search and replace in `copy.ts`.
+- "Shares" words are limited to the seed's visible mood tags that the other album also carries, strongest first, at most 4, so every shared word can light up in the seed header. Alternative: every descriptor the two albums share. If wrong: some rows list fewer shared words than they could; the rule is one function (`sharedWords`).
+- Map drawing follows the mockup over the plan's sprite formulas: cover size linear in map scale, overview dots of about 3 px (as in the mockup) that grow gently to 7 px with zoom, the overview framed with the mockup's padding, maximum zoom 28. If wrong: constants in one module.
 - Markers over the map take no pointer input; the map hit-tests them, so a drag can start on a cover. If wrong: dragging from covers regresses (an end-to-end test guards it).
 - On phones the similarity panel is measured at runtime and treated as a bottom exclusion for framing and markers (Safari's toolbar changes its height). If wrong: a little extra code.
 - The similarity stops and range are 44 px tap targets on phones (the mockup's are smaller). If wrong: one media query.
@@ -196,7 +200,7 @@ Testing and scope:
 
 - The keyboard-only search flow and the sandboxed-iframe flow run at desktop size only (the spec lists the flows at desktop and phone sizes). If wrong: two phone variants to add.
 - Slug generation is tested in the Python pipeline (pytest), not with Vitest (the spec lists slugs among the Vitest unit tests). If wrong: a small Vitest file.
-- About 35 screen-reader and helper strings are not in the spec's copy table; all are in the copy table below for sign-off.
+- About 35 screen-reader and helper strings are not in the spec's copy table; all are in the copy table below for sign-off. If a string is wrong: one edit in `copy.ts`.
 - The `window.__rmr` test hook ships in the production build, because the end-to-end tests run against it. Alternative: gate it behind a query flag. If wrong: a few lines and a test setting.
 - The perf script fails GPU mode when the renderer string is empty or "n/a", so a failed query never passes as hardware. If wrong: one condition.
 
@@ -211,19 +215,19 @@ Data:
 Repository and process:
 
 - `frontcreck/AGENTS.md` and `frontcreck/CLAUDE.md` are untracked files written by `next dev`; they are not in this PR. Choose: delete them, commit them, or add them to `.gitignore`. If left alone: they reappear as untracked files after every `next dev`.
-- The `design/` folder (the mockups, about 110 MB) is untracked and lives only in the working copy this work was done in; it is not in the PR. Decide whether to keep it somewhere.
+- The `design/` folder (the mockups, about 110 MB) is untracked and lives only in the working copy this work was done in; it is not in the PR, to keep the repository small. Decide whether to keep it somewhere. If it is lost: the approved mockups and their screenshots are gone.
 - A local, untracked `frontcreck/.env`, if one is present in a checkout, is still read by `next build`; the site does not use it. Delete it locally when convenient.
-- Commit co-author trailers are mixed: 41 commits name Claude Opus 5.5 and 8 name Claude Fable 5.1. If this matters: squash on merge, or reword before merging.
-- `next` and `eslint-config-next` were moved to 16.3.3, the lowest patched 16.x, because the planned version had a critical advisory.
-- The lockfile is generated with npm 11 (stock npm 10 crashes resolving vitest 4); stock `npm ci` installs it. Verify `npm ci` on Vercel's Linux image with the PR preview.
+- Commit co-author trailers are mixed: 41 commits name Claude Opus 5.5 and 8 name Claude Fable 5.1 (each commit uses the trailer of the session that made it). If this matters: squash on merge, or normalise them in one rebase before merging.
+- `next` and `eslint-config-next` were moved to 16.3.3, the lowest patched 16.x, because the planned version had a critical advisory. If wrong: a version change back, which would restore the advisory.
+- The lockfile is generated with npm 11 (stock npm 10 crashes resolving vitest 4); stock `npm ci` installs it. Verify `npm ci` on Vercel's Linux image with the PR preview. If it fails there: regenerate the lockfile on Linux.
 - `favicon.ico` was re-encoded as RGBA because `next build` rejected the original. If wrong: replace the icon.
-- The Vercel project's dashboard environment variables are outside the repository; check and remove them.
-- `/map` and `/about` had placeholder pages until they were built, so every link target existed at every commit. One commit carried an expected-failing test until the data files landed.
-- The album search prefetches album URLs without a placeholder album route (album pages came later in the plan).
-- Tasks 1 and 2 (data) ran alongside Task 3 (app scaffold) on disjoint files; a pre-flight conflict scan was delegated and its findings folded in as fix rounds.
-- In Task 2b the implementing agent edited data-pipeline files through the shell after its file tools were refused in the data working copy; the changes are confined to `data-pipeline/` and `albums.json`.
-- Publishable text (READMEs, these notes) follows the copy rules: no owner name, no exact catalog size ("4,000+"), no count of recommendations, and placeholders instead of home-directory paths.
-- Log entries mentioning the owner with no decision attached: implementers and reviewers ran on the model the owner asked for; one session was paused and resumed at the owner's request.
+- The Vercel project's dashboard environment variables are outside the repository; check and remove them. If left: unused values stay in the dashboard; the site does not read them.
+- `/map` and `/about` had placeholder pages until they were built, so every link target existed at every commit. One commit carried an expected-failing test until the data files landed. If wrong: bisecting across that one commit shows one red test.
+- The album search prefetches album URLs without a placeholder album route (album pages came later in the plan). If wrong: commits before the album pages log a 404 during search; none do now.
+- Tasks 1 and 2 (data) ran alongside Task 3 (app scaffold) on disjoint files; a pre-flight conflict scan was delegated and its findings folded in as fix rounds or plan amendments (including the pipeline's rounding consistency, the empty-overrides check, and the spec's descriptor count being a typo). If wrong: a merge conflict to resolve by hand; none occurred.
+- In Task 2b the implementing agent edited data-pipeline files through the shell after its file tools were refused in the data working copy; the changes are confined to `data-pipeline/` and `albums.json` and passed review. If in doubt: re-read that task's commits.
+- Publishable text (READMEs, these notes) follows the copy rules: no owner name, no exact catalog size ("4,000+"), no count of recommendations, and placeholders instead of home-directory paths. If a phrase is wrong: rewording.
+- Technical choices made during review, none visible to visitors: the album panel inset uses a symmetric camera frustum with `setViewOffset`, so the DOM covers and the WebGL dots share one projection; the tile and trail glyphs (`·`, `…`) live in `copy.ts`, and a data load error keeps its underlying cause; shared helpers (screen projection, tile, the test server, colour parsing) live in one module each; one stale sentence of the data README was corrected while album pages were built. If wrong: each is a local refactor.
 
 ## Copy table for sign-off
 
