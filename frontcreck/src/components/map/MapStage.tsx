@@ -155,13 +155,12 @@ export function MapStage() {
     // After first paint, like the rest of the map: the probe creates (and releases) a WebGL context. A worker
     // starts the GPU backend first, so neither the probe nor the renderer blocks the main thread on it.
     if (!painted) return;
-    let live = true;
-    void warmUpWebGL().then(() => {
-      if (live) useAppStore.getState().setWebgl(isWebGLAvailable() ? 'ok' : 'unavailable');
+    const warmUp = new AbortController();
+    void warmUpWebGL({ signal: warmUp.signal }).then(() => {
+      if (!warmUp.signal.aborted) useAppStore.getState().setWebgl(isWebGLAvailable() ? 'ok' : 'unavailable');
     });
-    return () => {
-      live = false;
-    };
+    // On unmount the worker is terminated.
+    return () => warmUp.abort();
   }, [painted]);
 
   const enabled = painted && webgl === 'ok';

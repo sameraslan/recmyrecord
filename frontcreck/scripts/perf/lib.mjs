@@ -26,7 +26,10 @@ export function checkBudgets(r, mode, budgets, { allowSoftwareGpu = false } = {}
   if (r.thumbsOnFirstLoad !== false) fails.push(`${where}: thumbs.webp was requested during the first load of / (it must load lazily, only after a cover fails)`);
   if (typeof r.idleFrames !== 'number' || r.idleFrames > budgets.idleFrames) fails.push(`${where}: ${r.idleFrames ?? 'missing'} frames while idle (budget ${budgets.idleFrames})`);
   if (mode === 'gpu') {
-    if (SOFTWARE_RENDERER.test(r.renderer ?? '') && !allowSoftwareGpu) fails.push(`${where}: GPU mode ran without a GPU (renderer "${r.renderer}")`);
+    const renderer = (r.renderer ?? '').trim();
+    // A failed query ('n/a' or empty) must never pass as hardware rendering.
+    if (renderer === '' || renderer === 'n/a') fails.push(`${where}: GPU mode ran but the renderer could not be read ("${renderer}")`);
+    else if (SOFTWARE_RENDERER.test(renderer) && !allowSoftwareGpu) fails.push(`${where}: GPU mode ran without a GPU (renderer "${r.renderer}")`);
     else for (const [key, label] of GAP_KEYS) over(label, r[key], budgets.frameGapMs, 'ms');
   }
   if (r.errors?.length) fails.push(`${where}: console errors: ${r.errors.slice(0, 3).join(' | ')}`);
@@ -47,6 +50,8 @@ const ROWS = [
   ['Renderer', (r) => r.renderer],
   ['Search usable', (r) => `${r.searchUsableMs} ms`],
   ['Startup worst long task', (r) => `${r.startupLongTaskMs} ms`],
+  ['WebGL warm-up end (reported only)', (r) => (r.warmUp ? `${r.warmUp.ms} ms (${r.warmUp.why})` : 'none')],
+  ['Map first frame (reported only)', (r) => `${r.mapFirstFrameMs} ms`],
   ['Typing to suggestions', (r) => `${r.typeToSuggestionsMs} ms`],
   ['Select to album', (r) => `${r.selectToAlbumMs} ms`],
   ['Transition worst frame gap', (r) => `${r.transitionGapMs} ms`],

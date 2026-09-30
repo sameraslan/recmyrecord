@@ -36,19 +36,26 @@ function sh(cmd, cmdArgs) {
 
 async function firstLoadJs() {
   const html = await (await fetch(`${BASE}/`)).text();
-  const srcs = [...new Set([...html.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]))];
+  // The budget counts every script of the page (the brief's definition); modern browsers skip `nomodule` ones.
+  const tags = new Map();
+  for (const m of html.matchAll(/<script([^>]*)\ssrc="([^"]+)"([^>]*)>/g)) {
+    if (!tags.has(m[2])) tags.set(m[2], /\snomodule\b/.test(`${m[1]} ${m[3]}`));
+  }
   let kb = 0;
+  let nomoduleKb = 0;
   let threeKb = 0;
   const files = [];
-  for (const src of srcs) {
+  for (const [src, nomodule] of tags) {
     const body = Buffer.from(await (await fetch(new URL(src, BASE))).arrayBuffer());
     const gz = zlib.gzipSync(body, { level: 9 }).length / 1024;
     const isThree = body.includes('WebGLRenderer');
-    files.push({ src, gzKb: Math.round(gz * 10) / 10, isThree });
+    files.push({ src, gzKb: Math.round(gz * 10) / 10, isThree, nomodule });
     if (isThree) threeKb += gz;
     else kb += gz;
+    if (nomodule && !isThree) nomoduleKb += gz;
   }
-  return { kb: Math.round(kb * 10) / 10, threeKb: Math.round(threeKb * 10) / 10, files };
+  const r1 = (n) => Math.round(n * 10) / 10;
+  return { kb: r1(kb), modernKb: r1(kb - nomoduleKb), threeKb: r1(threeKb), files };
 }
 
 /** Server HTML of `/` and of In Rainbows: size, and whether it names an album the page does not show. */
@@ -109,6 +116,13 @@ const PAGE_HELPERS = () => {
       return Math.round(longest);
     },
   };
+  // When the map first draws (after the WebGL warm-up, the probe and the data): reported, not budgeted.
+  window.__mapFirstFrame = null;
+  const watchMap = () => {
+    if ((window.__rmr?.frames ?? 0) > 0) window.__mapFirstFrame = Math.round(performance.now());
+    else requestAnimationFrame(watchMap);
+  };
+  requestAnimationFrame(watchMap);
   window.__lt = [];
   window.__ltSupported = PerformanceObserver.supportedEntryTypes?.includes('longtask') ?? false;
   if (window.__ltSupported) {
@@ -121,7 +135,7 @@ const PAGE_HELPERS = () => {
 async function albumFlow(page, isPhone) {
   return page.evaluate(async (phone) => {
     const P = window.__perf;
-    const res = {};
+    const res = { settled: [] };
     const input = document.querySelector('.hero input[role="combobox"]');
     input.focus();
     await P.until(() => document.documentElement.dataset.searchIndex === 'ready', 10000);
@@ -139,13 +153,13 @@ async function albumFlow(page, isPhone) {
     res.selectToAlbumMs = shown ? Math.round(performance.now() - t) : null;
     res.transitionGapMs = await P.gaps(600);
     await new Promise((r) => setTimeout(r, 1200));
-    await P.settled();
+    res.settled.push(await P.settled());
     if (phone) {
       document.querySelector('.fab-map')?.click();
       await new Promise((r) => setTimeout(r, 700));
       // With a software renderer each map frame takes about 100 ms and the map-mode entrance runs well past
       // 700 ms; a slider tap during it would time the entrance's frames, not the slider.
-      await P.settled();
+      res.settled.push(await P.settled());
     }
     const list = () => [...document.querySelectorAll('ol.rec-list .rec-title')].map((e) => e.textContent).join('|');
     const before = list();
@@ -235,7 +249,15 @@ async function measure(mode, vpName) {
       return 'n/a';
     }
   });
-  const startup = await page.evaluate(() => ({ lt: window.__lt.slice(), supported: window.__ltSupported, ready: performance.getEntriesByName('rmr-search-ready')[0]?.startTime ?? null }));
+  // A slow start (a cold software renderer) can draw the map after the 4 s window; wait for it so it is reported.
+  await page.waitForFunction(() => window.__mapFirstFrame !== null, null, { timeout: 20000 }).catch(() => {});
+  const startup = await page.evaluate(() => ({
+    lt: window.__lt.slice(),
+    supported: window.__ltSupported,
+    ready: performance.getEntriesByName('rmr-search-ready')[0]?.startTime ?? null,
+    mapFirstFrame: window.__mapFirstFrame,
+    warm: performance.getEntriesByName('rmr-webgl-warm').map((m) => ({ ms: Math.round(m.startTime), why: m.detail }))[0] ?? null,
+  }));
   const result = {
     mode,
     vp: vpName,
@@ -245,6 +267,9 @@ async function measure(mode, vpName) {
     thumbsOnFirstLoad,
     searchUsableMs: startup.ready === null ? null : Math.round(startup.ready),
     startupLongTaskMs: Math.max(0, ...startup.lt.map((x) => x[1])),
+    mapFirstFrameMs: startup.mapFirstFrame,
+    warmUp: startup.warm,
+    startupLongTasks: startup.lt,
     ...(await albumFlow(page, vpName === 'phone')),
     ...(await exploreFlow(page, vpName === 'phone')),
   };
@@ -260,7 +285,9 @@ async function main() {
   const fails = [];
   try {
     const js = await firstLoadJs();
-    console.log(`First-load JS of / (gzip): ${js.kb} KB (budget ${BUDGETS.firstLoadJsKb} KB); three.js chunk on first load: ${js.threeKb} KB`);
+    console.log(
+      `First-load JS of / (gzip): ${js.kb} KB with nomodule scripts (budget ${BUDGETS.firstLoadJsKb} KB), ${js.modernKb} KB without; three.js chunk on first load: ${js.threeKb} KB`,
+    );
     if (js.kb > BUDGETS.firstLoadJsKb) fails.push(`first-load JS ${js.kb} KB > ${BUDGETS.firstLoadJsKb} KB`);
     if (js.threeKb > 0) fails.push(`the three.js chunk (${js.threeKb} KB) is in the first-load scripts of /; MapStage must load it after first paint`);
     const pages = await pageChecks();
@@ -274,6 +301,10 @@ async function main() {
       }
     }
     console.log(`\n${formatTable(rows)}\n`);
+    for (const r of rows) {
+      // settled() gives up after 6 s; the next step then measures a map that is still animating.
+      if (r.settled?.includes(false)) console.warn(`WARNING ${r.mode} ${r.vp}: the map did not settle before a step (settled: ${JSON.stringify(r.settled)})`);
+    }
     const outDir = path.join(ROOT, 'scripts/perf/out');
     fs.mkdirSync(outDir, { recursive: true });
     fs.writeFileSync(path.join(outDir, `perf-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ js, rows, fails }, null, 1));

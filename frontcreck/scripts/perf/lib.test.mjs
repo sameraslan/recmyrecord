@@ -31,6 +31,14 @@ describe('checkBudgets', () => {
     expect(checkBudgets(slow, 'gpu', budgets, { allowSoftwareGpu: true }).join('\n')).toMatch(/drag frame gap/);
   });
 
+  it('fails GPU mode when the renderer could not be read', () => {
+    for (const renderer of ['n/a', '', undefined]) {
+      expect(checkBudgets({ ...ok, renderer }, 'gpu', budgets).join('\n'), String(renderer)).toMatch(/renderer could not be read/);
+      expect(checkBudgets({ ...ok, renderer }, 'gpu', budgets, { allowSoftwareGpu: true }).join('\n')).toMatch(/renderer could not be read/);
+      expect(checkBudgets({ ...ok, renderer }, 'software', budgets)).toEqual([]);
+    }
+  });
+
   it('fails when the map keeps rendering while idle', () => {
     expect(checkBudgets({ ...ok, idleFrames: 40 }, 'software', budgets)[0]).toMatch(/40 frames while idle/);
   });
