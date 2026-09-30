@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+
+import { COVER_MAX_PX, COVER_WORLD, coverCssPx, pxPerWorld, zoomForCoverPx } from "../state/zoomLimits";
+import { ALBUM_VERTEX_SHADER, renderedSpriteCssSize, selectedIsProminent, selectedSpriteCssSize, spriteCssSize } from "./album";
+
+const H = 836; // canvas height of a 1440 x 900 window, CSS px
+const FIT = 0.784; // its fitted overview zoom (whole cloud, mockup padding)
+const PHONE_H = 784;
+const PHONE_FIT = 0.347;
+
+describe("spriteCssSize (JS mirror of the vertex shader's sizes)", () => {
+  it("is a dot of about 3 px at the desktop and phone overviews, as in the mockup", () => {
+    expect(spriteCssSize(FIT, H)).toBeCloseTo(3.09, 2);
+    expect(spriteCssSize(PHONE_FIT, PHONE_H)).toBe(3);
+  });
+
+  it("grows the dot gently until covers start", () => {
+    const z = zoomForCoverPx(16, H);
+    expect(spriteCssSize(z, H)).toBeGreaterThan(6);
+    expect(spriteCssSize(z, H)).toBeLessThanOrEqual(7.2);
+  });
+
+  it("is the cover size, linear in the map scale, once covers are fully shown", () => {
+    const z = zoomForCoverPx(32, H);
+    expect(spriteCssSize(z, H)).toBeCloseTo(32, 6);
+    expect(spriteCssSize(1.5 * z, H)).toBeCloseTo(48, 6);
+    expect(coverCssPx(z, H)).toBeCloseTo(COVER_WORLD * pxPerWorld(z, H), 10);
+  });
+
+  it("caps covers at 64 px", () => {
+    expect(spriteCssSize(100, H)).toBe(COVER_MAX_PX);
+  });
+
+  it("stays a dot while the album's atlas sheet is not loaded", () => {
+    const z = zoomForCoverPx(48, H);
+    expect(spriteCssSize(z, H, false)).toBeLessThanOrEqual(7.2);
+  });
+});
+
+describe("renderedSpriteCssSize (sizes plus the shader's device-px caps)", () => {
+  it("matches the base size when no cap applies", () => {
+    expect(renderedSpriteCssSize(FIT, H, 1)).toBeCloseTo(spriteCssSize(FIT, H), 10);
+  });
+
+  it("applies the 18%-of-viewport cap", () => {
+    // 64 px cover on a 300 px canvas: capped at 0.18 * 300 = 54 px.
+    expect(renderedSpriteCssSize(100, 300, 1)).toBeCloseTo(54, 10);
+  });
+
+  it("applies the 240 device-px cap on a high-dpr screen", () => {
+    // 64 px * 1.5 * dpr 3 = 288 device px, capped at 240 -> 80 CSS px.
+    expect(renderedSpriteCssSize(100, 2000, 3, 1.5)).toBeCloseTo(80, 10);
+  });
+});
+
+describe("the picked album in cover mode (mockup max(cs * 1.8, 64))", () => {
+  it("is prominent only once covers are more than half faded in, and only with its atlas sheet", () => {
+    expect(selectedIsProminent(zoomForCoverPx(16, H), H, true)).toBe(false);
+    expect(selectedIsProminent(zoomForCoverPx(32, H), H, true)).toBe(true);
+    expect(selectedIsProminent(zoomForCoverPx(32, H), H, false)).toBe(false);
+  });
+
+  it("is at least 64 px, then 1.8 times the cover", () => {
+    expect(selectedSpriteCssSize(zoomForCoverPx(32, H), H, 1)).toBeCloseTo(64, 5);
+    expect(selectedSpriteCssSize(zoomForCoverPx(48, H), H, 1)).toBeCloseTo(86.4, 3);
+  });
+
+  it("keeps its frame inside the viewport-relative sprite cap", () => {
+    // 64 px covers on a 400 px tall canvas: the cap is 72 px, the frame takes 12 of it.
+    expect(selectedSpriteCssSize(zoomForCoverPx(64, 400), 400, 2)).toBeCloseTo(60, 5);
+  });
+});
+
+describe("albums outside the focus in album view", () => {
+  it("keep their overview size, as in the mockup, and only fade (hit tests use the same size)", () => {
+    const dimBranch = ALBUM_VERTEX_SHADER.slice(ALBUM_VERTEX_SHADER.indexOf("v_dim = 1.0;"));
+    expect(dimBranch.slice(0, dimBranch.indexOf("}"))).not.toMatch(/baseCss\s*\*=/);
+  });
+});
+
+describe("the dimmed map behind Home, About and 404", () => {
+  it("draws its dots 1.35 times larger, easing with the dot alpha (mockup muted)", () => {
+    expect(ALBUM_VERTEX_SHADER).toMatch(/float mutedT = clamp\(\(0\.7800 - u_dotAlpha\) \/ 0\.4400, 0\.0, 1\.0\);\s*dotCss \*= 1\.0 \+ 0\.3500 \* mutedT;/);
+  });
+});

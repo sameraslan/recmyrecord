@@ -1,0 +1,80 @@
+/* combobox */
+.combo { position: relative; }
+.combo-field {
+  display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 12px 0 14px;
+  background: var(--color-room-2); border: 1px solid var(--color-rule-2); border-radius: 2px;
+  transition: border-color .2s var(--out), background-color .2s var(--out);
+}
+/* Focus: the 1 px border turns lamp, with a softer 1 px halo outside it, so nothing moves. */
+.combo-field:focus-within {
+  border-color: var(--color-lamp); box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-lamp) 45%, transparent);
+  background: var(--color-room-3);
+}
+@media (forced-colors: active) {
+  .combo-field:focus-within { outline: 2px solid Highlight; }
+}
+.combo-field svg { width: 18px; height: 18px; flex: none; color: var(--color-ash); }
+/* padding: the mockup keeps the browser's default input padding (1px 2px), which Tailwind's preflight resets. */
+.combo input { flex: 1; min-width: 0; height: 100%; padding: 1px 2px; border: 0; background: none; outline: none; font-size: 15px; color: var(--color-paper); }
+.combo input::placeholder { color: var(--color-ash); opacity: 1; }
+.combo input::-webkit-search-cancel-button { display: none; }
+.kbd { flex: none; font-size: 12px; line-height: 1; color: var(--color-ash); border: 1px solid var(--color-rule-2); border-radius: 2px; padding: 4px 6px; }
+.combo-field:focus-within .kbd { visibility: hidden; }
+.combo-pop {
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 80;
+  background: var(--color-room-2); border: 1px solid var(--color-rule-2); border-radius: 2px; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .7); padding: 6px;
+  color: var(--color-paper);
+}
+.combo-pop ul { display: grid; gap: 2px; }
+.opt { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; padding: 6px 8px; min-height: 56px; border-radius: 2px; cursor: pointer; position: relative; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.opt[aria-selected="true"] { background: var(--color-room-4); }
+.opt[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; background: var(--color-lamp); }
+.opt-text { min-width: 0; }
+.opt-t { font-family: var(--font-serif); font-weight: 600; font-size: 19px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.opt-a { font-size: 13.5px; color: var(--color-dust); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.opt mark { background: none; color: var(--color-paper); box-shadow: inset 0 -1px 0 rgba(230, 168, 86, .8); }
+.combo-empty { padding: 14px 12px; font-size: 14.5px; color: var(--color-dust); overflow-wrap: anywhere; }
+.combo-empty b { color: var(--color-paper); font-weight: 500; }
+.combo-error { display: grid; gap: 10px; justify-items: start; padding: 12px; font-size: 14.5px; color: var(--color-dust); }
+.top-search .combo { width: min(440px, 100%); }
+
+/* hero variant (Home) */
+.combo--hero { margin: 32px auto 0; max-width: 580px; text-align: left; }
+.combo--hero .combo-field { height: 58px; padding: 0 16px 0 18px; }
+.combo--hero input { font-size: 17px; }
+.combo--hero .combo-field svg { width: 20px; height: 20px; }
+
+/* covers */
+/* While the remote image or the sprite loads the box is empty; only the tile (a failure state) is coloured and lettered. */
+.cover { position: relative; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 2px; background-color: var(--color-room-3); flex: none; }
+.cover[data-state="tile"] { background-color: var(--fb, #2c241c); }
+.cover .fb {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-serif); font-weight: 500; line-height: 1; color: rgba(237, 229, 213, .78); font-size: var(--fs, 20px);
+}
+.cover .spr { position: absolute; inset: 0; background-repeat: no-repeat; filter: saturate(.92) contrast(.96); }
+.cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .35s var(--out); }
+.cover img.ok { opacity: 1; }
+
+/* header search toggle (phone) and sheet */
+.search-toggle { display: none; }
+.search-sheet { position: fixed; inset: 0; z-index: 200; background: var(--color-room); color: var(--color-paper); padding: 8px 6px 0 16px; overflow-y: auto; overscroll-behavior: contain; }
+/* The field and the close button share the first row; the results span both columns below. */
+.search-sheet-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 6px; align-items: start; }
+.search-sheet .combo { display: contents; }
+.search-sheet .combo-field { grid-column: 1; grid-row: 1; height: 48px; }
+.search-sheet-top > .icon-btn { grid-column: 2; grid-row: 1; }
+.search-sheet .combo-pop { grid-column: 1 / -1; grid-row: 2; position: static; margin-top: 10px; border: 0; box-shadow: none; padding: 0; background: transparent; }
+
+@media (max-width: 899px) {
+  .top-search { display: none; }
+  .search-toggle { display: inline-flex; margin-left: auto; }
+  .top.top--home .search-toggle { display: none; }
+  .top nav { margin-left: 0; }
+  .top.top--home nav { margin-left: auto; }
+  .combo--hero { margin-top: 24px; }
+  .combo--hero .combo-field { height: 54px; }
+  /* The 404 field: its input sits inside a 1 px border, so 48 px keeps the input a 46 px tap target (the sheet's size). */
+  .notfound .combo-field { height: 48px; }
+  .combo--hero .kbd { display: none; }
+}

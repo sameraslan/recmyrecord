@@ -33,3 +33,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# env files are never committed
+.env
+.env*
+
+# test and tool output
+/test-results/
+/playwright-report/
+/scripts/perf/out/

@@ -1,21 +1,17 @@
-'use client';
+import type { Metadata } from 'next';
+import { FocusOnMount } from '@/components/FocusOnMount';
+import { COPY } from '@/lib/copy';
 
-import styles from '../page.module.css';
-import Image from 'next/image';
-import mapImage from '../../../public/map.jpg';
-import { HomeButton } from '@/src/global-components/HomeButton';
+export const metadata: Metadata = { title: COPY.titles.map };
 
+/** Explore: the map itself is the persistent MapStage in the root layout; this route only names the view. */
 export default function MapPage() {
   return (
-    <main className={styles.main}>
-      <HomeButton />
-      <Image
-        src={mapImage}
-        width={3228}
-        height={1713}
-        priority={true}
-        alt="WOJEH"
-      />
-    </main>
+    <>
+      <h1 className="sr-only" id="map-h" tabIndex={-1}>
+        {COPY.map.heading}
+      </h1>
+      <FocusOnMount selector="#map-h" />
+    </>
   );
 }

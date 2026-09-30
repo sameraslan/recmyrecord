@@ -1,0 +1,12 @@
+{
+  "searchUsableMs": 1000,
+  "startupLongTaskMs": 250,
+  "typeToSuggestionsMs": 100,
+  "selectToAlbumMs": 200,
+  "sliderToListMs": 150,
+  "frameGapMs": 50,
+  "idleLongTasks": 0,
+  "idleFrames": 1,
+  "firstLoadJsKb": 200,
+  "pageHtmlKb": 150
+}
