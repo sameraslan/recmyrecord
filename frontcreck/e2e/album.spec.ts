@@ -78,6 +78,32 @@ test.describe('desktop split view', () => {
     await expect(page).toHaveURL(IR);
   });
 
+  test('a held arrow key on the slider ends on the last stop, even when a URL write lands just after it', async ({ page }) => {
+    await page.goto(IR);
+    await waitForMap(page);
+    const range = page.getByRole('slider', { name: COPY.slider.label });
+    await range.focus();
+    // Key repeat at its worst moment: the next move comes the instant the app writes ?by=mood, before Next
+    // has applied that URL (it does so in a transition).
+    await page.evaluate(() => {
+      const write = history.replaceState.bind(history);
+      let armed = true;
+      history.replaceState = (data, unused, url) => {
+        write(data, unused, url);
+        if (!armed || !String(url).includes('by=mood')) return;
+        armed = false;
+        const r = document.querySelector<HTMLInputElement>('.mode input[type="range"]')!;
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(r, '0');
+        r.dispatchEvent(new Event('input', { bubbles: true }));
+      };
+    });
+    await page.keyboard.press('ArrowRight'); // balanced -> mood, and at once mood -> sonic
+    await expect(page).toHaveURL(`${IR}?by=sonic`);
+    await expect(range).toHaveValue('0');
+    await expect(page.getByRole('button', { name: COPY.slider.stops.sonic, exact: true })).toHaveAttribute('aria-pressed', 'true');
+    expect((await titles(page))[0]).toBe('Music for the Masses');
+  });
+
   test('rows and map markers highlight each other and light shared tags', async ({ page }) => {
     await page.goto(IR);
     await waitForMap(page);

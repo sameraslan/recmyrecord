@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { absoluteUrl, albumHref, hrefWithBy, isStopId, parseBy, replaceBy, slugFromPathname, viewFromPathname } from './url-state';
+import {
+  absoluteUrl,
+  albumHref,
+  hrefWithBy,
+  isOwnBy,
+  isStopId,
+  parseBy,
+  peekOwnBy,
+  replaceBy,
+  slugFromPathname,
+  viewFromPathname,
+} from './url-state';
 
 afterEach(() => window.history.replaceState(null, '', '/'));
 
@@ -38,6 +49,20 @@ describe('url state', () => {
     replaceBy('balanced');
     expect(window.location.search).toBe('');
     expect(window.history.length).toBe(before);
+  });
+
+  it('remembers the stop it wrote until the URL catches up, and forgets it on back or forward', () => {
+    window.history.replaceState(null, '', '/album/x');
+    replaceBy('mood');
+    expect(peekOwnBy()).toBe('mood');
+    expect(isOwnBy('sonic')).toBe(false);
+    expect(isOwnBy('mood')).toBe(true);
+    expect(isOwnBy('mood')).toBe(false);
+    replaceBy('mood'); // already in the URL: nothing written, nothing remembered
+    expect(peekOwnBy()).toBeNull();
+    replaceBy('sonic');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+    expect(isOwnBy('sonic')).toBe(false);
   });
 
   it('derives the view and slug from a pathname', () => {

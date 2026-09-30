@@ -23,12 +23,39 @@ export function hrefWithBy(href: string, by: StopId): string {
   return u.pathname + u.search + u.hash;
 }
 
+/** The stop the app itself last wrote with replaceBy, until the URL has caught up with it (see isOwnBy). */
+let ownBy: StopId | null = null;
+if (typeof window !== 'undefined') {
+  // Back and forward bring back URLs the app did not just write.
+  window.addEventListener('popstate', () => {
+    ownBy = null;
+  });
+}
+
 /** Writes `?by=` without a navigation or a new history entry (Next syncs useSearchParams). */
 export function replaceBy(by: StopId): void {
   if (typeof window === 'undefined') return;
   const current = window.location.pathname + window.location.search + window.location.hash;
   const next = hrefWithBy(current, by);
-  if (next !== current) window.history.replaceState(null, '', next);
+  if (next === current) return;
+  ownBy = by;
+  window.history.replaceState(null, '', next);
+}
+
+/**
+ * True when `by` is the stop the app itself last wrote with replaceBy, and forgets it. Next applies that URL
+ * in a transition, so it can arrive after the slider has already moved on; the store is then ahead of the
+ * URL and must not be set back to it.
+ */
+export function isOwnBy(by: StopId): boolean {
+  if (ownBy !== by) return false;
+  ownBy = null;
+  return true;
+}
+
+/** isOwnBy without forgetting, for rendering. */
+export function peekOwnBy(): StopId | null {
+  return ownBy;
 }
 
 /** An album view is exactly a pathname that `slugFromPathname` accepts. */
