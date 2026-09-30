@@ -255,7 +255,10 @@ test.describe('covers', () => {
       if (r.url().startsWith('https://i.scdn.co/') || r.url().endsWith('/data/thumbs.webp')) requests.push(r.url());
     });
     await page.goto('/nope');
-    await searchFor(page, 'spiritual unity albert');
+    // One input event: typing key by key would list (and load covers for) the albums matching each prefix.
+    const input = page.locator('.top-search').getByRole('combobox', { name: COPY.search.label });
+    await input.click();
+    await input.fill('spiritual unity albert');
     await expect(page.getByRole('option')).toHaveCount(1);
     const cover = page.getByRole('option').first().locator('.cover');
     await expect(cover).toHaveAttribute('data-state', 'tile');

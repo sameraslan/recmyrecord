@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Schibsted_Grotesk } from 'next/font/google';
+import { MapStage } from '@/components/map/MapStage';
 import { Header } from '@/components/shell/Header';
 import { COPY } from '@/lib/copy';
 import './globals.css';
@@ -44,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main id="main" tabIndex={-1}>
           <div className="stage" id="stage">
-            <div className="map-pane" aria-hidden="true" />
+            <MapStage />
             {children}
           </div>
         </main>

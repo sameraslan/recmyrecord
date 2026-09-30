@@ -27,3 +27,37 @@ export async function coversSettled(page: Page, scope = 'body'): Promise<void> {
     });
   }, scope);
 }
+
+/** Waits until the map has loaded, rendered and exposed its API. */
+export async function waitForMap(page: Page): Promise<void> {
+  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 20_000 });
+}
+
+/** Waits until no camera animation is running. */
+export async function waitForCameraIdle(page: Page): Promise<void> {
+  await page.waitForFunction(() => window.__rmr?.map && !window.__rmr.map.isAnimating(), null, { timeout: 10_000 });
+  await page.waitForTimeout(120);
+}
+
+/** Client coordinates of an album that is on screen and not covered by another element. */
+export async function visibleAlbumPoint(page: Page, from = 0, to = 600): Promise<{ id: number; x: number; y: number }> {
+  const hit = await page.evaluate(
+    ([a, b]) => {
+      const api = window.__rmr!.map!;
+      for (let id = a; id < b; id++) {
+        const p = api.screenPoint(id);
+        if (!p || p.x < 60 || p.y < 120 || p.x > innerWidth - 90 || p.y > innerHeight - 90) continue;
+        const el = document.elementFromPoint(p.x, p.y);
+        if (el && el.classList.contains('map-canvas')) return { id, x: p.x, y: p.y };
+      }
+      return null;
+    },
+    [from, to],
+  );
+  if (!hit) throw new Error('no visible album point');
+  return hit;
+}
+
+export async function camera(page: Page): Promise<{ x: number; y: number; zoom: number }> {
+  return page.evaluate(() => window.__rmr!.map!.getCamera());
+}

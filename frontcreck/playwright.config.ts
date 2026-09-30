@@ -28,6 +28,11 @@ export default defineConfig({
       testIgnore: /nowebgl\.spec\.ts/,
       use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
     },
+    {
+      name: 'nowebgl',
+      testMatch: /nowebgl\.spec\.ts/,
+      use: { viewport: { width: 1440, height: 900 }, launchOptions: { args: ['--disable-3d-apis'] } },
+    },
   ],
   webServer: {
     command: dev ? `npx next dev --port ${PORT}` : `npm run build && npx next start --port ${PORT}`,

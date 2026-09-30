@@ -1,3 +1,4 @@
+import type { MapApi } from '@/components/map/types';
 import type { AppState } from '@/lib/store';
 
 declare global {
@@ -5,6 +6,10 @@ declare global {
     /** Read-only hooks for Playwright and the perf script. */
     __rmr?: {
       getState: () => AppState;
+      /** The map's camera API once the map has mounted. */
+      map?: MapApi | null;
+      /** Frames the map has rendered. */
+      frames?: number;
     };
   }
 }
