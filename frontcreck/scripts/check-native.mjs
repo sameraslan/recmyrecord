@@ -5,7 +5,7 @@
 export async function assertNativeChrome(browser) {
   if (process.platform !== 'darwin') return process.arch;
   if (process.arch !== 'arm64') {
-    throw new Error(`Node is ${process.arch}, not arm64. Run: export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"`);
+    throw new Error(`Node is ${process.arch}, not arm64. Run: export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"`);
   }
   let page = await browser.newPage();
   try {

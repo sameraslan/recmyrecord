@@ -14,7 +14,7 @@ recmyrecord recommends albums by how close they are to one you pick, comparing t
 
 ## Running the site
 
-See [`frontcreck/README.md`](frontcreck/README.md). In short, with Node 20.20.2 on arm64:
+See [`frontcreck/README.md`](frontcreck/README.md). In short, with Node 22.23.3 on arm64:
 
 ```bash
 cd frontcreck
