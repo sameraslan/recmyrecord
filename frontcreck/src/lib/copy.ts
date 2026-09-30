@@ -26,6 +26,8 @@ export const COPY = {
   home: {
     explore: 'Explore the map',
     surprise: 'Surprise me',
+    /** Small line under the Explore / Surprise buttons. */
+    wander: 'Or step outside your usual territory on the map. Time for exploration!',
     shelfLabel: 'Or start from one of these',
     shelfListLabel: 'Albums to start from',
     albumLabel: (title: string, artist: string) => `${title} by ${artist}`,
@@ -87,17 +89,20 @@ export const COPY = {
   },
   notFound: {
     title: 'Not found',
-    body: 'That page isn’t here. Search for an album, or explore the map.',
+    body: 'That page isn’t here. Search for an album, or explore the map. Experimental exploration!',
     mapLink: 'Explore the map',
   },
   about: {
     title: 'How it works',
     body: [
-      'Every album here is described two ways. Sonic values come from the audio: measurements such as energy, tempo, danceability and acousticness, taken from the recording itself. Mood descriptors are words listeners use for an album’s feeling and atmosphere, such as melancholic or nocturnal.',
-      'Pick an album and you get the ones closest to it once both are combined. The slider leans the comparison toward sound or toward mood.',
-      `The map places ${CATALOG_SIZE_LABEL} albums so that ones that sound or feel alike sit close together.`,
-      'Recommendations use more features than a two-dimensional map can show, so placing albums on it means giving up some accuracy. An album’s closest albums sit nearby, but not always right beside it.',
+      'recmyrecord helps you find new music you may like, or step out of your comfort zone into music far outside your usual territory. Pick an album you love to get ones similar to it, and use the map to wander as far from it as you want.',
+      'Every album here has two core properties that make it what it is: sound and mood. Sound (sonic values) comes from the audio itself: measurements such as energy, tempo, danceability and acousticness, taken from the recording. Mood descriptors are words listeners use for the feelings or atmosphere an album evokes, such as melancholic or warm.',
+      'Pick an album and you get the ones most similar to it. By default that means similar in both sound and mood; use the slider to match on sound only or mood only.',
+      `The map places ${CATALOG_SIZE_LABEL} albums so that similar ones sit near one another and different ones sit further apart.`,
+      'An album’s closest albums sit nearby on the map, but not always right beside it. Recommendations use more features than a two-dimensional map can show, so placing albums on it means giving up some accuracy.',
     ],
+    /** Closing line under the body, above the credits divider. */
+    signoff: 'Time for exploration!',
     credits: 'Mood descriptors handpicked from RateYourMusic. Sound values from Spotify. Cover art from Spotify.',
     close: 'Close',
   },

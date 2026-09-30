@@ -53,6 +53,7 @@ export function HomeHero() {
           <span>{COPY.home.surprise}</span>
         </button>
       </div>
+      <p className="hero-wander">{COPY.home.wander}</p>
     </div>
   );
 }

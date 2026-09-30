@@ -16,6 +16,7 @@ export default function AboutPage() {
         {COPY.about.body.map((p) => (
           <p key={p}>{p}</p>
         ))}
+        <p className="about-signoff">{COPY.about.signoff}</p>
         <p className="about-credits">{COPY.about.credits}</p>
       </article>
       <FocusOnMount selector="#about-h" />

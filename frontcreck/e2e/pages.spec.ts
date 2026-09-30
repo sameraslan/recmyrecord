@@ -16,6 +16,7 @@ test.describe('Home', () => {
     else await expect(search).not.toBeFocused();
     await expect(page.getByRole('link', { name: COPY.home.explore })).toBeVisible();
     await expect(page.getByRole('button', { name: COPY.home.surprise })).toBeVisible();
+    await expect(page.getByText(COPY.home.wander)).toBeVisible();
     const shelf = page.getByRole('list', { name: COPY.home.shelfListLabel });
     // `getByRole` skips links hidden by `display: none` (16 of 24 on phones), so count the elements themselves.
     await expect(shelf.locator('a')).toHaveCount(24);
@@ -89,6 +90,7 @@ test('About explains the site and closes back', async ({ page }, info) => {
   await expect(page).toHaveTitle('About · recmyrecord');
   await expect(page.getByRole('heading', { level: 1, name: COPY.about.title })).toBeFocused();
   for (const p of COPY.about.body) await expect(page.getByText(p)).toBeVisible();
+  await expect(page.getByText(COPY.about.signoff)).toBeVisible();
   await expect(page.getByText(COPY.about.credits)).toBeVisible();
   await expect(page.locator('body')).not.toContainText(OWNER_NAME_RE);
   await waitForMap(page);
