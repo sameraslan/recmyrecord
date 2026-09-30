@@ -60,6 +60,8 @@ export const COPY = {
   map: {
     heading: 'Map of albums',
     hint: 'Albums that sit close together sound or feel alike.',
+    /** The hint beside an album, where a click on the map opens that album (the approved mockup's wording). */
+    hintAlbum: 'Albums that sit close together sound or feel alike. Select one to start from it.',
     canvasLabel: 'Map of albums. Drag or use arrow keys to pan, plus and minus to zoom.',
     /** The canvas label while the map is only a backdrop (Home, About, 404) and takes no input. */
     canvasLabelStatic: 'Map of albums',

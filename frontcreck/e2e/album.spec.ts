@@ -31,6 +31,15 @@ test('renders the seed, tags and the closest albums (balanced by default)', asyn
   await shot(page, info, 'album');
 });
 
+test('the map beside an album shows the hint line on desktop, as in the mockup', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the hint is desktop only');
+  await page.goto(IR);
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await expect(page.locator('.map-hint')).toHaveText(COPY.map.hintAlbum);
+  await expect(page.locator('.map-hint')).toBeVisible();
+});
+
 test('?by=mood shows the mood list, which matches the live site', async ({ page }) => {
   await page.goto(`${IR}?by=mood`);
   await expect.poll(() => titles(page)).toEqual(['Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom']);

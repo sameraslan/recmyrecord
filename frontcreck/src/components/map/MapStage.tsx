@@ -346,7 +346,7 @@ export function MapStage() {
           <>
             <SimilaritySlider stop={stop} onChange={onStop} />
             {mapData ? <ZoomControls api={apiRef} /> : null}
-            {view === 'explore' ? <MapHint hidden={selected !== null} /> : null}
+            {view === 'explore' || view === 'album' ? <MapHint hidden={view === 'explore' && selected !== null} album={view === 'album'} /> : null}
             {cardShown && selected !== null && catalog ? (
               <MapCard
                 key={selected}
