@@ -16,6 +16,8 @@ async function setFocus(page: Page, seed: number, recs: number[]) {
   await page.evaluate(([s, r]) => window.__rmr!.getState().setFocus({ seed: s, recs: r }), [seed, recs] as const);
 }
 
+type Pt = { x: number; y: number };
+
 /** Centre of a marker in client px. */
 async function markerCentre(page: Page, id: number): Promise<{ x: number; y: number }> {
   const box = (await page.locator(`.mk[data-album-id="${id}"]`).boundingBox())!;
@@ -176,14 +178,14 @@ test('the morph is animated, and instant under reduced motion', async ({ page })
   // Frame by frame: record album 11 and isAnimating() on every animation frame from the stop change until it settles.
   const run = await page.evaluate(
     () =>
-      new Promise<{ before: { x: number; y: number }; f0: number; log: { f: number; p: { x: number; y: number }; a: boolean }[] }>((resolve) => {
+      new Promise<{ before: Pt | null; f0: number; log: { f: number; p: Pt | null; a: boolean }[] }>((resolve) => {
         const rmr = window.__rmr!;
         const api = rmr.map!;
-        const before = api.screenPoint(11)!;
+        const before = api.screenPoint(11);
         const f0 = rmr.frames ?? 0;
-        const log: { f: number; p: { x: number; y: number }; a: boolean }[] = [];
+        const log: { f: number; p: Pt | null; a: boolean }[] = [];
         const tick = () => {
-          log.push({ f: rmr.frames ?? 0, p: api.screenPoint(11)!, a: api.isAnimating() });
+          log.push({ f: rmr.frames ?? 0, p: api.screenPoint(11), a: api.isAnimating() });
           if (!log[log.length - 1].a || log.length > 240) resolve({ before, f0, log });
           else requestAnimationFrame(tick);
         };
@@ -191,13 +193,16 @@ test('the morph is animated, and instant under reduced motion', async ({ page })
         requestAnimationFrame(tick);
       }),
   );
+  const before = run.before;
+  expect(before, 'album 11 on screen before').not.toBeNull();
+  for (const e of run.log) expect(e.p, `album 11 on screen at frame ${e.f}`).not.toBeNull();
   const last = run.log[run.log.length - 1];
   expect(last.a, 'settled').toBe(false);
   expect(last.f - run.f0, 'rendered frames to settle').toBeLessThanOrEqual(3);
   // The morph really happened, at once: album 11 moved, and every frame shows it at the old or the sonic position.
-  const d = (p: { x: number; y: number }, q: { x: number; y: number }) => Math.hypot(p.x - q.x, p.y - q.y);
-  expect(d(last.p, run.before)).toBeGreaterThan(1);
-  for (const e of run.log) expect(Math.min(d(e.p, run.before), d(e.p, last.p)), `frame ${e.f}`).toBeLessThan(0.5);
+  const d = (p: Pt | null, q: Pt | null) => Math.hypot(p!.x - q!.x, p!.y - q!.y);
+  expect(d(last.p, before)).toBeGreaterThan(1);
+  for (const e of run.log) expect(Math.min(d(e.p, before), d(e.p, last.p)), `frame ${e.f}`).toBeLessThan(0.5);
 });
 
 test('a zoom from the buttons survives a stop change until Reset re-arms the focus framing', async ({ page }) => {
@@ -239,4 +244,56 @@ test('the slider has 44 px tap targets on a phone', async ({ page, isMobile }) =
     }, box);
     expect(misses, await t.evaluate((el) => el.outerHTML.slice(0, 60))).toEqual([]);
   }
+});
+
+test('on a phone the focus markers stay above the slider panel', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone only');
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  // A focus that reaches the bottom edge: the lowest album on the map as the seed, with the albums closest to it on
+  // screen (which the ring pushes around it) and the highest album (so the framing is limited vertically).
+  const focus = await page.evaluate(() => {
+    const api = window.__rmr!.map!;
+    const pts: { id: number; x: number; y: number }[] = [];
+    for (let id = 0; ; id++) {
+      const p = api.screenPoint(id);
+      if (!p) break;
+      pts.push({ id, ...p });
+    }
+    const low = pts.reduce((a, b) => (b.y > a.y ? b : a));
+    const high = pts.reduce((a, b) => (b.y < a.y ? b : a));
+    const near = pts
+      .filter((p) => p.id !== low.id && p.id !== high.id)
+      .sort((a, b) => Math.hypot(a.x - low.x, a.y - low.y) - Math.hypot(b.x - low.x, b.y - low.y))
+      .slice(0, 6)
+      .map((p) => p.id);
+    return { seed: low.id, recs: [...near, high.id] };
+  });
+  const cases = [focus, { seed: 11, recs: await recsOf(page, 11, 'balanced', 10) }];
+  for (const f of cases) {
+    await setFocus(page, f.seed, f.recs);
+    await waitForCameraIdle(page);
+    await expect(page.locator('.mk')).toHaveCount(f.recs.length + 1);
+    const panelTop = (await page.locator('.mode').boundingBox())!.y;
+    const bottoms = await page.locator('.mk').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom));
+    for (const b of bottoms) expect(b, `seed ${f.seed}`).toBeLessThanOrEqual(panelTop);
+  }
+  // After the visitor moves the camera, the framing no longer helps: slide the albums down until the seed sits
+  // behind the panel; the layout bounds still keep every marker above it.
+  await setFocus(page, focus.seed, focus.recs);
+  await waitForCameraIdle(page);
+  const panelTop = (await page.locator('.mode').boundingBox())!.y;
+  const seedY = (await page.evaluate((id) => window.__rmr!.map!.screenPoint(id), focus.seed))!.y;
+  const shift = panelTop + 40 - seedY;
+  await page.evaluate((dy) => window.__rmr!.map!.panBy(0, dy), shift);
+  let moved = (await page.evaluate((id) => window.__rmr!.map!.screenPoint(id), focus.seed))!.y;
+  if (moved < seedY) {
+    await page.evaluate((dy) => window.__rmr!.map!.panBy(0, -2 * dy), shift);
+    moved = (await page.evaluate((id) => window.__rmr!.map!.screenPoint(id), focus.seed))!.y;
+  }
+  expect(moved, 'the seed album is behind the panel').toBeGreaterThan(panelTop + 20);
+  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  const bottoms = await page.locator('.mk').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().bottom));
+  for (const b of bottoms) expect(b, 'after the camera moved').toBeLessThanOrEqual(panelTop);
 });

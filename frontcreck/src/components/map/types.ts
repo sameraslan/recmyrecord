@@ -23,6 +23,8 @@ export interface MapInput {
   framePadding: MapPadding;
   /** CSS px kept clear around the whole cloud in the overview (clear of the header, slider and hint). */
   fitPadding: MapPadding;
+  /** CSS px covered by a full-width panel along the bottom (the phone slider): focus markers stay above it. */
+  bottomCover: number;
 }
 
 export interface MapCallbacks {

@@ -44,11 +44,14 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
     const rect = canvasRect(width, height);
     // The animated inset, so markers follow the map while the album panel slides.
     const inset = Math.max(0, insetCurrent);
+    const area = visibleArea(inset, width, height, MARKER_EDGE);
+    // Above a full-width bottom panel (the phone slider), with the same edge as elsewhere.
+    const markerBounds = { ...area, bottom: Math.min(area.bottom, height - input.bottomCover - MARKER_EDGE) };
     const placed = layoutMarkers(
       [f.seed, ...f.recs].map((id) => ({ id, ...worldToScreen(pos[2 * id], pos[2 * id + 1], rect, camera) })),
       MARKER_SIZE.seed,
       MARKER_SIZE.rec,
-      { bounds: visibleArea(inset, width, height, MARKER_EDGE) },
+      { bounds: markerBounds },
     );
     const drawn: PlacedMarker[] = [];
     for (const it of placed) {

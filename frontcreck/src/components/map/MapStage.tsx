@@ -18,14 +18,21 @@ import type { MapApi, MapCallbacks, MapInput, MapPadding } from './types';
 
 const MusicMap = dynamic(() => import('./MusicMap'), { ssr: false, loading: () => null });
 
+/** CSS px of the map the phone slider panel covers from the bottom: its 12 px offset plus its 152.5 px height
+ * (styles/map.css, `@media (max-width: 899px)` `.mode`, with 44 px tap targets). Update it with that CSS. */
+export const PHONE_SLIDER_COVER_PX = 165;
+/** Space kept between framed albums and the top of the phone slider panel. */
+const PHONE_SLIDER_MARGIN_PX = 4;
+const PHONE_BOTTOM_PADDING = PHONE_SLIDER_COVER_PX + PHONE_SLIDER_MARGIN_PX;
+
 /** Album framing: clear of the slider panel (top-left on desktop, bottom on phones). */
 const DESKTOP_PADDING: MapPadding = { top: 262, right: 96, bottom: 90, left: 96 };
-const PHONE_PADDING: MapPadding = { top: 80, right: 60, bottom: 150, left: 60 };
+const PHONE_PADDING: MapPadding = { top: 80, right: 60, bottom: PHONE_BOTTOM_PADDING, left: 60 };
 /** Overview framing of the whole cloud (mockup fitTarget); on phones clear of the bottom slider. */
 // The mockup's fitTarget fits h - 170 and shifts the cloud up 30 px: top 85 - 30, bottom 85 + 30.
 const DESKTOP_FIT_PADDING: MapPadding = { top: 55, right: 40, bottom: 115, left: 40 };
-// Phone: clear of the bottom slider, and the same 30 px upward shift as the mockup.
-const PHONE_FIT_PADDING: MapPadding = { top: 90, right: 40, bottom: 150, left: 40 };
+// Phone: clear of the bottom slider panel.
+const PHONE_FIT_PADDING: MapPadding = { top: 90, right: 40, bottom: PHONE_BOTTOM_PADDING, left: 40 };
 
 /** True after first paint (two animation frames) plus an idle slot: three.js never competes with it. */
 function useAfterFirstPaint(): boolean {
@@ -89,6 +96,8 @@ export function MapStage() {
       insetLeft: view === 'album' && !narrow ? panelInset : 0,
       framePadding: narrow ? PHONE_PADDING : DESKTOP_PADDING,
       fitPadding: narrow ? PHONE_FIT_PADDING : DESKTOP_FIT_PADDING,
+      // The full-width phone slider panel; the desktop corner card stays out of the marker bounds.
+      bottomCover: narrow && interactive ? PHONE_SLIDER_COVER_PX : 0,
     }),
     [stop, focus, hot, selected, view, interactive, dimmed, narrow, panelInset],
   );
