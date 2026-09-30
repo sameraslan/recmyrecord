@@ -316,6 +316,8 @@ export function MapStage() {
           <MusicMap data={mapData} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
         ) : null}
       </div>
+      {/* Home (mockup .veil): dims the map further round the hero; a click on empty map area opens the map. */}
+      {view === 'home' ? <div className="veil" aria-hidden="true" onClick={() => router.push('/map')} /> : null}
       {webgl === 'unavailable' && view !== 'home' ? <NoWebGL /> : null}
       {failed && view !== 'home' ? (
         <ErrorPanel

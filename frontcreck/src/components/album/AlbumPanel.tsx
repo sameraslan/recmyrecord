@@ -5,7 +5,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { COPY } from '@/lib/copy';
 import { REC_DEFAULT_VISIBLE, REC_MAX } from '@/lib/data/catalog';
-import { isNarrow } from '@/lib/media';
 import { previousPath } from '@/lib/nav-history';
 import { useAppStore } from '@/lib/store';
 import type { AlbumPageData, StopId } from '@/lib/types';
@@ -13,6 +12,7 @@ import { AmbientLayers } from './AmbientWash';
 import { RecList } from './RecList';
 import { SeedHeader } from './SeedHeader';
 import { Trail } from './Trail';
+import { usePanelInset } from './usePanelInset';
 
 export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }) {
   const { seed } = data;
@@ -43,25 +43,16 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
     document.documentElement.style.setProperty('--acc', seed.ambient[2]);
   }, [seed.ambient]);
 
-  useEffect(() => {
-    const el = panelRef.current;
-    if (!el) return;
-    const update = () => useAppStore.getState().setPanelInset(isNarrow() ? 0 : Math.round(el.getBoundingClientRect().width));
-    update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+  usePanelInset(panelRef);
 
-  // The one place that clears the album view's state: the close control, Escape and every route change away
-  // from this album (including to another album) unmount this panel.
+  // The one place that clears the album view's state (the map inset is usePanelInset's): the close control,
+  // Escape and every route change away from this album (including to another album) unmount this panel.
   useEffect(
     () => () => {
       const s = useAppStore.getState();
       s.setFocus(null);
       s.setHot(null);
       s.setAmbient(null);
-      s.setPanelInset(0);
       s.setMapMode(false);
       document.documentElement.style.removeProperty('--acc');
     },

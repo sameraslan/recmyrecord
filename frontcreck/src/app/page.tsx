@@ -1,14 +1,13 @@
-import { COPY } from '@/lib/copy';
+import { HomeHero } from '@/components/home/HomeHero';
+import { Shelf } from '@/components/home/Shelf';
+import { SHELF_SIZE } from '@/lib/data/catalog';
+import { getShelf } from '@/lib/data/server';
 
 export default function HomePage() {
   return (
     <section className="home" aria-labelledby="home-h">
-      <div className="hero">
-        <h1 id="home-h" tabIndex={-1}>
-          {COPY.hero}
-        </h1>
-        <p className="lede">{COPY.heroSub}</p>
-      </div>
+      <HomeHero />
+      <Shelf albums={getShelf(SHELF_SIZE)} />
     </section>
   );
 }

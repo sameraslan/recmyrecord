@@ -23,7 +23,7 @@ const sans = Schibsted_Grotesk({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://recmyrecord.com'),
-  title: { default: COPY.titles.home, template: `%s · ${COPY.wordmark}` },
+  title: { default: COPY.titles.home, template: COPY.titles.template },
   description: COPY.metaDescription,
   openGraph: { title: COPY.wordmark, description: COPY.metaDescription, siteName: COPY.wordmark, type: 'website' },
 };

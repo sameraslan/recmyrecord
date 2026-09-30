@@ -98,6 +98,8 @@ export const COPY = {
   },
   titles: {
     home: 'recmyrecord',
+    /** Every page title except Home's: '{page} · recmyrecord'. */
+    template: '%s · recmyrecord',
     map: 'Map',
     about: 'About',
     album: (title: string, artist: string) => `${title} by ${artist}`,

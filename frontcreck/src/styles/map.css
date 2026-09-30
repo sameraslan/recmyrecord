@@ -117,3 +117,9 @@
 @media (min-width: 900px) {
   .map-pane[data-view="album"] .map-msg { left: calc(var(--panel) + (100% - var(--panel)) / 2); }
 }
+
+/* Home: a radial veil over the dimmed map, darkest behind the hero (mockup lines 167 to 172). Opacity only. */
+.veil {
+  position: absolute; inset: 0; z-index: 4; cursor: pointer;
+  background: radial-gradient(50% 55% at 50% 45%, rgba(21, 17, 13, .72), rgba(21, 17, 13, .3) 70%, rgba(21, 17, 13, .15));
+}
