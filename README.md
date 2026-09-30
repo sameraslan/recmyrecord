@@ -1,20 +1,43 @@
-# recmyrecord
+<h1 align="center">recmyrecord</h1>
 
-recmyrecord recommends albums by how close they are to one you pick, comparing their sound (Spotify's audio values) and their mood (handpicked RateYourMusic descriptors). It also shows 4,000+ albums on a map where albums that sound or feel alike sit close together.
+<p align="center">
+  Start with an album you like. Get the most similar albums to it, by sound and by mood.
+  <br><br>
+  <a href="https://www.recmyrecord.com"><b>recmyrecord.com</b></a>
+</p>
 
-## Repository layout
+<p align="center">
+  <img src="docs/readme/search.gif" alt="Searching for In Rainbows and opening its closest albums" width="900">
+</p>
 
-| Folder | Contents |
-|---|---|
-| `frontcreck/` | The website: a static Next.js app. |
-| `data-pipeline/` | Builds every data file the website serves, from the recommender's feature table and the map's cover sprites. |
-| `data-retrieval/` | The original scraping and recommender code, kept for reference. The pipeline reads its feature table and never changes it. |
-| `docs/superpowers/` | The design spec and the implementation plan of the current site. |
-| `recVenv/` | A legacy Python virtualenv committed with the original code. Not used by the site or the pipeline. |
+Every album is placed by how it sounds, using Spotify's audio values, and how it feels, using mood descriptors handpicked from RateYourMusic. Pick one and you get the albums nearest to it.
 
-## Running the site
+<p align="center">
+  <img src="docs/readme/slider.gif" alt="Sliding from sound to mood reorders the list and moves the map" width="900">
+</p>
 
-See [`frontcreck/README.md`](frontcreck/README.md). In short, with Node 20.20.2 on arm64:
+Slide between sound and mood to change what "close" means.
+
+<p align="center">
+  <img src="docs/readme/map.gif" alt="Exploring the map of albums" width="900">
+</p>
+
+Or skip the search and wander the map: 4,000+ albums, with the ones that sound or feel alike sitting together.
+
+<p align="center">
+  <img src="docs/readme/phone.gif" alt="The album page on a phone, switching between list and map" width="300">
+</p>
+
+<p align="center"><a href="https://www.recmyrecord.com"><b>Try it at recmyrecord.com</b></a></p>
+
+<br>
+
+<details>
+<summary>Running it locally</summary>
+
+<br>
+
+The site is a static Next.js app in `frontcreck/` and needs no environment variables. With Node 22 on arm64:
 
 ```bash
 cd frontcreck
@@ -22,18 +45,12 @@ npm install
 npm run dev
 ```
 
-The site needs no environment variables.
+The data it serves is committed. To rebuild it, see [`data-pipeline/README.md`](data-pipeline/README.md). More detail in [`frontcreck/README.md`](frontcreck/README.md).
 
-## Rebuilding the data
+| Folder | Contents |
+|---|---|
+| `frontcreck/` | The website |
+| `data-pipeline/` | Builds the data files the site serves |
+| `data-retrieval/` | The original scraping and recommender code, kept for reference |
 
-See [`data-pipeline/README.md`](data-pipeline/README.md). The outputs are committed, so this is only needed to change the data. With Python 3.11:
-
-```bash
-python3.11 -m venv data-pipeline/.venv
-data-pipeline/.venv/bin/pip install -r data-pipeline/requirements.txt
-cd data-pipeline
-.venv/bin/python -m rmr_pipeline.build --map-root <path>
-.venv/bin/python -m rmr_pipeline.validate
-```
-
-`<path>` is a checkout of the music map that supplies the cover sprites and cover links.
+</details>

@@ -4,10 +4,10 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
 
 ## Requirements
 
-- Node 20.20.2 on arm64. On an Apple silicon Mac, put it first on the path in every shell that runs `node`, `npm` or `npx`:
+- Node 22.23.3 on arm64. On an Apple silicon Mac, put it first on the path in every shell that runs `node`, `npm` or `npx`:
 
   ```bash
-  export PATH="$HOME/.nvm/versions/node/v20.20.2/bin:$PATH"
+  export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"
   node -p process.arch   # must print arm64
   ```
 
@@ -47,4 +47,4 @@ App state (current stop, focus, hover, selection and the trail of visited albums
 
 ## Deployment
 
-The Vercel project's root directory is `frontcreck/`. `engines.node` is `20.x`. No environment variables are needed. Production currently deploys from the `recmyrecord` branch, not `main`.
+The Vercel project's root directory is `frontcreck/`. `engines.node` is `22.x`. No environment variables are needed. Production deploys from `main`.

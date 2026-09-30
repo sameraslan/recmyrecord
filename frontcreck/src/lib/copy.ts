@@ -10,7 +10,7 @@ export const COPY = {
   skip: 'Skip to content',
   nav: { label: 'Main', map: 'Map', about: 'About' },
   hero: 'Start with an album you like.',
-  heroSub: 'Get the albums closest to it, by sound and by mood.',
+  heroSub: 'Get the most similar albums to it, by sound and by mood.',
   search: {
     placeholder: 'Search albums or artists',
     label: 'Search albums or artists',
