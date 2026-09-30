@@ -84,7 +84,8 @@
   position: absolute; left: 0; top: 0; min-width: 18px; will-change: transform; height: 18px; padding: 0 4px; display: grid; place-items: center;
   background: var(--color-float); border: 1px solid rgba(237, 229, 213, .35); color: var(--color-paper); font: 600 11px/1 var(--font-sans);
 }
-.mk-n[data-hot] { background: var(--acc); border-color: var(--acc); color: var(--color-lamp-ink); }
+/* Room-coloured digits: every album accent is at least 4.5:1 against the room colour (lamp ink is not). */
+.mk-n[data-hot] { background: var(--acc); border-color: var(--acc); color: var(--color-room); }
 
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
