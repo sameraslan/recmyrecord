@@ -73,5 +73,7 @@
   .top.top--home nav { margin-left: auto; }
   .combo--hero { margin-top: 24px; }
   .combo--hero .combo-field { height: 54px; }
+  /* The 404 field: its input sits inside a 1 px border, so 48 px keeps the input a 46 px tap target (the sheet's size). */
+  .notfound .combo-field { height: 48px; }
   .combo--hero .kbd { display: none; }
 }
