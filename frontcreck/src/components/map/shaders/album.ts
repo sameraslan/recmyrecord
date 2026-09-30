@@ -58,6 +58,12 @@ export const SELECTED_FRAME_GAP_PX = 4;
 export const SELECTED_FRAME_PX = 2;
 /** CSS px the selected sprite adds around the cover for its frame (both sides, plus a pixel for antialiasing). */
 const SELECTED_QUAD_EXTRA = 2 * (SELECTED_FRAME_GAP_PX + SELECTED_FRAME_PX / 2) + 2;
+/** Alpha of the dots at the overview, and on the dimmed Home, About and 404 map (mockup .78 and .34). */
+export const DOT_ALPHA = 0.78;
+export const DOT_ALPHA_DIMMED = 0.34;
+/** The dimmed map draws its dots this much larger (mockup `muted`: radius * 1.35), easing with the alpha. */
+export const MUTED_DOT_SCALE = 1.35;
+
 /** Alpha factor of the other covers while an album is picked (mockup coverA * .5); dots are unaffected. */
 export const SELECTION_DIM = 0.5;
 
@@ -93,6 +99,7 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   uniform float u_selectedIndex; // album picked in Explore, -1 = none (always -1 in album view)
   uniform float u_maxSpritePx;  // device px cap, viewportHeightCssPx * 0.18 * dpr
   uniform float u_atlasLoaded[5];
+  uniform float u_dotAlpha;     // eases from DOT_ALPHA to DOT_ALPHA_DIMMED as the map dims
 
   varying vec2 v_atlasOrigin;
   varying vec2 v_atlasSize;
@@ -144,6 +151,9 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
     float coverCss = min(${f(COVER_MAX_PX)}, ${f(COVER_WORLD)} * pxPerWorld);
     float coverT = smoothstep(${f(COVER_FADE_START_PX)}, ${f(COVER_FADE_END_PX)}, coverCss)
       * step(0.5, atlasLoaded(int(a_atlasIndex)));
+    // The dimmed backdrop (Home, About, 404) draws larger, fainter dots (mockup muted), eased with the alpha.
+    float mutedT = clamp((${f(DOT_ALPHA)} - u_dotAlpha) / ${f(DOT_ALPHA - DOT_ALPHA_DIMMED)}, 0.0, 1.0);
+    dotCss *= 1.0 + ${f(MUTED_DOT_SCALE - 1)} * mutedT;
     float baseCss = mix(dotCss, coverCss, coverT);
 
     // Draw-order layers via depth (the material writes depth, LessEqual

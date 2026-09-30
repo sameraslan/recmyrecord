@@ -77,3 +77,9 @@ describe("albums outside the focus in album view", () => {
     expect(dimBranch.slice(0, dimBranch.indexOf("}"))).not.toMatch(/baseCss\s*\*=/);
   });
 });
+
+describe("the dimmed map behind Home, About and 404", () => {
+  it("draws its dots 1.35 times larger, easing with the dot alpha (mockup muted)", () => {
+    expect(ALBUM_VERTEX_SHADER).toMatch(/float mutedT = clamp\(\(0\.7800 - u_dotAlpha\) \/ 0\.4400, 0\.0, 1\.0\);\s*dotCss \*= 1\.0 \+ 0\.3500 \* mutedT;/);
+  });
+});

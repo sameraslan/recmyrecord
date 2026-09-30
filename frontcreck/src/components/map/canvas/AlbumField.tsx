@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { atlasSlot } from "@/lib/data/sprites";
 import { prefersReducedMotion } from "@/lib/media";
 import { CLUSTER_RGB, interpolateInto, type MapData } from "../data";
-import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, MAX_SPRITE_VIEWPORT_FRACTION, SELECTION_DIM } from "../shaders/album";
+import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, DOT_ALPHA, DOT_ALPHA_DIMMED, MAX_SPRITE_VIEWPORT_FRACTION, SELECTION_DIM } from "../shaders/album";
 import { useMapStore } from "../state/mapStore";
 
 interface AlbumFieldProps {
@@ -22,9 +22,6 @@ interface AlbumFieldProps {
 }
 
 const MAX_ATLASES = 5;
-/** Alpha of the dots at the overview, and on the dimmed Home, About and 404 map. */
-const DOT_ALPHA = 0.78;
-const DOT_ALPHA_DIMMED = 0.34;
 /** Alpha factor of albums outside the focus in album view. */
 const FOCUS_DIM = 0.45;
 /** Slots in u_neighborMask: the seed, then the focus recommendations, padded with -1. */
