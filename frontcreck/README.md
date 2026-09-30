@@ -47,4 +47,4 @@ App state (current stop, focus, hover, selection and the trail of visited albums
 
 ## Deployment
 
-The Vercel project's root directory is `frontcreck/`. `engines.node` is `22.x`. No environment variables are needed. Production currently deploys from the `recmyrecord` branch, not `main`.
+The Vercel project's root directory is `frontcreck/`. `engines.node` is `22.x`. No environment variables are needed. Production deploys from `main`.
