@@ -65,6 +65,34 @@ export function nearestWithin(
   return best;
 }
 
+/**
+ * Like `nearestWithin`, but every album has its own hit radius (world units),
+ * e.g. a cover-sized one when its atlas sheet is loaded and a dot-sized one
+ * otherwise. Returns the nearest album whose own radius contains the point.
+ */
+export function nearestWithinEach(
+  positions: Float32Array,
+  n: number,
+  x: number,
+  y: number,
+  radiusWorldOf: (index: number) => number,
+): number {
+  let best = -1;
+  let bestD2 = Infinity;
+  for (let i = 0; i < n; i++) {
+    const dx = positions[i * 2] - x;
+    const dy = positions[i * 2 + 1] - y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= bestD2) continue;
+    const r = radiusWorldOf(i);
+    if (d2 < r * r) {
+      bestD2 = d2;
+      best = i;
+    }
+  }
+  return best;
+}
+
 /** A hit-test candidate that wins over nearest-centre when the point is
  * inside its own drawn disc (radius in world units). */
 export interface PriorityHit {
@@ -85,7 +113,7 @@ export function pickAlbum(
   n: number,
   x: number,
   y: number,
-  radiusWorld: number,
+  radiusWorld: number | ((index: number) => number),
   priority: readonly PriorityHit[],
 ): number {
   for (const p of priority) {
@@ -94,5 +122,7 @@ export function pickAlbum(
     const dy = positions[p.index * 2 + 1] - y;
     if (dx * dx + dy * dy < p.radiusWorld * p.radiusWorld) return p.index;
   }
-  return nearestWithin(positions, n, x, y, radiusWorld);
+  return typeof radiusWorld === "number"
+    ? nearestWithin(positions, n, x, y, radiusWorld)
+    : nearestWithinEach(positions, n, x, y, radiusWorld);
 }

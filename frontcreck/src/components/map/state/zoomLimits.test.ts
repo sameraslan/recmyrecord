@@ -39,10 +39,11 @@ describe("zoom limits", () => {
     expect(gap).toBeLessThan(130);
   });
 
-  it("grows dots gently with the map scale, up to 7.2 px as covers start", () => {
-    expect(dotCssPx(0.784, H)).toBeCloseTo(5, 1);
-    expect(dotCssPx(0.1, H)).toBeGreaterThan(3.7);
-    expect(dotCssPx(0.1, H)).toBeLessThan(dotCssPx(0.784, H));
-    expect(dotCssPx(zoomForCoverPx(16, H), H)).toBe(7.2);
+  it("grows dots gently with the map scale, from 3 px to about 7 px as covers start, at most 7.2", () => {
+    expect(dotCssPx(0.784, H)).toBeCloseTo(3.09, 2);
+    expect(dotCssPx(0.1, H)).toBe(3);
+    expect(dotCssPx(2, H)).toBeGreaterThan(dotCssPx(0.784, H));
+    expect(dotCssPx(zoomForCoverPx(16, H), H)).toBeCloseTo(6.88, 2);
+    expect(dotCssPx(zoomForCoverPx(32, H), H)).toBe(7.2);
   });
 });

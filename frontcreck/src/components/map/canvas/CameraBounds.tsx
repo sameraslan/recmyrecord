@@ -100,9 +100,8 @@ export function CameraBounds() {
 
     const cam = state.camera as THREE.OrthographicCamera;
     const viewport = viewportWorldRect(cam);
-    // The same percentile bounds the overview framing fits to (published by
-    // InitialFrame, recomputed on every sliderT change), so the idle nudge
-    // keeps the bulk of the cloud on screen, not its outliers.
+    // The cloud's full extent, the same box the overview framing fits
+    // (published by InitialFrame, recomputed on every sliderT change).
     const framing = getOverviewFraming();
     const cloud = framing.bounds;
     // Stricter at or below the fitted zoom (60% of the cloud's box must be

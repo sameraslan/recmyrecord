@@ -5,10 +5,12 @@ import { useFrame, useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 
 import { DURATION } from "@/lib/media";
+import { ATLAS_PER_SHEET } from "@/lib/data/sprites";
 import { renderedSpriteCssSize } from "../shaders/album";
 import { cssPxToWorld, pickAlbum, spriteHitRadiusCssPx } from "../state/hitTest";
 import { useMapStore } from "../state/mapStore";
 import { canvasRect, screenToWorld } from "../state/projection";
+import { isAtlasSheetLoaded } from "./AtlasManager";
 
 /** After a mouse press, hover resumes once the pointer moves this far (CSS
  * px) from where it was pressed, so click jitter doesn't count as a move. */
@@ -33,18 +35,25 @@ export function albumAt(
 ): number {
   const toWorld = (px: number) =>
     cssPxToWorld(px, viewportHeightCssPx, camera.zoom, camera.top - camera.bottom);
-  const drawnRadius = renderedSpriteCssSize(camera.zoom, viewportHeightCssPx, pixelRatio) / 2;
+  // An album whose atlas sheet is not loaded is still drawn as a dot, so it gets the dot's radius.
+  const drawnRadius = (loaded: boolean) => renderedSpriteCssSize(camera.zoom, viewportHeightCssPx, pixelRatio, 1, loaded) / 2;
+  const coverR = drawnRadius(true);
+  const dotR = drawnRadius(false);
+  const loadedAt = (i: number) => isAtlasSheetLoaded(Math.floor(i / ATLAS_PER_SHEET));
+  const hitCover = toWorld(spriteHitRadiusCssPx(pointerType, coverR * 2));
+  const hitDot = toWorld(spriteHitRadiusCssPx(pointerType, dotR * 2));
   const focusedIndex = useMapStore.getState().input.focus?.seed ?? -1;
+  const drawnWorld = (i: number) => toWorld(i >= 0 && loadedAt(i) ? coverR : dotR);
   return pickAlbum(
     positions,
     positions.length / 2,
     worldX,
     worldY,
-    toWorld(spriteHitRadiusCssPx(pointerType, drawnRadius * 2)),
+    hitCover === hitDot ? hitCover : (i) => (loadedAt(i) ? hitCover : hitDot),
     [
       // The hover marks (ring, stroke) are drawn outside the album; hits stay on the album itself.
-      { index: focusedIndex, radiusWorld: toWorld(drawnRadius) },
-      { index: hoverIndex, radiusWorld: toWorld(drawnRadius) },
+      { index: focusedIndex, radiusWorld: drawnWorld(focusedIndex) },
+      { index: hoverIndex, radiusWorld: drawnWorld(hoverIndex) },
     ],
   );
 }

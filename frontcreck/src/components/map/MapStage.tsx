@@ -20,8 +20,10 @@ const MusicMap = dynamic(() => import('./MusicMap'), { ssr: false, loading: () =
 const DESKTOP_PADDING: MapPadding = { top: 262, right: 96, bottom: 90, left: 96 };
 const PHONE_PADDING: MapPadding = { top: 80, right: 60, bottom: 150, left: 60 };
 /** Overview framing of the whole cloud (mockup fitTarget); on phones clear of the bottom slider. */
-const DESKTOP_FIT_PADDING: MapPadding = { top: 85, right: 40, bottom: 85, left: 40 };
-const PHONE_FIT_PADDING: MapPadding = { top: 80, right: 40, bottom: 160, left: 40 };
+// The mockup's fitTarget fits h - 170 and shifts the cloud up 30 px: top 85 - 30, bottom 85 + 30.
+const DESKTOP_FIT_PADDING: MapPadding = { top: 55, right: 40, bottom: 115, left: 40 };
+// Phone: clear of the bottom slider, and the same 30 px upward shift as the mockup.
+const PHONE_FIT_PADDING: MapPadding = { top: 90, right: 40, bottom: 150, left: 40 };
 
 /** True after first paint (two animation frames) plus an idle slot: three.js never competes with it. */
 function useAfterFirstPaint(): boolean {

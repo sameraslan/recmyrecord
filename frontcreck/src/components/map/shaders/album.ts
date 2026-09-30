@@ -80,6 +80,7 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   varying float v_baseCss;      // CSS px of the dot or cover itself
   varying float v_quadCss;      // CSS px of the point sprite (larger when hovered, for the ring)
   varying float v_dotCss;       // CSS px of the dot at this zoom (hover core dot)
+  varying float v_markGap;      // CSS px between the drawn album and the hover mark
 
   vec2 interpolatePos() {
     if (u_sliderT <= 0.5) {
@@ -144,9 +145,10 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
       }
     }
     v_hovered = (abs(u_hoverIndex - instanceIndex) < 0.5 && v_anchor < 0.5) ? 1.0 : 0.0;
-    // Hovered: room for the mockup's marks, a ring of radius 7 around a dot, or a square stroke 3 px
-    // outside a cover.
-    float quadCss = v_hovered > 0.5 ? (coverT >= 0.98 ? baseCss + 8.0 : max(baseCss * 1.25, 17.0)) : baseCss;
+    // Hover mark (mockup): a ring of radius 7 around a dot, a square stroke 3 px outside a cover, and in
+    // between a stroke that follows the drawn shape at a gap that shrinks to 3 px. The sprite grows to hold it.
+    float markGap = mix(max(7.0 - 0.5 * baseCss, 3.0), 3.0, coverT);
+    float quadCss = v_hovered > 0.5 ? max(baseCss + 2.0 * markGap + 2.0, 17.0) : baseCss;
     // Clamp at 240 device-px (most GPUs cap GL_POINTS sprites around 256) and at u_maxSpritePx (a
     // viewport-relative cap so a single cover never dominates a short window).
     float capCss = min(240.0, u_maxSpritePx) / u_pixelRatio;
@@ -160,6 +162,7 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
     v_baseCss = baseCss;
     v_quadCss = quadCss;
     v_dotCss = dotCss;
+    v_markGap = markGap;
     v_atlasOrigin = a_atlasUV.xy;
     v_atlasSize = a_atlasUV.zw;
     v_atlasIndex = a_atlasIndex;
@@ -193,6 +196,7 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
   varying float v_baseCss;
   varying float v_quadCss;
   varying float v_dotCss;
+  varying float v_markGap;
 
   vec3 sampleAtlas(int idx, vec2 uv) {
     if (idx == 0) return texture2D(u_atlas0, uv).rgb;
@@ -245,20 +249,16 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
     }
 
     if (v_hovered > 0.5) {
-      float over;
-      float overAlpha;
-      if (v_coverT >= 0.98) {
-        // 1.5 px square stroke 3 px outside the cover
-        over = band(max(abs(p.x), abs(p.y)) - (halfSize + 3.0), 1.5, aa);
-        overAlpha = 0.9;
-      } else {
-        // paper core dot and a 1.5 px ring of radius 7, transparent between them
-        float d = length(p);
-        float core = 1.0 - smoothstep(max(0.5 * v_dotCss, 2.2) - 0.5 * aa, max(0.5 * v_dotCss, 2.2) + 0.5 * aa, d);
-        over = max(core, band(d - 7.0, 1.5, aa));
-        overAlpha = 0.95;
-      }
-      float a = over * overAlpha;
+      // A 1.5 px stroke v_markGap outside the drawn shape: a circle around a dot (radius 7), a square
+      // with sharp corners around a full cover, following the shape through the cross-fade.
+      float markHalf = halfSize + v_markGap;
+      float markCorner = mix(markHalf, 0.0, v_coverT);
+      vec2 mq = abs(p) - vec2(markHalf - markCorner);
+      float msd = length(max(mq, 0.0)) + min(max(mq.x, mq.y), 0.0) - markCorner;
+      // In dot mode a paper core dot covers the album, fading out as the cover fades in.
+      float coreR = max(0.5 * v_dotCss, 2.2);
+      float core = (1.0 - smoothstep(coreR - 0.5 * aa, coreR + 0.5 * aa, length(p))) * (1.0 - smoothstep(0.0, 0.5, v_coverT));
+      float a = max(band(msd, 1.5, aa), core) * mix(0.95, 0.9, v_coverT);
       float outA = a + alpha * (1.0 - a);
       col = (PAPER * a + col * alpha * (1.0 - a)) / max(outA, 0.0001);
       alpha = outA;

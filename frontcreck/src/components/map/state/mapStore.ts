@@ -12,7 +12,7 @@ export const DEFAULT_INPUT: MapInput = {
   dimmed: true,
   insetLeft: 0,
   framePadding: { top: 96, right: 96, bottom: 96, left: 96 },
-  fitPadding: { top: 85, right: 40, bottom: 85, left: 40 },
+  fitPadding: { top: 55, right: 40, bottom: 115, left: 40 },
 };
 
 const NO_CALLBACKS: MapCallbacks = { onHover: () => {}, onPick: () => {}, onEmpty: () => {}, onContextLost: () => {} };

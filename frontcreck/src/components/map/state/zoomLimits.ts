@@ -33,13 +33,12 @@ export const COVER_MAX_PX = 64;
 /** Atlases start loading a little before covers start to show. */
 export const ATLAS_LOAD_PX = 13;
 
-/** Dot diameter in CSS px: `DOT_BASE_PX + pxPerWorld * COVER_WORLD / DOT_SCALE_PX`, clamped. The growth
- * rate is the mockup's (radius .9 + k/600 for its scale k, where its covers are 0.0105 k px, so the
- * diameter grows by 2 * k / 600 = pxPerWorld * COVER_WORLD / 3.15); the base is set so the desktop
- * overview shows 5 px dots (about 4.2 px on a phone), reaching 7.2 px as covers start. */
-export const DOT_BASE_PX = 3.7;
+/** Dot diameter in CSS px, the mockup's dots (radius clamp(.9 + k/600, 1.5, 3.6) for its scale k, where
+ * its covers are 0.0105 k px): `clamp(1.8 + pxPerWorld * COVER_WORLD / 3.15, 3, 7.2)`. About 3 px at the
+ * desktop and phone overviews, about 6.9 px as covers start, at most 7.2. */
+export const DOT_BASE_PX = 1.8;
 export const DOT_SCALE_PX = 3.15;
-export const DOT_MIN_PX = 3;  // a floor for tiny canvases
+export const DOT_MIN_PX = 3;
 export const DOT_MAX_PX = 7.2;
 
 export function pxPerWorld(zoom: number, canvasHeightCssPx: number): number {

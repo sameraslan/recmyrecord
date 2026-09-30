@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  nearestWithinEach,
   cssPxToWorld,
   hitRadiusCssPx,
   nearestWithin,
@@ -97,5 +98,24 @@ describe("pickAlbum", () => {
       { index: 0, radiusWorld: 0.7 },
     ];
     expect(pickAlbum(positions, 2, 0.5, 0, 2, priority)).toBe(1);
+  });
+});
+
+describe("nearestWithinEach", () => {
+  const positions = new Float32Array([0, 0, 1, 0]);
+
+  it("uses each album's own radius", () => {
+    // Album 0 is nearer but small (not loaded); album 1 is farther with a cover-sized radius.
+    const radius = (i: number) => (i === 0 ? 0.1 : 0.8);
+    expect(nearestWithinEach(positions, 2, 0.3, 0, radius)).toBe(1);
+    expect(nearestWithinEach(positions, 2, 0.05, 0, radius)).toBe(0);
+  });
+
+  it("returns -1 when no album's own radius contains the point", () => {
+    expect(nearestWithinEach(positions, 2, 0.5, 0.5, () => 0.2)).toBe(-1);
+  });
+
+  it("is what pickAlbum uses when given a radius function", () => {
+    expect(pickAlbum(positions, 2, 0.3, 0, (i) => (i === 0 ? 0.1 : 0.8), [])).toBe(1);
   });
 });

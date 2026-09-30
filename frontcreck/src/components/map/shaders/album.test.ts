@@ -9,9 +9,9 @@ const PHONE_H = 784;
 const PHONE_FIT = 0.347;
 
 describe("spriteCssSize (JS mirror of the vertex shader's sizes)", () => {
-  it("is a dot of about 5 px at the desktop overview and 4 px at the phone overview", () => {
-    expect(spriteCssSize(FIT, H)).toBeCloseTo(5, 1);
-    expect(spriteCssSize(PHONE_FIT, PHONE_H)).toBeCloseTo(4.2, 1);
+  it("is a dot of about 3 px at the desktop and phone overviews, as in the mockup", () => {
+    expect(spriteCssSize(FIT, H)).toBeCloseTo(3.09, 2);
+    expect(spriteCssSize(PHONE_FIT, PHONE_H)).toBe(3);
   });
 
   it("grows the dot gently until covers start", () => {
