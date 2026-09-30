@@ -87,6 +87,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   clearToast: () => set({ toast: null }),
 }));
 
+// Test hooks (Playwright, the perf script). getState includes the setters, so these can change state as well.
 if (typeof window !== 'undefined') {
   window.__rmr = { ...window.__rmr, getState: useAppStore.getState, subscribe: useAppStore.subscribe };
 }
