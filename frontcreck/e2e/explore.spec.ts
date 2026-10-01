@@ -235,6 +235,36 @@ test('closing an album returns to the map where it was', async ({ page, isMobile
   await expect(page.locator('#map-h')).toBeFocused();
 });
 
+test('"Explore this area" drops the album and leaves the map where it was', async ({ page, isMobile }) => {
+  await page.goto('/album/in-rainbows-radiohead');
+  await waitForMap(page);
+  // Phones show it in map mode only, opposite the List button.
+  if (isMobile) {
+    await expect(page.getByRole('button', { name: COPY.map.exploreHere })).toBeHidden();
+    await page.getByRole('button', { name: COPY.phone.mapLabel }).click();
+  }
+  await expect(page.locator('.mk')).toHaveCount(6);
+  await waitForCameraIdle(page);
+  const before = await camera(page);
+  await page.getByRole('button', { name: COPY.map.exploreHere }).click();
+  await expect(page).toHaveURL('/map');
+  await expect(page.locator('.mk')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: COPY.map.exploreHere })).toHaveCount(0);
+  await expect(page.locator('#map-h')).toBeFocused();
+  await waitForCameraIdle(page);
+  const after = await camera(page);
+  expect(after.zoom).toBeCloseTo(before.zoom, 5);
+  expect(Math.abs(after.x - before.x)).toBeLessThan(1e-6);
+  expect(Math.abs(after.y - before.y)).toBeLessThan(1e-6);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.getState().focus)).toBeNull();
+  // A pick now opens the Explore card, not the album.
+  await pick(page, isMobile);
+  await expect(page.locator('.card')).toBeVisible();
+  await expect(page).toHaveURL('/map');
+  await page.goBack();
+  await expect(page).toHaveURL('/album/in-rainbows-radiohead');
+});
+
 test('leaving an album by the header nav leaves the album state clean and frames the whole map', async ({ page }) => {
   await page.goto('/album/in-rainbows-radiohead');
   await waitForMap(page);

@@ -19,6 +19,10 @@
 .map-ui { position: absolute; inset: 0; z-index: 6; pointer-events: none; transition: left var(--dur) var(--out); }
 .map-ui > * { pointer-events: auto; }
 .panel { background: var(--color-float); border: 1px solid var(--color-rule); border-radius: 2px; box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .8); }
+/* "Explore this area" (album view): top right of the visible map, clear of the slider card top left. */
+.map-explore { position: absolute; right: 20px; top: 20px; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 12px; font-size: 14px; color: var(--color-paper); }
+.map-explore svg { width: 16px; height: 16px; color: var(--color-dust); }
+.map-explore:hover svg { color: var(--color-lamp); }
 .map-zoom { position: absolute; right: 20px; bottom: 20px; display: grid; }
 .map-zoom button { width: 40px; height: 40px; display: grid; place-items: center; background: var(--color-float); border: 1px solid var(--color-rule); color: var(--color-dust); }
 .map-zoom button + button { border-top: 0; }
@@ -106,6 +110,9 @@
   .mode input[type=range]::-webkit-slider-thumb { margin-top: 14px; }
   .mode-stops button { min-height: 44px; margin-bottom: -7px; }
   .map-hint { display: none; }
+  /* Phone map mode: top left, opposite the List button and the same height (it is in the stage's corner too). */
+  .map-explore { right: auto; left: 12px; top: 12px; min-height: 48px; padding: 0 16px 0 14px; font-size: 15px; font-weight: 500; border-color: var(--color-rule-2); box-shadow: none; }
+  .map-explore svg { width: 17px; height: 17px; }
   /* A bottom sheet resting on the slider panel (their borders overlap into one line), as in the mockup; the zoom
    * controls step aside while it is open. */
   .card { left: 12px; right: 12px; bottom: calc(var(--slider-cover, calc(165px + env(safe-area-inset-bottom))) - 1px); width: auto; grid-template-columns: 72px minmax(0, 1fr); }
