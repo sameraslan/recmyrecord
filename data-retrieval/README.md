@@ -20,6 +20,6 @@ Or Madvillainy by Madvillain
 
 4. Now in process of playing with features and weights for an ideal and accurate model. 
 
-## Credentials
+## Status
 
-The scripts read credentials from environment variables; none are stored in the repository. See [`.env.example`](.env.example) for the names: `SPOTIPY_CLIENT_ID` / `SPOTIPY_CLIENT_SECRET` for the Spotify scripts, and `DATABASE_URL` (or `PGHOST`, `PGPORT`, `PGUSER`, `PGPASSWORD`, `PGDATABASE`) for `Recommender/populate_db.py`.
+This folder is kept for reference and for the data files `data-pipeline/` reads (`Recommender/data/all_data_norm.pkl`). The scripts that called the Spotify API or wrote to the old Postgres database have been removed; the site serves static files and uses neither.
