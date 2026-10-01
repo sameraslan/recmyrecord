@@ -1,15 +1,44 @@
 """Feature table access and an exact replica of the live recommender."""
+import hashlib
+import os
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 from sklearn.neighbors import NearestNeighbors
 
-from .constants import AUDIO, DEFAULT_TABLE, LYRIC_DROP, META
+from .constants import AUDIO, DEFAULT_TABLE, DEFAULT_TABLE_SHA256, LYRIC_DROP, META
 
 
-def load_table(path: Path = DEFAULT_TABLE) -> pd.DataFrame:
-    """The feature table in catalog-rank order with a fresh RangeIndex (row = album number - 1)."""
+def sha256_file(path: Path) -> str:
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify_table_hash(path: Path, expected_sha256: str) -> None:
+    """Raise if the file's SHA-256 differs from `expected_sha256`, unless
+    RMR_ALLOW_TABLE_HASH_MISMATCH=1 is set (for intentional updates)."""
+    actual = sha256_file(path)
+    if actual != expected_sha256.lower() and os.environ.get("RMR_ALLOW_TABLE_HASH_MISMATCH") != "1":
+        raise ValueError(
+            f"Refusing to unpickle {path}: SHA-256 {actual} does not match the pinned {expected_sha256}. "
+            "If the table was updated on purpose, update DEFAULT_TABLE_SHA256 in rmr_pipeline/constants.py "
+            "(or set RMR_ALLOW_TABLE_HASH_MISMATCH=1 for this run)."
+        )
+
+
+def load_table(path: Path = DEFAULT_TABLE, expected_sha256: str | None = None) -> pd.DataFrame:
+    """The feature table in catalog-rank order with a fresh RangeIndex (row = album number - 1).
+    The pickle is hash-checked before loading: against `expected_sha256` when given, otherwise
+    against DEFAULT_TABLE_SHA256 when `path` is the default table."""
+    path = Path(path)
+    if expected_sha256 is None and path.resolve() == DEFAULT_TABLE.resolve():
+        expected_sha256 = DEFAULT_TABLE_SHA256
+    if expected_sha256 is not None:
+        verify_table_hash(path, expected_sha256)
     return pd.read_pickle(path).reset_index(drop=True)
 
 

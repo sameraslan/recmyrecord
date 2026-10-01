@@ -5,6 +5,10 @@ from pathlib import Path
 PIPELINE_DIR = Path(__file__).resolve().parents[1]
 REPO = PIPELINE_DIR.parent
 DEFAULT_TABLE = REPO / "data-retrieval" / "Recommender" / "data" / "all_data_norm.pkl"
+# SHA-256 of DEFAULT_TABLE. The table is unpickled (which can run code), so it is pinned.
+# After an intentional update, recompute with `sha256sum` and change this value
+# (or set RMR_ALLOW_TABLE_HASH_MISMATCH=1 for a one-off run).
+DEFAULT_TABLE_SHA256 = "9c1ed17db5eb54273d3f739e10437275d4934399b095ba8ccb6c32098a1e63f8"
 DEFAULT_OUT = REPO / "frontcreck" / "public" / "data"
 DEFAULT_OVERRIDES = PIPELINE_DIR / "overrides.json"
 

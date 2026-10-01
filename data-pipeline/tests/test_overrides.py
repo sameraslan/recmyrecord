@@ -94,3 +94,18 @@ def test_an_artist_correction_may_not_move_another_slug():
     slugs = make_slugs(titles, ["Old", "B"])  # t-old, t-b
     with pytest.raises(ValueError, match="slug"):
         slugs_after_overrides(titles, ["B", "B"], slugs, {0})  # would take t-b and push the other to t-b-2
+
+
+@pytest.mark.parametrize("image", ["/etc/passwd", "../secret.jpg", "overrides/../../x.jpg",
+                                   "C:\\x.jpg", "..\\x.jpg"])
+def test_rejects_absolute_or_parent_image_paths(tmp_path, image):
+    with pytest.raises(ValueError, match="image"):
+        load_overrides(_write(tmp_path, {"x": {"image": image}}))
+
+
+def test_apply_rejects_image_outside_base(tmp_path):
+    base = tmp_path / "base"
+    base.mkdir()
+    (tmp_path / "out.jpg").write_bytes(b"")
+    with pytest.raises(ValueError):
+        apply_overrides(["a"], ["c"], ["s"], {"a": {"image": "../out.jpg"}}, base, artists=["A"])
