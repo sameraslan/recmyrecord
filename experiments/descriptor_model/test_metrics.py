@@ -117,3 +117,80 @@ def test_set_metrics():
 def test_unlabelled_album_is_rejected():
     with pytest.raises(AssertionError):
         M.precision_at_k(np.zeros((1, 3)), np.ones((1, 3)), 2)
+
+
+# ---------------------------------------------------------------- capped precision@k
+
+# 5 albums, 6 labels, k = 3. True labels (weights only matter for being > 0):
+#   A: {0, 1}            fewer than k        B: {0, 5}        fewer than k
+#   C: {0, 1, 2}         exactly k           D: {0, 1, 2, 3, 4}  more than k      E: {1, 2, 3, 4}  more than k
+YC = np.array([[1.5, 1.4, 0, 0, 0, 0],
+               [1.5, 0, 0, 0, 0, 1.4],
+               [1.5, 1.4, 1.3, 0, 0, 0],
+               [1.5, 1.4, 1.3, 1.2, 1.1, 0],
+               [0, 1.5, 1.4, 1.3, 1.2, 0]])
+# top-3 per album:  A: 1, 0, 5 (2 hits)   B: 1, 2, 0 (1 hit)   C: 0, 3, 1 (2 hits)   D: 4, 2, 0 (3 hits)   E: 0, 5, 1 (1 hit)
+SC = np.array([[0.8, 0.9, 0.1, 0.2, 0.3, 0.7],
+               [0.5, 0.9, 0.8, 0.1, 0.2, 0.4],
+               [0.9, 0.6, 0.1, 0.7, 0.2, 0.3],
+               [0.6, 0.1, 0.7, 0.2, 0.9, 0.3],
+               [0.9, 0.5, 0.1, 0.2, 0.3, 0.8]])
+
+
+def test_capped_precision_hand_computed():
+    assert M.top_k(SC, 3).tolist() == [[1, 0, 5], [1, 2, 0], [0, 3, 1], [4, 2, 0], [0, 5, 1]]
+    # hits / min(k, n_true):  A 2/2,  B 1/2,  C 2/3,  D 3/3,  E 1/3
+    assert M.capped_precision_at_k(YC, SC, 3).tolist() == pytest.approx([1.0, 0.5, 2 / 3, 1.0, 1 / 3])
+    # plain precision@3 divides by k regardless: the album with 2 descriptors can never exceed 2/3
+    assert M.precision_at_k(YC, SC, 3).tolist() == pytest.approx([2 / 3, 1 / 3, 2 / 3, 1.0, 1 / 3])
+    # at least k true descriptors -> equals precision@k; fewer -> equals recall@k
+    assert M.capped_precision_at_k(YC, SC, 3)[2:].tolist() == pytest.approx(M.precision_at_k(YC, SC, 3)[2:].tolist())
+    assert M.capped_precision_at_k(YC, SC, 3)[:2].tolist() == pytest.approx(M.recall_at_k(YC, SC, 3)[:2].tolist())
+    # k = 1: hit or miss, whatever the number of descriptors.  k = 6 (all labels): everything is found
+    assert M.capped_precision_at_k(YC, SC, 1).tolist() == [1.0, 0.0, 1.0, 1.0, 0.0]
+    assert M.capped_precision_at_k(YC, SC, 6).tolist() == [1.0] * 5
+
+
+def test_capped_precision_seven_descriptors_all_in_top_ten():
+    y = np.zeros((1, 20))
+    y[0, :7] = np.linspace(1.5, 1.0, 7)
+    s = np.zeros((1, 20))
+    s[0, :7] = 1.0                # the 7 true ones lead ...
+    s[0, 7:10] = 0.5              # ... followed by 3 wrong ones in the top 10
+    assert M.capped_precision_at_k(y, s, 10).tolist() == [1.0]
+    assert M.precision_at_k(y, s, 10).tolist() == [0.7]
+    s[0, 6] = -1.0                # one true descriptor falls out of the top 10 (column 10 takes its place by tie order)
+    assert M.capped_precision_at_k(y, s, 10).tolist() == pytest.approx([6 / 7])
+
+
+def test_capped_precision_ties_break_like_precision_at_k():
+    y = np.array([[0, 0, 1.5, 1.4]])
+    s = np.ones((1, 4))           # all tied: lower column index first -> top-2 = columns 0, 1 = no hit
+    assert M.capped_precision_at_k(y, s, 2).tolist() == [0.0] and M.precision_at_k(y, s, 2).tolist() == [0.0]
+    assert M.capped_precision_at_k(y, s, 3).tolist() == [0.5]      # column 2 enters: 1 hit / min(3, 2)
+    w = np.array([[0.0, 0.0, 0.7, 0.0]])                            # a weight vector: zeros are "not predicted"
+    assert M.capped_precision_at_k(y, w, 3, min_score=0).tolist() == [0.5]
+
+
+def test_capped_precision_perfect_ranking_is_exactly_one():
+    rng = np.random.default_rng(0)
+    counts = [1, 2, 7, 9, 10, 11, 25, 40]                           # fewer than, exactly, and more than k = 10
+    Yp = np.zeros((len(counts), 120))
+    for i, c in enumerate(counts):
+        Yp[i, rng.choice(120, c, replace=False)] = np.linspace(1.5, 0.6, c)
+    for k in (1, 5, 10):
+        assert (M.capped_precision_at_k(Yp, Yp, k) == 1.0).all()    # the true weights as scores = perfect ranking
+    ev = M.evaluate(Yp, Yp, k=10)
+    assert ev["cP@10"] == 1.0 and ev["cP@5"] == 1.0 and ev["perfect@10"] == 1.0
+    assert ev["precision@10"] == pytest.approx(ev["max_precision@10"]) and ev["precision@10"] < 0.75
+    worst = -Yp                                                     # true descriptors ranked last
+    assert M.evaluate(Yp, worst, k=10)["cP@10"] == 0.0
+
+
+def test_evaluate_reports_capped_precision():
+    ev = M.evaluate(YC, SC, k=3)
+    assert ev["cP@3"] == pytest.approx((1.0 + 0.5 + 2 / 3 + 1.0 + 1 / 3) / 5)
+    assert ev["perfect@3"] == pytest.approx(2 / 5)
+    assert ev["cP@5"] == pytest.approx(float(M.capped_precision_at_k(YC, SC, 5).mean()))
+    assert ev["per_album"]["capped_precision"].tolist() == pytest.approx([1.0, 0.5, 2 / 3, 1.0, 1 / 3])
+    assert ev["cP@3"] >= ev["precision@3"]

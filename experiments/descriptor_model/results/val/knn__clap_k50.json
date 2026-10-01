@@ -694,7 +694,10 @@
      0,
      0
     ]
-   }
+   },
+   "cP@10": 0.5579365079365078,
+   "cP@5": 0.6857142857142856,
+   "perfect@10": 0.09523809523809523
   },
   "precision_coverage": {
    "n_albums": 21,
@@ -953,5 +956,15 @@
    "metrics": 0.11893391702324152,
    "downstream": 10.663642041850835
   }
+ },
+ "backfill": {
+  "fields": [
+   "cP@10",
+   "cP@5",
+   "perfect@10"
+  ],
+  "from": "cache/scores (float32)",
+  "when": "2026-10-01T20:14:50+00:00",
+  "precision@10_recomputed_minus_stored": 0.0
  }
 }

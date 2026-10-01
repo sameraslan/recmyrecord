@@ -45,14 +45,16 @@ TEST_ENV = F.TEST_ENV
 COUNTS = (0.5, 1, 2, 3, 4, 5, 7, 10)     # average descriptors emitted per album on the precision-coverage curve
 TARGETS = (0.90, 0.80, 0.70)             # precision operating points
 KS = (1, 3, 5, 10)
+CAPPED_KEYS = ("cP@10", "cP@5", "perfect@10")   # capped precision (ceiling 1.0): the headline metric
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.+=,@-]*(?:_[A-Za-z0-9.+=,@-]+)*__[A-Za-z0-9_.+=,@-]+$")
 
 LEADERBOARD_COLUMNS = [
-    "name", "n_train", "n_val", "n_shards", "P@10", "nDCG@10", "mAP", "P@1", "P@3", "P@5", "R@10", "macro_auc",
+    "name", "n_train", "n_val", "n_shards", "cP@10", "nDCG@10", "P@10", "mAP", "P@1", "P@3", "P@5", "cP@5", "perfect@10",
+    "R@10", "macro_auc",
     "cnt@p90", "cnt@p80", "cnt@p70", "cov@p90", "cov@p80", "xfit_p@p90", "xfit_cnt@p90", "P@mean_count",
     "calib_prec", "calib_recall", "bal_ov10", "bal_ov10_med", "mood_ov10", "mood_ov10_med", "bal_ov10_thr", "mood_ov10_thr",
     "bal_inbound_ratio", "mood_inbound_ratio", "bal_zero_inbound", "mood_zero_inbound", "sonic_ov10",
-    "P@10_nosuspect", "val_coverage", "partial_data", "timestamp", "notes",
+    "P@10_nosuspect", "cP@10_nosuspect", "val_coverage", "partial_data", "timestamp", "notes",
 ]
 
 
@@ -469,8 +471,8 @@ def _evaluate(split: str, S: np.ndarray, rows: np.ndarray, *, downstream: bool,
     if sus.any() and (~sus).any():
         r = _ranking(Yt[~sus], S[~sus], full=False)
         p = precision_coverage(Yt[~sus], Sc[~sus])
-        ex.update({k: r[k] for k in ("precision@1", "precision@3", "precision@5", "precision@10", "recall@10", "ndcg@10",
-                                     "mAP", "macro_auc")})
+        ex.update({k: r[k] for k in (*CAPPED_KEYS, "precision@1", "precision@3", "precision@5", "precision@10", "recall@10",
+                                     "ndcg@10", "mAP", "macro_auc")})
         ex["at_precision"] = p["at_precision"]
     else:
         ex["note"] = "no label-suspect rows among the evaluated rows: identical to the main metrics"
@@ -552,6 +554,8 @@ def _leaderboard_row(res: dict) -> dict:
     mean_pt = next(p for p in pc["points"] if p.get("is_mean_true_count"))
     row = {
         "name": res["name"], "n_train": d["n_train"], "n_val": d["n_val"], "n_shards": d["n_shards"],
+        "cP@10": r.get("cP@10"), "cP@5": r.get("cP@5"), "perfect@10": r.get("perfect@10"),
+        "cP@10_nosuspect": m["excluding_label_suspects"].get("cP@10", r.get("cP@10")),
         "P@10": r["precision@10"], "nDCG@10": r["ndcg@10"], "mAP": r["mAP"], "P@1": r["precision@1"],
         "P@3": r["precision@3"], "P@5": r["precision@5"], "R@10": r["recall@10"], "macro_auc": r["macro_auc"],
         "cnt@p90": at["0.90"]["avg_count"], "cnt@p80": at["0.80"]["avg_count"], "cnt@p70": at["0.70"]["avg_count"],
@@ -573,7 +577,7 @@ def _leaderboard_row(res: dict) -> dict:
             "bal_zero_inbound": k["balanced"]["zero_inbound_share_after"], "mood_zero_inbound": k["mood"]["zero_inbound_share_after"],
             "sonic_ov10": ds["sonic_overlap@10_mean"],
         })
-    return {c: row.get(c, "") for c in LEADERBOARD_COLUMNS}
+    return {c: ("" if row.get(c) is None else row[c]) for c in LEADERBOARD_COLUMNS}
 
 
 @contextmanager
@@ -635,18 +639,20 @@ def _num(x) -> float:
         return float("nan")
 
 
-def leaderboard(sort: str = "P@10", top: int | None = None, show: bool = True) -> list[dict]:
-    """Print the validation table sorted by P@10 (descending) and return the rows. Columns: n_train,
-    n_val, P@10, nDCG@10, mAP, P@1, P@3, c@90 (largest avg descriptors/album at precision >= 0.90, chosen
-    on val itself = optimistic), balanced / mood overlap@10 (fixed k=10 weights), balanced inbound ratio
-    (after / before). Rows from different shard snapshots are NOT comparable: check n_train / n_val."""
+def leaderboard(sort: str = "cP@10", top: int | None = None, show: bool = True) -> list[dict]:
+    """Print the validation table sorted by capped precision@10 (descending; rows without the value last)
+    and return the rows. Columns: n_train, n_val, cP@10 (hits in the top 10 / min(10, true count): ceiling
+    1.0 — the headline), nDCG@10, P@10 (ceiling ~0.83), mAP, P@1, P@3, c@90 (largest avg descriptors/album
+    at precision >= 0.90, chosen on val itself = optimistic), balanced / mood overlap@10 (fixed k=10
+    weights), balanced inbound ratio (after / before). Rows from different shard snapshots are NOT
+    comparable: check n_train / n_val."""
     rows = sorted(_read_leaderboard(), key=lambda r: -np.nan_to_num(_num(r.get(sort)), nan=-1.0))
     if top:
         rows = rows[:top]
     if show:
-        cols = [("n_train", "n_train", "{:.0f}"), ("n_val", "n_val", "{:.0f}"), ("P@10", "P@10", "{:.4f}"),
-                ("nDCG@10", "nDCG@10", "{:.4f}"), ("mAP", "mAP", "{:.4f}"), ("P@1", "P@1", "{:.4f}"), ("P@3", "P@3", "{:.4f}"),
-                ("c@90", "cnt@p90", "{:.3f}"), ("c@80", "cnt@p80", "{:.3f}"), ("bal_ov", "bal_ov10", "{:.3f}"),
+        cols = [("n_train", "n_train", "{:.0f}"), ("n_val", "n_val", "{:.0f}"), ("cP@10", "cP@10", "{:.4f}"),
+                ("nDCG@10", "nDCG@10", "{:.4f}"), ("P@10", "P@10", "{:.4f}"), ("mAP", "mAP", "{:.4f}"), ("P@1", "P@1", "{:.4f}"),
+                ("P@3", "P@3", "{:.4f}"), ("c@90", "cnt@p90", "{:.3f}"), ("c@80", "cnt@p80", "{:.3f}"), ("bal_ov", "bal_ov10", "{:.3f}"),
                 ("mood_ov", "mood_ov10", "{:.3f}"), ("inb_ratio", "bal_inbound_ratio", "{:.3f}")]
         w = max([len(r["name"]) for r in rows] + [4]) + 2
         print(f"{'name':<{w}s}" + " ".join(f"{h:>9s}" for h, _, _ in cols) + "  flags")
@@ -663,6 +669,61 @@ def leaderboard(sort: str = "P@10", top: int | None = None, show: bool = True) -
             print(f"WARNING: rows come from {len(sizes)} different shard snapshots (n_val, n_shards): {sorted(sizes)}; "
                   "compare only rows with the same n_val.")
     return rows
+
+
+def backfill_capped_precision(verbose: bool = True) -> dict:
+    """Add the capped-precision fields (cP@10, cP@5, perfect@10; overall and without label-suspect rows) to
+    results/val/*.json files written before the metric existed, recomputing them from the saved score
+    matrices in cache/scores/, then rebuild the leaderboard. Nothing is re-trained and no other field is
+    changed. A run whose saved scores are missing (or do not match its JSON) is left as it is and shows
+    blank on the leaderboard. The saved scores are float32 (evaluate_run scored float64), so a recomputed
+    metric can differ in the last digits where rounding creates a tie; as a check, precision@10 is
+    recomputed too and the difference to the stored value is recorded under "backfill".
+    Returns {"filled": [...], "already": [...], "no_scores": [...], "mismatch": [...]}."""
+    out: dict[str, list] = {"filled": [], "already": [], "no_scores": [], "mismatch": []}
+    sus_all = label_suspect_rows()
+    for p in sorted(_val_dir().glob("*.json")):
+        res = json.loads(p.read_text())
+        name, r = res["name"], res["metrics"]["ranking"]
+        if all(k in r for k in CAPPED_KEYS):
+            out["already"].append(name)
+            continue
+        try:
+            S, rows = load_scores(name, "val")
+        except (FileNotFoundError, OSError, ValueError):
+            out["no_scores"].append(name)
+            continue
+        S = S.astype(np.float64)
+        if S.shape != (res["data"]["n_val"], len(DESCRIPTORS)) or len(rows) != len(S) or not (load_splits()[rows] == "val").all():
+            out["mismatch"].append(name)
+            continue
+        Yt = Y[rows]
+        p10 = float(M.precision_at_k(Yt, S, 10).mean())
+        if abs(p10 - r["precision@10"]) > 0.005:          # these are not the scores this JSON was computed from
+            out["mismatch"].append(name)
+            continue
+
+        def capped(Ya: np.ndarray, Sa: np.ndarray) -> dict:
+            c10, c5 = M.capped_precision_at_k(Ya, Sa, 10), M.capped_precision_at_k(Ya, Sa, 5)
+            return {"cP@10": float(c10.mean()), "cP@5": float(c5.mean()), "perfect@10": float((c10 == 1).mean())}
+
+        r.update(capped(Yt, S))
+        sus = np.isin(rows, sus_all)
+        if sus.any() and (~sus).any():
+            res["metrics"]["excluding_label_suspects"].update(capped(Yt[~sus], S[~sus]))
+        res["backfill"] = {"fields": list(CAPPED_KEYS), "from": "cache/scores (float32)",
+                           "when": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                           "precision@10_recomputed_minus_stored": p10 - r["precision@10"]}
+        tmp = p.with_name(f"{p.name}.{os.getpid()}.part")
+        tmp.write_text(json.dumps(_jsonable(res), indent=1, ensure_ascii=False) + "\n")
+        os.replace(tmp, p)
+        out["filled"].append(name)
+    n = rebuild_leaderboard()
+    if verbose:
+        print(f"[harness] backfill: {len(out['filled'])} filled, {len(out['already'])} already had the fields, "
+              f"{len(out['no_scores'])} without saved scores {out['no_scores']}, {len(out['mismatch'])} with scores that do "
+              f"not match their JSON {out['mismatch']}; leaderboard rebuilt with {n} rows")
+    return out
 
 
 # ---------------------------------------------------------------- the one function every experiment calls
@@ -685,7 +746,8 @@ def evaluate_run(name: str, S_val: np.ndarray, rows_val: np.ndarray, *, config: 
                  of train rows currently available) — shown on the leaderboard.
     downstream   also run downstream.downstream_eval (slower; see timing_seconds in the result).
 
-    Computes: metrics.evaluate (P/R/nDCG@10, mAP, AUCs, best/worst labels); precision@1/3/5/10; the
+    Computes: metrics.evaluate (capped precision cP@10 / cP@5 and perfect@10 — the headline, ceiling 1.0;
+    P/R/nDCG@10, mAP, AUCs, best/worst labels); precision@1/3/5/10; the
     precision-coverage curve (see precision_coverage — the "at_precision" operating points are chosen on
     val itself and are optimistic; "crossfit_at_precision" is the two-fold honest version); the
     calibrated-count set (global threshold so the mean predicted count on val = the TRAIN mean count; this
@@ -726,7 +788,7 @@ def evaluate_run(name: str, S_val: np.ndarray, rows_val: np.ndarray, *, config: 
     if verbose:
         r, at = metrics["ranking"], metrics["precision_coverage"]["at_precision"]
         t = metrics["timing_seconds"]
-        line = (f"[harness] {name}: n_train {n_train}, n_val {len(rows)} | P@10 {r['precision@10']:.4f} nDCG@10 {r['ndcg@10']:.4f} "
+        line = (f"[harness] {name}: n_train {n_train}, n_val {len(rows)} | cP@10 {r['cP@10']:.4f} P@10 {r['precision@10']:.4f} nDCG@10 {r['ndcg@10']:.4f} "
                 f"mAP {r['mAP']:.4f} P@1 {r['precision@1']:.4f} P@3 {r['precision@3']:.4f} | avg count at precision>=0.90: "
                 f"{at['0.90']['avg_count']:.3f}, >=0.80: {at['0.80']['avg_count']:.3f}")
         if downstream:
@@ -816,4 +878,6 @@ def final_test(name: str, predict: Callable[[TestAccess], tuple[np.ndarray, np.n
 
 
 if __name__ == "__main__":
-    leaderboard()
+    if "--backfill" in sys.argv:
+        backfill_capped_precision()
+    leaderboard(top=int(sys.argv[sys.argv.index("--top") + 1]) if "--top" in sys.argv else None)

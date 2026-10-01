@@ -53,6 +53,18 @@ def recall_at_k(Y, S, k: int = 10, min_score: float | None = None) -> np.ndarray
     return (_hits(Y, S, k, min_score)[1] > 0).sum(1) / (Y > 0).sum(1)
 
 
+def capped_precision_at_k(Y, S, k: int = 10, min_score: float | None = None) -> np.ndarray:
+    """Per album: (# of the top-k predictions that are true descriptors) / min(k, # true descriptors).
+
+    Precision@k with the arithmetic ceiling removed: an album with 7 descriptors whose 7 are all in the
+    top 10 scores 1.0 (precision@10 would say 0.7), so a perfect ranking gives exactly 1.0 on every album.
+    For albums with at least k descriptors it equals precision@k; for albums with fewer it equals recall@k.
+    Same ranking and tie-breaking as precision_at_k. Returns the per-album array (like precision_at_k);
+    evaluate() reports its mean as "cP@k"."""
+    Y, S = _check(Y, S)
+    return (_hits(Y, S, k, min_score)[1] > 0).sum(1) / np.minimum(k, (Y > 0).sum(1))
+
+
 def ndcg_at_k(Y, S, k: int = 10, min_score: float | None = None) -> np.ndarray:
     """Per album: DCG@k / IDCG@k with the true rank weights as gains and 1/log2(rank + 1) discounts
     (rank 1 = best). IDCG is the DCG of the album's own true weights in descending order (top k)."""
@@ -113,6 +125,8 @@ def evaluate(Y, S, k: int = 10, labels: list[str] | None = None, min_score: floa
     Returns a dict with
       n_albums, k
       precision@k, recall@k, ndcg@k        means over albums
+      cP@k, cP@5                           capped precision (hits / min(k, n_true)); ceiling 1.0 — the headline
+      perfect@k                            share of albums whose capped precision@k is exactly 1
       micro_recall@k                       total hits / total true descriptors (micro precision@k equals
                                            precision@k because every album has the same denominator k)
       max_precision@k, max_recall@k        arithmetic ceilings (means over albums)
@@ -127,11 +141,13 @@ def evaluate(Y, S, k: int = 10, labels: list[str] | None = None, min_score: floa
     B = Y > 0
     p, r, g = (precision_at_k(Y, S, k, min_score), recall_at_k(Y, S, k, min_score), ndcg_at_k(Y, S, k, min_score))
     mp, mr = max_precision_recall_at_k(Y, k)
+    cp, cp5 = capped_precision_at_k(Y, S, k, min_score), capped_precision_at_k(Y, S, 5, min_score)
     ap, auc = per_label_ap(Y, S), per_label_auc(Y, S)
     n_pos = B.sum(0)
     out = {
         "n_albums": int(len(Y)), "k": k,
         f"precision@{k}": float(p.mean()), f"recall@{k}": float(r.mean()), f"ndcg@{k}": float(g.mean()),
+        f"cP@{k}": float(cp.mean()), "cP@5": float(cp5.mean()), f"perfect@{k}": float((cp == 1).mean()),
         f"micro_recall@{k}": float((p * k).sum() / B.sum()),
         f"max_precision@{k}": float(mp.mean()), f"max_recall@{k}": float(mr.mean()),
         "mAP": float(np.nanmean(ap)), "mAP_n_labels": int(np.isfinite(ap).sum()),
@@ -140,7 +156,7 @@ def evaluate(Y, S, k: int = 10, labels: list[str] | None = None, min_score: floa
         "auc_skipped": int(np.isnan(auc).sum()),
         "micro_ap": float(average_precision_score(B.ravel(), S.ravel())),
         "micro_auc": float(roc_auc_score(B.ravel(), S.ravel())),
-        "per_album": {"precision": p, "recall": r, "ndcg": g},
+        "per_album": {"precision": p, "recall": r, "ndcg": g, "capped_precision": cp},
         "per_label": {"ap": ap, "auc": auc, "n_pos": n_pos},
     }
     if labels is not None:
@@ -165,7 +181,7 @@ def evaluate_sets(Y, W) -> dict:
     }
 
 
-SUMMARY_KEYS = ["precision@10", "recall@10", "ndcg@10", "micro_recall@10", "mAP", "macro_auc", "micro_ap", "micro_auc"]
+SUMMARY_KEYS = ["cP@10", "precision@10", "recall@10", "ndcg@10", "micro_recall@10", "mAP", "macro_auc", "micro_ap", "micro_auc"]
 
 
 def format_table(results: dict[str, dict], keys: list[str] = SUMMARY_KEYS) -> str:

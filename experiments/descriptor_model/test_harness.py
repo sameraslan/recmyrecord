@@ -14,6 +14,7 @@ import pytest
 
 import features as F
 import harness as H
+import metrics as M
 from common import DESCRIPTORS, Y, load_splits, split_rows
 
 
@@ -240,7 +241,8 @@ def test_final_test_with_env_uses_validation_thresholds(sandbox, monkeypatch):
 # ---------------------------------------------------------------- leaderboard
 
 def _row(name, p10):
-    return {c: "" for c in H.LEADERBOARD_COLUMNS} | {"name": name, "P@10": p10, "n_train": 10, "n_val": 5, "timestamp": "t"}
+    return {c: "" for c in H.LEADERBOARD_COLUMNS} | {"name": name, "P@10": p10, "cP@10": p10, "n_train": 10, "n_val": 5,
+                                                     "timestamp": "t"}
 
 
 def test_leaderboard_row_is_replaced_not_duplicated(sandbox):
@@ -250,10 +252,24 @@ def test_leaderboard_row_is_replaced_not_duplicated(sandbox):
     rows = H._read_leaderboard()
     assert [r["name"] for r in rows] == ["a__one", "b__two"]          # replaced in place
     assert float(rows[0]["P@10"]) == 0.70
-    assert [r["name"] for r in H.leaderboard(show=False)] == ["a__one", "b__two"]   # sorted by P@10, descending
+    assert [r["name"] for r in H.leaderboard(show=False)] == ["a__one", "b__two"]   # sorted by cP@10, descending
     H._update_leaderboard(_row("a__one", 0.10))
     assert [r["name"] for r in H.leaderboard(show=False)] == ["b__two", "a__one"]
     assert len(H._read_leaderboard()) == 2
+
+
+def test_leaderboard_sorts_by_capped_precision_and_tolerates_blanks(sandbox, capsys):
+    a, b, c = _row("a__one", 0.30), _row("b__two", 0.50), _row("c__old", 0.90)
+    a["cP@10"], b["cP@10"], c["cP@10"] = 0.80, 0.60, ""          # c predates the metric: blank, however good its P@10
+    for r in (c, b, a):
+        H._update_leaderboard(r)
+    assert [r["name"] for r in H.leaderboard(show=False)] == ["a__one", "b__two", "c__old"]
+    assert [r["name"] for r in H.leaderboard(sort="P@10", show=False)] == ["c__old", "b__two", "a__one"]
+    H.leaderboard()
+    out = capsys.readouterr().out.splitlines()
+    head = out[0].split()
+    assert head.index("cP@10") < head.index("nDCG@10") < head.index("P@10")
+    assert out[3].startswith("c__old") and out[3].split()[3] == "-"   # name, n_train, n_val, cP@10
 
 
 def test_evaluate_run_writes_everything_and_replaces(sandbox, fake_val, capsys):
@@ -267,6 +283,9 @@ def test_evaluate_run_writes_everything_and_replaces(sandbox, fake_val, capsys):
     H.evaluate_run("arm__other", S_bad, rows, config={}, downstream=False, n_train=7, notes="hello")
     m = r2["metrics"]
     assert m["ranking"]["precision@1"] == 1.0 and m["ranking"]["ndcg@10"] == pytest.approx(1.0)
+    assert m["ranking"]["cP@10"] == 1.0 and m["ranking"]["cP@5"] == 1.0 and m["ranking"]["perfect@10"] == 1.0
+    assert r1["metrics"]["ranking"]["cP@10"] == pytest.approx(float(M.capped_precision_at_k(Y[rows], S_bad, 10).mean()))
+    assert r1["metrics"]["ranking"]["precision@10"] <= r1["metrics"]["ranking"]["cP@10"] < 0.4
     assert m["ranking"]["precision@10"] == pytest.approx(m["ranking"]["max_precision@10"])
     pc = m["precision_coverage"]
     # every true pair outranks every false one: precision is 1 up to the true count, and still >= 0.9 a little beyond it
@@ -282,10 +301,45 @@ def test_evaluate_run_writes_everything_and_replaces(sandbox, fake_val, capsys):
     lb = H._read_leaderboard()
     assert [r["name"] for r in lb] == ["arm__model", "arm__other"]
     assert float(lb[0]["P@10"]) == pytest.approx(m["ranking"]["precision@10"]) and lb[0]["n_train"] == "123"
+    assert float(lb[0]["cP@10"]) == 1.0 and float(lb[0]["perfect@10"]) == 1.0 and float(lb[0]["cP@10_nosuspect"]) == 1.0
     assert lb[1]["notes"] == "hello"
     assert H.rebuild_leaderboard() == 2 and {r["name"] for r in H._read_leaderboard()} == {"arm__model", "arm__other"}
     H.leaderboard()
     assert "arm__model" in capsys.readouterr().out
+
+
+def test_backfill_recomputes_capped_precision_from_saved_scores(sandbox, fake_val):
+    rows = fake_val
+    rng = np.random.default_rng(5)
+    S = 0.5 * Y[rows] + rng.random((len(rows), 120))
+    full = {n: H.evaluate_run(n, S if n != "arm__c" else S[:, ::-1].copy(), rows, config={}, downstream=False, n_train=9,
+                              verbose=False) for n in ("arm__a", "arm__b", "arm__c", "arm__d")}
+    vdir = sandbox / "results" / "val"
+
+    def strip(name):            # make the file look like one written before the metric existed
+        d = json.loads((vdir / f"{name}.json").read_text())
+        for k in H.CAPPED_KEYS:
+            d["metrics"]["ranking"].pop(k)
+            d["metrics"]["excluding_label_suspects"].pop(k, None)
+        (vdir / f"{name}.json").write_text(json.dumps(d))
+
+    for n in ("arm__a", "arm__b", "arm__c"):
+        strip(n)
+    (sandbox / "scores" / "arm__b__val.npy").unlink()                                  # b: saved scores are gone
+    np.save(sandbox / "scores" / "arm__c__val.npy", S.astype(np.float32))              # c: scores of another model
+    out = H.backfill_capped_precision(verbose=False)
+    assert out == {"filled": ["arm__a"], "already": ["arm__d"], "no_scores": ["arm__b"], "mismatch": ["arm__c"]}
+    a = json.loads((vdir / "arm__a.json").read_text())
+    for k in H.CAPPED_KEYS:
+        assert a["metrics"]["ranking"][k] == pytest.approx(full["arm__a"]["metrics"]["ranking"][k], abs=1e-9)
+    assert abs(a["backfill"]["precision@10_recomputed_minus_stored"]) < 1e-9
+    assert a["metrics"]["ranking"]["ndcg@10"] == full["arm__a"]["metrics"]["ranking"]["ndcg@10"]   # nothing else touched
+    lb = {r["name"]: r for r in H._read_leaderboard()}
+    assert set(lb) == {"arm__a", "arm__b", "arm__c", "arm__d"}
+    assert float(lb["arm__a"]["cP@10"]) == pytest.approx(full["arm__a"]["metrics"]["ranking"]["cP@10"])
+    assert lb["arm__b"]["cP@10"] == "" and lb["arm__c"]["cP@10"] == "" and lb["arm__b"]["P@10"] != ""
+    assert [r["name"] for r in H.leaderboard(show=False)][2:] in (["arm__b", "arm__c"], ["arm__c", "arm__b"])   # blanks last
+    assert H.backfill_capped_precision(verbose=False)["filled"] == []                   # idempotent
 
 
 def test_evaluate_run_is_strict_about_rows_and_names(sandbox, fake_val):

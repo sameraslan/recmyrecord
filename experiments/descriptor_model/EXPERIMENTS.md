@@ -60,8 +60,13 @@ The one function every experiment calls. It writes `results/val/<name>.json`, re
   leaderboard record `n_train`, `n_val`, `n_shards`). Re-using a name overwrites that run.
 - **`config`** must hold everything needed to reproduce the run (spec, pooling, hyper-parameters, seed).
 - **`n_train`**: pass `len(d["rows_train"])`.
-- **What it computes:** P/R/nDCG@10, mAP, macro/micro AUC, best/worst-15 labels; precision@1/3/5/10 (P@10
-  has an arithmetic ceiling of ~0.83, so the small-k numbers matter for the "90 % precision" target); the
+- **Headline metric: capped precision@10 (`cP@10`)** = hits in the top 10 / min(10, number of true
+  descriptors), averaged over albums (`metrics.capped_precision_at_k`, per-album array). Its ceiling is
+  exactly 1.0, unlike P@10 (~0.83). `cP@5` and `perfect@10` (share of albums with cP@10 = 1) are stored
+  next to it, and `H.leaderboard()` sorts by `cP@10`. `H.backfill_capped_precision()` (or
+  `python harness.py --backfill`) adds these fields to older result files from the saved scores.
+- **What it computes:** cP@10 / cP@5 / perfect@10, P/R/nDCG@10, mAP, macro/micro AUC, best/worst-15 labels;
+  precision@1/3/5/10 (P@10 has an arithmetic ceiling of ~0.83); the
   precision–coverage curve (one global threshold over all album×descriptor pairs: precision at 0.5 … 10
   descriptors per album, and the largest average count with precision ≥ 0.90 / 0.80 / 0.70, plus the share
   of albums that get at least one descriptor there); the calibrated-count set (threshold such that the mean
