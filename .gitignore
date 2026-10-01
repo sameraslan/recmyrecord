@@ -3,3 +3,7 @@ node_modules
 data-pipeline/.venv/
 **/__pycache__/
 .pytest_cache/
+
+# preview-features experiment: caches, models and venv are never committed
+experiments/preview_features/cache/
+experiments/preview_features/.venv/
