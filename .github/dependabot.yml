@@ -4,9 +4,11 @@ updates:
     directory: /frontcreck
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    # A dependency joins the first group it matches, so the specific groups come first.
     groups:
       # Next and React move together (eslint-config-next and the React types track them).
+      # @react-three/fiber pins an upper bound on react, so a React bump without it fails to install.
       next-react:
         patterns:
           - next
@@ -14,13 +16,42 @@ updates:
           - react
           - react-dom
           - "@types/react*"
+          - "@react-three/*"
+      # three and its types have to stay on the same release.
+      three:
+        patterns:
+          - three
+          - "@types/three"
       dev-tooling:
         dependency-type: development
         update-types:
           - minor
           - patch
+      production:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # The runtime is pinned to Node 22 (engines, .nvmrc); the types follow it, not the latest Node.
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
+      # typescript-eslint (via eslint-config-next) rejects TypeScript 7: lint fails at load.
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
+      # eslint-plugin-react, -import and -jsx-a11y (via eslint-config-next) only support ESLint 9.
+      - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
 
   - package-ecosystem: pip
     directory: /data-pipeline
     schedule:
       interval: monthly
+    # The pins constrain each other (numba caps numpy, umap-learn needs numba), so bump them as one set.
+    groups:
+      pipeline:
+        patterns:
+          - "*"
