@@ -11,9 +11,9 @@ from tqdm import tqdm
 import time
 
 
-cid = '6e15382346114bc89d5c7add9a1910d1'
-secret = 'd7642655e2624cf29b5e6b5506e5f84d'
-client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=secret)
+# Credentials are read from the SPOTIPY_CLIENT_ID / SPOTIPY_CLIENT_SECRET
+# environment variables. Never hardcode them.
+client_credentials_manager = SpotifyClientCredentials()
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 # Prints the 5 most similar albums

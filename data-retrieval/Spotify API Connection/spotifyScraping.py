@@ -1,3 +1,4 @@
+import os
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import pandas as pd
@@ -5,9 +6,9 @@ import numpy as np
 import requests
 import time
 
-cid = 'c480b13ef81c4e6aa0ab0119636eabe5'
-secret = '50826f24c12044448b906de50ac74742'
-client_credentials_manager = SpotifyClientCredentials(client_id=cid, client_secret=secret)
+# Credentials are read from the SPOTIPY_CLIENT_ID / SPOTIPY_CLIENT_SECRET
+# environment variables. Never hardcode them.
+client_credentials_manager = SpotifyClientCredentials()
 sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 artist_uri = '5LhTec3c7dcqBvpLRWbMcf'
@@ -122,7 +123,7 @@ def getAlbumsSpotifyData(df):
 
     #Finally, write to csv
     export_filename = "found"
-    path = '/Users/saslan.19/Desktop/Programming/Music Recommendation/Spotify API Connection/'
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '')
     #album_data_dataframe.to_csv(path + export_filename + ".csv")
 
 def createNotFoundDataframe(notFound):

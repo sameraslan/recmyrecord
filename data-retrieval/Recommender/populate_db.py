@@ -1,3 +1,5 @@
+import os
+
 import psycopg2
 import pandas as pd
 
@@ -43,13 +45,30 @@ def clear_tables(conn, table_names):
         print(f"Error clearing tables: {e}")
 
 
-db_params = {
-    'dbname': 'recmyrecord-postgres',
-    'user': 'sameraslan',
-    'password': 'RecMyRecord69',
-    'host': 'recmyrecord-postgres.cumpbsaqdzfn.us-east-2.rds.amazonaws.com',
-    'port': '5432'
-}
+def get_db_params():
+    """Read Postgres connection settings from the environment.
+
+    Uses DATABASE_URL if set, otherwise PGHOST/PGUSER/PGPASSWORD/PGDATABASE
+    (and optional PGPORT, default 5432). Credentials must never be hardcoded.
+    """
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        return {"dsn": url}
+    required = ["PGHOST", "PGUSER", "PGPASSWORD", "PGDATABASE"]
+    missing = [name for name in required if not os.environ.get(name)]
+    if missing:
+        raise RuntimeError(
+            "Database credentials are not configured. Set DATABASE_URL, or set "
+            + ", ".join(required) + " (and optionally PGPORT). Missing: "
+            + ", ".join(missing)
+        )
+    return {
+        'dbname': os.environ["PGDATABASE"],
+        'user': os.environ["PGUSER"],
+        'password': os.environ["PGPASSWORD"],
+        'host': os.environ["PGHOST"],
+        'port': os.environ.get("PGPORT", "5432"),
+    }
 
 #csv_file_path = '../Backend/Recommender/all_data.csv'
 csv_file_path = '../test.csv'
@@ -86,6 +105,7 @@ descriptor_names = [
 
 def create_connection():
     conn = None
+    db_params = get_db_params()
     try:
         conn = psycopg2.connect(**db_params)
         print("Database connection successfully established.")
