@@ -1,28 +1,39 @@
 """Clip-length check: how much of an album do a few 30-second previews capture?
 
-CLI: python clip_length.py --fixture [--variants Ball,Cvm,D24,E] [--out DIR]
+CLI:
+  python clip_length.py                 first n / spread n tracks vs every track -> results/clip_length.{md,json}
+  python clip_length.py --mode pass1    first track vs the extractor's first pass (4 spread tracks), usable
+                                        while the extraction is still running -> results/clip_length_pass1.*
+  python clip_length.py --fixture [--variants Ball,Cvm,D24,E] [--out DIR] [--min-albums 100]
 
-On albums with every track analysed (two tracks or more), album features from a subset of the
-tracks are compared with the mean over all of them. Subsets: the first n tracks in album order
-and n tracks spread evenly over the album, n in 1, 2, 4, 8 ("spread 1" is the middle track).
+Album features from a subset of the tracks are compared with a reference:
+  full   reference = the mean over all tracks, on albums with every track analysed (2 to 30
+         tracks; longer albums are capped by the extractor, so never complete). Subsets: the
+         first n tracks in album order, and the n tracks the extractor takes first (track 0, then
+         spread evenly: what `extract.py --max-tracks-per-album n` gives), n in 1, 2, 4, 8.
+  pass1  reference = the first pass (the 4 tracks with prio < 4), on albums whose first pass is
+         complete. Subsets: the first track, and the first two tracks in priority order.
+Per subset:
   per scalar      Pearson r, bias (mean signed difference) and MAE, in catalog standard deviations
-  per embedding   cosine between the subset and full-album vectors, raw and catalog-mean-centred
-  downstream      overlap@10 between the recommendations built from subset features and from
-                  full features (each variant rebuilt from scratch on the subset features,
-                  Ridge and PCA refitted, as a one-track-per-album deployment would)
+  per embedding   cosine between the subset and reference vectors, raw and catalog-mean-centred
+  downstream      overlap@10 between the recommendations built from subset features and from the
+                  reference (each variant rebuilt from scratch on the subset features, Ridge and
+                  PCA refitted, as a few-tracks-per-album deployment would)
 Everything is broken down by mean track duration tercile, genre family, a stratified sample of
 about 100 albums, and long-track jazz and prog (a 30 s clip covers little of a 15-minute track).
+Both sides are 30-second previews: this measures how many previews an album needs, not what a
+preview misses of its own track.
 """
 import argparse
 import json
-from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-from common import RESULTS
-from evaluate import CONDITIONS, _table, matrix
+from aggregate import aggregate, first, in_priority_order
+from common import FEATURES_DB, MATCH_DB, RESULTS
+from evaluate import CONDITIONS, _table, matrix, overlap
 from fixture import FIXTURE, make_fixture
 from genres import load_genres
 from rmr_pipeline.recs import top_k_neighbours
@@ -30,50 +41,32 @@ from rmr_pipeline.table import descriptor_cols
 from variants import Inputs, build_variants, make_inputs
 
 NS = (1, 2, 4, 8)
+PASS = 4  # tracks per album in the extractor's first pass
+CAP = 30  # tracks per album the extractor analyses at most
 MIN_GROUP = 30  # smallest genre family reported
 DETAIL = ("all", "stratified_100", "tracks_long", "jazz_prog_long")  # groups with a per-scalar table
 
 
-def first(k: int):
-    """Selector: the first k tracks."""
-    return lambda n: np.arange(min(k, n))
-
-
-def spread(k: int):
-    """Selector: k tracks at the centres of k equal stretches of the album."""
-    return lambda n: ((np.arange(min(k, n)) + 0.5) * n / min(k, n)).astype(int)
-
-
-def every(n: int) -> np.ndarray:
-    """Selector: all tracks."""
-    return np.arange(n)
-
-
-@lru_cache(maxsize=1)
-def _fixture_tracks() -> tuple[pd.DataFrame, dict[str, np.ndarray]]:
-    """The fixture's per-track scalars (sorted by row, track_idx) and embeddings."""
-    return pd.read_parquet(FIXTURE / "tracks.parquet"), {"effnet": np.load(FIXTURE / "tracks_effnet.npy")}
-
-
-def album_features_from_tracks(selector) -> tuple[pd.DataFrame, pd.DataFrame]:
+def album_features_from_tracks(selector, mode: str, dbs: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Album features and embeddings (the cache parquet layouts) averaged over the tracks that
-    `selector(n) -> positions` picks among each album's n analysed tracks in album order.
-    `n_tracks_ok` stays the number of analysed tracks. This is the only place that touches
-    per-track data: it reads the fixture, and is where aggregate.py plugs in for real data."""
-    tracks, embs = _fixture_tracks()
-    sizes = tracks.groupby("row", sort=False).size()
-    picks = [selector(n) for n in sizes]
-    starts = np.cumsum(sizes.to_numpy()) - sizes.to_numpy()
-    take = np.concatenate([s + p for s, p in zip(starts, picks)])
-    counts = np.array([len(p) for p in picks])
-    offsets = np.cumsum(counts) - counts
-    ids = pd.DataFrame({"row": sizes.index, "n_tracks_ok": sizes.to_numpy(),
-                        "n_tracks_total": tracks["n_tracks_total"].to_numpy()[starts]})
-    means = tracks.iloc[take].groupby("row", sort=False).mean().drop(columns=["track_idx", "n_tracks_total"])
-    e = ids[["row", "n_tracks_ok"]].copy()
-    for name, E in embs.items():
-        e[name] = list(np.add.reduceat(E[take], offsets, axis=0) / counts[:, None])
-    return pd.concat([ids, means.reset_index(drop=True)], axis=1), e
+    `selector(n) -> positions` picks among each album's analysed tracks in album order (None =
+    all), within the first pass only for mode `pass1`. `dbs` = aggregate's db / match_db paths."""
+    return aggregate(selector, **dbs, prio_below=PASS if mode == "pass1" else None)
+
+
+def subsets(mode: str) -> dict:
+    """Name -> selector of the track subsets compared with the reference."""
+    if mode == "pass1":
+        return {"first_1": first(1), "priority_2": in_priority_order(2)}
+    return {f"first_{n}": first(n) for n in NS} | {f"priority_{n}": in_priority_order(n) for n in NS[1:]}
+
+
+def complete_rows(f: pd.DataFrame, mode: str) -> pd.Series:
+    """`row` of the albums whose reference is complete: every track analysed (first-pass track
+    for `pass1`), at least two of them, and for `full` no more than the extractor's cap."""
+    total = f["n_tracks_total"]
+    need = np.minimum(total, PASS) if mode == "pass1" else total.where(total <= CAP)
+    return f.loc[(f["n_tracks_ok"] == need) & (f["n_tracks_ok"] >= 2), "row"]
 
 
 def make_groups(full: Inputs, seed: int) -> dict[str, np.ndarray]:
@@ -117,11 +110,10 @@ def recommendations(inp: Inputs, names: list[str], seed: int) -> dict[str, dict[
 
 
 def compare(part: Inputs, full: Inputs, full_recs: dict, groups: dict, names: list[str], seed: int) -> dict:
-    """Subset-vs-full statistics for every album group."""
+    """Subset-vs-reference statistics for every album group."""
     cols = [c for c in full.scalars.columns if c in part.scalars.columns]
     recs = recommendations(part, names, seed)
-    overlap = {v: {c: (recs[c][v][:, :, None] == full_recs[c][v][:, None, :]).any(axis=2).mean(axis=1)
-                   for c in CONDITIONS} for v in names}
+    shared = {v: {c: overlap(recs[c][v], full_recs[c][v]) for c in CONDITIONS} for v in names}
     cos = {}
     for e, E in full.emb.items():
         centre = E.mean(axis=0)
@@ -135,27 +127,30 @@ def compare(part: Inputs, full: Inputs, full_recs: dict, groups: dict, names: li
             "mean_abs_bias": round(float(s["bias"].abs().mean()), 4),
             "mean_mae": round(float(s["mae"].mean()), 4),
             "embedding_cosine": {e: {k: round(float(v[mask].mean()), 4) for k, v in d.items()} for e, d in cos.items()},
-            "overlap10": {v: {c: round(float(o[mask].mean()), 4) for c, o in d.items()} for v, d in overlap.items()},
+            "overlap10": {v: {c: round(float(o[mask].mean()), 4) for c, o in d.items()} for v, d in shared.items()},
         }
         if g in DETAIL or g == "not_jazz_prog_long":
             out[g]["scalars"] = s.round(4).to_dict(orient="index")
     return out
 
 
-def run(names: list[str], seed: int = 0) -> dict:
-    """The whole check: every subset scheme against the full-album features."""
-    f, e = album_features_from_tracks(every)
-    rows = f.loc[(f["n_tracks_ok"] == f["n_tracks_total"]) & (f["n_tracks_ok"] >= 2), "row"]
+def run(names: list[str], mode: str, dbs: dict, min_albums: int, seed: int = 0) -> dict:
+    """The whole check: every subset against the reference features."""
+    f, e = album_features_from_tracks(None, mode, dbs)
+    rows = complete_rows(f, mode)
+    if len(rows) < min_albums:
+        raise SystemExit(f"only {len(rows)} of {len(f)} albums have a complete "
+                         f"{'first pass' if mode == 'pass1' else 'track list'} analysed so far (need {min_albums}); "
+                         + ("wait for the extraction" if mode == "pass1" else "try --mode pass1, or wait"))
     full = make_inputs(f, e, rows)
     groups = make_groups(full, seed)
     full_recs = recommendations(full, names, seed)
-    res = {"albums_fully_analysed": len(full.albums), "variants": names,
+    res = {"mode": mode, "albums": len(full.albums), "albums_with_features": len(f), "variants": names,
            "groups": {g: int(m.sum()) for g, m in groups.items()}, "subsets": {}}
-    for scheme, selector in (("first", first), ("spread", spread)):
-        for n in NS:
-            part = make_inputs(*album_features_from_tracks(selector(n)), rows)
-            res["subsets"][f"{scheme}_{n}"] = compare(part, full, full_recs, groups, names, seed)
-            print(f"{scheme} {n} done", flush=True)
+    for name, selector in subsets(mode).items():
+        part = make_inputs(*album_features_from_tracks(selector, mode, dbs), rows)
+        res["subsets"][name] = compare(part, full, full_recs, groups, names, seed)
+        print(f"{name} done", flush=True)
     return res
 
 
@@ -172,16 +167,19 @@ def report(res: dict) -> str:
                 *(f"{g['overlap10'][v][c]:.3f}" for v, c in shown)]
 
     head = ["median r", "mean abs bias", "mean MAE", *(f"{e} cos" for e in emb), *(f"{v} {c}" for v, c in shown)]
+    reference = ("the first pass (4 spread tracks); albums with a complete first pass" if res["mode"] == "pass1"
+                 else "every track; albums with every track analysed (2 to 30 tracks)")
     out = ["# Clip length: a few previews vs the whole album", "",
-           f"{res['albums_fully_analysed']} albums with every track analysed (two or more tracks). Bias and MAE are in "
-           "catalog standard deviations; embedding cosine is catalog-mean-centred; the variant columns are overlap@10 "
-           "between recommendations from subset features and from full-album features.", "",
+           f"Reference: {reference}. {res['albums']} of the {res['albums_with_features']} albums with features "
+           "qualify. Bias and MAE are in catalog standard deviations; embedding cosine is catalog-mean-centred; "
+           "the variant columns are overlap@10 between recommendations from subset features and from the reference. "
+           "`priority n` = track 0 plus tracks spread evenly through the album, as the extractor takes them.", "",
            "## How many tracks are enough (all albums)", "",
            *_table(["subset", *head], [[k.replace("_", " "), *summary(s["all"])] for k, s in subsets.items()]),
            "## First track only, by album group", "",
            *_table(["group", "albums", *head], [[g, str(d["albums"]), *summary(d)] for g, d in one.items()]),
            "## First track only, per scalar", "",
-           "`r / bias / MAE` per group; positive bias = the first track reads higher than the album.", ""]
+           "`r / bias / MAE` per group; positive bias = the first track reads higher than the reference.", ""]
     cell = lambda s: f"{s['r']:.2f} / {s['bias']:+.2f} / {s['mae']:.2f}"  # noqa: E731
     out += _table(["scalar", *DETAIL], [[c, *(cell(one[g]["scalars"][c]) for g in DETAIL)]
                                         for c in one["all"]["scalars"]])
@@ -198,22 +196,26 @@ def report(res: dict) -> str:
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--fixture", action="store_true", help="run on the synthetic per-track caches")
+    p.add_argument("--mode", default="full", choices=("full", "pass1"),
+                   help="reference: every track, or the first pass")
+    p.add_argument("--fixture", action="store_true", help="run on the synthetic caches")
     p.add_argument("--variants", default="Ball,Cvm,D24,E", help="variants for the downstream overlap")
+    p.add_argument("--min-albums", type=int, default=100, help="stop when fewer albums have a complete reference")
     p.add_argument("--out", type=Path)
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
-    if not args.fixture:
-        p.error("per-track features come from the fixture until aggregate.py is wired into "
-                "album_features_from_tracks; pass --fixture")
-    if not (FIXTURE / "tracks.parquet").exists():
-        make_fixture()
+    dbs = {"db": FEATURES_DB, "match_db": MATCH_DB}
+    if args.fixture:
+        dbs = {"db": FIXTURE / "features.sqlite", "match_db": FIXTURE / "match.sqlite"}
+        if not dbs["db"].exists():
+            make_fixture()
     out = args.out or (FIXTURE / "results" if args.fixture else RESULTS)
-    res = run(args.variants.split(","), args.seed)
+    res = run(args.variants.split(","), args.mode, dbs, args.min_albums, args.seed)
+    name = "clip_length" + ("_pass1" if args.mode == "pass1" else "")
     out.mkdir(parents=True, exist_ok=True)
-    (out / "clip_length.json").write_text(json.dumps(res, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
-    (out / "clip_length.md").write_text(report(res) + "\n", encoding="utf-8")
-    print(f"{res['albums_fully_analysed']} albums -> {out}")
+    (out / f"{name}.json").write_text(json.dumps(res, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
+    (out / f"{name}.md").write_text(report(res) + "\n", encoding="utf-8")
+    print(f"{res['albums']} albums -> {out / name}.md")
 
 
 if __name__ == "__main__":

@@ -82,11 +82,17 @@ def album_meta(match_db: Path = MATCH_DB) -> pd.DataFrame:
     return meta.set_index("row")
 
 
-def aggregate(selector=None, db: Path = FEATURES_DB, match_db: Path = MATCH_DB) -> tuple[pd.DataFrame, pd.DataFrame]:
+def aggregate(selector=None, db: Path = FEATURES_DB, match_db: Path = MATCH_DB,
+              prio_below: int | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """(album features, album embeddings) in the parquet layouts above, averaged over the tracks
     that `selector(n) -> positions` picks among each album's n analysed tracks in album order
-    (None = all of them). `n_tracks_ok` stays the number of analysed tracks either way."""
+    (None = all of them). `n_tracks_ok` stays the number of analysed tracks either way.
+    `prio_below` first narrows every album to the tracks extract.py ranks below it in its
+    processing order (4 = the first pass), so a half-finished run can be read as a finished pass."""
     tracks, embs = load_tracks(db)
+    if prio_below is not None:
+        keep = (tracks["prio"] < prio_below).to_numpy()
+        tracks, embs = tracks[keep], {name: e[keep] for name, e in embs.items()}
     sizes = tracks.groupby("row", sort=False).size()
     starts = np.cumsum(sizes.to_numpy()) - sizes.to_numpy()
     picks = [np.arange(n) if selector is None else np.asarray(selector(n)) for n in sizes]

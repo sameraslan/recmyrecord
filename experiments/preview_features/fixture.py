@@ -1,22 +1,27 @@
-"""Synthetic stand-in for the extraction caches, so the evaluation runs before real features exist.
+"""Synthetic stand-in for the extraction caches, so the harness can be tested without real features.
 
-CLI: python fixture.py   (writes cache/fixture/: album_features.parquet, embeddings.parquet,
-                          tracks.parquet + tracks_effnet.npy for the clip-length check)
+CLI: python fixture.py [--albums 400]   (writes cache/fixture/features.sqlite and match.sqlite in the
+                                         layouts of extract.py and match.py, as far as aggregate.py
+                                         reads them; small by default, delete the folder after use)
 
 Per track: the album's Spotify features plus track noise (larger on long-track albums, and a
 louder, more energetic first track), pushed through noisy nonlinear maps to Essentia-like
-scalars; the embedding is a ReLU random projection of [track audio | album descriptors].
-About 8% of albums are missing (never the first 50 rows) and 10% of the rest have unanalysed tracks.
+scalars; the embeddings are random projections of [track audio | album descriptors]. The first
+50 rows are always in; 10% of the albums have tracks that failed to download.
 """
+import argparse
+import json
+import sqlite3
+
 import numpy as np
-import pandas as pd
 
 from common import CACHE, load_albums
+from extract import SCHEMA, priority_order
 from rmr_pipeline.constants import AUDIO
 from rmr_pipeline.table import descriptor_cols
 
 FIXTURE = CACHE / "fixture"
-EFFNET_DIM, MAEST_DIM = 1280, 768
+EFFNET_DIM, MUSICNN_DIM = 1280, 200
 
 
 def _sig(x):
@@ -62,49 +67,55 @@ def _scalars(s: dict[str, np.ndarray], rng: np.random.Generator) -> dict[str, np
     }
 
 
-def make_fixture(seed: int = 0) -> None:
-    """Write the fixture caches under cache/fixture/."""
+def make_fixture(n_albums: int = 400, seed: int = 0) -> None:
+    """Write the fixture databases under cache/fixture/ (replacing any earlier ones)."""
     rng = np.random.default_rng(seed)
     albums = load_albums()
-    albums = albums[(rng.random(len(albums)) > 0.08) | (albums["row"] < 50)]  # the best-known albums stay
+    albums = albums[(rng.random(len(albums)) < n_albums / len(albums)) | (albums["row"] < 50)]
     S = albums[AUDIO].to_numpy(dtype=np.float64)
     D = albums[descriptor_cols(albums.drop(columns="row"))].to_numpy(dtype=np.float64) / 1.5
     total = rng.integers(3, 17, len(albums))
     a = np.repeat(np.arange(len(albums)), total)  # album position of each track
     idx = np.concatenate([np.arange(t) for t in total])
+    prio = np.concatenate([np.argsort(priority_order(int(t))) for t in total])
     long_track = S[a, AUDIO.index("duration_ms")] / S[:, AUDIO.index("duration_ms")].std()
     T = S[a] + rng.normal(0, 0.06, (len(a), len(AUDIO))) * (1 + 0.5 * long_track[:, None])
     T[:, [AUDIO.index("energy"), AUDIO.index("loudness")]] += 0.05 * (idx == 0)[:, None]
     T = np.clip(T, 0, 1)
+    scalars = _scalars(dict(zip(AUDIO, T.T)), rng)
+    duration_s = scalars.pop("duration_ms") / 1000
 
-    tracks = pd.DataFrame({"row": albums["row"].to_numpy()[a], "track_idx": idx, "n_tracks_total": total[a],
-                           **_scalars(dict(zip(AUDIO, T.T)), rng)})
     W = rng.normal(0, 1, (len(AUDIO) + D.shape[1], EFFNET_DIM)).astype(np.float32)
     W[:len(AUDIO)] *= 3  # audio drives the embedding more than the descriptors do
     latent = np.hstack([T - T.mean(0), D[a]]).astype(np.float32)
     effnet = np.maximum(latent @ W + rng.normal(0, 1, (len(a), EFFNET_DIM)).astype(np.float32), 0)
-
-    partial = rng.random(len(albums)) < 0.10
-    ok = ~(partial[a] & (rng.random(len(a)) < 0.4)) | (idx == 0)
-    tracks, effnet, a = tracks[ok].reset_index(drop=True), effnet[ok], a[ok]
+    Wm = rng.normal(0, 1 / 30, (EFFNET_DIM, MUSICNN_DIM)).astype(np.float32)
+    musicnn = np.tanh(effnet @ Wm) + rng.normal(0, 0.3, (len(a), MUSICNN_DIM)).astype(np.float32)
+    failed = (rng.random(len(albums)) < 0.10)[a] & (rng.random(len(a)) < 0.4) & (idx > 0)
 
     FIXTURE.mkdir(parents=True, exist_ok=True)
-    tracks.to_parquet(FIXTURE / "tracks.parquet")
-    np.save(FIXTURE / "tracks_effnet.npy", effnet)
-
-    g = tracks.groupby("row", sort=True)
-    ids = pd.DataFrame({"row": albums["row"].to_numpy(), "uri": albums["URI"].to_numpy(),
-                        "n_tracks_total": total, "n_tracks_ok": g.size().to_numpy()})
-    means = g.mean().drop(columns=["track_idx", "n_tracks_total"]).reset_index(drop=True)
-    pd.concat([ids, means], axis=1).to_parquet(FIXTURE / "album_features.parquet")
-    album_effnet = pd.DataFrame(effnet).groupby(a).mean().to_numpy(dtype=np.float32)
-    Wm = rng.normal(0, 1, (EFFNET_DIM, MAEST_DIM)).astype(np.float32) / 30
-    maest = np.tanh(album_effnet @ Wm) + rng.normal(0, 0.3, (len(albums), MAEST_DIM)).astype(np.float32)
-    emb = ids[["row", "uri", "n_tracks_ok"]].copy()
-    emb["effnet"], emb["maest"] = list(album_effnet), list(maest.astype(np.float32))
-    emb.to_parquet(FIXTURE / "embeddings.parquet")
-    print(f"fixture: {len(albums)} albums, {len(tracks)} tracks -> {FIXTURE}")
+    rows = albums["row"].to_numpy()
+    for name in ("features.sqlite", "match.sqlite"):
+        (FIXTURE / name).unlink(missing_ok=True)
+    with sqlite3.connect(FIXTURE / "match.sqlite") as con:
+        con.execute("CREATE TABLE albums(row INTEGER PRIMARY KEY, uri TEXT, status TEXT)")
+        con.execute("CREATE TABLE tracks(row INTEGER, track_idx INTEGER, duration_s REAL)")
+        con.executemany("INSERT INTO albums VALUES (?, ?, 'matched')", zip(rows.tolist(), albums["URI"]))
+        con.executemany("INSERT INTO tracks VALUES (?, ?, ?)", zip(rows[a].tolist(), idx.tolist(), duration_s.tolist()))
+    names = list(scalars)
+    values = np.column_stack([scalars[k] for k in names])
+    with sqlite3.connect(FIXTURE / "features.sqlite") as con:
+        con.execute(SCHEMA)
+        con.executemany(
+            "INSERT INTO tracks(row, track_idx, prio, status, error, clip_s, scalars, effnet, musicnn) "
+            "VALUES (?, ?, ?, ?, ?, 30.0, ?, ?, ?)",
+            ((int(rows[a[t]]), int(idx[t]), int(prio[t]), "download_failed", "HTTP 403", None, None, None) if failed[t]
+             else (int(rows[a[t]]), int(idx[t]), int(prio[t]), "ok", None, json.dumps(dict(zip(names, values[t]))),
+                   effnet[t].astype("<f2").tobytes(), musicnn[t].astype("<f2").tobytes()) for t in range(len(a))))
+    print(f"fixture: {len(albums)} albums, {len(a)} tracks ({int(failed.sum())} failed) -> {FIXTURE}")
 
 
 if __name__ == "__main__":
-    make_fixture()
+    p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    p.add_argument("--albums", type=int, default=400, help="approximate number of albums")
+    make_fixture(p.parse_args().albums)

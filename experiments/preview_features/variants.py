@@ -12,6 +12,7 @@ is not a per-column drop-in is rescaled to that total.
   Cvm/Cembvm  the same with each column rescaled to the Spotify column's std
   D16/24/32   effnet album embedding, L2-normalised, PCA, variance-matched (Dm*: maest, Dn*: musicnn)
   E, E13  Ball (or B13) + D24, half of A's variance each
+  F, Femb Cvm (or Cembvm) + D24, half of A's variance each: "Spotify-like + embedding"
   Z0      no audio block; Zs: the Spotify block with rows shuffled
 """
 import json
@@ -64,11 +65,13 @@ ALPHAS = np.logspace(-2, 4, 13)
 class Inputs:
     """The evaluation pool: `albums` (rows of load_albums(), fresh index), the Essentia scalars
     and embeddings aligned to it (None / {} for a baseline-only run), `tracks` (n_tracks_ok,
-    n_tracks_total), and `fit`: False for albums whose Spotify features belong to another record."""
+    n_tracks_total), `seeds` (album masks for the Spotify-agreement metrics, see seed_groups)
+    and `fit`, the Ridge training set (one of the seed masks)."""
     albums: pd.DataFrame
     scalars: pd.DataFrame | None
     emb: dict[str, np.ndarray]
     tracks: pd.DataFrame | None
+    seeds: dict[str, np.ndarray]
     fit: np.ndarray
 
 
@@ -79,21 +82,45 @@ def override_rows(albums: pd.DataFrame, match_db: Path = MATCH_DB) -> set[int]:
     keys = set(json.loads((REPO / "data-pipeline" / "overrides.json").read_text()))
     rows = {int(r) for r, s in zip(albums["row"], slugs) if s in keys}
     if match_db.exists():
-        with sqlite3.connect(match_db) as con:
+        with sqlite3.connect(f"file:{match_db}?mode=ro", uri=True) as con:
             rows |= {int(r) for (r,) in con.execute("SELECT row FROM albums WHERE override = 1")}
     return rows
 
 
-def make_inputs(f: pd.DataFrame | None, e: pd.DataFrame | None, rows=None) -> Inputs:
-    """Pool = albums with at least one analysed track in both frames (album_features /
-    embeddings layouts), optionally restricted to `rows`; the whole catalog when `f` is None.
-    Scalar columns are every numeric non-id column; NaNs take the median."""
+def seed_groups(albums: pd.DataFrame, match_db: Path = MATCH_DB) -> dict[str, np.ndarray]:
+    """Album masks: which seeds can be compared with Spotify's features.
+      all          the Spotify features are this album's (not an override)
+      clean        also matched without ambiguity, to the edition Spotify analysed: no
+                   `spotify_twin`, and mean track duration within 10% of Spotify's (`dur_off`)
+      ambiguous / unambiguous   `all`, split by the matcher's ambiguity flag (matched albums only)
+    Only `all` exists before the matcher has run."""
+    out = {"all": ~albums["row"].isin(override_rows(albums, match_db)).to_numpy()}
+    if match_db.exists():
+        with sqlite3.connect(f"file:{match_db}?mode=ro", uri=True) as con:
+            m = pd.read_sql("SELECT row, status, ambiguous, candidates FROM albums", con).set_index("row")
+        m = m.reindex(albums["row"])
+        top = [(json.loads(c) or [{}])[0] if c else {} for c in m["candidates"]]
+        matched = (m["status"] == "matched").to_numpy()
+        ambiguous = (m["ambiguous"] == 1).to_numpy()
+        same_edition = np.array([not t.get("spotify_twin") and t.get("dur_off") is not None and t["dur_off"] <= 0.1
+                                 for t in top])
+        out |= {"clean": out["all"] & matched & ~ambiguous & same_edition,
+                "ambiguous": out["all"] & matched & ambiguous, "unambiguous": out["all"] & matched & ~ambiguous}
+    return out
+
+
+def make_inputs(f: pd.DataFrame | None, e: pd.DataFrame | None, rows=None, subset: str = "all") -> Inputs:
+    """Pool = albums with at least one analysed track and every embedding in both frames
+    (album_features / embeddings layouts), optionally restricted to `rows`; the whole catalog
+    when `f` is None. Scalar columns are every numeric non-id column; NaNs take the median.
+    `subset` names the seed group the Ridge trains on."""
     albums = load_albums()
-    overrides = override_rows(albums)
     if f is None:
-        return Inputs(albums, None, {}, None, ~albums["row"].isin(overrides).to_numpy())
+        seeds = seed_groups(albums)
+        return Inputs(albums, None, {}, None, seeds, seeds[subset])
     f, e = f.set_index("row"), e.set_index("row")
-    keep = albums["row"].isin(f.index[f["n_tracks_ok"] > 0].intersection(e.index[e["n_tracks_ok"] > 0]))
+    names = [c for c in e.columns if c in EMB_TAG]
+    keep = albums["row"].isin(f.index[f["n_tracks_ok"] > 0].intersection(e.index[e[names].notna().all(axis=1)]))
     if rows is not None:
         keep &= albums["row"].isin(rows)
     albums = albums[keep].reset_index(drop=True)
@@ -101,16 +128,17 @@ def make_inputs(f: pd.DataFrame | None, e: pd.DataFrame | None, rows=None) -> In
     scalars = f.drop(columns=[c for c in f.columns if c in ID_COLS]).select_dtypes("number")
     scalars = scalars.loc[:, scalars.nunique() > 1].astype(np.float64)
     scalars = scalars.fillna(scalars.median()).reset_index(drop=True)
-    emb = {c: np.stack(e[c].to_numpy()).astype(np.float32) for c in e.columns if c in EMB_TAG}
+    emb = {c: np.stack(e[c].to_numpy()).astype(np.float32) for c in names}
+    seeds = seed_groups(albums)
     tracks = f[["n_tracks_ok", "n_tracks_total"]].reset_index(drop=True)
-    return Inputs(albums, scalars, emb, tracks, ~albums["row"].isin(overrides).to_numpy())
+    return Inputs(albums, scalars, emb, tracks, seeds, seeds[subset])
 
 
-def load_inputs(features: Path | None, embeddings: Path | None) -> Inputs:
+def load_inputs(features: Path | None, embeddings: Path | None, subset: str = "all") -> Inputs:
     """make_inputs from the cache parquets (baseline-only pool when `features` is None)."""
     if features is None:
-        return make_inputs(None, None)
-    return make_inputs(pd.read_parquet(features), pd.read_parquet(embeddings))
+        return make_inputs(None, None, subset=subset)
+    return make_inputs(pd.read_parquet(features), pd.read_parquet(embeddings), subset=subset)
 
 
 def total_var(X: np.ndarray) -> float:
@@ -135,7 +163,7 @@ def pca_scores(E: np.ndarray, k: int) -> np.ndarray:
     no per-dimension standardisation or whitening, which would amplify the 1,000+ low-variance
     directions; components keep their own variance so the leading ones dominate."""
     E = E / np.linalg.norm(E, axis=1, keepdims=True)
-    return PCA(n_components=k, svd_solver="full").fit_transform(E.astype(np.float64))
+    return PCA(n_components=min(k, len(E) - 1), svd_solver="full").fit_transform(E.astype(np.float64))
 
 
 def b13_columns(scalars: pd.DataFrame) -> dict[str, str | None]:
@@ -202,6 +230,8 @@ def build_variants(inp: Inputs, seed: int = 0) -> tuple[dict[str, np.ndarray | N
             half = match_var(scores["effnet"][:, :E_K], target / 2)
             out["E"] = np.hstack([match_var(out["Ball"], target / 2), half])
             out["E13"] = np.hstack([match_var(out["B13"], target / 2), half])
+            out["F"] = np.hstack([match_var(out["Cvm"], target / 2), half])
+            out["Femb"] = np.hstack([match_var(out["Cembvm"], target / 2), half])
     report["blocks"] = {k: {"columns": 0 if v is None else v.shape[1],
                             "total_var_vs_A": 0.0 if v is None else round(total_var(v) / target, 4)}
                         for k, v in out.items()}

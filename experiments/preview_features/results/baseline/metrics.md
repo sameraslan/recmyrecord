@@ -1,8 +1,9 @@
 # Preview-features evaluation
 
-Pool: 4081 of 4081 albums (100.0%); 4075 with descriptors; genres joined for 4079 (99.95%); 19 albums with another record's Spotify features (kept as neighbours, not used as agreement seeds or in the Ridge fit).
+Pool: 4081 of 4081 albums (100.0%); 4075 with descriptors; genres joined for 4079 (99.95%); 19 albums with another record's Spotify features (kept as neighbours, never agreement seeds or Ridge training albums).
+Seed groups for the agreement metrics: all 4062, clean 3600, ambiguous 147, unambiguous 3782. The Ridge trained on the `all` group (4062 albums).
 
-Cells: `mean ±half-width of the 95% CI`; for coherence metrics `mean (difference vs A)`, `*` = the paired 95% CI excludes 0. `audio` = audio block alone.
+Cells: `mean ±half-width of the 95% CI`; for coherence metrics `mean (difference vs A)`, `*` = the paired 95% CI excludes 0. `audio` = audio block alone. Agreement tables use the `all` seed group.
 
 ## Audio blocks
 
@@ -47,7 +48,7 @@ Cells: `mean ±half-width of the 95% CI`; for coherence metrics `mean (differenc
 | variant | sonic | balanced | mood | audio |
 |---|---|---|---|---|
 | A | 0.176 ±0.006 | 0.328 ±0.008 | 0.290 ±0.008 | 0.175 ±0.006 |
-| Z0 | 0.287 (+0.111*) | 0.287 (-0.041*) | 0.287 (-0.002*) | – |
+| Z0 | 0.287 (+0.111*) | 0.287 (-0.041*) | 0.287 (-0.003*) | – |
 | Zs | 0.028 (-0.148*) | 0.177 (-0.151*) | 0.287 (-0.002*) | 0.027 (-0.147*) |
 | random neighbours | 0.027 | 0.027 | 0.027 | 0.027 |
 
@@ -68,6 +69,32 @@ Cells: `mean ±half-width of the 95% CI`; for coherence metrics `mean (differenc
 | Z0 | – |
 | Zs | 0.217 (-0.125*) |
 | random neighbours | 0.218 |
+
+## Agreement with A, `clean` seeds (3600)
+
+| variant | overlap10 sonic | overlap10 balanced | spearman_full sonic | spearman_full balanced | spearman_top100 sonic | spearman_top100 balanced |
+|---|---|---|---|---|---|---|
+| Z0 | 0.024 | 0.356 | 0.178 | 0.631 | 0.065 | 0.538 |
+| Zs | 0.002 | 0.132 | 0.003 | 0.342 | -0.001 | 0.148 |
+
+## Agreement with A by match ambiguity: ambiguous (147) / unambiguous (3782) seeds
+
+| variant | overlap10 sonic | overlap10 balanced | spearman_full sonic | spearman_full balanced | spearman_top100 sonic | spearman_top100 balanced |
+|---|---|---|---|---|---|---|
+| Z0 | 0.018 / 0.025 | 0.282 / 0.355 | 0.102 / 0.177 | 0.556 / 0.630 | 0.042 / 0.065 | 0.474 / 0.538 |
+| Zs | 0.003 / 0.002 | 0.095 / 0.132 | 0.003 / 0.003 | 0.302 / 0.342 | 0.013 / -0.001 | 0.146 / 0.148 |
+
+## Balanced stop: audio block scale
+
+The block multiplied by a factor before the neighbours are computed (1 = as evaluated above); overlap is with A's unscaled lists.
+
+| variant | scale | overlap10 | genre_primary | genre_any | genre_family |
+|---|---|---|---|---|---|
+| A | 0.5 | 0.611 | 0.187 | 0.323 | 0.540 |
+| A | 0.7 | 0.767 | 0.191 | 0.329 | 0.549 |
+| A | 1.0 | 1.000 | 0.190 | 0.328 | 0.548 |
+| A | 1.4 | 0.751 | 0.181 | 0.314 | 0.537 |
+| A | 2.0 | 0.523 | 0.162 | 0.286 | 0.513 |
 
 ## In Rainbows at slider 0.5 (live check)
 

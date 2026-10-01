@@ -5,6 +5,7 @@ CLI:
   python evaluate.py --baseline         A and the controls on the whole catalog -> results/baseline/
   python evaluate.py --fixture          synthetic caches (built if missing) -> cache/fixture/results/
   python evaluate.py --features PATH --embeddings PATH --out DIR --seed-variants A,Cvm,D24,E
+  python evaluate.py --subset clean     train the Ridge on the clean seed group only (default: all)
 
 Conditions: the three slider stops ([audio | descriptors / slider**3], as the live recommender)
 and `audio` (the audio block alone). Per condition and variant, over seeds:
@@ -15,33 +16,45 @@ and `audio` (the audio block alone). Per condition and variant, over seeds:
                    genre / any genre / the primary genre's coarse family
   desc_cos         (audio only) mean cosine between the seed's 120 descriptor weights and its
                    neighbours', over albums with descriptors
-Agreement metrics skip seeds whose Spotify features belong to another record. Confidence
-intervals are 95% percentile bootstraps over seeds (paired for differences against A).
+Agreement metrics are reported per seed group (variants.seed_groups): `all` skips only the seeds
+whose Spotify features belong to another record, `clean` keeps the unambiguous same-edition
+matches, and `ambiguous` / `unambiguous` split by the matcher's flag. Confidence intervals are
+95% percentile bootstraps over seeds (paired for differences against A).
+
+Also: a balanced-stop sweep of the audio block's scale for A, D24 and E (is the slider still
+tuned once the block changes?), and matching / extraction coverage read from the two caches.
 """
 import argparse
 import json
+import sqlite3
 import time
 import warnings
+from contextlib import closing
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 from scipy.stats import rankdata
 from sklearn.metrics.pairwise import euclidean_distances
 
-from common import ALBUM_FEATURES, EMBEDDINGS, RESULTS, TABLE_NORM
+from aggregate import aggregate
+from common import ALBUM_FEATURES, EMBEDDINGS, FEATURES_DB, MATCH_DB, RESULTS, TABLE_NORM
 from fixture import FIXTURE, make_fixture
 from genres import load_genres, match_matrices
 from rmr_pipeline.artists import clean_artist
 from rmr_pipeline.constants import AUDIO, IN_RAINBOWS_LIVE, IN_RAINBOWS_ROW, LIVE_POOL, SLIDER, STOPS
 from rmr_pipeline.recs import top_k_neighbours
 from rmr_pipeline.table import descriptor_cols, live_recommend, load_table, rec_matrix
-from variants import Inputs, build_variants, load_inputs
+from variants import Inputs, build_variants, load_inputs, make_inputs
 
 CONDITIONS = (*STOPS, "audio")
 AGREEMENT = ("overlap10", "spearman_full", "spearman_top100")
 GENRE = ("genre_primary", "genre_any", "genre_family")
 TOP = 100
 N_BOOT = 1000
+SWEEP_VARIANTS = ("A", "D24", "E")
+SWEEP_SCALES = (0.5, 0.7, 1.0, 1.4, 2.0)
+MAX_FAILURE_ROWS = 5000  # extract_failures.csv is written only when it stays this small
 # `row` of the listening seeds (well-known, stylistically spread).
 SEEDS = [
     11,    # Radiohead, In Rainbows
@@ -103,20 +116,23 @@ def neighbourhood(X: np.ndarray) -> dict:
     D = euclidean_distances(X.astype(np.float64), squared=True).astype(np.float32)
     far = D.copy()
     np.fill_diagonal(far, np.inf)
-    return {"nbrs": top_k_neighbours(X), "D": D, "R": rank_rows(D),
-            "top": np.argpartition(far, TOP, axis=1)[:, :TOP]}
+    top = min(TOP, len(D) - 2)
+    return {"nbrs": top_k_neighbours(X), "D": D, "R": rank_rows(D), "top": np.argpartition(far, top, axis=1)[:, :top]}
 
 
-def seed_metrics(hood: dict, ref: dict, coherence: dict[str, np.ndarray], fit: np.ndarray) -> dict[str, np.ndarray]:
+def overlap(a: np.ndarray, b: np.ndarray) -> np.ndarray:
+    """Per seed, the share of list `a` that is also in list `b`."""
+    return (a[:, :, None] == b[:, None, :]).any(axis=2).mean(axis=1)
+
+
+def seed_metrics(hood: dict, ref: dict, coherence: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     """Per-seed values of every metric for one variant in one condition (`ref` is A's)."""
     out = {name: row_nanmean(np.take_along_axis(M, hood["nbrs"], axis=1)) for name, M in coherence.items()}
     if hood is not ref:
         a, v = (np.take_along_axis(h["D"], ref["top"], axis=1) for h in (ref, hood))
-        out["overlap10"] = (hood["nbrs"][:, :, None] == ref["nbrs"][:, None, :]).any(axis=2).mean(axis=1)
+        out["overlap10"] = overlap(hood["nbrs"], ref["nbrs"])
         out["spearman_full"] = corr_rows(ref["R"], hood["R"])
         out["spearman_top100"] = corr_rows(rankdata(a, axis=1), rankdata(v, axis=1))
-        for name in AGREEMENT:
-            out[name] = np.where(fit, out[name], np.nan)
     return out
 
 
@@ -130,6 +146,45 @@ def summarise(v: np.ndarray, base: np.ndarray | None, boot: np.ndarray) -> dict:
     if base is not None:
         out["diff"], out["diff_ci"] = stats(v - base)
     return out
+
+
+def by_seed_group(v: np.ndarray, seeds: dict[str, np.ndarray], boot: np.ndarray) -> dict:
+    """An agreement metric summarised over the `all` seeds, with the other groups under `by_seeds`."""
+    groups = {g: summarise(np.where(mask, v, np.nan), None, boot) for g, mask in seeds.items()}
+    return groups.pop("all") | {"by_seeds": groups}
+
+
+def scale_sweep(blocks: dict, desc: np.ndarray, ref: np.ndarray, genre_M: dict, seeds: np.ndarray) -> dict:
+    """Balanced stop with the audio block multiplied by each scale: overlap@10 with A's unscaled
+    lists and genre coherence. A flat or falling curve around 1 means the slider needs no re-tune."""
+    out = {}
+    for name in SWEEP_VARIANTS:
+        if name in blocks:
+            out[name] = {}
+            for scale in SWEEP_SCALES:
+                nbrs = top_k_neighbours(matrix(blocks[name] * scale, desc, "balanced"))
+                out[name][str(scale)] = {"overlap10": round(float(overlap(nbrs, ref)[seeds].mean()), 4)} | {
+                    m: round(float(np.nanmean(row_nanmean(np.take_along_axis(M, nbrs, axis=1)))), 4)
+                    for m, M in genre_M.items()}
+    return out
+
+
+def extraction_coverage(match_db: Path, features_db: Path) -> tuple[dict, pd.DataFrame]:
+    """Matching and extraction coverage read from the two caches (read-only), and the tracks
+    that are recorded with a status other than ok."""
+    with closing(sqlite3.connect(f"file:{match_db}?mode=ro", uri=True)) as con:
+        albums, matched = con.execute("SELECT COUNT(*), SUM(status = 'matched') FROM albums").fetchone()
+        tracks, previews = con.execute("SELECT COUNT(*), SUM(COALESCE(preview_url, '') != '') FROM tracks").fetchone()
+        planned, = con.execute("SELECT SUM(MIN(n, 30)) FROM (SELECT COUNT(*) AS n FROM tracks "
+                               "WHERE COALESCE(preview_url, '') != '' GROUP BY row)").fetchone()
+    with closing(sqlite3.connect(f"file:{features_db}?mode=ro", uri=True)) as con:
+        status = dict(con.execute("SELECT status, COUNT(*) FROM tracks GROUP BY status ORDER BY 2 DESC"))
+        with_ok, = con.execute("SELECT COUNT(DISTINCT row) FROM tracks WHERE status = 'ok'").fetchone()
+        failures = pd.read_sql("SELECT row, track_idx, status, error FROM tracks WHERE status != 'ok' "
+                               "ORDER BY row, track_idx", con)
+    return {"albums": albums, "albums_matched": matched, "tracks_on_matched_albums": tracks,
+            "tracks_with_preview": previews, "tracks_planned": planned, "tracks_by_status": status,
+            "albums_with_analysed_track": with_ok}, failures
 
 
 def floors(coherence: dict[str, np.ndarray]) -> dict[str, float]:
@@ -169,7 +224,7 @@ def in_rainbows(inp: Inputs, blocks: dict, desc: np.ndarray) -> dict:
 def coverage(inp: Inputs, genres, has_desc: np.ndarray, n_catalog: int) -> dict:
     """How much of the catalog the pool covers."""
     out = {"catalog": n_catalog, "pool": len(inp.albums), "pool_share": round(len(inp.albums) / n_catalog, 4),
-           "wrong_spotify_album_in_pool": int((~inp.fit).sum()), "with_descriptors": int(has_desc.sum()),
+           "wrong_spotify_album_in_pool": int((~inp.seeds["all"]).sum()), "with_descriptors": int(has_desc.sum()),
            "genre_joined": int(genres["joined"].sum()), "genre_join_rate": round(float(genres["joined"].mean()), 4)}
     if inp.tracks is not None:
         ok, total = inp.tracks["n_tracks_ok"], inp.tracks["n_tracks_total"]
@@ -195,22 +250,25 @@ def evaluate(inp: Inputs, seed: int = 0) -> tuple[dict, dict]:
         ref = neighbourhood(matrix(blocks["A"], desc, cond))
         if cond != "audio":
             assert np.array_equal(ref["nbrs"], top_k_neighbours(rec_matrix(albums.drop(columns="row"), SLIDER[cond])))
-        base = seed_metrics(ref, ref, coherence[cond], inp.fit)
+        base = seed_metrics(ref, ref, coherence[cond])
         metrics[cond], lists[cond] = {}, {}
         for name, block in blocks.items():
             if block is None and cond == "audio":
                 continue
             hood = ref if name == "A" else neighbourhood(matrix(block, desc, cond))
-            per_seed = seed_metrics(hood, ref, coherence[cond], inp.fit)
-            metrics[cond][name] = {m: summarise(v, None if name == "A" or m in AGREEMENT else base[m], boot)
+            per_seed = seed_metrics(hood, ref, coherence[cond])
+            metrics[cond][name] = {m: by_seed_group(v, inp.seeds, boot) if m in AGREEMENT
+                                   else summarise(v, None if name == "A" else base[m], boot)
                                    for m, v in per_seed.items()}
             lists[cond][name] = hood["nbrs"]
     out = {
         "coverage": coverage(inp, genres, desc.any(axis=1), len(load_table(TABLE_NORM)["URI"].unique())),
-        "agreement_seeds": int(inp.fit.sum()),
+        "seed_groups": {g: int(mask.sum()) for g, mask in inp.seeds.items()},
+        "ridge_training_albums": int(inp.fit.sum()),
         **report,
         "floors": floors(coherence["audio"]),
         "metrics": metrics,
+        "scale_sweep": scale_sweep(blocks, desc, lists["balanced"]["A"], genre_M, inp.seeds["all"]),
         "in_rainbows": in_rainbows(inp, blocks, desc),
     }
     failures = albums.loc[~genres["joined"], ["row", "Artist", "Title"]]
@@ -231,7 +289,7 @@ def seeds_md(inp: Inputs, lists: dict, names: list[str]) -> str:
             out += [f"## row {row}: not in the pool", ""]
             continue
         i = pos[row]
-        wrong = "" if inp.fit[i] else " (Spotify features of another record: A is unreliable here)"
+        wrong = "" if inp.seeds["all"][i] else " (Spotify features of another record: A is unreliable here)"
         out += [f"## {label(albums, i)}{wrong}", ""]
         for stop in ("sonic", "balanced"):
             ref = set(lists[stop]["A"][i].tolist())
@@ -268,13 +326,28 @@ def metrics_md(res: dict) -> str:
            f"Pool: {cov['pool']} of {cov['catalog']} albums ({cov['pool_share']:.1%}); "
            f"{cov['with_descriptors']} with descriptors; genres joined for {cov['genre_joined']} "
            f"({cov['genre_join_rate']:.2%}); {cov['wrong_spotify_album_in_pool']} albums with another record's "
-           f"Spotify features (kept as neighbours, not used as agreement seeds or in the Ridge fit)."]
+           f"Spotify features (kept as neighbours, never agreement seeds or Ridge training albums).",
+           "Seed groups for the agreement metrics: " + ", ".join(f"{g} {n}" for g, n in res["seed_groups"].items())
+           + f". The Ridge trained on the `{res['subset']}` group ({res['ridge_training_albums']} albums)."]
     if "tracks_ok" in cov:
         out.append(f"Tracks analysed: {cov['tracks_ok']} of {cov['tracks_total']}; "
                    f"{cov['albums_fully_analysed']} albums fully analysed; "
                    f"median {cov['median_tracks_ok']:.0f} per album.")
+    if ext := res.get("extraction"):
+        status, planned = ext["tracks_by_status"], ext["tracks_planned"]
+        out += ["", "## Coverage: matching and extraction", "", *_table(["", "count", "share"], [
+            ["albums matched", str(ext["albums_matched"]),
+             f"{ext['albums_matched'] / ext['albums']:.1%} of the catalog"],
+            ["tracks with a preview", str(ext["tracks_with_preview"]),
+             f"{ext['tracks_with_preview'] / ext['tracks_on_matched_albums']:.1%} of the matched albums' tracks"],
+            ["tracks planned (30 per album at most)", str(planned), ""],
+            ["albums with an analysed track", str(ext["albums_with_analysed_track"]),
+             f"{ext['albums_with_analysed_track'] / ext['albums_matched']:.1%} of the matched albums"],
+            *([f"tracks recorded `{k}`", str(n), f"{n / planned:.1%} of planned" if k == "ok" else ""]
+              for k, n in status.items())])]
     out += ["", "Cells: `mean ±half-width of the 95% CI`; for coherence metrics `mean (difference vs A)`, "
-            "`*` = the paired 95% CI excludes 0. `audio` = audio block alone.", "", "## Audio blocks", ""]
+            "`*` = the paired 95% CI excludes 0. `audio` = audio block alone. Agreement tables use the "
+            "`all` seed group.", "", "## Audio blocks", ""]
     out += _table(["variant", "columns", "total variance / A's"],
                   [[n, str(b["columns"]), f"{b['total_var_vs_A']:.2f}"] for n, b in res["blocks"].items()])
     for metric in (*AGREEMENT, *GENRE, "desc_cos"):
@@ -284,6 +357,25 @@ def metrics_md(res: dict) -> str:
         if metric not in AGREEMENT:
             rows.append(["random neighbours"] + [f"{res['floors'][metric]:.3f}"] * len(conds))
         out += [f"## {metric}", "", *_table(["variant", *conds], rows)]
+    shown = [(m, c) for m in AGREEMENT for c in ("sonic", "balanced")]
+    if "clean" in res["seed_groups"]:
+        groups = res["seed_groups"]
+        by = lambda v, m, c, g: f"{metrics[c][v][m]['by_seeds'][g]['mean']:.3f}"  # noqa: E731
+        out += [f"## Agreement with A, `clean` seeds ({groups['clean']})", "",
+                *_table(["variant", *(f"{m} {c}" for m, c in shown)],
+                        [[v, *(by(v, m, c, "clean") for m, c in shown)] for v in names if v != "A"]),
+                f"## Agreement with A by match ambiguity: ambiguous ({groups['ambiguous']}) / "
+                f"unambiguous ({groups['unambiguous']}) seeds", "",
+                *_table(["variant", *(f"{m} {c}" for m, c in shown)],
+                        [[v, *(f"{by(v, m, c, 'ambiguous')} / {by(v, m, c, 'unambiguous')}" for m, c in shown)]
+                         for v in names if v != "A"])]
+    if sweep := res["scale_sweep"]:
+        out += ["## Balanced stop: audio block scale", "",
+                "The block multiplied by a factor before the neighbours are computed (1 = as evaluated above); "
+                "overlap is with A's unscaled lists.", "",
+                *_table(["variant", "scale", "overlap10", *GENRE],
+                        [[v, k, *(f"{row[m]:.3f}" for m in ("overlap10", *GENRE))]
+                         for v, rows in sweep.items() for k, row in rows.items()])]
     if "ridge" in res:
         fits = res["ridge"]
         out += ["## Ridge: out-of-fold R² per Spotify column", ""]
@@ -317,24 +409,34 @@ def main() -> None:
     p.add_argument("--baseline", action="store_true", help="A and the controls on the whole catalog")
     p.add_argument("--fixture", action="store_true", help="run on the synthetic caches")
     p.add_argument("--out", type=Path)
+    p.add_argument("--subset", default="all", choices=("all", "clean"), help="seed group the Ridge trains on")
     p.add_argument("--seed-variants", help="columns of seeds.md (default A,Cvm,D24,E; A,Z0,Zs for --baseline)")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
     t0 = time.time()
-    if args.fixture:
-        args.features, args.embeddings = FIXTURE / "album_features.parquet", FIXTURE / "embeddings.parquet"
-        if not args.features.exists():
-            make_fixture()
-    if not args.baseline and not (args.features.exists() and args.embeddings.exists()):
-        p.error(f"{args.features} or {args.embeddings} is missing; run aggregate.py, or pass --baseline or --fixture")
     out = args.out or (FIXTURE / "results" if args.fixture else RESULTS / "baseline" if args.baseline else RESULTS)
-    inp = load_inputs(None, None) if args.baseline else load_inputs(args.features, args.embeddings)
+    if args.fixture:
+        if not (FIXTURE / "features.sqlite").exists():
+            make_fixture()
+        inp = make_inputs(*aggregate(db=FIXTURE / "features.sqlite", match_db=FIXTURE / "match.sqlite"),
+                          subset=args.subset)
+    elif args.baseline:
+        inp = load_inputs(None, None, args.subset)
+    elif args.features.exists() and args.embeddings.exists():
+        inp = load_inputs(args.features, args.embeddings, args.subset)
+    else:
+        p.error(f"{args.features} or {args.embeddings} is missing; run aggregate.py, or pass --baseline or --fixture")
     res, extra = evaluate(inp, args.seed)
+    res["subset"] = args.subset
+    out.mkdir(parents=True, exist_ok=True)
+    if not (args.fixture or args.baseline) and FEATURES_DB.exists():
+        res["extraction"], failures = extraction_coverage(MATCH_DB, FEATURES_DB)
+        if len(failures) <= MAX_FAILURE_ROWS:
+            failures.to_csv(out / "extract_failures.csv", index=False)
     res["runtime_s"] = round(time.time() - t0, 1)
     shown = (args.seed_variants or ("A,Z0,Zs" if args.baseline else "A,Cvm,D24,E")).split(",")
     if missing := [n for n in shown if n not in extra["lists"]["sonic"]]:
         p.error(f"unknown --seed-variants {missing}; have {list(extra['lists']['sonic'])}")
-    out.mkdir(parents=True, exist_ok=True)
     (out / "metrics.json").write_text(json.dumps(res, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     (out / "metrics.md").write_text(metrics_md(res) + "\n", encoding="utf-8")
     (out / "seeds.md").write_text(seeds_md(inp, extra["lists"], shown) + "\n", encoding="utf-8")

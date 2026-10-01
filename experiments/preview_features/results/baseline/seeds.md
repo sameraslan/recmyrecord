@@ -522,12 +522,12 @@ Top 10 per variant (A, Z0, Zs). **Bold** = also in A's top 10 at that stop. The 
 | 2 | John Williams — Schindler's List | Berliner Philharmoniker / Herbert von Karajan — Symphonie Nr. 7 | Comus — First Utterance |
 | 3 | Floating Points, Pharoah Sanders & The London Symphony Orchestra — Promises | **John Williams — Schindler's List** | John Abercrombie — Timeless |
 | 4 | Cleveland Orchestra / Pierre Boulez — Pétrouchka; Le Sacre du printemps | McCoy Tyner — Focal Point | Dazey and the Scouts — Maggot |
-| 5 | Jeremy Soule — The Elder Scrolls IV: Oblivion | Charles Lloyd — Forest Flower | Mew — And the Glass Handed Kites |
+| 5 | Jeremy Soule — The Elder Scrolls IV: Oblivion | Peter McConnell — Grim Fandango | Mew — And the Glass Handed Kites |
 | 6 | Tangerine Dream — Phaedra | Andrew Hill — Passing Ships | Intestine Baalism — Banquet in the Darkness |
-| 7 | Keller Quartett — Die Kunst der Fuge | Peter McConnell — Grim Fandango | Muddy Waters — Folk Singer |
-| 8 | Clint Mansell — The Fountain | Thelonious Monk Quartet — Thelonious in Action | The Durutti Column — LC |
-| 9 | Philip Glass — Solo Piano | Thelonious Monk — Live at the It Club | Beach House — Once Twice Melody |
-| 10 | Howard Shore — The Lord of the Rings: The Two Towers | Miles Davis — Live at the Fillmore East (March 7, 1970): It's About That Time | Pere Ubu — Dub Housing |
+| 7 | Keller Quartett — Die Kunst der Fuge | Miles Davis — Live at the Fillmore East (March 7, 1970): It's About That Time | Muddy Waters — Folk Singer |
+| 8 | Clint Mansell — The Fountain | Thelonious Monk — Live at the It Club | The Durutti Column — LC |
+| 9 | Philip Glass — Solo Piano | Charles Lloyd — Forest Flower | Beach House — Once Twice Melody |
+| 10 | Howard Shore — The Lord of the Rings: The Two Towers | Thelonious Monk Quartet — Thelonious in Action | Pere Ubu — Dub Housing |
 | shared | 10 | 1 | 0 |
 
 ### balanced
@@ -538,12 +538,12 @@ Top 10 per variant (A, Z0, Zs). **Bold** = also in A's top 10 at that stop. The 
 | 2 | Berliner Philharmoniker / Herbert von Karajan — Symphonie Nr. 5 | **Berliner Philharmoniker / Herbert von Karajan — Symphonie Nr. 7** | Benny Carter and His Orchestra — Further Definitions |
 | 3 | John Williams — Schindler's List | **John Williams — Schindler's List** | Lee Morgan — Leeway |
 | 4 | New York Philharmonic / Leonard Bernstein — Le sacre du printemps | McCoy Tyner — Focal Point | Los Tres — Los Tres |
-| 5 | Jacques Brel — N° 5 | Charles Lloyd — Forest Flower | Dazey and the Scouts — Maggot |
+| 5 | Jacques Brel — N° 5 | Peter McConnell — Grim Fandango | Dazey and the Scouts — Maggot |
 | 6 | Bernard Herrmann — Vertigo | Andrew Hill — Passing Ships | The Horace Silver Quintet — The Tokyo Blues |
-| 7 | Cleveland Orchestra / Pierre Boulez — Pétrouchka; Le Sacre du printemps | Peter McConnell — Grim Fandango | Joe Henderson — Our Thing |
-| 8 | Paco de Lucía — Concierto de Aranjuez | Thelonious Monk Quartet — Thelonious in Action | Testament — Live at the Fillmore |
-| 9 | Howard Shore — The Lord of the Rings: The Two Towers | Thelonious Monk — Live at the It Club | The Clash — From Here to Eternity: Live |
-| 10 | Hans Zimmer — The Thin Red Line | Miles Davis — Live at the Fillmore East (March 7, 1970): It's About That Time | Art Blakey Jazz Messengers — Caravan |
+| 7 | Cleveland Orchestra / Pierre Boulez — Pétrouchka; Le Sacre du printemps | Miles Davis — Live at the Fillmore East (March 7, 1970): It's About That Time | Joe Henderson — Our Thing |
+| 8 | Paco de Lucía — Concierto de Aranjuez | Thelonious Monk — Live at the It Club | Testament — Live at the Fillmore |
+| 9 | Howard Shore — The Lord of the Rings: The Two Towers | Charles Lloyd — Forest Flower | The Clash — From Here to Eternity: Live |
+| 10 | Hans Zimmer — The Thin Red Line | Thelonious Monk Quartet — Thelonious in Action | Art Blakey Jazz Messengers — Caravan |
 | shared | 10 | 3 | 1 |
 
 ## Bob Marley & The Wailers — Exodus
