@@ -3,12 +3,20 @@
 An empty `s` means the album has no Spotify release; an empty `c` means it has no Spotify cover
 (its `image` still gives the sprites and ambient colours)."""
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from .slugs import make_slugs
 from .validate import COVER_RE, SPOTIFY_RE
 
 ALLOWED = {"c", "s", "a", "image", "note"}
+
+
+def _is_safe_relative(image: str) -> bool:
+    """True when `image` is a plain relative path with no absolute root, drive or `..` segment."""
+    for pure in (PurePosixPath(image), PureWindowsPath(image)):
+        if pure.is_absolute() or pure.anchor or ".." in pure.parts:
+            return False
+    return True
 
 
 def load_overrides(path: Path) -> dict[str, dict[str, str]]:
@@ -34,6 +42,9 @@ def load_overrides(path: Path) -> dict[str, dict[str, str]]:
             raise ValueError(f"{where}: artist must be a non-empty name")
         if "image" in entry and not entry["image"].strip():
             raise ValueError(f"{where}: image must be a path relative to the overrides file")
+        if "image" in entry and not _is_safe_relative(entry["image"]):
+            raise ValueError(f"{where}: image {entry['image']!r} must be a relative path inside the "
+                             "overrides folder (no absolute paths or '..' segments)")
     return data
 
 
@@ -57,7 +68,12 @@ def apply_overrides(slugs: list[str], cover_ids: list[str], spotify_ids: list[st
         if "a" in e:
             names[i] = e["a"].strip()
         if "image" in e:
+            if not _is_safe_relative(e["image"]):
+                raise ValueError(f"overrides[{slug!r}]: image {e['image']!r} must be a relative path")
+            root = base.resolve()
             p = (base / e["image"]).resolve()
+            if not p.is_relative_to(root):
+                raise ValueError(f"overrides[{slug!r}]: image {e['image']!r} resolves outside {root}")
             if not p.exists():
                 raise FileNotFoundError(p)
             images[i] = p
