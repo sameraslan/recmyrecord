@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /frontcreck
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      # Next and React move together (eslint-config-next and the React types track them).
+      next-react:
+        patterns:
+          - next
+          - eslint-config-next
+          - react
+          - react-dom
+          - "@types/react*"
+      dev-tooling:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+
+  - package-ecosystem: pip
+    directory: /data-pipeline
+    schedule:
+      interval: monthly
