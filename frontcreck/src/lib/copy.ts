@@ -75,6 +75,8 @@ export const COPY = {
     noWebgl: 'The map needs WebGL, which this browser has turned off. Search and lists still work.',
     preview: 'Map preview of the album and its closest albums',
     openMap: 'Open map',
+    /** Beside an album: leaves it for Explore with the map left where it is. */
+    exploreHere: 'Explore this area',
   },
   phone: { map: 'Map', list: 'List', mapLabel: 'Open the map', listLabel: 'Back to the list' },
   /** Typographic cover tile when the title has no letter or digit. */
