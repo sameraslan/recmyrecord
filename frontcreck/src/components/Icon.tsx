@@ -21,6 +21,12 @@ const PATHS = {
       <path d="M8 7.5l7-1M7 9l3 5.5M16 8l-4 6.5" />
     </>
   ),
+  compass: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m15.2 8.8-1.9 4.5-4.5 1.9 1.9-4.5z" />
+    </>
+  ),
   list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.5M4.5 12h.5M4.5 18h.5" />,
 } satisfies Record<string, ReactNode>;
 

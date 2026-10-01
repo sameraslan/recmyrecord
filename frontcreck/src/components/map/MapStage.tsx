@@ -12,6 +12,7 @@ import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-sta
 import { AmbientLayers } from '@/components/album/AmbientWash';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { buildMapData } from './data';
+import { ExploreHere } from './overlays/ExploreHere';
 import { MapCard } from './overlays/MapCard';
 import { MapHint } from './overlays/MapHint';
 import { NoWebGL } from './overlays/NoWebGL';
@@ -213,8 +214,10 @@ export function MapStage() {
 
   // Explore camera memory (mockup render: exploreCam). Leaving Explore saves the camera and drops the card;
   // coming back from an album (its close control, Escape or the header nav) restores it, or frames the whole map.
+  // "Explore this area" is the exception: it asks for Explore with the camera left where the album had it.
   const prevView = useRef<View>(view);
   const pendingReturn = useRef(false);
+  const exploreHere = useRef(false);
   // A layout effect, declared before the one below, so both see the same commit.
   useLayoutEffect(() => {
     const prev = prevView.current;
@@ -225,7 +228,8 @@ export function MapStage() {
       if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
       s.setSelected(null);
     }
-    pendingReturn.current = view === 'explore' && prev === 'album';
+    pendingReturn.current = view === 'explore' && prev === 'album' && !exploreHere.current;
+    exploreHere.current = false;
   }, [view]);
   // The pathname can change a commit before the album panel unmounts and clears the focus, so the camera moves
   // only once the map input has no focus (MusicMap applies the input in its layout effect, before this one);
@@ -309,6 +313,13 @@ export function MapStage() {
     [catalog, router],
   );
 
+  const onExploreHere = useCallback(() => {
+    exploreHere.current = true;
+    // Dropped before the route changes: with the focus still set, the panel inset easing away would reframe it.
+    useAppStore.getState().setFocus(null);
+    router.push('/map');
+  }, [router]);
+
   const failed = catalogStatus === 'error' || positionsStatus === 'error';
   return (
     <div
@@ -344,6 +355,7 @@ export function MapStage() {
         {interactive ? (
           <>
             <SimilaritySlider stop={stop} onChange={onStop} />
+            {mapData && view === 'album' && focus ? <ExploreHere onClick={onExploreHere} /> : null}
             {mapData ? <ZoomControls api={apiRef} /> : null}
             {/* No hint over an empty map: the data is still loading or failed to load. */}
             {mapData && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'explore' && selected !== null} album={view === 'album'} /> : null}
