@@ -35,14 +35,14 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 
 ## Audio
 
-The audio block is 64 numbers per album computed from 30-second preview clips (the evidence is in `experiments/preview_features/REPORT.md`, the design in `docs/superpowers/specs/2026-10-02-preview-audio-design.md`). It has two stages. The audio stage matches an album on Deezer or iTunes, runs each clip through Essentia's Discogs-EffNet model and stores the album's mean embedding; it is rare, needs the network and its own environment, and is not part of this package. The build stage, here, only reads the store, so anyone can rebuild the site data from committed files.
+The audio block is 64 numbers per album computed from 30-second preview clips (the evidence is in `experiments/preview_features/REPORT.md`, the design in `docs/superpowers/specs/2026-10-02-preview-audio-design.md`). It has two stages. The audio stage (`rmr_audio`, see The audio stage below) matches an album on Deezer or iTunes, runs each clip through Essentia's Discogs-EffNet model and stores the album's mean embedding; it is rare, needs the network and its own environment. The build stage (`rmr_pipeline`) only reads the store, so anyone can rebuild the site data from committed files.
 
 ### The store (`data-pipeline/audio/`, committed)
 
 | File | Contents |
 |---|---|
 | `embeddings/part-NNNN.npz` | Append-only shards: `keys` (the feature table's `URI`), `emb` (float16, 1,280 per album: the mean of its clips' embeddings), `n_clips`, `source` (`deezer`, `itunes:us`, `local`, ...). A key in a later shard replaces the earlier one. |
-| `manifest.json` | Model id, clip policy, one entry per shard. |
+| `manifest.json` | Model id, clip policy (`clips.per_album`: how many clips a plain `sync` gives an album), one entry per shard. |
 | `matches.csv` | One row per album: source, source album id, matched title and artist, score, `ambiguous`, track count, clips available. An empty source means no match. |
 | `match_overrides.json` | Hand corrections for the audio stage: key -> `{"source", "album_id"}` to force a match, or `{"skip": true}`. |
 | `transform.npz` | The frozen transform: `mean`, `components` (64 x 1,280), `scale`, `target_total_variance`, and the fit's date, album count and model id. |
@@ -72,11 +72,54 @@ The settings come from `experiments/preview_features/imputation.py` (`results/im
 ### Adding albums
 
 1. The album has a row in the feature table (descriptors, a unique `URI`, title, artist). Its Spotify audio columns can be empty.
-2. The audio stage adds its embedding as a new shard and its row in `matches.csv`. Check ambiguous or missing matches and correct them in `match_overrides.json`.
-3. Rebuild. An album with no shard entry is imputed.
-4. Commit the shard, `matches.csv` and the regenerated site data. A test fails when `recs.json` is not what the committed store gives.
+2. `.venv-audio/bin/python -m rmr_audio sync` (audio venv, below). It matches the album, embeds its clips, writes one new shard and adds the album's row to `matches.csv`.
+3. `.venv-audio/bin/python -m rmr_audio status --missing`. Check the ambiguous matches and the albums without audio; correct them in `match_overrides.json` or with local files, and run `sync` again.
+4. Rebuild (`rmr_pipeline.build`). An album with no shard entry is imputed.
+5. Commit the new shard, `manifest.json`, `matches.csv`, `match_overrides.json` and the regenerated site data. A test fails when `recs.json` is not what the committed store gives. Nothing under `.cache/` is committed.
 
 The album also has to be in the map inputs (cover sprite, cluster id), and the thumbnail sheet holds 4,096 albums.
+
+### The audio stage (`rmr_audio`)
+
+It has its own environment, because the arm64 Essentia wheel needs Python 3.11 and `numpy<2` while the build pins numpy 2.5 on Python 3.12:
+
+```bash
+uv venv --python 3.11 data-pipeline/.venv-audio      # or python3.11 -m venv
+uv pip install --python data-pipeline/.venv-audio/bin/python -r data-pipeline/requirements-audio.txt
+cd data-pipeline
+.venv-audio/bin/python -m rmr_audio status [--missing]    # counts; with --missing, the albums without audio
+.venv-audio/bin/python -m rmr_audio sync --dry-run        # what a sync would do; no network, nothing written
+nice -n 19 .venv-audio/bin/python -m rmr_audio sync       # albums missing from the store, at the store's clip policy
+nice -n 19 .venv-audio/bin/python -m rmr_audio sync --clips 8    # top every album up to 8 clips
+.venv-audio/bin/python -m rmr_audio compact               # rewrite all shards into one
+.venv-audio/bin/python -m pytest tests_audio              # its tests (no network)
+```
+
+The venv is about 560 MB. The model (`discogs-effnet-bs1-1.pb`, 18 MB) is fetched into `.cache/audio/models/` on the first sync, from the experiment's cache if it is there, else from essentia.upf.edu, and checked against a pinned SHA-256.
+
+`sync` works on every album of the feature table that is missing from the store or has fewer clips than asked. For each it reads the match from `matches.csv` (searching the stores only for an album never matched), fetches the track listing again (Deezer's preview URLs expire after 15 minutes), downloads the clips it still needs into memory, embeds them and records each clip in the local clip cache. At the end it writes one new shard with the mean of each finished album's clips and updates `matches.csv`. An album whose clips did not change is not rewritten.
+
+- Clips: the first track, then tracks spread evenly through the album, so an album's four clips are the first four of its eight. `--clips N` asks for N; without it the store's policy (`clips.per_album` in `manifest.json`) applies. A `--clips` run over the whole catalog that finishes makes N the policy. An album with fewer previews than N gets what there is.
+- Resuming: Ctrl-C or SIGTERM stops taking albums, lets the clips in flight finish (a few seconds) and writes the shard for the albums that finished. Running `sync` again continues; no clip is downloaded twice. `--limit N` stops after N albums, `--keys` takes URIs or slugs.
+- The clip cache (`.cache/audio/clips.sqlite`, gitignored) holds every clip's embedding. It is what lets a top-up from four to eight clips download only four. If it is lost nothing committed is lost; a top-up then downloads all eight. `python -m rmr_audio import-experiment` seeds it from the experiment's cache (only on the machine that ran the experiment) and checks that those clips reproduce `part-0001.npz` exactly.
+- Load: 2 worker processes by default (`--workers`), one thread each, at the lowest priority. Measured on an M-series laptop: about 2 clips a second, 600 to 770 MB per worker and 1.4 to 1.6 GB in all. No audio is written to disk beyond a temp file deleted right after decoding.
+- Failures: API errors and Deezer's quota answer are retried with backoff (Deezer is asked at most 5 times a second, iTunes once every 3.2 seconds). A clip that cannot be downloaded or decoded is recorded with its status and skipped; a download that failed is tried again by the next sync, an empty or too short preview is not. An album with no usable clip stays out of the store and is listed at the end. A worker that crashes costs one clip.
+
+**Matching.** Deezer first; iTunes when Deezer has no match, a doubtful one, or previews for fewer than half the tracks. The iTunes storefronts are tried in order (`--storefronts us,gb,jp,de,fr,ca,au,br` by default): the first one as the fallback, each further one only while there is still no match with a preview. The source is recorded as `deezer` or `itunes:<storefront>`. Albums recorded as unmatched are not searched again unless `--retry-unmatched` is given (or the album is named in `--keys`). API responses are cached for 30 days in `.cache/audio/http.sqlite`.
+
+**Match overrides** (`audio/match_overrides.json`, keyed by the album's `URI`):
+
+```json
+{
+  "spotify:album:...": { "source": "deezer", "album_id": "1261474", "note": "the match was a tribute album" },
+  "spotify:album:...": { "source": "itunes:jp", "album_id": "826492492" },
+  "spotify:album:...": { "skip": true, "note": "no store has the right recording" }
+}
+```
+
+A forced listing replaces the album's embedding at the next sync; `skip` keeps the album out of matching (an embedding it already has stays in the store).
+
+**Local files.** For an album no store has: put its files in `DIR/<album slug>/` (mp3, m4a, flac, wav, ogg, aiff; file-name order is track order) and run `sync --local-dir DIR`. `status --missing` prints the slugs as `slug<TAB>artist — title`. One excerpt per file: 30 seconds starting 30 seconds in, centred when the track is shorter than a minute, the whole file when it is shorter than 30 seconds (under 5 seconds is skipped). A folder takes precedence over the stores for that album, the source is recorded as `local`, and a later sync without `--local-dir` leaves the album alone. Adding, removing or replacing a file updates the album at the next `sync --local-dir`. The files are only read.
 
 ## Commands
 
@@ -90,6 +133,8 @@ cd data-pipeline
 .venv/bin/python -m pytest
 RMR_MAP_ROOT=/path/to/music_map .venv/bin/python -m pytest   # also compares sprites with the map's atlases
 ```
+
+`pytest` here runs `tests/` (the build). The audio stage's tests are in `tests_audio/` and run with the audio venv (see The audio stage); `tests/test_audio_store.py` passes in both.
 
 The pinned requirements need Python 3.12.
 
@@ -123,7 +168,7 @@ Only the Spotify link, the cover, the sprites, the ambient colours and (for `a`)
 - Some Spotify URIs in the feature table point at a different album. The verified ones are corrected in `overrides.json` (see Overrides). The URI stays the album's key in the audio store.
 - 137 albums have no preview audio and an imputed audio block (see Audio).
 - Audio matches are not all right: in the experiment's hand audit about 1% of confident matches and about a third of the 148 flagged `ambiguous` in `matches.csv` were the wrong album or edition.
-- The store has four clips per album. Eight would be closer to the whole album (experiment report, clip length).
+- The store has four clips per album. Eight would be closer to the whole album (experiment report, clip length): `rmr_audio sync --clips 8` tops it up (about 13,000 clips, about two hours with two workers). The site data and the tests that pin the committed store (album and shard counts, the transform, `recs.json`) then have to be rebuilt and updated together.
 - "One" by Neal Morse shows a Neal Francis sleeve. Unverified, so not corrected.
 - "Chill Out" (The KLF), "Gimix" (The Avalanches) and "Dark & Long" (Underworld) have no Spotify release, so they have no Spotify id and no cover id. The site shows no Spotify link for an album with an empty Spotify id. Their sprites and ambient colours use the corrected cover, but the site's cover component shows a cover id's image, then the sprite only when that image fails, so with no cover id it shows the typographic tile, not the sprite.
 - "Spiritual Unity" (Albert Ayler Trio) has no cover; the site shows a typographic tile.

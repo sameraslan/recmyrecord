@@ -78,14 +78,17 @@ Plain euclidean at every stop, as today. Mutual-proximity ranking at the balance
 Ported from `experiments/preview_features/` and reduced to what the block needs (matching, clip download, EffNet; no scalar features, heads or MusiCNN).
 
 ```
-python -m rmr_audio sync [--clips 8] [--keys K,...] [--workers 2] [--local-dir DIR] [--storefronts us,jp,gb,...]
+python -m rmr_audio sync [--clips N] [--keys K,...] [--limit N] [--workers 2] [--local-dir DIR]
+                         [--storefronts us,gb,jp,...] [--retry-unmatched] [--dry-run]
 python -m rmr_audio status [--missing]
 python -m rmr_audio compact
+python -m rmr_audio import-experiment
 ```
 
 - `sync` works on every album of the feature table that is missing from the store or has fewer than `--clips` clips: match (or reuse `matches.csv`), fetch fresh preview URLs, download each clip to memory, embed, record in the clip cache, and at the end write one new shard and update `matches.csv`. Resumable at clip level. No audio is written to disk beyond a temp file deleted after decoding.
 - Clip choice: track 1, then tracks spread evenly through the album (the experiment's priority order), so 4 clips and 8 clips nest.
 - Default 2 worker processes at low priority.
+- As built: `--clips` defaults to the store's policy (`clips.per_album` in the manifest, 4 today), so a plain `sync` only adds missing albums and never starts a catalog-wide top-up by accident; a finished whole-catalog `--clips 8` run makes 8 the policy. The mean is over the album's clips of rank below `--clips`, not over every cached clip, so all albums follow one policy. Albums recorded as unmatched are searched again only with `--retry-unmatched`. Storefronts after the first are asked only while there is no match with a preview. `import-experiment` seeds the clip cache from the experiment.
 - Its own `requirements-audio.txt` and venv, because the arm64 Essentia wheel needs `numpy<2` and Python 3.11 while the build pins numpy 2.5 on Python 3.12.
 
 ## Adding albums, end to end
