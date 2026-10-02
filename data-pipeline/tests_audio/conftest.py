@@ -33,12 +33,19 @@ def fake_emb(track_id: str) -> np.ndarray:
 
 class FakePool:
     """Stands in for the worker pool: every clip succeeds with fake_emb(track_id), except the clips
-    named in `status`, and a task holding a clip named in `crash` raises BrokenProcessPool."""
+    named in `status`; a task holding a clip named in `crash` raises BrokenProcessPool from its result, and
+    one holding a clip named in `submit_crash` raises it from submit itself, once (the pool was found broken)."""
 
-    def __init__(self, log: list, status: dict | None = None, crash: set | None = None, on_task=None):
+    def __init__(self, log: list, status: dict | None = None, crash: set | None = None, on_task=None,
+                 submit_crash: set | None = None):
         self.log, self.status, self.crash, self.on_task = log, status or {}, crash or set(), on_task
+        self.submit_crash = submit_crash if submit_crash is not None else set()
 
     def submit(self, fn, recs):
+        hit = {r["track_id"] for r in recs} & self.submit_crash
+        if hit:
+            self.submit_crash -= hit
+            raise BrokenProcessPool("the pool is broken")
         fut = Future()
         if any(r["track_id"] in self.crash for r in recs):
             fut.set_exception(BrokenProcessPool("a worker died"))
@@ -47,8 +54,8 @@ class FakePool:
         for r in recs:
             self.log.append((r["key"], r["track_id"]))
             r = {k: v for k, v in r.items() if k != "url"}
-            status = self.status.get(r["track_id"], "ok")
-            r.update(status=status, clip_s=30.0, emb=fake_emb(r["track_id"]).astype("<f2").tobytes() if status == "ok" else None)
+            status, _, error = self.status.get(r["track_id"], "ok").partition(":")
+            r.update(status=status, error=error or None, clip_s=30.0, emb=fake_emb(r["track_id"]).astype("<f2").tobytes() if status == "ok" else None)
             out.append(r)
         fut.set_result({"pid": 1, "rss": 0, "clips": out, "seconds": 0.0})
         if self.on_task:

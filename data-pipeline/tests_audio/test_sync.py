@@ -88,10 +88,33 @@ def test_a_clip_that_fails_is_recorded_and_skipped(world):
     assert any("'too_short': 1" in line and "'download_failed': 1" in line for line in lines)
     world.pool_args = {}
     log = len(world.log)
-    lines = world.run()  # the final failure is left alone, the transient one is tried again
-    assert world.log[log:] == [("key:2", "i2-0")]
-    assert "wrote part-0002.npz: 1 albums (0 new, 1 updated)" in lines
-    assert load_store(world.audio).n_clips.tolist() == [3, 4, 3]
+    lines = world.run()  # the next track takes the too-short clip's place; the failed download is tried again
+    assert world.log[log:] == [("key:0", f"d0-{priority_order(10)[4]}"), ("key:2", "i2-0")]
+    assert "wrote part-0002.npz: 2 albums (0 new, 2 updated)" in lines
+    assert load_store(world.audio).n_clips.tolist() == [4, 4, 3]
+    assert "3 up to date" in world.run()[0] and len(world.log) == log + 2
+
+
+def test_a_preview_refused_twice_is_not_asked_for_a_third_time(world):
+    world.pool_args = {"status": {"i2-0": "download_failed:HTTP 404, 0 bytes", "d1-0": "download_failed:ReadTimeout"}}
+    world.run()
+    world.run()
+    assert world.log.count(("key:2", "i2-0")) == 2 and world.log.count(("key:1", "d1-0")) == 2
+    world.run()
+    assert world.log.count(("key:2", "i2-0")) == 2  # final now: album 2 has every preview it can have
+    assert world.log.count(("key:1", "d1-0")) == 3  # a timeout is not a refusal: tried again
+    assert load_store(world.audio).n_clips.tolist() == [4, 3, 2]
+
+
+def test_a_pool_found_broken_at_submit_is_replayed_like_a_dead_worker(world):
+    """A worker died while the parent was fetching the next listing: submit itself raises."""
+    world.pool_args = {"submit_crash": {"d1-0"}}
+    lines = world.run()
+    assert any("a worker died" in line for line in lines)
+    s = load_store(world.audio)
+    assert s.keys.tolist() == ["key:0", "key:1", "key:2"] and s.n_clips.tolist() == [4, 4, 3]
+    assert len(world.log) == len(set(world.log)) == 11
+    assert len(load_matches(world.audio / "matches.csv")) == 5  # the run ended normally
 
 
 def test_an_album_with_no_usable_clip_stays_out_of_the_store(world):
@@ -170,14 +193,82 @@ def test_match_overrides_skip_and_force(world, monkeypatch):
     monkeypatch.setattr(matching, "forced", lambda http, source, album_id: matching.Match(
         source, album_id, "Right", "Artist 1", 1.0, False, 10, 10, "forced"))
     world.listings[("itunes:gb", "g1")] = listing("g1", 10)
-    lines = world.run(clips=8)
-    assert "2 skipped by match_overrides.json" in lines[0]
+    lines = world.run(clips=8, keys=("key:0", "key:1", "key:4"))
+    assert "1 to remove from the store" in lines[0] and "1 skipped by match_overrides.json" in lines[0]
+    assert "wrote part-0002.npz: 1 albums (0 new, 1 updated), 1 removed" in lines
     shard = read_shard(world.audio / "embeddings" / "part-0002.npz")
-    assert shard.keys.tolist() == ["key:1"] and shard.source.tolist() == ["itunes:gb"]
-    assert np.array_equal(shard.emb[0], _mean("g1", 10, 8))
+    assert shard.keys.tolist() == ["key:0", "key:1"] and shard.source.tolist() == ["", "itunes:gb"]
+    assert shard.n_clips.tolist() == [0, 8] and np.array_equal(shard.emb[1], _mean("g1", 10, 8))
+    rows = load_matches(world.audio / "matches.csv")
+    assert (rows[1]["source"], rows[1]["source_album_id"], rows[1]["matched_title"]) == ("itunes:gb", "g1", "Right")
+    assert rows[0] == match_row("key:0", "")  # the skipped album had an embedding: it is removed, and unmatched
+    s = load_store(world.audio)
+    assert s.keys.tolist() == ["key:1", "key:2"] and s.source.tolist() == ["itunes:gb", "itunes:us"]
+    lines = world.run(clips=8, keys=("key:0", "key:1", "key:4"))
+    assert "2 skipped by match_overrides.json" in lines[0] and len(load_manifest(world.audio)["shards"]) == 2
+
+
+def test_a_forced_listing_replaces_local_audio_and_one_without_previews_removes_the_embedding(world, tmp_path, monkeypatch):
+    folder = tmp_path / "local" / "title-0-artist-0"
+    folder.mkdir(parents=True)
+    (folder / "01.mp3").write_bytes(b"x")
+    world.run(local_dir=tmp_path / "local")
+    assert load_store(world.audio).source.tolist() == ["local", "deezer", "itunes:us"]
+    (world.audio / "match_overrides.json").write_text(json.dumps({
+        "key:0": {"source": "deezer", "album_id": "d0"},  # the listing matches.csv already names: local audio stays
+        "key:1": {"source": "itunes:gb", "album_id": "empty"}}))
+    monkeypatch.setattr(matching, "forced", lambda http, source, album_id: matching.Match(
+        source, album_id, "Right", "Artist", 1.0, False, 10, 0 if album_id == "empty" else 10, "forced"))
+    lines = world.run()
+    assert "problem\ttitle-1-artist-1\tmatched, but the listing has no preview" in lines
+    s = load_store(world.audio)
+    assert s.keys.tolist() == ["key:0", "key:2"] and s.source.tolist() == ["local", "itunes:us"]  # album 1 is gone
     row = load_matches(world.audio / "matches.csv")[1]
-    assert (row["source"], row["source_album_id"], row["matched_title"]) == ("itunes:gb", "g1", "Right")
-    assert load_store(world.audio).n_clips.tolist()[0] == 4  # the skipped album keeps what it had
+    assert (row["source"], row["source_album_id"], row["n_clips_available"]) == ("itunes:gb", "empty", "0")
+    (world.audio / "match_overrides.json").write_text(json.dumps({"key:0": {"source": "deezer", "album_id": "other"}}))
+    world.listings[("deezer", "other")] = listing("other", 10)
+    world.run()  # a forced listing that is not the one of matches.csv wins over local audio
+    s = load_store(world.audio)
+    assert s.source.tolist()[0] == "deezer" and np.array_equal(s.emb[0], _mean("other", 10, 4))
+
+
+def test_a_skipped_album_ignores_its_local_folder(world, tmp_path):
+    folder = tmp_path / "local" / "title-0-artist-0"
+    folder.mkdir(parents=True)
+    (folder / "01.mp3").write_bytes(b"x")
+    (world.audio / "match_overrides.json").write_text(json.dumps({"key:0": {"skip": True}}))
+    world.run(local_dir=tmp_path / "local")
+    assert "key:0" not in load_store(world.audio).keys.tolist() and not [k for k, _ in world.log if k == "key:0"]
+
+
+def test_the_policy_only_changes_when_the_whole_catalog_was_done(world):
+    world.run()
+    del world.listings[("deezer", "d1")]
+    lines = world.run(clips=8)
+    assert any(line.startswith("problem\ttitle-1-artist-1\tlisting failed") for line in lines)
+    assert load_manifest(world.audio)["clips"]["per_album"] == 4  # album 1 is left for the next run
+    world.listings[("deezer", "d1")] = listing("d1", 10)
+    world.run(clips=8)
+    assert load_manifest(world.audio)["clips"]["per_album"] == 8
+
+
+def test_leftovers_of_an_interrupted_write_are_ignored_then_removed(world):
+    from rmr_pipeline.audio_store import leftovers, write_shard
+    from rmr_audio.status import status
+
+    world.run()
+    stray = world.audio / "embeddings" / "part-0002.npz"  # a shard written, the manifest not yet: a crash in between
+    write_shard(stray, ["key:9"], fake_emb("x")[None], [4], ["deezer"])
+    (world.audio / "embeddings" / ".part-0003.npz.tmp").write_bytes(b"half a shard")
+    (world.audio / ".matches.csv.tmp").write_text("half a file")
+    assert load_store(world.audio).keys.tolist() == ["key:0", "key:1", "key:2"]  # the store still loads
+    assert "left by an interrupted write" in status(world.catalog, world.audio).splitlines()[-1]
+    lines = world.run(clips=8, keys=("key:0",))
+    assert "removed what an interrupted write left behind: .matches.csv.tmp, .part-0003.npz.tmp, part-0002.npz" in lines
+    assert not leftovers(world.audio)
+    s = load_store(world.audio)
+    assert s.keys.tolist() == ["key:0", "key:1", "key:2"] and s.n_clips.tolist() == [8, 4, 3]
+    assert [e["file"] for e in load_manifest(world.audio)["shards"]] == ["part-0001.npz", "part-0002.npz"]
 
 
 def test_the_store_catches_up_from_the_cache_without_downloading(world):
@@ -203,8 +294,12 @@ def test_dry_run_touches_nothing(world):
     lines = world.run(dry_run=True, clips=8)
     assert any(line.startswith("would embed  0 -> 8 clips (0 cached)") and line.endswith("title-0-artist-0") for line in lines)
     assert lines[-1] == "dry run: nothing fetched or written; about 27 clips to embed"  # 8 + 8 + 3 + 8 for the album to match
-    assert not world.fetched and not world.log and not (world.cache / "clips.sqlite").exists()
+    assert not world.fetched and not world.log and not world.cache.exists()
     assert not (world.audio / "embeddings").exists()
+    world.run()
+    before = {p: p.read_bytes() for p in list(world.cache.iterdir()) + list(world.audio.rglob("*")) if p.is_file()}
+    world.run(dry_run=True, clips=8)
+    assert before == {p: p.read_bytes() for p in list(world.cache.iterdir()) + list(world.audio.rglob("*")) if p.is_file()}
 
 
 def test_local_folder_takes_precedence_and_follows_its_files(world, tmp_path):

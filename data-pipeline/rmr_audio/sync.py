@@ -24,15 +24,16 @@ import sys
 import tempfile
 import time
 from collections import Counter
-from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
+from concurrent.futures import FIRST_COMPLETED, Future, ProcessPoolExecutor, wait
 from concurrent.futures.process import BrokenProcessPool
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 
-from rmr_pipeline.audio_store import (DEFAULT_AUDIO, StoreError, append_shard, load_manifest, load_match_overrides,
-                                      load_matches, load_store, set_clips_per_album, write_matches)
+from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, StoreError, append_shard, clean_leftovers, load_manifest,
+                                      load_match_overrides, load_matches, load_store, set_clips_per_album,
+                                      write_matches)
 
 from . import embed
 from . import match as matching
@@ -60,7 +61,8 @@ class Options:
 @dataclass
 class Item:
     """One album with work to do. kind: `match` (find its listing first), `clips` (download and embed),
-    `write` (its cached clips are enough, the store is behind), `local` (a folder of files)."""
+    `write` (its cached clips are enough, the store is behind), `local` (a folder of files), `drop` (it is
+    skipped by match_overrides.json and the store still has an embedding for it: remove it)."""
     album: Album
     kind: str
     source: str = ""
@@ -79,7 +81,7 @@ class Item:
     def line(self) -> str:
         what = {"match": "match, then embed", "write": f"write  {self.have} -> {self.want} clips (all cached)",
                 "clips": f"embed  {self.have} -> {self.want} clips ({self.cached} cached)",
-                "local": f"local  {self.want} files"}[self.kind]
+                "local": f"local  {self.want} files", "drop": "remove from the store (skipped)"}[self.kind]
         where = f"{self.source} {self.album_id}".strip() or "-"
         return f"{what:34s} {where:26s} {self.album.slug}"
 
@@ -94,6 +96,7 @@ class Plan:
         total = len(self.items) + sum(c.values())
         parts = [f"{c['up_to_date']} up to date", f"{kinds['clips']} to embed", f"{kinds['write']} to write from the cache",
                  f"{kinds['match']} to match", f"{kinds['local']} from local files"]
+        parts += [f"{kinds['drop']} to remove from the store"] if kinds["drop"] else []
         parts += [f"{c[k]} {text}" for k, text in (
             ("no_audio", "with no usable clip"), ("unmatched", "unmatched (not retried: --retry-unmatched)"),
             ("skipped", "skipped by match_overrides.json"), ("beyond_limit", "left for a later run (--limit)")) if c[k]]
@@ -104,15 +107,17 @@ def classify(al: Album, row: dict | None, override: dict | None, stored: tuple[i
              cached: dict, clips: int, retry_unmatched: bool) -> Item | str:
     """What one album needs, from files only (no network): an Item, or the reason it needs nothing
     (`up_to_date`, `no_audio`, `unmatched`, `skipped`). `stored` is (clips, source) of its embedding in
-    the store; `cached` maps (key, source, album_id) to the [(prio, status)] of the clip cache."""
+    the store; `cached` maps (key, source, album_id) to the [(prio, status)] of the clip cache.
+    Precedence: a `skip` override, then a forced listing not applied yet, then local audio already in
+    the store (only a --local-dir run touches it), then the listing of matches.csv."""
     have = stored[0] if stored else 0
     if override and override.get("skip"):
-        return "skipped"
-    if stored and stored[1] == "local":  # local files win; only a --local-dir run touches them
-        return "up_to_date"
+        return Item(al, "drop", have=have) if stored else "skipped"
     target = (row["source"], row["source_album_id"]) if row and row["source"] else None
     if override and (override["source"], override["album_id"]) != target:
         return Item(al, "match", override["source"], override["album_id"], have, clips, force=True)
+    if stored and stored[1] == "local":
+        return "up_to_date"
     if target is None or (retry_unmatched and row["n_clips_available"] in ("", "0")):
         if row is None or retry_unmatched:
             return Item(al, "match", have=have, want=clips)
@@ -120,16 +125,16 @@ def classify(al: Album, row: dict | None, override: dict | None, stored: tuple[i
     source, album_id = target
     available = int(row["n_clips_available"]) if row["n_clips_available"] != "" else None
     want = clips if available is None else min(clips, available)
-    mine = [(p, s) for p, s in cached.get((al.key, source, album_id), []) if p is not None and p < clips]
-    n_final, n_ok = sum(s in FINAL for _, s in mine), sum(s == "ok" for _, s in mine)
+    mine = [s for p, s in cached.get((al.key, source, album_id), []) if p is not None]
+    tried, n_ok = sum(s in FINAL for s in mine), min(clips, sum(s == "ok" for s in mine))
     behind = stored is None or stored[1] != source
-    if n_final >= want:  # every clip it can have was tried
+    if n_ok >= want or (available is not None and tried >= available):  # it has its clips, or every preview was tried
         if n_ok and (behind or n_ok > have):
             return Item(al, "write", source, album_id, have, n_ok)
         return "up_to_date" if stored else "no_audio"
     if not behind and have >= want:  # the store is at the target; the cache is only missing or partial
         return "up_to_date"
-    return Item(al, "clips", source, album_id, have, want, n_final)
+    return Item(al, "clips", source, album_id, have, want, n_ok)
 
 
 def local_item(al: Album, folder: Path, stored: tuple[int, str] | None, cache: ClipCache) -> Item | str:
@@ -155,7 +160,8 @@ def make_plan(catalog: list[Album], stored: dict[str, tuple[int, str]], matches:
         if wanted and al.key not in wanted and al.slug not in wanted:
             continue
         folder = opts.local_dir / al.slug if opts.local_dir else None
-        if folder is not None and folder.is_dir():
+        skipped = bool(overrides.get(al.key, {}).get("skip"))
+        if folder is not None and folder.is_dir() and not skipped:
             verdict = local_item(al, folder, stored.get(al.key), cache)
         else:
             verdict = classify(al, matches.get(al.key), overrides.get(al.key), stored.get(al.key), cached, clips,
@@ -170,23 +176,25 @@ def make_plan(catalog: list[Album], stored: dict[str, tuple[int, str]], matches:
 
 
 def needed_clips(al: Album, source: str, album_id: str, listing: list[dict], cached: list[dict], clips: int) -> list[dict]:
-    """The clips to download now: walk the listing's tracks that have a preview in priority order, skip
-    the ones the cache already holds a final answer for, and give each new one the next free rank below
-    `clips`. With an unchanged listing an album that has ranks 0..3 gets exactly ranks 4..7."""
+    """The clips to download now, so that the album has `clips` good ones: walk the listing's tracks that
+    have a preview in priority order, skip the ones the cache already holds a final answer for, and take
+    as many as are missing; a clip's rank is its place in that walk. With an unchanged listing an album
+    that has ranks 0..3 gets exactly ranks 4..7; a track whose clip failed for good (too short, no
+    audio) is replaced by the next one in the order."""
     playable = [(i, t) for i, t in enumerate(listing) if t["preview_url"]]
     final = {c["track_id"] for c in cached if c["status"] in FINAL}
-    taken = {c["prio"] for c in cached if c["status"] in FINAL and c["prio"] is not None}
-    free = [p for p in range(clips) if p not in taken]
+    refused = {c["track_id"] for c in cached if c["status"] == "download_failed" and (c.get("error") or "").startswith("HTTP 4")}
+    missing = clips - sum(c["status"] == "ok" for c in cached)
     out = []
-    for pos in priority_order(len(playable)) if playable else []:
-        if not free:
+    for rank, pos in enumerate(priority_order(len(playable)) if playable else []):
+        if len(out) >= missing:
             break
         idx, t = playable[pos]
         if t["track_id"] in final:
             continue
         out.append({"key": al.key, "source": source, "album_id": album_id, "track_id": t["track_id"], "track_idx": idx,
-                    "prio": free.pop(0), "url": t["preview_url"],
-                    "suffix": ".mp3" if source == "deezer" else ".m4a"})
+                    "prio": rank, "url": t["preview_url"], "suffix": ".mp3" if source == "deezer" else ".m4a",
+                    "refused_before": t["track_id"] in refused})
     return out
 
 
@@ -257,6 +265,9 @@ class Extraction:
         return needed_clips(item.album, item.source, item.album_id, listing, cached, self.clips)
 
     def record(self, item: Item, recs: list[dict]) -> None:
+        for rec in recs:  # a fresh URL refused (HTTP 4xx) in two runs is not tried a third time
+            if rec["status"] == "download_failed" and rec.get("refused_before") and (rec.get("error") or "").startswith("HTTP 4"):
+                rec.update(status="no_preview", error=rec["error"] + ", twice")
         self.cache.put(recs)
         item.pending -= len(recs)
         item.changed = True
@@ -274,7 +285,15 @@ class Extraction:
             self.last = now
 
     def submit(self, pool, item: Item, recs: list[dict]) -> None:
-        self.inflight[pool.submit(embed.process, recs)] = (item, recs)
+        """Hand the album's clips to the pool. A pool that broke since the last look (a worker died while
+        the parent was fetching a listing) refuses the task: it is kept as a failed future, so the main
+        loop replays it with the others."""
+        try:
+            fut = pool.submit(embed.process, recs)
+        except BrokenProcessPool as e:
+            fut = Future()
+            fut.set_exception(e)
+        self.inflight[fut] = (item, recs)
 
     def collect(self, fut) -> None:
         item, _ = self.inflight[fut]
@@ -293,9 +312,8 @@ class Extraction:
             if self.stop.now:
                 break
             rec = {k: v for k, v in rec.items() if k not in ("status", "error", "emb", "clip_s")}
-            fut = pool.submit(embed.process, [rec])
             try:
-                self.record(item, fut.result()["clips"])
+                self.record(item, pool.submit(embed.process, [rec]).result()["clips"])
             except BrokenProcessPool:
                 self.record(item, [dict(rec, status="crashed", error="worker process died")])
                 pool = self.new_pool(1)
@@ -379,6 +397,8 @@ def preview_matches(opts: Options, catalog: list[Album], http=None, out=print) -
     plan = make_plan(catalog, stored, matches, overrides, ClipCache(":memory:"), opts, clips)
     todo = [i for i in plan.items if i.kind == "match"]
     http = http or matching.Http(opts.cache_dir / "http.sqlite")
+    if isinstance(http, matching.Http) and opts.retry_unmatched:
+        http.search_max_age_days = matching.RETRY_SEARCH_DAYS
     counts: Counter = Counter()
     for item in todo:
         al = item.album
@@ -414,7 +434,10 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
     matches = {r["key"]: r for r in match_rows}
     clips = opts.clips or int(manifest["clips"].get("per_album", 4))
     clips_db = opts.cache_dir / "clips.sqlite"
-    cache = ClipCache(":memory:" if opts.dry_run and not clips_db.exists() else clips_db)
+    if opts.dry_run:  # nothing is created or written, not even an empty cache
+        cache = ClipCache(clips_db, readonly=True) if clips_db.exists() else ClipCache(":memory:")
+    else:
+        cache = ClipCache(clips_db)
     plan = make_plan(catalog, stored, matches, overrides, cache, opts, clips)
     out(f"sync to {clips} clips per album. " + plan.summary())
     if opts.dry_run:
@@ -422,7 +445,7 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
             out("would " + item.line())
         if len(plan.items) > 40:
             out(f"... and {len(plan.items) - 40} more")
-        n = sum(max(0, i.want - i.cached) for i in plan.items if i.kind != "write")
+        n = sum(max(0, i.want - i.cached) for i in plan.items if i.kind not in ("write", "drop"))
         out(f"dry run: nothing fetched or written; about {n} clips to embed" if plan.items else "dry run: nothing to do")
         cache.close()
         return 0
@@ -436,9 +459,14 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
     stop.install()
     if isinstance(http, matching.Http):
         http.abort = lambda: stop.asked
+        if opts.retry_unmatched:
+            http.search_max_age_days = matching.RETRY_SEARCH_DAYS
     changed_rows: dict[str, dict] = {}
     tmp = tempfile.mkdtemp(prefix="rmr-audio-")
     try:
+        gone = clean_leftovers(opts.audio_dir)
+        if gone:
+            out(f"removed what an interrupted write left behind: {', '.join(gone)}")
         # 1. Albums never matched (or forced to another listing): ask the stores.
         todo = [i for i in plan.items if i.kind == "match"]
         for n, item in enumerate(todo, 1):
@@ -464,6 +492,8 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
                 item.kind, item.source, item.album_id, item.want = "clips", m.source, m.album_id, min(clips, m.n_previews)
             else:
                 item.problem = "no match" if not m.source else "matched, but the listing has no preview"
+                if item.force and al.key in stored:  # the forced listing has no audio: the old embedding goes
+                    item.kind = "drop"
 
         # 2. Download and embed.
         work = [i for i in plan.items if i.kind in ("clips", "local")]
@@ -496,15 +526,28 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
                 else:
                     changed_rows[key] = row
 
-        # 3. One shard with the albums that finished, and matches.csv.
-        keys, embs, counts, sources, new, grown = [], [], [], [], 0, 0
+        # 3. matches.csv, then one shard with the albums that finished (and the removals), then the rows of
+        #    forced listings. Each write is atomic, and a crash between them is repaired by the next sync.
+        keys, embs, counts, sources, new, grown, dropped = [], [], [], [], 0, 0, 0
+        late_rows: dict[str, dict] = {}
+
+        def drop(item: Item, row: dict) -> None:
+            nonlocal dropped
+            keys.append(item.album.key), embs.append(np.zeros(DIM)), counts.append(0), sources.append("")
+            late_rows[item.album.key], dropped = row, dropped + 1
+
         for item in plan.items:
+            was = stored.get(item.album.key)
+            if item.kind == "drop":
+                drop(item, item.row or {k: str(v) for k, v in matching.Match().row(item.album.key).items()})
+                continue
             if item.kind == "match" or (item.kind != "write" and not item.done):
                 continue
             mean, n = cache.mean(item.album.key, item.source, item.album_id, None if item.kind == "local" else clips)
-            was = stored.get(item.album.key)
             if mean is None:
                 item.problem = item.problem or "no usable clip"
+                if item.force and was:  # forced to a listing that gave no clip: the old embedding goes
+                    drop(item, item.row)
                 continue
             if item.kind == "local":
                 if was == (n, "local") and not item.changed:
@@ -513,28 +556,42 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
                 continue
             keys.append(item.album.key), embs.append(mean), counts.append(n), sources.append(item.source)
             if item.row:
-                changed_rows[item.album.key] = item.row
+                late_rows[item.album.key] = item.row
             new, grown = new + (was is None), grown + (was is not None)
         interrupted = stop.asked
+        order = {al.key: i for i, al in enumerate(catalog)}
+
+        def write_rows(rows: dict[str, dict]) -> None:
+            matches.update(rows)
+            write_matches(matches_path, sorted(matches.values(), key=lambda r: order.get(r["key"], len(order))))
+
+        if changed_rows:
+            write_rows(changed_rows)
         if keys:
-            note = (f"sync to {clips} clips: {new} new, {grown} updated" + (" (interrupted)" if interrupted else ""))
+            note = (f"sync to {clips} clips: {new} new, {grown} updated" + (f", {dropped} removed" if dropped else "")
+                    + (" (interrupted)" if interrupted else ""))
             path = append_shard(opts.audio_dir, keys, np.stack(embs), counts, sources, note=note)
-            out(f"wrote {path.name}: {len(keys)} albums ({new} new, {grown} updated)")
+            out(f"wrote {path.name}: {len(keys) - dropped} albums ({new} new, {grown} updated)"
+                + (f", {dropped} removed" if dropped else ""))
         else:
             out("no album changed: no shard written")
-        if changed_rows:
-            order = {al.key: i for i, al in enumerate(catalog)}
-            merged = {**matches, **changed_rows}
-            write_matches(matches_path, sorted(merged.values(), key=lambda r: order.get(r["key"], len(order))))
-            out(f"matches.csv: {len(changed_rows)} rows added or changed")
-        whole = not opts.keys and opts.limit is None and not interrupted
+        if late_rows:
+            write_rows(late_rows)
+        if changed_rows or late_rows:
+            out(f"matches.csv: {len({**changed_rows, **late_rows})} rows added or changed")
+        down = http.down() if isinstance(http, matching.Http) else []
+        if down:
+            out(f"{' and '.join(down)} stopped answering: the albums that needed it are left for the next run")
+        unfinished = [i for i in plan.items if (i.kind in ("clips", "local") and not i.done)
+                      or (i.kind == "match" and i.problem.startswith("matching failed"))]
+        whole = not opts.keys and opts.limit is None and not interrupted and not unfinished
         if whole and clips > int(manifest["clips"].get("per_album", 0)):
             set_clips_per_album(opts.audio_dir, clips)
             out(f"manifest.json: the store's clip policy is now {clips} per album")
         problems = [i for i in plan.items if i.problem]
         for item in problems:
             out(f"problem\t{item.album.slug}\t{item.problem}")
-        left = sum(1 for i in plan.items if not i.problem and i.kind != "write" and not i.done)
+        left = sum(1 for i in plan.items if not i.problem and i.kind not in ("write", "drop") and not i.done)
         if left:
             out(f"{left} albums not finished; run sync again to continue")
     finally:

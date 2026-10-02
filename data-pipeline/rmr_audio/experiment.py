@@ -63,7 +63,7 @@ def check_first_shard(cache: ClipCache, audio_dir: Path) -> int | None:
         "SELECT DISTINCT key, source, album_id FROM clips")}
     for key, emb, n_clips, source in zip(shard.keys.tolist(), shard.emb, shard.n_clips.tolist(), shard.source.tolist()):
         assert key in listing and listing[key][0] == source, f"{key}: not in the clip cache as a {source} album"
-        mean, n = cache.mean(key, *listing[key], FIRST_SHARD_CLIPS)
+        mean, n = cache.mean(key, *listing[key], FIRST_SHARD_CLIPS, below_rank=True)
         assert n == n_clips, f"{key}: {n} cached clips, the shard says {n_clips}"
         assert np.array_equal(mean.astype(np.float16), emb), f"{key}: the cached clips do not give the shard's mean"
     return len(shard.keys)

@@ -2,7 +2,7 @@
 from collections import Counter
 from pathlib import Path
 
-from rmr_pipeline.audio_store import load_manifest, load_match_overrides, load_matches, load_store
+from rmr_pipeline.audio_store import leftovers, load_manifest, load_match_overrides, load_matches, load_store
 
 from .catalog import Album
 
@@ -39,6 +39,10 @@ def status(catalog: list[Album], audio_dir: Path, missing: bool = False) -> str:
         f"{sum(1 for al in without if not row(al) and al.key not in skips)} never synced, "
         f"{sum(1 for al in without if al.key in skips)} skipped by match_overrides.json",
     ]
+    left = leftovers(audio_dir)
+    if left:
+        lines.append(f"left by an interrupted write (ignored; the next sync or compact removes them): "
+                     + ", ".join(p.name for p in left))
     if missing:
         lines += [f"{al.slug}\t{al.artist} — {al.title}" for al in without]
     return "\n".join(lines)

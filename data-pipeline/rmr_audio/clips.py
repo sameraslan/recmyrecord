@@ -9,8 +9,9 @@ up then downloads all of its clips again.
                           file has source `local` and an empty album_id
   track_id                the store's track id, or the file name
   track_idx               the track's position in the listing (or among the folder's files)
-  prio                    the clip's rank in the album's clip order; an album's N-clip mean is the
-                          mean of its `ok` clips with prio < N
+  prio                    the clip's rank in the album's clip order (its place in priority_order when
+                          it was taken); an album's N-clip mean is the mean of its first N `ok`
+                          clips in rank order, so a clip that failed does not use up a place
   status                  ok | no_preview (none, or an empty one) | too_short | decode_failed
                           (final: never tried again)
                           download_failed | analysis_failed | crashed (tried again by the next sync)
@@ -44,7 +45,12 @@ def to_blob(emb: np.ndarray) -> bytes:
 
 
 class ClipCache:
-    def __init__(self, path: Path | str):
+    def __init__(self, path: Path | str, readonly: bool = False):
+        """`readonly` opens an existing cache without creating or changing anything (dry runs)."""
+        self.readonly = readonly
+        if readonly:
+            self.con = sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=60)
+            return
         if str(path) != ":memory:":
             Path(path).parent.mkdir(parents=True, exist_ok=True)
         self.con = sqlite3.connect(path, timeout=60)
@@ -62,9 +68,9 @@ class ClipCache:
     def album(self, key: str, source: str, album_id: str) -> list[dict]:
         """The album's clips from one listing, without embeddings, by prio then track."""
         rows = self.con.execute(
-            "SELECT track_id, track_idx, prio, status, sig FROM clips WHERE key = ? AND source = ? AND album_id = ? "
+            "SELECT track_id, track_idx, prio, status, sig, error FROM clips WHERE key = ? AND source = ? AND album_id = ? "
             "ORDER BY prio IS NULL, prio, track_idx", (key, source, album_id)).fetchall()
-        return [dict(zip(("track_id", "track_idx", "prio", "status", "sig"), r)) for r in rows]
+        return [dict(zip(("track_id", "track_idx", "prio", "status", "sig", "error"), r)) for r in rows]
 
     def summary(self) -> dict[tuple[str, str, str], list[tuple[int | None, str]]]:
         """(key, source, album_id) -> [(prio, status)] for every clip: what planning needs, in one query."""
@@ -79,19 +85,24 @@ class ClipCache:
                              [(key, source, album_id, t) for t in track_ids])
         self.con.commit()
 
-    def mean(self, key: str, source: str, album_id: str, clips: int | None) -> tuple[np.ndarray | None, int]:
-        """(mean embedding in float64, number of clips) over the album's ok clips with prio < clips (all of
-        them when clips is None), taken in track order; (None, 0) when it has none."""
+    def mean(self, key: str, source: str, album_id: str, clips: int | None,
+             below_rank: bool = False) -> tuple[np.ndarray | None, int]:
+        """(mean embedding in float64, number of clips) over the album's first `clips` ok clips in rank
+        order (all of them when clips is None), averaged in track order; (None, 0) when it has none.
+        `below_rank` takes the ok clips with prio < clips instead: how the experiment's shard was made."""
         rows = self.con.execute(
-            "SELECT emb FROM clips WHERE key = ? AND source = ? AND album_id = ? AND status = 'ok' "
-            "AND emb IS NOT NULL AND (? IS NULL OR prio < ?) ORDER BY track_idx", (key, source, album_id, clips, clips)
-        ).fetchall()
+            "SELECT emb, track_idx, prio FROM clips WHERE key = ? AND source = ? AND album_id = ? AND status = 'ok' "
+            "AND emb IS NOT NULL ORDER BY prio, track_idx", (key, source, album_id)).fetchall()
+        if clips is not None:
+            rows = [r for r in rows if r[2] < clips] if below_rank else rows[:clips]
+        rows = sorted(rows, key=lambda r: r[1])
         if not rows:
             return None, 0
-        stack = np.stack([np.frombuffer(b, "<f2").astype(np.float32) for b, in rows])
+        stack = np.stack([np.frombuffer(r[0], "<f2").astype(np.float32) for r in rows])
         assert stack.shape[1] == DIM
         return stack.astype(np.float64).mean(axis=0), len(rows)
 
     def close(self) -> None:
-        self.con.commit()
+        if not self.readonly:
+            self.con.commit()
         self.con.close()
