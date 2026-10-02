@@ -104,17 +104,17 @@ def test_target_variance_is_the_spotify_blocks(deduped, audio):
     assert audio.transform.target_total_variance == pytest.approx(spotify.var(axis=0).sum(), rel=1e-9)
 
 
-def test_block_agrees_with_the_experiments_d64(deduped, audio):
-    """The experiment's published transform on the stored embeddings gives the same block: the
-    production fit is the experiment's, up to the float16 rounding of the stored album means."""
-    sub, _ = deduped
+def test_transform_stays_close_to_the_experiments_d64(audio):
+    """The committed transform was refitted on eight-clip means (the experiment's D64 was fitted on four clips
+    per album). It is still that projection: nearly the same 64-dimensional subspace, the same leading
+    directions, the same variance target and almost the same scale."""
     z = np.load(EXPERIMENT_TRANSFORM)
-    store = load_store(DEFAULT_AUDIO)
-    e = store.emb[store.rows(sub["URI"][audio.has_audio])].astype(np.float64)
-    e /= np.linalg.norm(e, axis=1, keepdims=True)
-    d64 = (e - z["mean"].astype(np.float64)) @ z["components"].T.astype(np.float64) * float(z["scale"])
-    assert np.abs(audio.block[audio.has_audio] - d64).max() < 5e-4
-    assert audio.transform.scale == pytest.approx(float(z["scale"]), rel=1e-6)
+    ours, theirs = audio.transform.components.astype(np.float64), z["components"].astype(np.float64)
+    cos = ours @ theirs.T
+    assert (cos ** 2).sum() / BLOCK_DIMS > 0.9  # share of our subspace inside the experiment's
+    assert np.abs(np.diag(cos))[:8].min() > 0.95
+    assert audio.transform.scale == pytest.approx(float(z["scale"]), rel=0.02)
+    assert np.linalg.norm(audio.transform.mean - z["mean"]) < 0.05
 
 
 def test_a_fit_on_the_fitted_albums_reproduces_the_committed_transform(deduped, audio, tmp_path):
