@@ -1,6 +1,6 @@
 """Does the conclusion depend on how many tracks per album are analysed?
 
-CLI: python tracks_per_album.py [--variants Ball,Cvm,D24,Dn24,E,F] [--out DIR] [--fixture]
+CLI: python tracks_per_album.py [--variants Ball,Cvm,D24,D64,Dn24,E,F] [--rows FILE] [--out DIR] [--fixture]
      -> tracks_per_album.{md,json}
 
 Album features are rebuilt from the first 1, 2 and 4 tracks in the extractor's priority order
@@ -21,15 +21,19 @@ from common import FEATURES_DB, MATCH_DB, RESULTS
 from evaluate import CONDITIONS, GENRE, _table, coherence_matrices, matrix, overlap, row_nanmean
 from fixture import FIXTURE
 from rmr_pipeline.recs import top_k_neighbours
+from simbench import pool_rows
 from variants import build_variants, make_inputs
 
 COUNTS = (1, 2, 4)
 
 
-def run(names: list[str], dbs: dict, seed: int = 0) -> dict:
-    """Every metric per track count, variant and condition; A (which no count changes) under "A"."""
+def run(names: list[str], dbs: dict, seed: int = 0, snapshot=None) -> dict:
+    """Every metric per track count, variant and condition; A (which no count changes) under "A".
+    `snapshot` restricts the pool to those rows."""
     frames = {k: aggregate(**dbs, prio_below=k) for k in COUNTS}
     rows = set.intersection(*(set(f["row"]) for f, _ in frames.values()))
+    if snapshot is not None:
+        rows &= set(snapshot.tolist())
     res, lists = {"albums": len(rows), "variants": names, "counts": {}}, {}
     for k in COUNTS:
         inp = make_inputs(*frames[k], rows)
@@ -74,7 +78,8 @@ def report(res: dict) -> str:
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--variants", default="Ball,Cvm,D24,Dn24,E,F")
+    p.add_argument("--variants", default="Ball,Cvm,D24,D64,Dn24,E,F")
+    p.add_argument("--rows", type=Path, help="album snapshot to restrict the pool to (see simbench.pool_rows)")
     p.add_argument("--fixture", action="store_true", help="run on the synthetic caches")
     p.add_argument("--out", type=Path)
     p.add_argument("--seed", type=int, default=0)
@@ -82,7 +87,7 @@ def main() -> None:
     dbs = {"db": FIXTURE / "features.sqlite", "match_db": FIXTURE / "match.sqlite"} if args.fixture else {
         "db": FEATURES_DB, "match_db": MATCH_DB}
     out = args.out or (FIXTURE / "results" if args.fixture else RESULTS)
-    res = run(args.variants.split(","), dbs, args.seed)
+    res = run(args.variants.split(","), dbs, args.seed, pool_rows(args.rows) if args.rows else None)
     out.mkdir(parents=True, exist_ok=True)
     (out / "tracks_per_album.json").write_text(json.dumps(res, indent=1) + "\n", encoding="utf-8")
     (out / "tracks_per_album.md").write_text(report(res) + "\n", encoding="utf-8")

@@ -7,7 +7,8 @@ CLI:
   python evaluate.py --subset clean     train the Ridge on the clean seed group only (default: all)
   python evaluate.py --baseline         A and the controls on the whole catalog -> results/baseline/
   python evaluate.py --fixture          synthetic caches (built if missing) -> cache/fixture/results/
-  python evaluate.py --features PATH --embeddings PATH --out DIR --seed-variants A,Cvm,D24,E
+  python evaluate.py --features PATH --embeddings PATH --out DIR --seed-variants A,D64,D64~mp,Cvm
+  python evaluate.py --rows FILE        only the albums of a snapshot (simbench.pool_rows; written if missing)
 
 Features come straight from cache/features.sqlite through aggregate.py (read-only), or from the
 two parquet files when both are given.
@@ -26,8 +27,10 @@ whose Spotify features belong to another record, `clean` keeps the unambiguous s
 matches, and `ambiguous` / `unambiguous` split by the matcher's flag. Confidence intervals are
 95% percentile bootstraps over seeds (paired for differences against A).
 
-Also: a balanced-stop sweep of the audio block's scale for A, D24 and E (is the slider still
+Also: a balanced-stop sweep of the audio block's scale for A, D24, D64 and E (is the slider still
 tuned once the block changes?), and matching / extraction coverage read from the two caches.
+seeds.md / seeds.json hold the top 10 of the listening seeds per variant; a `name~mp` variant is
+the block `name` ranked by mutual proximity (simbench.mutual_proximity).
 """
 import argparse
 import json
@@ -43,7 +46,7 @@ from scipy.stats import rankdata
 from sklearn.metrics.pairwise import euclidean_distances
 
 from aggregate import aggregate
-from common import FEATURES_DB, MATCH_DB, RESULTS, TABLE_NORM, load_albums
+from common import ALBUMS_JSON, FEATURES_DB, MATCH_DB, RESULTS, TABLE_NORM, load_albums
 from fixture import FIXTURE, make_fixture
 from genres import load_genres, match_matrices
 from rmr_pipeline.artists import clean_artist
@@ -57,7 +60,7 @@ AGREEMENT = ("overlap10", "spearman_full", "spearman_top100")
 GENRE = ("genre_primary", "genre_any", "genre_family")
 TOP = 100
 N_BOOT = 1000
-SWEEP_VARIANTS = ("A", "D24", "E")
+SWEEP_VARIANTS = ("A", "D24", "D64", "E")
 SWEEP_SCALES = (0.5, 0.7, 1.0, 1.4, 2.0)
 MAX_FAILURE_ROWS = 5000  # extract_failures.csv is written only when it stays this small
 # `row` of the listening seeds (well-known, stylistically spread).
@@ -79,7 +82,15 @@ SEEDS = [
     57,    # Stevie Wonder, Songs in the Key of Life
     245,   # Berliner Philharmoniker / Karajan, Symphony No. 9
     430,   # Bob Marley & The Wailers, Exodus
+    # hard cases
+    48,    # Miles Davis, Bitches Brew (long-track jazz: a preview covers 2% of a track)
+    50,    # Yes, Close to the Edge (prog, side-long tracks)
+    1077,  # Brian Eno, Ambient 1: Music for Airports (ambient)
+    664,   # Stars of the Lid, And Their Refinement of the Decline (drone)
+    277,   # Jorge Ben, A Tábua de Esmeralda (Portuguese-language)
+    531,   # Philip Glass, Koyaanisqatsi (one RYM descriptor)
 ]
+SEED_STOPS = ("sonic", "balanced")
 
 
 def matrix(audio: np.ndarray | None, desc: np.ndarray, cond: str) -> np.ndarray:
@@ -282,7 +293,16 @@ def evaluate(inp: Inputs, seed: int = 0) -> tuple[dict, dict]:
         "in_rainbows": in_rainbows(inp, blocks, desc),
     }
     failures = albums.loc[~genres["joined"], ["row", "Artist", "Title"]]
-    return out, {"lists": lists, "genre_failures": failures}
+    return out, {"lists": lists, "genre_failures": failures, "blocks": blocks, "desc": desc}
+
+
+def add_rescaled(lists: dict, blocks: dict, desc: np.ndarray, names: list[str]) -> None:
+    """Adds to `lists`, at the seed stops, the top 10 of every `block~rescale` name: the block's
+    distances rescaled by a hubness reduction of simbench.RESCALE before ranking."""
+    from simbench import RESCALE, distances, nearest  # simbench imports this module
+    for block, _, how in (n.partition("~") for n in names):
+        for stop in SEED_STOPS if how else ():
+            lists[stop][f"{block}~{how}"] = nearest(RESCALE[how](distances(matrix(blocks[block], desc, stop))))
 
 
 def label(albums, i: int) -> str:
@@ -296,7 +316,7 @@ def seeds_md(inp: Inputs, lists: dict, names: list[str]) -> str:
     with closing(sqlite3.connect(f"file:{MATCH_DB}?mode=ro", uri=True)) as con:
         matched = {r for (r,) in con.execute("SELECT row FROM albums WHERE status = 'matched'")}
     out = ["# Listening seeds", "", f"Top 10 per variant ({', '.join(names)}). **Bold** = also in A's top 10 "
-           "at that stop. The last line counts them.", ""]
+           "at that stop. The last line counts them. `~mp` = ranked by mutual proximity.", ""]
     for row in SEEDS:
         if row not in pos:
             why = "matched, but no track analysed" if row in matched else "not matched: no previews to analyse"
@@ -306,7 +326,7 @@ def seeds_md(inp: Inputs, lists: dict, names: list[str]) -> str:
         i = pos[row]
         wrong = "" if inp.seeds["all"][i] else " (Spotify features of another record: A is unreliable here)"
         out += [f"## {label(albums, i)}{wrong}", ""]
-        for stop in ("sonic", "balanced"):
+        for stop in SEED_STOPS:
             ref = set(lists[stop]["A"][i].tolist())
             out += [f"### {stop}", "", "| # | " + " | ".join(names) + " |", "|---|" + "---|" * len(names)]
             for k in range(10):
@@ -316,6 +336,26 @@ def seeds_md(inp: Inputs, lists: dict, names: list[str]) -> str:
             shared = [str(len(ref & set(lists[stop][n][i].tolist()))) for n in names]
             out += ["| shared | " + " | ".join(shared) + " |", ""]
     return "\n".join(out)
+
+
+def seeds_json(inp: Inputs, lists: dict, names: list[str]) -> dict:
+    """The lists of seeds.md as data: per listening seed in the pool, stop and variant, the ordered
+    top 10 as {row, title, artist, spotify_id}. `spotify_id` is albums.json's `s` (the table's URI
+    with the pipeline's corrections), joined by position: album i of albums.json is album i of
+    load_albums()."""
+    catalog, site = load_albums(), json.loads(ALBUMS_JSON.read_text(encoding="utf-8"))
+    assert len(site) == len(catalog)
+    spotify = dict(zip(catalog["row"], (a["s"] for a in site)))
+    albums, pos = inp.albums, {int(r): i for i, r in enumerate(inp.albums["row"])}
+
+    def entry(i: int) -> dict:
+        row = int(albums.loc[i, "row"])
+        return {"row": row, "title": str(albums.loc[i, "Title"]), "artist": clean_artist(albums.loc[i, "Artist"]),
+                "spotify_id": spotify[row]}
+
+    return {"variants": names, "stops": list(SEED_STOPS), "seeds": [
+        entry(pos[row]) | {"lists": {stop: {n: [entry(int(j)) for j in lists[stop][n][pos[row]]] for n in names}
+                                     for stop in SEED_STOPS}} for row in SEEDS if row in pos]}
 
 
 def _table(header: list[str], rows: list[list[str]]) -> list[str]:
@@ -428,7 +468,8 @@ def main() -> None:
     p.add_argument("--fixture", action="store_true", help="run on the synthetic caches")
     p.add_argument("--out", type=Path)
     p.add_argument("--subset", default="all", choices=("all", "clean"), help="seed group the Ridge trains on")
-    p.add_argument("--seed-variants", help="columns of seeds.md (default A,Cvm,D24,E; A,Z0,Zs for --baseline)")
+    p.add_argument("--seed-variants", help="columns of seeds.md (default A,D64,D64~mp,Cvm; A,Z0,Zs for --baseline)")
+    p.add_argument("--rows", type=Path, help="album snapshot to restrict the pool to (written if missing)")
     p.add_argument("--seed", type=int, default=0)
     args = p.parse_args()
     t0 = time.time()
@@ -440,7 +481,11 @@ def main() -> None:
     if args.baseline or args.features:
         inp = load_inputs(args.features, args.embeddings, args.subset)
     elif dbs["db"].exists():
-        inp = make_inputs(*aggregate(**dbs, prio_below=args.tracks or None), subset=args.subset)
+        rows = None
+        if args.rows:
+            from simbench import pool_rows  # simbench imports this module
+            rows = pool_rows(args.rows)
+        inp = make_inputs(*aggregate(**dbs, prio_below=args.tracks or None), rows, args.subset)
     else:
         p.error(f"{dbs['db']} is missing; run extract.py, or pass --baseline, --fixture or --features/--embeddings")
     res, extra = evaluate(inp, args.seed)
@@ -451,14 +496,18 @@ def main() -> None:
         if len(failures) <= MAX_FAILURE_ROWS:
             failures.to_csv(out / "extract_failures.csv", index=False)
     res["runtime_s"] = round(time.time() - t0, 1)
-    shown = (args.seed_variants or ("A,Z0,Zs" if args.baseline else "A,Cvm,D24,E")).split(",")
-    if unknown := [n for n in shown if n not in extra["lists"]["sonic"]]:
+    shown = (args.seed_variants or ("A,Z0,Zs" if args.baseline else "A,D64,D64~mp,Cvm")).split(",")
+    if unknown := [n for n in shown if n.partition("~")[0] not in extra["lists"]["sonic"]]:
         p.error(f"unknown --seed-variants {unknown}; have {list(extra['lists']['sonic'])}")
+    n_variants = len(extra["lists"]["sonic"])
+    add_rescaled(extra["lists"], extra["blocks"], extra["desc"], shown)
     (out / "metrics.json").write_text(json.dumps(res, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
     (out / "metrics.md").write_text(metrics_md(res) + "\n", encoding="utf-8")
     (out / "seeds.md").write_text(seeds_md(inp, extra["lists"], shown) + "\n", encoding="utf-8")
+    (out / "seeds.json").write_text(json.dumps(seeds_json(inp, extra["lists"], shown), indent=1, ensure_ascii=False) + "\n",
+                                    encoding="utf-8")
     extra["genre_failures"].to_csv(out / "genre_join_failures.csv", index=False)
-    print(f"{len(inp.albums)} albums, {len(extra['lists']['sonic'])} variants, {res['runtime_s']}s -> {out}")
+    print(f"{len(inp.albums)} albums, {n_variants} variants, {res['runtime_s']}s -> {out}")
 
 
 if __name__ == "__main__":

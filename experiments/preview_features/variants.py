@@ -10,7 +10,9 @@ is not a per-column drop-in is rescaled to that total.
   Ball    every Essentia scalar, min-max, block variance-matched
   C/Cemb  Ridge onto the 13 Spotify columns, out-of-fold predictions (scalars / + effnet PCA 64)
   Cvm/Cembvm  the same with each column rescaled to the Spotify column's std
-  D16/24/32   effnet album embedding, L2-normalised, PCA, variance-matched (Dm*: maest, Dn*: musicnn)
+  D16..D64    effnet album embedding, L2-normalised, PCA 16/24/32/48/64, variance-matched (Dm*: maest,
+              Dn*: musicnn, 16/24/32 only). D64 is the proposed block; solution.py is the same recipe
+              kept as a transform.
   E, E13  Ball (or B13) + D24, half of A's variance each
   F, Femb Cvm (or Cembvm) + D24, half of A's variance each: "Spotify-like + embedding"
   Z0      no audio block; Zs: the Spotify block with rows shuffled
@@ -55,7 +57,7 @@ B13_MAP = {
     "time_signature": (),
 }
 EMB_TAG = {"effnet": "D", "maest": "Dm", "musicnn": "Dn"}
-PCA_KS = (16, 24, 32)
+PCA_KS = (16, 24, 32, 48, 64)
 E_K = 24
 RIDGE_PCS = 64
 ALPHAS = np.logspace(-2, 4, 13)
@@ -224,7 +226,7 @@ def build_variants(inp: Inputs, seed: int = 0) -> tuple[dict[str, np.ndarray | N
             out[name], report["ridge"][name] = ridge_oof(X, A, inp.fit, cols, seed)
             out[name + "vm"] = A.mean(0) + (out[name] - out[name].mean(0)) * A.std(0) / out[name].std(0)
         for emb, P in scores.items():
-            for k in PCA_KS:
+            for k in PCA_KS if emb == "effnet" else PCA_KS[:3]:
                 out[f"{EMB_TAG[emb]}{k}"] = match_var(P[:, :k], target)
         if "effnet" in scores:
             half = match_var(scores["effnet"][:, :E_K], target / 2)

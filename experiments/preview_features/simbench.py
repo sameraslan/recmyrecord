@@ -90,12 +90,11 @@ class Bench:
 
 def pool_rows(path: Path = ROWS) -> np.ndarray:
     """The album snapshot every run sticks to while the extractor keeps adding albums: `row` of
-    the catalog albums with an analysed track among the first TRACKS[0] in priority order, minus
-    the last one (possibly half done). Written on first use."""
+    the catalog albums with an analysed track among the first TRACKS[0] in priority order (the
+    extractor stores an album's pass in one transaction, so none is half done). Written on first use."""
     if not path.exists():
         tracks, _ = load_tracks()
-        rows = np.unique(tracks.loc[tracks["prio"] < TRACKS[0], "row"])
-        rows = np.intersect1d(rows[rows < tracks["row"].max()], load_albums()["row"])
+        rows = np.intersect1d(tracks.loc[tracks["prio"] < TRACKS[0], "row"], load_albums()["row"])
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("\n".join(map(str, rows)) + "\n")
     return np.loadtxt(path, dtype=np.int64)

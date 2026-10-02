@@ -4,7 +4,7 @@ CLI:
   python clip_length.py                 first n / spread n tracks vs every track -> results/clip_length.{md,json}
   python clip_length.py --mode pass1    first track vs the extractor's first pass (4 spread tracks), usable
                                         while the extraction is still running -> results/clip_length_pass1.*
-  python clip_length.py --fixture [--variants Ball,Cvm,D24,E] [--out DIR] [--min-albums 100]
+  python clip_length.py --fixture [--variants Ball,Cvm,D24,D64,E] [--out DIR] [--min-albums 100]
 
 Album features from a subset of the tracks are compared with a reference:
   full   reference = the mean over all tracks, on albums with every track analysed (2 to 30
@@ -199,7 +199,7 @@ def main() -> None:
     p.add_argument("--mode", default="full", choices=("full", "pass1"),
                    help="reference: every track, or the first pass")
     p.add_argument("--fixture", action="store_true", help="run on the synthetic caches")
-    p.add_argument("--variants", default="Ball,Cvm,D24,E", help="variants for the downstream overlap")
+    p.add_argument("--variants", default="Ball,Cvm,D24,D64,E", help="variants for the downstream overlap")
     p.add_argument("--min-albums", type=int, default=100, help="stop when fewer albums have a complete reference")
     p.add_argument("--out", type=Path)
     p.add_argument("--seed", type=int, default=0)
