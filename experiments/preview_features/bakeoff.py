@@ -23,7 +23,7 @@ Candidates (model names as stored)
       Only batch-64 exports exist and the batch size is baked into the graph: the 29 patches of a
       30 s clip are padded to 64 by repetition and the first 29 outputs kept (1.0 CPU-s per model
       instead of 0.45). The `multi` export has no projection head (both outputs are the embedding).
-  clap, mert
+  clap, clap_music, mert
       PyTorch models served by bakeoff_torch.py in a second interpreter (.venv-torch): see its
       docstring. `mert` stores all 13 layers; load a view with bakeoff_load("mert_l7"), "mert_mid"
       (layers 4-7) or "mert_mean" (all layers).
@@ -76,8 +76,8 @@ BASE = "https://essentia.upf.edu/models/feature-extractors/discogs-effnet/"
 CONTRASTIVE = ("artist", "multi", "track", "release", "label")
 # `multi` has no projection head: its export returns the 1280-d embedding on both outputs
 TIER1 = [f"{k}_{d}" for k in CONTRASTIVE for d in (1280, 512) if (k, d) != ("multi", 512)]
-TORCH = {"clap": 512, "mert": 13 * 768}
-DEFAULT_RUN = TIER1 + ["clap", "mert"]
+TORCH = {"clap": 512, "clap_music": 512, "mert": 13 * 768}
+DEFAULT_RUN = TIER1 + ["clap", "clap_music", "mert"]
 CACHED = {"effnet": 1280, "musicnn": 200}  # baselines read from cache/features.sqlite
 MERT_VIEWS = {"mert_mid": range(4, 8), "mert_mean": range(13), **{f"mert_l{i}": [i] for i in range(13)}}
 BATCH = 64

@@ -19,6 +19,8 @@ Models
         an untrained network (every LayerNorm weight 1, every bias 0, embeddings at std 0.02): it
         scores noise and silence at cosine 0.9997 and fails zero-shot genre prompts, where the unfused
         checkpoint gets them right.
+  clap_music  the same recipe with laion/larger_clap_music_and_speech (HTSAT-base, trained on music
+        and speech; the checkpoint behind the published agreement with human similarity judgements)
   mert  MERT-v1-95M (m-a-p/MERT-v1-95M, 24 kHz): 5 s chunks (its training crop length), every one of
         the 13 hidden states averaged over time and chunks -> 13 x 768 values, flattened. The layer
         is picked at evaluation time (`bakeoff_load("mert_l7")`, `"mert_mean"`).
@@ -32,8 +34,10 @@ import time
 from pathlib import Path
 
 CLAP_ID = "laion/clap-htsat-unfused"
+CLAP_MUSIC_ID = "laion/larger_clap_music_and_speech"
 MERT_ID = "m-a-p/MERT-v1-95M"
-DIMS = {"clap": 512, "mert": 13 * 768}
+DIMS = {"clap": 512, "clap_music": 512, "mert": 13 * 768}
+REPOS = {"clap": CLAP_ID, "clap_music": CLAP_MUSIC_ID, "mert": MERT_ID}
 
 
 def main() -> None:
@@ -47,7 +51,7 @@ def main() -> None:
     os.environ.setdefault("HF_HOME", str(Path(__file__).resolve().parent / "cache" / "models" / "hf"))
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     hub = Path(os.environ["HF_HOME"]) / "hub"
-    if all((hub / ("models--" + i.replace("/", "--")) / "snapshots").is_dir() for i in (CLAP_ID, MERT_ID)):
+    if all((hub / ("models--" + REPOS[m].replace("/", "--")) / "snapshots").is_dir() for m in args.models.split(",")):
         # weights are cached: stay offline (transformers otherwise fetches a second, safetensors copy of CLAP)
         os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
@@ -64,11 +68,11 @@ def main() -> None:
     device = torch.device(args.device)
     t0 = time.perf_counter()
 
-    def clap_factory():
+    def clap_factory(repo: str = CLAP_ID):
         from transformers import ClapFeatureExtractor, ClapModel
 
-        fe = ClapFeatureExtractor.from_pretrained(CLAP_ID)
-        model = ClapModel.from_pretrained(CLAP_ID, use_safetensors=False).eval()
+        fe = ClapFeatureExtractor.from_pretrained(repo)
+        model = ClapModel.from_pretrained(repo, use_safetensors=False).eval()
         model.text_model, model.text_projection = None, None  # the text tower is not needed
         model.to(device)
         window = 10 * 48000
@@ -120,7 +124,7 @@ def main() -> None:
 
         return embed
 
-    factories = {"clap": clap_factory, "mert": mert_factory}
+    factories = {"clap": clap_factory, "clap_music": lambda: clap_factory(CLAP_MUSIC_ID), "mert": mert_factory}
     embedders = {name: factories[name]() for name in args.models.split(",") if name}
 
     def rss() -> int:
