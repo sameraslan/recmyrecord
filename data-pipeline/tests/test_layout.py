@@ -97,15 +97,27 @@ def test_pull_islands_brings_detached_groups_next_to_the_cloud():
     P, moved = pull_islands(E)
     assert moved == 21
     np.testing.assert_array_equal(P[main], E[main])
-    # The blob moves as one piece: its inner distances are the same.
-    np.testing.assert_allclose(P[blob] - P[blob[0]], E[blob] - E[blob[0]], atol=1e-9)
+    # The blob keeps its shape and is enlarged to the map's density: UMAP packs detached groups far tighter.
+    grow = median_gap(E) / median_gap(E[blob])
+    assert grow > 2
+    np.testing.assert_allclose(P[blob] - P[blob].mean(0), (E[blob] - E[blob].mean(0)) * grow, atol=1e-9)
+    assert math.isclose(median_gap(P[blob]), median_gap(E), rel_tol=1e-6)
     tree = cKDTree(P[main])
     for group in (blob, [stray]):
         gap = float(tree.query(P[group])[0].min())
         assert reach < gap < 1.01 * reach
     # Both islands were several cloud widths away; the frame is now little more than the cloud.
     assert np.ptp(E, axis=0).max() > 9
-    assert np.ptp(P, axis=0).max() < 2 + 2.2 * reach
+    assert np.ptp(P, axis=0).max() < 2 + 2.2 * reach + np.ptp(P[blob], axis=0).max()
+
+
+def test_pull_islands_does_not_shrink_a_sparse_island():
+    E, main, blob, _ = _cloud_with_islands()
+    wider = 1.5 * median_gap(E[main]) / median_gap(E[blob])  # sparser than the disc, still one detached group
+    E[blob] = E[blob].mean(0) + (E[blob] - E[blob].mean(0)) * wider
+    assert median_gap(E[blob]) > median_gap(E)
+    P, _ = pull_islands(E)
+    np.testing.assert_allclose(P[blob] - P[blob[0]], E[blob] - E[blob[0]], atol=1e-9)
 
 
 def test_pull_islands_keeps_a_connected_cloud_and_everyones_neighbours():
@@ -152,7 +164,7 @@ def test_finalize_layouts_does_not_let_a_far_speck_set_the_frame():
     E, main, _, _ = _cloud_with_islands()
     out = finalize_layouts({"balanced": E, "sonic": E, "mood": E})["balanced"]
     disc = np.ptp(out[main], axis=0).max()
-    assert np.ptp(out, axis=0).max() < 1.25 * disc
+    assert np.ptp(out, axis=0).max() < 1.5 * disc  # 2.07 when each stop was scaled to its own bounding box
 
 
 def test_finalize_layouts_is_deterministic():

@@ -48,11 +48,13 @@ def pull_islands(E: np.ndarray, link: float = ISLAND_LINK_GAPS) -> tuple[np.ndar
     """Groups detached from the main cloud are moved next to it, nearest first.
 
     Two points are linked when they are within `link` median gaps of each other; the largest linked group is
-    the main cloud. Every other group is translated, unchanged inside, along the line between its closest pair
-    of points with the cloud until it sits `link` median gaps away. Far specks would otherwise set the frame of
-    the overview and shrink everything else."""
+    the main cloud. Every other group is translated along the line between its closest pair of points with the
+    cloud until it sits `link` median gaps away. Far specks would otherwise set the frame of the overview and
+    shrink everything else. UMAP also packs a detached group much tighter than the cloud, so a group denser
+    than the map is first enlarged around its centre to the map's median gap; its shape is kept."""
     E = np.asarray(E, dtype=float).copy()
-    reach = link * median_gap(E)
+    gap = median_gap(E)
+    reach = link * gap
     pairs = cKDTree(E).query_pairs(reach, output_type="ndarray")
     graph = coo_matrix((np.ones(len(pairs)), (pairs[:, 0], pairs[:, 1])), shape=(len(E), len(E)))
     n, label = connected_components(graph, directed=False)
@@ -62,6 +64,11 @@ def pull_islands(E: np.ndarray, link: float = ISLAND_LINK_GAPS) -> tuple[np.ndar
     attached = label == main
     islands = [np.flatnonzero(label == c) for c in range(n) if c != main]
     islands.sort(key=lambda idx: int(idx[0]))  # an order that does not depend on the component numbering
+    for idx in islands:
+        inner = median_gap(E[idx]) if len(idx) > 1 else 0.0
+        if 0 < inner < gap:
+            centre = E[idx].mean(0)
+            E[idx] = centre + (E[idx] - centre) * (gap / inner)
     moved = 0
     while islands:
         tree = cKDTree(E[attached])
