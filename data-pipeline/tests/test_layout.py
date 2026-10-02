@@ -1,11 +1,12 @@
 import math
 
 import numpy as np
+import pytest
 from scipy.spatial import cKDTree
 
 from rmr_pipeline.constants import ISLAND_LINK_GAPS, STOPS, UMAP_MIN_DIST
-from rmr_pipeline.layout import (finalize_layouts, fix_stacks, flat_positions, median_gap, norm_box, procrustes_to,
-                                 pull_islands, stacked3, umap_embed)
+from rmr_pipeline.layout import (ISLAND_MAX_RADIUS, finalize_layouts, fix_outliers, fix_stacks, flat_positions,
+                                 median_gap, norm_box, procrustes_to, pull_islands, stacked3, umap_embed)
 
 
 def _rot(a):
@@ -137,6 +138,93 @@ def test_pull_islands_keeps_a_connected_cloud_and_everyones_neighbours():
 def test_pull_islands_is_deterministic():
     E = _cloud_with_islands()[0]
     np.testing.assert_array_equal(pull_islands(E)[0], pull_islands(E.copy())[0])
+
+
+def _radius(P):
+    return float(np.linalg.norm(P - P.mean(0), axis=0 if P.ndim == 1 else 1).max())
+
+
+@pytest.mark.parametrize("apart", [0.0, 1e-9, 1e-5])
+def test_stacked_albums_do_not_set_an_islands_size(apart):
+    """Five albums far from the disc, four of them in two pairs on (nearly) one spot, as identical rows of the
+    matrix come out of UMAP. The median gap inside the island is the pairs' (zero, or next to it), and
+    enlarging the island until that is the map's gap made it thousands of times the width of the map."""
+    E, main, _, _ = _cloud_with_islands()
+    gap = median_gap(E[main])
+    a, b, c = np.array([6.0, 1.0]), np.array([6.0 + 3 * gap, 1.0]), np.array([6.0, 1.0 + 4 * gap])
+    island = np.array([a, a + [apart, 0], b, b + [0, apart], c])
+    E = np.vstack([E[main], island])
+    idx = np.arange(600, 605)
+    P, moved = pull_islands(E)
+    assert moved == 5 and np.isfinite(P).all()
+    np.testing.assert_array_equal(P[main], E[main])
+    # The pairs are 3 and 4 gaps from each other: the island is already as sparse as the map and keeps its size.
+    np.testing.assert_allclose(P[idx] - P[idx].mean(0), island - island.mean(0), atol=1e-9)
+    assert np.ptp(P, axis=0).max() < 2.5
+    np.testing.assert_array_equal(P, pull_islands(E.copy())[0])
+
+
+def test_island_enlargement_stops_at_the_largest_radius():
+    """Two close pairs, not stacked, 5 gaps apart: the median gap inside the island says 20 times denser than
+    the map, but a group of four albums 100 gaps wide is not an island at the map's density."""
+    E, main, _, _ = _cloud_with_islands()
+    gap = median_gap(E[main])
+    island = np.array([[6.0, 1.0], [6.0 + 0.05 * gap, 1.0], [6.0 + 5 * gap, 1.0], [6.0 + 5.05 * gap, 1.0]])
+    E = np.vstack([E[main], island])
+    idx = np.arange(600, 604)
+    gap = median_gap(E)
+    assert gap / median_gap(E[idx]) > 15
+    P, _ = pull_islands(E)
+    limit = ISLAND_MAX_RADIUS * gap * math.sqrt(4)
+    assert math.isclose(_radius(P[idx]), limit, rel_tol=1e-9)
+    grow = limit / _radius(E[idx])
+    assert 1 < grow < 8
+    np.testing.assert_allclose(P[idx] - P[idx].mean(0), (E[idx] - E[idx].mean(0)) * grow, atol=1e-9)  # shape kept
+
+
+def test_an_island_wider_than_the_largest_radius_is_not_shrunk():
+    """Ten close pairs in a line, 9 gaps from one to the next: denser than the map by its median gap, and
+    already wider than the limit for twenty albums. It is moved, not resized."""
+    E, main, _, _ = _cloud_with_islands()
+    gap = median_gap(E[main])
+    x = 6.0 + 9 * gap * np.repeat(np.arange(10), 2) + 0.05 * gap * np.tile([0, 1], 10)
+    E = np.vstack([E[main], np.c_[x, np.ones(20)]])
+    idx = np.arange(600, 620)
+    gap = median_gap(E)
+    assert median_gap(E[idx]) < 0.1 * gap and _radius(E[idx]) > ISLAND_MAX_RADIUS * gap * math.sqrt(20)
+    P, moved = pull_islands(E)
+    assert moved == 20
+    np.testing.assert_allclose(P[idx] - P[idx].mean(0), E[idx] - E[idx].mean(0), atol=1e-9)
+
+
+def test_layouts_with_nothing_to_scale_by_fail_with_a_message():
+    rng = np.random.default_rng(8)
+    good = rng.normal(size=(200, 2))
+    half = good.copy()
+    half[100:] = half[:100]  # every album on top of another one: the median gap is 0
+    for stop in STOPS:
+        with pytest.raises(ValueError, match=f"the {stop} layout: at least half of the 200 albums sit exactly on another"):
+            finalize_layouts({s: half if s == stop else good for s in STOPS})
+    with pytest.raises(ValueError, match="at least half"):
+        pull_islands(half)
+    broken = good.copy()
+    broken[[3, 7], 0] = np.nan
+    with pytest.raises(ValueError, match="the mood layout: 2 of 200 positions are not finite"):
+        finalize_layouts({"sonic": good, "balanced": good, "mood": broken})
+    with pytest.raises(ValueError, match="shape"):
+        finalize_layouts({"sonic": good, "balanced": good, "mood": good[:, :1]})
+    # A few stacked albums are routine (identical rows): they are spread, not refused.
+    some = good.copy()
+    some[:40] = some[40:80]
+    assert all(stacked3(E) == 0 for E in finalize_layouts({s: some for s in STOPS}).values())
+
+
+def test_fix_outliers_leaves_a_layout_with_no_spread_of_radii_alone():
+    a = np.linspace(0, 2 * math.pi, 40, endpoint=False)
+    ring = np.vstack([np.c_[np.cos(a), np.sin(a)], [[0.0, 0.0]]])  # every radius but one is the same
+    out, n = fix_outliers(ring)
+    assert n == 0 and np.isfinite(out).all()
+    np.testing.assert_array_equal(out, ring)
 
 
 def test_finalize_layouts_gives_every_stop_the_same_median_gap():
