@@ -18,3 +18,10 @@ def audio(deduped):
     from rmr_pipeline.audio import audio_block
 
     return audio_block(deduped[0])
+
+
+@pytest.fixture(scope="session")
+def site_recs(deduped, audio):
+    from rmr_pipeline.recs import build_recs
+
+    return build_recs(deduped[0], audio.block)

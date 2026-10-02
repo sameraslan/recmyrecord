@@ -1,10 +1,13 @@
-"""CLI: python -m rmr_pipeline.build --map-root PATH [--table PATH] [--out PATH] [--overrides PATH] [--skip-images]"""
+"""CLI: python -m rmr_pipeline.build --map-root PATH [--table PATH] [--out PATH] [--overrides PATH]
+                                    [--audio-dir PATH] [--hub-correction STOPS] [--skip-images]"""
 import argparse
 import sys
 import time
 from pathlib import Path
 
 from .artists import clean_artist
+from .audio import audio_block
+from .audio_store import DEFAULT_AUDIO, StoreError
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, STOPS
 from .images import load_album_sprites, write_sheets
@@ -28,10 +31,19 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--out", type=Path, default=None,
                    help="Output folder (default frontcreck/public/data). Required with --skip-images.")
     p.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES, help="Manual corrections keyed by slug.")
+    p.add_argument("--audio-dir", type=Path, default=DEFAULT_AUDIO,
+                   help="The audio store: embeddings, manifest and transform.npz (default data-pipeline/audio).")
+    p.add_argument("--hub-correction", default="", metavar="STOPS",
+                   help="Comma-separated stops whose recommendations rank by mutual proximity instead of the raw "
+                        "distance (for example: balanced). Off by default.")
     p.add_argument("--skip-images", action="store_true",
                    help="Fast run for development: keep fallback ambient colours and do not write sprite sheets. "
                         "Needs an explicit --out so the committed albums.json keeps its extracted colours.")
     args = p.parse_args(argv)
+    args.hub_correction = tuple(s for s in args.hub_correction.split(",") if s)
+    unknown = [s for s in args.hub_correction if s not in STOPS]
+    if unknown:
+        p.error(f"--hub-correction: unknown stop {unknown[0]!r} (choose from {', '.join(STOPS)})")
     if args.out is None:
         if args.skip_images:
             p.error("--skip-images writes fallback ambient colours; pass an explicit --out folder so the "
@@ -69,8 +81,14 @@ def main(argv: list[str] | None = None) -> int:
         overrides, args.overrides.parent, artists=artists)
     slugs = slugs_after_overrides(titles, artists, slugs, {slugs.index(k) for k, e in overrides.items() if "a" in e})
     vocab, tops = build_vocab(sub)
-    recs = build_recs(sub)
-    layouts = build_layouts(sub)
+    try:
+        audio = audio_block(sub, args.audio_dir)
+    except StoreError as e:
+        print(f"audio store: {e}", file=sys.stderr)
+        return 1
+    print(audio.summary() + (f"; hub correction at {', '.join(args.hub_correction)}" if args.hub_correction else ""))
+    recs = build_recs(sub, audio.block, args.hub_correction)
+    layouts = build_layouts(sub, audio.block)
     print(f"recs and layouts done ({time.time() - t0:.0f}s)")
 
     ambient = [FALLBACK_AMBIENT[k % 3] for k in clusters]

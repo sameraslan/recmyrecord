@@ -17,3 +17,12 @@ def test_skip_images_with_explicit_out_is_allowed(tmp_path):
 
 def test_default_out_without_skip_images():
     assert parse_args(["--map-root", "map"]).out == DEFAULT_OUT
+
+
+def test_hub_correction_is_off_by_default_and_takes_stops(capsys):
+    assert parse_args(["--map-root", "map"]).hub_correction == ()
+    assert parse_args(["--map-root", "map", "--hub-correction", "balanced"]).hub_correction == ("balanced",)
+    assert parse_args(["--map-root", "map", "--hub-correction", "sonic,balanced"]).hub_correction == ("sonic", "balanced")
+    with pytest.raises(SystemExit):
+        parse_args(["--map-root", "map", "--hub-correction", "loud"])
+    assert "unknown stop 'loud'" in capsys.readouterr().err

@@ -1,12 +1,12 @@
-"""Map layouts: UMAP per stop from the recommender's own matrix, aligned and scaled to [-1, 1]."""
+"""Map layouts: UMAP per stop from the site matrix, aligned and scaled to [-1, 1]."""
 import math
 from collections import Counter
 
 import numpy as np
 import pandas as pd
 
+from .audio import site_matrix
 from .constants import SLIDER, STOPS, UMAP_PARAMS
-from .table import rec_matrix
 
 
 def norm_box(E: np.ndarray) -> np.ndarray:
@@ -91,8 +91,8 @@ def finalize_layouts(raw: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     return out
 
 
-def build_layouts(sub: pd.DataFrame) -> dict[str, np.ndarray]:
-    return finalize_layouts({stop: umap_embed(rec_matrix(sub, SLIDER[stop])) for stop in STOPS})
+def build_layouts(sub: pd.DataFrame, block: np.ndarray) -> dict[str, np.ndarray]:
+    return finalize_layouts({stop: umap_embed(site_matrix(sub, block, SLIDER[stop])) for stop in STOPS})
 
 
 def flat_positions(E: np.ndarray) -> list[float]:
