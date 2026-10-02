@@ -1,0 +1,610 @@
+{
+ "album": {
+  "key": "spotify:album:5Y0p2XCgRRIjna91aQE8q7",
+  "title": "The Queen Is Dead",
+  "artist": "The Smiths",
+  "slug": "the-queen-is-dead-the-smiths",
+  "mean_s": 223.110703125,
+  "means": [
+   4.099999904632568,
+   0.699999988079071,
+   3.799999952316284
+  ],
+  "override": false
+ },
+ "expected": {
+  "key": "spotify:album:5Y0p2XCgRRIjna91aQE8q7",
+  "source": "deezer",
+  "source_album_id": "1261474",
+  "matched_title": "The Queen Is Dead",
+  "matched_artist": "The Smiths",
+  "score": "0.9971",
+  "ambiguous": 0,
+  "n_tracks": 10,
+  "n_clips_available": 10
+ },
+ "responses": {
+  "https://api.deezer.com/search/album?q=artist%3A%22The+Smiths%22+album%3A%22The+Queen+Is+Dead%22&limit=25": {
+   "data": [
+    {
+     "id": 1261474,
+     "title": "The Queen Is Dead",
+     "nb_tracks": 10,
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 49722702,
+     "title": "The Queen Is Dead (Deluxe Edition)",
+     "nb_tracks": 36,
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    }
+   ]
+  },
+  "https://api.deezer.com/album/1261474/tracks?limit=200": {
+   "data": [
+    {
+     "id": 13785965,
+     "title": "The Queen Is Dead (2011 Remaster)",
+     "duration": 387,
+     "track_position": 1,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785965",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785966,
+     "title": "Frankly, Mr. Shankly (2011 Remaster)",
+     "duration": 138,
+     "track_position": 2,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785966",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785967,
+     "title": "I Know It's Over (2011 Remaster)",
+     "duration": 349,
+     "track_position": 3,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785967",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785968,
+     "title": "Never Had No One Ever (2011 Remaster)",
+     "duration": 218,
+     "track_position": 4,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785968",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785969,
+     "title": "Cemetry Gates (2011 Remaster)",
+     "duration": 161,
+     "track_position": 5,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785969",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785970,
+     "title": "Bigmouth Strikes Again (2011 Remaster)",
+     "duration": 193,
+     "track_position": 6,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785970",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785971,
+     "title": "The Boy with the Thorn in His Side (2011 Remaster)",
+     "duration": 196,
+     "track_position": 7,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785971",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785972,
+     "title": "Vicar in a Tutu (2011 Remaster)",
+     "duration": 144,
+     "track_position": 8,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785972",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785973,
+     "title": "There Is a Light That Never Goes Out (2011 Remaster)",
+     "duration": 244,
+     "track_position": 9,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785973",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 13785974,
+     "title": "Some Girls Are Bigger Than Others (2011 Remaster)",
+     "duration": 197,
+     "track_position": 10,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/13785974",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    }
+   ]
+  },
+  "https://api.deezer.com/album/49722702/tracks?limit=200": {
+   "data": [
+    {
+     "id": 416477012,
+     "title": "The Queen Is Dead (2017 Master)",
+     "duration": 384,
+     "track_position": 1,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477012",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477022,
+     "title": "Frankly, Mr. Shankly (2017 Master)",
+     "duration": 137,
+     "track_position": 2,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477022",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477032,
+     "title": "I Know It's Over (2017 Master)",
+     "duration": 347,
+     "track_position": 3,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477032",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477042,
+     "title": "Never Had No One Ever (2017 Master)",
+     "duration": 216,
+     "track_position": 4,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477042",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477052,
+     "title": "Cemetry Gates (2017 Master)",
+     "duration": 158,
+     "track_position": 5,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477052",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477062,
+     "title": "Bigmouth Strikes Again (2017 Master)",
+     "duration": 191,
+     "track_position": 6,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477062",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477072,
+     "title": "The Boy with the Thorn in His Side (2017 Master)",
+     "duration": 195,
+     "track_position": 7,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477072",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477082,
+     "title": "Vicar in a Tutu (2017 Master)",
+     "duration": 142,
+     "track_position": 8,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477082",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477092,
+     "title": "There Is a Light That Never Goes Out (2017 Master)",
+     "duration": 242,
+     "track_position": 9,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477092",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477102,
+     "title": "Some Girls Are Bigger Than Others (2017 Master)",
+     "duration": 196,
+     "track_position": 10,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/416477102",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477112,
+     "title": "The Queen Is Dead (Full Version)",
+     "duration": 434,
+     "track_position": 1,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477112",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477122,
+     "title": "Frankly, Mr. Shankly (Demo)",
+     "duration": 138,
+     "track_position": 2,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477122",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477132,
+     "title": "I Know It's Over (Demo)",
+     "duration": 348,
+     "track_position": 3,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477132",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477142,
+     "title": "Never Had No One Ever (Demo)",
+     "duration": 280,
+     "track_position": 4,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477142",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477152,
+     "title": "Cemetry Gates (Demo)",
+     "duration": 181,
+     "track_position": 5,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477152",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477162,
+     "title": "Bigmouth Strikes Again (Demo)",
+     "duration": 186,
+     "track_position": 6,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477162",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477172,
+     "title": "Some Girls Are Bigger Than Others (Demo)",
+     "duration": 237,
+     "track_position": 7,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477172",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477182,
+     "title": "The Boy with the Thorn in His Side (Demo Mix)",
+     "duration": 198,
+     "track_position": 8,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477182",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477192,
+     "title": "There Is a Light That Never Goes Out (Take 1)",
+     "duration": 265,
+     "track_position": 9,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477192",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477202,
+     "title": "Rubber Ring (2017 Master)",
+     "duration": 234,
+     "track_position": 10,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477202",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477212,
+     "title": "Asleep (Single B-Side; 2017 Master)",
+     "duration": 242,
+     "track_position": 11,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477212",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477222,
+     "title": "Money Changes Everything (2017 Master)",
+     "duration": 281,
+     "track_position": 12,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477222",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477232,
+     "title": "Unloveable (2017 Master)",
+     "duration": 235,
+     "track_position": 13,
+     "disk_number": 2,
+     "preview": "https://previews.invalid/416477232",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477242,
+     "title": "How Soon Is Now? (Live in Boston)",
+     "duration": 325,
+     "track_position": 1,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477242",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477252,
+     "title": "Hand in Glove (Live in Boston)",
+     "duration": 177,
+     "track_position": 2,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477252",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477262,
+     "title": "I Want the One I Can't Have (Live in Boston)",
+     "duration": 203,
+     "track_position": 3,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477262",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477272,
+     "title": "Never Had No One Ever (Live in Boston)",
+     "duration": 205,
+     "track_position": 4,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477272",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477282,
+     "title": "Stretch out and Wait (Live in Boston)",
+     "duration": 191,
+     "track_position": 5,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477282",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477292,
+     "title": "The Boy with the Thorn in His Side (Live in Boston)",
+     "duration": 214,
+     "track_position": 6,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477292",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477302,
+     "title": "Cemetry Gates (Live in Boston)",
+     "duration": 181,
+     "track_position": 7,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477302",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477312,
+     "title": "Rubber Ring / What She Said / Rubber Ring (Live in Boston)",
+     "duration": 257,
+     "track_position": 8,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477312",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477322,
+     "title": "Is It Really so Strange? (Live in Boston)",
+     "duration": 202,
+     "track_position": 9,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477322",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477332,
+     "title": "There Is a Light That Never Goes Out (Live in Boston)",
+     "duration": 249,
+     "track_position": 10,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477332",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477342,
+     "title": "That Joke Isn't Funny Anymore (Live in Boston)",
+     "duration": 290,
+     "track_position": 11,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477342",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477352,
+     "title": "The Queen Is Dead (Live in Boston)",
+     "duration": 305,
+     "track_position": 12,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477352",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    },
+    {
+     "id": 416477362,
+     "title": "I Know It's Over (Live in Boston)",
+     "duration": 455,
+     "track_position": 13,
+     "disk_number": 3,
+     "preview": "https://previews.invalid/416477362",
+     "artist": {
+      "id": 1297,
+      "name": "The Smiths"
+     }
+    }
+   ]
+  }
+ }
+}
