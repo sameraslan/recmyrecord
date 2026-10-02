@@ -71,5 +71,9 @@
   "source": "itunes:us",
   "album_id": "1222223526",
   "note": "The Birthday Party - Mutiny!: Only listed as 'Mutiny / The Bad Seed' (10 tracks): the Mutiny! EP with the four tracks of The Bad Seed EP before it."
+ },
+ "spotify:album:4n8GtrqMTNsmBMr7Yx28Kr": {
+  "skip": true,
+  "note": "Kool G Rap & DJ Polo - Wanted: Dead or Alive: not on the stores. The matcher takes Kool G Rap's later album 'Dead or Alive' (itunes 377118797) for it, as an ambiguous match."
  }
 }
