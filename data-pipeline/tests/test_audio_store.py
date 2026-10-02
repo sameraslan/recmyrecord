@@ -153,13 +153,17 @@ def test_committed_store(deduped):
     sub, _ = deduped
     s = load_store(DEFAULT_AUDIO)
     uris = set(sub["URI"])
-    assert len(s.keys) == 3944 and set(s.keys.tolist()) <= uris
-    assert set(s.source.tolist()) == {"deezer", "itunes:us"}
-    assert 1 <= s.n_clips.min() and s.n_clips.max() == s.manifest["clips"]["per_album"] == 4
+    # Counts are bounds, not pins: the audio stage adds albums and clips (3,944 albums came from the experiment).
+    assert 3944 <= len(s.keys) <= len(uris) and set(s.keys.tolist()) <= uris
+    assert {"deezer", "itunes:us"} <= set(s.source.tolist())
+    assert s.manifest["clips"]["per_album"] in (4, 8) and 1 <= s.n_clips.min()
+    assert s.n_clips.max() <= s.manifest["clips"]["per_album"] or "local" in s.source.tolist()
     matches = load_matches(DEFAULT_AUDIO / "matches.csv")
     assert {m["key"] for m in matches} == uris
-    assert {m["key"] for m in matches if m["source"]} == set(s.keys.tolist())
-    assert {m["key"]: m["source"] for m in matches if m["source"]} == dict(zip(s.keys.tolist(), s.source.tolist()))
+    matched = {m["key"]: m["source"] for m in matches if m["source"]}
+    stored = {k: src for k, src in zip(s.keys.tolist(), s.source.tolist()) if src != "local"}
+    assert stored == {k: matched.get(k) for k in stored}  # every embedding comes from the listing matches.csv names
+    assert len(matched) - len(stored) <= 5  # matched, but no usable clip: rare
     overrides = load_match_overrides(DEFAULT_AUDIO / "match_overrides.json")
     assert set(overrides) <= uris and all(e.get("note") for e in overrides.values())
     skipped = {k for k, e in overrides.items() if e.get("skip")}

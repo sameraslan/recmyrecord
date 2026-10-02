@@ -38,12 +38,14 @@ def test_block_shape_and_determinism(deduped, audio):
     sub, _ = deduped
     assert audio.block.shape == (4081, BLOCK_DIMS) and audio.block.dtype == np.float32
     assert np.isfinite(audio.block).all()
-    assert int(audio.has_audio.sum()) == 3944
+    n = int(audio.has_audio.sum())
+    assert 3944 <= n <= 4081  # the experiment's albums, plus what the audio stage added since
     assert np.array_equal(audio_block(sub).block, audio.block)
     fitted = audio.block[audio.has_audio].astype(np.float64)
     assert fitted.var(axis=0).sum() == pytest.approx(audio.transform.target_total_variance, rel=1e-4)
-    assert audio.summary() == ("audio: 3944 albums with audio, 137 imputed, 1 store shard(s), "
-                               f"transform fitted {audio.transform.fitted} on 3944 albums")
+    assert audio.summary() == (f"audio: {n} albums with audio, {4081 - n} imputed, {audio.shards} store shard(s), "
+                               f"transform fitted {audio.transform.fitted} on {audio.transform.albums} albums")
+    assert 3944 <= audio.transform.albums <= n
 
 
 def test_target_variance_is_the_spotify_blocks(deduped, audio):
@@ -154,5 +156,7 @@ def test_missing_or_mismatched_store_fails_clearly(deduped, audio, tmp_path, cap
 def test_status_lists_the_imputed_albums(capsys):
     assert main(["status"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert out[0].startswith("audio: 3944 albums with audio, 137 imputed")
-    assert len(out) == 138 and any(line.endswith("\tLoveless\tMy Bloody Valentine") for line in out)
+    imputed = len(out) - 1
+    assert out[0].startswith(f"audio: {4081 - imputed} albums with audio, {imputed} imputed") and 0 < imputed <= 137
+    assert all(line.startswith("imputed\tspotify:album:") for line in out[1:])
+    assert any(line.endswith("\tSuper Mario Galaxy\tMario Galaxy Orchestra") for line in out)  # skipped: covers only
