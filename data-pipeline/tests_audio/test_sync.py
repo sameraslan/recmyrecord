@@ -118,6 +118,17 @@ def test_a_listing_that_cannot_be_fetched_only_loses_its_album(world):
     assert any(line.startswith("problem\ttitle-0-artist-0\tlisting failed") for line in lines)
 
 
+def test_a_store_that_stops_answering_is_left_for_the_next_run(world, monkeypatch):
+    from rmr_audio import sync as sync_module
+
+    monkeypatch.setattr(sync_module, "STORE_DOWN_AFTER", 1)
+    del world.listings[("deezer", "d0")], world.listings[("deezer", "d1")]
+    lines = world.run()
+    assert world.fetched == [("deezer", "d0"), ("itunes:us", "i2")]  # album 1's listing is not even asked for
+    assert "problem\ttitle-1-artist-1\tdeezer is not answering: left for the next run" in lines
+    assert load_store(world.audio).keys.tolist() == ["key:2"]
+
+
 def test_matches_csv_follows_the_listing(world):
     world.listings[("deezer", "d0")] = listing("d0", 10, no_preview=(8, 9))
     lines = world.run()

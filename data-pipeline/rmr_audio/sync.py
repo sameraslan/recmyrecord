@@ -39,6 +39,8 @@ from . import match as matching
 from .catalog import DEFAULT_CACHE, Album
 from .clips import FINAL, ClipCache, priority_order
 
+STORE_DOWN_AFTER = 3  # listings in a row a store may fail before its other albums are left for the next run
+
 
 @dataclass
 class Options:
@@ -241,6 +243,7 @@ class Extraction:
         self.inflight: dict = {}  # future -> (item, clips)
         self.status, self.rss = Counter(), {}
         self.listing: dict[str, tuple[int, int]] = {}  # key -> (tracks, tracks with a preview) of the fresh listing
+        self.failing: Counter = Counter()  # store -> listings failed in a row
         self.t0 = self.last = time.monotonic()
         self.n = self.total_albums = self.done_albums = 0
 
@@ -308,10 +311,18 @@ class Extraction:
                     item = next(queue, None)
                     if item is None:
                         break
+                    store = matching.store_of(item.source)
+                    if self.failing[store] >= STORE_DOWN_AFTER:
+                        item.problem = f"{store} is not answering: left for the next run"
+                        self.done_albums += 1
+                        continue
                     try:
                         recs = self.prepare(item)
+                        self.failing[store] = 0
                     except Exception as e:  # the listing could not be fetched: this album waits for the next run
-                        item.problem = f"listing failed: {e}"[:200]
+                        if not self.stop.asked:
+                            item.problem = f"listing failed: {e}"[:200]
+                            self.failing[store] += 1
                         self.done_albums += 1
                         continue
                     if not recs:
@@ -386,6 +397,8 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
         http = matching.Http(opts.cache_dir / "http.sqlite")
     stop = stop or Stop()
     stop.install()
+    if isinstance(http, matching.Http):
+        http.abort = lambda: stop.asked
     changed_rows: dict[str, dict] = {}
     tmp = tempfile.mkdtemp(prefix="rmr-audio-")
     try:
@@ -399,7 +412,8 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
                 m = (matching.forced(http, item.source, item.album_id) if item.force
                      else matching.match_album(http, al, opts.storefronts))
             except Exception as e:
-                item.problem = f"matching failed: {e}"[:200]
+                if not stop.asked:
+                    item.problem = f"matching failed: {e}"[:200]
                 continue
             row = {k: str(v) for k, v in m.row(al.key).items()}
             if item.force and al.key in stored:  # until its clips are in, the store's embedding is the old listing's

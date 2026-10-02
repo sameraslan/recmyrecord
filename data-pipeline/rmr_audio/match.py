@@ -119,7 +119,7 @@ class Throttle:
 class Http:
     """GET JSON, rate-limited per store, with retries and a sqlite response cache (url -> zlib JSON).
     Only successful responses are cached. `fresh=True` neither reads nor writes the cache: track
-    listings fetched for download carry preview URLs that expire."""
+    listings fetched for download carry preview URLs that expire, and are given up on after 3 attempts."""
 
     def __init__(self, cache: Path | None, attempts: int = 8, sleep=time.sleep):
         self.db = None
@@ -129,6 +129,7 @@ class Http:
             self.db.execute("CREATE TABLE IF NOT EXISTS http_cache(url TEXT PRIMARY KEY, body BLOB, fetched_at TEXT)")
         self.throttles = {"deezer": Throttle(0.2, backoff=5), "itunes": Throttle(3.2, backoff=60)}
         self.attempts, self.sleep, self.session, self.fetched = attempts, sleep, None, 0
+        self.abort = lambda: False  # sync sets it: True once the run was asked to stop
 
     @staticmethod
     def url(base: str, **params: object) -> str:
@@ -162,7 +163,9 @@ class Http:
         if not fresh and (data := self.cached(url, CACHE_DAYS)) is not None:
             return data
         throttle = self.throttles[store]
-        for attempt in range(self.attempts):
+        for attempt in range(min(self.attempts, 3) if fresh else self.attempts):  # a listing for download gives up sooner
+            if self.abort():
+                raise IOError("interrupted")
             throttle.wait()
             try:
                 data = self.fetch(url)

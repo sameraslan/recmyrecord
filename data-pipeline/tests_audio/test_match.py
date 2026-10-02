@@ -166,3 +166,6 @@ def test_http_retries_quota_and_network_errors_then_caches(tmp_path):
     http.attempts = 2
     with pytest.raises(IOError, match="giving up"):
         http.get("https://api.deezer.com/y", "deezer")
+    http.abort = lambda: True
+    with pytest.raises(IOError, match="interrupted"):
+        http.get("https://api.deezer.com/z", "deezer")
