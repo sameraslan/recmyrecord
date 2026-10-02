@@ -19,3 +19,7 @@ Or Madvillainy by Madvillain
 
 
 4. Now in process of playing with features and weights for an ideal and accurate model. 
+
+## Status
+
+This folder is kept for reference and for the data files `data-pipeline/` reads (`Recommender/data/all_data_norm.pkl`). The scripts that called the Spotify API or wrote to the old Postgres database have been removed; the site serves static files and uses neither.

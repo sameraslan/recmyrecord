@@ -183,9 +183,14 @@ test('works with web storage blocked', async ({ page, isMobile }) => {
 
 test('the core flow works inside a sandboxed iframe', async ({ page, baseURL, isMobile }) => {
   test.skip(isMobile, 'one run is enough');
-  await page.setContent(
-    `<iframe sandbox="allow-scripts allow-same-origin allow-popups" src="${baseURL}/" style="border:0;width:1400px;height:860px"></iframe>`,
+  // The host page is same-origin: the site's frame-ancestors 'self' refuses any other embedder.
+  await page.route(`${baseURL}/__frame-host`, (route) =>
+    route.fulfill({
+      contentType: 'text/html',
+      body: `<iframe sandbox="allow-scripts allow-same-origin allow-popups" src="${baseURL}/" style="border:0;width:1400px;height:860px"></iframe>`,
+    }),
   );
+  await page.goto('/__frame-host');
   const frame = page.frameLocator('iframe');
   const input = frame.locator('.hero').getByRole('combobox');
   await input.click();
