@@ -1,6 +1,7 @@
 node_modules
 .vercel
 data-pipeline/.venv/
+data-pipeline/.venv-audio/
 **/__pycache__/
 .pytest_cache/
 
