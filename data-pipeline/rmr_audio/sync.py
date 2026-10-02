@@ -65,6 +65,7 @@ class Item:
     album_id: str = ""
     have: int = 0  # clips behind the album's embedding in the store
     want: int = 0  # clips it should end with, as far as known before the listing is fetched
+    cached: int = 0  # of those, the clips the cache already has an answer for
     force: bool = False  # the listing is not the one the store's embedding came from: rewrite whatever the count
     folder: Path | None = None
     pending: int = 0  # clips in flight
@@ -75,7 +76,8 @@ class Item:
 
     def line(self) -> str:
         what = {"match": "match, then embed", "write": f"write  {self.have} -> {self.want} clips (all cached)",
-                "clips": f"embed  {self.have} -> {self.want} clips", "local": f"local  {self.want} files"}[self.kind]
+                "clips": f"embed  {self.have} -> {self.want} clips ({self.cached} cached)",
+                "local": f"local  {self.want} files"}[self.kind]
         where = f"{self.source} {self.album_id}".strip() or "-"
         return f"{what:34s} {where:26s} {self.album.slug}"
 
@@ -125,7 +127,7 @@ def classify(al: Album, row: dict | None, override: dict | None, stored: tuple[i
         return "up_to_date" if stored else "no_audio"
     if not behind and have >= want:  # the store is at the target; the cache is only missing or partial
         return "up_to_date"
-    return Item(al, "clips", source, album_id, have, want)
+    return Item(al, "clips", source, album_id, have, want, n_final)
 
 
 def local_item(al: Album, folder: Path, stored: tuple[int, str] | None, cache: ClipCache) -> Item | str:
@@ -372,7 +374,7 @@ def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=
             out("would " + item.line())
         if len(plan.items) > 40:
             out(f"... and {len(plan.items) - 40} more")
-        n = sum(max(0, i.want - i.have) for i in plan.items if i.kind in ("clips", "local"))
+        n = sum(max(0, i.want - i.cached) for i in plan.items if i.kind != "write")
         out(f"dry run: nothing fetched or written; about {n} clips to embed" if plan.items else "dry run: nothing to do")
         cache.close()
         return 0

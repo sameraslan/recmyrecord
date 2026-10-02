@@ -85,13 +85,16 @@ def test_import_experiment_and_first_shard_check(tmp_path, monkeypatch):
     clips = [(0, i, p, "ok", None, "deezer", f"d0-{i}", 30.0, to_blob(fake_emb(f"d0-{i}"))) for p, i in enumerate((0, 4, 2, 6, 1))]
     clips += [(1, 0, 0, "ok", None, "itunes", "i1-0", 30.0, to_blob(fake_emb("i1-0"))),
               (1, 1, 1, "too_short", "4.0 s", "itunes", "i1-1", 4.0, None), (1, 2, None, "no_preview", None, "itunes", "i1-2", None, None),
+              (1, 3, 2, "download_failed", "HTTP 200, 10 bytes", "itunes", "i1-3", None, None),
+              (1, 4, 3, "download_failed", "ConnectionError", "itunes", "i1-4", None, None),
               (2, 0, 0, "ok", None, "deezer", "dup-0", 30.0, to_blob(fake_emb("dup-0")))]
     con.executemany("INSERT INTO tracks VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", clips)
     con.commit()
     cache = ClipCache(tmp_path / "clips.sqlite")
-    assert experiment.import_experiment(cache, tmp_path / "table.pkl", exp) == 8  # row 2 is a dropped duplicate
+    assert experiment.import_experiment(cache, tmp_path / "table.pkl", exp) == 10  # row 2 is a dropped duplicate
     assert cache.mean("u0", "deezer", "d0", 8)[1] == 5 and cache.mean("u1", "itunes:us", "i1", 8)[1] == 1
-    assert [c["status"] for c in cache.album("u1", "itunes:us", "i1")] == ["ok", "too_short", "no_preview"]
+    assert [c["status"] for c in cache.album("u1", "itunes:us", "i1")] == [
+        "ok", "too_short", "no_preview", "download_failed", "no_preview"]  # by rank; an empty preview is final
 
     from rmr_pipeline.audio_store import init_store
     audio = tmp_path / "audio"

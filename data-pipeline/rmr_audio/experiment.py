@@ -43,6 +43,8 @@ def import_experiment(cache: ClipCache, table: Path, experiment: Path = EXPERIME
             continue
         uri, album_source, album_id = album_of[row]
         assert uri == key_of[row] and album_source == SOURCES[source], (row, uri, source)
+        if status == "download_failed" and (error or "").startswith("HTTP 200"):
+            status = "no_preview"  # an empty preview, as embed.download now records it: not tried again
         recs.append({"key": uri, "source": album_source, "album_id": album_id, "track_id": track_id,
                      "track_idx": track_idx, "prio": prio, "status": status, "error": error, "clip_s": clip_s,
                      "emb": emb if status == "ok" else None})

@@ -11,7 +11,8 @@ up then downloads all of its clips again.
   track_idx               the track's position in the listing (or among the folder's files)
   prio                    the clip's rank in the album's clip order; an album's N-clip mean is the
                           mean of its `ok` clips with prio < N
-  status                  ok | no_preview | too_short | decode_failed (final: never tried again)
+  status                  ok | no_preview (none, or an empty one) | too_short | decode_failed
+                          (final: never tried again)
                           download_failed | analysis_failed | crashed (tried again by the next sync)
   sig                     local files: size and modification time, to notice a replaced file
   emb                     float16 little-endian, 1280 values

@@ -86,3 +86,44 @@ def test_process_embeds_local_files_like_previews(worker, tmp_path):
     emb, seconds = embed.embed(embed.decode(clip.read_bytes(), ".wav"))
     assert seconds == pytest.approx(30.0) and cos(emb.astype(np.float64), embs["01.wav"]) > 0.9999
     assert not list((tmp_path.parent).glob("decode*/*"))  # the temp file of the decode is gone
+
+
+def test_an_empty_preview_is_final_and_a_failed_download_is_not(monkeypatch):
+    class Response:
+        def __init__(self, code, body):
+            self.status_code, self.content = code, body
+
+    class Session:
+        def __init__(self, *answers):
+            self.answers = list(answers)
+
+        def get(self, url, timeout):
+            a = self.answers.pop(0)
+            if isinstance(a, Exception):
+                raise a
+            return a
+
+    monkeypatch.setattr(embed.time, "sleep", lambda s: None)
+    monkeypatch.setitem(embed.WORKER, "session", Session(ConnectionError(), Response(200, b"x" * 2000)))
+    assert embed.download("u") == b"x" * 2000  # a network error is retried
+    monkeypatch.setitem(embed.WORKER, "session", Session(*[Response(200, b"0123456789")] * 3))
+    with pytest.raises(embed.EmptyPreview, match="HTTP 200, 10 bytes"):
+        embed.download("u")
+    session = Session(Response(404, b""), Response(200, b"x" * 2000))
+    monkeypatch.setitem(embed.WORKER, "session", session)
+    with pytest.raises(IOError) as e:
+        embed.download("u")
+    assert not isinstance(e.value, embed.EmptyPreview) and len(session.answers) == 1  # 4xx is not retried
+
+    class Pending:
+        def __init__(self, error):
+            self.error = error
+
+        def result(self):
+            raise self.error
+
+    rec = {"track_id": "t"}
+    embed.analyse(rec, Pending(embed.EmptyPreview("HTTP 200, 10 bytes")))
+    assert rec["status"] == "no_preview"
+    embed.analyse(rec, Pending(IOError("ReadTimeout")))
+    assert rec["status"] == "download_failed"

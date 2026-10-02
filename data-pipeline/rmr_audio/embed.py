@@ -141,20 +141,25 @@ def init_worker(model_dir: str, tmp: str) -> None:
         to16k=es.Resample(inputSampleRate=SR, outputSampleRate=16000, quality=4))
 
 
+class EmptyPreview(IOError):
+    """The store answered 200 with (next to) nothing: the listing has a preview URL but no preview."""
+
+
 def download(url: str) -> bytes:
     """The preview's bytes. Three attempts with backoff; 4xx is not retried."""
+    empty = False
     for attempt in range(3):
         try:
             r = WORKER["session"].get(url, timeout=(10, 30))
             if r.status_code < 400 and len(r.content) > 1000:
                 return r.content
-            error = f"HTTP {r.status_code}, {len(r.content)} bytes"
+            error, empty = f"HTTP {r.status_code}, {len(r.content)} bytes", r.status_code < 400
             if 400 <= r.status_code < 500:
                 break
         except Exception as e:  # requests.RequestException; anything else is as much a failed download
-            error = type(e).__name__
+            error, empty = type(e).__name__, False
         time.sleep(1.5 * (attempt + 1))
-    raise IOError(error)
+    raise (EmptyPreview if empty else IOError)(error)
 
 
 def decode(data: bytes, suffix: str) -> np.ndarray:
@@ -211,7 +216,7 @@ def analyse(rec: dict, pending) -> None:
             try:
                 data = pending.result()
             except IOError as e:
-                rec.update(status="download_failed", error=str(e))
+                rec.update(status="no_preview" if isinstance(e, EmptyPreview) else "download_failed", error=str(e))
                 return
             mono = decode(data, rec.get("suffix", ".mp3"))
             del data

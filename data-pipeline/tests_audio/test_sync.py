@@ -190,8 +190,8 @@ def test_fewer_clips_than_the_store_has_never_downgrades(world):
 
 def test_dry_run_touches_nothing(world):
     lines = world.run(dry_run=True, clips=8)
-    assert any(line.startswith("would embed  0 -> 8 clips") and line.endswith("title-0-artist-0") for line in lines)
-    assert lines[-1].startswith("dry run: nothing fetched or written")
+    assert any(line.startswith("would embed  0 -> 8 clips (0 cached)") and line.endswith("title-0-artist-0") for line in lines)
+    assert lines[-1] == "dry run: nothing fetched or written; about 27 clips to embed"  # 8 + 8 + 3 + 8 for the album to match
     assert not world.fetched and not world.log and not (world.cache / "clips.sqlite").exists()
     assert not (world.audio / "embeddings").exists()
 
