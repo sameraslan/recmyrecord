@@ -363,6 +363,43 @@ def _stored(audio_dir: Path) -> tuple[dict, dict[str, tuple[int, str]]]:
     return manifest, {k: (int(n), src) for k, n, src in zip(s.keys.tolist(), s.n_clips.tolist(), s.source.tolist())}
 
 
+def preview_matches(opts: Options, catalog: list[Album], http=None, out=print) -> int:
+    """`python -m rmr_audio match`: ask the stores for the albums a sync would have to match, and print each
+    verdict. Nothing of the store is written (the API responses are cached, so the sync that follows asks
+    for little). Returns 0, or 1 when the store is unusable."""
+    try:
+        manifest, stored = _stored(opts.audio_dir)
+        matches_path = opts.audio_dir / "matches.csv"
+        matches = {r["key"]: r for r in (load_matches(matches_path) if matches_path.exists() else [])}
+        overrides = load_match_overrides(opts.audio_dir / "match_overrides.json")
+    except StoreError as e:
+        print(f"FAIL\n{e}", file=sys.stderr)
+        return 1
+    clips = opts.clips or int(manifest["clips"].get("per_album", 4))
+    plan = make_plan(catalog, stored, matches, overrides, ClipCache(":memory:"), opts, clips)
+    todo = [i for i in plan.items if i.kind == "match"]
+    http = http or matching.Http(opts.cache_dir / "http.sqlite")
+    counts: Counter = Counter()
+    for item in todo:
+        al = item.album
+        try:
+            m = (matching.forced(http, item.source, item.album_id) if item.force
+                 else matching.match_album(http, al, opts.storefronts))
+        except Exception as e:
+            counts["failed"] += 1
+            out(f"failed\t{al.slug}\t{e}")
+            continue
+        kind = ("unmatched" if not m.source else "no preview" if not m.n_previews else
+                "forced" if item.force else "ambiguous" if m.ambiguous else "matched")
+        counts[kind] += 1
+        out("\t".join([kind, al.slug, f"{al.artist} — {al.title}"] + ([
+            f"{m.source} {m.album_id}", f"{m.artist} — {m.title}", f"score {m.score:.2f}",
+            f"{m.n_previews}/{m.n_tracks} previews", m.reason] if m.source else [m.reason])))
+    out(f"{len(todo)} albums asked for: " + (", ".join(f"{n} {k}" for k, n in sorted(counts.items())) or "nothing to match")
+        + (f"; {plan.counts['skipped']} skipped by match_overrides.json" if plan.counts["skipped"] else ""))
+    return 0
+
+
 def sync(opts: Options, catalog: list[Album], http=None, pool_factory=None, out=print, stop: Stop | None = None) -> int:
     """Run one sync. `http`, `pool_factory` and `stop` are replaced in tests; the defaults talk to the
     stores, start Essentia workers and listen for Ctrl-C. Returns 0, or 1 when the store is unusable."""

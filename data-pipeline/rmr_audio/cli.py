@@ -3,6 +3,7 @@
   .venv-audio/bin/python -m rmr_audio sync [--clips N] [--keys K,...] [--limit N] [--workers 2]
                                            [--local-dir DIR] [--storefronts us,gb,jp,...]
                                            [--retry-unmatched] [--dry-run]
+  .venv-audio/bin/python -m rmr_audio match [--keys K,...] [--retry-unmatched] [--storefronts ...]
   .venv-audio/bin/python -m rmr_audio status [--missing]
   .venv-audio/bin/python -m rmr_audio compact
   .venv-audio/bin/python -m rmr_audio import-experiment
@@ -37,20 +38,26 @@ def parser() -> argparse.ArgumentParser:
                         help="Local cache: clips.sqlite, http.sqlite, models/ (default data-pipeline/.cache/audio).")
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("sync", parents=[common], help="Match, download and embed what the store is missing.")
+    select = argparse.ArgumentParser(add_help=False)
+    select.add_argument("--keys", default="", help="Only these albums: comma-separated keys (URIs) or slugs.")
+    select.add_argument("--limit", type=int, default=None, help="At most N albums with work to do.")
+    select.add_argument("--storefronts", type=_storefronts, default=DEFAULT_STOREFRONTS,
+                        help=f"iTunes storefronts to try, in order (default {','.join(DEFAULT_STOREFRONTS)}).")
+    select.add_argument("--retry-unmatched", action="store_true",
+                        help="Search again for the albums recorded as unmatched.")
+
+    s = sub.add_parser("sync", parents=[common, select], help="Match, download and embed what the store is missing.")
     s.add_argument("--clips", type=int, default=None,
                    help="Clips per album (default: the store's policy in manifest.json). A larger number tops "
                         "every album up; run over the whole catalog, it becomes the policy.")
-    s.add_argument("--keys", default="", help="Only these albums: comma-separated keys (URIs) or slugs.")
-    s.add_argument("--limit", type=int, default=None, help="At most N albums with work to do.")
     s.add_argument("--workers", type=int, default=2, help="Worker processes, one thread each (default 2).")
     s.add_argument("--local-dir", type=Path, default=None,
                    help="Folder of local files: DIR/<album slug>/*.mp3|m4a|flac|wav|ogg|aiff, one excerpt per file.")
-    s.add_argument("--storefronts", type=_storefronts, default=DEFAULT_STOREFRONTS,
-                   help=f"iTunes storefronts to try, in order (default {','.join(DEFAULT_STOREFRONTS)}).")
-    s.add_argument("--retry-unmatched", action="store_true", help="Search again for the albums recorded as unmatched.")
     s.add_argument("--dry-run", action="store_true", help="Print what would be done; no network, nothing written.")
 
+    sub.add_parser("match", parents=[common, select],
+                   help="Only ask the stores for the albums a sync would match, and print the verdicts; writes nothing "
+                        "to the store.")
     t = sub.add_parser("status", parents=[common], help="Counts, and with --missing the albums without audio.")
     t.add_argument("--missing", action="store_true", help="List the albums without audio: slug<TAB>artist — title.")
     sub.add_parser("compact", parents=[common], help="Rewrite all shards into one.")
@@ -75,8 +82,14 @@ def main(argv: list[str] | None = None) -> int:
             cache = ClipCache(args.cache_dir / "clips.sqlite")
             n = import_experiment(cache, args.table)
             print(f"{n} clips copied into {args.cache_dir / 'clips.sqlite'}")
-            print(f"checked: the cached clips with prio < 4 give the first shard's {check_first_shard(cache, args.audio_dir)} "
-                  "album means exactly")
+            from .experiment import EXPERIMENT_CACHE
+            from .match import import_responses
+
+            n = import_responses(args.cache_dir / "http.sqlite", EXPERIMENT_CACHE / "match.sqlite", default_storefront="us")
+            print(f"{n} API responses copied into {args.cache_dir / 'http.sqlite'}")
+            checked = check_first_shard(cache, args.audio_dir)
+            print(f"checked: the cached clips with prio < 4 give the first shard's {checked} album means exactly"
+                  if checked is not None else "not checked against the first shard: the store was compacted since")
             cache.close()
             return 0
         catalog = load_catalog(args.table, args.overrides)
@@ -85,13 +98,16 @@ def main(argv: list[str] | None = None) -> int:
 
             print(status(catalog, args.audio_dir, args.missing))
             return 0
-        from .sync import Options, sync
+        from .sync import Options, preview_matches, sync
 
+        keys = tuple(k for k in args.keys.split(",") if k)
+        if args.cmd == "match":
+            return preview_matches(Options(args.audio_dir, args.cache_dir, keys=keys, limit=args.limit,
+                                           storefronts=args.storefronts, retry_unmatched=args.retry_unmatched), catalog)
         if args.clips is not None and args.clips < 1:
             parser().error("--clips must be at least 1")
-        return sync(Options(args.audio_dir, args.cache_dir, args.clips, tuple(k for k in args.keys.split(",") if k),
-                            args.limit, max(1, args.workers), args.local_dir, args.storefronts, args.retry_unmatched,
-                            args.dry_run), catalog)
+        return sync(Options(args.audio_dir, args.cache_dir, args.clips, keys, args.limit, max(1, args.workers),
+                            args.local_dir, args.storefronts, args.retry_unmatched, args.dry_run), catalog)
     except StoreError as e:
         print(f"FAIL\n{e}", file=sys.stderr)
         return 1

@@ -14,7 +14,7 @@ from rmr_audio.match import Http, match_album
 
 FIXTURES = Path(__file__).parent / "fixtures"
 KEEP = {"id", "title", "nb_tracks", "artist", "name", "duration", "disk_number", "track_position", "preview", "next",
-        "data", "results", "collectionId", "collectionName", "artistName", "trackCount", "collectionType",
+        "data", "results", "collectionId", "collectionName", "artistName", "artistId", "trackCount", "collectionType",
         "wrapperType", "kind", "trackId", "trackName", "trackTimeMillis", "discNumber", "trackNumber", "previewUrl",
         "error", "code"}
 

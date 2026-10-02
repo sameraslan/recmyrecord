@@ -53,9 +53,11 @@ def import_experiment(cache: ClipCache, table: Path, experiment: Path = EXPERIME
     return len(recs)
 
 
-def check_first_shard(cache: ClipCache, audio_dir: Path) -> int:
+def check_first_shard(cache: ClipCache, audio_dir: Path) -> int | None:
     """Assert that the cached clips with prio < 4 reproduce the store's first shard exactly (float16);
-    returns the number of albums checked."""
+    returns the number of albums checked, or None when the store was compacted and that shard is gone."""
+    if not (audio_dir / "embeddings" / FIRST_SHARD).exists():
+        return None
     shard = read_shard(audio_dir / "embeddings" / FIRST_SHARD)
     listing = {key: (source, album_id) for key, source, album_id in cache.con.execute(
         "SELECT DISTINCT key, source, album_id FROM clips")}

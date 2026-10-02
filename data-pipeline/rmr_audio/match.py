@@ -48,7 +48,10 @@ OVERSIZED = 30  # more tracks than this is not a standard edition
 FETCH_MAX = 6  # tracklists fetched per source when the match is oversized, to find the standard edition
 RESCUE, RESCUE_TRACKS = 6, 5  # tracklists fetched to recognise an album by its durations; fewest tracks trusted
 SHORTLIST = {"deezer": 4, "itunes": 3}  # candidates whose tracks are fetched
-DEFAULT_STOREFRONTS = ("us", "gb", "jp", "de", "fr", "ca", "au", "br")
+# gb and de recovered every album a probe of nine storefronts found for the albums the US store lacks
+# (gb 14 of 16, de the other two); others (jp, br, pl, fr...) only when passed with --storefronts.
+DEFAULT_STOREFRONTS = ("us", "gb", "de")
+ARTIST_LIST_MIN = 0.9  # iTunes: how well a search result's artist must read for its album list to be fetched
 CACHE_DAYS = 30  # a cached search older than this is asked again
 
 
@@ -184,6 +187,26 @@ class Http:
         raise IOError(f"giving up on {url}")
 
 
+def import_responses(dest: Path, source: Path, default_storefront: str | None = None) -> int:
+    """Copy another http_cache table (same layout) into the cache at `dest`, keeping what `dest` already has.
+    With `default_storefront`, iTunes URLs recorded without `country=` get it (the experiment asked the
+    default storefront, us). Returns the number of responses added."""
+    Http(dest).db.close()  # creates the table
+    con = sqlite3.connect(dest, timeout=60)
+    src = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
+    before = con.execute("SELECT COUNT(*) FROM http_cache").fetchone()[0]
+    for url, body, fetched_at in src.execute("SELECT url, body, fetched_at FROM http_cache"):
+        if "itunes.apple.com" in url and "country=" not in url:
+            if default_storefront is None:
+                continue
+            url += f"&country={default_storefront}"
+        con.execute("INSERT OR IGNORE INTO http_cache VALUES (?, ?, ?)", (url, body, fetched_at))
+    con.commit()
+    added = con.execute("SELECT COUNT(*) FROM http_cache").fetchone()[0] - before
+    con.close(), src.close()
+    return added
+
+
 def text_pairs(al: Album) -> list[tuple[str, str]]:
     """(artist, title) spellings to search for, most specific first."""
     names = artist_names(al.artist)
@@ -276,13 +299,29 @@ def itunes_urls(al: Album, storefront: str) -> list[str]:
             for q in dict.fromkeys(terms)]
 
 
+def _itunes_albums(al: Album, storefront: str, results: list[dict]) -> list[Cand]:
+    return [scored(al, f"itunes:{storefront}", d["collectionId"], d["collectionName"], d["artistName"],
+                   d.get("trackCount", 0), d.get("artistId", ""))
+            for d in results if d.get("wrapperType", "collection") == "collection"
+            and d.get("collectionType") in ("Album", "Compilation")]
+
+
+def itunes_artist_albums(http: Http, al: Album, artist_id: str, storefront: str) -> list[Cand]:
+    """Every album the storefront lists for the artist. Search misses albums it has ("Liquid Swords")."""
+    url = Http.url("https://itunes.apple.com/lookup", id=artist_id, entity="album", limit=200, country=storefront)
+    return _itunes_albums(al, storefront, http.get(url, "itunes").get("results", []))
+
+
 def itunes_search(http: Http, al: Album, storefront: str) -> Iterator[list[Cand]]:
-    """Candidates per search in one iTunes storefront."""
+    """Candidates per search in one iTunes storefront, then, when the searches found the artist, the
+    artist's album list (the caller stops before it once a candidate reads right)."""
+    artists: Counter = Counter()
     for url in itunes_urls(al, storefront):
-        data = http.get(url, "itunes")
-        yield [scored(al, f"itunes:{storefront}", d["collectionId"], d["collectionName"], d["artistName"],
-                      d.get("trackCount", 0))
-               for d in data.get("results", []) if d.get("collectionType") in ("Album", "Compilation")]
+        batch = _itunes_albums(al, storefront, http.get(url, "itunes").get("results", []))
+        artists.update(c.artist_id for c in batch if c.artist_id and c.a >= ARTIST_LIST_MIN)
+        yield batch
+    if artists and not is_various(al.artist):
+        yield itunes_artist_albums(http, al, artists.most_common(1)[0][0], storefront)
 
 
 def itunes_tracks(http: Http, album_id: str, storefront: str, fresh: bool = False) -> list[dict]:
@@ -394,10 +433,10 @@ def needs_fallback(cands: list[Cand]) -> bool:
     return best is None or ambiguous or best.n_previews < best.n_tracks / 2 or best.n_tracks > OVERSIZED
 
 
-def has_audio(cands: list[Cand]) -> bool:
-    """Is there a match with at least one preview?"""
-    best = judge(cands)[0]
-    return best is not None and best.n_previews > 0
+def settled(cands: list[Cand]) -> bool:
+    """Is there a confident match with at least one preview? Then no further storefront is asked."""
+    best, ambiguous, _ = judge(cands)
+    return best is not None and not ambiguous and best.n_previews > 0
 
 
 @dataclass(frozen=True)
@@ -433,10 +472,10 @@ def verdict(cands: list[Cand]) -> Match:
 
 def match_album(http: Http, al: Album, storefronts: tuple[str, ...] = DEFAULT_STOREFRONTS) -> Match:
     """Deezer, then the first storefront when Deezer's answer is missing or doubtful (needs_fallback), then
-    each further storefront only while there is still no match with a preview."""
+    each further storefront only while there is still no confident match with a preview (settled)."""
     cands = candidates(http, al, "deezer")
     for n, cc in enumerate(storefronts):
-        if not (needs_fallback(cands) if n == 0 else not has_audio(cands)):
+        if not (needs_fallback(cands) if n == 0 else not settled(cands)):
             break
         cands += candidates(http, al, f"itunes:{cc}")
     return verdict(cands)

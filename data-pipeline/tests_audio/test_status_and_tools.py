@@ -106,6 +106,7 @@ def test_import_experiment_and_first_shard_check(tmp_path, monkeypatch):
                 "status": "ok", "emb": to_blob(fake_emb("other"))}])
     with pytest.raises(AssertionError, match="u1"):
         experiment.check_first_shard(cache, audio)
+    assert experiment.check_first_shard(cache, tmp_path / "compacted") is None
 
 
 def test_model_file_is_checked_before_it_is_kept(tmp_path, monkeypatch):

@@ -4,6 +4,9 @@ Titles and artists are compared after folding (case, accents, punctuation, "&"/"
 removing edition markers ("(Deluxe Edition)", "[Remastered 2011]", "- Remaster"). Each side is compared
 through several variants (full, without parentheticals, without subtitle, romanised or native name), a
 derived variant counting a little less than the full string.
+
+Copied from experiments/preview_features/textnorm.py, with one addition: ordinal words read as their
+numeral ("Third" = "3rd"), see _ORDINALS.
 """
 import re
 import unicodedata
@@ -27,6 +30,8 @@ _YEAR = re.compile(r"(?:19|20)\d\d")
 _NUMBER = re.compile(r"\b(?:\d+|ii|iii|iv|vi|vii|viii|ix|two|three|four|five)\b")
 _DIGITS = {"ii": "2", "iii": "3", "iv": "4", "vi": "6", "vii": "7", "viii": "8", "ix": "9",
            "two": "2", "three": "3", "four": "4", "five": "5"}
+_ORDINALS = {"first": "1st", "second": "2nd", "third": "3rd", "fourth": "4th", "fifth": "5th", "sixth": "6th",
+             "seventh": "7th", "eighth": "8th", "ninth": "9th", "tenth": "10th"}
 _JOINER = re.compile(r"\s*[,&/;]\s*|\s+(?:and|with|feat\.?|featuring|x|vs\.?|et|y|e)\s+", re.IGNORECASE)
 _NATIVE_ROMAN = re.compile(r"[^\s\[\]&,/][^\[\]&,/]*?\s*\[([^\]]+)\]")
 _VARIOUS = {"various artists", "various", "multi interpretes", "varios artistas", "verschiedene interpreten",
@@ -54,9 +59,10 @@ def ascii_fold(s: str) -> str:
 
 
 def norm(s: str, *, artist: bool = False) -> str:
-    """Folded words joined by single spaces; "&" reads "and"; titles lose a leading "the", artists every "the"."""
+    """Folded words joined by single spaces; "&" reads "and"; an ordinal word reads as its numeral ("third" ->
+    "3rd"); titles lose a leading "the", artists every "the"."""
     s = re.sub(r"['’`´]", "", fold(s).replace("&", " and "))
-    words = [w for w in re.split(r"[\W_]+", s) if w]
+    words = [_ORDINALS.get(w, w) for w in re.split(r"[\W_]+", s) if w]
     if artist:
         words = [w for w in words if w != "the"] or words
     elif len(words) > 1 and words[0] == "the":

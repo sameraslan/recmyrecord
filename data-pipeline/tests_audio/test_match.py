@@ -130,7 +130,8 @@ def test_fallback_is_wanted_for_missing_doubtful_previewless_or_oversized_matche
     assert not needs_fallback([_cand("Album")])
     assert needs_fallback([_cand("Album", previews=2)])
     assert needs_fallback([_cand("Album", n=40)])
-    assert not matching.has_audio([_cand("Album", previews=0)]) and matching.has_audio([_cand("Album", previews=1)])
+    assert not matching.settled([_cand("Album", previews=0)]) and matching.settled([_cand("Album", previews=1)])
+    assert not matching.settled([]) and matching.DEFAULT_STOREFRONTS == ("us", "gb", "de")
 
 
 def test_text_similarities():
@@ -141,6 +142,9 @@ def test_text_similarities():
     assert artist_sim("Various Artists", "Anyone") == 0.65
     assert edition_marker("Blue", "Blue (Karaoke Version)") == "other" and edition_marker("Blue", "Blue (Expanded)") == "bigger"
     assert edition_marker("Live at Leeds", "Live at Leeds") == ""
+    assert title_sim("3rd", "Third") == 1.0 and title_sim("The Third Man", "The 3rd Man") == 1.0  # ordinals
+    assert title_sim("3rd", "4th") <= 0.5 and title_sim("Third", "Thirst") <= 0.9
+    assert artist_sim("Third Eye Blind", "3rd Eye Blind") == 1.0
 
 
 def test_http_retries_quota_and_network_errors_then_caches(tmp_path):
@@ -169,3 +173,87 @@ def test_http_retries_quota_and_network_errors_then_caches(tmp_path):
     http.abort = lambda: True
     with pytest.raises(IOError, match="interrupted"):
         http.get("https://api.deezer.com/z", "deezer")
+
+
+def _itunes_store(albums: dict, searches: dict, cc: str = "us") -> dict:
+    """Hand-made iTunes responses: `albums` id -> (title, artist, artist id, tracks), `searches` term -> ids;
+    every artist's album list holds all of the artist's albums."""
+    def head(i):
+        title, artist, artist_id, n = albums[i]
+        return {"wrapperType": "collection", "collectionType": "Album", "collectionId": i, "collectionName": title,
+                "artistName": artist, "artistId": artist_id, "trackCount": n}
+
+    out = {Http.url("https://itunes.apple.com/search", term=term, entity="album", limit=25, country=cc):
+           {"results": [head(i) for i in ids]} for term, ids in searches.items()}
+    for i, (title, artist, artist_id, n) in albums.items():
+        songs = [{"wrapperType": "track", "kind": "song", "trackId": i * 100 + k, "trackName": f"t{k}", "trackNumber": k + 1,
+                  "discNumber": 1, "trackTimeMillis": 240000, "previewUrl": f"https://previews.invalid/{i}-{k}"} for k in range(n)]
+        out[Http.url("https://itunes.apple.com/lookup", id=i, entity="song", limit=200, country=cc)] = {"results": [head(i)] + songs}
+        out[Http.url("https://itunes.apple.com/lookup", id=artist_id, entity="album", limit=200, country=cc)] = {"results": [
+            {"wrapperType": "artist", "artistName": artist, "artistId": artist_id}] + [head(j) for j, a in albums.items() if a[2] == artist_id]}
+    return out
+
+
+class Store(Replay):
+    """Replay where Deezer has nothing and an unknown iTunes search finds nothing."""
+
+    def get(self, url, store, fresh=False):
+        self.asked.append(url)
+        if url in self.responses:
+            return self.responses[url]
+        assert "deezer" in url or "/search" in url, f"not recorded: {url}"
+        return {"data": [], "results": []}
+
+
+def test_itunes_artist_album_list_finds_what_search_misses():
+    """Search returns only another album of the artist; the artist's album list has the right one."""
+    al = Album("k", "Liquid Swords", "Genius/GZA", "liquid-swords-genius-gza")
+    albums = {1: ("Legend of the Liquid Sword", "GZA", 77, 14), 2: ("Liquid Swords", "GZA", 77, 13),
+              3: ("Liquid Swords (Instrumentals)", "GZA", 77, 13)}
+    http = Store(_itunes_store(albums, {"Genius/GZA Liquid Swords": [1]}))
+    m = match_album(http, al, ("us",))
+    assert (m.source, m.album_id, m.title, m.n_previews) == ("itunes:us", "2", "Liquid Swords", 13) and not m.ambiguous
+    assert sum("entity=album&limit=200" in url for url in http.asked) == 1
+
+
+def test_artist_album_list_is_not_fetched_when_search_has_the_album_or_not_the_artist():
+    al = Album("k", "Liquid Swords", "Genius/GZA", "liquid-swords-genius-gza")
+    albums = {2: ("Liquid Swords", "GZA", 77, 13), 9: ("Liquid Swords", "Some Tribute Band", 88, 13)}
+    http = Store(_itunes_store(albums, {"Genius/GZA Liquid Swords": [2]}))
+    assert match_album(http, al, ("us",)).album_id == "2"
+    assert not any("entity=album&limit=200" in url for url in http.asked)
+    http = Store(_itunes_store(albums, {"Genius/GZA Liquid Swords": [9]}))  # the artist does not read right
+    assert match_album(http, al, ("us",)).source == ""
+    assert not any("entity=album&limit=200" in url for url in http.asked)
+
+
+def test_a_cover_version_is_never_a_confident_match():
+    """Game soundtracks on Apple are cover versions under another credit. By text they are rejected. When the
+    table's Spotify numbers are the cover album's own (they are for "Super Mario Galaxy"), the listing is
+    recognised by its durations and flagged ambiguous: such albums are kept out with {"skip": true}."""
+    albums = {5: ("Super Mario Galaxy Collection", "Goodknight Productions", 55, 18),
+              6: ("Super Mario Galaxy - EP", "Video Game Piano Players", 56, 6)}
+    searches = {"Mario Galaxy Orchestra Super Mario Galaxy": [5, 6], "Super Mario Galaxy": [5, 6]}
+    al = Album("k", "Super Mario Galaxy", "Mario Galaxy Orchestra", "super-mario-galaxy-mario-galaxy-orchestra")
+    assert match_album(Store(_itunes_store(albums, searches)), al, ("us",)).source == ""
+    spotify = Album(al.key, al.title, al.artist, al.slug, 240.0, (5.5, 0.5, 4.0), override=False)  # 18 tracks of 240 s
+    del albums[6]
+    m = match_album(Store(_itunes_store(albums, {k: [5] for k in searches})), spotify, ("us",))
+    assert m.album_id == "5" and m.ambiguous and "durations only" in m.reason
+
+
+def test_import_responses_adds_the_default_storefront(tmp_path):
+    src = Http(tmp_path / "src.sqlite")
+    urls = ["https://itunes.apple.com/search?term=a&entity=album&limit=25", "https://api.deezer.com/search/album?q=a",
+            "https://itunes.apple.com/lookup?id=1&entity=song&limit=200&country=gb"]
+    for n, url in enumerate(urls):
+        src.fetch = lambda u, n=n: {"n": n}
+        src.throttles["itunes"].interval = 0.0
+        src.get(url, "itunes")
+    src.db.close()
+    dest = tmp_path / "cache" / "http.sqlite"
+    assert matching.import_responses(dest, tmp_path / "src.sqlite") == 2  # the iTunes URL without a storefront is left out
+    assert matching.import_responses(dest, tmp_path / "src.sqlite", default_storefront="us") == 1
+    http = Http(dest)
+    assert http.cached(urls[0] + "&country=us") == {"n": 0} and http.cached(urls[0]) is None
+    assert http.cached(urls[1]) == {"n": 1} and http.cached(urls[2]) == {"n": 2}
