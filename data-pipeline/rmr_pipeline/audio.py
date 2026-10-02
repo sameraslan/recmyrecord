@@ -12,6 +12,7 @@ An album with no embedding gets the mean block of its IMPUTE_K nearest albums by
 distance among the albums that have one, rescaled to those neighbours' mean norm.
 """
 import argparse
+import os
 import sys
 import zipfile
 from dataclasses import dataclass
@@ -96,8 +97,10 @@ def save_transform(path: Path, t: Transform) -> None:
                   albums=np.int64(t.albums), model=np.str_(t.model))
     if t.keys is not None:
         arrays["keys"] = np.asarray(t.keys, dtype=np.str_)
-    with open(path, "wb") as f:
+    tmp = path.with_name("." + path.name + ".tmp")  # complete or not at all, like the store's own files
+    with open(tmp, "wb") as f:
         np.savez(f, **arrays)
+    os.replace(tmp, path)
 
 
 def load_transform(path: Path) -> Transform:

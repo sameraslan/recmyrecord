@@ -3,9 +3,10 @@ import json
 import numpy as np
 import pytest
 
-from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, MATCH_FIELDS, StoreError, append_shard, compact_store,
-                                      init_store, load_match_overrides, load_matches, load_store, read_shard,
-                                      set_clips_per_album, write_matches, write_shard)
+from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, MATCH_FIELDS, StoreError, append_shard, clean_leftovers,
+                                      compact_store, drop_albums, init_store, leftovers, load_match_overrides,
+                                      load_matches, load_store, read_shard, set_clips_per_album, write_matches,
+                                      write_shard)
 
 
 def _emb(n: int, seed: int = 0) -> np.ndarray:
@@ -62,6 +63,54 @@ def test_compact_keeps_every_albums_newest_embedding_in_one_shard(store):
     assert append_shard(store, ["e"], _emb(1), [4], ["local"], note="next").name == "part-0004.npz"
 
 
+def test_writes_are_atomic_and_leftovers_are_cleaned_by_the_next_write(store, monkeypatch):
+    import rmr_pipeline.audio_store as mod
+
+    before = load_store(store)
+
+    def crash(*a, **k):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(mod, "_write_json", crash)  # the shard is in place, the manifest write never happens
+    with pytest.raises(KeyboardInterrupt):
+        append_shard(store, ["d"], _emb(1), [4], ["deezer"], note="interrupted")
+    monkeypatch.undo()
+    assert (store / "embeddings" / "part-0002.npz").exists()
+    after = load_store(store)  # still the store it was
+    assert after.keys.tolist() == before.keys.tolist() and len(after.manifest["shards"]) == 1
+    monkeypatch.setattr(mod.np, "savez_compressed", crash)  # a crash in the middle of writing a shard
+    with pytest.raises(KeyboardInterrupt):
+        append_shard(store, ["e"], _emb(1), [4], ["deezer"], note="interrupted")
+    monkeypatch.undo()
+    assert sorted(p.name for p in leftovers(store)) == [".part-0002.npz.tmp"]  # the stray shard was replaced first
+    path = append_shard(store, ["f"], _emb(1, seed=3), [4], ["deezer"], note="next")
+    assert path.name == "part-0002.npz" and not leftovers(store)
+    assert load_store(store).keys.tolist() == ["a", "b", "c", "f"]
+    (store / ".matches.csv.tmp").write_text("x")
+    assert clean_leftovers(store) == [".matches.csv.tmp"]
+    rows = [dict(zip(MATCH_FIELDS, ["k1", "deezer", "12", "T", "A", "0.9", "0", "12", "12"]))]
+    write_matches(store / "matches.csv", rows)
+    assert load_matches(store / "matches.csv") == rows and not leftovers(store)
+
+
+def test_removed_albums_leave_the_store_and_compaction_forgets_them(store):
+    path = drop_albums(store, ["b"], note="wrong album", created="2026-10-02")
+    shard = read_shard(path)
+    assert shard.n_clips.tolist() == [0] and shard.source.tolist() == [""] and not shard.emb.any()
+    s = load_store(store)
+    assert s.keys.tolist() == ["a", "c"] and s.rows(["b", "c"]).tolist() == [-1, 1]
+    append_shard(store, ["b"], _emb(1, seed=5), [8], ["itunes:gb"], note="back")  # a later entry brings it back
+    assert load_store(store).keys.tolist() == ["a", "b", "c"] and load_store(store).n_clips.tolist() == [4, 8, 2]
+    drop_albums(store, ["a", "b"], note="gone")
+    compact_store(store, note="compacted")
+    assert load_store(store).keys.tolist() == ["c"]
+    assert read_shard(store / "embeddings" / load_store(store).manifest["shards"][0]["file"]).keys.tolist() == ["c"]
+    with pytest.raises(StoreError, match="n_clips"):  # a removal carries no embedding and no source
+        write_shard(store / "x.npz", ["a"], _emb(1), [0], [""])
+    with pytest.raises(StoreError, match="n_clips"):
+        write_shard(store / "x.npz", ["a"], np.zeros((1, DIM), np.float16), [0], ["deezer"])
+
+
 def test_set_clips_per_album_changes_only_the_policy(store):
     before = load_store(store).manifest
     set_clips_per_album(store, 8)
@@ -106,8 +155,8 @@ def test_store_and_manifest_must_agree(store, tmp_path):
     with pytest.raises(StoreError, match="manifest.json"):
         load_store(tmp_path / "nowhere")
     write_shard(store / "embeddings" / "part-0007.npz", ["z"], _emb(1), [4], ["deezer"])
-    with pytest.raises(StoreError, match="part-0007.npz"):
-        load_store(store)
+    assert load_store(store).keys.tolist() == ["a", "b", "c"]  # a shard the manifest does not list is ignored...
+    assert [p.name for p in leftovers(store)] == ["part-0007.npz"]  # ...and reported
     (store / "embeddings" / "part-0007.npz").unlink()
     manifest = json.loads((store / "manifest.json").read_text())
     manifest["shards"][0]["albums"] = 5
@@ -153,6 +202,7 @@ def test_committed_store(deduped):
     sub, _ = deduped
     s = load_store(DEFAULT_AUDIO)
     uris = set(sub["URI"])
+    assert not leftovers(DEFAULT_AUDIO)  # nothing unlisted or half-written is committed
     # Counts are bounds, not pins: the audio stage adds albums and clips (3,944 albums came from the experiment).
     assert 3944 <= len(s.keys) <= len(uris) and set(s.keys.tolist()) <= uris
     assert {"deezer", "itunes:us"} <= set(s.source.tolist())

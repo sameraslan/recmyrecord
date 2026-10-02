@@ -5,14 +5,21 @@ Written by the audio stage, read by the build. Only numpy and the standard libra
 newer than numpy 1.26, so the audio venv (Python 3.11, numpy<2) and the build venv share it.
 
   embeddings/part-NNNN.npz   keys (str), emb (float16, n x 1280), n_clips (int16), source (str);
-                             a key in a later shard supersedes earlier ones
+                             a key in a later shard supersedes earlier ones; an entry with n_clips 0
+                             (all-zero emb, empty source) removes the album
   manifest.json              model, clip policy (clips.per_album: what a plain sync gives an album),
                              one entry per shard
   matches.csv                one row per album key (MATCH_FIELDS); an empty source = unmatched
   match_overrides.json       key -> {"source", "album_id"} or {"skip": true}, optional "note"
+
+Every file is written under a temporary name (".<name>.tmp", never "*.npz") and renamed into place, and
+a shard is in place before the manifest lists it, so a crash at any point leaves a store that loads:
+at worst a temporary file or a shard the manifest does not list, both ignored by load_store, reported
+by leftovers() and removed by the next write (clean_leftovers).
 """
 import csv
 import json
+import os
 import re
 import zipfile
 from dataclasses import dataclass
@@ -68,23 +75,30 @@ def _check_shard(s: Shard, where: str) -> None:
     keys = s.keys.tolist()
     if n == 0 or len(set(keys)) != n or not all(keys):
         raise StoreError(f"{where}: keys must be non-empty and unique within a shard")
-    if not np.isfinite(s.emb).all() or not s.emb.any(axis=1).all():
+    gone = s.n_clips == 0  # removals
+    if not np.isfinite(s.emb).all() or not s.emb[~gone].any(axis=1).all():
         raise StoreError(f"{where}: emb has non-finite or all-zero rows")
-    if (s.n_clips < 1).any():
-        raise StoreError(f"{where}: n_clips must be at least 1")
-    bad = sorted({x for x in s.source.tolist() if not SOURCE_RE.match(x)})
+    if (s.n_clips < 0).any() or s.emb[gone].any() or any(s.source[gone].tolist()):
+        raise StoreError(f"{where}: n_clips must be at least 1, or 0 with an all-zero emb row and an empty source "
+                         "(a removed album)")
+    bad = sorted({x for x in s.source[~gone].tolist() if not SOURCE_RE.match(x)})
     if bad:
         raise StoreError(f"{where}: unknown source {bad[0]!r} (deezer, itunes:<storefront>, local)")
 
 
+def _tmp(path: Path) -> Path:
+    return path.with_name("." + path.name + ".tmp")
+
+
 def write_shard(path: Path, keys, emb: np.ndarray, n_clips, source) -> Shard:
-    """Validate and write one shard (compressed, no pickled objects)."""
+    """Validate and write one shard (compressed, no pickled objects), complete or not at all."""
     s = Shard(np.asarray(keys, dtype=np.str_), np.asarray(emb, dtype=np.float16),
               np.asarray(n_clips, dtype=np.int16), np.asarray(source, dtype=np.str_))
     _check_shard(s, path.name)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "wb") as f:
+    with open(_tmp(path), "wb") as f:
         np.savez_compressed(f, keys=s.keys, emb=s.emb, n_clips=s.n_clips, source=s.source)
+    os.replace(_tmp(path), path)
     return s
 
 
@@ -132,12 +146,12 @@ def init_store(audio_dir: Path, model: str, clips: dict) -> None:
 
 def append_shard(audio_dir: Path, keys, emb: np.ndarray, n_clips, source, note: str,
                  created: str | None = None) -> Path:
-    """Write the next part-NNNN.npz and add it to the manifest."""
+    """Write the next part-NNNN.npz, then add it to the manifest. What an interrupted write left behind
+    (see leftovers) is removed first."""
     m = load_manifest(audio_dir)
+    clean_leftovers(audio_dir)
     number = 1 + max((int(SHARD_RE.match(e["file"])[1]) for e in m["shards"]), default=0)
     path = audio_dir / "embeddings" / f"part-{number:04d}.npz"
-    if path.exists():
-        raise StoreError(f"{path} exists but is not in the manifest")
     s = write_shard(path, keys, emb, n_clips, source)
     m["shards"].append({"file": path.name, "albums": len(s.keys), "created": created or date.today().isoformat(),
                         "note": note})
@@ -152,14 +166,38 @@ def set_clips_per_album(audio_dir: Path, per_album: int) -> None:
     _write_json(audio_dir / "manifest.json", m)
 
 
+def leftovers(audio_dir: Path) -> list[Path]:
+    """Files an interrupted write left behind: temporary files, and shards the manifest does not list.
+    load_store ignores them; the next append or compact removes them."""
+    listed = {e["file"] for e in load_manifest(audio_dir)["shards"]}
+    folder = audio_dir / "embeddings"
+    out = [p for p in folder.glob("*.npz") if p.name not in listed] if folder.is_dir() else []
+    return sorted(out + [p for d in (audio_dir, folder) if d.is_dir() for p in d.glob(".*.tmp")])
+
+
+def clean_leftovers(audio_dir: Path) -> list[str]:
+    """Delete the leftovers; returns their names."""
+    found = leftovers(audio_dir)
+    for p in found:
+        p.unlink()
+    return [p.name for p in found]
+
+
+def drop_albums(audio_dir: Path, keys, note: str, created: str | None = None) -> Path:
+    """Remove albums from the store: a new shard whose entries (n_clips 0) supersede their embeddings."""
+    keys = [str(k) for k in keys]
+    return append_shard(audio_dir, keys, np.zeros((len(keys), DIM), np.float16), [0] * len(keys), [""] * len(keys),
+                        note=note, created=created)
+
+
 def compact_store(audio_dir: Path, note: str, created: str | None = None) -> Path:
-    """Rewrite every shard into one: each album's newest embedding, in store order. The new shard takes
-    the next number; the older files are deleted once the manifest lists only the new one."""
+    """Rewrite every shard into one: each album's newest embedding, in store order, removed albums left
+    out. The new shard takes the next number; the older files are deleted once the manifest lists only
+    the new one."""
     store = load_store(audio_dir)
+    clean_leftovers(audio_dir)
     old = [e["file"] for e in store.manifest["shards"]]
     path = audio_dir / "embeddings" / f"part-{1 + int(SHARD_RE.match(old[-1])[1]):04d}.npz"
-    if path.exists():
-        raise StoreError(f"{path} exists but is not in the manifest")
     s = write_shard(path, store.keys, store.emb, store.n_clips, store.source)
     m = dict(store.manifest)
     m["shards"] = [{"file": path.name, "albums": len(s.keys), "created": created or date.today().isoformat(),
@@ -171,15 +209,13 @@ def compact_store(audio_dir: Path, note: str, created: str | None = None) -> Pat
 
 
 def load_store(audio_dir: Path = DEFAULT_AUDIO) -> Store:
-    """Every shard of the manifest merged, later shards superseding earlier ones key by key."""
+    """Every shard of the manifest merged, later shards superseding earlier ones key by key; an album
+    whose newest entry is a removal (n_clips 0) is left out. Files the manifest does not list are ignored
+    (see leftovers)."""
     m = load_manifest(audio_dir)
     if not m["shards"]:
         raise StoreError(f"{audio_dir / 'manifest.json'} lists no shards")
-    listed = [e["file"] for e in m["shards"]]
     folder = audio_dir / "embeddings"
-    stray = sorted(p.name for p in folder.glob("*.npz") if p.name not in listed)
-    if stray:
-        raise StoreError(f"{folder} has shards the manifest does not list: {stray}")
     shards = []
     for e in m["shards"]:
         s = read_shard(folder / e["file"])
@@ -191,6 +227,7 @@ def load_store(audio_dir: Path = DEFAULT_AUDIO) -> Store:
     for i, k in enumerate(keys.tolist()):
         newest[k] = i
     take = np.fromiter(newest.values(), dtype=np.int64, count=len(newest))
+    take = take[np.concatenate([s.n_clips for s in shards])[take] > 0]
     cat = lambda name: np.concatenate([getattr(s, name) for s in shards])[take]  # noqa: E731
     return Store(keys[take], cat("emb"), cat("n_clips"), cat("source"), m)
 
@@ -219,10 +256,11 @@ def load_matches(path: Path) -> list[dict[str, str]]:
 
 def write_matches(path: Path, rows: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", newline="", encoding="utf-8") as f:
+    with open(_tmp(path), "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=MATCH_FIELDS, lineterminator="\n")
         w.writeheader()
         w.writerows(rows)
+    os.replace(_tmp(path), path)
 
 
 def load_match_overrides(path: Path) -> dict[str, dict]:
@@ -250,6 +288,5 @@ def load_match_overrides(path: Path) -> dict[str, dict]:
 
 
 def _write_json(path: Path, data) -> None:
-    tmp = path.with_name("." + path.name + ".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    _tmp(path).write_text(json.dumps(data, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    os.replace(_tmp(path), path)
