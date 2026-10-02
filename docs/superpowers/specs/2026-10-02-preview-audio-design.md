@@ -28,7 +28,7 @@ The build never imports Essentia and never touches the network. Anyone can rebui
 
 | File | Contents |
 |---|---|
-| `embeddings/part-NNNN.npz` | Append-only shards. Arrays: `keys` (album key, str), `emb` (float16, n × 1280: the album mean of per-clip Discogs-EffNet embeddings), `n_clips` (int16), `source` (str: `deezer`, `itunes:us`, `itunes:jp`, `local`). A key in a later shard supersedes earlier ones. |
+| `embeddings/part-NNNN.npz` | Append-only shards. Arrays: `keys` (album key, str), `emb` (float16, n × 1280: the album mean of per-clip Discogs-EffNet embeddings), `n_clips` (int16), `source` (str: `deezer`, `itunes:us`, `itunes:jp`, `local`). A key in a later shard supersedes earlier ones; an entry with `n_clips` 0 removes the album. |
 | `manifest.json` | Model id and version, clip policy (clips per album, priority order), one entry per shard (file, albums, created, note). |
 | `matches.csv` | One row per album key: source, source album id, matched title and artist, score, `ambiguous`, track count, clips available. Provenance, and the input that lets a re-extraction skip matching. |
 | `match_overrides.json` | Hand corrections: key -> `{source, album_id}` to force a match, or `{skip: true}`. Read by the audio stage before searching. |
@@ -58,14 +58,14 @@ The live-site replica (`rec_matrix`, `live_recommend`, the In Rainbows test) sta
 
 ### Albums without audio
 
-137 albums have no preview on Deezer or the US iTunes store. Every album still needs a matrix row: the site requires a position and ten recommendations for each.
+137 albums had no preview on Deezer or the US iTunes store when the store was first filled; after the British and German storefronts, the artist album lists and the hand-checked overrides, 101 are left (98 unmatched, 3 skipped). Every album still needs a matrix row: the site requires a position and ten recommendations for each.
 
 Their block is the mean of the blocks of their k nearest albums by descriptor distance, among albums that have audio. In words: until we have their audio, they sound like the records that share their mood. They stay in the catalog as seeds and as candidates. The implementation picks k (and whether to rescale the mean to a typical norm) by hiding the audio of albums that have it and measuring neighbour coherence and hubness; the numbers go in the pipeline README.
 
 Ways to get real audio for them, in order:
 
-1. Other iTunes storefronts (`itunes:jp`, `itunes:gb`, ...), tried automatically by the matcher.
-2. Local files: `rmr_audio sync --local-dir DIR` reads `DIR/<album slug>/*` (mp3, m4a, flac, wav), takes one 30-second excerpt from each file starting 30 seconds in (or centred, for shorter tracks), and embeds it like a preview. `rmr_audio status --missing` prints the slugs to create.
+1. Other iTunes storefronts: `itunes:gb` and `itunes:de` are tried automatically after `itunes:us`; others (`jp`, `br`, ...) with `--storefronts`.
+2. Local files: `rmr_audio sync --local-dir DIR` reads `DIR/<album slug>/*` (mp3, m4a, flac, wav, ogg, aiff, aif), takes one 30-second excerpt from each file starting 30 seconds in (or centred, for shorter tracks), and embeds it like a preview. `rmr_audio status --missing` prints the slugs to create.
 
 Nothing on the site says which albums are imputed; the list is in the build log and `rmr_audio status`.
 
@@ -79,7 +79,8 @@ Ported from `experiments/preview_features/` and reduced to what the block needs 
 
 ```
 python -m rmr_audio sync [--clips N] [--keys K,...] [--limit N] [--workers 2] [--local-dir DIR]
-                         [--storefronts us,gb,jp,...] [--retry-unmatched] [--dry-run]
+                         [--storefronts us,gb,de] [--retry-unmatched] [--dry-run]
+python -m rmr_audio match [--retry-unmatched]
 python -m rmr_audio status [--missing]
 python -m rmr_audio compact
 python -m rmr_audio import-experiment
