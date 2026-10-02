@@ -160,4 +160,9 @@ def test_committed_store(deduped):
     assert {m["key"] for m in matches} == uris
     assert {m["key"] for m in matches if m["source"]} == set(s.keys.tolist())
     assert {m["key"]: m["source"] for m in matches if m["source"]} == dict(zip(s.keys.tolist(), s.source.tolist()))
-    assert load_match_overrides(DEFAULT_AUDIO / "match_overrides.json") == {}
+    overrides = load_match_overrides(DEFAULT_AUDIO / "match_overrides.json")
+    assert set(overrides) <= uris and all(e.get("note") for e in overrides.values())
+    skipped = {k for k, e in overrides.items() if e.get("skip")}
+    assert not skipped & set(s.keys.tolist())  # an album kept out of matching has no embedding
+    # Apple only has cover versions of these two game soundtracks: they stay without audio
+    assert {"spotify:album:3saAefkIXxddLvrh05pFz6", "spotify:album:4WHw7nHg2tlT0ClrJvS8dE"} <= skipped

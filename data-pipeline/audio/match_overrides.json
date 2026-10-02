@@ -1,1 +1,75 @@
-{}
+{
+ "spotify:album:3saAefkIXxddLvrh05pFz6": {
+  "skip": true,
+  "note": "近藤浩治 [Koji Kondo] - The Legend of Zelda [Ocarina of Time]: Apple only has cover versions (Super Guitar Bros)."
+ },
+ "spotify:album:4WHw7nHg2tlT0ClrJvS8dE": {
+  "skip": true,
+  "note": "Mario Galaxy Orchestra - Super Mario Galaxy: Apple only has cover versions (Goodknight Productions); the table's Spotify numbers are that cover album's, so the matcher recognises it by its durations."
+ },
+ "spotify:album:4Zkx9awRmjtUs06KshW9Hm": {
+  "source": "itunes:us",
+  "album_id": "1452618050",
+  "note": "Wiener Philharmoniker / Carlos Kleiber - Symphonie Nr.5: Listed as 'Beethoven: Symphony No. 5 (The Works)', Vienna Philharmonic & Carlos Kleiber: the symphony's 4 movements, 33 minutes (Spotify had the coupling with No. 7)."
+ },
+ "spotify:album:3gEqq6EYr32lyb63XEKBqK": {
+  "source": "itunes:gb",
+  "album_id": "1439554076",
+  "note": "Black Sabbath - Past Lives: Only listed as 'Past Lives (Deluxe Edition)': the same 18 tracks on 2 discs. Not in the US store."
+ },
+ "spotify:album:67GJo4ajqUWHsuY0f4aQz2": {
+  "source": "itunes:us",
+  "album_id": "1657544540",
+  "note": "The Mothers - The Grand Wazoo: Listed under Frank Zappa (the table credits The Mothers); 5 tracks."
+ },
+ "spotify:album:4t1qyfHV42y3WyEoTtU8lV": {
+  "source": "itunes:us",
+  "album_id": "1692802275",
+  "note": "Chicago Symphony / Fritz Reiner - Scheherazade: Listed as 'Rimsky-Korsakov: Scheherazade, Op. 35 (Remastered 2023)', Chicago Symphony Orchestra & Fritz Reiner: 4 movements, 45 minutes."
+ },
+ "spotify:album:25Uej9vkdGxJOclrpDaetA": {
+  "source": "itunes:gb",
+  "album_id": "510129517",
+  "note": "RCA Victor Symphony Orchestra / Kirill Kondrashin / Van Cliburn - Concerto No. 1: Listed as 'Tchaikovsky: Piano Concerto No. 1, Op. 23', RCA Orchestra, Kondrashin & Van Cliburn: 3 movements, 35 minutes. Not in the US store."
+ },
+ "spotify:album:4pSCGZfWXF7z8QBwUFZ4eU": {
+  "source": "itunes:us",
+  "album_id": "1045605788",
+  "note": "Pain of Salvation - 12:5: Listed as '12:05 (Live)'; the album's 16 tracks, 61 minutes."
+ },
+ "spotify:album:6PuVuJwyxyBZXMz73teSoV": {
+  "source": "itunes:gb",
+  "album_id": "700052779",
+  "note": "Clifford Brown & Max Roach - At Basin Street: The original 7-track album; the match was the 15-track Expanded Edition (ambiguous)."
+ },
+ "spotify:album:28665Y7rUCz2qEnfU4PjTr": {
+  "source": "itunes:gb",
+  "album_id": "1443422478",
+  "note": "The Chameleons - Strange Times: Listed under The Chameleons UK: the album's 10 tracks plus 5 bonus tracks (no listing without them). Not in the US store."
+ },
+ "spotify:album:3TIorpubpykzUFdUNBLOdp": {
+  "source": "itunes:us",
+  "album_id": "1713616695",
+  "note": "Pappo's Blues - Vol. 3: Listed as 'Pappo's Blues, Vol. 3'; 9 tracks, mean duration as Spotify's."
+ },
+ "spotify:album:38pbe0Co6uxej8v82U2D4d": {
+  "source": "itunes:us",
+  "album_id": "1438788039",
+  "note": "Sam Rivers - Streams: Listed as 'Streams (Live At The Montreux Jazz Festival / 1973)': the album is that concert; 3 tracks, 50 minutes. The table's Spotify URI is another album."
+ },
+ "spotify:album:30DzU0j9pEzPIiQA9FoBdU": {
+  "source": "itunes:gb",
+  "album_id": "1705730537",
+  "note": "Frumpy - 2: Listed as 'Frumpy 2'; the album's 4 tracks. Not in the US store. The table's Spotify URI is another album."
+ },
+ "spotify:album:0Apb4rWlRu82RGhfyuLaVh": {
+  "source": "itunes:us",
+  "album_id": "1478635885",
+  "note": "Y.M.O. - Naughty Boys: Listed under Yellow Magic Orchestra (the table says Y.M.O.). The 10-track album (2019 remaster), not the 20-track 'Naughty Boys & Instrumental' Spotify had."
+ },
+ "spotify:album:5UDAJbDljEo9F1G6JU80EB": {
+  "source": "itunes:us",
+  "album_id": "1222223526",
+  "note": "The Birthday Party - Mutiny!: Only listed as 'Mutiny / The Bad Seed' (10 tracks): the Mutiny! EP with the four tracks of The Bad Seed EP before it."
+ }
+}
