@@ -2,15 +2,15 @@
  "model": "discogs-effnet-bs1-1",
  "dim": 1280,
  "clips": {
-  "per_album": 4,
+  "per_album": 8,
   "order": "the first track, then tracks spread evenly through the album (bit-reversal order), so fewer clips are a prefix of more"
  },
  "shards": [
   {
-   "file": "part-0001.npz",
-   "albums": 3944,
+   "file": "part-0004.npz",
+   "albums": 3980,
    "created": "2026-10-02",
-   "note": "migrated from the preview-features experiment (four-clip pass, 1 October 2026)"
+   "note": "up to eight clips per album: the preview-features experiment's four (1 October 2026) and the top-up and 36 new albums of 2 October 2026, compacted from 3 shards"
   }
  ]
 }
