@@ -1,8 +1,11 @@
 import math
 
 import numpy as np
+from scipy.spatial import cKDTree
 
-from rmr_pipeline.layout import finalize_layouts, fix_stacks, flat_positions, norm_box, procrustes_to, stacked3, umap_embed
+from rmr_pipeline.constants import ISLAND_LINK_GAPS, STOPS, UMAP_MIN_DIST
+from rmr_pipeline.layout import (finalize_layouts, fix_stacks, flat_positions, median_gap, norm_box, procrustes_to,
+                                 pull_islands, stacked3, umap_embed)
 
 
 def _rot(a):
@@ -42,6 +45,7 @@ def test_finalize_layouts_unit_box_aligned_and_unique():
         assert out[stop].shape == (300, 2)
         assert float(np.abs(out[stop]).max()) <= 1.0 + 1e-12
         assert stacked3(out[stop]) == 0
+    assert math.isclose(max(float(np.abs(E).max()) for E in out.values()), 1.0, rel_tol=1e-9)
     assert np.abs(out["sonic"] - out["balanced"]).mean() < 0.05
 
 
@@ -72,3 +76,101 @@ def test_stack_detection_uses_the_written_rounding():
 def test_points_that_differ_beyond_three_decimals_count_as_stacked():
     E = np.array([[0.1231, 0.4], [0.1234, 0.4], [0.9, 0.9]])
     assert stacked3(E) == 2
+
+
+def _cloud_with_islands(seed=4):
+    """A 600-point disc, a 20-point blob far to the right and one stray point far below."""
+    rng = np.random.default_rng(seed)
+    r, a = np.sqrt(rng.uniform(0, 1, 600)), rng.uniform(0, 2 * math.pi, 600)
+    main = np.c_[r * np.cos(a), r * np.sin(a)]
+    blob = rng.normal(0, 0.03, (20, 2)) + [6.0, 1.0]
+    return np.vstack([main, blob, [[0.5, -9.0]]]), np.arange(600), np.arange(600, 620), 620
+
+
+def _knn(E, k):
+    return cKDTree(E).query(E, k=k + 1)[1][:, 1:]
+
+
+def test_pull_islands_brings_detached_groups_next_to_the_cloud():
+    E, main, blob, stray = _cloud_with_islands()
+    reach = ISLAND_LINK_GAPS * median_gap(E)
+    P, moved = pull_islands(E)
+    assert moved == 21
+    np.testing.assert_array_equal(P[main], E[main])
+    # The blob moves as one piece: its inner distances are the same.
+    np.testing.assert_allclose(P[blob] - P[blob[0]], E[blob] - E[blob[0]], atol=1e-9)
+    tree = cKDTree(P[main])
+    for group in (blob, [stray]):
+        gap = float(tree.query(P[group])[0].min())
+        assert reach < gap < 1.01 * reach
+    # Both islands were several cloud widths away; the frame is now little more than the cloud.
+    assert np.ptp(E, axis=0).max() > 9
+    assert np.ptp(P, axis=0).max() < 2 + 2.2 * reach
+
+
+def test_pull_islands_keeps_a_connected_cloud_and_everyones_neighbours():
+    rng = np.random.default_rng(5)
+    E = rng.normal(size=(500, 2))
+    core = np.linalg.norm(E, axis=1) < 1.5  # a cloud with no detached point
+    P, moved = pull_islands(E[core])
+    assert moved == 0
+    np.testing.assert_array_equal(P, E[core])
+    E, main, blob, _ = _cloud_with_islands()
+    P, _ = pull_islands(E)
+    before, after = _knn(E, 10), _knn(P, 10)
+    same = [len(set(before[i]) & set(after[i])) / 10 for i in list(main) + list(blob)]
+    assert np.mean(same) > 0.97
+
+
+def test_pull_islands_is_deterministic():
+    E = _cloud_with_islands()[0]
+    np.testing.assert_array_equal(pull_islands(E)[0], pull_islands(E.copy())[0])
+
+
+def test_finalize_layouts_gives_every_stop_the_same_median_gap():
+    """The site draws covers at one size for all stops, so a clumped stop must not come out denser."""
+    rng = np.random.default_rng(6)
+    balanced = rng.uniform(-1, 1, (800, 2))
+    centres = rng.uniform(-1, 1, (40, 2))
+    clumped = centres[rng.integers(0, 40, 800)] + rng.normal(0, 0.02, (800, 2))  # tight clumps, wide voids
+    stretched = balanced * [3.0, 1.0]
+    raw = {"balanced": balanced, "sonic": clumped, "mood": stretched}
+    assert median_gap(norm_box(clumped)) < 0.5 * median_gap(norm_box(balanced))
+    out = finalize_layouts(raw)
+    gaps = {stop: median_gap(out[stop]) for stop in STOPS}
+    for stop in ("sonic", "mood"):
+        assert math.isclose(gaps[stop], gaps["balanced"], rel_tol=0.02)
+    for stop in STOPS:
+        assert float(np.abs(out[stop]).max()) <= 1.0 + 1e-12
+        assert stacked3(out[stop]) == 0
+        # Resizing a stop never reorders anyone's neighbours.
+        before, after = _knn(np.asarray(raw[stop]), 10), _knn(out[stop], 10)
+        assert np.mean([len(set(before[i]) & set(after[i])) / 10 for i in range(800)]) > 0.97
+
+
+def test_finalize_layouts_does_not_let_a_far_speck_set_the_frame():
+    E, main, _, _ = _cloud_with_islands()
+    out = finalize_layouts({"balanced": E, "sonic": E, "mood": E})["balanced"]
+    disc = np.ptp(out[main], axis=0).max()
+    assert np.ptp(out, axis=0).max() < 1.25 * disc
+
+
+def test_finalize_layouts_is_deterministic():
+    E = _cloud_with_islands()[0]
+    raw = {"balanced": E, "sonic": E @ _rot(0.3).T, "mood": E * [1, -1]}
+    a, b = finalize_layouts(raw), finalize_layouts({k: v.copy() for k, v in raw.items()})
+    for stop in STOPS:
+        assert flat_positions(a[stop]) == flat_positions(b[stop])
+
+
+def test_min_dist_spreads_a_clumped_embedding():
+    """The lever behind UMAP_MIN_DIST: at a larger min_dist neighbours sit further apart relative to the map."""
+    rng = np.random.default_rng(7)
+    X = np.vstack([rng.normal(c, 0.3, (40, 6)) for c in rng.normal(0, 3, (6, 6))]).astype(np.float32)
+
+    def evenness(E):  # median gap over the gap of a uniform cloud of the same bounding box
+        return median_gap(E) / math.sqrt(np.prod(np.ptp(E, axis=0)) / len(E))
+
+    assert evenness(umap_embed(X, 0.8)) > 1.3 * evenness(umap_embed(X, 0.05))
+    assert set(UMAP_MIN_DIST) == set(STOPS)
+    assert all(0 < v <= 1 for v in UMAP_MIN_DIST.values())
