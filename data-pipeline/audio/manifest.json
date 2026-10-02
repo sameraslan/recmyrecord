@@ -1,0 +1,16 @@
+{
+ "model": "discogs-effnet-bs1-1",
+ "dim": 1280,
+ "clips": {
+  "per_album": 4,
+  "order": "the first track, then tracks spread evenly through the album (bit-reversal order), so fewer clips are a prefix of more"
+ },
+ "shards": [
+  {
+   "file": "part-0001.npz",
+   "albums": 3944,
+   "created": "2026-10-02",
+   "note": "migrated from the preview-features experiment (four-clip pass, 1 October 2026)"
+  }
+ ]
+}
