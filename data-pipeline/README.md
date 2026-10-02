@@ -71,7 +71,7 @@ The settings come from `experiments/preview_features/imputation.py` (`results/im
 
 ### Adding albums
 
-1. The album has a row in the feature table (descriptors, a unique `URI`, title, artist). Its Spotify audio columns can be empty.
+1. The album has a row in the feature table (descriptors, a unique `URI`, title, artist). Its Spotify audio columns can be empty. The table is a pickle pinned by hash, so after changing it put its new SHA-256 (`shasum -a 256`) in `DEFAULT_TABLE_SHA256` in `rmr_pipeline/constants.py`: `load_table` refuses a table whose hash differs.
 2. `.venv-audio/bin/python -m rmr_audio sync` (audio venv, below). It matches the album, embeds its clips, writes one new shard and adds the album's row to `matches.csv`.
 3. `.venv-audio/bin/python -m rmr_audio status --missing`. Check the ambiguous matches and the albums without audio; correct them in `match_overrides.json` or with local files, and run `sync` again. (`python -m rmr_audio match` shows what the stores answer for a new album before anything is embedded.)
 4. Rebuild (`rmr_pipeline.build`). An album with no shard entry is imputed.
