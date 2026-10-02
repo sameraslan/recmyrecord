@@ -4,7 +4,8 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 
 ## Inputs (read-only)
 
-- `data-retrieval/Recommender/data/all_data_norm.pkl`: the recommender's feature table (4,000+ rows in catalog-rank order; `Title`, `Artist`, `URI`, `Descriptor Count`, 13 min-max audio features, 176 descriptor columns). Override with `--table`.
+- `data-retrieval/Recommender/data/all_data_norm.pkl`: the recommender's feature table (4,000+ rows in catalog-rank order; `Title`, `Artist`, `URI`, `Descriptor Count`, 13 min-max Spotify audio features, 176 descriptor columns). Override with `--table`. The build no longer reads the 13 Spotify columns; only the live-site replica does (see step 2).
+- `data-pipeline/audio/`: the committed audio store and the frozen transform (see Audio). Override with `--audio-dir`.
 - The music map worktree of the personal site, passed as `--map-root` (for example `/path/to/music_map`). The pipeline reads:
   - `public/data/metadata.json`: cluster id (0 to 7), atlas sheet and UV for each Spotify URI.
   - `public/data/atlas-0.webp` to `atlas-3.webp`: 96 px cover sprites in the map's own order.
@@ -25,24 +26,74 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 ## How it works
 
 1. Albums: the feature table, keeping the first row of each Spotify URI; every album present in both the feature table and the map.
-2. Recommendations: the live recommender exactly (drop the 56 lyric and theme descriptors, divide the other 120 descriptor columns by `slider ** 3`, euclidean nearest neighbours) at three stops: sonic 5, balanced 1.765 (the original site's tuned default, a divisor of about 5.5), mood 0.5. Ten per album per stop, over the whole catalog. A test checks the live behaviour: "In Rainbows" at slider 0.5, over the same leading rows the live recommender searches (`LIVE_POOL`), returns Tindersticks, Avalon, So, You Will Never Know Why, Imperial Bedroom.
-3. Layouts: UMAP (n_neighbors 15, min_dist 0.1, random_state 42) of the recommender's matrix at each stop, outliers softly compressed, sonic and mood Procrustes-aligned to balanced, scaled to [-1, 1], stacked points spread.
+2. Recommendations: the live recommender with its 13 Spotify audio columns replaced by the 64-column audio block (see Audio). The matrix is `[audio block | descriptors / slider ** 3]` (184 columns): the 56 lyric and theme descriptors are dropped, the other 120 descriptor columns are divided by `slider ** 3`, and the neighbours are euclidean, at three stops: sonic 5, balanced 1.765 (the original site's tuned default, a divisor of about 5.5), mood 0.5. Ten per album per stop, over the whole catalog. `table.py` keeps an exact replica of the old live recommender (`rec_matrix`, `live_recommend`) and a test checks it: "In Rainbows" at slider 0.5, over the same leading rows the live recommender searches (`LIVE_POOL`), returns Tindersticks, Avalon, So, You Will Never Know Why, Imperial Bedroom. The site's mood stop still returns those five; the audio block has almost no weight there.
+3. Layouts: UMAP (n_neighbors 15, min_dist 0.1, random_state 42) of the same matrix at each stop, outliers softly compressed, sonic and mood Procrustes-aligned to balanced, scaled to [-1, 1], stacked points spread.
 4. Artists: the feature table sometimes glues the member names onto the billed credit with no separator ("Bob Marley & The WailersBob MarleyThe Wailers"). `artists.py` keeps the billed credit: it cuts at the first case or script boundary inside a word when the text before it joins several names ("&", ",", "/", "and", "with", ...) and the glued-on tail repeats one of them. Whitespace is collapsed. Every string it changes in the feature table is listed in `tests/test_artists.py`.
 5. Slugs: `kebab(title)-kebab(artist)` from the cleaned artist, ASCII-folded (Cyrillic transliterated), `-2`, `-3` on collision in catalog order.
 6. Vocabulary: kept descriptors minus vocals descriptors, "instrumental" and "concept album", most frequent first.
 7. Sprites: each album's map sprite re-packed in album order; ambient colours from the sprite plus an accent with at least 4.5:1 contrast on `#15110d`. The two washes are the leading colour and the next one of a clearly different hue (or, on a cover with one hue or none, a clearly lighter or darker one), made dark and muted with saturation taken from the colour's chroma so grey covers stay grey; the more visible of the two comes first. The constants in `colors.py` were tuned against the hand-picked pairs of the design mockup.
 
+## Audio
+
+The audio block is 64 numbers per album computed from 30-second preview clips (the evidence is in `experiments/preview_features/REPORT.md`, the design in `docs/superpowers/specs/2026-10-02-preview-audio-design.md`). It has two stages. The audio stage matches an album on Deezer or iTunes, runs each clip through Essentia's Discogs-EffNet model and stores the album's mean embedding; it is rare, needs the network and its own environment, and is not part of this package. The build stage, here, only reads the store, so anyone can rebuild the site data from committed files.
+
+### The store (`data-pipeline/audio/`, committed)
+
+| File | Contents |
+|---|---|
+| `embeddings/part-NNNN.npz` | Append-only shards: `keys` (the feature table's `URI`), `emb` (float16, 1,280 per album: the mean of its clips' embeddings), `n_clips`, `source` (`deezer`, `itunes:us`, `local`, ...). A key in a later shard replaces the earlier one. |
+| `manifest.json` | Model id, clip policy, one entry per shard. |
+| `matches.csv` | One row per album: source, source album id, matched title and artist, score, `ambiguous`, track count, clips available. An empty source means no match. |
+| `match_overrides.json` | Hand corrections for the audio stage: key -> `{"source", "album_id"}` to force a match, or `{"skip": true}`. |
+| `transform.npz` | The frozen transform: `mean`, `components` (64 x 1,280), `scale`, `target_total_variance`, and the fit's date, album count and model id. |
+
+`audio_store.py` reads and writes these and rejects a malformed store with a message naming the file. It needs only numpy (1.26 or 2.x), so the audio stage can use it from its own environment.
+
+The first shard (3,944 albums, four clips each) was migrated from the experiment's cache by `scripts/migrate_experiment_audio.py`, which also fitted `transform.npz`. Against the experiment's own block the migrated one differs by at most 0.0002 (values reach 0.6), because the store keeps float16 means; 98.9% of the sonic lists and 99.3% of the balanced lists over those albums are identical, and 99.98% of the recommendations are the same albums.
+
+### The block
+
+`block = ((e / |e|) - mean) @ components.T * scale`, where `e` is the album's stored embedding. The transform is a PCA fitted once on the catalog. `scale` gives the block the total variance the 13 Spotify columns had on the fitted albums (`target_total_variance`, 0.3905), so the slider stops keep their meaning.
+
+An album added later goes through the same frozen transform. Refit only on purpose:
+
+```bash
+.venv/bin/python -m rmr_pipeline.audio fit      # rewrites audio/transform.npz from the current store
+```
+
+A refit changes about 5% of the lists and every map position, so it is never automatic. It keeps `target_total_variance`. Rebuild and commit the site data after it.
+
+### Albums without audio
+
+137 albums have no preview on Deezer or the US iTunes store ("Loveless" is one). Each still needs a row, so its block is imputed: the mean block of its 3 nearest albums by descriptor distance among the albums with audio, rescaled to those neighbours' mean norm. Until it has audio of its own, it sounds like the records that share its mood. `python -m rmr_pipeline.audio status` lists the imputed albums; the build prints the count.
+
+The settings come from `experiments/preview_features/imputation.py` (`results/imputation.md`), which hides the audio of 137 random albums that have it, five times, and compares their imputed lists with their real ones. With k = 3 and rescaling a hidden album gets back 8% of its real top 10 at the sonic stop and 42% at the balanced stop; the share of its recommendations with its primary genre is 0.15 (0.25 with its own audio) at sonic and 0.18 (0.28) at balanced; it appears in 14 lists at sonic and 12 at balanced, where an average album appears in 10. Without rescaling the mean block is shorter than a real one and the album lands in 28 and 19 lists. Larger k does not recover more and makes the imputed albums recommend each other.
+
+### Adding albums
+
+1. The album has a row in the feature table (descriptors, a unique `URI`, title, artist). Its Spotify audio columns can be empty.
+2. The audio stage adds its embedding as a new shard and its row in `matches.csv`. Check ambiguous or missing matches and correct them in `match_overrides.json`.
+3. Rebuild. An album with no shard entry is imputed.
+4. Commit the shard, `matches.csv` and the regenerated site data. A test fails when `recs.json` is not what the committed store gives.
+
+The album also has to be in the map inputs (cover sprite, cluster id), and the thumbnail sheet holds 4,096 albums.
+
 ## Commands
 
 ```bash
-python3.11 -m venv data-pipeline/.venv
+python3.12 -m venv data-pipeline/.venv
 data-pipeline/.venv/bin/pip install -r data-pipeline/requirements.txt
 cd data-pipeline
 .venv/bin/python -m rmr_pipeline.build --map-root /path/to/music_map   # about 1 to 2 minutes
 .venv/bin/python -m rmr_pipeline.validate                               # checks every output against the contract
+.venv/bin/python -m rmr_pipeline.audio status                           # albums with audio, and the imputed ones
 .venv/bin/python -m pytest
 RMR_MAP_ROOT=/path/to/music_map .venv/bin/python -m pytest   # also compares sprites with the map's atlases
 ```
+
+The pinned requirements need Python 3.12.
+
+`--hub-correction balanced` (any comma-separated stops) ranks those stops by mutual proximity instead of the raw distance: an album that is close to everything stops counting as close. At the balanced stop the most-recommended album goes from 92 lists to 37, the albums in no list from 4.8% to 0.9%, and about a third of the recommendations change. It is off by default because the lists then differ from "nearest on the map".
 
 `--skip-images` is a faster development run that keeps the fallback ambient colours and writes no sprite sheets. It needs an explicit `--out` folder so it never overwrites the committed `albums.json`; check that folder with `.venv/bin/python -m rmr_pipeline.validate --data <folder> --no-images`.
 
@@ -64,12 +115,15 @@ UMAP output depends on the exact versions of umap-learn, pynndescent and numba; 
 { "blue-joni-mitchell": { "s": "<22-character album id>", "c": "<cover id>", "image": "overrides/blue-joni-mitchell.jpg", "note": "Spotify URI points at a tribute single" } }
 ```
 
-Only the Spotify link, the cover, the sprites, the ambient colours and (for `a`) the artist and slug change. All 19 corrections of the list match an album in this catalog. Positions and recommendations still use the wrong album's audio features, because Spotify no longer serves audio features to refetch them.
+Only the Spotify link, the cover, the sprites, the ambient colours and (for `a`) the artist and slug change. All 19 corrections of the list match an album in this catalog. Their positions and recommendations no longer use the wrong album's audio: preview clips are matched by artist and title, not by Spotify URI. 15 of the 19 have their own audio; the other 4 have no preview and are imputed.
 
 ## Known data problems (documented, not fixed)
 
 - 34 Spotify URIs in the feature table are assigned to two or three different albums (69 rows). The pipeline keeps the first row and drops the other 35.
-- Some Spotify URIs in the feature table point at a different album. The verified ones are corrected in `overrides.json` (see Overrides); their positions and recommendations still come from the wrong album's features.
+- Some Spotify URIs in the feature table point at a different album. The verified ones are corrected in `overrides.json` (see Overrides). The URI stays the album's key in the audio store.
+- 137 albums have no preview audio and an imputed audio block (see Audio).
+- Audio matches are not all right: in the experiment's hand audit about 1% of confident matches and about a third of the 148 flagged `ambiguous` in `matches.csv` were the wrong album or edition.
+- The store has four clips per album. Eight would be closer to the whole album (experiment report, clip length).
 - "One" by Neal Morse shows a Neal Francis sleeve. Unverified, so not corrected.
 - "Chill Out" (The KLF), "Gimix" (The Avalanches) and "Dark & Long" (Underworld) have no Spotify release, so they have no Spotify id and no cover id. The site shows no Spotify link for an album with an empty Spotify id. Their sprites and ambient colours use the corrected cover, but the site's cover component shows a cover id's image, then the sprite only when that image fails, so with no cover id it shows the typographic tile, not the sprite.
 - "Spiritual Unity" (Albert Ayler Trio) has no cover; the site shows a typographic tile.
@@ -77,4 +131,4 @@ Only the Spotify link, the cover, the sprites, the ambient colours and (for `a`)
 - The feature table has 176 descriptor columns (the design spec says 175).
 - Cluster ids come from the map pipeline and are unbalanced (three clusters hold almost every album); the site only uses them for dot colours.
 - Artist cleaning only drops a glued tail that repeats a name from the credit. A credit glued to an unrelated name, or to member names spelled too differently, would stay as it is; none is known in the current table. The member names in the dropped tail are not kept.
-- The catalog is frozen because Spotify no longer serves audio features.
+- Audio no longer freezes the catalog, but adding an album still needs its descriptor row in the feature table, which no code here produces, and its cover and cluster in the map inputs.
