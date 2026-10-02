@@ -21,7 +21,7 @@ class Replay:
     def __init__(self, responses: dict):
         self.responses, self.asked = responses, []
 
-    def get(self, url, store, fresh=False):
+    def get(self, url, store, fresh=False, search=False):
         self.asked.append(url)
         assert url in self.responses, f"not recorded: {url}"
         return self.responses[url]
@@ -78,7 +78,7 @@ def test_no_store_has_it():
         responses |= {url.replace("country=us", f"country={cc}"): {"results": []} for url in data["responses"]}
 
     class Empty(Replay):
-        def get(self, url, store, fresh=False):
+        def get(self, url, store, fresh=False, search=False):
             self.asked.append(url)
             return self.responses.get(url, {"data": [], "results": []})
 
@@ -197,7 +197,7 @@ def _itunes_store(albums: dict, searches: dict, cc: str = "us") -> dict:
 class Store(Replay):
     """Replay where Deezer has nothing and an unknown iTunes search finds nothing."""
 
-    def get(self, url, store, fresh=False):
+    def get(self, url, store, fresh=False, search=False):
         self.asked.append(url)
         if url in self.responses:
             return self.responses[url]
@@ -257,3 +257,70 @@ def test_import_responses_adds_the_default_storefront(tmp_path):
     http = Http(dest)
     assert http.cached(urls[0] + "&country=us") == {"n": 0} and http.cached(urls[0]) is None
     assert http.cached(urls[1]) == {"n": 1} and http.cached(urls[2]) == {"n": 2}
+
+
+def _http(tmp_path, answers, **kw):
+    """An Http whose requests are answered from `answers` (an exception is raised), without waiting."""
+    http = Http(tmp_path / "http.sqlite", **kw)
+    for t in http.throttles.values():
+        t.interval = 0.0
+
+    def fetch(url):
+        a = answers.pop(0)
+        if isinstance(a, Exception):
+            raise a
+        return a
+
+    http.fetch = fetch
+    return http
+
+
+def test_error_payloads_are_not_cached(tmp_path):
+    answers = [{"error": {"type": "DataException", "message": "no data", "code": 800}}, {"data": [1]}]
+    http = _http(tmp_path, answers)
+    assert "error" in http.get("https://api.deezer.com/album/1/tracks", "deezer")
+    assert http.cached("https://api.deezer.com/album/1/tracks") is None
+    assert http.get("https://api.deezer.com/album/1/tracks", "deezer") == {"data": [1]}  # asked again, and kept
+    assert http.cached("https://api.deezer.com/album/1/tracks") == {"data": [1]}
+
+
+def test_a_store_that_keeps_failing_is_left_alone_for_the_rest_of_the_run(tmp_path):
+    import requests
+
+    slept = []
+    http = _http(tmp_path, [requests.HTTPError("HTTP 403")] * 100, sleep=slept.append)
+    for n in range(matching.STORE_DOWN_AFTER):
+        with pytest.raises(IOError, match="giving up"):
+            http.get(f"https://itunes.apple.com/search?term={n}", "itunes")
+    assert slept == [60, 120, 180, 240] * matching.STORE_DOWN_AFTER and http.down() == ["itunes"]
+    with pytest.raises(matching.StoreDown, match="itunes is not answering"):
+        http.get("https://itunes.apple.com/search?term=next", "itunes")
+    assert len(slept) == 4 * matching.STORE_DOWN_AFTER  # no request, no wait
+    http.fetch = lambda url: {"data": []}
+    assert http.get("https://api.deezer.com/search/album?q=a", "deezer") == {"data": []}  # the other store still works
+
+
+def test_retry_unmatched_asks_again_for_searches_older_than_a_day(tmp_path):
+    answers = [{"results": [1]}, {"results": [2]}, {"results": [3]}]
+    http = _http(tmp_path, answers)
+    url = "https://itunes.apple.com/search?term=a&entity=album&limit=25&country=us"
+    assert http.get(url, "itunes", search=True) == {"results": [1]}
+    http.db.execute("UPDATE http_cache SET fetched_at = datetime('now', '-3 days') || '+00:00'")
+    assert http.get(url, "itunes", search=True) == {"results": [1]}  # three days old: fine for a plain run
+    http.search_max_age_days = matching.RETRY_SEARCH_DAYS  # what --retry-unmatched sets
+    assert http.get(url, "itunes") == {"results": [1]}  # a track listing is not a search: still from the cache
+    assert http.get(url, "itunes", search=True) == {"results": [2]}  # the search is asked again
+    assert http.get(url, "itunes", search=True) == {"results": [2]} and len(answers) == 1  # and that answer is fresh
+
+
+def test_waits_between_attempts_end_when_the_run_is_stopped(tmp_path):
+    import time
+
+    import requests
+
+    http = _http(tmp_path, [requests.HTTPError("HTTP 503")] * 10)
+    t0, calls = time.monotonic(), []
+    http.abort = lambda: calls.append(1) or len(calls) > 2  # asked to stop during the first wait
+    with pytest.raises(IOError, match="interrupted"):
+        http.get("https://itunes.apple.com/search?term=a", "itunes")
+    assert time.monotonic() - t0 < 3  # not the 60 seconds of the first backoff

@@ -52,7 +52,10 @@ SHORTLIST = {"deezer": 4, "itunes": 3}  # candidates whose tracks are fetched
 # (gb 14 of 16, de the other two); others (jp, br, pl, fr...) only when passed with --storefronts.
 DEFAULT_STOREFRONTS = ("us", "gb", "de")
 ARTIST_LIST_MIN = 0.9  # iTunes: how well a search result's artist must read for its album list to be fetched
-CACHE_DAYS = 30  # a cached search older than this is asked again
+CACHE_DAYS = 30  # a cached response older than this is asked for again
+RETRY_SEARCH_DAYS = 1  # with --retry-unmatched: a cached search older than this is asked again
+ATTEMPTS = 4  # per URL: Deezer waits 5, 10, 15 s between them, iTunes 60, 120, 180 s
+STORE_DOWN_AFTER = 3  # URLs in a row a store may fail before it is left alone for the rest of the run
 
 
 def store_of(source: str) -> str:
@@ -119,20 +122,37 @@ class Throttle:
         time.sleep(max(0.0, start - time.monotonic()))
 
 
+class StoreDown(IOError):
+    """A store failed STORE_DOWN_AFTER URLs in a row: it is not asked again in this run."""
+
+
 class Http:
     """GET JSON, rate-limited per store, with retries and a sqlite response cache (url -> zlib JSON).
-    Only successful responses are cached. `fresh=True` neither reads nor writes the cache: track
-    listings fetched for download carry preview URLs that expire, and are given up on after 3 attempts."""
+    Only successful responses are cached, never an error payload. `fresh=True` neither reads nor writes
+    the cache: track listings fetched for download carry preview URLs that expire, and are given up on
+    after 3 attempts. `search=True` marks a search (or an artist's album list): with --retry-unmatched
+    those are asked again when the cached answer is older than a day. The waits between attempts end
+    at once when the run is asked to stop."""
 
-    def __init__(self, cache: Path | None, attempts: int = 8, sleep=time.sleep):
+    def __init__(self, cache: Path | None, attempts: int = ATTEMPTS, sleep=None):
         self.db = None
         if cache is not None:
             Path(cache).parent.mkdir(parents=True, exist_ok=True)
             self.db = sqlite3.connect(cache, timeout=60)
             self.db.execute("CREATE TABLE IF NOT EXISTS http_cache(url TEXT PRIMARY KEY, body BLOB, fetched_at TEXT)")
         self.throttles = {"deezer": Throttle(0.2, backoff=5), "itunes": Throttle(3.2, backoff=60)}
-        self.attempts, self.sleep, self.session, self.fetched = attempts, sleep, None, 0
+        self.attempts, self.sleep, self.session, self.fetched = attempts, sleep or self._pause, None, 0
         self.abort = lambda: False  # sync sets it: True once the run was asked to stop
+        self.search_max_age_days = CACHE_DAYS
+        self.failed: Counter = Counter()  # store -> URLs given up on in a row
+
+    def _pause(self, seconds: float) -> None:
+        end = time.monotonic() + seconds
+        while not self.abort() and (left := end - time.monotonic()) > 0:
+            time.sleep(min(0.5, left))
+
+    def down(self) -> list[str]:
+        return sorted(s for s, n in self.failed.items() if n >= STORE_DOWN_AFTER)
 
     @staticmethod
     def url(base: str, **params: object) -> str:
@@ -162,9 +182,11 @@ class Http:
             raise requests.HTTPError(f"Deezer: {data['error'].get('message', 'quota')}")
         return data
 
-    def get(self, url: str, store: str, fresh: bool = False) -> dict:
-        if not fresh and (data := self.cached(url, CACHE_DAYS)) is not None:
+    def get(self, url: str, store: str, fresh: bool = False, search: bool = False) -> dict:
+        if not fresh and (data := self.cached(url, self.search_max_age_days if search else CACHE_DAYS)) is not None:
             return data
+        if self.failed[store] >= STORE_DOWN_AFTER:
+            raise StoreDown(f"{store} is not answering")
         throttle = self.throttles[store]
         for attempt in range(min(self.attempts, 3) if fresh else self.attempts):  # a listing for download gives up sooner
             if self.abort():
@@ -178,12 +200,14 @@ class Http:
                 self.sleep(pause)
                 continue
             self.fetched += 1
-            if not fresh and self.db is not None:
+            self.failed[store] = 0
+            if not fresh and self.db is not None and not (isinstance(data, dict) and data.get("error")):
                 self.db.execute("INSERT OR REPLACE INTO http_cache VALUES (?, ?, ?)", (
                     url, zlib.compress(json.dumps(data, separators=(",", ":")).encode()),
                     datetime.now(timezone.utc).isoformat(timespec="seconds")))
                 self.db.commit()
             return data
+        self.failed[store] += 1
         raise IOError(f"giving up on {url}")
 
 
@@ -255,7 +279,8 @@ def deezer_artist_albums(http: Http, al: Album, artist_id: str, artist: str) -> 
     """Every album Deezer lists for the artist, without track counts. Search misses some albums and sometimes
     returns the deluxe edition only."""
     url = Http.url(f"https://api.deezer.com/artist/{artist_id}/albums", limit=100)
-    return [scored(al, "deezer", d["id"], d["title"], artist, 0, artist_id) for d in http.get(url, "deezer").get("data", [])]
+    return [scored(al, "deezer", d["id"], d["title"], artist, 0, artist_id)
+            for d in http.get(url, "deezer", search=True).get("data", [])]
 
 
 def deezer_search(http: Http, al: Album) -> Iterator[list[Cand]]:
@@ -270,7 +295,8 @@ def deezer_search(http: Http, al: Album) -> Iterator[list[Cand]]:
     whole = [] if various or al.override else [f'artist:"{first_billed(pairs[0][0])}"']
     artists: Counter = Counter()
     for q in dict.fromkeys(strict + plain + whole):
-        data = http.get(Http.url("https://api.deezer.com/search/album", q=q, limit=50 if q in whole else 25), "deezer")
+        data = http.get(Http.url("https://api.deezer.com/search/album", q=q, limit=50 if q in whole else 25), "deezer",
+                        search=True)
         batch = [scored(al, "deezer", d["id"], d["title"], d["artist"]["name"], d.get("nb_tracks", 0), d["artist"]["id"])
                  for d in data.get("data", [])]
         artists.update((c.artist_id, c.artist) for c in batch if c.a >= 0.95)
@@ -309,7 +335,7 @@ def _itunes_albums(al: Album, storefront: str, results: list[dict]) -> list[Cand
 def itunes_artist_albums(http: Http, al: Album, artist_id: str, storefront: str) -> list[Cand]:
     """Every album the storefront lists for the artist. Search misses albums it has ("Liquid Swords")."""
     url = Http.url("https://itunes.apple.com/lookup", id=artist_id, entity="album", limit=200, country=storefront)
-    return _itunes_albums(al, storefront, http.get(url, "itunes").get("results", []))
+    return _itunes_albums(al, storefront, http.get(url, "itunes", search=True).get("results", []))
 
 
 def itunes_search(http: Http, al: Album, storefront: str) -> Iterator[list[Cand]]:
@@ -317,7 +343,7 @@ def itunes_search(http: Http, al: Album, storefront: str) -> Iterator[list[Cand]
     artist's album list (the caller stops before it once a candidate reads right)."""
     artists: Counter = Counter()
     for url in itunes_urls(al, storefront):
-        batch = _itunes_albums(al, storefront, http.get(url, "itunes").get("results", []))
+        batch = _itunes_albums(al, storefront, http.get(url, "itunes", search=True).get("results", []))
         artists.update(c.artist_id for c in batch if c.artist_id and c.a >= ARTIST_LIST_MIN)
         yield batch
     if artists and not is_various(al.artist):
