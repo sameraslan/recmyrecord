@@ -144,6 +144,10 @@ def run(names: list[str], mode: str, dbs: dict, min_albums: int, seed: int = 0) 
                          + ("wait for the extraction" if mode == "pass1" else "try --mode pass1, or wait"))
     full = make_inputs(f, e, rows)
     groups = make_groups(full, seed)
+    # By album length: with four tracks or fewer the 4-track subsets are the whole album.
+    total = f.set_index("row")["n_tracks_total"].reindex(full.albums["row"]).to_numpy()
+    groups |= {"albums_2_4_tracks": total <= 4, "albums_5_8_tracks": (total > 4) & (total <= 8),
+               "albums_9plus_tracks": total > 8}
     full_recs = recommendations(full, names, seed)
     res = {"mode": mode, "albums": len(full.albums), "albums_with_features": len(f), "variants": names,
            "groups": {g: int(m.sum()) for g, m in groups.items()}, "subsets": {}}
