@@ -43,6 +43,7 @@ class Transform:
     fitted: str  # ISO date of the fit
     albums: int  # albums fitted on
     model: str  # embedding model id, as in the store's manifest
+    keys: np.ndarray | None = None  # the fitted albums' keys in fit order; None in a file written before fits recorded them
 
     def apply(self, emb: np.ndarray) -> np.ndarray:
         """(n, DIM) album-mean embeddings -> (n, k) float32 block; works for albums never fitted on."""
@@ -70,25 +71,33 @@ def unit(emb: np.ndarray) -> np.ndarray:
 
 
 def fit_transform(emb: np.ndarray, target_total_variance: float, model: str, k: int = BLOCK_DIMS,
-                  fitted: str | None = None) -> Transform:
+                  fitted: str | None = None, keys=None) -> Transform:
     """PCA(k) of the centred unit vectors, with one scale factor that gives the block the total
     variance `target_total_variance` on these albums. Component signs are fixed (largest loading
-    positive) so a refit on the same albums is identical."""
+    positive) so a refit on the same albums is identical. `keys` (the albums' keys, one per row)
+    are kept in the transform, so it says which albums it was fitted on once the store has grown."""
     V = unit(emb)
+    if keys is not None:
+        keys = np.asarray(keys, dtype=np.str_)
+        if keys.shape != (len(V),):
+            raise ValueError(f"{len(V)} embeddings but keys of shape {keys.shape}")
     mean = V.mean(axis=0)
     _, s, Vt = np.linalg.svd(V - mean, full_matrices=False)
     C = Vt[:k]
     C = C * np.sign(C[np.arange(len(C)), np.abs(C).argmax(axis=1)])[:, None]
     scale = float(np.sqrt(target_total_variance * len(V) / (s[:k] ** 2).sum()))
     return Transform(mean.astype(np.float32), C.astype(np.float32), scale, float(target_total_variance),
-                     fitted or date.today().isoformat(), len(V), model)
+                     fitted or date.today().isoformat(), len(V), model, keys)
 
 
 def save_transform(path: Path, t: Transform) -> None:
+    arrays = dict(mean=t.mean, components=t.components, scale=np.float64(t.scale),
+                  target_total_variance=np.float64(t.target_total_variance), fitted=np.str_(t.fitted),
+                  albums=np.int64(t.albums), model=np.str_(t.model))
+    if t.keys is not None:
+        arrays["keys"] = np.asarray(t.keys, dtype=np.str_)
     with open(path, "wb") as f:
-        np.savez(f, mean=t.mean, components=t.components, scale=np.float64(t.scale),
-                 target_total_variance=np.float64(t.target_total_variance), fitted=np.str_(t.fitted),
-                 albums=np.int64(t.albums), model=np.str_(t.model))
+        np.savez(f, **arrays)
 
 
 def load_transform(path: Path) -> Transform:
@@ -98,7 +107,7 @@ def load_transform(path: Path) -> Transform:
             if missing:
                 raise StoreError(f"{path.name}: missing arrays {missing}")
             t = Transform(z["mean"], z["components"], float(z["scale"]), float(z["target_total_variance"]),
-                          str(z["fitted"]), int(z["albums"]), str(z["model"]))
+                          str(z["fitted"]), int(z["albums"]), str(z["model"]), z["keys"] if "keys" in z.files else None)
     except FileNotFoundError:
         raise StoreError(f"missing {path}: the frozen transform is not there (see data-pipeline/README.md)") from None
     except (ValueError, OSError, zipfile.BadZipFile) as e:
@@ -108,12 +117,30 @@ def load_transform(path: Path) -> Transform:
             or not (np.isfinite(t.scale) and t.scale > 0 and t.target_total_variance > 0)):
         raise StoreError(f"{path.name}: needs mean ({DIM},), components (k, {DIM}), finite, and a positive scale "
                          "and target_total_variance")
+    if t.keys is not None and (t.keys.dtype.kind != "U" or t.keys.shape != (t.albums,)):
+        raise StoreError(f"{path.name}: keys must be one string per fitted album ({t.albums})")
     return t
 
 
+def _name_rows(sub: pd.DataFrame, rows: np.ndarray, limit: int = 10) -> str:
+    """'Title (URI)' of the albums at positions `rows` of the frame, for an error message."""
+    def name(i: int) -> str:
+        title = repr(str(sub["Title"].iloc[i])) if "Title" in sub.columns else f"row {i}"
+        return f"{title} ({sub['URI'].iloc[i]})" if "URI" in sub.columns else title
+
+    return ", ".join(name(int(i)) for i in rows[:limit]) + (f" and {len(rows) - limit} more" if len(rows) > limit else "")
+
+
 def descriptors(sub: pd.DataFrame) -> np.ndarray:
-    """The 120 descriptor columns the recommender scales, float64."""
-    return sub[descriptor_cols(sub)].to_numpy(dtype=np.float64)
+    """The 120 descriptor columns the recommender scales, float64. Every value has to be a finite
+    number: an empty one would silently become NaN distances (and a wrong imputed block)."""
+    D = sub[descriptor_cols(sub)].to_numpy(dtype=np.float64)
+    bad = np.flatnonzero(~np.isfinite(D).all(axis=1))
+    if len(bad):
+        raise ValueError(f"the feature table has empty or non-finite descriptor values for {len(bad)} album(s): "
+                         f"{_name_rows(sub, bad)}. Every album needs a number in each of the {D.shape[1]} "
+                         "descriptor columns (0 when the descriptor does not apply)")
+    return D
 
 
 def impute(block: np.ndarray, desc: np.ndarray, has_audio: np.ndarray, k: int = IMPUTE_K,
@@ -152,7 +179,14 @@ def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> AudioBloc
 
 
 def site_matrix(sub: pd.DataFrame, block: np.ndarray, slider: float) -> np.ndarray:
-    """The site's matrix at one stop: [audio block | descriptors / slider**3], float32."""
+    """The site's matrix at one stop: [audio block | descriptors / slider**3], float32. Raises
+    ValueError naming the albums when a descriptor or a block value is not a finite number."""
+    block = np.asarray(block)
+    if block.ndim != 2 or len(block) != len(sub):
+        raise ValueError(f"the audio block has shape {block.shape} for {len(sub)} albums")
+    bad = np.flatnonzero(~np.isfinite(block).all(axis=1))
+    if len(bad):
+        raise ValueError(f"the audio block has non-finite values for {len(bad)} album(s): {_name_rows(sub, bad)}")
     return np.hstack([block, descriptors(sub) / float(slider) ** 3]).astype(np.float32)
 
 
@@ -163,7 +197,7 @@ def refit(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> Transform:
     old = load_transform(audio_dir / "transform.npz")
     rows = store.rows(sub["URI"])
     return fit_transform(store.emb[rows[rows >= 0]], old.target_total_variance, store.manifest["model"],
-                         k=len(old.components))
+                         k=len(old.components), keys=sub["URI"].to_numpy()[rows >= 0])
 
 
 def main(argv: list[str] | None = None) -> int:
