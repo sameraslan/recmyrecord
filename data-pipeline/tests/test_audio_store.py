@@ -3,9 +3,9 @@ import json
 import numpy as np
 import pytest
 
-from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, MATCH_FIELDS, StoreError, append_shard, init_store,
-                                      load_match_overrides, load_matches, load_store, read_shard, write_matches,
-                                      write_shard)
+from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, MATCH_FIELDS, StoreError, append_shard, compact_store,
+                                      init_store, load_match_overrides, load_matches, load_store, read_shard,
+                                      set_clips_per_album, write_matches, write_shard)
 
 
 def _emb(n: int, seed: int = 0) -> np.ndarray:
@@ -47,6 +47,26 @@ def test_later_shard_supersedes_earlier(store):
     assert np.array_equal(s.emb[1], new[1]) and np.array_equal(s.emb[3], new[0])
     assert np.array_equal(s.emb[[0, 2]], _emb(3)[[0, 2]])
     assert s.n_clips.tolist() == [4, 8, 2, 8] and s.source.tolist() == ["deezer", "deezer", "local", "deezer"]
+
+
+def test_compact_keeps_every_albums_newest_embedding_in_one_shard(store):
+    append_shard(store, ["d", "b"], _emb(2, seed=1), [8, 8], ["deezer", "deezer"], note="top-up")
+    before = load_store(store)
+    path = compact_store(store, note="compacted", created="2026-10-02")
+    assert path.name == "part-0003.npz" and sorted(p.name for p in (store / "embeddings").iterdir()) == [path.name]
+    after = load_store(store)
+    assert after.manifest["shards"] == [{"file": "part-0003.npz", "albums": 4, "created": "2026-10-02", "note": "compacted"}]
+    assert after.manifest["clips"] == before.manifest["clips"] and after.manifest["model"] == before.manifest["model"]
+    for name in ("keys", "emb", "n_clips", "source"):
+        assert np.array_equal(getattr(after, name), getattr(before, name))
+    assert append_shard(store, ["e"], _emb(1), [4], ["local"], note="next").name == "part-0004.npz"
+
+
+def test_set_clips_per_album_changes_only_the_policy(store):
+    before = load_store(store).manifest
+    set_clips_per_album(store, 8)
+    after = load_store(store).manifest
+    assert after["clips"] == {"per_album": 8} and after["shards"] == before["shards"] and after["model"] == before["model"]
 
 
 @pytest.mark.parametrize("arrays, message", [

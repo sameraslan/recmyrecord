@@ -6,7 +6,8 @@ newer than numpy 1.26, so the audio venv (Python 3.11, numpy<2) and the build ve
 
   embeddings/part-NNNN.npz   keys (str), emb (float16, n x 1280), n_clips (int16), source (str);
                              a key in a later shard supersedes earlier ones
-  manifest.json              model, clip policy, one entry per shard
+  manifest.json              model, clip policy (clips.per_album: what a plain sync gives an album),
+                             one entry per shard
   matches.csv                one row per album key (MATCH_FIELDS); an empty source = unmatched
   match_overrides.json       key -> {"source", "album_id"} or {"skip": true}, optional "note"
 """
@@ -141,6 +142,31 @@ def append_shard(audio_dir: Path, keys, emb: np.ndarray, n_clips, source, note: 
     m["shards"].append({"file": path.name, "albums": len(s.keys), "created": created or date.today().isoformat(),
                         "note": note})
     _write_json(audio_dir / "manifest.json", m)
+    return path
+
+
+def set_clips_per_album(audio_dir: Path, per_album: int) -> None:
+    """Record the store's clip policy: how many clips an album gets when it has that many."""
+    m = load_manifest(audio_dir)
+    m["clips"] = {**m["clips"], "per_album": int(per_album)}
+    _write_json(audio_dir / "manifest.json", m)
+
+
+def compact_store(audio_dir: Path, note: str, created: str | None = None) -> Path:
+    """Rewrite every shard into one: each album's newest embedding, in store order. The new shard takes
+    the next number; the older files are deleted once the manifest lists only the new one."""
+    store = load_store(audio_dir)
+    old = [e["file"] for e in store.manifest["shards"]]
+    path = audio_dir / "embeddings" / f"part-{1 + int(SHARD_RE.match(old[-1])[1]):04d}.npz"
+    if path.exists():
+        raise StoreError(f"{path} exists but is not in the manifest")
+    s = write_shard(path, store.keys, store.emb, store.n_clips, store.source)
+    m = dict(store.manifest)
+    m["shards"] = [{"file": path.name, "albums": len(s.keys), "created": created or date.today().isoformat(),
+                    "note": note}]
+    _write_json(audio_dir / "manifest.json", m)
+    for name in old:
+        (audio_dir / "embeddings" / name).unlink()
     return path
 
 
