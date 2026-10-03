@@ -3,6 +3,7 @@
 Everything here is read-only with respect to the site: nothing under frontcreck/public/data/ or
 the build pipeline's outputs is written. All experiment state lives in cache/ (gitignored).
 """
+import os
 import sys
 from pathlib import Path
 
@@ -10,7 +11,8 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
-CACHE = HERE / "cache"
+# RMR_PREVIEW_CACHE points reads at another worktree's cache (opened read-only; write nothing under it).
+CACHE = Path(os.environ.get("RMR_PREVIEW_CACHE") or HERE / "cache")
 MODELS = CACHE / "models"
 RESULTS = HERE / "results"
 
