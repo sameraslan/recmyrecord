@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en" data-chrome="trifid">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Map · recmyrecord</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="src/css/app.css">
+<link rel="stylesheet" href="src/css/trifid.css">
+<link rel="stylesheet" href="src/css/pages.css">
+</head>
+<body>
+<a class="skip" href="#main" id="skip">Skip to content</a>
+
+<header class="top">
+  <a class="wordmark" data-to="home" href="#/">recmyrecord</a>
+  <div class="top-search">
+    <div id="top-combo"></div>
+  </div>
+  <button type="button" class="icon-btn search-toggle" id="search-toggle" aria-label="Search albums"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg></button>
+  <nav aria-label="Main">
+    <a class="navbtn" data-nav="map" data-to="map" href="#/map">Map</a>
+    <a class="navbtn" data-nav="about" data-to="about" href="#/about">About</a>
+  </nav>
+</header>
+
+<main id="main" class="stage">
+  <section class="album is-closed" id="album" aria-hidden="true"></section>
+  <section class="map-pane" id="map" aria-labelledby="map-h">
+    <h1 class="sr-only" id="map-h">Map of albums</h1>
+    <canvas id="gl" class="map-canvas" aria-hidden="true"></canvas>
+    <canvas id="ov" class="map-canvas" tabindex="0" role="application" aria-roledescription="map" aria-label="Map" aria-describedby="ov-help"></canvas>
+    <p class="sr-only" id="ov-help">Drag or use arrow keys to pan, plus and minus to zoom. Comma and full stop step through the albums nearest the centre, Enter selects one.</p>
+    <div id="labels"></div>
+    <div id="pointers"><button type="button" class="here off" id="here"></button></div>
+    <ul class="sr-only" id="region-list" aria-label="Regions of the map"></ul>
+    <ul class="sr-only" id="near-list" aria-label="Albums in view"></ul>
+    <div class="map-tip" id="tip" aria-hidden="true"></div>
+    <div class="map-msg" id="nowebgl" role="note" hidden>The map needs WebGL, which this browser has turned off. Search and lists still work.</div>
+    <div class="veil veil--off" id="veil" aria-hidden="true"></div>
+    <div class="map-ui" id="ui">
+      <div class="mode panel">
+        <label class="cap" for="mode-range">Similarity</label>
+        <div class="mode-track">
+          <i style="left:8px"></i><i style="left:50%"></i><i style="left:calc(100% - 8px)"></i>
+          <input id="mode-range" type="range" min="0" max="2" step="1" value="1">
+        </div>
+        <div class="mode-stops" id="mode-stops">
+          <button type="button" tabindex="-1" data-stop="sonic">Sonic</button>
+          <button type="button" tabindex="-1" data-stop="balanced">Balanced</button>
+          <button type="button" tabindex="-1" data-stop="mood">Mood</button>
+        </div>
+        <p class="mode-note" id="mode-note" aria-live="polite"></p>
+        <p class="mode-names" id="mode-names"></p>
+      </div>
+      <div class="regions" id="regions">
+        <button type="button" class="regions-btn panel" id="regions-btn" aria-expanded="false" aria-controls="regions-menu"></button>
+        <button type="button" class="regions-btn panel colours-btn" id="colours-btn" aria-expanded="false" aria-controls="colours"></button>
+        <ul class="regions-menu panel" id="regions-menu" hidden></ul>
+      </div>
+      <button type="button" class="map-explore panel" id="explore-here" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="m15.2 8.8-1.9 4.5-4.5 1.9 1.9-4.5z"/></svg>
+        <span>Explore this area</span>
+      </button>
+      <div class="map-hint" id="hint"><p id="hint-line"></p><p class="legend" id="legend"></p></div>
+      <div id="card-slot"></div>
+      <div class="plate panel" id="plate" role="group" aria-live="polite" hidden></div>
+      <div class="csheet panel" id="colours" role="dialog" hidden></div>
+      <p class="stress" id="stress" hidden></p>
+      <div class="map-zoom">
+        <button type="button" id="zoom-in" aria-label="Zoom in"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button type="button" id="zoom-out" aria-label="Zoom out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+        <button type="button" id="zoom-fit" aria-label="Reset view"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+      </div>
+    </div>
+  </section>
+  <button type="button" class="fab-map" id="fab" hidden></button>
+  <section class="home" id="home" aria-labelledby="home-h" hidden></section>
+  <div class="about-page" id="about" hidden></div>
+  <section class="notfound" id="notfound" aria-labelledby="nf-h" hidden></section>
+</main>
+
+<div class="search-sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Search albums" hidden></div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Prototype-only controls: not part of the design. -->
+<aside class="proto" id="proto" aria-label="Prototype controls">
+  <button type="button" class="proto-tab" id="proto-tab" aria-expanded="false" aria-controls="proto-body">Prototype</button>
+  <div class="proto-body" id="proto-body" hidden>
+    <fieldset><legend>Chrome</legend><label><input type="radio" name="chrome" value="trifid"> Trifid</label><label><input type="radio" name="chrome" value="site"> Site</label></fieldset>
+    <fieldset><legend>Gas</legend><label><input type="radio" name="gas" value="baked"> Baked</label><label><input type="radio" name="gas" value="live"> Live</label></fieldset>
+    <fieldset><legend>Data</legend><label><input type="radio" name="data" value="real"> Real</label><label><input type="radio" name="data" value="10k"> Synthetic 10,000</label></fieldset>
+    <fieldset><legend>10k regions</legend><label><input type="radio" name="regions" value="fine"> Fine</label><label><input type="radio" name="regions" value="default"> Default</label></fieldset>
+    <fieldset><legend>Home</legend><label><input type="radio" name="home" value="a"> A shelf</label><label><input type="radio" name="home" value="b"> B regions</label></fieldset>
+    <label><input type="checkbox" name="hulls"> Show region hulls</label>
+    <label><input type="checkbox" name="labelsOff"> Hide map names (L)</label>
+    <label><input type="checkbox" name="hud"> Frame time</label>
+    <span class="proto-note" id="proto-note"></span>
+  </div>
+</aside>
+<div class="hud" id="hud" hidden></div>
+<pre id="proto-errors"></pre>
+
+<script src="data/data.js"></script>
+<script src="src/config.js"></script>
+<script src="src/copy.js"></script>
+<script src="src/data.js"></script>
+<script src="src/camera.js"></script>
+<script src="src/gas.js"></script>
+<script src="src/stars.js"></script>
+<script src="src/focus.js"></script>
+<script src="src/overlay.js"></script>
+<script src="src/regions.js"></script>
+<script src="src/labels.js"></script>
+<script src="src/search.js"></script>
+<script src="src/panel.js"></script>
+<script src="src/pages.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

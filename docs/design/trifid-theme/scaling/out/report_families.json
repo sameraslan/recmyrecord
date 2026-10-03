@@ -1,0 +1,629 @@
+{
+ "full_refit": {
+  "words_used": 99,
+  "anchors_distinct": true,
+  "top_words": {
+   "fierce": [
+    "energetic",
+    "heavy",
+    "aggressive",
+    "male vocals",
+    "raw",
+    "angry",
+    "passionate"
+   ],
+   "warm": [
+    "melodic",
+    "bittersweet",
+    "warm",
+    "playful",
+    "passionate",
+    "lush",
+    "sentimental"
+   ],
+   "quiet": [
+    "acoustic",
+    "instrumental",
+    "improvisation",
+    "calm",
+    "mellow",
+    "soothing",
+    "soft"
+   ],
+   "dark": [
+    "atmospheric",
+    "dark",
+    "ominous",
+    "sombre",
+    "hypnotic",
+    "mysterious",
+    "dense"
+   ],
+   "urban": [
+    "urban",
+    "sampling",
+    "rhythmic",
+    "nocturnal",
+    "male vocals",
+    "dark",
+    "playful"
+   ]
+  },
+  "max_abs_diff_vs_stored_album_weights": 0.005,
+  "mean_abs_diff_vs_stored_album_weights": 0.0016,
+  "leading_family_agrees_with_stored_clear_albums": 0.995,
+  "clear_albums": 3951
+ },
+ "subsets": {
+  "prefix_1600": {
+   "n": 1600,
+   "cosine": {
+    "fierce": 0.519,
+    "warm": 0.947,
+    "quiet": 0.9,
+    "dark": 0.673,
+    "urban": 0.965
+   },
+   "anchors_distinct": false,
+   "anchors_pick_matched_component": false,
+   "leading_same_all": 0.654,
+   "leading_same_clear": 0.656
+  },
+  "prefix_2400": {
+   "n": 2400,
+   "cosine": {
+    "fierce": 0.526,
+    "warm": 0.987,
+    "quiet": 0.921,
+    "dark": 0.72,
+    "urban": 0.993
+   },
+   "anchors_distinct": false,
+   "anchors_pick_matched_component": false,
+   "leading_same_all": 0.723,
+   "leading_same_clear": 0.727
+  },
+  "prefix_3200": {
+   "n": 3200,
+   "cosine": {
+    "fierce": 0.999,
+    "warm": 0.998,
+    "quiet": 1.0,
+    "dark": 0.999,
+    "urban": 0.998
+   },
+   "anchors_distinct": true,
+   "anchors_pick_matched_component": true,
+   "leading_same_all": 0.975,
+   "leading_same_clear": 0.977
+  },
+  "random_half_seed1": {
+   "n": 2040,
+   "cosine": {
+    "fierce": 0.999,
+    "warm": 0.993,
+    "quiet": 0.999,
+    "dark": 0.998,
+    "urban": 0.99
+   },
+   "anchors_distinct": true,
+   "anchors_pick_matched_component": true,
+   "leading_same_all": 0.966,
+   "leading_same_clear": 0.97
+  },
+  "random_half_seed2": {
+   "n": 2040,
+   "cosine": {
+    "fierce": 0.997,
+    "warm": 0.999,
+    "quiet": 0.999,
+    "dark": 0.997,
+    "urban": 0.999
+   },
+   "anchors_distinct": true,
+   "anchors_pick_matched_component": true,
+   "leading_same_all": 0.963,
+   "leading_same_clear": 0.969
+  }
+ },
+ "descriptor_only": {
+  "words_used": 99,
+  "cosine_on_word_loadings": {
+   "fierce": 0.86,
+   "warm": 0.946,
+   "quiet": 0.391,
+   "dark": 0.684,
+   "urban": 0.384
+  },
+  "anchors_distinct": false,
+  "anchors_pick_matched_component": false,
+  "top_words": {
+   "fierce": [
+    "aggressive",
+    "heavy",
+    "raw",
+    "energetic",
+    "angry",
+    "dark",
+    "noisy"
+   ],
+   "warm": [
+    "bittersweet",
+    "warm",
+    "melodic",
+    "lush",
+    "sentimental",
+    "mellow",
+    "romantic"
+   ],
+   "quiet": [
+    "complex",
+    "technical",
+    "progressive",
+    "uncommon time signatures",
+    "improvisation",
+    "instrumental",
+    "epic"
+   ],
+   "dark": [
+    "sombre",
+    "melancholic",
+    "lonely",
+    "depressive",
+    "dark",
+    "atmospheric",
+    "nocturnal"
+   ],
+   "urban": [
+    "hypnotic",
+    "atmospheric",
+    "ethereal",
+    "psychedelic",
+    "mysterious",
+    "surreal",
+    "repetitive"
+   ]
+  },
+  "leading_changes_all": 0.555,
+  "leading_changes_clear": 0.554,
+  "leading_changes_clear_with_words": 0.553,
+  "albums_with_no_words": 8
+ },
+ "t8": {
+  "mean_names_per_album_all_columns": 7.18,
+  "mean_names_in_120_columns": 5.8,
+  "full_mean_names_in_120_columns": 10.77,
+  "empty_columns": 14,
+  "albums_with_no_words": 58,
+  "families": {
+   "words_used": 81,
+   "cosine_on_word_loadings": {
+    "fierce": 0.918,
+    "warm": 0.92,
+    "quiet": 0.785,
+    "dark": 0.851,
+    "urban": 0.169
+   },
+   "anchors_distinct": false,
+   "anchors_pick_matched_component": false,
+   "top_words": {
+    "fierce": [
+     "energetic",
+     "heavy",
+     "aggressive",
+     "raw",
+     "rhythmic",
+     "angry",
+     "passionate"
+    ],
+    "warm": [
+     "melodic",
+     "bittersweet",
+     "warm",
+     "passionate",
+     "mellow",
+     "lush",
+     "romantic"
+    ],
+    "quiet": [
+     "instrumental",
+     "improvisation",
+     "acoustic",
+     "avant-garde",
+     "technical",
+     "rhythmic",
+     "warm"
+    ],
+    "dark": [
+     "atmospheric",
+     "dark",
+     "melancholic",
+     "sombre",
+     "nocturnal",
+     "mysterious",
+     "ominous"
+    ],
+    "urban": [
+     "progressive",
+     "complex",
+     "uncommon time signatures",
+     "technical",
+     "epic",
+     "eclectic",
+     "playful"
+    ]
+   },
+   "leading_changes_all": 0.52,
+   "leading_changes_clear": 0.516,
+   "leading_changes_clear_with_words": 0.513,
+   "albums_with_no_words": 60
+  },
+  "name_word_coverage_same_members": [
+   {
+    "word": "improvisation",
+    "strength": "strong",
+    "n": 290,
+    "coverage_full": 0.821,
+    "lift_full": 7.73,
+    "coverage_t8": 0.759,
+    "overall_t8": 0.089,
+    "lift_t8": 8.53
+   },
+   {
+    "word": "sampling",
+    "strength": "strong",
+    "n": 232,
+    "coverage_full": 0.819,
+    "lift_full": 9.55,
+    "coverage_t8": 0.56,
+    "overall_t8": 0.052,
+    "lift_t8": 10.84
+   },
+   {
+    "word": "playful",
+    "strength": "strong",
+    "n": 196,
+    "coverage_full": 0.607,
+    "lift_full": 2.86,
+    "coverage_t8": 0.485,
+    "overall_t8": 0.144,
+    "lift_t8": 3.38
+   },
+   {
+    "word": "aggressive",
+    "strength": "strong",
+    "n": 184,
+    "coverage_full": 0.967,
+    "lift_full": 6.77,
+    "coverage_t8": 0.799,
+    "overall_t8": 0.093,
+    "lift_t8": 8.63
+   },
+   {
+    "word": "progressive",
+    "strength": "strong",
+    "n": 141,
+    "coverage_full": 0.78,
+    "lift_full": 4.18,
+    "coverage_t8": 0.674,
+    "overall_t8": 0.112,
+    "lift_t8": 6.0
+   },
+   {
+    "word": "ethereal",
+    "strength": "strong",
+    "n": 121,
+    "coverage_full": 0.471,
+    "lift_full": 4.75,
+    "coverage_t8": 0.298,
+    "overall_t8": 0.049,
+    "lift_t8": 6.04
+   },
+   {
+    "word": "raw",
+    "strength": "strong",
+    "n": 107,
+    "coverage_full": 0.888,
+    "lift_full": 5.64,
+    "coverage_t8": 0.692,
+    "overall_t8": 0.097,
+    "lift_t8": 7.16
+   },
+   {
+    "word": "warm",
+    "strength": "strong",
+    "n": 106,
+    "coverage_full": 0.736,
+    "lift_full": 3.22,
+    "coverage_t8": 0.566,
+    "overall_t8": 0.138,
+    "lift_t8": 4.1
+   },
+   {
+    "word": "sombre",
+    "strength": "strong",
+    "n": 106,
+    "coverage_full": 0.764,
+    "lift_full": 5.45,
+    "coverage_t8": 0.509,
+    "overall_t8": 0.083,
+    "lift_t8": 6.11
+   },
+   {
+    "word": "lonely",
+    "strength": "strong",
+    "n": 82,
+    "coverage_full": 0.512,
+    "lift_full": 4.33,
+    "coverage_t8": 0.354,
+    "overall_t8": 0.063,
+    "lift_t8": 5.59
+   },
+   {
+    "word": "epic",
+    "strength": "fair",
+    "n": 346,
+    "coverage_full": 0.535,
+    "lift_full": 3.63,
+    "coverage_t8": 0.379,
+    "overall_t8": 0.091,
+    "lift_t8": 4.14
+   },
+   {
+    "word": "pastoral",
+    "strength": "fair",
+    "n": 226,
+    "coverage_full": 0.389,
+    "lift_full": 5.66,
+    "coverage_t8": 0.248,
+    "overall_t8": 0.042,
+    "lift_t8": 5.91
+   },
+   {
+    "word": "romantic",
+    "strength": "fair",
+    "n": 186,
+    "coverage_full": 0.355,
+    "lift_full": 3.27,
+    "coverage_t8": 0.285,
+    "overall_t8": 0.07,
+    "lift_t8": 4.07
+   },
+   {
+    "word": "eclectic",
+    "strength": "fair",
+    "n": 152,
+    "coverage_full": 0.375,
+    "lift_full": 2.58,
+    "coverage_t8": 0.243,
+    "overall_t8": 0.073,
+    "lift_t8": 3.36
+   },
+   {
+    "word": "bittersweet",
+    "strength": "fair",
+    "n": 127,
+    "coverage_full": 0.614,
+    "lift_full": 2.79,
+    "coverage_t8": 0.386,
+    "overall_t8": 0.124,
+    "lift_t8": 3.1
+   }
+  ],
+  "median_coverage_ratio": 0.708,
+  "regions_full_presence_words_only": {
+   "regions": 15,
+   "strong": 10,
+   "fair": 5,
+   "unnamed": 0.362,
+   "areas": 5,
+   "words": [
+    "aggressive",
+    "bittersweet",
+    "eclectic",
+    "epic",
+    "ethereal",
+    "improvisation",
+    "lonely",
+    "pastoral",
+    "playful",
+    "progressive",
+    "raw",
+    "romantic",
+    "sampling",
+    "sombre",
+    "warm"
+   ]
+  },
+  "region_runs": {
+   "same_gates_0.40_0.35": {
+    "params": {},
+    "regions": 13,
+    "strong": 10,
+    "fair": 3,
+    "unnamed": 0.42,
+    "areas": 3,
+    "words": [
+     "aggressive",
+     "atmospheric",
+     "bittersweet",
+     "epic",
+     "improvisation",
+     "melancholic",
+     "passionate",
+     "playful",
+     "progressive",
+     "psychedelic",
+     "raw",
+     "rhythmic",
+     "urban"
+    ],
+    "region_words_kept": [
+     7,
+     15
+    ],
+    "album_word_same_named": 0.488,
+    "ari": 0.657
+   },
+   "scaled_by_mean_names": {
+    "params": {
+     "cov_strong": 0.216,
+     "cov_fair": 0.189,
+     "top_cov": 0.135
+    },
+    "regions": 17,
+    "strong": 15,
+    "fair": 2,
+    "unnamed": 0.243,
+    "areas": 5,
+    "words": [
+     "aggressive",
+     "anthemic",
+     "atmospheric",
+     "bittersweet",
+     "ethereal",
+     "hypnotic",
+     "improvisation",
+     "lonely",
+     "orchestral",
+     "passionate",
+     "pastoral",
+     "playful",
+     "progressive",
+     "psychedelic",
+     "raw",
+     "rhythmic",
+     "urban"
+    ],
+    "region_words_kept": [
+     9,
+     15
+    ],
+    "album_word_same_named": 0.561,
+    "ari": 0.616
+   },
+   "0.25_0.20": {
+    "params": {
+     "cov_strong": 0.25,
+     "cov_fair": 0.2,
+     "top_cov": 0.15
+    },
+    "regions": 15,
+    "strong": 12,
+    "fair": 3,
+    "unnamed": 0.335,
+    "areas": 5,
+    "words": [
+     "aggressive",
+     "atmospheric",
+     "bittersweet",
+     "epic",
+     "ethereal",
+     "improvisation",
+     "lonely",
+     "passionate",
+     "pastoral",
+     "playful",
+     "progressive",
+     "psychedelic",
+     "raw",
+     "rhythmic",
+     "urban"
+    ],
+    "region_words_kept": [
+     10,
+     15
+    ],
+    "album_word_same_named": 0.653,
+    "ari": 0.835
+   },
+   "0.20_0.15_lift2.5": {
+    "params": {
+     "cov_strong": 0.2,
+     "cov_fair": 0.15,
+     "top_cov": 0.12,
+     "lift_min": 2.5
+    },
+    "regions": 16,
+    "strong": 14,
+    "fair": 2,
+    "unnamed": 0.267,
+    "areas": 4,
+    "words": [
+     "aggressive",
+     "anthemic",
+     "atmospheric",
+     "bittersweet",
+     "ethereal",
+     "futuristic",
+     "improvisation",
+     "lonely",
+     "orchestral",
+     "pastoral",
+     "playful",
+     "progressive",
+     "psychedelic",
+     "raw",
+     "rhythmic",
+     "urban"
+    ],
+    "region_words_kept": [
+     9,
+     15
+    ],
+    "album_word_same_named": 0.561,
+    "ari": 0.673
+   }
+  }
+ },
+ "pinned": {
+  "full_fit_projection_vs_stored": {
+   "leading_same_clear": 0.995,
+   "mean_abs_diff": 0.0016,
+   "max_abs_diff": 0.006
+  },
+  "holdout_seed1": {
+   "train": 2856,
+   "test": 1225,
+   "component_cosine_to_full": {
+    "fierce": 0.999,
+    "warm": 0.957,
+    "quiet": 0.998,
+    "dark": 0.999,
+    "urban": 0.973
+   },
+   "leading_same_as_stored_all": 0.887,
+   "leading_same_as_stored_clear": 0.893,
+   "clear_test_albums": 1175,
+   "mean_abs_weight_diff_vs_stored": 0.0258
+  },
+  "holdout_seed2": {
+   "train": 2856,
+   "test": 1225,
+   "component_cosine_to_full": {
+    "fierce": 0.999,
+    "warm": 1.0,
+    "quiet": 1.0,
+    "dark": 0.999,
+    "urban": 0.999
+   },
+   "leading_same_as_stored_all": 0.984,
+   "leading_same_as_stored_clear": 0.987,
+   "clear_test_albums": 1188,
+   "mean_abs_weight_diff_vs_stored": 0.0046
+  },
+  "word_block_only_projection": {
+   "leading_same_as_stored_clear": 0.65,
+   "leading_same_as_stored_clear_with_words": 0.651,
+   "leading_same_as_joint_all": 0.647,
+   "mean_neutral_joint": 0.12,
+   "mean_neutral_word_only": 0.155
+  },
+  "word_block_only_projection_t8": {
+   "leading_same_as_stored_clear": 0.61,
+   "leading_same_as_stored_clear_with_words": 0.614,
+   "mean_neutral": 0.328,
+   "albums_with_no_words": 59
+  }
+ }
+}

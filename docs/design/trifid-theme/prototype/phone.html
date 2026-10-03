@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trifid prototype: phone</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Schibsted+Grotesk:wght@400;500&display=swap">
+<style>
+  body { margin: 0; padding: 32px; background: #0b0a0e; color: #f1ece4; font: 15px/1.5 "Schibsted Grotesk", system-ui, sans-serif; }
+  h1 { font: 500 34px/1.1 "Cormorant Garamond", serif; margin: 0 0 6px; }
+  p { margin: 0; color: #bab4ac; max-width: 60em; }
+  .row { display: flex; flex-wrap: wrap; gap: 36px; margin-top: 28px; }
+  figure { margin: 0; width: 390px; }
+  .device { width: 390px; height: 844px; border: 1px solid rgba(241, 236, 228, .24); border-radius: 2px; overflow: hidden; background: #07060a; }
+  iframe { width: 390px; height: 844px; border: 0; display: block; }
+  figcaption { margin-top: 10px; color: #bab4ac; font-size: 14px; }
+  figcaption b { color: #f1ece4; font-weight: 500; display: block; }
+  a { color: #f1ece4; text-underline-offset: 4px; }
+</style>
+</head>
+<body>
+<h1>Phone layout, 390 x 844</h1>
+<p>Each frame is the live prototype at phone width. They load one after another to keep the laptop cool. Mouse works as touch: drag to pan, wheel to zoom.</p>
+<div class="row" id="row"></div>
+<script>
+  // Frames are created one at a time: the next starts when the previous posts 'rmr-ready' (its first drawn frame).
+  var FRAMES = [
+    ['Album: the list, scrolled to the map strip', 'The list is the album view. WebGL starts only when the strip scrolls into view. The strip shows the same nebula, lines and covers; "Open map" or the Map pill switches to the full map.', '#/album/the-stone-roses-the-stone-roses?scroll=strip'],
+    ['Album: map mode with a name plate', 'A first tap on a numbered cover names it; "Open" or a second tap opens it and stays in map mode. Where covers are under 16 px a tap on stars zooms in. Regions and Colours sit under the top row; the similarity control is one row.', '#/album/the-stone-roses-the-stone-roses?view=map&plate=2'],
+    ['Explore: a region sheet', 'Tap a region name: the map flies there and the sheet rests on the slider at its peek height. The grabber (tap or swipe) opens the full height.', '#/map?region=warm'],
+  ];
+  var row = document.getElementById('row'), next = 0;
+  function add() {
+    if (next >= FRAMES.length) return;
+    var f = FRAMES[next++], fig = document.createElement('figure');
+    fig.innerHTML = '<div class="device"><iframe title="' + f[0] + '" src="index.html' + f[2] + '"></iframe></div><figcaption><b>' + f[0] + '</b>' + f[1] + ' <a href="index.html' + f[2] + '" target="_blank" rel="noopener">Open</a></figcaption>';
+    row.appendChild(fig);
+  }
+  var timer = 0;
+  function step() { clearTimeout(timer); add(); timer = setTimeout(step, 8000); }   // fallback if a frame never reports
+  window.addEventListener('message', function (e) { if (e.data === 'rmr-ready') step(); });
+  step();
+</script>
+</body>
+</html>

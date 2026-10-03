@@ -24,3 +24,7 @@ Open PR #25 (`feat/preview-audio`) is not an experiment: it changes the data pip
 Descriptor model, in one paragraph (single held-out test run, 2026-10-01): a language model listing descriptors from artist, title and year scores 0.79 capped precision@10; audio embeddings with a linear probe 0.66; audio plus MusicBrainz tags 0.69; always guessing the most common descriptors 0.44. The test split is spent, so judge new ideas on validation. Untested follow-ups are listed in section 9 of the report.
 
 When an experiment PR merges, or a new experiment starts, update this table in the same PR.
+
+## Design: Trifid map theme
+
+A space theme for the album map, at prototype stage; nothing in `frontcreck/` uses it yet. Start at `docs/design/trifid-theme/HANDOFF.md`, then `RECOMMENDATION.md` (what to ship, cost, open decisions), `prototype/` (interactive HTML prototype; open `screens.html`) and `SCALING.md` (how regions, names and colours are regenerated as the catalogue grows; the automated recipe and its tests are in `scaling/`). All wording in the prototype is placeholder until the owner approves it (`prototype/COPY.md`).

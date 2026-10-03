@@ -1,0 +1,2137 @@
+{
+ "layout": {
+  "prefix/fresh": [
+   {
+    "move_median_gaps": 41.7,
+    "move_p90_gaps": 88.5,
+    "map_knn_retained": 0.434
+   },
+   {
+    "move_median_gaps": 16.7,
+    "move_p90_gaps": 47.0,
+    "map_knn_retained": 0.453
+   },
+   {
+    "move_median_gaps": 50.7,
+    "move_p90_gaps": 75.2,
+    "map_knn_retained": 0.365
+   }
+  ],
+  "prefix/anchored": [
+   {
+    "move_median_gaps": 22.5,
+    "move_p90_gaps": 62.7,
+    "map_knn_retained": 0.447
+   },
+   {
+    "move_median_gaps": 8.2,
+    "move_p90_gaps": 18.3,
+    "map_knn_retained": 0.432
+   },
+   {
+    "move_median_gaps": 8.0,
+    "move_p90_gaps": 18.5,
+    "map_knn_retained": 0.416
+   }
+  ],
+  "random1/fresh": [
+   {
+    "move_median_gaps": 9.8,
+    "move_p90_gaps": 27.8,
+    "map_knn_retained": 0.457
+   },
+   {
+    "move_median_gaps": 7.4,
+    "move_p90_gaps": 16.7,
+    "map_knn_retained": 0.43
+   },
+   {
+    "move_median_gaps": 14.3,
+    "move_p90_gaps": 41.5,
+    "map_knn_retained": 0.411
+   }
+  ],
+  "random1/anchored": [
+   {
+    "move_median_gaps": 4.7,
+    "move_p90_gaps": 13.6,
+    "map_knn_retained": 0.484
+   },
+   {
+    "move_median_gaps": 7.5,
+    "move_p90_gaps": 17.2,
+    "map_knn_retained": 0.422
+   },
+   {
+    "move_median_gaps": 7.0,
+    "move_p90_gaps": 15.0,
+    "map_knn_retained": 0.417
+   }
+  ],
+  "prefix/anchored200": [
+   {
+    "move_median_gaps": 21.8,
+    "move_p90_gaps": 54.6,
+    "map_knn_retained": 0.418
+   },
+   {
+    "move_median_gaps": 9.5,
+    "move_p90_gaps": 20.9,
+    "map_knn_retained": 0.398
+   },
+   {
+    "move_median_gaps": 11.0,
+    "move_p90_gaps": 19.7,
+    "map_knn_retained": 0.372
+   }
+  ],
+  "seed/fresh": [
+   {
+    "move_median_gaps": 4.3,
+    "move_p90_gaps": 7.5,
+    "map_knn_retained": 0.585
+   }
+  ],
+  "seed/anchored": [
+   {
+    "move_median_gaps": 4.4,
+    "move_p90_gaps": 8.5,
+    "map_knn_retained": 0.585
+   }
+  ]
+ },
+ "regions": {
+  "prefix/fresh/recluster": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.18
+   },
+   {
+    "n": 2400,
+    "regions": 15,
+    "strong": 13,
+    "fair": 2,
+    "unnamed": 0.26,
+    "mean_n": 118.4,
+    "max_n": 193,
+    "mean_roster": 148.5,
+    "mean_name_word_coverage": 0.636,
+    "seconds": 0.36,
+    "kept": 7,
+    "renamed": 3,
+    "new": 5,
+    "retired": 2,
+    "id_same_named": 0.57,
+    "word_same_named": 0.446,
+    "named_to_unnamed": 0.21,
+    "named_to_other_word": 0.344
+   },
+   {
+    "n": 3200,
+    "regions": 13,
+    "strong": 13,
+    "fair": 0,
+    "unnamed": 0.294,
+    "mean_n": 173.8,
+    "max_n": 373,
+    "mean_roster": 213.3,
+    "mean_name_word_coverage": 0.679,
+    "seconds": 0.43,
+    "kept": 9,
+    "renamed": 2,
+    "new": 2,
+    "retired": 4,
+    "id_same_named": 0.619,
+    "word_same_named": 0.569,
+    "named_to_unnamed": 0.183,
+    "named_to_other_word": 0.248
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 13,
+    "fair": 5,
+    "unnamed": 0.235,
+    "mean_n": 173.5,
+    "max_n": 342,
+    "mean_roster": 214.3,
+    "mean_name_word_coverage": 0.587,
+    "seconds": 0.5,
+    "kept": 10,
+    "renamed": 1,
+    "new": 7,
+    "retired": 2,
+    "id_same_named": 0.683,
+    "word_same_named": 0.649,
+    "named_to_unnamed": 0.169,
+    "named_to_other_word": 0.182
+   }
+  ],
+  "prefix/fresh/carry": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.17
+   },
+   {
+    "n": 2400,
+    "regions": 16,
+    "strong": 13,
+    "fair": 3,
+    "unnamed": 0.368,
+    "mean_n": 94.8,
+    "max_n": 211,
+    "mean_roster": 146.2,
+    "mean_name_word_coverage": 0.709,
+    "seconds": 0.25,
+    "kept": 9,
+    "renamed": 0,
+    "new": 7,
+    "retired": 3,
+    "id_same_named": 0.604,
+    "word_same_named": 0.676,
+    "named_to_unnamed": 0.238,
+    "named_to_other_word": 0.086,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 472,
+     "members_released": 62,
+     "absorbed": 0,
+     "not_contiguous": 3,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "cold",
+      "lush",
+      "uncommon-time-signatures"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 14,
+    "strong": 9,
+    "fair": 5,
+    "unnamed": 0.517,
+    "mean_n": 110.4,
+    "max_n": 260,
+    "mean_roster": 174.9,
+    "mean_name_word_coverage": 0.699,
+    "seconds": 0.3,
+    "kept": 11,
+    "renamed": 0,
+    "new": 3,
+    "retired": 5,
+    "id_same_named": 0.668,
+    "word_same_named": 0.688,
+    "named_to_unnamed": 0.26,
+    "named_to_other_word": 0.052,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 380,
+     "members_released": 116,
+     "absorbed": 0,
+     "not_contiguous": 4,
+     "failed_gates": 1,
+     "not_contiguous_ids": [
+      "warm",
+      "epic",
+      "psychedelic",
+      "uplifting"
+     ],
+     "failed_gates_ids": [
+      "hypnotic"
+     ]
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 15,
+    "fair": 3,
+    "unnamed": 0.479,
+    "mean_n": 118.1,
+    "max_n": 297,
+    "mean_roster": 184.2,
+    "mean_name_word_coverage": 0.677,
+    "seconds": 0.44,
+    "kept": 10,
+    "renamed": 2,
+    "new": 6,
+    "retired": 2,
+    "id_same_named": 0.733,
+    "word_same_named": 0.645,
+    "named_to_unnamed": 0.212,
+    "named_to_other_word": 0.142,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 342,
+     "members_released": 134,
+     "absorbed": 0,
+     "not_contiguous": 2,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "uncommon-time-signatures-2",
+      "quirky"
+     ],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "prefix/fresh/carry_absorb": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.17
+   },
+   {
+    "n": 2400,
+    "regions": 16,
+    "strong": 11,
+    "fair": 5,
+    "unnamed": 0.312,
+    "mean_n": 103.2,
+    "max_n": 218,
+    "mean_roster": 145.7,
+    "mean_name_word_coverage": 0.704,
+    "seconds": 0.22,
+    "kept": 9,
+    "renamed": 0,
+    "new": 7,
+    "retired": 3,
+    "id_same_named": 0.628,
+    "word_same_named": 0.699,
+    "named_to_unnamed": 0.205,
+    "named_to_other_word": 0.096,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 472,
+     "members_released": 62,
+     "absorbed": 95,
+     "not_contiguous": 3,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "cold",
+      "lush",
+      "uncommon-time-signatures"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 13,
+    "strong": 11,
+    "fair": 2,
+    "unnamed": 0.505,
+    "mean_n": 121.8,
+    "max_n": 271,
+    "mean_roster": 168.6,
+    "mean_name_word_coverage": 0.695,
+    "seconds": 0.27,
+    "kept": 9,
+    "renamed": 2,
+    "new": 2,
+    "retired": 5,
+    "id_same_named": 0.634,
+    "word_same_named": 0.515,
+    "named_to_unnamed": 0.314,
+    "named_to_other_word": 0.171,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 386,
+     "members_released": 120,
+     "absorbed": 160,
+     "not_contiguous": 3,
+     "failed_gates": 2,
+     "not_contiguous_ids": [
+      "warm",
+      "psychedelic",
+      "uplifting"
+     ],
+     "failed_gates_ids": [
+      "anthemic",
+      "melodic"
+     ]
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 16,
+    "strong": 13,
+    "fair": 3,
+    "unnamed": 0.454,
+    "mean_n": 139.2,
+    "max_n": 315,
+    "mean_roster": 186.8,
+    "mean_name_word_coverage": 0.709,
+    "seconds": 0.48,
+    "kept": 10,
+    "renamed": 1,
+    "new": 5,
+    "retired": 2,
+    "id_same_named": 0.795,
+    "word_same_named": 0.706,
+    "named_to_unnamed": 0.15,
+    "named_to_other_word": 0.145,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 289,
+     "members_released": 155,
+     "absorbed": 116,
+     "not_contiguous": 2,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "uncommon-time-signatures-2",
+      "hypnotic"
+     ],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "prefix/anchored/recluster": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.18
+   },
+   {
+    "n": 2400,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.281,
+    "mean_n": 143.8,
+    "max_n": 304,
+    "mean_roster": 175.9,
+    "mean_name_word_coverage": 0.65,
+    "seconds": 0.42,
+    "kept": 8,
+    "renamed": 2,
+    "new": 2,
+    "retired": 2,
+    "id_same_named": 0.654,
+    "word_same_named": 0.553,
+    "named_to_unnamed": 0.234,
+    "named_to_other_word": 0.212
+   },
+   {
+    "n": 3200,
+    "regions": 16,
+    "strong": 15,
+    "fair": 1,
+    "unnamed": 0.306,
+    "mean_n": 138.8,
+    "max_n": 245,
+    "mean_roster": 172.8,
+    "mean_name_word_coverage": 0.629,
+    "seconds": 0.41,
+    "kept": 7,
+    "renamed": 3,
+    "new": 6,
+    "retired": 2,
+    "id_same_named": 0.596,
+    "word_same_named": 0.469,
+    "named_to_unnamed": 0.246,
+    "named_to_other_word": 0.285
+   },
+   {
+    "n": 4081,
+    "regions": 16,
+    "strong": 13,
+    "fair": 3,
+    "unnamed": 0.251,
+    "mean_n": 191.1,
+    "max_n": 588,
+    "mean_roster": 235.6,
+    "mean_name_word_coverage": 0.68,
+    "seconds": 0.48,
+    "kept": 9,
+    "renamed": 3,
+    "new": 4,
+    "retired": 4,
+    "id_same_named": 0.679,
+    "word_same_named": 0.56,
+    "named_to_unnamed": 0.16,
+    "named_to_other_word": 0.279
+   }
+  ],
+  "prefix/anchored/carry": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.18
+   },
+   {
+    "n": 2400,
+    "regions": 11,
+    "strong": 9,
+    "fair": 2,
+    "unnamed": 0.466,
+    "mean_n": 116.5,
+    "max_n": 212,
+    "mean_roster": 168.2,
+    "mean_name_word_coverage": 0.73,
+    "seconds": 0.19,
+    "kept": 11,
+    "renamed": 0,
+    "new": 0,
+    "retired": 1,
+    "id_same_named": 0.699,
+    "word_same_named": 0.699,
+    "named_to_unnamed": 0.301,
+    "named_to_other_word": 0.0,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 472,
+     "members_released": 132,
+     "absorbed": 0,
+     "not_contiguous": 0,
+     "failed_gates": 1,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": [
+      "uncommon-time-signatures"
+     ]
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 13,
+    "strong": 11,
+    "fair": 2,
+    "unnamed": 0.503,
+    "mean_n": 122.4,
+    "max_n": 259,
+    "mean_roster": 186.6,
+    "mean_name_word_coverage": 0.704,
+    "seconds": 0.35,
+    "kept": 10,
+    "renamed": 0,
+    "new": 3,
+    "retired": 1,
+    "id_same_named": 0.781,
+    "word_same_named": 0.781,
+    "named_to_unnamed": 0.219,
+    "named_to_other_word": 0.0,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 360,
+     "members_released": 84,
+     "absorbed": 0,
+     "not_contiguous": 0,
+     "failed_gates": 1,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": [
+      "lush"
+     ]
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 15,
+    "strong": 12,
+    "fair": 3,
+    "unnamed": 0.495,
+    "mean_n": 137.4,
+    "max_n": 294,
+    "mean_roster": 228.5,
+    "mean_name_word_coverage": 0.681,
+    "seconds": 0.43,
+    "kept": 8,
+    "renamed": 2,
+    "new": 5,
+    "retired": 3,
+    "id_same_named": 0.704,
+    "word_same_named": 0.608,
+    "named_to_unnamed": 0.215,
+    "named_to_other_word": 0.177,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 351,
+     "members_released": 108,
+     "absorbed": 0,
+     "not_contiguous": 3,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "ethereal",
+      "quirky",
+      "instrumentalness"
+     ],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "prefix/anchored/carry_absorb": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.17
+   },
+   {
+    "n": 2400,
+    "regions": 12,
+    "strong": 9,
+    "fair": 3,
+    "unnamed": 0.377,
+    "mean_n": 124.7,
+    "max_n": 218,
+    "mean_roster": 171.4,
+    "mean_name_word_coverage": 0.684,
+    "seconds": 0.15,
+    "kept": 11,
+    "renamed": 1,
+    "new": 0,
+    "retired": 0,
+    "id_same_named": 0.759,
+    "word_same_named": 0.708,
+    "named_to_unnamed": 0.233,
+    "named_to_other_word": 0.06,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 472,
+     "members_released": 132,
+     "absorbed": 127,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 12,
+    "strong": 8,
+    "fair": 4,
+    "unnamed": 0.432,
+    "mean_n": 151.4,
+    "max_n": 272,
+    "mean_roster": 204.6,
+    "mean_name_word_coverage": 0.627,
+    "seconds": 0.32,
+    "kept": 8,
+    "renamed": 2,
+    "new": 2,
+    "retired": 2,
+    "id_same_named": 0.763,
+    "word_same_named": 0.588,
+    "named_to_unnamed": 0.206,
+    "named_to_other_word": 0.207,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 387,
+     "members_released": 84,
+     "absorbed": 139,
+     "not_contiguous": 1,
+     "failed_gates": 1,
+     "not_contiguous_ids": [
+      "uncommon-time-signatures"
+     ],
+     "failed_gates_ids": [
+      "melodic"
+     ]
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.429,
+    "mean_n": 194.2,
+    "max_n": 476,
+    "mean_roster": 263.5,
+    "mean_name_word_coverage": 0.658,
+    "seconds": 0.4,
+    "kept": 8,
+    "renamed": 1,
+    "new": 3,
+    "retired": 3,
+    "id_same_named": 0.699,
+    "word_same_named": 0.62,
+    "named_to_unnamed": 0.257,
+    "named_to_other_word": 0.123,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 384,
+     "members_released": 105,
+     "absorbed": 156,
+     "not_contiguous": 2,
+     "failed_gates": 1,
+     "not_contiguous_ids": [
+      "lush",
+      "technical"
+     ],
+     "failed_gates_ids": [
+      "melancholic"
+     ]
+    }
+   }
+  ],
+  "random1/fresh/recluster": [
+   {
+    "n": 1600,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.23,
+    "mean_n": 136.9,
+    "max_n": 295,
+    "mean_roster": 166.2,
+    "mean_name_word_coverage": 0.661,
+    "seconds": 0.18
+   },
+   {
+    "n": 2400,
+    "regions": 13,
+    "strong": 8,
+    "fair": 5,
+    "unnamed": 0.307,
+    "mean_n": 127.9,
+    "max_n": 233,
+    "mean_roster": 160.1,
+    "mean_name_word_coverage": 0.629,
+    "seconds": 0.29,
+    "kept": 6,
+    "renamed": 3,
+    "new": 4,
+    "retired": 0,
+    "id_same_named": 0.577,
+    "word_same_named": 0.376,
+    "named_to_unnamed": 0.225,
+    "named_to_other_word": 0.399
+   },
+   {
+    "n": 3200,
+    "regions": 14,
+    "strong": 11,
+    "fair": 3,
+    "unnamed": 0.26,
+    "mean_n": 169.1,
+    "max_n": 332,
+    "mean_roster": 207.3,
+    "mean_name_word_coverage": 0.696,
+    "seconds": 0.38,
+    "kept": 9,
+    "renamed": 3,
+    "new": 2,
+    "retired": 1,
+    "id_same_named": 0.769,
+    "word_same_named": 0.662,
+    "named_to_unnamed": 0.174,
+    "named_to_other_word": 0.164
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 14,
+    "fair": 4,
+    "unnamed": 0.235,
+    "mean_n": 173.5,
+    "max_n": 342,
+    "mean_roster": 214.3,
+    "mean_name_word_coverage": 0.649,
+    "seconds": 0.49,
+    "kept": 12,
+    "renamed": 2,
+    "new": 4,
+    "retired": 0,
+    "id_same_named": 0.69,
+    "word_same_named": 0.641,
+    "named_to_unnamed": 0.183,
+    "named_to_other_word": 0.177
+   }
+  ],
+  "random1/fresh/carry": [
+   {
+    "n": 1600,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.23,
+    "mean_n": 136.9,
+    "max_n": 295,
+    "mean_roster": 166.2,
+    "mean_name_word_coverage": 0.661,
+    "seconds": 0.19
+   },
+   {
+    "n": 2400,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.363,
+    "mean_n": 169.9,
+    "max_n": 418,
+    "mean_roster": 226.7,
+    "mean_name_word_coverage": 0.7,
+    "seconds": 0.23,
+    "kept": 8,
+    "renamed": 0,
+    "new": 1,
+    "retired": 1,
+    "id_same_named": 0.769,
+    "word_same_named": 0.814,
+    "named_to_unnamed": 0.185,
+    "named_to_other_word": 0.001,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 542,
+     "members_released": 66,
+     "absorbed": 0,
+     "not_contiguous": 1,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "bittersweet"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 10,
+    "strong": 9,
+    "fair": 1,
+    "unnamed": 0.428,
+    "mean_n": 182.9,
+    "max_n": 510,
+    "mean_roster": 256.1,
+    "mean_name_word_coverage": 0.66,
+    "seconds": 0.28,
+    "kept": 8,
+    "renamed": 1,
+    "new": 1,
+    "retired": 0,
+    "id_same_named": 0.821,
+    "word_same_named": 0.751,
+    "named_to_unnamed": 0.179,
+    "named_to_other_word": 0.07,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 529,
+     "members_released": 88,
+     "absorbed": 0,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 11,
+    "strong": 10,
+    "fair": 1,
+    "unnamed": 0.429,
+    "mean_n": 211.8,
+    "max_n": 629,
+    "mean_roster": 298.5,
+    "mean_name_word_coverage": 0.699,
+    "seconds": 0.4,
+    "kept": 7,
+    "renamed": 2,
+    "new": 2,
+    "retired": 1,
+    "id_same_named": 0.837,
+    "word_same_named": 0.744,
+    "named_to_unnamed": 0.133,
+    "named_to_other_word": 0.123,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 555,
+     "members_released": 50,
+     "absorbed": 0,
+     "not_contiguous": 1,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "bittersweet-2"
+     ],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "random1/fresh/carry_absorb": [
+   {
+    "n": 1600,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.23,
+    "mean_n": 136.9,
+    "max_n": 295,
+    "mean_roster": 166.2,
+    "mean_name_word_coverage": 0.661,
+    "seconds": 0.19
+   },
+   {
+    "n": 2400,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.299,
+    "mean_n": 186.9,
+    "max_n": 450,
+    "mean_roster": 236.8,
+    "mean_name_word_coverage": 0.694,
+    "seconds": 0.19,
+    "kept": 8,
+    "renamed": 0,
+    "new": 1,
+    "retired": 1,
+    "id_same_named": 0.798,
+    "word_same_named": 0.843,
+    "named_to_unnamed": 0.15,
+    "named_to_other_word": 0.007,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 542,
+     "members_released": 66,
+     "absorbed": 106,
+     "not_contiguous": 1,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "bittersweet"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 10,
+    "strong": 9,
+    "fair": 1,
+    "unnamed": 0.306,
+    "mean_n": 222.1,
+    "max_n": 574,
+    "mean_roster": 288.6,
+    "mean_name_word_coverage": 0.652,
+    "seconds": 0.22,
+    "kept": 8,
+    "renamed": 1,
+    "new": 1,
+    "retired": 0,
+    "id_same_named": 0.862,
+    "word_same_named": 0.789,
+    "named_to_unnamed": 0.131,
+    "named_to_other_word": 0.08,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 548,
+     "members_released": 82,
+     "absorbed": 144,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 10,
+    "strong": 9,
+    "fair": 1,
+    "unnamed": 0.326,
+    "mean_n": 275.2,
+    "max_n": 711,
+    "mean_roster": 357.6,
+    "mean_name_word_coverage": 0.659,
+    "seconds": 0.28,
+    "kept": 10,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "id_same_named": 0.882,
+    "word_same_named": 0.882,
+    "named_to_unnamed": 0.114,
+    "named_to_other_word": 0.005,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 603,
+     "members_released": 80,
+     "absorbed": 167,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "random1/anchored/recluster": [
+   {
+    "n": 1600,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.23,
+    "mean_n": 136.9,
+    "max_n": 295,
+    "mean_roster": 166.2,
+    "mean_name_word_coverage": 0.661,
+    "seconds": 0.19
+   },
+   {
+    "n": 2400,
+    "regions": 12,
+    "strong": 9,
+    "fair": 3,
+    "unnamed": 0.3,
+    "mean_n": 140.1,
+    "max_n": 213,
+    "mean_roster": 174.1,
+    "mean_name_word_coverage": 0.646,
+    "seconds": 0.3,
+    "kept": 7,
+    "renamed": 1,
+    "new": 4,
+    "retired": 1,
+    "id_same_named": 0.545,
+    "word_same_named": 0.481,
+    "named_to_unnamed": 0.217,
+    "named_to_other_word": 0.303
+   },
+   {
+    "n": 3200,
+    "regions": 15,
+    "strong": 14,
+    "fair": 1,
+    "unnamed": 0.333,
+    "mean_n": 142.3,
+    "max_n": 461,
+    "mean_roster": 179.5,
+    "mean_name_word_coverage": 0.692,
+    "seconds": 0.42,
+    "kept": 10,
+    "renamed": 0,
+    "new": 5,
+    "retired": 2,
+    "id_same_named": 0.592,
+    "word_same_named": 0.628,
+    "named_to_unnamed": 0.276,
+    "named_to_other_word": 0.096
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 12,
+    "fair": 6,
+    "unnamed": 0.195,
+    "mean_n": 182.6,
+    "max_n": 321,
+    "mean_roster": 225.7,
+    "mean_name_word_coverage": 0.628,
+    "seconds": 0.54,
+    "kept": 12,
+    "renamed": 2,
+    "new": 4,
+    "retired": 1,
+    "id_same_named": 0.723,
+    "word_same_named": 0.614,
+    "named_to_unnamed": 0.132,
+    "named_to_other_word": 0.254
+   }
+  ],
+  "random1/anchored/carry": [
+   {
+    "n": 1600,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.23,
+    "mean_n": 136.9,
+    "max_n": 295,
+    "mean_roster": 166.2,
+    "mean_name_word_coverage": 0.661,
+    "seconds": 0.18
+   },
+   {
+    "n": 2400,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.38,
+    "mean_n": 165.2,
+    "max_n": 416,
+    "mean_roster": 223.4,
+    "mean_name_word_coverage": 0.686,
+    "seconds": 0.21,
+    "kept": 8,
+    "renamed": 0,
+    "new": 1,
+    "retired": 1,
+    "id_same_named": 0.758,
+    "word_same_named": 0.791,
+    "named_to_unnamed": 0.209,
+    "named_to_other_word": 0.001,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 542,
+     "members_released": 40,
+     "absorbed": 0,
+     "not_contiguous": 1,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "bittersweet"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 11,
+    "strong": 11,
+    "fair": 0,
+    "unnamed": 0.425,
+    "mean_n": 167.2,
+    "max_n": 515,
+    "mean_roster": 238.0,
+    "mean_name_word_coverage": 0.723,
+    "seconds": 0.3,
+    "kept": 7,
+    "renamed": 2,
+    "new": 2,
+    "retired": 0,
+    "id_same_named": 0.834,
+    "word_same_named": 0.722,
+    "named_to_unnamed": 0.166,
+    "named_to_other_word": 0.112,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 517,
+     "members_released": 84,
+     "absorbed": 0,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 14,
+    "strong": 12,
+    "fair": 2,
+    "unnamed": 0.398,
+    "mean_n": 175.6,
+    "max_n": 620,
+    "mean_roster": 259.0,
+    "mean_name_word_coverage": 0.635,
+    "seconds": 0.4,
+    "kept": 8,
+    "renamed": 1,
+    "new": 5,
+    "retired": 2,
+    "id_same_named": 0.828,
+    "word_same_named": 0.813,
+    "named_to_unnamed": 0.129,
+    "named_to_other_word": 0.058,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 556,
+     "members_released": 123,
+     "absorbed": 0,
+     "not_contiguous": 2,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "bittersweet-2",
+      "ethereal"
+     ],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "random1/anchored/carry_absorb": [
+   {
+    "n": 1600,
+    "regions": 9,
+    "strong": 8,
+    "fair": 1,
+    "unnamed": 0.23,
+    "mean_n": 136.9,
+    "max_n": 295,
+    "mean_roster": 166.2,
+    "mean_name_word_coverage": 0.661,
+    "seconds": 0.18
+   },
+   {
+    "n": 2400,
+    "regions": 10,
+    "strong": 9,
+    "fair": 1,
+    "unnamed": 0.262,
+    "mean_n": 177.1,
+    "max_n": 429,
+    "mean_roster": 231.5,
+    "mean_name_word_coverage": 0.641,
+    "seconds": 0.19,
+    "kept": 8,
+    "renamed": 0,
+    "new": 2,
+    "retired": 1,
+    "id_same_named": 0.794,
+    "word_same_named": 0.838,
+    "named_to_unnamed": 0.15,
+    "named_to_other_word": 0.011,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 542,
+     "members_released": 40,
+     "absorbed": 103,
+     "not_contiguous": 1,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "bittersweet"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 10,
+    "strong": 8,
+    "fair": 2,
+    "unnamed": 0.298,
+    "mean_n": 224.6,
+    "max_n": 564,
+    "mean_roster": 291.6,
+    "mean_name_word_coverage": 0.612,
+    "seconds": 0.2,
+    "kept": 9,
+    "renamed": 1,
+    "new": 0,
+    "retired": 0,
+    "id_same_named": 0.847,
+    "word_same_named": 0.778,
+    "named_to_unnamed": 0.149,
+    "named_to_other_word": 0.074,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 561,
+     "members_released": 124,
+     "absorbed": 164,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 10,
+    "strong": 9,
+    "fair": 1,
+    "unnamed": 0.32,
+    "mean_n": 277.6,
+    "max_n": 714,
+    "mean_roster": 360.9,
+    "mean_name_word_coverage": 0.629,
+    "seconds": 0.32,
+    "kept": 10,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "id_same_named": 0.885,
+    "word_same_named": 0.885,
+    "named_to_unnamed": 0.11,
+    "named_to_other_word": 0.005,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 614,
+     "members_released": 102,
+     "absorbed": 181,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "prefix/anchored200/recluster": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.17
+   },
+   {
+    "n": 2400,
+    "regions": 13,
+    "strong": 11,
+    "fair": 2,
+    "unnamed": 0.22,
+    "mean_n": 144.0,
+    "max_n": 284,
+    "mean_roster": 174.5,
+    "mean_name_word_coverage": 0.637,
+    "seconds": 0.29,
+    "kept": 10,
+    "renamed": 1,
+    "new": 2,
+    "retired": 1,
+    "id_same_named": 0.677,
+    "word_same_named": 0.606,
+    "named_to_unnamed": 0.163,
+    "named_to_other_word": 0.231
+   },
+   {
+    "n": 3200,
+    "regions": 16,
+    "strong": 11,
+    "fair": 5,
+    "unnamed": 0.241,
+    "mean_n": 151.8,
+    "max_n": 246,
+    "mean_roster": 186.8,
+    "mean_name_word_coverage": 0.599,
+    "seconds": 0.42,
+    "kept": 9,
+    "renamed": 3,
+    "new": 4,
+    "retired": 1,
+    "id_same_named": 0.649,
+    "word_same_named": 0.572,
+    "named_to_unnamed": 0.182,
+    "named_to_other_word": 0.246
+   },
+   {
+    "n": 4081,
+    "regions": 16,
+    "strong": 14,
+    "fair": 2,
+    "unnamed": 0.334,
+    "mean_n": 169.8,
+    "max_n": 554,
+    "mean_roster": 205.8,
+    "mean_name_word_coverage": 0.68,
+    "seconds": 0.45,
+    "kept": 8,
+    "renamed": 3,
+    "new": 5,
+    "retired": 5,
+    "id_same_named": 0.621,
+    "word_same_named": 0.49,
+    "named_to_unnamed": 0.226,
+    "named_to_other_word": 0.284
+   }
+  ],
+  "prefix/anchored200/carry": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.17
+   },
+   {
+    "n": 2400,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.435,
+    "mean_n": 112.9,
+    "max_n": 210,
+    "mean_roster": 168.9,
+    "mean_name_word_coverage": 0.733,
+    "seconds": 0.18,
+    "kept": 11,
+    "renamed": 0,
+    "new": 1,
+    "retired": 1,
+    "id_same_named": 0.666,
+    "word_same_named": 0.666,
+    "named_to_unnamed": 0.29,
+    "named_to_other_word": 0.044,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 472,
+     "members_released": 127,
+     "absorbed": 0,
+     "not_contiguous": 1,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "uncommon-time-signatures"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 14,
+    "strong": 10,
+    "fair": 4,
+    "unnamed": 0.5,
+    "mean_n": 114.4,
+    "max_n": 257,
+    "mean_roster": 178.4,
+    "mean_name_word_coverage": 0.699,
+    "seconds": 0.35,
+    "kept": 10,
+    "renamed": 0,
+    "new": 4,
+    "retired": 2,
+    "id_same_named": 0.716,
+    "word_same_named": 0.716,
+    "named_to_unnamed": 0.201,
+    "named_to_other_word": 0.083,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 369,
+     "members_released": 86,
+     "absorbed": 0,
+     "not_contiguous": 2,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "progressive",
+      "lush"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 15,
+    "strong": 12,
+    "fair": 3,
+    "unnamed": 0.483,
+    "mean_n": 140.5,
+    "max_n": 299,
+    "mean_roster": 219.7,
+    "mean_name_word_coverage": 0.706,
+    "seconds": 0.5,
+    "kept": 9,
+    "renamed": 1,
+    "new": 5,
+    "retired": 4,
+    "id_same_named": 0.673,
+    "word_same_named": 0.613,
+    "named_to_unnamed": 0.215,
+    "named_to_other_word": 0.172,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 343,
+     "members_released": 108,
+     "absorbed": 0,
+     "not_contiguous": 3,
+     "failed_gates": 1,
+     "not_contiguous_ids": [
+      "uncommon-time-signatures",
+      "ethereal",
+      "quirky"
+     ],
+     "failed_gates_ids": [
+      "uplifting"
+     ]
+    }
+   }
+  ],
+  "prefix/anchored200/carry_absorb": [
+   {
+    "n": 1600,
+    "regions": 12,
+    "strong": 10,
+    "fair": 2,
+    "unnamed": 0.203,
+    "mean_n": 106.3,
+    "max_n": 161,
+    "mean_roster": 132.5,
+    "mean_name_word_coverage": 0.728,
+    "seconds": 0.17
+   },
+   {
+    "n": 2400,
+    "regions": 12,
+    "strong": 9,
+    "fair": 3,
+    "unnamed": 0.366,
+    "mean_n": 126.8,
+    "max_n": 216,
+    "mean_roster": 178.2,
+    "mean_name_word_coverage": 0.64,
+    "seconds": 0.17,
+    "kept": 8,
+    "renamed": 3,
+    "new": 1,
+    "retired": 1,
+    "id_same_named": 0.701,
+    "word_same_named": 0.527,
+    "named_to_unnamed": 0.249,
+    "named_to_other_word": 0.223,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 472,
+     "members_released": 127,
+     "absorbed": 117,
+     "not_contiguous": 1,
+     "failed_gates": 0,
+     "not_contiguous_ids": [
+      "uncommon-time-signatures"
+     ],
+     "failed_gates_ids": []
+    }
+   },
+   {
+    "n": 3200,
+    "regions": 13,
+    "strong": 10,
+    "fair": 3,
+    "unnamed": 0.432,
+    "mean_n": 139.7,
+    "max_n": 273,
+    "mean_roster": 188.8,
+    "mean_name_word_coverage": 0.63,
+    "seconds": 0.27,
+    "kept": 8,
+    "renamed": 2,
+    "new": 3,
+    "retired": 2,
+    "id_same_named": 0.74,
+    "word_same_named": 0.623,
+    "named_to_unnamed": 0.198,
+    "named_to_other_word": 0.179,
+    "carry": {
+     "new_albums": 800,
+     "new_albums_joined": 394,
+     "members_released": 116,
+     "absorbed": 133,
+     "not_contiguous": 1,
+     "failed_gates": 1,
+     "not_contiguous_ids": [
+      "progressive"
+     ],
+     "failed_gates_ids": [
+      "melodic"
+     ]
+    }
+   },
+   {
+    "n": 4081,
+    "regions": 14,
+    "strong": 12,
+    "fair": 2,
+    "unnamed": 0.448,
+    "mean_n": 160.9,
+    "max_n": 309,
+    "mean_roster": 214.4,
+    "mean_name_word_coverage": 0.677,
+    "seconds": 0.41,
+    "kept": 7,
+    "renamed": 1,
+    "new": 6,
+    "retired": 5,
+    "id_same_named": 0.654,
+    "word_same_named": 0.571,
+    "named_to_unnamed": 0.266,
+    "named_to_other_word": 0.163,
+    "carry": {
+     "new_albums": 881,
+     "new_albums_joined": 370,
+     "members_released": 128,
+     "absorbed": 141,
+     "not_contiguous": 4,
+     "failed_gates": 1,
+     "not_contiguous_ids": [
+      "ethereal",
+      "quirky",
+      "lush",
+      "technical"
+     ],
+     "failed_gates_ids": [
+      "melancholic"
+     ]
+    }
+   }
+  ],
+  "seed/fresh/recluster": [
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 14,
+    "fair": 4,
+    "unnamed": 0.235,
+    "mean_n": 173.5,
+    "max_n": 342,
+    "mean_roster": 214.3,
+    "mean_name_word_coverage": 0.644,
+    "seconds": 0.49
+   },
+   {
+    "n": 4081,
+    "regions": 21,
+    "strong": 14,
+    "fair": 7,
+    "unnamed": 0.247,
+    "mean_n": 146.4,
+    "max_n": 322,
+    "mean_roster": 184.3,
+    "mean_name_word_coverage": 0.665,
+    "seconds": 0.49,
+    "kept": 14,
+    "renamed": 2,
+    "new": 5,
+    "retired": 2,
+    "id_same_named": 0.723,
+    "word_same_named": 0.696,
+    "named_to_unnamed": 0.156,
+    "named_to_other_word": 0.148
+   }
+  ],
+  "seed/fresh/carry": [
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 14,
+    "fair": 4,
+    "unnamed": 0.235,
+    "mean_n": 173.5,
+    "max_n": 342,
+    "mean_roster": 214.3,
+    "mean_name_word_coverage": 0.644,
+    "seconds": 0.49
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 12,
+    "fair": 6,
+    "unnamed": 0.269,
+    "mean_n": 165.7,
+    "max_n": 326,
+    "mean_roster": 212.3,
+    "mean_name_word_coverage": 0.657,
+    "seconds": 0.2,
+    "kept": 18,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "id_same_named": 0.915,
+    "word_same_named": 0.915,
+    "named_to_unnamed": 0.085,
+    "named_to_other_word": 0.0,
+    "carry": {
+     "new_albums": 0,
+     "new_albums_joined": 0,
+     "members_released": 36,
+     "absorbed": 0,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "seed/fresh/carry_absorb": [
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 14,
+    "fair": 4,
+    "unnamed": 0.235,
+    "mean_n": 173.5,
+    "max_n": 342,
+    "mean_roster": 214.3,
+    "mean_name_word_coverage": 0.644,
+    "seconds": 0.49
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 13,
+    "fair": 5,
+    "unnamed": 0.257,
+    "mean_n": 168.4,
+    "max_n": 328,
+    "mean_roster": 214.6,
+    "mean_name_word_coverage": 0.654,
+    "seconds": 0.2,
+    "kept": 18,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "id_same_named": 0.919,
+    "word_same_named": 0.919,
+    "named_to_unnamed": 0.078,
+    "named_to_other_word": 0.004,
+    "carry": {
+     "new_albums": 0,
+     "new_albums_joined": 0,
+     "members_released": 36,
+     "absorbed": 41,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "seed/anchored/recluster": [
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 14,
+    "fair": 4,
+    "unnamed": 0.235,
+    "mean_n": 173.5,
+    "max_n": 342,
+    "mean_roster": 214.3,
+    "mean_name_word_coverage": 0.644,
+    "seconds": 0.48
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 13,
+    "fair": 5,
+    "unnamed": 0.285,
+    "mean_n": 162.0,
+    "max_n": 287,
+    "mean_roster": 199.5,
+    "mean_name_word_coverage": 0.655,
+    "seconds": 0.52,
+    "kept": 15,
+    "renamed": 1,
+    "new": 2,
+    "retired": 2,
+    "id_same_named": 0.768,
+    "word_same_named": 0.723,
+    "named_to_unnamed": 0.173,
+    "named_to_other_word": 0.103
+   }
+  ],
+  "seed/anchored/carry": [
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 14,
+    "fair": 4,
+    "unnamed": 0.235,
+    "mean_n": 173.5,
+    "max_n": 342,
+    "mean_roster": 214.3,
+    "mean_name_word_coverage": 0.644,
+    "seconds": 0.48
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 12,
+    "fair": 6,
+    "unnamed": 0.263,
+    "mean_n": 167.2,
+    "max_n": 334,
+    "mean_roster": 212.3,
+    "mean_name_word_coverage": 0.658,
+    "seconds": 0.21,
+    "kept": 18,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "id_same_named": 0.914,
+    "word_same_named": 0.914,
+    "named_to_unnamed": 0.086,
+    "named_to_other_word": 0.0,
+    "carry": {
+     "new_albums": 0,
+     "new_albums_joined": 0,
+     "members_released": 36,
+     "absorbed": 0,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   }
+  ],
+  "seed/anchored/carry_absorb": [
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 14,
+    "fair": 4,
+    "unnamed": 0.235,
+    "mean_n": 173.5,
+    "max_n": 342,
+    "mean_roster": 214.3,
+    "mean_name_word_coverage": 0.644,
+    "seconds": 0.48
+   },
+   {
+    "n": 4081,
+    "regions": 18,
+    "strong": 12,
+    "fair": 6,
+    "unnamed": 0.25,
+    "mean_n": 170.1,
+    "max_n": 337,
+    "mean_roster": 214.8,
+    "mean_name_word_coverage": 0.652,
+    "seconds": 0.2,
+    "kept": 18,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "id_same_named": 0.916,
+    "word_same_named": 0.916,
+    "named_to_unnamed": 0.08,
+    "named_to_other_word": 0.004,
+    "carry": {
+     "new_albums": 0,
+     "new_albums_joined": 0,
+     "members_released": 36,
+     "absorbed": 45,
+     "not_contiguous": 0,
+     "failed_gates": 0,
+     "not_contiguous_ids": [],
+     "failed_gates_ids": []
+    }
+   }
+  ]
+ },
+ "quality": {
+  "fresh_shipped_seed42": {
+   "feature_knn_preserved": 0.208,
+   "trustworthiness": 0.9043
+  },
+  "fresh_seed7": {
+   "feature_knn_preserved": 0.208,
+   "trustworthiness": 0.9038
+  },
+  "anchored_prefix_chain": {
+   "feature_knn_preserved": 0.206,
+   "trustworthiness": 0.9026
+  },
+  "anchored_random1_chain": {
+   "feature_knn_preserved": 0.206,
+   "trustworthiness": 0.9029
+  },
+  "anchored200_prefix_chain": {
+   "feature_knn_preserved": 0.199,
+   "trustworthiness": 0.9004
+  },
+  "anchored_seed7_from_seed42": {
+   "feature_knn_preserved": 0.206,
+   "trustworthiness": 0.9052
+  }
+ },
+ "umap_seconds": {
+  "anch_prefix_2400": 10.7,
+  "anch_prefix_3200": 8.9,
+  "anch_prefix_4081": 13.5,
+  "anch_random1_2400": 5.6,
+  "anch_random1_3200": 8.9,
+  "anch_random1_4081": 13.2,
+  "anch200_prefix_2400": 4.1,
+  "anch200_prefix_3200": 6.8,
+  "anch200_prefix_4081": 10.6,
+  "anch_seed7": 12.9
+ },
+ "summary": {
+  "fresh/recluster": {
+   "growth_mean": {
+    "id_same_named": 0.651,
+    "word_same_named": 0.557,
+    "named_to_unnamed": 0.191,
+    "named_to_other_word": 0.252,
+    "unnamed": 0.265,
+    "regions": 15.167,
+    "kept": 8.833,
+    "renamed": 2.333,
+    "new": 4.0,
+    "retired": 1.5,
+    "mean_n": 156.033,
+    "max_n": 302.5,
+    "mean_name_word_coverage": 0.646
+   },
+   "seed": {
+    "id_same_named": 0.723,
+    "word_same_named": 0.696,
+    "named_to_unnamed": 0.156,
+    "named_to_other_word": 0.148,
+    "unnamed": 0.247,
+    "regions": 21,
+    "kept": 14,
+    "renamed": 2,
+    "new": 5,
+    "retired": 2,
+    "mean_n": 146.4,
+    "max_n": 322,
+    "mean_name_word_coverage": 0.665
+   }
+  },
+  "fresh/carry": {
+   "growth_mean": {
+    "id_same_named": 0.739,
+    "word_same_named": 0.72,
+    "named_to_unnamed": 0.201,
+    "named_to_other_word": 0.079,
+    "unnamed": 0.431,
+    "regions": 13.0,
+    "kept": 8.833,
+    "renamed": 0.833,
+    "new": 3.333,
+    "retired": 2.0,
+    "mean_n": 147.983,
+    "max_n": 387.5,
+    "mean_name_word_coverage": 0.691
+   },
+   "seed": {
+    "id_same_named": 0.915,
+    "word_same_named": 0.915,
+    "named_to_unnamed": 0.085,
+    "named_to_other_word": 0.0,
+    "unnamed": 0.269,
+    "regions": 18,
+    "kept": 18,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "mean_n": 165.7,
+    "max_n": 326,
+    "mean_name_word_coverage": 0.657
+   },
+   "growth_not_contiguous_per_step": [
+    3,
+    4,
+    2,
+    1,
+    0,
+    1
+   ],
+   "growth_failed_gates_per_step": [
+    0,
+    1,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "fresh/carry_absorb": {
+   "growth_mean": {
+    "id_same_named": 0.767,
+    "word_same_named": 0.739,
+    "named_to_unnamed": 0.177,
+    "named_to_other_word": 0.084,
+    "unnamed": 0.367,
+    "regions": 12.333,
+    "kept": 9.0,
+    "renamed": 0.667,
+    "new": 2.667,
+    "retired": 1.833,
+    "mean_n": 174.733,
+    "max_n": 423.167,
+    "mean_name_word_coverage": 0.686
+   },
+   "seed": {
+    "id_same_named": 0.919,
+    "word_same_named": 0.919,
+    "named_to_unnamed": 0.078,
+    "named_to_other_word": 0.004,
+    "unnamed": 0.257,
+    "regions": 18,
+    "kept": 18,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "mean_n": 168.4,
+    "max_n": 328,
+    "mean_name_word_coverage": 0.654
+   },
+   "growth_not_contiguous_per_step": [
+    3,
+    3,
+    2,
+    1,
+    0,
+    0
+   ],
+   "growth_failed_gates_per_step": [
+    0,
+    2,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "anchored/recluster": {
+   "growth_mean": {
+    "id_same_named": 0.632,
+    "word_same_named": 0.551,
+    "named_to_unnamed": 0.211,
+    "named_to_other_word": 0.238,
+    "unnamed": 0.278,
+    "regions": 14.833,
+    "kept": 8.833,
+    "renamed": 1.833,
+    "new": 4.167,
+    "retired": 2.0,
+    "mean_n": 156.45,
+    "max_n": 355.333,
+    "mean_name_word_coverage": 0.654
+   },
+   "seed": {
+    "id_same_named": 0.768,
+    "word_same_named": 0.723,
+    "named_to_unnamed": 0.173,
+    "named_to_other_word": 0.103,
+    "unnamed": 0.285,
+    "regions": 18,
+    "kept": 15,
+    "renamed": 1,
+    "new": 2,
+    "retired": 2,
+    "mean_n": 162.0,
+    "max_n": 287,
+    "mean_name_word_coverage": 0.655
+   }
+  },
+  "anchored/carry": {
+   "growth_mean": {
+    "id_same_named": 0.767,
+    "word_same_named": 0.736,
+    "named_to_unnamed": 0.206,
+    "named_to_other_word": 0.058,
+    "unnamed": 0.444,
+    "regions": 12.167,
+    "kept": 8.667,
+    "renamed": 0.833,
+    "new": 2.667,
+    "retired": 1.333,
+    "mean_n": 147.383,
+    "max_n": 386.0,
+    "mean_name_word_coverage": 0.693
+   },
+   "seed": {
+    "id_same_named": 0.914,
+    "word_same_named": 0.914,
+    "named_to_unnamed": 0.086,
+    "named_to_other_word": 0.0,
+    "unnamed": 0.263,
+    "regions": 18,
+    "kept": 18,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "mean_n": 167.2,
+    "max_n": 334,
+    "mean_name_word_coverage": 0.658
+   },
+   "growth_not_contiguous_per_step": [
+    0,
+    0,
+    3,
+    1,
+    0,
+    2
+   ],
+   "growth_failed_gates_per_step": [
+    1,
+    1,
+    0,
+    0,
+    0,
+    0
+   ]
+  },
+  "anchored/carry_absorb": {
+   "growth_mean": {
+    "id_same_named": 0.791,
+    "word_same_named": 0.736,
+    "named_to_unnamed": 0.184,
+    "named_to_other_word": 0.08,
+    "unnamed": 0.353,
+    "regions": 11.0,
+    "kept": 9.0,
+    "renamed": 0.833,
+    "new": 1.167,
+    "retired": 1.0,
+    "mean_n": 191.6,
+    "max_n": 445.5,
+    "mean_name_word_coverage": 0.642
+   },
+   "seed": {
+    "id_same_named": 0.916,
+    "word_same_named": 0.916,
+    "named_to_unnamed": 0.08,
+    "named_to_other_word": 0.004,
+    "unnamed": 0.25,
+    "regions": 18,
+    "kept": 18,
+    "renamed": 0,
+    "new": 0,
+    "retired": 0,
+    "mean_n": 170.1,
+    "max_n": 337,
+    "mean_name_word_coverage": 0.652
+   },
+   "growth_not_contiguous_per_step": [
+    0,
+    1,
+    2,
+    1,
+    0,
+    0
+   ],
+   "growth_failed_gates_per_step": [
+    0,
+    1,
+    1,
+    0,
+    0,
+    0
+   ]
+  }
+ }
+}

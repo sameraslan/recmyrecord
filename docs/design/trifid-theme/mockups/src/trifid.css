@@ -1,0 +1,9 @@
+:root{--bg:#07060a;--panel:rgba(9,8,12,.95);--float:rgba(11,10,15,.95);--hdr-bg:linear-gradient(rgba(7,6,10,.95),rgba(7,6,10,.84));--text:#f1ece4;--dust:#bab4ac;--ash:#97918a;--lamp:#f1ece4;--lamp-ink:#121016;--rule:rgba(241,236,228,.11);--rule2:rgba(241,236,228,.24)}
+.amb{background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--acc) 13%,transparent),transparent 62%)}
+.mc .cv{box-shadow:0 0 0 1px rgba(255,255,255,.85),0 0 0 3px rgba(7,6,10,.75),0 8px 26px rgba(0,0,0,.8)}
+.mc.sd .cv{box-shadow:0 0 0 2px #07060a,0 0 0 4px #befff0,0 0 34px 4px rgba(190,255,236,.28)}
+.mc.hot .cv{box-shadow:0 0 0 2px #befff0,0 0 0 4px rgba(7,6,10,.75),0 8px 26px rgba(0,0,0,.8)}
+.badge{--badge-bg:#befff0;--badge-ink:#07130f;--badge-rule:#07060a}
+.rl.on b::after{background:#befff0}
+.sim-track i.on{border-color:#befff0}.sim-track i.on::after{background:#befff0}
+.nav a.on::after{background:#befff0}

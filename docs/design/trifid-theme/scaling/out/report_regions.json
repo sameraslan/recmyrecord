@@ -1,0 +1,2153 @@
+{
+ "params": {
+  "fine_bw": 15.0,
+  "coarse_mult": 2.5,
+  "adj_min": 0.2,
+  "cos_min": 0.72,
+  "knn": 15,
+  "interior": 0.7,
+  "straggler_pct": 97.0,
+  "far_pct": 92.0,
+  "min_n": 30,
+  "cov_strong": 0.4,
+  "cov_fair": 0.35,
+  "lift_min": 1.8,
+  "excl": 0.8,
+  "audio_z": 1.5,
+  "top_cov": 0.25,
+  "top_lift": 1.5,
+  "match_jaccard": 0.3,
+  "match_contain": 0.5,
+  "hysteresis": 1.5
+ },
+ "timing_s": {
+  "balanced_4081": [
+   0.5,
+   0.52
+  ],
+  "sonic": 0.46,
+  "mood": 0.5
+ },
+ "balanced_pure": {
+  "summary": {
+   "blobs": 25,
+   "after_merge": 21,
+   "regions": 18,
+   "strong": 13,
+   "fair": 5,
+   "unnamed_share": 0.235,
+   "areas": 5,
+   "coarse_blobs": 6,
+   "area_cover": 0.996,
+   "status": {
+    "kept": 0,
+    "renamed": 0,
+    "new": 18
+   },
+   "retired": []
+  },
+  "vs_hand": {
+   "rows": [
+    {
+     "hand": "live",
+     "hand_word": "liveness+",
+     "hand_n": 174,
+     "hand_strength": "strong",
+     "auto": "liveness",
+     "auto_word": "liveness+",
+     "auto_n": 174,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "The Live Belt",
+     "status": "new"
+    },
+    {
+     "hand": "urban",
+     "hand_word": "urban",
+     "hand_n": 232,
+     "hand_strength": "strong",
+     "auto": "sampling",
+     "auto_word": "sampling",
+     "auto_n": 232,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": false,
+     "strength_agrees": true,
+     "name": null,
+     "status": "new"
+    },
+    {
+     "hand": "improv",
+     "hand_word": "improvisation",
+     "hand_n": 290,
+     "hand_strength": "strong",
+     "auto": "improvisation",
+     "auto_word": "improvisation",
+     "auto_n": 290,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Improv Arm",
+     "status": "new"
+    },
+    {
+     "hand": "quiet",
+     "hand_word": "loudness-",
+     "hand_n": 242,
+     "hand_strength": "strong",
+     "auto": "loudness",
+     "auto_word": "loudness-",
+     "auto_n": 242,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "The Quiet Deep",
+     "status": "new"
+    },
+    {
+     "hand": "pastoral",
+     "hand_word": "pastoral",
+     "hand_n": 226,
+     "hand_strength": "fair",
+     "auto": "pastoral",
+     "auto_word": "pastoral",
+     "auto_n": 226,
+     "auto_strength": "fair",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Pastoral Nebula",
+     "status": "new"
+    },
+    {
+     "hand": "lonely",
+     "hand_word": "lonely",
+     "hand_n": 82,
+     "hand_strength": "strong",
+     "auto": "lonely",
+     "auto_word": "lonely",
+     "auto_n": 82,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Lonely Drift",
+     "status": "new"
+    },
+    {
+     "hand": "bittersweet",
+     "hand_word": "bittersweet",
+     "hand_n": 321,
+     "hand_strength": "fair",
+     "auto": "romantic",
+     "auto_word": "romantic",
+     "auto_n": 186,
+     "auto_strength": "fair",
+     "jaccard": 0.575,
+     "hand_in_auto": 0.576,
+     "auto_in_hand": 0.995,
+     "word_agrees": false,
+     "strength_agrees": true,
+     "name": null,
+     "status": "new"
+    },
+    {
+     "hand": "warm",
+     "hand_word": "warm",
+     "hand_n": 106,
+     "hand_strength": "strong",
+     "auto": "warm",
+     "auto_word": "warm",
+     "auto_n": 106,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Warm Halo",
+     "status": "new"
+    },
+    {
+     "hand": "playful",
+     "hand_word": "playful",
+     "hand_n": 196,
+     "hand_strength": "strong",
+     "auto": "playful",
+     "auto_word": "playful",
+     "auto_n": 196,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Playful Way",
+     "status": "new"
+    },
+    {
+     "hand": "eclectic",
+     "hand_word": "eclectic",
+     "hand_n": 152,
+     "hand_strength": "fair",
+     "auto": "eclectic",
+     "auto_word": "eclectic",
+     "auto_n": 152,
+     "auto_strength": "fair",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Eclectic Cloud",
+     "status": "new"
+    },
+    {
+     "hand": "progressive",
+     "hand_word": "progressive",
+     "hand_n": 141,
+     "hand_strength": "strong",
+     "auto": "progressive",
+     "auto_word": "progressive",
+     "auto_n": 141,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Progressive Spiral",
+     "status": "new"
+    },
+    {
+     "hand": "ethereal",
+     "hand_word": "ethereal",
+     "hand_n": 121,
+     "hand_strength": "strong",
+     "auto": "ethereal",
+     "auto_word": "ethereal",
+     "auto_n": 121,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Ethereal Veil",
+     "status": "new"
+    },
+    {
+     "hand": "aggressive",
+     "hand_word": "aggressive",
+     "hand_n": 184,
+     "hand_strength": "strong",
+     "auto": "aggressive",
+     "auto_word": "aggressive",
+     "auto_n": 184,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Aggressive Rift",
+     "status": "new"
+    },
+    {
+     "hand": "raw",
+     "hand_word": "raw",
+     "hand_n": 107,
+     "hand_strength": "strong",
+     "auto": "raw",
+     "auto_word": "raw",
+     "auto_n": 107,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Raw Flare",
+     "status": "new"
+    },
+    {
+     "hand": "epic",
+     "hand_word": "epic",
+     "hand_n": 346,
+     "hand_strength": "fair",
+     "auto": "epic",
+     "auto_word": "epic",
+     "auto_n": 346,
+     "auto_strength": "fair",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Epic Expanse",
+     "status": "new"
+    },
+    {
+     "hand": "sombre",
+     "hand_word": "sombre",
+     "hand_n": 106,
+     "hand_strength": "strong",
+     "auto": "sombre",
+     "auto_word": "sombre",
+     "auto_n": 106,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Sombre Void",
+     "status": "new"
+    },
+    {
+     "hand": "hypnotic",
+     "hand_word": "hypnotic",
+     "hand_n": 137,
+     "hand_strength": "fair",
+     "auto": "instrumentalness",
+     "auto_word": "instrumentalness+",
+     "auto_n": 104,
+     "auto_strength": "strong",
+     "jaccard": 0.759,
+     "hand_in_auto": 0.759,
+     "auto_in_hand": 1.0,
+     "word_agrees": false,
+     "strength_agrees": false,
+     "name": null,
+     "status": "new"
+    }
+   ],
+   "hand_without_auto": [],
+   "auto_without_hand": [
+    {
+     "id": "bittersweet",
+     "word": "bittersweet",
+     "n": 127,
+     "strength": "fair"
+    }
+   ],
+   "ari_all": 0.931,
+   "ari_named_in_both": 0.965,
+   "unnamed_hand": 0.225,
+   "unnamed_auto": 0.235,
+   "same_named_status": 0.983
+  },
+  "merges": [
+   {
+    "into": 11,
+    "from": 12,
+    "adjacency": 0.57,
+    "cosine": 0.93,
+    "same_word": true
+   },
+   {
+    "into": 15,
+    "from": 16,
+    "adjacency": 0.29,
+    "cosine": 0.76,
+    "same_word": true
+   },
+   {
+    "into": 13,
+    "from": 15,
+    "adjacency": 0.22,
+    "cosine": 0.51,
+    "same_word": true
+   },
+   {
+    "into": 21,
+    "from": 22,
+    "adjacency": 0.4,
+    "cosine": 0.75,
+    "same_word": false
+   }
+  ],
+  "regions": [
+   {
+    "id": "improvisation",
+    "word": "improvisation",
+    "name": "Improv Arm",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 290,
+    "status": "new",
+    "overlap": null,
+    "plain": "improvisation · acoustic",
+    "parent": "area-improvisation",
+    "evidence": {
+     "word": "improvisation",
+     "coverage": 0.821,
+     "overall": 0.106,
+     "lift": 7.73,
+     "next": 0.138
+    }
+   },
+   {
+    "id": "loudness",
+    "word": "loudness-",
+    "name": "The Quiet Deep",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 242,
+    "status": "new",
+    "overlap": null,
+    "plain": "low loudness · suspenseful",
+    "parent": "area-improvisation",
+    "evidence": {
+     "feature": "loudness",
+     "z": -2.06
+    }
+   },
+   {
+    "id": "sampling",
+    "word": "sampling",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 232,
+    "status": "new",
+    "overlap": null,
+    "plain": "sampling · urban",
+    "parent": "area-urban",
+    "evidence": {
+     "word": "sampling",
+     "coverage": 0.819,
+     "overall": 0.086,
+     "lift": 9.55,
+     "next": 0.144
+    }
+   },
+   {
+    "id": "playful",
+    "word": "playful",
+    "name": "Playful Way",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 196,
+    "status": "new",
+    "overlap": null,
+    "plain": "playful · energetic",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "playful",
+     "coverage": 0.607,
+     "overall": 0.212,
+     "lift": 2.86,
+     "next": 0.421
+    }
+   },
+   {
+    "id": "aggressive",
+    "word": "aggressive",
+    "name": "Aggressive Rift",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 184,
+    "status": "new",
+    "overlap": null,
+    "plain": "aggressive · heavy",
+    "parent": "area-heavy",
+    "evidence": {
+     "word": "aggressive",
+     "coverage": 0.967,
+     "overall": 0.143,
+     "lift": 6.77,
+     "next": 0.757
+    }
+   },
+   {
+    "id": "liveness",
+    "word": "liveness+",
+    "name": "The Live Belt",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 174,
+    "status": "new",
+    "overlap": null,
+    "plain": "high liveness · energetic",
+    "parent": "area-energetic",
+    "evidence": {
+     "feature": "liveness",
+     "z": 3.17
+    }
+   },
+   {
+    "id": "progressive",
+    "word": "progressive",
+    "name": "Progressive Spiral",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 141,
+    "status": "new",
+    "overlap": null,
+    "plain": "progressive · complex",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "progressive",
+     "coverage": 0.78,
+     "overall": 0.186,
+     "lift": 4.18,
+     "next": 0.376
+    }
+   },
+   {
+    "id": "ethereal",
+    "word": "ethereal",
+    "name": "Ethereal Veil",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 121,
+    "status": "new",
+    "overlap": null,
+    "plain": "ethereal · atmospheric",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "ethereal",
+     "coverage": 0.471,
+     "overall": 0.099,
+     "lift": 4.75,
+     "next": 0.252
+    }
+   },
+   {
+    "id": "raw",
+    "word": "raw",
+    "name": "Raw Flare",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 107,
+    "status": "new",
+    "overlap": null,
+    "plain": "raw · angry",
+    "parent": "area-energetic",
+    "evidence": {
+     "word": "raw",
+     "coverage": 0.888,
+     "overall": 0.158,
+     "lift": 5.64,
+     "next": 0.418
+    }
+   },
+   {
+    "id": "warm",
+    "word": "warm",
+    "name": "Warm Halo",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 106,
+    "status": "new",
+    "overlap": null,
+    "plain": "warm · rhythmic",
+    "parent": "area-urban",
+    "evidence": {
+     "word": "warm",
+     "coverage": 0.736,
+     "overall": 0.229,
+     "lift": 3.22,
+     "next": 0.495
+    }
+   },
+   {
+    "id": "sombre",
+    "word": "sombre",
+    "name": "Sombre Void",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 106,
+    "status": "new",
+    "overlap": null,
+    "plain": "sombre · atmospheric",
+    "parent": "area-heavy",
+    "evidence": {
+     "word": "sombre",
+     "coverage": 0.764,
+     "overall": 0.14,
+     "lift": 5.45,
+     "next": 0.537
+    }
+   },
+   {
+    "id": "instrumentalness",
+    "word": "instrumentalness+",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 104,
+    "status": "new",
+    "overlap": null,
+    "plain": "high instrumentalness · atmospheric",
+    "parent": "area-improvisation",
+    "evidence": {
+     "feature": "instrumentalness",
+     "z": 1.65
+    }
+   },
+   {
+    "id": "lonely",
+    "word": "lonely",
+    "name": "Lonely Drift",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 82,
+    "status": "new",
+    "overlap": null,
+    "plain": "lonely · sombre",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "lonely",
+     "coverage": 0.512,
+     "overall": 0.118,
+     "lift": 4.33,
+     "next": 0.387
+    }
+   },
+   {
+    "id": "epic",
+    "word": "epic",
+    "name": "Epic Expanse",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 346,
+    "status": "new",
+    "overlap": null,
+    "plain": "epic · heavy",
+    "parent": "area-heavy",
+    "evidence": {
+     "word": "epic",
+     "coverage": 0.535,
+     "overall": 0.147,
+     "lift": 3.63,
+     "next": 0.454
+    }
+   },
+   {
+    "id": "pastoral",
+    "word": "pastoral",
+    "name": "Pastoral Nebula",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 226,
+    "status": "new",
+    "overlap": null,
+    "plain": "pastoral · acoustic",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "pastoral",
+     "coverage": 0.389,
+     "overall": 0.069,
+     "lift": 5.66,
+     "next": 0.244
+    }
+   },
+   {
+    "id": "romantic",
+    "word": "romantic",
+    "name": null,
+    "needs_name": true,
+    "strength": "fair",
+    "n": 186,
+    "status": "new",
+    "overlap": null,
+    "plain": "romantic · bittersweet",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "romantic",
+     "coverage": 0.355,
+     "overall": 0.109,
+     "lift": 3.27,
+     "next": 0.301
+    }
+   },
+   {
+    "id": "eclectic",
+    "word": "eclectic",
+    "name": "Eclectic Cloud",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 152,
+    "status": "new",
+    "overlap": null,
+    "plain": "eclectic · psychedelic",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "eclectic",
+     "coverage": 0.375,
+     "overall": 0.145,
+     "lift": 2.58,
+     "next": 0.299
+    }
+   },
+   {
+    "id": "bittersweet",
+    "word": "bittersweet",
+    "name": "The Bittersweet Reach",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 127,
+    "status": "new",
+    "overlap": null,
+    "plain": "bittersweet · melodic",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "bittersweet",
+     "coverage": 0.614,
+     "overall": 0.22,
+     "lift": 2.79,
+     "next": 0.575
+    }
+   }
+  ],
+  "areas": [
+   {
+    "id": "area-bittersweet",
+    "word": "bittersweet",
+    "strength": "strong",
+    "n": 1516,
+    "plain": "bittersweet · sentimental"
+   },
+   {
+    "id": "area-heavy",
+    "word": "heavy",
+    "strength": "strong",
+    "n": 865,
+    "plain": "heavy · dark"
+   },
+   {
+    "id": "area-energetic",
+    "word": "energetic",
+    "strength": "strong",
+    "n": 429,
+    "plain": "energetic · anthemic"
+   },
+   {
+    "id": "area-urban",
+    "word": "urban",
+    "strength": "strong",
+    "n": 362,
+    "plain": "urban · sampling"
+   },
+   {
+    "id": "area-improvisation",
+    "word": "improvisation",
+    "strength": "fair",
+    "n": 891,
+    "plain": "improvisation · acoustic"
+   }
+  ]
+ },
+ "balanced_continuity": {
+  "summary": {
+   "blobs": 25,
+   "after_merge": 21,
+   "regions": 18,
+   "strong": 13,
+   "fair": 5,
+   "unnamed_share": 0.235,
+   "areas": 5,
+   "coarse_blobs": 6,
+   "area_cover": 0.996,
+   "status": {
+    "kept": 15,
+    "renamed": 2,
+    "new": 1
+   },
+   "retired": []
+  },
+  "vs_hand": {
+   "rows": [
+    {
+     "hand": "live",
+     "hand_word": "liveness+",
+     "hand_n": 174,
+     "hand_strength": "strong",
+     "auto": "live",
+     "auto_word": "liveness+",
+     "auto_n": 174,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "The Live Belt",
+     "status": "kept"
+    },
+    {
+     "hand": "urban",
+     "hand_word": "urban",
+     "hand_n": 232,
+     "hand_strength": "strong",
+     "auto": "urban",
+     "auto_word": "urban",
+     "auto_n": 232,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Urban Cluster",
+     "status": "kept"
+    },
+    {
+     "hand": "improv",
+     "hand_word": "improvisation",
+     "hand_n": 290,
+     "hand_strength": "strong",
+     "auto": "improv",
+     "auto_word": "improvisation",
+     "auto_n": 290,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Improv Arm",
+     "status": "kept"
+    },
+    {
+     "hand": "quiet",
+     "hand_word": "loudness-",
+     "hand_n": 242,
+     "hand_strength": "strong",
+     "auto": "quiet",
+     "auto_word": "loudness-",
+     "auto_n": 242,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "The Quiet Deep",
+     "status": "kept"
+    },
+    {
+     "hand": "pastoral",
+     "hand_word": "pastoral",
+     "hand_n": 226,
+     "hand_strength": "fair",
+     "auto": "pastoral",
+     "auto_word": "pastoral",
+     "auto_n": 226,
+     "auto_strength": "fair",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Pastoral Nebula",
+     "status": "kept"
+    },
+    {
+     "hand": "lonely",
+     "hand_word": "lonely",
+     "hand_n": 82,
+     "hand_strength": "strong",
+     "auto": "lonely",
+     "auto_word": "lonely",
+     "auto_n": 82,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Lonely Drift",
+     "status": "kept"
+    },
+    {
+     "hand": "bittersweet",
+     "hand_word": "bittersweet",
+     "hand_n": 321,
+     "hand_strength": "fair",
+     "auto": "bittersweet",
+     "auto_word": "romantic",
+     "auto_n": 186,
+     "auto_strength": "fair",
+     "jaccard": 0.575,
+     "hand_in_auto": 0.576,
+     "auto_in_hand": 0.995,
+     "word_agrees": false,
+     "strength_agrees": true,
+     "name": null,
+     "status": "renamed"
+    },
+    {
+     "hand": "warm",
+     "hand_word": "warm",
+     "hand_n": 106,
+     "hand_strength": "strong",
+     "auto": "warm",
+     "auto_word": "warm",
+     "auto_n": 106,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Warm Halo",
+     "status": "kept"
+    },
+    {
+     "hand": "playful",
+     "hand_word": "playful",
+     "hand_n": 196,
+     "hand_strength": "strong",
+     "auto": "playful",
+     "auto_word": "playful",
+     "auto_n": 196,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Playful Way",
+     "status": "kept"
+    },
+    {
+     "hand": "eclectic",
+     "hand_word": "eclectic",
+     "hand_n": 152,
+     "hand_strength": "fair",
+     "auto": "eclectic",
+     "auto_word": "eclectic",
+     "auto_n": 152,
+     "auto_strength": "fair",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Eclectic Cloud",
+     "status": "kept"
+    },
+    {
+     "hand": "progressive",
+     "hand_word": "progressive",
+     "hand_n": 141,
+     "hand_strength": "strong",
+     "auto": "progressive",
+     "auto_word": "progressive",
+     "auto_n": 141,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Progressive Spiral",
+     "status": "kept"
+    },
+    {
+     "hand": "ethereal",
+     "hand_word": "ethereal",
+     "hand_n": 121,
+     "hand_strength": "strong",
+     "auto": "ethereal",
+     "auto_word": "ethereal",
+     "auto_n": 121,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Ethereal Veil",
+     "status": "kept"
+    },
+    {
+     "hand": "aggressive",
+     "hand_word": "aggressive",
+     "hand_n": 184,
+     "hand_strength": "strong",
+     "auto": "aggressive",
+     "auto_word": "aggressive",
+     "auto_n": 184,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Aggressive Rift",
+     "status": "kept"
+    },
+    {
+     "hand": "raw",
+     "hand_word": "raw",
+     "hand_n": 107,
+     "hand_strength": "strong",
+     "auto": "raw",
+     "auto_word": "raw",
+     "auto_n": 107,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Raw Flare",
+     "status": "kept"
+    },
+    {
+     "hand": "epic",
+     "hand_word": "epic",
+     "hand_n": 346,
+     "hand_strength": "fair",
+     "auto": "epic",
+     "auto_word": "epic",
+     "auto_n": 346,
+     "auto_strength": "fair",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Epic Expanse",
+     "status": "kept"
+    },
+    {
+     "hand": "sombre",
+     "hand_word": "sombre",
+     "hand_n": 106,
+     "hand_strength": "strong",
+     "auto": "sombre",
+     "auto_word": "sombre",
+     "auto_n": 106,
+     "auto_strength": "strong",
+     "jaccard": 1.0,
+     "hand_in_auto": 1.0,
+     "auto_in_hand": 1.0,
+     "word_agrees": true,
+     "strength_agrees": true,
+     "name": "Sombre Void",
+     "status": "kept"
+    },
+    {
+     "hand": "hypnotic",
+     "hand_word": "hypnotic",
+     "hand_n": 137,
+     "hand_strength": "fair",
+     "auto": "hypnotic",
+     "auto_word": "instrumentalness+",
+     "auto_n": 104,
+     "auto_strength": "strong",
+     "jaccard": 0.759,
+     "hand_in_auto": 0.759,
+     "auto_in_hand": 1.0,
+     "word_agrees": false,
+     "strength_agrees": false,
+     "name": null,
+     "status": "renamed"
+    }
+   ],
+   "hand_without_auto": [],
+   "auto_without_hand": [
+    {
+     "id": "bittersweet-2",
+     "word": "bittersweet",
+     "n": 127,
+     "strength": "fair"
+    }
+   ],
+   "ari_all": 0.931,
+   "ari_named_in_both": 0.965,
+   "unnamed_hand": 0.225,
+   "unnamed_auto": 0.235,
+   "same_named_status": 0.983
+  },
+  "regions": [
+   {
+    "id": "improv",
+    "word": "improvisation",
+    "name": "Improv Arm",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 290,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "improvisation · acoustic",
+    "parent": "area-improvisation",
+    "evidence": {
+     "word": "improvisation",
+     "coverage": 0.821,
+     "overall": 0.106,
+     "lift": 7.73,
+     "next": 0.138
+    }
+   },
+   {
+    "id": "quiet",
+    "word": "loudness-",
+    "name": "The Quiet Deep",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 242,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "low loudness · suspenseful",
+    "parent": "area-improvisation",
+    "evidence": {
+     "feature": "loudness",
+     "z": -2.06
+    }
+   },
+   {
+    "id": "urban",
+    "word": "urban",
+    "name": "Urban Cluster",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 232,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "urban · sampling",
+    "parent": "area-urban",
+    "evidence": {
+     "word": "urban",
+     "coverage": 0.892,
+     "overall": 0.146,
+     "lift": 6.12,
+     "next": 0.296
+    }
+   },
+   {
+    "id": "playful",
+    "word": "playful",
+    "name": "Playful Way",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 196,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "playful · energetic",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "playful",
+     "coverage": 0.607,
+     "overall": 0.212,
+     "lift": 2.86,
+     "next": 0.421
+    }
+   },
+   {
+    "id": "aggressive",
+    "word": "aggressive",
+    "name": "Aggressive Rift",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 184,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "aggressive · heavy",
+    "parent": "area-heavy",
+    "evidence": {
+     "word": "aggressive",
+     "coverage": 0.967,
+     "overall": 0.143,
+     "lift": 6.77,
+     "next": 0.757
+    }
+   },
+   {
+    "id": "live",
+    "word": "liveness+",
+    "name": "The Live Belt",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 174,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "high liveness · energetic",
+    "parent": "area-energetic",
+    "evidence": {
+     "feature": "liveness",
+     "z": 3.17
+    }
+   },
+   {
+    "id": "progressive",
+    "word": "progressive",
+    "name": "Progressive Spiral",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 141,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "progressive · complex",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "progressive",
+     "coverage": 0.78,
+     "overall": 0.186,
+     "lift": 4.18,
+     "next": 0.376
+    }
+   },
+   {
+    "id": "ethereal",
+    "word": "ethereal",
+    "name": "Ethereal Veil",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 121,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "ethereal · atmospheric",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "ethereal",
+     "coverage": 0.471,
+     "overall": 0.099,
+     "lift": 4.75,
+     "next": 0.252
+    }
+   },
+   {
+    "id": "raw",
+    "word": "raw",
+    "name": "Raw Flare",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 107,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "raw · angry",
+    "parent": "area-energetic",
+    "evidence": {
+     "word": "raw",
+     "coverage": 0.888,
+     "overall": 0.158,
+     "lift": 5.64,
+     "next": 0.418
+    }
+   },
+   {
+    "id": "warm",
+    "word": "warm",
+    "name": "Warm Halo",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 106,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "warm · rhythmic",
+    "parent": "area-urban",
+    "evidence": {
+     "word": "warm",
+     "coverage": 0.736,
+     "overall": 0.229,
+     "lift": 3.22,
+     "next": 0.495
+    }
+   },
+   {
+    "id": "sombre",
+    "word": "sombre",
+    "name": "Sombre Void",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 106,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "sombre · atmospheric",
+    "parent": "area-heavy",
+    "evidence": {
+     "word": "sombre",
+     "coverage": 0.764,
+     "overall": 0.14,
+     "lift": 5.45,
+     "next": 0.537
+    }
+   },
+   {
+    "id": "hypnotic",
+    "word": "instrumentalness+",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 104,
+    "status": "renamed",
+    "overlap": 0.759,
+    "plain": "high instrumentalness · atmospheric",
+    "parent": "area-improvisation",
+    "evidence": {
+     "feature": "instrumentalness",
+     "z": 1.65
+    }
+   },
+   {
+    "id": "lonely",
+    "word": "lonely",
+    "name": "Lonely Drift",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 82,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "lonely · sombre",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "lonely",
+     "coverage": 0.512,
+     "overall": 0.118,
+     "lift": 4.33,
+     "next": 0.387
+    }
+   },
+   {
+    "id": "epic",
+    "word": "epic",
+    "name": "Epic Expanse",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 346,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "epic · heavy",
+    "parent": "area-heavy",
+    "evidence": {
+     "word": "epic",
+     "coverage": 0.535,
+     "overall": 0.147,
+     "lift": 3.63,
+     "next": 0.454
+    }
+   },
+   {
+    "id": "pastoral",
+    "word": "pastoral",
+    "name": "Pastoral Nebula",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 226,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "pastoral · acoustic",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "pastoral",
+     "coverage": 0.389,
+     "overall": 0.069,
+     "lift": 5.66,
+     "next": 0.244
+    }
+   },
+   {
+    "id": "bittersweet",
+    "word": "romantic",
+    "name": null,
+    "needs_name": true,
+    "strength": "fair",
+    "n": 186,
+    "status": "renamed",
+    "overlap": 0.575,
+    "plain": "romantic · bittersweet",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "romantic",
+     "coverage": 0.355,
+     "overall": 0.109,
+     "lift": 3.27,
+     "next": 0.301
+    }
+   },
+   {
+    "id": "eclectic",
+    "word": "eclectic",
+    "name": "Eclectic Cloud",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 152,
+    "status": "kept",
+    "overlap": 1.0,
+    "plain": "eclectic · psychedelic",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "eclectic",
+     "coverage": 0.375,
+     "overall": 0.145,
+     "lift": 2.58,
+     "next": 0.299
+    }
+   },
+   {
+    "id": "bittersweet-2",
+    "word": "bittersweet",
+    "name": "The Bittersweet Reach",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 127,
+    "status": "new",
+    "overlap": null,
+    "plain": "bittersweet · melodic",
+    "parent": "area-bittersweet",
+    "evidence": {
+     "word": "bittersweet",
+     "coverage": 0.614,
+     "overall": 0.22,
+     "lift": 2.79,
+     "next": 0.575
+    }
+   }
+  ],
+  "areas": [
+   {
+    "id": "area-bittersweet",
+    "word": "bittersweet",
+    "strength": "strong",
+    "n": 1516,
+    "plain": "bittersweet · sentimental"
+   },
+   {
+    "id": "area-heavy",
+    "word": "heavy",
+    "strength": "strong",
+    "n": 865,
+    "plain": "heavy · dark"
+   },
+   {
+    "id": "area-energetic",
+    "word": "energetic",
+    "strength": "strong",
+    "n": 429,
+    "plain": "energetic · anthemic"
+   },
+   {
+    "id": "area-urban",
+    "word": "urban",
+    "strength": "strong",
+    "n": 362,
+    "plain": "urban · sampling"
+   },
+   {
+    "id": "area-improvisation",
+    "word": "improvisation",
+    "strength": "fair",
+    "n": 891,
+    "plain": "improvisation · acoustic"
+   }
+  ]
+ },
+ "auto_merge_groups": [
+  [
+   11,
+   12
+  ],
+  [
+   13,
+   15,
+   16
+  ],
+  [
+   21,
+   22
+  ]
+ ],
+ "hand_merge_groups": [
+  [
+   3,
+   5
+  ],
+  [
+   11,
+   12
+  ],
+  [
+   13,
+   15,
+   16
+  ],
+  [
+   21,
+   22
+  ],
+  [
+   18,
+   23
+  ]
+ ],
+ "sonic": {
+  "summary": {
+   "blobs": 25,
+   "after_merge": 14,
+   "regions": 11,
+   "strong": 9,
+   "fair": 2,
+   "unnamed_share": 0.312,
+   "areas": 3,
+   "coarse_blobs": 6,
+   "area_cover": 0.498,
+   "status": {
+    "kept": 5,
+    "renamed": 4,
+    "new": 2
+   },
+   "retired": [
+    {
+     "id": "aggressive",
+     "level": 1,
+     "word": "aggressive",
+     "name": "Aggressive Rift",
+     "reason": "no matching region"
+    },
+    {
+     "id": "progressive",
+     "level": 1,
+     "word": "progressive",
+     "name": "Progressive Spiral",
+     "reason": "no matching region"
+    },
+    {
+     "id": "ethereal",
+     "level": 1,
+     "word": "ethereal",
+     "name": "Ethereal Veil",
+     "reason": "no matching region"
+    },
+    {
+     "id": "raw",
+     "level": 1,
+     "word": "raw",
+     "name": "Raw Flare",
+     "reason": "no matching region"
+    },
+    {
+     "id": "sombre",
+     "level": 1,
+     "word": "sombre",
+     "name": "Sombre Void",
+     "reason": "no matching region"
+    },
+    {
+     "id": "lonely",
+     "level": 1,
+     "word": "lonely",
+     "name": "Lonely Drift",
+     "reason": "no matching region"
+    },
+    {
+     "id": "bittersweet",
+     "level": 1,
+     "word": "romantic",
+     "name": null,
+     "reason": "no matching region"
+    },
+    {
+     "id": "eclectic",
+     "level": 1,
+     "word": "eclectic",
+     "name": "Eclectic Cloud",
+     "reason": "no matching region"
+    },
+    {
+     "id": "bittersweet-2",
+     "level": 1,
+     "word": "bittersweet",
+     "name": "The Bittersweet Reach",
+     "reason": "no matching region"
+    },
+    {
+     "id": "area-bittersweet",
+     "level": 0,
+     "word": "bittersweet",
+     "name": null,
+     "reason": "matched region fails the gates"
+    },
+    {
+     "id": "area-energetic",
+     "level": 0,
+     "word": "energetic",
+     "name": null,
+     "reason": "no matching region"
+    },
+    {
+     "id": "area-improvisation",
+     "level": 0,
+     "word": "improvisation",
+     "name": null,
+     "reason": "matched region fails the gates"
+    }
+   ]
+  },
+  "regions": [
+   {
+    "id": "epic",
+    "word": "heavy",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 613,
+    "status": "renamed",
+    "overlap": 0.274,
+    "plain": "heavy · aggressive",
+    "parent": "area-heavy"
+   },
+   {
+    "id": "hypnotic",
+    "word": "atmospheric",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 347,
+    "status": "renamed",
+    "overlap": 0.232,
+    "plain": "atmospheric · hypnotic",
+    "parent": null
+   },
+   {
+    "id": "pastoral",
+    "word": "bittersweet",
+    "name": "The Bittersweet Reach",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 334,
+    "status": "renamed",
+    "overlap": 0.505,
+    "plain": "bittersweet · acoustic",
+    "parent": "area-acoustic"
+   },
+   {
+    "id": "improv",
+    "word": "improvisation",
+    "name": "Improv Arm",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 310,
+    "status": "kept",
+    "overlap": 0.33,
+    "plain": "improvisation · acoustic",
+    "parent": "area-acoustic"
+   },
+   {
+    "id": "quiet",
+    "word": "loudness-",
+    "name": "The Quiet Deep",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 221,
+    "status": "kept",
+    "overlap": 0.702,
+    "plain": "low loudness · meditative",
+    "parent": null
+   },
+   {
+    "id": "urban",
+    "word": "urban",
+    "name": "Urban Cluster",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 210,
+    "status": "kept",
+    "overlap": 0.707,
+    "plain": "urban · sampling",
+    "parent": "area-urban"
+   },
+   {
+    "id": "live",
+    "word": "liveness+",
+    "name": "The Live Belt",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 182,
+    "status": "kept",
+    "overlap": 0.664,
+    "plain": "high liveness · energetic",
+    "parent": "area-heavy"
+   },
+   {
+    "id": "warm",
+    "word": "danceability+",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 60,
+    "status": "renamed",
+    "overlap": 0.297,
+    "plain": "high danceability · rhythmic",
+    "parent": "area-urban"
+   },
+   {
+    "id": "lush",
+    "word": "lush",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 54,
+    "status": "new",
+    "overlap": null,
+    "plain": "lush · warm",
+    "parent": null
+   },
+   {
+    "id": "playful",
+    "word": "playful",
+    "name": "Playful Way",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 315,
+    "status": "kept",
+    "overlap": 0.327,
+    "plain": "playful · energetic",
+    "parent": null
+   },
+   {
+    "id": "progressive-2",
+    "word": "progressive",
+    "name": "Progressive Spiral",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 161,
+    "status": "new",
+    "overlap": null,
+    "plain": "progressive · epic",
+    "parent": null
+   }
+  ],
+  "areas": [
+   {
+    "id": "area-heavy",
+    "word": "heavy",
+    "strength": "strong",
+    "n": 965,
+    "plain": "heavy · aggressive"
+   },
+   {
+    "id": "area-acoustic",
+    "word": "acoustic",
+    "strength": "strong",
+    "n": 610,
+    "plain": "acoustic · improvisation"
+   },
+   {
+    "id": "area-urban",
+    "word": "urban",
+    "strength": "strong",
+    "n": 457,
+    "plain": "urban · sampling"
+   }
+  ]
+ },
+ "mood": {
+  "summary": {
+   "blobs": 30,
+   "after_merge": 25,
+   "regions": 20,
+   "strong": 14,
+   "fair": 6,
+   "unnamed_share": 0.347,
+   "areas": 6,
+   "coarse_blobs": 6,
+   "area_cover": 1.0,
+   "status": {
+    "kept": 3,
+    "renamed": 3,
+    "new": 14
+   },
+   "retired": [
+    {
+     "id": "quiet",
+     "level": 1,
+     "word": "loudness-",
+     "name": "The Quiet Deep",
+     "reason": "no matching region"
+    },
+    {
+     "id": "live",
+     "level": 1,
+     "word": "liveness+",
+     "name": "The Live Belt",
+     "reason": "no matching region"
+    },
+    {
+     "id": "progressive",
+     "level": 1,
+     "word": "progressive",
+     "name": "Progressive Spiral",
+     "reason": "no matching region"
+    },
+    {
+     "id": "ethereal",
+     "level": 1,
+     "word": "ethereal",
+     "name": "Ethereal Veil",
+     "reason": "no matching region"
+    },
+    {
+     "id": "raw",
+     "level": 1,
+     "word": "raw",
+     "name": "Raw Flare",
+     "reason": "no matching region"
+    },
+    {
+     "id": "warm",
+     "level": 1,
+     "word": "warm",
+     "name": "Warm Halo",
+     "reason": "no matching region"
+    },
+    {
+     "id": "hypnotic",
+     "level": 1,
+     "word": "instrumentalness+",
+     "name": null,
+     "reason": "no matching region"
+    },
+    {
+     "id": "lonely",
+     "level": 1,
+     "word": "lonely",
+     "name": "Lonely Drift",
+     "reason": "no matching region"
+    },
+    {
+     "id": "pastoral",
+     "level": 1,
+     "word": "pastoral",
+     "name": "Pastoral Nebula",
+     "reason": "no matching region"
+    },
+    {
+     "id": "bittersweet",
+     "level": 1,
+     "word": "romantic",
+     "name": null,
+     "reason": "no matching region"
+    },
+    {
+     "id": "eclectic",
+     "level": 1,
+     "word": "eclectic",
+     "name": "Eclectic Cloud",
+     "reason": "no matching region"
+    },
+    {
+     "id": "bittersweet-2",
+     "level": 1,
+     "word": "bittersweet",
+     "name": "The Bittersweet Reach",
+     "reason": "no matching region"
+    },
+    {
+     "id": "area-energetic",
+     "level": 0,
+     "word": "energetic",
+     "name": null,
+     "reason": "no matching region"
+    }
+   ]
+  },
+  "regions": [
+   {
+    "id": "longing",
+    "word": "longing",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 312,
+    "status": "new",
+    "overlap": null,
+    "plain": "longing · melancholic",
+    "parent": "area-bittersweet"
+   },
+   {
+    "id": "aggressive",
+    "word": "aggressive",
+    "name": "Aggressive Rift",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 273,
+    "status": "kept",
+    "overlap": 0.534,
+    "plain": "aggressive · heavy",
+    "parent": "area-heavy"
+   },
+   {
+    "id": "soothing",
+    "word": "soothing",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 214,
+    "status": "new",
+    "overlap": null,
+    "plain": "soothing · ethereal",
+    "parent": "area-mysterious"
+   },
+   {
+    "id": "urban",
+    "word": "urban",
+    "name": "Urban Cluster",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 205,
+    "status": "kept",
+    "overlap": 0.662,
+    "plain": "urban · sampling",
+    "parent": "area-urban"
+   },
+   {
+    "id": "improv",
+    "word": "acoustic",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 187,
+    "status": "renamed",
+    "overlap": 0.395,
+    "plain": "acoustic · improvisation",
+    "parent": "area-improvisation"
+   },
+   {
+    "id": "quirky",
+    "word": "quirky",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 162,
+    "status": "new",
+    "overlap": null,
+    "plain": "quirky · playful",
+    "parent": "area-urban"
+   },
+   {
+    "id": "progressive-2",
+    "word": "progressive",
+    "name": "Progressive Spiral",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 150,
+    "status": "new",
+    "overlap": null,
+    "plain": "progressive · complex",
+    "parent": "area-heavy"
+   },
+   {
+    "id": "mellow",
+    "word": "mellow",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 142,
+    "status": "new",
+    "overlap": null,
+    "plain": "mellow · romantic",
+    "parent": "area-bittersweet"
+   },
+   {
+    "id": "sombre",
+    "word": "sombre",
+    "name": "Sombre Void",
+    "needs_name": false,
+    "strength": "strong",
+    "n": 133,
+    "status": "kept",
+    "overlap": 0.32,
+    "plain": "sombre · dark",
+    "parent": "area-bittersweet"
+   },
+   {
+    "id": "avant-garde",
+    "word": "avant-garde",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 80,
+    "status": "new",
+    "overlap": null,
+    "plain": "avant-garde · improvisation",
+    "parent": "area-improvisation"
+   },
+   {
+    "id": "psychedelic",
+    "word": "psychedelic",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 60,
+    "status": "new",
+    "overlap": null,
+    "plain": "psychedelic · summer",
+    "parent": "area-bittersweet"
+   },
+   {
+    "id": "ominous",
+    "word": "ominous",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 53,
+    "status": "new",
+    "overlap": null,
+    "plain": "ominous · dark",
+    "parent": "area-heavy"
+   },
+   {
+    "id": "noisy",
+    "word": "noisy",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 42,
+    "status": "new",
+    "overlap": null,
+    "plain": "noisy · raw",
+    "parent": "area-heavy"
+   },
+   {
+    "id": "mysterious",
+    "word": "mysterious",
+    "name": null,
+    "needs_name": true,
+    "strength": "strong",
+    "n": 37,
+    "status": "new",
+    "overlap": null,
+    "plain": "mysterious · atmospheric",
+    "parent": "area-mysterious"
+   },
+   {
+    "id": "epic",
+    "word": "anthemic",
+    "name": null,
+    "needs_name": true,
+    "strength": "fair",
+    "n": 160,
+    "status": "renamed",
+    "overlap": 0.294,
+    "plain": "anthemic · heavy",
+    "parent": "area-heavy"
+   },
+   {
+    "id": "suspenseful",
+    "word": "suspenseful",
+    "name": null,
+    "needs_name": true,
+    "strength": "fair",
+    "n": 129,
+    "status": "new",
+    "overlap": null,
+    "plain": "suspenseful · atmospheric",
+    "parent": "area-mysterious"
+   },
+   {
+    "id": "epic-2",
+    "word": "epic",
+    "name": "Epic Expanse",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 93,
+    "status": "new",
+    "overlap": null,
+    "plain": "epic · melancholic",
+    "parent": "area-bittersweet"
+   },
+   {
+    "id": "playful",
+    "word": "energetic",
+    "name": null,
+    "needs_name": true,
+    "strength": "fair",
+    "n": 88,
+    "status": "renamed",
+    "overlap": 0.198,
+    "plain": "energetic · anthemic",
+    "parent": "area-energetic-2"
+   },
+   {
+    "id": "melodic",
+    "word": "melodic",
+    "name": null,
+    "needs_name": true,
+    "strength": "fair",
+    "n": 79,
+    "status": "new",
+    "overlap": null,
+    "plain": "melodic · bittersweet",
+    "parent": "area-bittersweet"
+   },
+   {
+    "id": "warm-2",
+    "word": "warm",
+    "name": "Warm Halo",
+    "needs_name": false,
+    "strength": "fair",
+    "n": 65,
+    "status": "new",
+    "overlap": null,
+    "plain": "warm · summer",
+    "parent": "area-urban"
+   }
+  ],
+  "areas": [
+   {
+    "id": "area-bittersweet",
+    "word": "bittersweet",
+    "strength": "strong",
+    "n": 1323,
+    "plain": "bittersweet · melancholic"
+   },
+   {
+    "id": "area-heavy",
+    "word": "heavy",
+    "strength": "strong",
+    "n": 785,
+    "plain": "heavy · aggressive"
+   },
+   {
+    "id": "area-urban",
+    "word": "urban",
+    "strength": "strong",
+    "n": 549,
+    "plain": "urban · sampling"
+   },
+   {
+    "id": "area-mysterious",
+    "word": "mysterious",
+    "strength": "strong",
+    "n": 462,
+    "plain": "mysterious · atmospheric"
+   },
+   {
+    "id": "area-improvisation",
+    "word": "improvisation",
+    "strength": "strong",
+    "n": 417,
+    "plain": "improvisation · acoustic"
+   },
+   {
+    "id": "area-energetic-2",
+    "word": "energetic",
+    "strength": "fair",
+    "n": 545,
+    "plain": "energetic · playful"
+   }
+  ]
+ }
+}

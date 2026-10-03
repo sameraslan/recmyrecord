@@ -1,0 +1,324 @@
+{
+ "gap_real": 0.008000000000000007,
+ "gap_synth": 0.004491165689832381,
+ "default": {
+  "bw_gaps": 15.0,
+  "bw_units": 0.06737,
+  "blobs": 83,
+  "after_merge": 54,
+  "regions": 31,
+  "strong": 21,
+  "named": 7,
+  "needs_name": 24,
+  "areas": 4,
+  "coarse_blobs": 5,
+  "unnamed": 0.466,
+  "with_parent": 30,
+  "seconds": 1.38
+ },
+ "fine": {
+  "bw_gaps": 10.0,
+  "bw_units": 0.04491,
+  "blobs": 179,
+  "after_merge": 109,
+  "regions": 38,
+  "strong": 25,
+  "named": 10,
+  "needs_name": 28,
+  "areas": 4,
+  "coarse_blobs": 5,
+  "unnamed": 0.655,
+  "with_parent": 37,
+  "seconds": 2.41
+ },
+ "fine_words": [
+  [
+   "urban",
+   "Urban Cluster",
+   "strong",
+   421,
+   "area-urban"
+  ],
+  [
+   "loudness-",
+   "The Quiet Deep",
+   "strong",
+   166,
+   "area-improvisation"
+  ],
+  [
+   "liveness+",
+   "The Live Belt",
+   "strong",
+   147,
+   "area-heavy"
+  ],
+  [
+   "pastoral",
+   "Pastoral Nebula",
+   "strong",
+   105,
+   "area-bittersweet"
+  ],
+  [
+   "romantic",
+   null,
+   "strong",
+   105,
+   "area-bittersweet"
+  ],
+  [
+   "quirky",
+   null,
+   "strong",
+   93,
+   "area-bittersweet"
+  ],
+  [
+   "instrumentalness+",
+   null,
+   "strong",
+   89,
+   "area-improvisation"
+  ],
+  [
+   "anthemic",
+   null,
+   "strong",
+   87,
+   "area-heavy"
+  ],
+  [
+   "valence-",
+   null,
+   "strong",
+   86,
+   "area-improvisation"
+  ],
+  [
+   "party",
+   null,
+   "strong",
+   83,
+   "area-urban"
+  ],
+  [
+   "infernal",
+   null,
+   "strong",
+   76,
+   "area-heavy"
+  ],
+  [
+   "meditative",
+   null,
+   "strong",
+   71,
+   "area-improvisation"
+  ],
+  [
+   "triumphant",
+   null,
+   "strong",
+   66,
+   "area-heavy"
+  ],
+  [
+   "manic",
+   null,
+   "strong",
+   63,
+   "area-heavy"
+  ],
+  [
+   "energy-",
+   null,
+   "strong",
+   60,
+   "area-improvisation"
+  ],
+  [
+   "acousticness+",
+   null,
+   "strong",
+   58,
+   "area-bittersweet"
+  ],
+  [
+   "futuristic",
+   null,
+   "strong",
+   53,
+   "area-improvisation"
+  ],
+  [
+   "autumn",
+   null,
+   "strong",
+   47,
+   "area-bittersweet"
+  ],
+  [
+   "progressive",
+   "Progressive Spiral",
+   "strong",
+   45,
+   "area-heavy"
+  ],
+  [
+   "hypnotic",
+   "Hypnotic Orbit",
+   "strong",
+   45,
+   "area-bittersweet"
+  ],
+  [
+   "funereal",
+   null,
+   "strong",
+   43,
+   "area-heavy"
+  ],
+  [
+   "orchestral",
+   null,
+   "strong",
+   37,
+   "area-improvisation"
+  ],
+  [
+   "disturbing",
+   null,
+   "strong",
+   37,
+   "area-urban"
+  ],
+  [
+   "speechiness+",
+   null,
+   "strong",
+   36,
+   null
+  ],
+  [
+   "improvisation",
+   "Improv Arm",
+   "strong",
+   30,
+   "area-improvisation"
+  ],
+  [
+   "raw",
+   "Raw Flare",
+   "fair",
+   240,
+   "area-heavy"
+  ],
+  [
+   "acoustic",
+   null,
+   "fair",
+   177,
+   "area-bittersweet"
+  ],
+  [
+   "cold",
+   null,
+   "fair",
+   171,
+   "area-heavy"
+  ],
+  [
+   "mellow",
+   null,
+   "fair",
+   135,
+   "area-bittersweet"
+  ],
+  [
+   "tropical",
+   null,
+   "fair",
+   128,
+   "area-urban"
+  ],
+  [
+   "summer",
+   null,
+   "fair",
+   104,
+   "area-bittersweet"
+  ],
+  [
+   "eclectic",
+   "Eclectic Cloud",
+   "fair",
+   80,
+   "area-bittersweet"
+  ],
+  [
+   "depressive",
+   null,
+   "fair",
+   64,
+   "area-bittersweet"
+  ],
+  [
+   "sentimental",
+   null,
+   "fair",
+   54,
+   "area-bittersweet"
+  ],
+  [
+   "sombre",
+   "Sombre Void",
+   "fair",
+   42,
+   "area-heavy"
+  ],
+  [
+   "energetic",
+   null,
+   "fair",
+   37,
+   "area-heavy"
+  ],
+  [
+   "longing",
+   null,
+   "fair",
+   35,
+   "area-bittersweet"
+  ],
+  [
+   "lo-fi",
+   null,
+   "fair",
+   34,
+   "area-bittersweet"
+  ]
+ ],
+ "fine_areas": [
+  [
+   "area-bittersweet",
+   3853,
+   "strong"
+  ],
+  [
+   "area-heavy",
+   3006,
+   "strong"
+  ],
+  [
+   "area-urban",
+   906,
+   "strong"
+  ],
+  [
+   "area-improvisation",
+   2194,
+   "fair"
+  ]
+ ]
+}
