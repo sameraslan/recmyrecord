@@ -82,7 +82,7 @@ Written by hand from the tables below (3 October 2026); every figure is in a tab
 
 **Bitches Brew.** Neither the seed nor *Live-Evil*, *Get Up With It* or *Rocksession* is among the 1,000 bake-off albums, so CLAP and MERT cannot be shown for it. On the full pool no candidate puts a prog-rock album in the top 10 and none brings the three targets into it. Ranks under plain `effnet/64`: Live-Evil 70, Get Up With It 286, Rocksession 430. Closest: `effnet-leace/64` (11, 80, 2434) and `effnet-ndesc-inlp2/64` (19, 152, 200). The few non-jazz entries that appear come from the mean-subtraction and LEACE variants (Augustus Pablo, Madlib's Blue Note record, the *Phantom Thread* score). The pool here has four clips per album; the site's store has up to eight, so the site's own list differs.
 
-**Not done.** CLAP and MERT on the full catalog (weights deleted, no download). Listening.
+**Later the same day.** CLAP was run over the full catalog (4 clips); see the CLAP-on-full-pool, balanced-stop and fullclap anchor sections of this file and `REPORT-genre-crossing.md`. The Bitches Brew paragraph above predates that run. MERT on the full catalog was not done.
 
 ## 1,000 bake-off albums, 2 clips per album, the same clips for every model
 

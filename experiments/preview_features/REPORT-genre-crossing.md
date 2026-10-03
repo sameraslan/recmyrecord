@@ -8,12 +8,26 @@ Listening page: https://claude.ai/artifact/4NjJTbGzatP7uCy7y2bCo6 (rebuild with 
 
 No audio representation both reaches clearly further outside the seed's genre and keeps EffNet's agreement on how the music feels. Every option sits on one trade-off, at most about 0.04 above plain EffNet diluted with noise to the same reach.
 
-Two options are worth judging by ear:
+**CLAP (music and speech) is the pick.** Run over the whole catalog on 3 October (3,942 albums, the same four clips per album as EffNet):
 
-1. **Spotify-like scores predicted from audio** (`ridge`: a Ridge regression from the clip features onto Spotify's 13 columns). It is the old sonic stop without Spotify. It is the only audio-only option whose *Bitches Brew* list looks like what the owner described, and it can be built from the clips already stored.
-2. **CLAP, music and speech.** A small gain in reach for almost no loss of agreement, from a model not trained on genre labels. It exists only for 1,000 albums, which do not include *Bitches Brew*; judging it properly means running it over the catalog (776 MB checkpoint, about 30,000 clips).
+| Measure | EffNet | CLAP | Paired difference, 95% CI |
+|---|---|---|---|
+| Outside family, share of top 10 | 0.367 | 0.410 | +0.044 [+0.037, +0.051] |
+| Descriptor agreement, same artist removed | 0.432 | 0.426 | −0.005 [−0.008, −0.003] |
+| Crossing quality (xg lift) | +0.148 | +0.156 | +0.007 [+0.005, +0.010] |
+| Primary genre, same artist removed | 0.202 | 0.157 | −0.045 [−0.051, −0.039] |
+| Hub skew / never listed | 0.79 / 0.7% | 1.24 / 1.5% | |
+| Balanced stop, primary genre | 0.270 | 0.237 | −0.033 [−0.037, −0.029] |
+| Holdout: list unchanged for an unseen album | 94.8% | 99.5% | |
 
-Recommendation: do not change the store on these numbers. Listen to the page first. The numbers favour staying with EffNet or moving to CLAP; the one anchor case favours the Spotify-like block.
+- The 1,000-album finding holds at catalog scale: about 0.4 more albums of ten outside the family for half a point of descriptor cosine.
+- For *Bitches Brew* CLAP ranks *Live-Evil* 1, *Get Up With It* 13 and *Rocksession* 93 (EffNet: 70, 286, 430). The list is still all jazz, with no prog; nothing forces it elsewhere.
+- Costs: more hubs, and lists at the balanced stop match the seed's primary genre less often. A linear probe still reads genre family from CLAP nearly as well as from EffNet (0.70 against 0.72), so it is less tied to genre, not free of it.
+- Two albums have no CLAP vector (previews withdrawn since the EffNet run).
+
+The other option worth hearing is **Spotify-like scores predicted from audio** (`ridge`): looser, the only list for *Bitches Brew* with rock in it, weaker on agreement.
+
+Decisions taken by the owner on 3 October: use CLAP; no forcing of recommendations outside a genre (the forced-crossing rows below are kept for the record only); do not optimise the audio side for descriptor agreement.
 
 ## The measurement
 
