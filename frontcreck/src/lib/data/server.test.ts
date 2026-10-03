@@ -1,6 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { Positions, Recs } from '@/lib/types';
+import { STOP_IDS } from '@/lib/types';
+import type { AlbumRecord, Positions, Recs } from '@/lib/types';
 import { assertDataConsistent, getAlbumPageData, getAllSlugs, getServerCatalog, getShelf } from './server';
+
+const raw = <T>(name: string): T => JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'data', name), 'utf8')) as T;
 
 describe('build-time data access (real public/data)', () => {
   it('lists every slug once', () => {
@@ -10,7 +15,7 @@ describe('build-time data access (real public/data)', () => {
     expect(slugs[11]).toBe('in-rainbows-radiohead');
   });
 
-  it('builds In Rainbows with the fixed recommendations', () => {
+  it('builds In Rainbows with the recommendations of recs.json', () => {
     const page = getAlbumPageData('in-rainbows-radiohead');
     expect(page).not.toBeNull();
     expect(page!.seed.title).toBe('In Rainbows');
@@ -18,8 +23,13 @@ describe('build-time data access (real public/data)', () => {
     expect(page!.recs.mood.slice(0, 5).map((r) => r.title)).toEqual([
       'Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom',
     ]);
-    expect(page!.recs.balanced[0].title).toBe('You Will Never Know Why');
-    for (const stop of ['sonic', 'balanced', 'mood'] as const) {
+    // The mood list barely depends on audio, so it is pinned above. Sonic and balanced change with every rebuild
+    // of the audio features: each stop must be the row of recs.json, in order, with the titles of albums.json.
+    const albums = raw<AlbumRecord[]>('albums.json');
+    const recs = raw<Recs>('recs.json');
+    for (const stop of STOP_IDS) {
+      expect(page!.recs[stop].map((r) => r.id)).toEqual(recs[stop][page!.seed.id]);
+      expect(page!.recs[stop].map((r) => r.title)).toEqual(recs[stop][page!.seed.id].map((id) => albums[id].t));
       expect(page!.recs[stop]).toHaveLength(10);
       expect(page!.recs[stop].map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }

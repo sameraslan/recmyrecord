@@ -40,8 +40,15 @@ TOP_DESCRIPTORS = 10
 LIVE_POOL = 4000
 # n_jobs=1 is what UMAP forces anyway when random_state is set; stating it avoids its UserWarning.
 UMAP_PARAMS = {
-    "n_neighbors": 15, "min_dist": 0.1, "n_components": 2, "random_state": 42, "metric": "euclidean", "n_jobs": 1,
+    "n_neighbors": 15, "n_components": 2, "random_state": 42, "metric": "euclidean", "n_jobs": 1,
 }
+# UMAP min_dist per stop. The audio block packs sonic and balanced neighbours into tight clumps at 0.1, so covers
+# pile up on the map; 0.25 spreads them as evenly as the mood layout. Larger values put fewer of an album's
+# recommendations among its nearest albums on the map, which is why mood stays at 0.1.
+UMAP_MIN_DIST = {"sonic": 0.25, "balanced": 0.25, "mood": 0.1}
+# A group of albums with no album within this many median nearest-neighbour gaps of the rest of the map is an
+# island: it is moved next to the map, to this distance.
+ISLAND_LINK_GAPS = 10.0
 
 IN_RAINBOWS_ROW = 11
 IN_RAINBOWS_LIVE = ["Tindersticks", "Avalon", "So", "You Will Never Know Why", "Imperial Bedroom"]

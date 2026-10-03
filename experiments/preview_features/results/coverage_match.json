@@ -1,0 +1,37 @@
+{
+  "albums_total": 4081,
+  "albums_processed": 4081,
+  "matched": 3944,
+  "matched_by_source": {
+    "deezer": 3753,
+    "itunes": 191
+  },
+  "ambiguous": 148,
+  "unmatched": 137,
+  "oversized": 347,
+  "albums_over_30_tracks": 87,
+  "override_rows_matched": 15,
+  "albums_with_preview": 3944,
+  "pct_albums_with_preview": 96.64,
+  "matched_without_any_preview": 0,
+  "matched_duration_mismatch": 146,
+  "matched_other_edition_than_spotify": 94,
+  "tracks_total": 48843,
+  "tracks_with_preview": 48771,
+  "pct_tracks_with_preview": 99.85,
+  "tracks_per_album": {
+    "min": 1,
+    "q1": 8.0,
+    "median": 11.0,
+    "q3": 14.0,
+    "max": 142,
+    "mean": 12.38,
+    "histogram": {
+      "1-5": 403,
+      "6-10": 1451,
+      "11-15": 1259,
+      "16-25": 642,
+      "26+": 189
+    }
+  }
+}

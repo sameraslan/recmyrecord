@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
+import { recsOf } from './data';
 import { shot, waitForAnimations, waitForMap, waitForMapQuiet } from './helpers';
 
 // The owner's first and last name, stored encoded so this guard never spells them.
@@ -211,9 +212,10 @@ test.describe('album to album', () => {
 
   test('a slow navigation whose prefetch failed keeps the map inset while it waits', async ({ page, isMobile }) => {
     test.skip(isMobile, 'the phone has no map inset');
-    // The first row of In Rainbows (balanced). Its page prefetch fails and the navigation request is slow; the
+    // The first row of In Rainbows (balanced, read from the data). Its page prefetch fails and the navigation request is slow; the
     // current panel and the map inset stay until the new album arrives (album pages have no loading boundary).
-    const target = '/album/you-will-never-know-why-sweet-trip';
+    const first = recsOf('in-rainbows-radiohead', 'balanced')[0];
+    const target = `/album/${encodeURIComponent(first.slug)}`;
     await page.route(
       (url) => url.pathname === target,
       async (route) => {
@@ -234,7 +236,7 @@ test.describe('album to album', () => {
     await page.waitForLoadState('networkidle');
     await sampleFrames(page);
     await row.click();
-    await expect(page.locator('#seed-title')).toHaveText('You Will Never Know Why', { timeout: 10_000 });
+    await expect(page.locator('#seed-title')).toHaveText(first.title, { timeout: 10_000 });
     const samples = await stopSampling(page);
     expect(samples.length).toBeGreaterThan(10);
     expect(samples.filter((s) => s.inset === 0)).toEqual([]);

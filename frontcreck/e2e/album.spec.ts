@@ -1,8 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
+import { albumWhoseFirstRecHasNoSpotify, recsOf } from './data';
 import { shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
-const IR = '/album/in-rainbows-radiohead';
+const IR_SLUG = 'in-rainbows-radiohead';
+const IR = `/album/${IR_SLUG}`;
+// Sonic and balanced lists follow the audio features: expected from the data, never a pinned title.
+const IR_BALANCED = recsOf(IR_SLUG, 'balanced').map((r) => r.title);
+const IR_SONIC = recsOf(IR_SLUG, 'sonic').map((r) => r.title);
 const titles = (page: Page) => page.locator('ol.rec-list .rec-title').allTextContents();
 
 /** The accent colour of an album, read from the served data. */
@@ -22,7 +27,7 @@ test('renders the seed, tags and the closest albums (balanced by default)', asyn
   await expect(page.locator('.tags li')).toHaveText(['lush', 'melancholic', 'bittersweet', 'mellow', 'atmospheric', 'warm']);
   await expect(page.getByRole('heading', { level: 2, name: COPY.album.listHeading })).toBeVisible();
   await expect(page.locator('li.rec')).toHaveCount(5);
-  expect((await titles(page))[0]).toBe('You Will Never Know Why');
+  expect(await titles(page)).toEqual(IR_BALANCED.slice(0, 5));
   await expect(page.locator('li.rec').first().locator('.rec-shared')).toContainText('Shares ');
   await expect(page.getByRole('link', { name: new RegExp(`^${COPY.album.openInSpotify}`) })).toHaveAttribute('href', /^https:\/\/open\.spotify\.com\/album\//);
   await expect(page.locator('li.rec').first().locator('a.rec-sp')).toHaveAttribute('target', '_blank');
@@ -70,7 +75,8 @@ test.describe('desktop split view', () => {
     const historyBefore = await page.evaluate(() => history.length);
     await page.getByRole('button', { name: COPY.slider.stops.sonic, exact: true }).click();
     await expect(page).toHaveURL(`${IR}?by=sonic`);
-    expect((await titles(page))[0]).toBe('Music for the Masses');
+    expect(IR_SONIC.slice(0, 5), 'the data gives the sonic stop its own list').not.toEqual(IR_BALANCED.slice(0, 5));
+    await expect.poll(() => titles(page)).toEqual(IR_SONIC.slice(0, 5));
     expect(await page.evaluate(() => history.length)).toBe(historyBefore);
     await waitForCameraIdle(page);
     await shot(page, info, 'album-sonic');
@@ -101,7 +107,7 @@ test.describe('desktop split view', () => {
     await expect(page).toHaveURL(`${IR}?by=sonic`);
     await expect(range).toHaveValue('0');
     await expect(page.getByRole('button', { name: COPY.slider.stops.sonic, exact: true })).toHaveAttribute('aria-pressed', 'true');
-    expect((await titles(page))[0]).toBe('Music for the Masses');
+    await expect.poll(() => titles(page)).toEqual(IR_SONIC.slice(0, 5));
   });
 
   test('rows and map markers highlight each other and light shared tags', async ({ page }) => {
@@ -295,13 +301,14 @@ test('an album with no Spotify release shows no Spotify links', async ({ page })
   await expect(page.locator('.seed-actions a')).toHaveCount(0);
   await expect(page.getByRole('button', { name: COPY.album.copyLinkLabel })).toBeVisible();
   await expect(page.locator('a[href*="open.spotify.com/search"]')).toHaveCount(0);
-  // Inpariquipe's closest balanced album is Underworld's Dark & Long, which has no Spotify release either.
-  await page.goto('/album/inpariquipe-kaatayra');
+  // An album (found in the data) whose closest balanced album has no Spotify release, and whose second has one.
+  const off = albumWhoseFirstRecHasNoSpotify('balanced');
+  await page.goto(`/album/${encodeURIComponent(off.slug)}`);
   const row = page.locator('li.rec').first();
-  await expect(row.locator('.rec-title')).toHaveText('Dark & Long');
+  await expect(row.locator('.rec-title')).toHaveText(off.first.title);
   await expect(row.locator('a.rec-main')).toBeVisible();
   await expect(row.locator('a.rec-sp')).toHaveCount(0);
-  await expect(page.locator('li.rec').nth(1).locator('a.rec-sp')).toHaveAttribute('href', /^https:\/\/open\.spotify\.com\/album\//);
+  await expect(page.locator('li.rec').nth(1).locator('a.rec-sp')).toHaveAttribute('href', `https://open.spotify.com/album/${off.second.spotifyId}`);
   await expect(page.locator('a[href*="open.spotify.com/search"]')).toHaveCount(0);
 });
 

@@ -53,6 +53,15 @@ def test_in_rainbows_record_and_recs():
     assert albums[5]["slug"] == "loveless-my-bloody-valentine"
 
 
+def test_committed_recs_are_what_the_committed_audio_store_gives(site_recs):
+    """recs.json was built from data-pipeline/audio/ as committed: after a new shard, a changed
+    match or a refit, rebuild the site data. (positions.json comes from the same matrix; UMAP is
+    too slow to rerun here.)"""
+    recs = json.loads((DEFAULT_OUT / "recs.json").read_text(encoding="utf-8"))
+    for stop, rows in recs.items():
+        assert np.array_equal(np.array(rows), site_recs[stop]), stop
+
+
 def test_committed_artists_are_clean():
     albums = _albums()
     assert [a["a"] for a in albums if clean_artist(a["a"]) != a["a"]] == []
