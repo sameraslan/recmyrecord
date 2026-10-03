@@ -1,0 +1,1142 @@
+{
+ "coverage": {
+  "catalog": 4081,
+  "pool": 4081,
+  "pool_share": 1.0,
+  "wrong_spotify_album_in_pool": 19,
+  "with_descriptors": 4075,
+  "genre_joined": 4079,
+  "genre_join_rate": 0.9995
+ },
+ "seed_groups": {
+  "all": 4062,
+  "clean": 3600,
+  "ambiguous": 147,
+  "unambiguous": 3782
+ },
+ "ridge_training_albums": 4062,
+ "blocks": {
+  "A": {
+   "columns": 13,
+   "total_var_vs_A": 1.0
+  },
+  "Z0": {
+   "columns": 0,
+   "total_var_vs_A": 0.0
+  },
+  "Zs": {
+   "columns": 13,
+   "total_var_vs_A": 1.0
+  }
+ },
+ "floors": {
+  "genre_primary": 0.0104,
+  "genre_any": 0.0272,
+  "genre_family": 0.1277,
+  "desc_cos": 0.218
+ },
+ "metrics": {
+  "sonic": {
+   "A": {
+    "genre_primary": {
+     "mean": 0.0919,
+     "ci": [
+      0.0875,
+      0.0964
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1763,
+     "ci": [
+      0.1699,
+      0.1827
+     ]
+    },
+    "genre_family": {
+     "mean": 0.402,
+     "ci": [
+      0.3932,
+      0.4105
+     ]
+    }
+   },
+   "Z0": {
+    "genre_primary": {
+     "mean": 0.1661,
+     "ci": [
+      0.1596,
+      0.1725
+     ],
+     "diff": 0.0742,
+     "diff_ci": [
+      0.0677,
+      0.0803
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2872,
+     "ci": [
+      0.2794,
+      0.2948
+     ],
+     "diff": 0.1108,
+     "diff_ci": [
+      0.1025,
+      0.1186
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4938,
+     "ci": [
+      0.4838,
+      0.5031
+     ],
+     "diff": 0.0919,
+     "diff_ci": [
+      0.082,
+      0.1022
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0243,
+     "ci": [
+      0.0226,
+      0.0262
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0242,
+       "ci": [
+        0.0224,
+        0.0261
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0184,
+       "ci": [
+        0.0104,
+        0.0283
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0246,
+       "ci": [
+        0.0227,
+        0.0265
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.1713,
+     "ci": [
+      0.1666,
+      0.1757
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1776,
+       "ci": [
+        0.1727,
+        0.182
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1022,
+       "ci": [
+        0.0745,
+        0.1279
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.177,
+       "ci": [
+        0.1722,
+        0.1815
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.0634,
+     "ci": [
+      0.0598,
+      0.0669
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0654,
+       "ci": [
+        0.0615,
+        0.069
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0423,
+       "ci": [
+        0.0247,
+        0.0603
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0651,
+       "ci": [
+        0.0615,
+        0.0686
+       ]
+      }
+     }
+    }
+   },
+   "Zs": {
+    "genre_primary": {
+     "mean": 0.0106,
+     "ci": [
+      0.0096,
+      0.0117
+     ],
+     "diff": -0.0813,
+     "diff_ci": [
+      -0.0857,
+      -0.0768
+     ]
+    },
+    "genre_any": {
+     "mean": 0.028,
+     "ci": [
+      0.0263,
+      0.0297
+     ],
+     "diff": -0.1484,
+     "diff_ci": [
+      -0.1548,
+      -0.1421
+     ]
+    },
+    "genre_family": {
+     "mean": 0.1334,
+     "ci": [
+      0.1293,
+      0.1378
+     ],
+     "diff": -0.2686,
+     "diff_ci": [
+      -0.2776,
+      -0.2594
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0025,
+     "ci": [
+      0.002,
+      0.0029
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0024,
+       "ci": [
+        0.0019,
+        0.0029
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0034,
+       "ci": [
+        0.0007,
+        0.0067
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0024,
+       "ci": [
+        0.0019,
+        0.0029
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.0032,
+     "ci": [
+      0.0028,
+      0.0037
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0033,
+       "ci": [
+        0.0028,
+        0.0038
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.003,
+       "ci": [
+        0.0006,
+        0.0054
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0032,
+       "ci": [
+        0.0027,
+        0.0037
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": -0.0003,
+     "ci": [
+      -0.0034,
+      0.0027
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": -0.001,
+       "ci": [
+        -0.0044,
+        0.002
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0128,
+       "ci": [
+        -0.0017,
+        0.0277
+       ]
+      },
+      "unambiguous": {
+       "mean": -0.0013,
+       "ci": [
+        -0.0045,
+        0.0017
+       ]
+      }
+     }
+    }
+   }
+  },
+  "balanced": {
+   "A": {
+    "genre_primary": {
+     "mean": 0.1902,
+     "ci": [
+      0.1834,
+      0.197
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3282,
+     "ci": [
+      0.32,
+      0.3364
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5484,
+     "ci": [
+      0.5387,
+      0.5574
+     ]
+    }
+   },
+   "Z0": {
+    "genre_primary": {
+     "mean": 0.1661,
+     "ci": [
+      0.1596,
+      0.1725
+     ],
+     "diff": -0.0241,
+     "diff_ci": [
+      -0.0286,
+      -0.0198
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2872,
+     "ci": [
+      0.2795,
+      0.2947
+     ],
+     "diff": -0.041,
+     "diff_ci": [
+      -0.0469,
+      -0.0357
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4939,
+     "ci": [
+      0.4839,
+      0.5032
+     ],
+     "diff": -0.0545,
+     "diff_ci": [
+      -0.0611,
+      -0.0483
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3498,
+     "ci": [
+      0.3439,
+      0.3562
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3562,
+       "ci": [
+        0.3499,
+        0.3621
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2816,
+       "ci": [
+        0.2493,
+        0.3149
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3554,
+       "ci": [
+        0.349,
+        0.3616
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6241,
+     "ci": [
+      0.6205,
+      0.6275
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.631,
+       "ci": [
+        0.6277,
+        0.6344
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5557,
+       "ci": [
+        0.5257,
+        0.5825
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6301,
+       "ci": [
+        0.6266,
+        0.6335
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.5326,
+     "ci": [
+      0.5284,
+      0.5367
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.5384,
+       "ci": [
+        0.5342,
+        0.5425
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4738,
+       "ci": [
+        0.4488,
+        0.4967
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5376,
+       "ci": [
+        0.5334,
+        0.5416
+       ]
+      }
+     }
+    }
+   },
+   "Zs": {
+    "genre_primary": {
+     "mean": 0.0938,
+     "ci": [
+      0.0896,
+      0.0978
+     ],
+     "diff": -0.0964,
+     "diff_ci": [
+      -0.1013,
+      -0.0909
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1767,
+     "ci": [
+      0.171,
+      0.1825
+     ],
+     "diff": -0.1515,
+     "diff_ci": [
+      -0.1581,
+      -0.1452
+     ]
+    },
+    "genre_family": {
+     "mean": 0.3785,
+     "ci": [
+      0.3706,
+      0.3869
+     ],
+     "diff": -0.1699,
+     "diff_ci": [
+      -0.1777,
+      -0.1627
+     ]
+    },
+    "overlap10": {
+     "mean": 0.1292,
+     "ci": [
+      0.1256,
+      0.133
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1322,
+       "ci": [
+        0.1283,
+        0.1363
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0946,
+       "ci": [
+        0.0793,
+        0.1114
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1316,
+       "ci": [
+        0.1277,
+        0.1356
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.338,
+     "ci": [
+      0.3352,
+      0.3408
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3421,
+       "ci": [
+        0.3394,
+        0.345
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3016,
+       "ci": [
+        0.2819,
+        0.3194
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3416,
+       "ci": [
+        0.339,
+        0.3445
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1476,
+     "ci": [
+      0.1442,
+      0.1509
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1485,
+       "ci": [
+        0.1449,
+        0.1521
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1457,
+       "ci": [
+        0.1288,
+        0.1637
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1483,
+       "ci": [
+        0.1449,
+        0.1517
+       ]
+      }
+     }
+    }
+   }
+  },
+  "mood": {
+   "A": {
+    "genre_primary": {
+     "mean": 0.1679,
+     "ci": [
+      0.1613,
+      0.1743
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2897,
+     "ci": [
+      0.2823,
+      0.2973
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4981,
+     "ci": [
+      0.4884,
+      0.5073
+     ]
+    }
+   },
+   "Z0": {
+    "genre_primary": {
+     "mean": 0.1662,
+     "ci": [
+      0.1597,
+      0.1725
+     ],
+     "diff": -0.0017,
+     "diff_ci": [
+      -0.0024,
+      -0.0011
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2872,
+     "ci": [
+      0.2795,
+      0.2949
+     ],
+     "diff": -0.0025,
+     "diff_ci": [
+      -0.0033,
+      -0.0016
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4939,
+     "ci": [
+      0.484,
+      0.5033
+     ],
+     "diff": -0.0042,
+     "diff_ci": [
+      -0.0054,
+      -0.0032
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9647,
+     "ci": [
+      0.9609,
+      0.9682
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9651,
+       "ci": [
+        0.9611,
+        0.9687
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9578,
+       "ci": [
+        0.9394,
+        0.9743
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.965,
+       "ci": [
+        0.9611,
+        0.9686
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9874,
+     "ci": [
+      0.9866,
+      0.9883
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9877,
+       "ci": [
+        0.9868,
+        0.9886
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9829,
+       "ci": [
+        0.9769,
+        0.988
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9877,
+       "ci": [
+        0.9868,
+        0.9885
+       ]
+      }
+     }
+    }
+   },
+   "Zs": {
+    "genre_primary": {
+     "mean": 0.1664,
+     "ci": [
+      0.1599,
+      0.1728
+     ],
+     "diff": -0.0015,
+     "diff_ci": [
+      -0.0022,
+      -0.0008
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2875,
+     "ci": [
+      0.28,
+      0.2951
+     ],
+     "diff": -0.0022,
+     "diff_ci": [
+      -0.0032,
+      -0.0014
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4937,
+     "ci": [
+      0.4837,
+      0.5028
+     ],
+     "diff": -0.0044,
+     "diff_ci": [
+      -0.0057,
+      -0.0032
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9589,
+     "ci": [
+      0.955,
+      0.9627
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9596,
+       "ci": [
+        0.9556,
+        0.9635
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9483,
+       "ci": [
+        0.9273,
+        0.9662
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9596,
+       "ci": [
+        0.9556,
+        0.9634
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9798,
+     "ci": [
+      0.9784,
+      0.9812
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9801,
+       "ci": [
+        0.9786,
+        0.9815
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9729,
+       "ci": [
+        0.9628,
+        0.9812
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9802,
+       "ci": [
+        0.9787,
+        0.9815
+       ]
+      }
+     }
+    }
+   }
+  },
+  "audio": {
+   "A": {
+    "genre_primary": {
+     "mean": 0.091,
+     "ci": [
+      0.0866,
+      0.0955
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1747,
+     "ci": [
+      0.1684,
+      0.1809
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4,
+     "ci": [
+      0.3913,
+      0.4088
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.342,
+     "ci": [
+      0.3385,
+      0.3454
+     ]
+    }
+   },
+   "Zs": {
+    "genre_primary": {
+     "mean": 0.0102,
+     "ci": [
+      0.0093,
+      0.0113
+     ],
+     "diff": -0.0807,
+     "diff_ci": [
+      -0.085,
+      -0.0762
+     ]
+    },
+    "genre_any": {
+     "mean": 0.0273,
+     "ci": [
+      0.0257,
+      0.0291
+     ],
+     "diff": -0.1473,
+     "diff_ci": [
+      -0.1537,
+      -0.1411
+     ]
+    },
+    "genre_family": {
+     "mean": 0.1321,
+     "ci": [
+      0.1281,
+      0.1364
+     ],
+     "diff": -0.268,
+     "diff_ci": [
+      -0.277,
+      -0.2588
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.2167,
+     "ci": [
+      0.2146,
+      0.219
+     ],
+     "diff": -0.1253,
+     "diff_ci": [
+      -0.1284,
+      -0.122
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0024,
+     "ci": [
+      0.0019,
+      0.0028
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0024,
+       "ci": [
+        0.0019,
+        0.0028
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0034,
+       "ci": [
+        0.0007,
+        0.0067
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0023,
+       "ci": [
+        0.0018,
+        0.0028
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.003,
+     "ci": [
+      0.0025,
+      0.0035
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0031,
+       "ci": [
+        0.0026,
+        0.0036
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0029,
+       "ci": [
+        0.0004,
+        0.0053
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.003,
+       "ci": [
+        0.0025,
+        0.0035
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.0001,
+     "ci": [
+      -0.0029,
+      0.0031
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": -0.0006,
+       "ci": [
+        -0.0039,
+        0.0025
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0127,
+       "ci": [
+        -0.0017,
+        0.0274
+       ]
+      },
+      "unambiguous": {
+       "mean": -0.001,
+       "ci": [
+        -0.0041,
+        0.0021
+       ]
+      }
+     }
+    }
+   }
+  }
+ },
+ "scale_sweep": {
+  "A": {
+   "0.5": {
+    "overlap10": 0.6109,
+    "genre_primary": 0.187,
+    "genre_any": 0.3229,
+    "genre_family": 0.5401
+   },
+   "0.7": {
+    "overlap10": 0.767,
+    "genre_primary": 0.191,
+    "genre_any": 0.3294,
+    "genre_family": 0.5486
+   },
+   "1.0": {
+    "overlap10": 1.0,
+    "genre_primary": 0.1902,
+    "genre_any": 0.3282,
+    "genre_family": 0.5484
+   },
+   "1.4": {
+    "overlap10": 0.7509,
+    "genre_primary": 0.1808,
+    "genre_any": 0.3143,
+    "genre_family": 0.5375
+   },
+   "2.0": {
+    "overlap10": 0.5226,
+    "genre_primary": 0.1621,
+    "genre_any": 0.2862,
+    "genre_family": 0.5134
+   }
+  }
+ },
+ "in_rainbows": {
+  "expected": [
+   "Tindersticks",
+   "Avalon",
+   "So",
+   "You Will Never Know Why",
+   "Imperial Bedroom"
+  ],
+  "original_table_passes": true,
+  "seed_in_pool": true,
+  "expected_in_pool": 5,
+  "variants": {
+   "A": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Z0": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Zs": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   }
+  },
+  "pool_changes_A": false
+ },
+ "subset": "all",
+ "runtime_s": 92.7
+}

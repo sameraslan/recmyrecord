@@ -1,0 +1,12221 @@
+{
+ "coverage": {
+  "catalog": 4081,
+  "pool": 3944,
+  "pool_share": 0.9664,
+  "wrong_spotify_album_in_pool": 15,
+  "with_descriptors": 3938,
+  "genre_joined": 3943,
+  "genre_join_rate": 0.9997,
+  "tracks_used": 15529,
+  "tracks_on_these_albums": 48843,
+  "median_tracks_used": 4.0,
+  "albums_by_tracks_used": {
+   "1": 27,
+   "2": 49,
+   "3": 68,
+   "4": 3800
+  }
+ },
+ "seed_groups": {
+  "all": 3929,
+  "clean": 3600,
+  "ambiguous": 147,
+  "unambiguous": 3782
+ },
+ "ridge_training_albums": 3600,
+ "b13": {
+  "danceability": {
+   "column": "danceability",
+   "pearson_r": 0.3001
+  },
+  "energy": {
+   "column": "deam_arousal",
+   "pearson_r": 0.3401
+  },
+  "key": {
+   "column": "key",
+   "pearson_r": 0.1884
+  },
+  "loudness": {
+   "column": "loudness_lufs",
+   "pearson_r": 0.8143
+  },
+  "mode": {
+   "column": "mode",
+   "pearson_r": 0.2205
+  },
+  "speechiness": {
+   "column": null,
+   "pearson_r": null
+  },
+  "acousticness": {
+   "column": "mood_acoustic",
+   "pearson_r": 0.6935
+  },
+  "instrumentalness": {
+   "column": "instrumental",
+   "pearson_r": 0.5672
+  },
+  "liveness": {
+   "column": null,
+   "pearson_r": null
+  },
+  "valence": {
+   "column": "deam_valence",
+   "pearson_r": 0.1555
+  },
+  "tempo": {
+   "column": "bpm",
+   "pearson_r": 0.2609
+  },
+  "duration_ms": {
+   "column": "duration_ms",
+   "pearson_r": 0.9999
+  },
+  "time_signature": {
+   "column": null,
+   "pearson_r": null
+  }
+ },
+ "ridge": {
+  "C": {
+   "r2_oof": {
+    "danceability": 0.7423,
+    "energy": 0.7746,
+    "key": 0.0341,
+    "loudness": 0.7389,
+    "mode": 0.1317,
+    "speechiness": 0.4949,
+    "acousticness": 0.7025,
+    "instrumentalness": 0.5444,
+    "liveness": 0.103,
+    "valence": 0.7092,
+    "tempo": 0.2677,
+    "duration_ms": 0.9998,
+    "time_signature": 0.1134
+   },
+   "r2_oof_mean": 0.489,
+   "alpha": {
+    "danceability": 3.1622776601683795,
+    "energy": 10.0,
+    "key": 1000.0,
+    "loudness": 31.622776601683793,
+    "mode": 100.0,
+    "speechiness": 10.0,
+    "acousticness": 31.622776601683793,
+    "instrumentalness": 31.622776601683793,
+    "liveness": 31.622776601683793,
+    "valence": 3.1622776601683795,
+    "tempo": 31.622776601683793,
+    "duration_ms": 0.31622776601683794,
+    "time_signature": 316.22776601683796
+   },
+   "top_inputs": {
+    "danceability": [
+     [
+      "mood_aggressive",
+      -0.0539
+     ],
+     [
+      "spectral_centroid",
+      0.0457
+     ],
+     [
+      "dynamic_complexity",
+      0.0434
+     ],
+     [
+      "spectral_rolloff",
+      -0.0365
+     ],
+     [
+      "onset_rate",
+      0.0356
+     ]
+    ],
+    "energy": [
+     [
+      "loudness_lufs",
+      0.0627
+     ],
+     [
+      "emomusic_arousal",
+      0.0442
+     ],
+     [
+      "zcr",
+      0.0432
+     ],
+     [
+      "mood_relaxed",
+      -0.0404
+     ],
+     [
+      "spectral_centroid",
+      -0.0392
+     ]
+    ],
+    "key": [
+     [
+      "key",
+      0.0174
+     ],
+     [
+      "zcr",
+      0.0042
+     ],
+     [
+      "key_strength",
+      -0.0037
+     ],
+     [
+      "bpm_confidence",
+      0.0035
+     ],
+     [
+      "spectral_rolloff",
+      -0.0028
+     ]
+    ],
+    "loudness": [
+     [
+      "loudness_lufs",
+      0.0563
+     ],
+     [
+      "rms",
+      0.0333
+     ],
+     [
+      "engagement",
+      0.0222
+     ],
+     [
+      "zcr",
+      0.0191
+     ],
+     [
+      "duration_ms",
+      0.0157
+     ]
+    ],
+    "mode": [
+     [
+      "mood_happy",
+      0.0405
+     ],
+     [
+      "mode",
+      0.0336
+     ],
+     [
+      "tonal",
+      0.0334
+     ],
+     [
+      "approachability",
+      -0.0292
+     ],
+     [
+      "mood_acoustic",
+      0.028
+     ]
+    ],
+    "speechiness": [
+     [
+      "mood_sad",
+      -0.0524
+     ],
+     [
+      "mood_relaxed",
+      0.0425
+     ],
+     [
+      "onset_rate",
+      0.0319
+     ],
+     [
+      "emomusic_arousal",
+      0.0311
+     ],
+     [
+      "mood_aggressive",
+      -0.025
+     ]
+    ],
+    "acousticness": [
+     [
+      "mood_relaxed",
+      0.0842
+     ],
+     [
+      "engagement",
+      -0.0725
+     ],
+     [
+      "spectral_rolloff",
+      -0.0585
+     ],
+     [
+      "bpm_confidence",
+      -0.0541
+     ],
+     [
+      "mood_party",
+      0.0457
+     ]
+    ],
+    "instrumentalness": [
+     [
+      "instrumental",
+      0.1319
+     ],
+     [
+      "spectral_rolloff",
+      -0.0564
+     ],
+     [
+      "approachability",
+      -0.0509
+     ],
+     [
+      "dynamic_complexity",
+      -0.046
+     ],
+     [
+      "onset_rate",
+      -0.0424
+     ]
+    ],
+    "liveness": [
+     [
+      "emomusic_arousal",
+      0.0535
+     ],
+     [
+      "mood_acoustic",
+      -0.0332
+     ],
+     [
+      "danceability",
+      -0.0329
+     ],
+     [
+      "instrumental",
+      -0.0283
+     ],
+     [
+      "bpm_confidence",
+      -0.0266
+     ]
+    ],
+    "valence": [
+     [
+      "spectral_centroid",
+      0.0714
+     ],
+     [
+      "mood_sad",
+      -0.0544
+     ],
+     [
+      "mood_aggressive",
+      -0.0498
+     ],
+     [
+      "mood_happy",
+      0.0498
+     ],
+     [
+      "spectral_rolloff",
+      -0.0486
+     ]
+    ],
+    "tempo": [
+     [
+      "mood_aggressive",
+      0.0357
+     ],
+     [
+      "emomusic_valence",
+      0.0254
+     ],
+     [
+      "bpm",
+      0.0198
+     ],
+     [
+      "bpm_confidence",
+      0.0197
+     ],
+     [
+      "deam_valence",
+      0.0147
+     ]
+    ],
+    "duration_ms": [
+     [
+      "duration_ms",
+      0.0604
+     ],
+     [
+      "spectral_centroid",
+      -0.0003
+     ],
+     [
+      "spectral_rolloff",
+      0.0002
+     ],
+     [
+      "zcr",
+      0.0001
+     ],
+     [
+      "mood_party",
+      0.0001
+     ]
+    ],
+    "time_signature": [
+     [
+      "duration_ms",
+      0.0075
+     ],
+     [
+      "bpm_confidence",
+      0.0073
+     ],
+     [
+      "instrumental",
+      -0.0058
+     ],
+     [
+      "timbre_bright",
+      -0.0054
+     ],
+     [
+      "onset_rate",
+      0.0049
+     ]
+    ]
+   },
+   "n_inputs": 33
+  },
+  "Cemb": {
+   "r2_oof": {
+    "danceability": 0.7916,
+    "energy": 0.8145,
+    "key": 0.0327,
+    "loudness": 0.7727,
+    "mode": 0.1922,
+    "speechiness": 0.6988,
+    "acousticness": 0.8098,
+    "instrumentalness": 0.6341,
+    "liveness": 0.2069,
+    "valence": 0.7372,
+    "tempo": 0.3128,
+    "duration_ms": 0.9998,
+    "time_signature": 0.1384
+   },
+   "r2_oof_mean": 0.5493,
+   "alpha": {
+    "danceability": 31.622776601683793,
+    "energy": 100.0,
+    "key": 1000.0,
+    "loudness": 100.0,
+    "mode": 316.22776601683796,
+    "speechiness": 31.622776601683793,
+    "acousticness": 10.0,
+    "instrumentalness": 31.622776601683793,
+    "liveness": 316.22776601683796,
+    "valence": 100.0,
+    "tempo": 316.22776601683796,
+    "duration_ms": 0.31622776601683794,
+    "time_signature": 1000.0
+   },
+   "top_inputs": {
+    "danceability": [
+     [
+      "effnet_pc3",
+      0.0403
+     ],
+     [
+      "mood_aggressive",
+      -0.0319
+     ],
+     [
+      "bpm_confidence",
+      0.0276
+     ],
+     [
+      "effnet_pc1",
+      0.0247
+     ],
+     [
+      "dynamic_complexity",
+      0.0211
+     ]
+    ],
+    "energy": [
+     [
+      "effnet_pc1",
+      -0.0387
+     ],
+     [
+      "loudness_lufs",
+      0.0377
+     ],
+     [
+      "emomusic_arousal",
+      0.0254
+     ],
+     [
+      "mood_relaxed",
+      -0.0253
+     ],
+     [
+      "effnet_pc8",
+      0.0212
+     ]
+    ],
+    "key": [
+     [
+      "key",
+      0.0172
+     ],
+     [
+      "effnet_pc13",
+      -0.0054
+     ],
+     [
+      "effnet_pc19",
+      -0.0044
+     ],
+     [
+      "effnet_pc55",
+      -0.0042
+     ],
+     [
+      "effnet_pc32",
+      -0.0041
+     ]
+    ],
+    "loudness": [
+     [
+      "loudness_lufs",
+      0.0437
+     ],
+     [
+      "rms",
+      0.0296
+     ],
+     [
+      "duration_ms",
+      0.0149
+     ],
+     [
+      "zcr",
+      0.0127
+     ],
+     [
+      "effnet_pc1",
+      -0.0106
+     ]
+    ],
+    "mode": [
+     [
+      "effnet_pc2",
+      0.0297
+     ],
+     [
+      "effnet_pc17",
+      -0.029
+     ],
+     [
+      "effnet_pc8",
+      -0.027
+     ],
+     [
+      "mode",
+      0.0256
+     ],
+     [
+      "engagement",
+      0.0169
+     ]
+    ],
+    "speechiness": [
+     [
+      "effnet_pc3",
+      0.0258
+     ],
+     [
+      "effnet_pc4",
+      -0.0183
+     ],
+     [
+      "effnet_pc2",
+      -0.0175
+     ],
+     [
+      "mood_sad",
+      -0.0172
+     ],
+     [
+      "effnet_pc30",
+      -0.0152
+     ]
+    ],
+    "acousticness": [
+     [
+      "effnet_pc1",
+      0.1252
+     ],
+     [
+      "spectral_centroid",
+      -0.0576
+     ],
+     [
+      "effnet_pc8",
+      -0.046
+     ],
+     [
+      "rms",
+      -0.0439
+     ],
+     [
+      "engagement",
+      -0.0306
+     ]
+    ],
+    "instrumentalness": [
+     [
+      "approachability",
+      -0.0617
+     ],
+     [
+      "effnet_pc2",
+      -0.0552
+     ],
+     [
+      "instrumental",
+      0.0533
+     ],
+     [
+      "effnet_pc1",
+      -0.0516
+     ],
+     [
+      "effnet_pc11",
+      -0.0439
+     ]
+    ],
+    "liveness": [
+     [
+      "effnet_pc15",
+      0.0222
+     ],
+     [
+      "effnet_pc14",
+      -0.0205
+     ],
+     [
+      "effnet_pc16",
+      0.016
+     ],
+     [
+      "effnet_pc30",
+      -0.0156
+     ],
+     [
+      "effnet_pc2",
+      0.0154
+     ]
+    ],
+    "valence": [
+     [
+      "effnet_pc4",
+      -0.0388
+     ],
+     [
+      "effnet_pc1",
+      0.0318
+     ],
+     [
+      "onset_rate",
+      0.0283
+     ],
+     [
+      "effnet_pc3",
+      0.0263
+     ],
+     [
+      "mood_happy",
+      0.0238
+     ]
+    ],
+    "tempo": [
+     [
+      "bpm_confidence",
+      0.0154
+     ],
+     [
+      "bpm",
+      0.0142
+     ],
+     [
+      "effnet_pc1",
+      -0.0108
+     ],
+     [
+      "mood_aggressive",
+      0.0094
+     ],
+     [
+      "effnet_pc2",
+      0.0089
+     ]
+    ],
+    "duration_ms": [
+     [
+      "duration_ms",
+      0.0604
+     ],
+     [
+      "spectral_centroid",
+      -0.0004
+     ],
+     [
+      "mood_aggressive",
+      0.0002
+     ],
+     [
+      "spectral_rolloff",
+      0.0002
+     ],
+     [
+      "zcr",
+      0.0001
+     ]
+    ],
+    "time_signature": [
+     [
+      "duration_ms",
+      0.0065
+     ],
+     [
+      "effnet_pc3",
+      0.0045
+     ],
+     [
+      "bpm_confidence",
+      0.0043
+     ],
+     [
+      "effnet_pc30",
+      0.0034
+     ],
+     [
+      "onset_rate",
+      0.0034
+     ]
+    ]
+   },
+   "n_inputs": 97
+  }
+ },
+ "blocks": {
+  "A": {
+   "columns": 13,
+   "total_var_vs_A": 1.0
+  },
+  "Z0": {
+   "columns": 0,
+   "total_var_vs_A": 0.0
+  },
+  "Zs": {
+   "columns": 13,
+   "total_var_vs_A": 1.0
+  },
+  "B13": {
+   "columns": 10,
+   "total_var_vs_A": 1.0489
+  },
+  "B13v": {
+   "columns": 10,
+   "total_var_vs_A": 1.0
+  },
+  "Ball": {
+   "columns": 33,
+   "total_var_vs_A": 1.0
+  },
+  "C": {
+   "columns": 13,
+   "total_var_vs_A": 0.5341
+  },
+  "Cvm": {
+   "columns": 13,
+   "total_var_vs_A": 1.0
+  },
+  "Cemb": {
+   "columns": 13,
+   "total_var_vs_A": 0.6066
+  },
+  "Cembvm": {
+   "columns": 13,
+   "total_var_vs_A": 1.0
+  },
+  "D16": {
+   "columns": 16,
+   "total_var_vs_A": 1.0
+  },
+  "D24": {
+   "columns": 24,
+   "total_var_vs_A": 1.0
+  },
+  "D32": {
+   "columns": 32,
+   "total_var_vs_A": 1.0
+  },
+  "D48": {
+   "columns": 48,
+   "total_var_vs_A": 1.0
+  },
+  "D64": {
+   "columns": 64,
+   "total_var_vs_A": 1.0
+  },
+  "Dn16": {
+   "columns": 16,
+   "total_var_vs_A": 1.0
+  },
+  "Dn24": {
+   "columns": 24,
+   "total_var_vs_A": 1.0
+  },
+  "Dn32": {
+   "columns": 32,
+   "total_var_vs_A": 1.0
+  },
+  "E": {
+   "columns": 57,
+   "total_var_vs_A": 1.0
+  },
+  "E13": {
+   "columns": 34,
+   "total_var_vs_A": 1.0
+  },
+  "F": {
+   "columns": 37,
+   "total_var_vs_A": 1.0
+  },
+  "Femb": {
+   "columns": 37,
+   "total_var_vs_A": 1.0
+  }
+ },
+ "floors": {
+  "genre_primary": 0.0105,
+  "genre_any": 0.0276,
+  "genre_family": 0.1288,
+  "desc_cos": 0.2194
+ },
+ "metrics": {
+  "sonic": {
+   "A": {
+    "genre_primary": {
+     "mean": 0.0928,
+     "ci": [
+      0.0881,
+      0.0976
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1786,
+     "ci": [
+      0.1721,
+      0.1853
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4063,
+     "ci": [
+      0.3967,
+      0.4157
+     ]
+    }
+   },
+   "Z0": {
+    "genre_primary": {
+     "mean": 0.1636,
+     "ci": [
+      0.1574,
+      0.1702
+     ],
+     "diff": 0.0708,
+     "diff_ci": [
+      0.0647,
+      0.0773
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2853,
+     "ci": [
+      0.2777,
+      0.2933
+     ],
+     "diff": 0.1067,
+     "diff_ci": [
+      0.0989,
+      0.1148
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4941,
+     "ci": [
+      0.4843,
+      0.5045
+     ],
+     "diff": 0.0878,
+     "diff_ci": [
+      0.0781,
+      0.098
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0248,
+     "ci": [
+      0.0231,
+      0.0267
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0247,
+       "ci": [
+        0.0229,
+        0.0266
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0177,
+       "ci": [
+        0.0103,
+        0.0261
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0251,
+       "ci": [
+        0.0233,
+        0.027
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.1761,
+     "ci": [
+      0.1707,
+      0.1806
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1796,
+       "ci": [
+        0.1747,
+        0.1841
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1024,
+       "ci": [
+        0.0759,
+        0.1296
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.179,
+       "ci": [
+        0.1737,
+        0.1836
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.0651,
+     "ci": [
+      0.0615,
+      0.0686
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0663,
+       "ci": [
+        0.0626,
+        0.0699
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0407,
+       "ci": [
+        0.0225,
+        0.0607
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.066,
+       "ci": [
+        0.0624,
+        0.0697
+       ]
+      }
+     }
+    }
+   },
+   "Zs": {
+    "genre_primary": {
+     "mean": 0.0111,
+     "ci": [
+      0.01,
+      0.0122
+     ],
+     "diff": -0.0817,
+     "diff_ci": [
+      -0.0867,
+      -0.0772
+     ]
+    },
+    "genre_any": {
+     "mean": 0.0285,
+     "ci": [
+      0.0267,
+      0.0303
+     ],
+     "diff": -0.1501,
+     "diff_ci": [
+      -0.1566,
+      -0.1436
+     ]
+    },
+    "genre_family": {
+     "mean": 0.1312,
+     "ci": [
+      0.1269,
+      0.1355
+     ],
+     "diff": -0.2751,
+     "diff_ci": [
+      -0.2854,
+      -0.2659
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0022,
+     "ci": [
+      0.0018,
+      0.0027
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0022,
+       "ci": [
+        0.0017,
+        0.0027
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0041,
+       "ci": [
+        0.0013,
+        0.0075
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0022,
+       "ci": [
+        0.0017,
+        0.0026
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": -0.004,
+     "ci": [
+      -0.0045,
+      -0.0036
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": -0.004,
+       "ci": [
+        -0.0045,
+        -0.0036
+       ]
+      },
+      "ambiguous": {
+       "mean": -0.0025,
+       "ci": [
+        -0.0049,
+        -0.0002
+       ]
+      },
+      "unambiguous": {
+       "mean": -0.0041,
+       "ci": [
+        -0.0046,
+        -0.0036
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.0017,
+     "ci": [
+      -0.0014,
+      0.005
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0015,
+       "ci": [
+        -0.0016,
+        0.0048
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0037,
+       "ci": [
+        -0.011,
+        0.0184
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0016,
+       "ci": [
+        -0.0014,
+        0.005
+       ]
+      }
+     }
+    }
+   },
+   "B13": {
+    "genre_primary": {
+     "mean": 0.082,
+     "ci": [
+      0.0778,
+      0.0864
+     ],
+     "diff": -0.0108,
+     "diff_ci": [
+      -0.0154,
+      -0.0059
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1737,
+     "ci": [
+      0.1675,
+      0.18
+     ],
+     "diff": -0.0049,
+     "diff_ci": [
+      -0.0109,
+      0.0015
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4278,
+     "ci": [
+      0.4178,
+      0.4388
+     ],
+     "diff": 0.0214,
+     "diff_ci": [
+      0.0114,
+      0.0309
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0217,
+     "ci": [
+      0.0203,
+      0.0233
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0217,
+       "ci": [
+        0.0202,
+        0.0233
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0272,
+       "ci": [
+        0.0194,
+        0.0364
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0215,
+       "ci": [
+        0.02,
+        0.0231
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3804,
+     "ci": [
+      0.3746,
+      0.3861
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3844,
+       "ci": [
+        0.3786,
+        0.3903
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3537,
+       "ci": [
+        0.3209,
+        0.3869
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3814,
+       "ci": [
+        0.3754,
+        0.3873
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.0703,
+     "ci": [
+      0.0669,
+      0.0739
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0719,
+       "ci": [
+        0.0684,
+        0.0757
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0606,
+       "ci": [
+        0.042,
+        0.0789
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0707,
+       "ci": [
+        0.0673,
+        0.0745
+       ]
+      }
+     }
+    }
+   },
+   "B13v": {
+    "genre_primary": {
+     "mean": 0.082,
+     "ci": [
+      0.0778,
+      0.0864
+     ],
+     "diff": -0.0108,
+     "diff_ci": [
+      -0.0153,
+      -0.0058
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1737,
+     "ci": [
+      0.1675,
+      0.18
+     ],
+     "diff": -0.0049,
+     "diff_ci": [
+      -0.0109,
+      0.0015
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4279,
+     "ci": [
+      0.4179,
+      0.4389
+     ],
+     "diff": 0.0215,
+     "diff_ci": [
+      0.0115,
+      0.031
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0217,
+     "ci": [
+      0.0203,
+      0.0233
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0217,
+       "ci": [
+        0.0202,
+        0.0233
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0272,
+       "ci": [
+        0.0194,
+        0.0364
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0215,
+       "ci": [
+        0.02,
+        0.0231
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3804,
+     "ci": [
+      0.3746,
+      0.3862
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3844,
+       "ci": [
+        0.3786,
+        0.3903
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3537,
+       "ci": [
+        0.3209,
+        0.3869
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3814,
+       "ci": [
+        0.3754,
+        0.3873
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.0703,
+     "ci": [
+      0.0669,
+      0.0739
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0719,
+       "ci": [
+        0.0684,
+        0.0757
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0606,
+       "ci": [
+        0.0421,
+        0.0789
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0707,
+       "ci": [
+        0.0673,
+        0.0745
+       ]
+      }
+     }
+    }
+   },
+   "Ball": {
+    "genre_primary": {
+     "mean": 0.1443,
+     "ci": [
+      0.1393,
+      0.1505
+     ],
+     "diff": 0.0515,
+     "diff_ci": [
+      0.0463,
+      0.0574
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2706,
+     "ci": [
+      0.263,
+      0.2787
+     ],
+     "diff": 0.092,
+     "diff_ci": [
+      0.0855,
+      0.099
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5381,
+     "ci": [
+      0.5282,
+      0.5495
+     ],
+     "diff": 0.1318,
+     "diff_ci": [
+      0.1224,
+      0.1411
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0378,
+     "ci": [
+      0.0358,
+      0.0398
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0381,
+       "ci": [
+        0.036,
+        0.0403
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.032,
+       "ci": [
+        0.0223,
+        0.0425
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.038,
+       "ci": [
+        0.036,
+        0.0401
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.5088,
+     "ci": [
+      0.5027,
+      0.5148
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.5133,
+       "ci": [
+        0.5072,
+        0.5195
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4766,
+       "ci": [
+        0.4377,
+        0.5118
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5101,
+       "ci": [
+        0.5038,
+        0.5164
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1025,
+     "ci": [
+      0.099,
+      0.1061
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1047,
+       "ci": [
+        0.1011,
+        0.1084
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0873,
+       "ci": [
+        0.0666,
+        0.1049
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1031,
+       "ci": [
+        0.0994,
+        0.1068
+       ]
+      }
+     }
+    }
+   },
+   "C": {
+    "genre_primary": {
+     "mean": 0.1251,
+     "ci": [
+      0.1198,
+      0.1311
+     ],
+     "diff": 0.0323,
+     "diff_ci": [
+      0.0274,
+      0.0379
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2349,
+     "ci": [
+      0.2276,
+      0.2428
+     ],
+     "diff": 0.0563,
+     "diff_ci": [
+      0.0498,
+      0.0629
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4955,
+     "ci": [
+      0.4847,
+      0.5064
+     ],
+     "diff": 0.0892,
+     "diff_ci": [
+      0.0801,
+      0.0979
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0421,
+     "ci": [
+      0.0398,
+      0.0445
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0431,
+       "ci": [
+        0.0406,
+        0.0456
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.032,
+       "ci": [
+        0.0231,
+        0.0417
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0425,
+       "ci": [
+        0.0401,
+        0.045
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6215,
+     "ci": [
+      0.6162,
+      0.6268
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6279,
+       "ci": [
+        0.6225,
+        0.633
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.571,
+       "ci": [
+        0.5371,
+        0.6037
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6235,
+       "ci": [
+        0.6182,
+        0.6289
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1114,
+     "ci": [
+      0.1078,
+      0.1149
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1135,
+       "ci": [
+        0.1096,
+        0.1171
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0934,
+       "ci": [
+        0.0739,
+        0.1129
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1121,
+       "ci": [
+        0.1084,
+        0.1157
+       ]
+      }
+     }
+    }
+   },
+   "Cvm": {
+    "genre_primary": {
+     "mean": 0.1189,
+     "ci": [
+      0.1134,
+      0.124
+     ],
+     "diff": 0.0261,
+     "diff_ci": [
+      0.0212,
+      0.0311
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2269,
+     "ci": [
+      0.2197,
+      0.2343
+     ],
+     "diff": 0.0483,
+     "diff_ci": [
+      0.0416,
+      0.0549
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4869,
+     "ci": [
+      0.4769,
+      0.4971
+     ],
+     "diff": 0.0806,
+     "diff_ci": [
+      0.0719,
+      0.0892
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0388,
+     "ci": [
+      0.0366,
+      0.041
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0396,
+       "ci": [
+        0.0373,
+        0.0419
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.032,
+       "ci": [
+        0.0228,
+        0.0422
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0391,
+       "ci": [
+        0.0368,
+        0.0414
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6052,
+     "ci": [
+      0.5998,
+      0.6103
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6115,
+       "ci": [
+        0.6061,
+        0.6164
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5506,
+       "ci": [
+        0.518,
+        0.5812
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6073,
+       "ci": [
+        0.602,
+        0.6126
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1026,
+     "ci": [
+      0.0991,
+      0.1061
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1047,
+       "ci": [
+        0.101,
+        0.1083
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0849,
+       "ci": [
+        0.0653,
+        0.1036
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1033,
+       "ci": [
+        0.0996,
+        0.1068
+       ]
+      }
+     }
+    }
+   },
+   "Cemb": {
+    "genre_primary": {
+     "mean": 0.1448,
+     "ci": [
+      0.1383,
+      0.1511
+     ],
+     "diff": 0.052,
+     "diff_ci": [
+      0.0466,
+      0.0572
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2601,
+     "ci": [
+      0.2526,
+      0.2679
+     ],
+     "diff": 0.0815,
+     "diff_ci": [
+      0.0745,
+      0.0877
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5247,
+     "ci": [
+      0.5143,
+      0.5358
+     ],
+     "diff": 0.1183,
+     "diff_ci": [
+      0.1093,
+      0.1271
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0519,
+     "ci": [
+      0.0493,
+      0.0546
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0529,
+       "ci": [
+        0.0502,
+        0.0558
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0442,
+       "ci": [
+        0.0322,
+        0.0576
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0522,
+       "ci": [
+        0.0495,
+        0.0549
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6822,
+     "ci": [
+      0.6772,
+      0.6868
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6898,
+       "ci": [
+        0.6852,
+        0.6942
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6151,
+       "ci": [
+        0.5794,
+        0.6468
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6848,
+       "ci": [
+        0.68,
+        0.6894
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1332,
+     "ci": [
+      0.1292,
+      0.1372
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1356,
+       "ci": [
+        0.1315,
+        0.1397
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1072,
+       "ci": [
+        0.0869,
+        0.1268
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1342,
+       "ci": [
+        0.1302,
+        0.1383
+       ]
+      }
+     }
+    }
+   },
+   "Cembvm": {
+    "genre_primary": {
+     "mean": 0.1395,
+     "ci": [
+      0.1337,
+      0.1459
+     ],
+     "diff": 0.0467,
+     "diff_ci": [
+      0.0414,
+      0.0518
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2549,
+     "ci": [
+      0.2474,
+      0.2636
+     ],
+     "diff": 0.0763,
+     "diff_ci": [
+      0.0692,
+      0.0825
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5203,
+     "ci": [
+      0.5104,
+      0.5312
+     ],
+     "diff": 0.1139,
+     "diff_ci": [
+      0.105,
+      0.123
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0475,
+     "ci": [
+      0.045,
+      0.05
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0482,
+       "ci": [
+        0.0457,
+        0.051
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0408,
+       "ci": [
+        0.0305,
+        0.0525
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0477,
+       "ci": [
+        0.0453,
+        0.0505
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6567,
+     "ci": [
+      0.6519,
+      0.6612
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6638,
+       "ci": [
+        0.6593,
+        0.6682
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5929,
+       "ci": [
+        0.5596,
+        0.6238
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6591,
+       "ci": [
+        0.6544,
+        0.6637
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1181,
+     "ci": [
+      0.1143,
+      0.122
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1199,
+       "ci": [
+        0.1161,
+        0.1239
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0975,
+       "ci": [
+        0.0769,
+        0.1171
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1189,
+       "ci": [
+        0.1151,
+        0.1227
+       ]
+      }
+     }
+    }
+   },
+   "D16": {
+    "genre_primary": {
+     "mean": 0.2232,
+     "ci": [
+      0.2158,
+      0.2309
+     ],
+     "diff": 0.1305,
+     "diff_ci": [
+      0.1238,
+      0.137
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3961,
+     "ci": [
+      0.3866,
+      0.4046
+     ],
+     "diff": 0.2175,
+     "diff_ci": [
+      0.2089,
+      0.2255
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6427,
+     "ci": [
+      0.6331,
+      0.653
+     ],
+     "diff": 0.2364,
+     "diff_ci": [
+      0.2273,
+      0.246
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0445,
+     "ci": [
+      0.042,
+      0.047
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0455,
+       "ci": [
+        0.0429,
+        0.0481
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0306,
+       "ci": [
+        0.0209,
+        0.0414
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.045,
+       "ci": [
+        0.0425,
+        0.0477
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4141,
+     "ci": [
+      0.4088,
+      0.4194
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4174,
+       "ci": [
+        0.4123,
+        0.4227
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3753,
+       "ci": [
+        0.3421,
+        0.4084
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4156,
+       "ci": [
+        0.4103,
+        0.4207
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1127,
+     "ci": [
+      0.109,
+      0.1167
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1139,
+       "ci": [
+        0.1101,
+        0.1178
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1089,
+       "ci": [
+        0.0902,
+        0.1265
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1128,
+       "ci": [
+        0.109,
+        0.1167
+       ]
+      }
+     }
+    }
+   },
+   "D24": {
+    "genre_primary": {
+     "mean": 0.2305,
+     "ci": [
+      0.223,
+      0.2382
+     ],
+     "diff": 0.1377,
+     "diff_ci": [
+      0.131,
+      0.1444
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4049,
+     "ci": [
+      0.3958,
+      0.4134
+     ],
+     "diff": 0.2263,
+     "diff_ci": [
+      0.2178,
+      0.2343
+     ]
+    },
+    "genre_family": {
+     "mean": 0.648,
+     "ci": [
+      0.6382,
+      0.6583
+     ],
+     "diff": 0.2416,
+     "diff_ci": [
+      0.2321,
+      0.2511
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0451,
+     "ci": [
+      0.0425,
+      0.0477
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0459,
+       "ci": [
+        0.0433,
+        0.0485
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0313,
+       "ci": [
+        0.0219,
+        0.0421
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0456,
+       "ci": [
+        0.043,
+        0.0482
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4184,
+     "ci": [
+      0.4132,
+      0.4235
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4216,
+       "ci": [
+        0.4166,
+        0.4268
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3828,
+       "ci": [
+        0.3488,
+        0.4165
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4198,
+       "ci": [
+        0.4146,
+        0.4249
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1134,
+     "ci": [
+      0.1098,
+      0.1174
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1146,
+       "ci": [
+        0.1109,
+        0.1184
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1117,
+       "ci": [
+        0.093,
+        0.1297
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1135,
+       "ci": [
+        0.1097,
+        0.1174
+       ]
+      }
+     }
+    }
+   },
+   "D32": {
+    "genre_primary": {
+     "mean": 0.2349,
+     "ci": [
+      0.2274,
+      0.2425
+     ],
+     "diff": 0.1421,
+     "diff_ci": [
+      0.1352,
+      0.1492
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4112,
+     "ci": [
+      0.4022,
+      0.42
+     ],
+     "diff": 0.2326,
+     "diff_ci": [
+      0.224,
+      0.2406
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6514,
+     "ci": [
+      0.6419,
+      0.662
+     ],
+     "diff": 0.2451,
+     "diff_ci": [
+      0.2356,
+      0.2548
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0459,
+     "ci": [
+      0.0435,
+      0.0485
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0466,
+       "ci": [
+        0.044,
+        0.0491
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0333,
+       "ci": [
+        0.0232,
+        0.0445
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0464,
+       "ci": [
+        0.0438,
+        0.0489
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4229,
+     "ci": [
+      0.4178,
+      0.428
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4261,
+       "ci": [
+        0.421,
+        0.4313
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3886,
+       "ci": [
+        0.355,
+        0.4217
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4242,
+       "ci": [
+        0.4191,
+        0.4294
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1134,
+     "ci": [
+      0.1098,
+      0.1175
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1147,
+       "ci": [
+        0.1109,
+        0.1184
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1116,
+       "ci": [
+        0.0936,
+        0.1292
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1135,
+       "ci": [
+        0.1097,
+        0.1175
+       ]
+      }
+     }
+    }
+   },
+   "D48": {
+    "genre_primary": {
+     "mean": 0.2391,
+     "ci": [
+      0.2315,
+      0.2471
+     ],
+     "diff": 0.1463,
+     "diff_ci": [
+      0.1394,
+      0.1529
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4171,
+     "ci": [
+      0.4078,
+      0.4259
+     ],
+     "diff": 0.2385,
+     "diff_ci": [
+      0.2297,
+      0.2464
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6532,
+     "ci": [
+      0.6438,
+      0.6634
+     ],
+     "diff": 0.2469,
+     "diff_ci": [
+      0.2376,
+      0.2566
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0478,
+     "ci": [
+      0.0452,
+      0.0504
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0484,
+       "ci": [
+        0.0455,
+        0.0511
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0374,
+       "ci": [
+        0.0273,
+        0.0496
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0482,
+       "ci": [
+        0.0455,
+        0.0508
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4282,
+     "ci": [
+      0.4231,
+      0.4332
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4313,
+       "ci": [
+        0.4262,
+        0.4366
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3957,
+       "ci": [
+        0.3613,
+        0.4293
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4295,
+       "ci": [
+        0.4243,
+        0.4346
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1139,
+     "ci": [
+      0.1103,
+      0.1178
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1151,
+       "ci": [
+        0.1115,
+        0.119
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1122,
+       "ci": [
+        0.0938,
+        0.1297
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1139,
+       "ci": [
+        0.1102,
+        0.1178
+       ]
+      }
+     }
+    }
+   },
+   "D64": {
+    "genre_primary": {
+     "mean": 0.2395,
+     "ci": [
+      0.2321,
+      0.2474
+     ],
+     "diff": 0.1467,
+     "diff_ci": [
+      0.1402,
+      0.1533
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4164,
+     "ci": [
+      0.4073,
+      0.4254
+     ],
+     "diff": 0.2378,
+     "diff_ci": [
+      0.2294,
+      0.246
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6523,
+     "ci": [
+      0.6428,
+      0.6627
+     ],
+     "diff": 0.246,
+     "diff_ci": [
+      0.2366,
+      0.2558
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0488,
+     "ci": [
+      0.0463,
+      0.0514
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0494,
+       "ci": [
+        0.0468,
+        0.052
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0367,
+       "ci": [
+        0.0259,
+        0.0493
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0493,
+       "ci": [
+        0.0467,
+        0.0518
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4321,
+     "ci": [
+      0.427,
+      0.4371
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4352,
+       "ci": [
+        0.4302,
+        0.4404
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4,
+       "ci": [
+        0.3652,
+        0.4339
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4333,
+       "ci": [
+        0.4282,
+        0.4384
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1137,
+     "ci": [
+      0.1101,
+      0.1178
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1151,
+       "ci": [
+        0.1114,
+        0.119
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1118,
+       "ci": [
+        0.0931,
+        0.1298
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1138,
+       "ci": [
+        0.1101,
+        0.1177
+       ]
+      }
+     }
+    }
+   },
+   "Dn16": {
+    "genre_primary": {
+     "mean": 0.1711,
+     "ci": [
+      0.1647,
+      0.1776
+     ],
+     "diff": 0.0783,
+     "diff_ci": [
+      0.0726,
+      0.0843
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3168,
+     "ci": [
+      0.3085,
+      0.325
+     ],
+     "diff": 0.1382,
+     "diff_ci": [
+      0.1305,
+      0.1457
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5895,
+     "ci": [
+      0.5795,
+      0.6004
+     ],
+     "diff": 0.1831,
+     "diff_ci": [
+      0.1735,
+      0.1925
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0429,
+     "ci": [
+      0.0405,
+      0.0452
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0432,
+       "ci": [
+        0.0406,
+        0.0456
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0347,
+       "ci": [
+        0.0238,
+        0.0458
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0432,
+       "ci": [
+        0.0408,
+        0.0456
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3959,
+     "ci": [
+      0.3902,
+      0.4018
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4003,
+       "ci": [
+        0.394,
+        0.4064
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3588,
+       "ci": [
+        0.3214,
+        0.3985
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3974,
+       "ci": [
+        0.3915,
+        0.4034
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1169,
+     "ci": [
+      0.1133,
+      0.1207
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1192,
+       "ci": [
+        0.1154,
+        0.1232
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1074,
+       "ci": [
+        0.0882,
+        0.1256
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1173,
+       "ci": [
+        0.1134,
+        0.1213
+       ]
+      }
+     }
+    }
+   },
+   "Dn24": {
+    "genre_primary": {
+     "mean": 0.1766,
+     "ci": [
+      0.1701,
+      0.1831
+     ],
+     "diff": 0.0838,
+     "diff_ci": [
+      0.0776,
+      0.0898
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3244,
+     "ci": [
+      0.3159,
+      0.3328
+     ],
+     "diff": 0.1458,
+     "diff_ci": [
+      0.1379,
+      0.1534
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5931,
+     "ci": [
+      0.5827,
+      0.6041
+     ],
+     "diff": 0.1867,
+     "diff_ci": [
+      0.1763,
+      0.1963
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0441,
+     "ci": [
+      0.0418,
+      0.0466
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0446,
+       "ci": [
+        0.0421,
+        0.0471
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0327,
+       "ci": [
+        0.0226,
+        0.0429
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0446,
+       "ci": [
+        0.0422,
+        0.0472
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3973,
+     "ci": [
+      0.3915,
+      0.4031
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4016,
+       "ci": [
+        0.3954,
+        0.4078
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.36,
+       "ci": [
+        0.3228,
+        0.3996
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3988,
+       "ci": [
+        0.3929,
+        0.4048
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1175,
+     "ci": [
+      0.1139,
+      0.1212
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1198,
+       "ci": [
+        0.116,
+        0.1237
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1081,
+       "ci": [
+        0.0889,
+        0.1259
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1178,
+       "ci": [
+        0.114,
+        0.1218
+       ]
+      }
+     }
+    }
+   },
+   "Dn32": {
+    "genre_primary": {
+     "mean": 0.1769,
+     "ci": [
+      0.1704,
+      0.1833
+     ],
+     "diff": 0.0841,
+     "diff_ci": [
+      0.0781,
+      0.09
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3249,
+     "ci": [
+      0.3166,
+      0.3333
+     ],
+     "diff": 0.1463,
+     "diff_ci": [
+      0.1387,
+      0.1539
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5933,
+     "ci": [
+      0.5831,
+      0.6038
+     ],
+     "diff": 0.187,
+     "diff_ci": [
+      0.1766,
+      0.1966
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0442,
+     "ci": [
+      0.0419,
+      0.0467
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0447,
+       "ci": [
+        0.0422,
+        0.0473
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0327,
+       "ci": [
+        0.0226,
+        0.0433
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0447,
+       "ci": [
+        0.0423,
+        0.0472
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3974,
+     "ci": [
+      0.3916,
+      0.4032
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4017,
+       "ci": [
+        0.3955,
+        0.4079
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3602,
+       "ci": [
+        0.323,
+        0.3997
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3988,
+       "ci": [
+        0.393,
+        0.4049
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1175,
+     "ci": [
+      0.1139,
+      0.1213
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1198,
+       "ci": [
+        0.116,
+        0.1238
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1081,
+       "ci": [
+        0.0888,
+        0.1261
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1179,
+       "ci": [
+        0.114,
+        0.1219
+       ]
+      }
+     }
+    }
+   },
+   "E": {
+    "genre_primary": {
+     "mean": 0.2143,
+     "ci": [
+      0.2067,
+      0.222
+     ],
+     "diff": 0.1216,
+     "diff_ci": [
+      0.1153,
+      0.1283
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3834,
+     "ci": [
+      0.374,
+      0.3926
+     ],
+     "diff": 0.2048,
+     "diff_ci": [
+      0.1961,
+      0.2127
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6331,
+     "ci": [
+      0.6234,
+      0.6439
+     ],
+     "diff": 0.2268,
+     "diff_ci": [
+      0.2173,
+      0.2361
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0488,
+     "ci": [
+      0.0464,
+      0.0515
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0491,
+       "ci": [
+        0.0466,
+        0.0518
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0374,
+       "ci": [
+        0.0265,
+        0.049
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0493,
+       "ci": [
+        0.0469,
+        0.052
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.5149,
+     "ci": [
+      0.5093,
+      0.5207
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.5193,
+       "ci": [
+        0.5137,
+        0.525
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4779,
+       "ci": [
+        0.4419,
+        0.5132
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5163,
+       "ci": [
+        0.5106,
+        0.5222
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1196,
+     "ci": [
+      0.116,
+      0.1234
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1213,
+       "ci": [
+        0.1176,
+        0.1252
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1128,
+       "ci": [
+        0.0924,
+        0.1307
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1198,
+       "ci": [
+        0.1161,
+        0.1238
+       ]
+      }
+     }
+    }
+   },
+   "E13": {
+    "genre_primary": {
+     "mean": 0.1924,
+     "ci": [
+      0.1857,
+      0.1991
+     ],
+     "diff": 0.0996,
+     "diff_ci": [
+      0.0937,
+      0.1062
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3532,
+     "ci": [
+      0.3446,
+      0.3618
+     ],
+     "diff": 0.1746,
+     "diff_ci": [
+      0.1669,
+      0.1818
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6196,
+     "ci": [
+      0.6099,
+      0.6301
+     ],
+     "diff": 0.2133,
+     "diff_ci": [
+      0.204,
+      0.2229
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0411,
+     "ci": [
+      0.0391,
+      0.0434
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0413,
+       "ci": [
+        0.039,
+        0.0436
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0381,
+       "ci": [
+        0.0277,
+        0.0496
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0412,
+       "ci": [
+        0.0391,
+        0.0435
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4551,
+     "ci": [
+      0.4495,
+      0.4606
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4596,
+       "ci": [
+        0.4537,
+        0.465
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4132,
+       "ci": [
+        0.3801,
+        0.4475
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4567,
+       "ci": [
+        0.4511,
+        0.4622
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.106,
+     "ci": [
+      0.1023,
+      0.1097
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1073,
+       "ci": [
+        0.1037,
+        0.1113
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1022,
+       "ci": [
+        0.0818,
+        0.1208
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1061,
+       "ci": [
+        0.1025,
+        0.1099
+       ]
+      }
+     }
+    }
+   },
+   "F": {
+    "genre_primary": {
+     "mean": 0.2133,
+     "ci": [
+      0.2058,
+      0.2208
+     ],
+     "diff": 0.1206,
+     "diff_ci": [
+      0.1138,
+      0.127
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3777,
+     "ci": [
+      0.3687,
+      0.3869
+     ],
+     "diff": 0.1991,
+     "diff_ci": [
+      0.1909,
+      0.2068
+     ]
+    },
+    "genre_family": {
+     "mean": 0.633,
+     "ci": [
+      0.623,
+      0.6432
+     ],
+     "diff": 0.2266,
+     "diff_ci": [
+      0.2173,
+      0.2358
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0503,
+     "ci": [
+      0.0476,
+      0.053
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0512,
+       "ci": [
+        0.0484,
+        0.054
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.034,
+       "ci": [
+        0.0245,
+        0.0441
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.051,
+       "ci": [
+        0.0481,
+        0.0537
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.5882,
+     "ci": [
+      0.583,
+      0.5934
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.5938,
+       "ci": [
+        0.5884,
+        0.5988
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5387,
+       "ci": [
+        0.5057,
+        0.5698
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5901,
+       "ci": [
+        0.5851,
+        0.5954
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1245,
+     "ci": [
+      0.1209,
+      0.1283
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1265,
+       "ci": [
+        0.1227,
+        0.1303
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1154,
+       "ci": [
+        0.0956,
+        0.1335
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1248,
+       "ci": [
+        0.121,
+        0.1287
+       ]
+      }
+     }
+    }
+   },
+   "Femb": {
+    "genre_primary": {
+     "mean": 0.2178,
+     "ci": [
+      0.2103,
+      0.2252
+     ],
+     "diff": 0.125,
+     "diff_ci": [
+      0.1188,
+      0.1317
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3873,
+     "ci": [
+      0.3781,
+      0.3964
+     ],
+     "diff": 0.2087,
+     "diff_ci": [
+      0.2,
+      0.2165
+     ]
+    },
+    "genre_family": {
+     "mean": 0.641,
+     "ci": [
+      0.6311,
+      0.6519
+     ],
+     "diff": 0.2346,
+     "diff_ci": [
+      0.2252,
+      0.2443
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0531,
+     "ci": [
+      0.0506,
+      0.0557
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.054,
+       "ci": [
+        0.0513,
+        0.0566
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0401,
+       "ci": [
+        0.03,
+        0.052
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0536,
+       "ci": [
+        0.0511,
+        0.0564
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6245,
+     "ci": [
+      0.6196,
+      0.6292
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6306,
+       "ci": [
+        0.6258,
+        0.635
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5706,
+       "ci": [
+        0.5362,
+        0.6033
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6266,
+       "ci": [
+        0.6218,
+        0.6314
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1304,
+     "ci": [
+      0.1267,
+      0.1346
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1322,
+       "ci": [
+        0.1283,
+        0.1364
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1198,
+       "ci": [
+        0.1004,
+        0.1396
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1308,
+       "ci": [
+        0.1271,
+        0.135
+       ]
+      }
+     }
+    }
+   }
+  },
+  "balanced": {
+   "A": {
+    "genre_primary": {
+     "mean": 0.1905,
+     "ci": [
+      0.1837,
+      0.1975
+     ]
+    },
+    "genre_any": {
+     "mean": 0.33,
+     "ci": [
+      0.3215,
+      0.3387
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5523,
+     "ci": [
+      0.5418,
+      0.5623
+     ]
+    }
+   },
+   "Z0": {
+    "genre_primary": {
+     "mean": 0.1637,
+     "ci": [
+      0.1574,
+      0.1703
+     ],
+     "diff": -0.0269,
+     "diff_ci": [
+      -0.0311,
+      -0.0226
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2853,
+     "ci": [
+      0.2777,
+      0.2933
+     ],
+     "diff": -0.0447,
+     "diff_ci": [
+      -0.0501,
+      -0.0391
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4941,
+     "ci": [
+      0.4843,
+      0.5044
+     ],
+     "diff": -0.0581,
+     "diff_ci": [
+      -0.0647,
+      -0.0512
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3555,
+     "ci": [
+      0.3495,
+      0.3614
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3593,
+       "ci": [
+        0.3531,
+        0.3656
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2796,
+       "ci": [
+        0.248,
+        0.3117
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3584,
+       "ci": [
+        0.3525,
+        0.3645
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.632,
+     "ci": [
+      0.6282,
+      0.6355
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6357,
+       "ci": [
+        0.632,
+        0.6392
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.559,
+       "ci": [
+        0.5305,
+        0.5864
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6348,
+       "ci": [
+        0.6311,
+        0.6382
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.5355,
+     "ci": [
+      0.5313,
+      0.5395
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.5389,
+       "ci": [
+        0.5344,
+        0.543
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4739,
+       "ci": [
+        0.4523,
+        0.4963
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5379,
+       "ci": [
+        0.5335,
+        0.5419
+       ]
+      }
+     }
+    }
+   },
+   "Zs": {
+    "genre_primary": {
+     "mean": 0.0928,
+     "ci": [
+      0.0883,
+      0.0976
+     ],
+     "diff": -0.0978,
+     "diff_ci": [
+      -0.1034,
+      -0.0926
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1755,
+     "ci": [
+      0.1694,
+      0.1816
+     ],
+     "diff": -0.1545,
+     "diff_ci": [
+      -0.1612,
+      -0.1481
+     ]
+    },
+    "genre_family": {
+     "mean": 0.3805,
+     "ci": [
+      0.3719,
+      0.3896
+     ],
+     "diff": -0.1718,
+     "diff_ci": [
+      -0.1792,
+      -0.1638
+     ]
+    },
+    "overlap10": {
+     "mean": 0.1278,
+     "ci": [
+      0.124,
+      0.1314
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1284,
+       "ci": [
+        0.1248,
+        0.1322
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1184,
+       "ci": [
+        0.1,
+        0.1369
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1281,
+       "ci": [
+        0.1244,
+        0.1318
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3395,
+     "ci": [
+      0.3368,
+      0.3421
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3415,
+       "ci": [
+        0.3388,
+        0.3443
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2968,
+       "ci": [
+        0.28,
+        0.3124
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3412,
+       "ci": [
+        0.3384,
+        0.3438
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1482,
+     "ci": [
+      0.1447,
+      0.1514
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1484,
+       "ci": [
+        0.1449,
+        0.1518
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1452,
+       "ci": [
+        0.1283,
+        0.1622
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1483,
+       "ci": [
+        0.1448,
+        0.1517
+       ]
+      }
+     }
+    }
+   },
+   "B13": {
+    "genre_primary": {
+     "mean": 0.1739,
+     "ci": [
+      0.1674,
+      0.1807
+     ],
+     "diff": -0.0167,
+     "diff_ci": [
+      -0.0216,
+      -0.0122
+     ]
+    },
+    "genre_any": {
+     "mean": 0.314,
+     "ci": [
+      0.3059,
+      0.3221
+     ],
+     "diff": -0.016,
+     "diff_ci": [
+      -0.0222,
+      -0.0101
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5394,
+     "ci": [
+      0.5294,
+      0.5497
+     ],
+     "diff": -0.0129,
+     "diff_ci": [
+      -0.0198,
+      -0.0058
+     ]
+    },
+    "overlap10": {
+     "mean": 0.274,
+     "ci": [
+      0.2686,
+      0.2791
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.2774,
+       "ci": [
+        0.2719,
+        0.2827
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2177,
+       "ci": [
+        0.1928,
+        0.2453
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.2762,
+       "ci": [
+        0.2708,
+        0.2816
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.604,
+     "ci": [
+      0.5996,
+      0.6081
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.608,
+       "ci": [
+        0.6037,
+        0.6122
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5568,
+       "ci": [
+        0.5297,
+        0.5824
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6058,
+       "ci": [
+        0.6014,
+        0.61
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.316,
+     "ci": [
+      0.3119,
+      0.32
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3187,
+       "ci": [
+        0.3145,
+        0.3228
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2769,
+       "ci": [
+        0.2533,
+        0.2997
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3175,
+       "ci": [
+        0.3133,
+        0.3214
+       ]
+      }
+     }
+    }
+   },
+   "B13v": {
+    "genre_primary": {
+     "mean": 0.1747,
+     "ci": [
+      0.1681,
+      0.1817
+     ],
+     "diff": -0.0158,
+     "diff_ci": [
+      -0.0206,
+      -0.0114
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3146,
+     "ci": [
+      0.3062,
+      0.3229
+     ],
+     "diff": -0.0154,
+     "diff_ci": [
+      -0.0217,
+      -0.0096
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5399,
+     "ci": [
+      0.5298,
+      0.5503
+     ],
+     "diff": -0.0124,
+     "diff_ci": [
+      -0.0193,
+      -0.0054
+     ]
+    },
+    "overlap10": {
+     "mean": 0.2785,
+     "ci": [
+      0.2731,
+      0.2836
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.282,
+       "ci": [
+        0.2765,
+        0.2873
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2218,
+       "ci": [
+        0.1972,
+        0.249
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.2807,
+       "ci": [
+        0.2754,
+        0.286
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6093,
+     "ci": [
+      0.605,
+      0.6134
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6134,
+       "ci": [
+        0.6091,
+        0.6176
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5616,
+       "ci": [
+        0.5348,
+        0.5869
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6112,
+       "ci": [
+        0.6069,
+        0.6154
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.3231,
+     "ci": [
+      0.319,
+      0.3272
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3259,
+       "ci": [
+        0.3217,
+        0.33
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.283,
+       "ci": [
+        0.2594,
+        0.3059
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3247,
+       "ci": [
+        0.3205,
+        0.3287
+       ]
+      }
+     }
+    }
+   },
+   "Ball": {
+    "genre_primary": {
+     "mean": 0.2123,
+     "ci": [
+      0.2055,
+      0.2202
+     ],
+     "diff": 0.0218,
+     "diff_ci": [
+      0.0172,
+      0.0263
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3679,
+     "ci": [
+      0.3592,
+      0.3765
+     ],
+     "diff": 0.0379,
+     "diff_ci": [
+      0.0319,
+      0.0436
+     ]
+    },
+    "genre_family": {
+     "mean": 0.591,
+     "ci": [
+      0.5808,
+      0.6018
+     ],
+     "diff": 0.0388,
+     "diff_ci": [
+      0.0319,
+      0.0452
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3369,
+     "ci": [
+      0.3316,
+      0.3425
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3418,
+       "ci": [
+        0.3364,
+        0.3473
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2633,
+       "ci": [
+        0.2329,
+        0.2956
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3398,
+       "ci": [
+        0.3346,
+        0.3452
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6986,
+     "ci": [
+      0.6942,
+      0.7028
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.7027,
+       "ci": [
+        0.6986,
+        0.7069
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6521,
+       "ci": [
+        0.6248,
+        0.678
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.7004,
+       "ci": [
+        0.6961,
+        0.7047
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.397,
+     "ci": [
+      0.3929,
+      0.4013
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4003,
+       "ci": [
+        0.396,
+        0.4049
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3513,
+       "ci": [
+        0.3281,
+        0.3745
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3988,
+       "ci": [
+        0.3945,
+        0.4032
+       ]
+      }
+     }
+    }
+   },
+   "C": {
+    "genre_primary": {
+     "mean": 0.2004,
+     "ci": [
+      0.1936,
+      0.2079
+     ],
+     "diff": 0.0098,
+     "diff_ci": [
+      0.0059,
+      0.014
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3427,
+     "ci": [
+      0.3345,
+      0.3514
+     ],
+     "diff": 0.0127,
+     "diff_ci": [
+      0.007,
+      0.0179
+     ]
+    },
+    "genre_family": {
+     "mean": 0.565,
+     "ci": [
+      0.5547,
+      0.576
+     ],
+     "diff": 0.0127,
+     "diff_ci": [
+      0.0067,
+      0.0185
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3984,
+     "ci": [
+      0.3925,
+      0.4044
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4041,
+       "ci": [
+        0.398,
+        0.4104
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3136,
+       "ci": [
+        0.282,
+        0.344
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4017,
+       "ci": [
+        0.396,
+        0.4078
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.7879,
+     "ci": [
+      0.7843,
+      0.7911
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.7931,
+       "ci": [
+        0.7898,
+        0.7962
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.7301,
+       "ci": [
+        0.7028,
+        0.7547
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.7902,
+       "ci": [
+        0.7866,
+        0.7933
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.5027,
+     "ci": [
+      0.4983,
+      0.5072
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.5078,
+       "ci": [
+        0.5033,
+        0.5121
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4397,
+       "ci": [
+        0.4152,
+        0.4653
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5051,
+       "ci": [
+        0.5007,
+        0.5096
+       ]
+      }
+     }
+    }
+   },
+   "Cvm": {
+    "genre_primary": {
+     "mean": 0.2042,
+     "ci": [
+      0.1974,
+      0.2116
+     ],
+     "diff": 0.0136,
+     "diff_ci": [
+      0.0091,
+      0.018
+     ]
+    },
+    "genre_any": {
+     "mean": 0.349,
+     "ci": [
+      0.3408,
+      0.3576
+     ],
+     "diff": 0.019,
+     "diff_ci": [
+      0.0132,
+      0.0247
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5752,
+     "ci": [
+      0.5647,
+      0.5861
+     ],
+     "diff": 0.0229,
+     "diff_ci": [
+      0.0163,
+      0.0293
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3499,
+     "ci": [
+      0.3441,
+      0.3556
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3546,
+       "ci": [
+        0.3486,
+        0.3605
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2816,
+       "ci": [
+        0.2524,
+        0.3116
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3525,
+       "ci": [
+        0.3467,
+        0.3583
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.7566,
+     "ci": [
+      0.7527,
+      0.7602
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.7622,
+       "ci": [
+        0.7583,
+        0.7657
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.693,
+       "ci": [
+        0.6646,
+        0.7193
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.7591,
+       "ci": [
+        0.7548,
+        0.7628
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4081,
+     "ci": [
+      0.4037,
+      0.4125
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4127,
+       "ci": [
+        0.4083,
+        0.4171
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3461,
+       "ci": [
+        0.3229,
+        0.3702
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4105,
+       "ci": [
+        0.4061,
+        0.4149
+       ]
+      }
+     }
+    }
+   },
+   "Cemb": {
+    "genre_primary": {
+     "mean": 0.2101,
+     "ci": [
+      0.203,
+      0.218
+     ],
+     "diff": 0.0196,
+     "diff_ci": [
+      0.0154,
+      0.0237
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3578,
+     "ci": [
+      0.349,
+      0.3666
+     ],
+     "diff": 0.0278,
+     "diff_ci": [
+      0.0225,
+      0.033
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5836,
+     "ci": [
+      0.5735,
+      0.5942
+     ],
+     "diff": 0.0314,
+     "diff_ci": [
+      0.0256,
+      0.0368
+     ]
+    },
+    "overlap10": {
+     "mean": 0.4181,
+     "ci": [
+      0.4123,
+      0.424
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4241,
+       "ci": [
+        0.418,
+        0.4301
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3272,
+       "ci": [
+        0.2905,
+        0.3609
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4217,
+       "ci": [
+        0.4157,
+        0.4277
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.8245,
+     "ci": [
+      0.8211,
+      0.8273
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.8302,
+       "ci": [
+        0.8274,
+        0.8327
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.7636,
+       "ci": [
+        0.7377,
+        0.7866
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.8269,
+       "ci": [
+        0.8236,
+        0.8299
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.5205,
+     "ci": [
+      0.516,
+      0.5251
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.5268,
+       "ci": [
+        0.5222,
+        0.5312
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4413,
+       "ci": [
+        0.4151,
+        0.4671
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5236,
+       "ci": [
+        0.5192,
+        0.5283
+       ]
+      }
+     }
+    }
+   },
+   "Cembvm": {
+    "genre_primary": {
+     "mean": 0.2177,
+     "ci": [
+      0.2099,
+      0.2257
+     ],
+     "diff": 0.0271,
+     "diff_ci": [
+      0.0228,
+      0.0316
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3691,
+     "ci": [
+      0.3601,
+      0.3784
+     ],
+     "diff": 0.0391,
+     "diff_ci": [
+      0.0335,
+      0.0445
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5946,
+     "ci": [
+      0.5846,
+      0.6052
+     ],
+     "diff": 0.0424,
+     "diff_ci": [
+      0.0361,
+      0.0486
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3709,
+     "ci": [
+      0.3651,
+      0.3767
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3764,
+       "ci": [
+        0.3704,
+        0.3822
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2796,
+       "ci": [
+        0.2461,
+        0.3119
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3744,
+       "ci": [
+        0.3685,
+        0.3805
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.7941,
+     "ci": [
+      0.7904,
+      0.7974
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.8,
+       "ci": [
+        0.7967,
+        0.8028
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.729,
+       "ci": [
+        0.7026,
+        0.7527
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.7966,
+       "ci": [
+        0.7929,
+        0.7999
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4297,
+     "ci": [
+      0.4254,
+      0.4343
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4346,
+       "ci": [
+        0.4301,
+        0.4393
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3605,
+       "ci": [
+        0.3337,
+        0.3868
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4323,
+       "ci": [
+        0.4282,
+        0.4372
+       ]
+      }
+     }
+    }
+   },
+   "D16": {
+    "genre_primary": {
+     "mean": 0.2593,
+     "ci": [
+      0.2515,
+      0.2677
+     ],
+     "diff": 0.0687,
+     "diff_ci": [
+      0.0636,
+      0.0741
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4417,
+     "ci": [
+      0.4328,
+      0.4511
+     ],
+     "diff": 0.1118,
+     "diff_ci": [
+      0.1052,
+      0.1178
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6634,
+     "ci": [
+      0.6544,
+      0.6742
+     ],
+     "diff": 0.1111,
+     "diff_ci": [
+      0.1036,
+      0.1186
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3437,
+     "ci": [
+      0.3379,
+      0.3494
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3477,
+       "ci": [
+        0.3417,
+        0.3537
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2857,
+       "ci": [
+        0.2517,
+        0.3175
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.346,
+       "ci": [
+        0.3401,
+        0.3516
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6619,
+     "ci": [
+      0.6586,
+      0.6651
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6659,
+       "ci": [
+        0.6627,
+        0.669
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6008,
+       "ci": [
+        0.5783,
+        0.6229
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6643,
+       "ci": [
+        0.6609,
+        0.6676
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4024,
+     "ci": [
+      0.3976,
+      0.407
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4056,
+       "ci": [
+        0.4006,
+        0.4104
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3595,
+       "ci": [
+        0.3359,
+        0.3825
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.404,
+       "ci": [
+        0.3992,
+        0.4087
+       ]
+      }
+     }
+    }
+   },
+   "D24": {
+    "genre_primary": {
+     "mean": 0.2645,
+     "ci": [
+      0.2568,
+      0.273
+     ],
+     "diff": 0.074,
+     "diff_ci": [
+      0.0692,
+      0.0791
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4483,
+     "ci": [
+      0.4394,
+      0.4577
+     ],
+     "diff": 0.1183,
+     "diff_ci": [
+      0.1119,
+      0.1241
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6669,
+     "ci": [
+      0.6581,
+      0.6773
+     ],
+     "diff": 0.1146,
+     "diff_ci": [
+      0.1073,
+      0.1223
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3415,
+     "ci": [
+      0.3356,
+      0.347
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3458,
+       "ci": [
+        0.3399,
+        0.3516
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2823,
+       "ci": [
+        0.2487,
+        0.3158
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3438,
+       "ci": [
+        0.3379,
+        0.3493
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6705,
+     "ci": [
+      0.6673,
+      0.6735
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6745,
+       "ci": [
+        0.6713,
+        0.6775
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6104,
+       "ci": [
+        0.5884,
+        0.6317
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6729,
+       "ci": [
+        0.6695,
+        0.676
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4029,
+     "ci": [
+      0.3984,
+      0.4074
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.406,
+       "ci": [
+        0.4012,
+        0.4109
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3641,
+       "ci": [
+        0.3414,
+        0.3865
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4044,
+       "ci": [
+        0.3998,
+        0.409
+       ]
+      }
+     }
+    }
+   },
+   "D32": {
+    "genre_primary": {
+     "mean": 0.2669,
+     "ci": [
+      0.2594,
+      0.2758
+     ],
+     "diff": 0.0764,
+     "diff_ci": [
+      0.0715,
+      0.0817
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4525,
+     "ci": [
+      0.444,
+      0.462
+     ],
+     "diff": 0.1225,
+     "diff_ci": [
+      0.1161,
+      0.1283
+     ]
+    },
+    "genre_family": {
+     "mean": 0.669,
+     "ci": [
+      0.6606,
+      0.6792
+     ],
+     "diff": 0.1168,
+     "diff_ci": [
+      0.1095,
+      0.1245
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3403,
+     "ci": [
+      0.3345,
+      0.3457
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3445,
+       "ci": [
+        0.3386,
+        0.3504
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2837,
+       "ci": [
+        0.25,
+        0.3161
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3425,
+       "ci": [
+        0.3368,
+        0.3483
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6768,
+     "ci": [
+      0.6736,
+      0.6798
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6807,
+       "ci": [
+        0.6777,
+        0.6837
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6167,
+       "ci": [
+        0.5951,
+        0.6378
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6791,
+       "ci": [
+        0.6758,
+        0.6822
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4044,
+     "ci": [
+      0.3999,
+      0.4088
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4074,
+       "ci": [
+        0.4027,
+        0.412
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3661,
+       "ci": [
+        0.344,
+        0.3881
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4059,
+       "ci": [
+        0.4013,
+        0.4104
+       ]
+      }
+     }
+    }
+   },
+   "D48": {
+    "genre_primary": {
+     "mean": 0.269,
+     "ci": [
+      0.2613,
+      0.2776
+     ],
+     "diff": 0.0785,
+     "diff_ci": [
+      0.0736,
+      0.0837
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4556,
+     "ci": [
+      0.4465,
+      0.4652
+     ],
+     "diff": 0.1256,
+     "diff_ci": [
+      0.119,
+      0.1316
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6696,
+     "ci": [
+      0.6609,
+      0.6796
+     ],
+     "diff": 0.1173,
+     "diff_ci": [
+      0.11,
+      0.1253
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3397,
+     "ci": [
+      0.3339,
+      0.3452
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.344,
+       "ci": [
+        0.3379,
+        0.3498
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2871,
+       "ci": [
+        0.2547,
+        0.3191
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3418,
+       "ci": [
+        0.3358,
+        0.3474
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.684,
+     "ci": [
+      0.6809,
+      0.6869
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6879,
+       "ci": [
+        0.6849,
+        0.6908
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6241,
+       "ci": [
+        0.6026,
+        0.6451
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6863,
+       "ci": [
+        0.683,
+        0.6893
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4081,
+     "ci": [
+      0.4037,
+      0.4124
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4111,
+       "ci": [
+        0.4065,
+        0.4156
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.37,
+       "ci": [
+        0.3481,
+        0.3917
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4095,
+       "ci": [
+        0.405,
+        0.4139
+       ]
+      }
+     }
+    }
+   },
+   "D64": {
+    "genre_primary": {
+     "mean": 0.2704,
+     "ci": [
+      0.2627,
+      0.2791
+     ],
+     "diff": 0.0798,
+     "diff_ci": [
+      0.0749,
+      0.0853
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4562,
+     "ci": [
+      0.4475,
+      0.4658
+     ],
+     "diff": 0.1263,
+     "diff_ci": [
+      0.1194,
+      0.1321
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6687,
+     "ci": [
+      0.6603,
+      0.6789
+     ],
+     "diff": 0.1164,
+     "diff_ci": [
+      0.1095,
+      0.1242
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3397,
+     "ci": [
+      0.3339,
+      0.3451
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3438,
+       "ci": [
+        0.3379,
+        0.3495
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2884,
+       "ci": [
+        0.2563,
+        0.3196
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3417,
+       "ci": [
+        0.3359,
+        0.3472
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6884,
+     "ci": [
+      0.6853,
+      0.6913
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6924,
+       "ci": [
+        0.6894,
+        0.6952
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6283,
+       "ci": [
+        0.6066,
+        0.6491
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6908,
+       "ci": [
+        0.6875,
+        0.6937
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4105,
+     "ci": [
+      0.4062,
+      0.4148
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4135,
+       "ci": [
+        0.4089,
+        0.418
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3734,
+       "ci": [
+        0.3514,
+        0.3947
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4119,
+       "ci": [
+        0.4075,
+        0.4163
+       ]
+      }
+     }
+    }
+   },
+   "Dn16": {
+    "genre_primary": {
+     "mean": 0.2337,
+     "ci": [
+      0.2265,
+      0.2417
+     ],
+     "diff": 0.0432,
+     "diff_ci": [
+      0.0387,
+      0.0477
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4041,
+     "ci": [
+      0.3954,
+      0.4126
+     ],
+     "diff": 0.0741,
+     "diff_ci": [
+      0.0679,
+      0.0797
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6321,
+     "ci": [
+      0.6225,
+      0.6426
+     ],
+     "diff": 0.0798,
+     "diff_ci": [
+      0.0729,
+      0.0867
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3437,
+     "ci": [
+      0.3375,
+      0.3493
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3481,
+       "ci": [
+        0.3418,
+        0.3538
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2925,
+       "ci": [
+        0.2632,
+        0.3212
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3457,
+       "ci": [
+        0.3396,
+        0.3512
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6378,
+     "ci": [
+      0.6341,
+      0.6414
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6421,
+       "ci": [
+        0.6384,
+        0.6457
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.58,
+       "ci": [
+        0.5545,
+        0.6054
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.64,
+       "ci": [
+        0.6362,
+        0.6437
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.3992,
+     "ci": [
+      0.3947,
+      0.4041
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4022,
+       "ci": [
+        0.3974,
+        0.4073
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3643,
+       "ci": [
+        0.341,
+        0.3886
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4005,
+       "ci": [
+        0.3959,
+        0.4054
+       ]
+      }
+     }
+    }
+   },
+   "Dn24": {
+    "genre_primary": {
+     "mean": 0.2346,
+     "ci": [
+      0.2275,
+      0.2423
+     ],
+     "diff": 0.0441,
+     "diff_ci": [
+      0.0396,
+      0.0487
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4061,
+     "ci": [
+      0.3974,
+      0.4148
+     ],
+     "diff": 0.0761,
+     "diff_ci": [
+      0.0702,
+      0.0816
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6325,
+     "ci": [
+      0.6229,
+      0.6431
+     ],
+     "diff": 0.0802,
+     "diff_ci": [
+      0.0733,
+      0.087
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3444,
+     "ci": [
+      0.3383,
+      0.3501
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3487,
+       "ci": [
+        0.3426,
+        0.3543
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2925,
+       "ci": [
+        0.2634,
+        0.3208
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3464,
+       "ci": [
+        0.3403,
+        0.3521
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.641,
+     "ci": [
+      0.6374,
+      0.6446
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6453,
+       "ci": [
+        0.6417,
+        0.6489
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5831,
+       "ci": [
+        0.5575,
+        0.6085
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6433,
+       "ci": [
+        0.6395,
+        0.6469
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4008,
+     "ci": [
+      0.3963,
+      0.4057
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4039,
+       "ci": [
+        0.3991,
+        0.409
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3658,
+       "ci": [
+        0.3424,
+        0.3901
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4021,
+       "ci": [
+        0.3975,
+        0.407
+       ]
+      }
+     }
+    }
+   },
+   "Dn32": {
+    "genre_primary": {
+     "mean": 0.2349,
+     "ci": [
+      0.2277,
+      0.2425
+     ],
+     "diff": 0.0443,
+     "diff_ci": [
+      0.0398,
+      0.0489
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4067,
+     "ci": [
+      0.398,
+      0.4152
+     ],
+     "diff": 0.0767,
+     "diff_ci": [
+      0.0707,
+      0.0823
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6327,
+     "ci": [
+      0.6231,
+      0.6432
+     ],
+     "diff": 0.0804,
+     "diff_ci": [
+      0.0735,
+      0.0873
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3444,
+     "ci": [
+      0.3381,
+      0.3501
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3486,
+       "ci": [
+        0.3425,
+        0.3544
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2925,
+       "ci": [
+        0.2636,
+        0.3214
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3464,
+       "ci": [
+        0.3404,
+        0.3518
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6416,
+     "ci": [
+      0.638,
+      0.6452
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6459,
+       "ci": [
+        0.6423,
+        0.6495
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5837,
+       "ci": [
+        0.5581,
+        0.6091
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6439,
+       "ci": [
+        0.6401,
+        0.6475
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4012,
+     "ci": [
+      0.3967,
+      0.4061
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4042,
+       "ci": [
+        0.3995,
+        0.4094
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.366,
+       "ci": [
+        0.3429,
+        0.3904
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4025,
+       "ci": [
+        0.398,
+        0.4074
+       ]
+      }
+     }
+    }
+   },
+   "E": {
+    "genre_primary": {
+     "mean": 0.2526,
+     "ci": [
+      0.2449,
+      0.2609
+     ],
+     "diff": 0.0621,
+     "diff_ci": [
+      0.0576,
+      0.0667
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4296,
+     "ci": [
+      0.4208,
+      0.4387
+     ],
+     "diff": 0.0996,
+     "diff_ci": [
+      0.0929,
+      0.1054
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6519,
+     "ci": [
+      0.6428,
+      0.6626
+     ],
+     "diff": 0.0996,
+     "diff_ci": [
+      0.0926,
+      0.1067
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3561,
+     "ci": [
+      0.3506,
+      0.3619
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3606,
+       "ci": [
+        0.3547,
+        0.3665
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2952,
+       "ci": [
+        0.2637,
+        0.3267
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3585,
+       "ci": [
+        0.3528,
+        0.3642
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.7198,
+     "ci": [
+      0.7161,
+      0.7232
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.7239,
+       "ci": [
+        0.7205,
+        0.7273
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6695,
+       "ci": [
+        0.6441,
+        0.6938
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.7217,
+       "ci": [
+        0.718,
+        0.7252
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4252,
+     "ci": [
+      0.421,
+      0.4294
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4285,
+       "ci": [
+        0.4241,
+        0.4329
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3809,
+       "ci": [
+        0.358,
+        0.4042
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4269,
+       "ci": [
+        0.4226,
+        0.4311
+       ]
+      }
+     }
+    }
+   },
+   "E13": {
+    "genre_primary": {
+     "mean": 0.2411,
+     "ci": [
+      0.2333,
+      0.2491
+     ],
+     "diff": 0.0505,
+     "diff_ci": [
+      0.0459,
+      0.0553
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4151,
+     "ci": [
+      0.4061,
+      0.4245
+     ],
+     "diff": 0.0852,
+     "diff_ci": [
+      0.079,
+      0.091
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6451,
+     "ci": [
+      0.636,
+      0.6556
+     ],
+     "diff": 0.0928,
+     "diff_ci": [
+      0.0863,
+      0.0997
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3345,
+     "ci": [
+      0.3291,
+      0.3398
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3386,
+       "ci": [
+        0.3331,
+        0.3441
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2803,
+       "ci": [
+        0.2496,
+        0.3111
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3366,
+       "ci": [
+        0.3311,
+        0.342
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6831,
+     "ci": [
+      0.6795,
+      0.6865
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6876,
+       "ci": [
+        0.6842,
+        0.691
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.6252,
+       "ci": [
+        0.6009,
+        0.6486
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6854,
+       "ci": [
+        0.6816,
+        0.6889
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4002,
+     "ci": [
+      0.3962,
+      0.4043
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4032,
+       "ci": [
+        0.399,
+        0.4075
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3576,
+       "ci": [
+        0.3344,
+        0.3808
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4018,
+       "ci": [
+        0.3976,
+        0.406
+       ]
+      }
+     }
+    }
+   },
+   "F": {
+    "genre_primary": {
+     "mean": 0.252,
+     "ci": [
+      0.2439,
+      0.2609
+     ],
+     "diff": 0.0615,
+     "diff_ci": [
+      0.0568,
+      0.0665
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4261,
+     "ci": [
+      0.4174,
+      0.4356
+     ],
+     "diff": 0.0961,
+     "diff_ci": [
+      0.09,
+      0.1019
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6499,
+     "ci": [
+      0.6411,
+      0.66
+     ],
+     "diff": 0.0976,
+     "diff_ci": [
+      0.091,
+      0.1049
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3657,
+     "ci": [
+      0.3599,
+      0.3712
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3705,
+       "ci": [
+        0.3646,
+        0.3764
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.2966,
+       "ci": [
+        0.2639,
+        0.3279
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3684,
+       "ci": [
+        0.3623,
+        0.374
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.7619,
+     "ci": [
+      0.7584,
+      0.765
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.767,
+       "ci": [
+        0.7637,
+        0.7701
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.7016,
+       "ci": [
+        0.6746,
+        0.7265
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.7643,
+       "ci": [
+        0.7607,
+        0.7675
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4381,
+     "ci": [
+      0.4339,
+      0.4423
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4422,
+       "ci": [
+        0.438,
+        0.4465
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3811,
+       "ci": [
+        0.3581,
+        0.4055
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4403,
+       "ci": [
+        0.4359,
+        0.4446
+       ]
+      }
+     }
+    }
+   },
+   "Femb": {
+    "genre_primary": {
+     "mean": 0.2563,
+     "ci": [
+      0.248,
+      0.2648
+     ],
+     "diff": 0.0658,
+     "diff_ci": [
+      0.0611,
+      0.0708
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4328,
+     "ci": [
+      0.4239,
+      0.4422
+     ],
+     "diff": 0.1028,
+     "diff_ci": [
+      0.0966,
+      0.1084
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6554,
+     "ci": [
+      0.6464,
+      0.6657
+     ],
+     "diff": 0.1032,
+     "diff_ci": [
+      0.096,
+      0.1099
+     ]
+    },
+    "overlap10": {
+     "mean": 0.3713,
+     "ci": [
+      0.3655,
+      0.377
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3759,
+       "ci": [
+        0.3701,
+        0.3818
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.302,
+       "ci": [
+        0.2683,
+        0.3338
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.374,
+       "ci": [
+        0.3682,
+        0.3797
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.7878,
+     "ci": [
+      0.7844,
+      0.7908
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.793,
+       "ci": [
+        0.7899,
+        0.7956
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.7303,
+       "ci": [
+        0.7054,
+        0.7533
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.7901,
+       "ci": [
+        0.7867,
+        0.793
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.4445,
+     "ci": [
+      0.4402,
+      0.4489
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4489,
+       "ci": [
+        0.4444,
+        0.4534
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3855,
+       "ci": [
+        0.3614,
+        0.4094
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4468,
+       "ci": [
+        0.4425,
+        0.4511
+       ]
+      }
+     }
+    }
+   }
+  },
+  "mood": {
+   "A": {
+    "genre_primary": {
+     "mean": 0.1653,
+     "ci": [
+      0.1592,
+      0.1721
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2876,
+     "ci": [
+      0.28,
+      0.2957
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4976,
+     "ci": [
+      0.4874,
+      0.5078
+     ]
+    }
+   },
+   "Z0": {
+    "genre_primary": {
+     "mean": 0.1637,
+     "ci": [
+      0.1574,
+      0.1704
+     ],
+     "diff": -0.0016,
+     "diff_ci": [
+      -0.0023,
+      -0.001
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2854,
+     "ci": [
+      0.2778,
+      0.2934
+     ],
+     "diff": -0.0022,
+     "diff_ci": [
+      -0.0031,
+      -0.0014
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4942,
+     "ci": [
+      0.4844,
+      0.5045
+     ],
+     "diff": -0.0033,
+     "diff_ci": [
+      -0.0044,
+      -0.0023
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9667,
+     "ci": [
+      0.9634,
+      0.9701
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9672,
+       "ci": [
+        0.9638,
+        0.9707
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9551,
+       "ci": [
+        0.9359,
+        0.972
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9672,
+       "ci": [
+        0.9639,
+        0.9705
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9879,
+     "ci": [
+      0.9871,
+      0.9887
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9881,
+       "ci": [
+        0.9873,
+        0.9889
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9839,
+       "ci": [
+        0.9788,
+        0.9886
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9881,
+       "ci": [
+        0.9873,
+        0.9889
+       ]
+      }
+     }
+    }
+   },
+   "Zs": {
+    "genre_primary": {
+     "mean": 0.1638,
+     "ci": [
+      0.1577,
+      0.1704
+     ],
+     "diff": -0.0015,
+     "diff_ci": [
+      -0.0022,
+      -0.0008
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2853,
+     "ci": [
+      0.2775,
+      0.2932
+     ],
+     "diff": -0.0023,
+     "diff_ci": [
+      -0.0032,
+      -0.0015
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4936,
+     "ci": [
+      0.4835,
+      0.5036
+     ],
+     "diff": -0.004,
+     "diff_ci": [
+      -0.0053,
+      -0.0028
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9607,
+     "ci": [
+      0.9569,
+      0.9644
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9615,
+       "ci": [
+        0.9576,
+        0.9653
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9429,
+       "ci": [
+        0.9203,
+        0.9646
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9614,
+       "ci": [
+        0.9575,
+        0.9651
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9805,
+     "ci": [
+      0.9791,
+      0.9817
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9808,
+       "ci": [
+        0.9794,
+        0.982
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9721,
+       "ci": [
+        0.963,
+        0.9805
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9808,
+       "ci": [
+        0.9795,
+        0.982
+       ]
+      }
+     }
+    }
+   },
+   "B13": {
+    "genre_primary": {
+     "mean": 0.1656,
+     "ci": [
+      0.1594,
+      0.1721
+     ],
+     "diff": 0.0003,
+     "diff_ci": [
+      -0.0004,
+      0.0009
+     ]
+    },
+    "genre_any": {
+     "mean": 0.288,
+     "ci": [
+      0.2803,
+      0.2959
+     ],
+     "diff": 0.0004,
+     "diff_ci": [
+      -0.0003,
+      0.0012
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4979,
+     "ci": [
+      0.4878,
+      0.5081
+     ],
+     "diff": 0.0004,
+     "diff_ci": [
+      -0.0007,
+      0.0014
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9669,
+     "ci": [
+      0.9637,
+      0.9702
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9677,
+       "ci": [
+        0.9643,
+        0.971
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.951,
+       "ci": [
+        0.9303,
+        0.971
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9676,
+       "ci": [
+        0.9644,
+        0.9708
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9856,
+     "ci": [
+      0.9846,
+      0.9865
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9858,
+       "ci": [
+        0.9848,
+        0.9867
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9808,
+       "ci": [
+        0.9744,
+        0.9868
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9858,
+       "ci": [
+        0.9848,
+        0.9867
+       ]
+      }
+     }
+    }
+   },
+   "B13v": {
+    "genre_primary": {
+     "mean": 0.1656,
+     "ci": [
+      0.1594,
+      0.1721
+     ],
+     "diff": 0.0003,
+     "diff_ci": [
+      -0.0004,
+      0.0009
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2879,
+     "ci": [
+      0.2802,
+      0.2959
+     ],
+     "diff": 0.0003,
+     "diff_ci": [
+      -0.0005,
+      0.0011
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4979,
+     "ci": [
+      0.4876,
+      0.5081
+     ],
+     "diff": 0.0003,
+     "diff_ci": [
+      -0.0008,
+      0.0014
+     ]
+    },
+    "overlap10": {
+     "mean": 0.967,
+     "ci": [
+      0.9639,
+      0.9703
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9677,
+       "ci": [
+        0.9644,
+        0.9711
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.951,
+       "ci": [
+        0.9303,
+        0.971
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9676,
+       "ci": [
+        0.9644,
+        0.9709
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9857,
+     "ci": [
+      0.9847,
+      0.9866
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9859,
+       "ci": [
+        0.9849,
+        0.9868
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9809,
+       "ci": [
+        0.9745,
+        0.9868
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9858,
+       "ci": [
+        0.9849,
+        0.9868
+       ]
+      }
+     }
+    }
+   },
+   "Ball": {
+    "genre_primary": {
+     "mean": 0.1666,
+     "ci": [
+      0.1605,
+      0.1731
+     ],
+     "diff": 0.0013,
+     "diff_ci": [
+      0.0006,
+      0.002
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2894,
+     "ci": [
+      0.2815,
+      0.2976
+     ],
+     "diff": 0.0018,
+     "diff_ci": [
+      0.001,
+      0.0026
+     ]
+    },
+    "genre_family": {
+     "mean": 0.499,
+     "ci": [
+      0.489,
+      0.5093
+     ],
+     "diff": 0.0015,
+     "diff_ci": [
+      0.0005,
+      0.0024
+     ]
+    },
+    "overlap10": {
+     "mean": 0.969,
+     "ci": [
+      0.9658,
+      0.9723
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9696,
+       "ci": [
+        0.9664,
+        0.9729
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9544,
+       "ci": [
+        0.9362,
+        0.972
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9696,
+       "ci": [
+        0.9663,
+        0.9728
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9867,
+     "ci": [
+      0.9858,
+      0.9876
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9869,
+       "ci": [
+        0.986,
+        0.9878
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9827,
+       "ci": [
+        0.9775,
+        0.9879
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9869,
+       "ci": [
+        0.986,
+        0.9877
+       ]
+      }
+     }
+    }
+   },
+   "C": {
+    "genre_primary": {
+     "mean": 0.166,
+     "ci": [
+      0.1598,
+      0.1728
+     ],
+     "diff": 0.0007,
+     "diff_ci": [
+      0.0001,
+      0.0013
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2886,
+     "ci": [
+      0.2807,
+      0.2967
+     ],
+     "diff": 0.001,
+     "diff_ci": [
+      0.0002,
+      0.0018
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4979,
+     "ci": [
+      0.4878,
+      0.5083
+     ],
+     "diff": 0.0003,
+     "diff_ci": [
+      -0.0005,
+      0.0013
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9721,
+     "ci": [
+      0.9692,
+      0.9749
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9727,
+       "ci": [
+        0.9697,
+        0.9757
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9571,
+       "ci": [
+        0.9389,
+        0.9743
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9727,
+       "ci": [
+        0.9698,
+        0.9756
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9889,
+     "ci": [
+      0.9881,
+      0.9896
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9891,
+       "ci": [
+        0.9883,
+        0.9898
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9855,
+       "ci": [
+        0.9811,
+        0.9898
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.989,
+       "ci": [
+        0.9883,
+        0.9897
+       ]
+      }
+     }
+    }
+   },
+   "Cvm": {
+    "genre_primary": {
+     "mean": 0.1664,
+     "ci": [
+      0.1602,
+      0.1731
+     ],
+     "diff": 0.0011,
+     "diff_ci": [
+      0.0004,
+      0.0017
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2892,
+     "ci": [
+      0.2814,
+      0.2972
+     ],
+     "diff": 0.0016,
+     "diff_ci": [
+      0.0008,
+      0.0023
+     ]
+    },
+    "genre_family": {
+     "mean": 0.499,
+     "ci": [
+      0.4888,
+      0.5093
+     ],
+     "diff": 0.0014,
+     "diff_ci": [
+      0.0005,
+      0.0023
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9714,
+     "ci": [
+      0.9685,
+      0.9744
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9721,
+       "ci": [
+        0.969,
+        0.9752
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9558,
+       "ci": [
+        0.9377,
+        0.9731
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.972,
+       "ci": [
+        0.9691,
+        0.9749
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9889,
+     "ci": [
+      0.9881,
+      0.9896
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9891,
+       "ci": [
+        0.9883,
+        0.9898
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9847,
+       "ci": [
+        0.9798,
+        0.9894
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.989,
+       "ci": [
+        0.9883,
+        0.9897
+       ]
+      }
+     }
+    }
+   },
+   "Cemb": {
+    "genre_primary": {
+     "mean": 0.166,
+     "ci": [
+      0.1597,
+      0.1726
+     ],
+     "diff": 0.0007,
+     "diff_ci": [
+      0.0001,
+      0.0013
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2888,
+     "ci": [
+      0.2809,
+      0.2967
+     ],
+     "diff": 0.0012,
+     "diff_ci": [
+      0.0004,
+      0.0019
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4989,
+     "ci": [
+      0.4886,
+      0.5092
+     ],
+     "diff": 0.0013,
+     "diff_ci": [
+      0.0004,
+      0.0023
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9751,
+     "ci": [
+      0.9726,
+      0.9776
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9758,
+       "ci": [
+        0.973,
+        0.9783
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9571,
+       "ci": [
+        0.9397,
+        0.9735
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9758,
+       "ci": [
+        0.9733,
+        0.9783
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9909,
+     "ci": [
+      0.9903,
+      0.9915
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9911,
+       "ci": [
+        0.9905,
+        0.9917
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9875,
+       "ci": [
+        0.9834,
+        0.9914
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9911,
+       "ci": [
+        0.9904,
+        0.9917
+       ]
+      }
+     }
+    }
+   },
+   "Cembvm": {
+    "genre_primary": {
+     "mean": 0.1664,
+     "ci": [
+      0.1602,
+      0.173
+     ],
+     "diff": 0.0011,
+     "diff_ci": [
+      0.0005,
+      0.0017
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2891,
+     "ci": [
+      0.2813,
+      0.2971
+     ],
+     "diff": 0.0015,
+     "diff_ci": [
+      0.0008,
+      0.0022
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4991,
+     "ci": [
+      0.489,
+      0.5094
+     ],
+     "diff": 0.0015,
+     "diff_ci": [
+      0.0006,
+      0.0025
+     ]
+    },
+    "overlap10": {
+     "mean": 0.973,
+     "ci": [
+      0.9702,
+      0.9758
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9736,
+       "ci": [
+        0.9708,
+        0.9764
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9565,
+       "ci": [
+        0.9383,
+        0.9734
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9737,
+       "ci": [
+        0.9709,
+        0.9764
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9903,
+     "ci": [
+      0.9897,
+      0.991
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9906,
+       "ci": [
+        0.9899,
+        0.9912
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9866,
+       "ci": [
+        0.9825,
+        0.9908
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9905,
+       "ci": [
+        0.9898,
+        0.9911
+       ]
+      }
+     }
+    }
+   },
+   "D16": {
+    "genre_primary": {
+     "mean": 0.1668,
+     "ci": [
+      0.1604,
+      0.1734
+     ],
+     "diff": 0.0015,
+     "diff_ci": [
+      0.0009,
+      0.0021
+     ]
+    },
+    "genre_any": {
+     "mean": 0.29,
+     "ci": [
+      0.2821,
+      0.2979
+     ],
+     "diff": 0.0024,
+     "diff_ci": [
+      0.0016,
+      0.0032
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5003,
+     "ci": [
+      0.4902,
+      0.5107
+     ],
+     "diff": 0.0028,
+     "diff_ci": [
+      0.0018,
+      0.0037
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9689,
+     "ci": [
+      0.9657,
+      0.972
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9693,
+       "ci": [
+        0.9661,
+        0.9725
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9531,
+       "ci": [
+        0.9307,
+        0.9729
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9695,
+       "ci": [
+        0.9664,
+        0.9726
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9854,
+     "ci": [
+      0.9844,
+      0.9864
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9857,
+       "ci": [
+        0.9847,
+        0.9867
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9803,
+       "ci": [
+        0.9746,
+        0.9862
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9856,
+       "ci": [
+        0.9846,
+        0.9866
+       ]
+      }
+     }
+    }
+   },
+   "D24": {
+    "genre_primary": {
+     "mean": 0.1667,
+     "ci": [
+      0.1604,
+      0.1733
+     ],
+     "diff": 0.0013,
+     "diff_ci": [
+      0.0008,
+      0.002
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2898,
+     "ci": [
+      0.282,
+      0.2979
+     ],
+     "diff": 0.0023,
+     "diff_ci": [
+      0.0015,
+      0.003
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5006,
+     "ci": [
+      0.4904,
+      0.5108
+     ],
+     "diff": 0.003,
+     "diff_ci": [
+      0.0021,
+      0.004
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9692,
+     "ci": [
+      0.9661,
+      0.9723
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9696,
+       "ci": [
+        0.9664,
+        0.9728
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9537,
+       "ci": [
+        0.9324,
+        0.9732
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9698,
+       "ci": [
+        0.9666,
+        0.9729
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9857,
+     "ci": [
+      0.9847,
+      0.9866
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9859,
+       "ci": [
+        0.9849,
+        0.9869
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9807,
+       "ci": [
+        0.9751,
+        0.9865
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9859,
+       "ci": [
+        0.9849,
+        0.9869
+       ]
+      }
+     }
+    }
+   },
+   "D32": {
+    "genre_primary": {
+     "mean": 0.1669,
+     "ci": [
+      0.1606,
+      0.1736
+     ],
+     "diff": 0.0016,
+     "diff_ci": [
+      0.0009,
+      0.0022
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2901,
+     "ci": [
+      0.2822,
+      0.2981
+     ],
+     "diff": 0.0025,
+     "diff_ci": [
+      0.0017,
+      0.0033
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5007,
+     "ci": [
+      0.4906,
+      0.5111
+     ],
+     "diff": 0.0032,
+     "diff_ci": [
+      0.0022,
+      0.0041
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9699,
+     "ci": [
+      0.9669,
+      0.9731
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9703,
+       "ci": [
+        0.9672,
+        0.9735
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9551,
+       "ci": [
+        0.9338,
+        0.9742
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9705,
+       "ci": [
+        0.9674,
+        0.9736
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.986,
+     "ci": [
+      0.985,
+      0.9869
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9863,
+       "ci": [
+        0.9852,
+        0.9872
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9809,
+       "ci": [
+        0.9752,
+        0.9866
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9862,
+       "ci": [
+        0.9852,
+        0.9872
+       ]
+      }
+     }
+    }
+   },
+   "D48": {
+    "genre_primary": {
+     "mean": 0.1668,
+     "ci": [
+      0.1605,
+      0.1735
+     ],
+     "diff": 0.0015,
+     "diff_ci": [
+      0.0009,
+      0.0022
+     ]
+    },
+    "genre_any": {
+     "mean": 0.29,
+     "ci": [
+      0.2822,
+      0.298
+     ],
+     "diff": 0.0024,
+     "diff_ci": [
+      0.0016,
+      0.0032
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5009,
+     "ci": [
+      0.4907,
+      0.5112
+     ],
+     "diff": 0.0033,
+     "diff_ci": [
+      0.0024,
+      0.0043
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9702,
+     "ci": [
+      0.9671,
+      0.9733
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9708,
+       "ci": [
+        0.9676,
+        0.974
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9537,
+       "ci": [
+        0.9313,
+        0.9737
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9709,
+       "ci": [
+        0.9677,
+        0.974
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9863,
+     "ci": [
+      0.9853,
+      0.9872
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9865,
+       "ci": [
+        0.9855,
+        0.9875
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9812,
+       "ci": [
+        0.9754,
+        0.9868
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9865,
+       "ci": [
+        0.9855,
+        0.9874
+       ]
+      }
+     }
+    }
+   },
+   "D64": {
+    "genre_primary": {
+     "mean": 0.1668,
+     "ci": [
+      0.1605,
+      0.1734
+     ],
+     "diff": 0.0015,
+     "diff_ci": [
+      0.0009,
+      0.0021
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2901,
+     "ci": [
+      0.2822,
+      0.298
+     ],
+     "diff": 0.0025,
+     "diff_ci": [
+      0.0017,
+      0.0033
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5009,
+     "ci": [
+      0.4907,
+      0.5111
+     ],
+     "diff": 0.0033,
+     "diff_ci": [
+      0.0024,
+      0.0043
+     ]
+    },
+    "overlap10": {
+     "mean": 0.97,
+     "ci": [
+      0.9668,
+      0.9732
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9705,
+       "ci": [
+        0.9673,
+        0.9738
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9537,
+       "ci": [
+        0.9317,
+        0.9734
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9707,
+       "ci": [
+        0.9675,
+        0.9739
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9865,
+     "ci": [
+      0.9855,
+      0.9874
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9867,
+       "ci": [
+        0.9857,
+        0.9877
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9814,
+       "ci": [
+        0.9757,
+        0.987
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9867,
+       "ci": [
+        0.9857,
+        0.9876
+       ]
+      }
+     }
+    }
+   },
+   "Dn16": {
+    "genre_primary": {
+     "mean": 0.1669,
+     "ci": [
+      0.1608,
+      0.1736
+     ],
+     "diff": 0.0016,
+     "diff_ci": [
+      0.001,
+      0.0023
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2902,
+     "ci": [
+      0.2823,
+      0.2981
+     ],
+     "diff": 0.0026,
+     "diff_ci": [
+      0.0018,
+      0.0034
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5014,
+     "ci": [
+      0.4913,
+      0.5116
+     ],
+     "diff": 0.0038,
+     "diff_ci": [
+      0.0028,
+      0.0049
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9699,
+     "ci": [
+      0.9671,
+      0.9729
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9703,
+       "ci": [
+        0.9672,
+        0.9733
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9558,
+       "ci": [
+        0.936,
+        0.9745
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9705,
+       "ci": [
+        0.9676,
+        0.9735
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.986,
+     "ci": [
+      0.9849,
+      0.9869
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9863,
+       "ci": [
+        0.9852,
+        0.9872
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.979,
+       "ci": [
+        0.9721,
+        0.9856
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9862,
+       "ci": [
+        0.9852,
+        0.9872
+       ]
+      }
+     }
+    }
+   },
+   "Dn24": {
+    "genre_primary": {
+     "mean": 0.167,
+     "ci": [
+      0.1609,
+      0.1737
+     ],
+     "diff": 0.0017,
+     "diff_ci": [
+      0.0011,
+      0.0023
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2902,
+     "ci": [
+      0.2823,
+      0.2981
+     ],
+     "diff": 0.0026,
+     "diff_ci": [
+      0.0018,
+      0.0034
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5013,
+     "ci": [
+      0.4912,
+      0.5116
+     ],
+     "diff": 0.0038,
+     "diff_ci": [
+      0.0028,
+      0.0048
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9699,
+     "ci": [
+      0.967,
+      0.9728
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9703,
+       "ci": [
+        0.9671,
+        0.9732
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9551,
+       "ci": [
+        0.9353,
+        0.9742
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9704,
+       "ci": [
+        0.9675,
+        0.9734
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.986,
+     "ci": [
+      0.985,
+      0.987
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9863,
+       "ci": [
+        0.9853,
+        0.9873
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.979,
+       "ci": [
+        0.9722,
+        0.9856
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9863,
+       "ci": [
+        0.9853,
+        0.9872
+       ]
+      }
+     }
+    }
+   },
+   "Dn32": {
+    "genre_primary": {
+     "mean": 0.167,
+     "ci": [
+      0.1609,
+      0.1737
+     ],
+     "diff": 0.0017,
+     "diff_ci": [
+      0.0011,
+      0.0024
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2902,
+     "ci": [
+      0.2823,
+      0.2981
+     ],
+     "diff": 0.0026,
+     "diff_ci": [
+      0.0018,
+      0.0034
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5014,
+     "ci": [
+      0.4913,
+      0.5116
+     ],
+     "diff": 0.0038,
+     "diff_ci": [
+      0.0028,
+      0.0048
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9699,
+     "ci": [
+      0.967,
+      0.9728
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9703,
+       "ci": [
+        0.9672,
+        0.9733
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9551,
+       "ci": [
+        0.9353,
+        0.9742
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9705,
+       "ci": [
+        0.9675,
+        0.9735
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.986,
+     "ci": [
+      0.985,
+      0.987
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9863,
+       "ci": [
+        0.9853,
+        0.9873
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.979,
+       "ci": [
+        0.9722,
+        0.9856
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9863,
+       "ci": [
+        0.9853,
+        0.9872
+       ]
+      }
+     }
+    }
+   },
+   "E": {
+    "genre_primary": {
+     "mean": 0.167,
+     "ci": [
+      0.1608,
+      0.1737
+     ],
+     "diff": 0.0017,
+     "diff_ci": [
+      0.001,
+      0.0024
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2902,
+     "ci": [
+      0.2823,
+      0.2982
+     ],
+     "diff": 0.0026,
+     "diff_ci": [
+      0.0018,
+      0.0035
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5009,
+     "ci": [
+      0.4906,
+      0.5113
+     ],
+     "diff": 0.0034,
+     "diff_ci": [
+      0.0024,
+      0.0044
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9702,
+     "ci": [
+      0.9671,
+      0.9733
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9706,
+       "ci": [
+        0.9675,
+        0.9737
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9565,
+       "ci": [
+        0.9368,
+        0.9745
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9708,
+       "ci": [
+        0.9679,
+        0.9737
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.987,
+     "ci": [
+      0.986,
+      0.9878
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9872,
+       "ci": [
+        0.9862,
+        0.9881
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9829,
+       "ci": [
+        0.9777,
+        0.9881
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9871,
+       "ci": [
+        0.9862,
+        0.988
+       ]
+      }
+     }
+    }
+   },
+   "E13": {
+    "genre_primary": {
+     "mean": 0.1666,
+     "ci": [
+      0.1603,
+      0.1732
+     ],
+     "diff": 0.0012,
+     "diff_ci": [
+      0.0006,
+      0.0019
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2895,
+     "ci": [
+      0.2816,
+      0.2976
+     ],
+     "diff": 0.0019,
+     "diff_ci": [
+      0.0011,
+      0.0027
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5006,
+     "ci": [
+      0.4905,
+      0.5109
+     ],
+     "diff": 0.0031,
+     "diff_ci": [
+      0.002,
+      0.0042
+     ]
+    },
+    "overlap10": {
+     "mean": 0.97,
+     "ci": [
+      0.9669,
+      0.9731
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9705,
+       "ci": [
+        0.9674,
+        0.9737
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9537,
+       "ci": [
+        0.9331,
+        0.9722
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9707,
+       "ci": [
+        0.9675,
+        0.9737
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9865,
+     "ci": [
+      0.9856,
+      0.9874
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9868,
+       "ci": [
+        0.9858,
+        0.9877
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9818,
+       "ci": [
+        0.9761,
+        0.9873
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9867,
+       "ci": [
+        0.9858,
+        0.9876
+       ]
+      }
+     }
+    }
+   },
+   "F": {
+    "genre_primary": {
+     "mean": 0.167,
+     "ci": [
+      0.1606,
+      0.1737
+     ],
+     "diff": 0.0016,
+     "diff_ci": [
+      0.001,
+      0.0023
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2902,
+     "ci": [
+      0.2822,
+      0.2982
+     ],
+     "diff": 0.0026,
+     "diff_ci": [
+      0.0017,
+      0.0034
+     ]
+    },
+    "genre_family": {
+     "mean": 0.501,
+     "ci": [
+      0.4907,
+      0.5114
+     ],
+     "diff": 0.0035,
+     "diff_ci": [
+      0.0025,
+      0.0045
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9715,
+     "ci": [
+      0.9686,
+      0.9744
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9719,
+       "ci": [
+        0.9689,
+        0.9751
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9571,
+       "ci": [
+        0.9376,
+        0.975
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.972,
+       "ci": [
+        0.9692,
+        0.9749
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.9883,
+     "ci": [
+      0.9875,
+      0.9891
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9885,
+       "ci": [
+        0.9877,
+        0.9893
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9842,
+       "ci": [
+        0.9793,
+        0.989
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9885,
+       "ci": [
+        0.9877,
+        0.9892
+       ]
+      }
+     }
+    }
+   },
+   "Femb": {
+    "genre_primary": {
+     "mean": 0.1669,
+     "ci": [
+      0.1606,
+      0.1736
+     ],
+     "diff": 0.0016,
+     "diff_ci": [
+      0.001,
+      0.0022
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2902,
+     "ci": [
+      0.2822,
+      0.2983
+     ],
+     "diff": 0.0026,
+     "diff_ci": [
+      0.0019,
+      0.0033
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5008,
+     "ci": [
+      0.4905,
+      0.5111
+     ],
+     "diff": 0.0033,
+     "diff_ci": [
+      0.0023,
+      0.0043
+     ]
+    },
+    "overlap10": {
+     "mean": 0.9731,
+     "ci": [
+      0.9702,
+      0.9759
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9735,
+       "ci": [
+        0.9705,
+        0.9764
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.9585,
+       "ci": [
+        0.9396,
+        0.9756
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9737,
+       "ci": [
+        0.9709,
+        0.9765
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 1.0,
+     "ci": [
+      1.0,
+      1.0
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "ambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      },
+      "unambiguous": {
+       "mean": 1.0,
+       "ci": [
+        1.0,
+        1.0
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.99,
+     "ci": [
+      0.9893,
+      0.9906
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.9902,
+       "ci": [
+        0.9895,
+        0.9909
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.986,
+       "ci": [
+        0.9816,
+        0.9903
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.9901,
+       "ci": [
+        0.9894,
+        0.9908
+       ]
+      }
+     }
+    }
+   }
+  },
+  "audio": {
+   "A": {
+    "genre_primary": {
+     "mean": 0.0919,
+     "ci": [
+      0.0872,
+      0.0966
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1767,
+     "ci": [
+      0.17,
+      0.1835
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4043,
+     "ci": [
+      0.3948,
+      0.414
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.3449,
+     "ci": [
+      0.3411,
+      0.3485
+     ]
+    }
+   },
+   "Zs": {
+    "genre_primary": {
+     "mean": 0.0107,
+     "ci": [
+      0.0096,
+      0.0117
+     ],
+     "diff": -0.0812,
+     "diff_ci": [
+      -0.086,
+      -0.0766
+     ]
+    },
+    "genre_any": {
+     "mean": 0.0278,
+     "ci": [
+      0.0261,
+      0.0296
+     ],
+     "diff": -0.1489,
+     "diff_ci": [
+      -0.1553,
+      -0.1426
+     ]
+    },
+    "genre_family": {
+     "mean": 0.1301,
+     "ci": [
+      0.1258,
+      0.1344
+     ],
+     "diff": -0.2742,
+     "diff_ci": [
+      -0.2843,
+      -0.2651
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.2187,
+     "ci": [
+      0.2164,
+      0.221
+     ],
+     "diff": -0.1262,
+     "diff_ci": [
+      -0.1297,
+      -0.1229
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0023,
+     "ci": [
+      0.0018,
+      0.0027
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0022,
+       "ci": [
+        0.0017,
+        0.0027
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0041,
+       "ci": [
+        0.0013,
+        0.0075
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0022,
+       "ci": [
+        0.0017,
+        0.0027
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": -0.0043,
+     "ci": [
+      -0.0047,
+      -0.0038
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": -0.0043,
+       "ci": [
+        -0.0048,
+        -0.0038
+       ]
+      },
+      "ambiguous": {
+       "mean": -0.0026,
+       "ci": [
+        -0.0051,
+        -0.0003
+       ]
+      },
+      "unambiguous": {
+       "mean": -0.0043,
+       "ci": [
+        -0.0048,
+        -0.0039
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.001,
+     "ci": [
+      -0.0021,
+      0.0042
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0007,
+       "ci": [
+        -0.0025,
+        0.004
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0029,
+       "ci": [
+        -0.0122,
+        0.0171
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0009,
+       "ci": [
+        -0.0023,
+        0.0043
+       ]
+      }
+     }
+    }
+   },
+   "B13": {
+    "genre_primary": {
+     "mean": 0.0811,
+     "ci": [
+      0.0769,
+      0.0855
+     ],
+     "diff": -0.0108,
+     "diff_ci": [
+      -0.0151,
+      -0.0059
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1716,
+     "ci": [
+      0.1653,
+      0.1781
+     ],
+     "diff": -0.0051,
+     "diff_ci": [
+      -0.0111,
+      0.0013
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4264,
+     "ci": [
+      0.4164,
+      0.437
+     ],
+     "diff": 0.022,
+     "diff_ci": [
+      0.012,
+      0.0316
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.3472,
+     "ci": [
+      0.3439,
+      0.3508
+     ],
+     "diff": 0.0023,
+     "diff_ci": [
+      -0.0009,
+      0.0056
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0214,
+     "ci": [
+      0.02,
+      0.023
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0214,
+       "ci": [
+        0.0198,
+        0.0229
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0265,
+       "ci": [
+        0.0189,
+        0.0358
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0212,
+       "ci": [
+        0.0198,
+        0.0228
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3801,
+     "ci": [
+      0.3744,
+      0.3859
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3841,
+       "ci": [
+        0.3783,
+        0.39
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3535,
+       "ci": [
+        0.3207,
+        0.3867
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3811,
+       "ci": [
+        0.3751,
+        0.387
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.0695,
+     "ci": [
+      0.0661,
+      0.0732
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0709,
+       "ci": [
+        0.0674,
+        0.0749
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0609,
+       "ci": [
+        0.042,
+        0.0794
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0698,
+       "ci": [
+        0.0663,
+        0.0736
+       ]
+      }
+     }
+    }
+   },
+   "B13v": {
+    "genre_primary": {
+     "mean": 0.0811,
+     "ci": [
+      0.0769,
+      0.0855
+     ],
+     "diff": -0.0108,
+     "diff_ci": [
+      -0.0151,
+      -0.0059
+     ]
+    },
+    "genre_any": {
+     "mean": 0.1716,
+     "ci": [
+      0.1653,
+      0.1781
+     ],
+     "diff": -0.0051,
+     "diff_ci": [
+      -0.0111,
+      0.0013
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4264,
+     "ci": [
+      0.4164,
+      0.437
+     ],
+     "diff": 0.022,
+     "diff_ci": [
+      0.012,
+      0.0316
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.3472,
+     "ci": [
+      0.3439,
+      0.3508
+     ],
+     "diff": 0.0023,
+     "diff_ci": [
+      -0.0009,
+      0.0056
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0214,
+     "ci": [
+      0.02,
+      0.023
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0214,
+       "ci": [
+        0.0198,
+        0.0229
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0265,
+       "ci": [
+        0.0189,
+        0.0358
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0212,
+       "ci": [
+        0.0198,
+        0.0228
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3801,
+     "ci": [
+      0.3744,
+      0.3859
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.3841,
+       "ci": [
+        0.3783,
+        0.39
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3535,
+       "ci": [
+        0.3207,
+        0.3867
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3811,
+       "ci": [
+        0.3751,
+        0.387
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.0695,
+     "ci": [
+      0.0661,
+      0.0732
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0709,
+       "ci": [
+        0.0674,
+        0.0749
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0609,
+       "ci": [
+        0.042,
+        0.0794
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0698,
+       "ci": [
+        0.0663,
+        0.0736
+       ]
+      }
+     }
+    }
+   },
+   "Ball": {
+    "genre_primary": {
+     "mean": 0.1432,
+     "ci": [
+      0.1381,
+      0.1493
+     ],
+     "diff": 0.0513,
+     "diff_ci": [
+      0.0461,
+      0.0572
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2688,
+     "ci": [
+      0.2612,
+      0.277
+     ],
+     "diff": 0.0921,
+     "diff_ci": [
+      0.0854,
+      0.0992
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5368,
+     "ci": [
+      0.5269,
+      0.548
+     ],
+     "diff": 0.1325,
+     "diff_ci": [
+      0.1229,
+      0.1421
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.3886,
+     "ci": [
+      0.3852,
+      0.3922
+     ],
+     "diff": 0.0437,
+     "diff_ci": [
+      0.0407,
+      0.0468
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0373,
+     "ci": [
+      0.0353,
+      0.0393
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0375,
+       "ci": [
+        0.0354,
+        0.0396
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.032,
+       "ci": [
+        0.0222,
+        0.0425
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0375,
+       "ci": [
+        0.0355,
+        0.0395
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.5086,
+     "ci": [
+      0.5025,
+      0.5146
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.513,
+       "ci": [
+        0.507,
+        0.5193
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4764,
+       "ci": [
+        0.4376,
+        0.5116
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5098,
+       "ci": [
+        0.5036,
+        0.5161
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1014,
+     "ci": [
+      0.0979,
+      0.1051
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1036,
+       "ci": [
+        0.0998,
+        0.1072
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0874,
+       "ci": [
+        0.0675,
+        0.1053
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.102,
+       "ci": [
+        0.0982,
+        0.1057
+       ]
+      }
+     }
+    }
+   },
+   "C": {
+    "genre_primary": {
+     "mean": 0.122,
+     "ci": [
+      0.1168,
+      0.1278
+     ],
+     "diff": 0.0301,
+     "diff_ci": [
+      0.0253,
+      0.0356
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2302,
+     "ci": [
+      0.223,
+      0.2379
+     ],
+     "diff": 0.0535,
+     "diff_ci": [
+      0.0471,
+      0.0602
+     ]
+    },
+    "genre_family": {
+     "mean": 0.491,
+     "ci": [
+      0.4804,
+      0.5016
+     ],
+     "diff": 0.0866,
+     "diff_ci": [
+      0.0775,
+      0.0951
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.3705,
+     "ci": [
+      0.3671,
+      0.3741
+     ],
+     "diff": 0.0256,
+     "diff_ci": [
+      0.0226,
+      0.0287
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0413,
+     "ci": [
+      0.0389,
+      0.0436
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0422,
+       "ci": [
+        0.0397,
+        0.0446
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0306,
+       "ci": [
+        0.0216,
+        0.0403
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0417,
+       "ci": [
+        0.0393,
+        0.0441
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6213,
+     "ci": [
+      0.616,
+      0.6266
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6277,
+       "ci": [
+        0.6223,
+        0.6328
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5708,
+       "ci": [
+        0.537,
+        0.6035
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6233,
+       "ci": [
+        0.618,
+        0.6288
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1109,
+     "ci": [
+      0.1073,
+      0.1144
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1129,
+       "ci": [
+        0.1091,
+        0.1166
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0925,
+       "ci": [
+        0.0729,
+        0.1129
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1116,
+       "ci": [
+        0.1078,
+        0.1152
+       ]
+      }
+     }
+    }
+   },
+   "Cvm": {
+    "genre_primary": {
+     "mean": 0.1176,
+     "ci": [
+      0.1122,
+      0.1227
+     ],
+     "diff": 0.0257,
+     "diff_ci": [
+      0.021,
+      0.0308
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2252,
+     "ci": [
+      0.2182,
+      0.2327
+     ],
+     "diff": 0.0485,
+     "diff_ci": [
+      0.0418,
+      0.0549
+     ]
+    },
+    "genre_family": {
+     "mean": 0.4857,
+     "ci": [
+      0.4758,
+      0.4963
+     ],
+     "diff": 0.0814,
+     "diff_ci": [
+      0.0727,
+      0.0902
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.3695,
+     "ci": [
+      0.3659,
+      0.3729
+     ],
+     "diff": 0.0246,
+     "diff_ci": [
+      0.0216,
+      0.0278
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0382,
+     "ci": [
+      0.036,
+      0.0403
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0389,
+       "ci": [
+        0.0366,
+        0.0412
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0313,
+       "ci": [
+        0.0222,
+        0.0415
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0384,
+       "ci": [
+        0.0362,
+        0.0407
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.605,
+     "ci": [
+      0.5996,
+      0.6101
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6113,
+       "ci": [
+        0.6059,
+        0.6163
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5505,
+       "ci": [
+        0.5179,
+        0.5811
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6071,
+       "ci": [
+        0.6018,
+        0.6125
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.102,
+     "ci": [
+      0.0982,
+      0.1056
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1041,
+       "ci": [
+        0.1004,
+        0.1077
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.083,
+       "ci": [
+        0.0633,
+        0.1016
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1027,
+       "ci": [
+        0.0988,
+        0.1063
+       ]
+      }
+     }
+    }
+   },
+   "Cemb": {
+    "genre_primary": {
+     "mean": 0.1416,
+     "ci": [
+      0.1353,
+      0.1478
+     ],
+     "diff": 0.0498,
+     "diff_ci": [
+      0.0446,
+      0.055
+     ]
+    },
+    "genre_any": {
+     "mean": 0.256,
+     "ci": [
+      0.2485,
+      0.2638
+     ],
+     "diff": 0.0793,
+     "diff_ci": [
+      0.0721,
+      0.0854
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5216,
+     "ci": [
+      0.5115,
+      0.5328
+     ],
+     "diff": 0.1173,
+     "diff_ci": [
+      0.1085,
+      0.1261
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.375,
+     "ci": [
+      0.3715,
+      0.3785
+     ],
+     "diff": 0.0301,
+     "diff_ci": [
+      0.0271,
+      0.033
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0511,
+     "ci": [
+      0.0484,
+      0.0538
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0521,
+       "ci": [
+        0.0494,
+        0.0549
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0435,
+       "ci": [
+        0.0316,
+        0.0567
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0513,
+       "ci": [
+        0.0487,
+        0.054
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.682,
+     "ci": [
+      0.6771,
+      0.6866
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6897,
+       "ci": [
+        0.6851,
+        0.694
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.615,
+       "ci": [
+        0.5792,
+        0.6467
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6846,
+       "ci": [
+        0.6798,
+        0.6892
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1324,
+     "ci": [
+      0.1285,
+      0.1364
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1348,
+       "ci": [
+        0.1309,
+        0.139
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1065,
+       "ci": [
+        0.0861,
+        0.1261
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1334,
+       "ci": [
+        0.1294,
+        0.1374
+       ]
+      }
+     }
+    }
+   },
+   "Cembvm": {
+    "genre_primary": {
+     "mean": 0.1379,
+     "ci": [
+      0.1322,
+      0.1443
+     ],
+     "diff": 0.046,
+     "diff_ci": [
+      0.0409,
+      0.0513
+     ]
+    },
+    "genre_any": {
+     "mean": 0.2527,
+     "ci": [
+      0.2453,
+      0.2615
+     ],
+     "diff": 0.076,
+     "diff_ci": [
+      0.069,
+      0.0823
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5181,
+     "ci": [
+      0.5083,
+      0.5289
+     ],
+     "diff": 0.1138,
+     "diff_ci": [
+      0.1047,
+      0.1227
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.3732,
+     "ci": [
+      0.3693,
+      0.3768
+     ],
+     "diff": 0.0283,
+     "diff_ci": [
+      0.0252,
+      0.0314
+     ]
+    },
+    "overlap10": {
+     "mean": 0.047,
+     "ci": [
+      0.0446,
+      0.0496
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0478,
+       "ci": [
+        0.0453,
+        0.0505
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0408,
+       "ci": [
+        0.0297,
+        0.0529
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0473,
+       "ci": [
+        0.0448,
+        0.05
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6565,
+     "ci": [
+      0.6517,
+      0.661
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6636,
+       "ci": [
+        0.6592,
+        0.668
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5928,
+       "ci": [
+        0.5595,
+        0.6237
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.659,
+       "ci": [
+        0.6543,
+        0.6636
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1174,
+     "ci": [
+      0.1135,
+      0.1212
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1192,
+       "ci": [
+        0.1153,
+        0.1232
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0961,
+       "ci": [
+        0.0763,
+        0.1161
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1182,
+       "ci": [
+        0.1144,
+        0.1221
+       ]
+      }
+     }
+    }
+   },
+   "D16": {
+    "genre_primary": {
+     "mean": 0.2221,
+     "ci": [
+      0.2148,
+      0.2298
+     ],
+     "diff": 0.1303,
+     "diff_ci": [
+      0.1238,
+      0.1369
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3942,
+     "ci": [
+      0.3849,
+      0.4026
+     ],
+     "diff": 0.2175,
+     "diff_ci": [
+      0.2091,
+      0.2257
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6418,
+     "ci": [
+      0.6322,
+      0.6522
+     ],
+     "diff": 0.2374,
+     "diff_ci": [
+      0.2281,
+      0.2468
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4198,
+     "ci": [
+      0.4162,
+      0.4237
+     ],
+     "diff": 0.0749,
+     "diff_ci": [
+      0.0717,
+      0.0784
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0437,
+     "ci": [
+      0.0413,
+      0.0463
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0447,
+       "ci": [
+        0.0421,
+        0.0473
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0286,
+       "ci": [
+        0.0191,
+        0.0389
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0443,
+       "ci": [
+        0.0418,
+        0.0469
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4137,
+     "ci": [
+      0.4084,
+      0.4191
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4171,
+       "ci": [
+        0.412,
+        0.4223
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3751,
+       "ci": [
+        0.3419,
+        0.4082
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4152,
+       "ci": [
+        0.41,
+        0.4204
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1116,
+     "ci": [
+      0.1078,
+      0.1156
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1127,
+       "ci": [
+        0.1088,
+        0.1167
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1095,
+       "ci": [
+        0.0915,
+        0.1269
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1116,
+       "ci": [
+        0.1077,
+        0.1156
+       ]
+      }
+     }
+    }
+   },
+   "D24": {
+    "genre_primary": {
+     "mean": 0.229,
+     "ci": [
+      0.2215,
+      0.2368
+     ],
+     "diff": 0.1371,
+     "diff_ci": [
+      0.1304,
+      0.1438
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4032,
+     "ci": [
+      0.3943,
+      0.4117
+     ],
+     "diff": 0.2265,
+     "diff_ci": [
+      0.2181,
+      0.2342
+     ]
+    },
+    "genre_family": {
+     "mean": 0.647,
+     "ci": [
+      0.6372,
+      0.6576
+     ],
+     "diff": 0.2427,
+     "diff_ci": [
+      0.2331,
+      0.2519
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4222,
+     "ci": [
+      0.4186,
+      0.4262
+     ],
+     "diff": 0.0773,
+     "diff_ci": [
+      0.0739,
+      0.0808
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0446,
+     "ci": [
+      0.0421,
+      0.0472
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0454,
+       "ci": [
+        0.0428,
+        0.0481
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0306,
+       "ci": [
+        0.0211,
+        0.0413
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0451,
+       "ci": [
+        0.0426,
+        0.0478
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.418,
+     "ci": [
+      0.4129,
+      0.4232
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4213,
+       "ci": [
+        0.4162,
+        0.4265
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3826,
+       "ci": [
+        0.3485,
+        0.4163
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4194,
+       "ci": [
+        0.4143,
+        0.4246
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1124,
+     "ci": [
+      0.1086,
+      0.1165
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1135,
+       "ci": [
+        0.1096,
+        0.1174
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1127,
+       "ci": [
+        0.0951,
+        0.1302
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1124,
+       "ci": [
+        0.1086,
+        0.1163
+       ]
+      }
+     }
+    }
+   },
+   "D32": {
+    "genre_primary": {
+     "mean": 0.2338,
+     "ci": [
+      0.2262,
+      0.2417
+     ],
+     "diff": 0.1419,
+     "diff_ci": [
+      0.1351,
+      0.1486
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4096,
+     "ci": [
+      0.4007,
+      0.4184
+     ],
+     "diff": 0.2329,
+     "diff_ci": [
+      0.2243,
+      0.2409
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6506,
+     "ci": [
+      0.6411,
+      0.6611
+     ],
+     "diff": 0.2463,
+     "diff_ci": [
+      0.2368,
+      0.256
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4246,
+     "ci": [
+      0.421,
+      0.4286
+     ],
+     "diff": 0.0797,
+     "diff_ci": [
+      0.0763,
+      0.0832
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0453,
+     "ci": [
+      0.0428,
+      0.0479
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0459,
+       "ci": [
+        0.0435,
+        0.0486
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0333,
+       "ci": [
+        0.0229,
+        0.0446
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0457,
+       "ci": [
+        0.0433,
+        0.0484
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4225,
+     "ci": [
+      0.4174,
+      0.4276
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4257,
+       "ci": [
+        0.4206,
+        0.4309
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3884,
+       "ci": [
+        0.3548,
+        0.4215
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4239,
+       "ci": [
+        0.4187,
+        0.429
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1124,
+     "ci": [
+      0.1086,
+      0.1164
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1135,
+       "ci": [
+        0.1097,
+        0.1174
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1124,
+       "ci": [
+        0.0949,
+        0.1294
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1124,
+       "ci": [
+        0.1086,
+        0.1163
+       ]
+      }
+     }
+    }
+   },
+   "D48": {
+    "genre_primary": {
+     "mean": 0.2383,
+     "ci": [
+      0.2307,
+      0.2463
+     ],
+     "diff": 0.1464,
+     "diff_ci": [
+      0.1397,
+      0.1529
+     ]
+    },
+    "genre_any": {
+     "mean": 0.416,
+     "ci": [
+      0.4068,
+      0.4249
+     ],
+     "diff": 0.2393,
+     "diff_ci": [
+      0.2306,
+      0.2473
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6528,
+     "ci": [
+      0.6435,
+      0.663
+     ],
+     "diff": 0.2485,
+     "diff_ci": [
+      0.239,
+      0.2584
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4269,
+     "ci": [
+      0.4231,
+      0.4307
+     ],
+     "diff": 0.082,
+     "diff_ci": [
+      0.0785,
+      0.0854
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0473,
+     "ci": [
+      0.0447,
+      0.0498
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0478,
+       "ci": [
+        0.045,
+        0.0506
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0367,
+       "ci": [
+        0.0268,
+        0.0489
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0477,
+       "ci": [
+        0.045,
+        0.0502
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4278,
+     "ci": [
+      0.4227,
+      0.4329
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.431,
+       "ci": [
+        0.4258,
+        0.4362
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3955,
+       "ci": [
+        0.3611,
+        0.4291
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4291,
+       "ci": [
+        0.424,
+        0.4342
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1128,
+     "ci": [
+      0.1091,
+      0.1168
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.114,
+       "ci": [
+        0.1103,
+        0.118
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.113,
+       "ci": [
+        0.0951,
+        0.1303
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1128,
+       "ci": [
+        0.1091,
+        0.1168
+       ]
+      }
+     }
+    }
+   },
+   "D64": {
+    "genre_primary": {
+     "mean": 0.2391,
+     "ci": [
+      0.2318,
+      0.247
+     ],
+     "diff": 0.1473,
+     "diff_ci": [
+      0.1407,
+      0.1539
+     ]
+    },
+    "genre_any": {
+     "mean": 0.4157,
+     "ci": [
+      0.4066,
+      0.4246
+     ],
+     "diff": 0.239,
+     "diff_ci": [
+      0.2305,
+      0.2472
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6521,
+     "ci": [
+      0.6425,
+      0.6624
+     ],
+     "diff": 0.2477,
+     "diff_ci": [
+      0.2384,
+      0.2573
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4274,
+     "ci": [
+      0.4237,
+      0.4312
+     ],
+     "diff": 0.0825,
+     "diff_ci": [
+      0.079,
+      0.0859
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0483,
+     "ci": [
+      0.0459,
+      0.0509
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0489,
+       "ci": [
+        0.0463,
+        0.0516
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0354,
+       "ci": [
+        0.0248,
+        0.0478
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0488,
+       "ci": [
+        0.0463,
+        0.0514
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4317,
+     "ci": [
+      0.4266,
+      0.4367
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4348,
+       "ci": [
+        0.4298,
+        0.44
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3998,
+       "ci": [
+        0.365,
+        0.4337
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4329,
+       "ci": [
+        0.4278,
+        0.438
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1127,
+     "ci": [
+      0.109,
+      0.1168
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.114,
+       "ci": [
+        0.1102,
+        0.1179
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1126,
+       "ci": [
+        0.0941,
+        0.13
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1127,
+       "ci": [
+        0.1091,
+        0.1167
+       ]
+      }
+     }
+    }
+   },
+   "Dn16": {
+    "genre_primary": {
+     "mean": 0.1699,
+     "ci": [
+      0.1633,
+      0.1764
+     ],
+     "diff": 0.078,
+     "diff_ci": [
+      0.0725,
+      0.0839
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3151,
+     "ci": [
+      0.3071,
+      0.3232
+     ],
+     "diff": 0.1384,
+     "diff_ci": [
+      0.131,
+      0.146
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5885,
+     "ci": [
+      0.5786,
+      0.5997
+     ],
+     "diff": 0.1842,
+     "diff_ci": [
+      0.1743,
+      0.1937
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4047,
+     "ci": [
+      0.4011,
+      0.4084
+     ],
+     "diff": 0.0598,
+     "diff_ci": [
+      0.0564,
+      0.0633
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0424,
+     "ci": [
+      0.0401,
+      0.0447
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0428,
+       "ci": [
+        0.0403,
+        0.0452
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0347,
+       "ci": [
+        0.0242,
+        0.0458
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0427,
+       "ci": [
+        0.0403,
+        0.0451
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3957,
+     "ci": [
+      0.3899,
+      0.4015
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4,
+       "ci": [
+        0.3937,
+        0.4061
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3586,
+       "ci": [
+        0.3212,
+        0.3982
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3971,
+       "ci": [
+        0.3912,
+        0.4032
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1161,
+     "ci": [
+      0.1122,
+      0.1199
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1182,
+       "ci": [
+        0.1144,
+        0.1222
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1085,
+       "ci": [
+        0.0896,
+        0.1258
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1163,
+       "ci": [
+        0.1123,
+        0.1204
+       ]
+      }
+     }
+    }
+   },
+   "Dn24": {
+    "genre_primary": {
+     "mean": 0.1751,
+     "ci": [
+      0.1686,
+      0.1817
+     ],
+     "diff": 0.0832,
+     "diff_ci": [
+      0.0769,
+      0.0891
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3221,
+     "ci": [
+      0.3136,
+      0.3306
+     ],
+     "diff": 0.1454,
+     "diff_ci": [
+      0.1377,
+      0.1532
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5921,
+     "ci": [
+      0.5817,
+      0.603
+     ],
+     "diff": 0.1877,
+     "diff_ci": [
+      0.1772,
+      0.1973
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4061,
+     "ci": [
+      0.4025,
+      0.4099
+     ],
+     "diff": 0.0612,
+     "diff_ci": [
+      0.0579,
+      0.0647
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0434,
+     "ci": [
+      0.0412,
+      0.0459
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0438,
+       "ci": [
+        0.0414,
+        0.0463
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0333,
+       "ci": [
+        0.0231,
+        0.0438
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0438,
+       "ci": [
+        0.0415,
+        0.0464
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.397,
+     "ci": [
+      0.3912,
+      0.4028
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4013,
+       "ci": [
+        0.3951,
+        0.4075
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.3598,
+       "ci": [
+        0.3226,
+        0.3994
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3985,
+       "ci": [
+        0.3926,
+        0.4045
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1166,
+     "ci": [
+      0.1127,
+      0.1205
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1188,
+       "ci": [
+        0.1149,
+        0.1228
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1091,
+       "ci": [
+        0.09,
+        0.1264
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1169,
+       "ci": [
+        0.1129,
+        0.1209
+       ]
+      }
+     }
+    }
+   },
+   "Dn32": {
+    "genre_primary": {
+     "mean": 0.1753,
+     "ci": [
+      0.1688,
+      0.1817
+     ],
+     "diff": 0.0834,
+     "diff_ci": [
+      0.0772,
+      0.0892
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3228,
+     "ci": [
+      0.3143,
+      0.3314
+     ],
+     "diff": 0.1461,
+     "diff_ci": [
+      0.1385,
+      0.1539
+     ]
+    },
+    "genre_family": {
+     "mean": 0.5923,
+     "ci": [
+      0.5822,
+      0.6029
+     ],
+     "diff": 0.188,
+     "diff_ci": [
+      0.1776,
+      0.1976
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4063,
+     "ci": [
+      0.4028,
+      0.4101
+     ],
+     "diff": 0.0615,
+     "diff_ci": [
+      0.0581,
+      0.065
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0436,
+     "ci": [
+      0.0413,
+      0.0461
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.044,
+       "ci": [
+        0.0416,
+        0.0465
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0327,
+       "ci": [
+        0.0224,
+        0.0431
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.044,
+       "ci": [
+        0.0417,
+        0.0466
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.3971,
+     "ci": [
+      0.3913,
+      0.4029
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4014,
+       "ci": [
+        0.3952,
+        0.4076
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.36,
+       "ci": [
+        0.3228,
+        0.3995
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.3985,
+       "ci": [
+        0.3927,
+        0.4046
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1167,
+     "ci": [
+      0.1127,
+      0.1205
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1189,
+       "ci": [
+        0.115,
+        0.1228
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.109,
+       "ci": [
+        0.0899,
+        0.1261
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.117,
+       "ci": [
+        0.113,
+        0.121
+       ]
+      }
+     }
+    }
+   },
+   "E": {
+    "genre_primary": {
+     "mean": 0.2135,
+     "ci": [
+      0.2062,
+      0.221
+     ],
+     "diff": 0.1217,
+     "diff_ci": [
+      0.1154,
+      0.1282
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3821,
+     "ci": [
+      0.3728,
+      0.3912
+     ],
+     "diff": 0.2054,
+     "diff_ci": [
+      0.1971,
+      0.2132
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6324,
+     "ci": [
+      0.6227,
+      0.6431
+     ],
+     "diff": 0.2281,
+     "diff_ci": [
+      0.2185,
+      0.2377
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4203,
+     "ci": [
+      0.4168,
+      0.4242
+     ],
+     "diff": 0.0754,
+     "diff_ci": [
+      0.0722,
+      0.0789
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0482,
+     "ci": [
+      0.0458,
+      0.0507
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0485,
+       "ci": [
+        0.046,
+        0.0511
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0374,
+       "ci": [
+        0.0265,
+        0.049
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0486,
+       "ci": [
+        0.0462,
+        0.0513
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.5146,
+     "ci": [
+      0.509,
+      0.5204
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.519,
+       "ci": [
+        0.5135,
+        0.5247
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.4777,
+       "ci": [
+        0.4417,
+        0.513
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5161,
+       "ci": [
+        0.5104,
+        0.5219
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1184,
+     "ci": [
+      0.1148,
+      0.1223
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.12,
+       "ci": [
+        0.1162,
+        0.1238
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1131,
+       "ci": [
+        0.0928,
+        0.1306
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1186,
+       "ci": [
+        0.1148,
+        0.1225
+       ]
+      }
+     }
+    }
+   },
+   "E13": {
+    "genre_primary": {
+     "mean": 0.1913,
+     "ci": [
+      0.1847,
+      0.1979
+     ],
+     "diff": 0.0994,
+     "diff_ci": [
+      0.0934,
+      0.1061
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3514,
+     "ci": [
+      0.3428,
+      0.3601
+     ],
+     "diff": 0.1747,
+     "diff_ci": [
+      0.1672,
+      0.1819
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6189,
+     "ci": [
+      0.6093,
+      0.6294
+     ],
+     "diff": 0.2146,
+     "diff_ci": [
+      0.2056,
+      0.2245
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4113,
+     "ci": [
+      0.4078,
+      0.4149
+     ],
+     "diff": 0.0664,
+     "diff_ci": [
+      0.0631,
+      0.0698
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0406,
+     "ci": [
+      0.0386,
+      0.0429
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0408,
+       "ci": [
+        0.0387,
+        0.0431
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0381,
+       "ci": [
+        0.0277,
+        0.0496
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0407,
+       "ci": [
+        0.0386,
+        0.043
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.4548,
+     "ci": [
+      0.4492,
+      0.4603
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.4593,
+       "ci": [
+        0.4534,
+        0.4647
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.413,
+       "ci": [
+        0.3799,
+        0.4474
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.4564,
+       "ci": [
+        0.4507,
+        0.4619
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1048,
+     "ci": [
+      0.1011,
+      0.1085
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.106,
+       "ci": [
+        0.1024,
+        0.1101
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1024,
+       "ci": [
+        0.0827,
+        0.1204
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1049,
+       "ci": [
+        0.1013,
+        0.1087
+       ]
+      }
+     }
+    }
+   },
+   "F": {
+    "genre_primary": {
+     "mean": 0.2124,
+     "ci": [
+      0.2049,
+      0.2199
+     ],
+     "diff": 0.1205,
+     "diff_ci": [
+      0.1137,
+      0.127
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3766,
+     "ci": [
+      0.3675,
+      0.3858
+     ],
+     "diff": 0.1999,
+     "diff_ci": [
+      0.1916,
+      0.2077
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6322,
+     "ci": [
+      0.6222,
+      0.6427
+     ],
+     "diff": 0.2279,
+     "diff_ci": [
+      0.2183,
+      0.2373
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4194,
+     "ci": [
+      0.4157,
+      0.4231
+     ],
+     "diff": 0.0745,
+     "diff_ci": [
+      0.0711,
+      0.078
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0496,
+     "ci": [
+      0.0469,
+      0.0524
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0506,
+       "ci": [
+        0.0477,
+        0.0533
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.034,
+       "ci": [
+        0.0245,
+        0.0441
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0502,
+       "ci": [
+        0.0474,
+        0.0531
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.588,
+     "ci": [
+      0.5828,
+      0.5932
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.5936,
+       "ci": [
+        0.5882,
+        0.5986
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5385,
+       "ci": [
+        0.5056,
+        0.5697
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.5899,
+       "ci": [
+        0.5849,
+        0.5951
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1235,
+     "ci": [
+      0.1198,
+      0.1274
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.1254,
+       "ci": [
+        0.1215,
+        0.1292
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.115,
+       "ci": [
+        0.0957,
+        0.1327
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1238,
+       "ci": [
+        0.1199,
+        0.1277
+       ]
+      }
+     }
+    }
+   },
+   "Femb": {
+    "genre_primary": {
+     "mean": 0.2169,
+     "ci": [
+      0.2095,
+      0.2242
+     ],
+     "diff": 0.125,
+     "diff_ci": [
+      0.1187,
+      0.1316
+     ]
+    },
+    "genre_any": {
+     "mean": 0.3859,
+     "ci": [
+      0.3768,
+      0.3951
+     ],
+     "diff": 0.2092,
+     "diff_ci": [
+      0.2006,
+      0.2172
+     ]
+    },
+    "genre_family": {
+     "mean": 0.6403,
+     "ci": [
+      0.6306,
+      0.6511
+     ],
+     "diff": 0.236,
+     "diff_ci": [
+      0.2265,
+      0.2459
+     ]
+    },
+    "desc_cos": {
+     "mean": 0.4198,
+     "ci": [
+      0.4164,
+      0.4236
+     ],
+     "diff": 0.0749,
+     "diff_ci": [
+      0.0717,
+      0.0784
+     ]
+    },
+    "overlap10": {
+     "mean": 0.0524,
+     "ci": [
+      0.0499,
+      0.055
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.0532,
+       "ci": [
+        0.0506,
+        0.0558
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.0401,
+       "ci": [
+        0.03,
+        0.052
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.0529,
+       "ci": [
+        0.0504,
+        0.0556
+       ]
+      }
+     }
+    },
+    "spearman_full": {
+     "mean": 0.6243,
+     "ci": [
+      0.6194,
+      0.629
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.6304,
+       "ci": [
+        0.6256,
+        0.6348
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.5704,
+       "ci": [
+        0.536,
+        0.6032
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.6264,
+       "ci": [
+        0.6216,
+        0.6312
+       ]
+      }
+     }
+    },
+    "spearman_top100": {
+     "mean": 0.1294,
+     "ci": [
+      0.1256,
+      0.1334
+     ],
+     "by_seeds": {
+      "clean": {
+       "mean": 0.131,
+       "ci": [
+        0.1271,
+        0.1352
+       ]
+      },
+      "ambiguous": {
+       "mean": 0.1194,
+       "ci": [
+        0.1003,
+        0.1386
+       ]
+      },
+      "unambiguous": {
+       "mean": 0.1298,
+       "ci": [
+        0.126,
+        0.1338
+       ]
+      }
+     }
+    }
+   }
+  }
+ },
+ "scale_sweep": {
+  "A": {
+   "0.5": {
+    "overlap10": 0.6137,
+    "genre_primary": 0.1863,
+    "genre_any": 0.3232,
+    "genre_family": 0.5424
+   },
+   "0.7": {
+    "overlap10": 0.7691,
+    "genre_primary": 0.1905,
+    "genre_any": 0.3304,
+    "genre_family": 0.5509
+   },
+   "1.0": {
+    "overlap10": 1.0,
+    "genre_primary": 0.1905,
+    "genre_any": 0.33,
+    "genre_family": 0.5523
+   },
+   "1.4": {
+    "overlap10": 0.7523,
+    "genre_primary": 0.1813,
+    "genre_any": 0.3164,
+    "genre_family": 0.5421
+   },
+   "2.0": {
+    "overlap10": 0.5246,
+    "genre_primary": 0.1628,
+    "genre_any": 0.2879,
+    "genre_family": 0.5182
+   }
+  },
+  "D24": {
+   "0.5": {
+    "overlap10": 0.3992,
+    "genre_primary": 0.2175,
+    "genre_any": 0.3775,
+    "genre_family": 0.6078
+   },
+   "0.7": {
+    "overlap10": 0.3853,
+    "genre_primary": 0.2425,
+    "genre_any": 0.4146,
+    "genre_family": 0.644
+   },
+   "1.0": {
+    "overlap10": 0.3415,
+    "genre_primary": 0.2645,
+    "genre_any": 0.4483,
+    "genre_family": 0.6669
+   },
+   "1.4": {
+    "overlap10": 0.2827,
+    "genre_primary": 0.2762,
+    "genre_any": 0.4648,
+    "genre_family": 0.6761
+   },
+   "2.0": {
+    "overlap10": 0.2153,
+    "genre_primary": 0.278,
+    "genre_any": 0.4675,
+    "genre_family": 0.6778
+   }
+  },
+  "D64": {
+   "0.5": {
+    "overlap10": 0.4032,
+    "genre_primary": 0.2194,
+    "genre_any": 0.3791,
+    "genre_family": 0.6076
+   },
+   "0.7": {
+    "overlap10": 0.3888,
+    "genre_primary": 0.2464,
+    "genre_any": 0.4203,
+    "genre_family": 0.6447
+   },
+   "1.0": {
+    "overlap10": 0.3397,
+    "genre_primary": 0.2704,
+    "genre_any": 0.4562,
+    "genre_family": 0.6687
+   },
+   "1.4": {
+    "overlap10": 0.2748,
+    "genre_primary": 0.2831,
+    "genre_any": 0.475,
+    "genre_family": 0.6781
+   },
+   "2.0": {
+    "overlap10": 0.2061,
+    "genre_primary": 0.2825,
+    "genre_any": 0.4744,
+    "genre_family": 0.6801
+   }
+  },
+  "E": {
+   "0.5": {
+    "overlap10": 0.4054,
+    "genre_primary": 0.2118,
+    "genre_any": 0.3653,
+    "genre_family": 0.593
+   },
+   "0.7": {
+    "overlap10": 0.3976,
+    "genre_primary": 0.2322,
+    "genre_any": 0.3983,
+    "genre_family": 0.6255
+   },
+   "1.0": {
+    "overlap10": 0.3561,
+    "genre_primary": 0.2526,
+    "genre_any": 0.4296,
+    "genre_family": 0.6519
+   },
+   "1.4": {
+    "overlap10": 0.2919,
+    "genre_primary": 0.2628,
+    "genre_any": 0.4451,
+    "genre_family": 0.6622
+   },
+   "2.0": {
+    "overlap10": 0.215,
+    "genre_primary": 0.2635,
+    "genre_any": 0.4475,
+    "genre_family": 0.6651
+   }
+  }
+ },
+ "in_rainbows": {
+  "expected": [
+   "Tindersticks",
+   "Avalon",
+   "So",
+   "You Will Never Know Why",
+   "Imperial Bedroom"
+  ],
+  "original_table_passes": true,
+  "seed_in_pool": true,
+  "expected_in_pool": 5,
+  "variants": {
+   "A": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Z0": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Zs": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "B13": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "B13v": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Ball": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "C": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Cvm": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Cemb": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Cembvm": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "D16": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "D24": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "D32": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "D48": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "D64": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Dn16": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Dn24": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Dn32": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "E": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "E13": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "F": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   },
+   "Femb": {
+    "titles": [
+     "Tindersticks",
+     "Avalon",
+     "So",
+     "You Will Never Know Why",
+     "Imperial Bedroom"
+    ],
+    "in_order": 5,
+    "as_set": 5,
+    "same_as_A": true
+   }
+  },
+  "pool_changes_A": false
+ },
+ "subset": "clean",
+ "tracks_per_album": 4,
+ "extraction": {
+  "albums": 4081,
+  "albums_matched": 3944,
+  "tracks_on_matched_albums": 48843,
+  "tracks_with_preview": 48771,
+  "tracks_by_status": {
+   "ok": 16618,
+   "no_preview": 72,
+   "too_short": 3,
+   "download_failed": 1
+  },
+  "albums_with_analysed_track": 3944
+ },
+ "runtime_s": 173.9
+}
