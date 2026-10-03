@@ -6,18 +6,20 @@ Album recommendations from RateYourMusic's top chart: Euclidean nearest neighbou
 
 Before proposing or re-running an experiment, read its report. Each experiment lives in `experiments/<name>/` and its `REPORT.md` is the record of what was tried and what was found.
 
-Merged experiments are on `main`. One report still lives on an open branch; read it without checking the branch out:
+All experiment reports are on `main`.
+
+| Experiment | Question | Report |
+|---|---|---|
+| Descriptor model | Can we predict an album's RYM descriptors for new albums without scraping? | `experiments/descriptor_model/REPORT.md` |
+| Preview features | Can preview-clip embeddings replace Spotify audio features? | `experiments/preview_features/REPORT.md` |
+| Genre crossing | Can the sonic slider stop cross genres? | `experiments/preview_features/REPORT-genre-crossing.md` |
+
+The genre-crossing report and its supporting notes (`crossgenre_findings.md`, `HANDOFF-genre-crossing.md`, `results/*.md`) were merged as documents only. The scripts they refer to (`crossgenre.py`, `simbench.py` and others) are on branch `experiment/genre-crossing` (open PR #26, stacked on #25), not on `main`:
 
 ```bash
-git fetch origin <branch>
-git show origin/<branch>:<report path>
+git fetch origin experiment/genre-crossing
+git show origin/experiment/genre-crossing:experiments/preview_features/crossgenre.py
 ```
-
-| Experiment | Question | Report | Where |
-|---|---|---|---|
-| Descriptor model | Can we predict an album's RYM descriptors for new albums without scraping? | `experiments/descriptor_model/REPORT.md` | `main` (merged in #23) |
-| Preview features | Can preview-clip embeddings replace Spotify audio features? | `experiments/preview_features/REPORT.md` | `main` (merged in #24) |
-| Genre crossing | Can the sonic slider stop cross genres? | `experiments/preview_features/REPORT-genre-crossing.md` | branch `experiment/genre-crossing`, open PR #26 (stacked on #25) |
 
 Open PR #25 (`feat/preview-audio`) is not an experiment: it changes the data pipeline to use the preview-clip audio block.
 
