@@ -1,8 +1,6 @@
 # RYM top-10,000 sheet: audit against the catalog
 
-Read on 3 October 2026 through the Google Sheets connector (read-only; the sheet was not changed).
-Spreadsheet "RYM Top Albums of 2026", tab "🔟 Top 10K Chart" (gid 1463770381). The rows are in
-`experiments/preview_features/scratch/rym10k.csv` (gitignored, not committed).
+Read on 3 October 2026 through the Google Sheets connector (read-only; the sheet was not changed). Spreadsheet "RYM Top Albums of 2026", tab "🔟 Top 10K Chart" (gid 1463770381). The rows are in `experiments/preview_features/scratch/rym10k.csv` (gitignored, not committed).
 
 Findings only. **M** = measured on the data, **E** = estimate, **J** = judged by reading names.
 
@@ -58,21 +56,13 @@ Columns of the main tab (fill = non-empty cells of 10,000):
 | artist_latin, title_latin | 548 / 487 | Romanised name where the original is not Latin script |
 | retrieved_at | 10,000 | 1 to 3 October 2026 |
 
-No MusicBrainz id, no track count, no runtime, no tracklist, no cover URL, no language or country
-column on the main tab.
+No MusicBrainz id, no track count, no runtime, no tracklist, no cover URL, no language or country column on the main tab.
 
-**Descriptors (M).** Names only, no votes or weights. The order is meaningful: on the 83 rows that
-the All-Time tab also has, `top_descriptors` equals the first eight of RYM's full ordered list after
-removing the vocalist tags in 77 of 83 cases. `male vocalist`, `female vocalist` and
-`androgynous vocals` never appear. Rows with fewer than eight names: 1,038 (13 have none).
-361 distinct names over 76,867 tokens.
+**Descriptors (M).** Names only, no votes or weights. The order is meaningful: on the 83 rows that the All-Time tab also has, `top_descriptors` equals the first eight of RYM's full ordered list after removing the vocalist tags in 77 of 83 cases. `male vocalist`, `female vocalist` and `androgynous vocals` never appear. Rows with fewer than eight names: 1,038 (13 have none). 361 distinct names over 76,867 tokens.
 
 ## 2. Overlap with the catalog
 
-How matched. The sheet carries its own match (`in_recmyrecord`, `recmyrecord_match`). I resolved
-each match label back to a feature-table row and checked it two independent ways: Spotify album id
-(sheet link against catalog `URI`) and folded artist + title (`genres.py` `norm`, artists through
-`clean_artist`).
+How matched. The sheet carries its own match (`in_recmyrecord`, `recmyrecord_match`). I resolved each match label back to a feature-table row and checked it two independent ways: Spotify album id (sheet link against catalog `URI`) and folded artist + title (`genres.py` `norm`, artists through `clean_artist`).
 
 | | Rows | |
 |---|---|---|
@@ -86,97 +76,43 @@ each match label back to a feature-table row and checked it two independent ways
 
 Reliability (J, from reading the lists):
 
-- The 3,522 confirmed matches are sound, except where several albums share a name (Tim Maia has
-  four self-titled albums on the chart, Caetano Veloso three, Elis Regina three): one is flagged,
-  the others are `missing`, and nothing in the sheet says the flag chose the right one.
-- **The 28 are not in the site catalog.** They were lost when the table was deduped on URI because
-  their URI was another album's: Led Zeppelin's debut (shares IV's URI), Led Zeppelin III, The
-  Velvet Underground (third album), Band of Gypsys, Twin Peaks: Fire Walk With Me, Saturation III,
-  Solo Monk, Escalator Over the Hill. The sheet calls them `yes`.
-- Of the 82 looser matches, at least 9 are the wrong album: a sequel or another edition matched
-  to the original (Hollow Knight: Silksong, Made in Abyss 3, Kingdom Hearts II, Musas Vol. 1,
-  Program Music I, Utopia², Watching From a Distance: Live at Roadburn, Silent Shout: An Audio
-  Visual Experience, Nelson Cavaquinho "Série documento").
-- Of the 39 `likely`, at least 11 are wrong: title-only matches across artists (Neil Young's Live
-  at the Fillmore East to Hendrix's; Sutcliffe Jugend's Relentless to Bill Hicks's; Galneryus to
-  Halford; Dexter Gordon to Sinatra; Derek & The Dominos to Dead Can Dance) or another recording of
-  a classical work (The Nutcracker under Rattle to Gergiev's; Die Kunst der Fuge by Nikolayeva to
-  the Keller Quartett's; Shostakovich quartets by the Emerson to the Alban Berg Quartett's).
-- 55 rows flagged `missing` collide with a catalog album by Spotify id (36) or by artist + title
-  (19). 13 of them point at a catalog album no row is matched to, so the album is in the catalog
-  and the flag missed it (Springsteen Live/1975-85, John Mayer Where the Light Is, Pärt Te Deum
-  and Da pacem, Tim Maia Racional vol. 1, Hades, Woodstock, Cabaret). The other 42 point at a
-  catalog album already matched to a different row: either the true match (Hollow Knight, Made in
-  Abyss, Silent Shout, Koyaanisqatsi 1983) or a different album sharing a name or a Spotify link.
+- The 3,522 confirmed matches are sound, except where several albums share a name (Tim Maia has four self-titled albums on the chart, Caetano Veloso three, Elis Regina three): one is flagged, the others are `missing`, and nothing in the sheet says the flag chose the right one.
+- **The 28 are not in the site catalog.** They were lost when the table was deduped on URI because their URI was another album's: Led Zeppelin's debut (shares IV's URI), Led Zeppelin III, The Velvet Underground (third album), Band of Gypsys, Twin Peaks: Fire Walk With Me, Saturation III, Solo Monk, Escalator Over the Hill. The sheet calls them `yes`.
+- Of the 82 looser matches, at least 9 are the wrong album: a sequel or another edition matched to the original (Hollow Knight: Silksong, Made in Abyss 3, Kingdom Hearts II, Musas Vol. 1, Program Music I, Utopia², Watching From a Distance: Live at Roadburn, Silent Shout: An Audio Visual Experience, Nelson Cavaquinho "Série documento").
+- Of the 39 `likely`, at least 11 are wrong: title-only matches across artists (Neil Young's Live at the Fillmore East to Hendrix's; Sutcliffe Jugend's Relentless to Bill Hicks's; Galneryus to Halford; Dexter Gordon to Sinatra; Derek & The Dominos to Dead Can Dance) or another recording of a classical work (The Nutcracker under Rattle to Gergiev's; Die Kunst der Fuge by Nikolayeva to the Keller Quartett's; Shostakovich quartets by the Emerson to the Alban Berg Quartett's).
+- 55 rows flagged `missing` collide with a catalog album by Spotify id (36) or by artist + title (19). 13 of them point at a catalog album no row is matched to, so the album is in the catalog and the flag missed it (Springsteen Live/1975-85, John Mayer Where the Light Is, Pärt Te Deum and Da pacem, Tim Maia Racional vol. 1, Hades, Woodstock, Cabaret). The other 42 point at a catalog album already matched to a different row: either the true match (Hollow Knight, Made in Abyss, Silent Shout, Koyaanisqatsi 1983) or a different album sharing a name or a Spotify link.
 
-Net: about 6,400 sheet albums are new (6,368 + 28 + about 20 wrong matches, less about 25 false
-`missing`), and about 465 to 485 catalog albums are not on the chart.
+Net: about 6,400 sheet albums are new (6,368 + 28 + about 20 wrong matches, less about 25 false `missing`), and about 465 to 485 catalog albums are not on the chart.
 
-**Catalog albums missing from the sheet (M).** Of the 477, 247 come from rows 5,001 to 5,560 of
-the original scrape, the supplementary charts whose ranks restart at 1 to 80; the sheet's chart is
-type `Album` only, so those kinds are absent by construction. Examples: Jar of Flies, Hi Scores,
-Street Halo, Fall Be Kind, The White EP, A Day in the Life, Almighty So, Back From the Dead 2,
-LCD Soundsystem 45:33. The other 230 were in the old top 5,000 and are not in today's top 10,000
-(Ryan Adams Heartbreaker, Minor Threat, Butthole Surfers, Wayne Shorter The Soothsayer, Magma Live,
-801 Live). Whether they are dropped is not something the sheet decides: a catalog rebuilt from the
-sheet alone loses them; one that appends the sheet's new rows keeps them and ends near 10,480.
+**Catalog albums missing from the sheet (M).** Of the 477, 247 come from rows 5,001 to 5,560 of the original scrape, the supplementary charts whose ranks restart at 1 to 80; the sheet's chart is type `Album` only, so those kinds are absent by construction. Examples: Jar of Flies, Hi Scores, Street Halo, Fall Be Kind, The White EP, A Day in the Life, Almighty So, Back From the Dead 2, LCD Soundsystem 45:33. The other 230 were in the old top 5,000 and are not in today's top 10,000 (Ryan Adams Heartbreaker, Minor Threat, Butthole Surfers, Wayne Shorter The Soothsayer, Magma Live, 801 Live). Whether they are dropped is not something the sheet decides: a catalog rebuilt from the sheet alone loses them; one that appends the sheet's new rows keeps them and ends near 10,480.
 
 ## 3. What the pipeline needs that the sheet lacks
 
 **Album key (M).**
-- 773 new rows have no Spotify link; 658 have none of Spotify, Apple or Deezer; 81 have no link of
-  any kind.
-- The sheet's Spotify id is not the catalog's key. Of 3,574 matched rows with a Spotify link, the
-  id equals the catalog `URI` for 2,391 and differs for 1,157 (another edition). A join on Spotify
-  id finds 2,434 of the catalog; the same album would get a second key.
-- 11 pairs of rows share one Spotify link (Ascension Edition I and II; Joe's Garage Act I and
-  Acts II & III; Trilogie de la mort and Kyema; Karajan's Beethoven 5 and Pastorale; both House of
-  Atreus acts). The build dedupes on the key, so one of each pair would vanish, as the 28 did.
+- 773 new rows have no Spotify link; 658 have none of Spotify, Apple or Deezer; 81 have no link of any kind.
+- The sheet's Spotify id is not the catalog's key. Of 3,574 matched rows with a Spotify link, the id equals the catalog `URI` for 2,391 and differs for 1,157 (another edition). A join on Spotify id finds 2,434 of the catalog; the same album would get a second key.
+- 11 pairs of rows share one Spotify link (Ascension Edition I and II; Joe's Garage Act I and Acts II & III; Trilogie de la mort and Kyema; Karajan's Beethoven 5 and Pastorale; both House of Atreus acts). The build dedupes on the key, so one of each pair would vanish, as the 28 did.
 
-**Descriptors (M).** The table has 176 descriptor columns, of which the recommender scales 120
-(56 lyric and theme columns are dropped).
-- The weights are not votes. In 4,024 of 4,081 rows the non-zero weights are exactly
-  1.5 − (rank − 1)/42 down the album's RYM descriptor list. So an ordered list is the input the
-  table was built from, but the rank counted every descriptor including the vocalist tags.
-- Catalog rows carry 13.4 descriptors on average (10.8 within the 120); 64% have more than eight
-  within the 120. Ranks nine and below hold 40% of all descriptor weight in the table. The sheet
-  stops at eight.
-- Vocabulary: 158 of the sheet's 361 names are table columns (97.9% of tokens); 107 are among the
-  120 (82.4% of tokens). A new row has 6.3 names inside the 120 on average; 477 have three or
-  fewer, 22 have none.
-- 13 of the 120 columns can never be filled from the sheet: `male vocals` (non-zero for 2,900
-  catalog albums, mean weight 1.40), `female vocals` (549), `androgynous vocals`, `chamber music`,
-  `opera`, `symphony`, `string quartet`, `oratorio`, `rock opera`, `waltz`, `mashup`, `jingle`,
-  `lyrics`. 79% of catalog albums have a vocals column set.
-- Renamed on RYM since the scrape: `LGBT` → `LGBTQ`, `hedonistic` → `hedonism`,
-  `anti-religious` → `antireligious`, `satanic` → `satanism`, `male vocals` → `male vocalist`.
-- 203 sheet names have no column (2.1% of tokens): jamming 82, harsh vocals 61, unaccompanied
-  solo 45, bright 41, theatrical 36, maximalist 32, smooth 29, microtonal 27, socialism 26.
-- Drift: for matched albums, 89.5% of the sheet's in-vocabulary names are non-zero in the catalog
-  row, the first descriptor is the same in 52%, and the order agrees in 8%. The lists have moved
-  since the scrape, so a sheet-built row would not reproduce an existing row.
+**Descriptors (M).** The table has 176 descriptor columns, of which the recommender scales 120 (56 lyric and theme columns are dropped).
+- The weights are not votes. In 4,024 of 4,081 rows the non-zero weights are exactly 1.5 − (rank − 1)/42 down the album's RYM descriptor list. So an ordered list is the input the table was built from, but the rank counted every descriptor including the vocalist tags.
+- Catalog rows carry 13.4 descriptors on average (10.8 within the 120); 64% have more than eight within the 120. Ranks nine and below hold 40% of all descriptor weight in the table. The sheet stops at eight.
+- Vocabulary: 158 of the sheet's 361 names are table columns (97.9% of tokens); 107 are among the 120 (82.4% of tokens). A new row has 6.3 names inside the 120 on average; 477 have three or fewer, 22 have none.
+- 13 of the 120 columns can never be filled from the sheet: `male vocals` (non-zero for 2,900 catalog albums, mean weight 1.40), `female vocals` (549), `androgynous vocals`, `chamber music`, `opera`, `symphony`, `string quartet`, `oratorio`, `rock opera`, `waltz`, `mashup`, `jingle`, `lyrics`. 79% of catalog albums have a vocals column set.
+- Renamed on RYM since the scrape: `LGBT` → `LGBTQ`, `hedonistic` → `hedonism`, `anti-religious` → `antireligious`, `satanic` → `satanism`, `male vocals` → `male vocalist`.
+- 203 sheet names have no column (2.1% of tokens): jamming 82, harsh vocals 61, unaccompanied solo 45, bright 41, theatrical 36, maximalist 32, smooth 29, microtonal 27, socialism 26.
+- Drift: for matched albums, 89.5% of the sheet's in-vocabulary names are non-zero in the catalog row, the first descriptor is the same in 52%, and the order agrees in 8%. The lists have moved since the scrape, so a sheet-built row would not reproduce an existing row.
 - The design doc's point stands: no code produces new rows of `all_data_norm.pkl`.
 
 **Other inputs the build or the audio stage uses (M, from the code and the design doc).**
-- The matcher recognises an edition by the Spotify album's mean track duration and by track-count
-  consistency (`catalog.py` `mean_s`, `means`, `count_fits`, read from `all_data.pkl`). The sheet
-  has no track count, runtime or durations, so every new album would run as `override=True`: text
-  only, no duration fingerprint. Only 19 catalog albums run that way today (1 ambiguous, 4 with no
-  match), too few to size the effect.
-- The matcher takes one cleaned artist string. The sheet joins composer, performer and conductor,
-  and also ordinary collaborators, with " & " (853 rows; 188 with three or more parts), the same
-  character as in band names (Nick Cave & The Bad Seeds).
-- Cover sprite and cluster id come from the personal-site map inputs; the sheet has no cover URL
-  (the 83-row All-Time tab does). The thumbnail sheet holds 4,096 albums.
+- The matcher recognises an edition by the Spotify album's mean track duration and by track-count consistency (`catalog.py` `mean_s`, `means`, `count_fits`, read from `all_data.pkl`). The sheet has no track count, runtime or durations, so every new album would run as `override=True`: text only, no duration fingerprint. Only 19 catalog albums run that way today (1 ambiguous, 4 with no match), too few to size the effect.
+- The matcher takes one cleaned artist string. The sheet joins composer, performer and conductor, and also ordinary collaborators, with " & " (853 rows; 188 with three or more parts), the same character as in band names (Nick Cave & The Bad Seeds).
+- Cover sprite and cluster id come from the personal-site map inputs; the sheet has no cover URL (the 83-row All-Time tab does). The thumbnail sheet holds 4,096 albums.
 - The 13 Spotify audio columns do not exist for new albums (the build accepts NaN there).
-- The sheet does hold direct store links for new rows: Deezer for 2,450, Apple Music for 5,553.
-  The Apple links are spread over many storefronts; the matcher searches us, gb and de.
+- The sheet does hold direct store links for new rows: Deezer for 2,450, Apple Music for 5,553. The Apple links are spread over many storefronts; the matcher searches us, gb and de.
 
 ## 4. How the new albums differ
 
-Genre family (first primary genre through `genres.py`; catalog side from the old scrape). 357 of
-the sheet's 911 genre names did not exist in the old scrape and fall through the family rules
-untested; 393 new rows lead with one.
+Genre family (first primary genre through `genres.py`; catalog side from the old scrape). 357 of the sheet's 911 genre names did not exist in the old scrape and fall through the family rules untested; 393 new rows lead with one.
 
 | Family | Catalog | % | New | % |
 |---|---|---|---|---|
@@ -198,8 +134,7 @@ untested; 393 new rows lead with one.
 | experimental | 26 | 0.6 | 104 | 1.6 |
 | spoken & comedy | 23 | 0.6 | 12 | 0.2 |
 
-The largest single genres among the new rows: Progressive Rock 153, Video Game Music 142,
-Singer-Songwriter 141, Black Metal 112, Post-Hardcore 100, Avant-Garde Jazz 85, MPB 81.
+The largest single genres among the new rows: Progressive Rock 153, Video Game Music 142, Singer-Songwriter 141, Black Metal 112, Post-Hardcore 100, Avant-Garde Jazz 85, MPB 81.
 
 | Decade | Catalog % | New % | New rows |
 |---|---|---|---|
@@ -213,21 +148,14 @@ Singer-Songwriter 141, Black Metal 112, Post-Hardcore 100, Avant-Garde Jazz 85, 
 | 2020s | 1.9 | 12.3 | 780 |
 
 - 619 new rows are from 2022 or later (53 from 2026); the catalog stops in 2022.
-- Depth: 4,104 of the new rows rank below 5,000. Median rating count 1,000 against 4,000 for the
-  rows already in the catalog; 1,298 new rows have under 500 ratings.
-- Release type: the sheet does not say. The old scrape tagged 331 catalog albums Live and 117
-  Archival. By title, 223 new rows read as live and 23 as bootleg or archive series.
-- Script: 683 new rows have a non-Latin artist or title (CJK 448, of which kana 315; Cyrillic 102;
-  Hangul 26; Greek 14; Arabic 11; Ethiopic 7; Hebrew 5) against 37 in the catalog. 22.8% of new
-  rows have a non-ASCII character against 6.8%. `artist_latin` or `title_latin` covers all but 11
-  of the 734 non-Latin rows.
-- Region, by genre name anywhere in the row (new / already in catalog): Japanese 205 / 7,
-  Brazilian 260 / 83, Hispanic 189 / 68, African, Middle Eastern and Asian 161 / 62.
+- Depth: 4,104 of the new rows rank below 5,000. Median rating count 1,000 against 4,000 for the rows already in the catalog; 1,298 new rows have under 500 ratings.
+- Release type: the sheet does not say. The old scrape tagged 331 catalog albums Live and 117 Archival. By title, 223 new rows read as live and 23 as bootleg or archive series.
+- Script: 683 new rows have a non-Latin artist or title (CJK 448, of which kana 315; Cyrillic 102; Hangul 26; Greek 14; Arabic 11; Ethiopic 7; Hebrew 5) against 37 in the catalog. 22.8% of new rows have a non-ASCII character against 6.8%. `artist_latin` or `title_latin` covers all but 11 of the 734 non-Latin rows.
+- Region, by genre name anywhere in the row (new / already in catalog): Japanese 205 / 7, Brazilian 260 / 83, Hispanic 189 / 68, African, Middle Eastern and Asian 161 / 62.
 
 ## 5. Likely matching trouble
 
-Current catalog, from `matches.csv` (M): 101 unmatched (no previews), 149 ambiguous, none both.
-Sources: Deezer 3,754, iTunes us 204, gb 20, de 2.
+Current catalog, from `matches.csv` (M): 101 unmatched (no previews), 149 ambiguous, none both. Sources: Deezer 3,754, iTunes us 204, gb 20, de 2.
 
 | Kind | Catalog albums | No preview | % | Ambiguous | % | New rows of this kind |
 |---|---|---|---|---|---|---|
@@ -245,12 +173,9 @@ Sources: Deezer 3,754, iTunes us 204, gb 20, de 2.
 | Experimental | 26 | 2 | 7.7 | 2 | 7.7 | 104 |
 | None of the kinds above the hip hop row | 2,477 | 41 | 1.7 | 55 | 2.2 | 3,371 |
 
-Kinds overlap. Ambiguity concentrates in classical, Various Artists, soundtracks and multi-artist
-credits; missing previews in non-Latin, archival, punk, hip hop and experimental. Every risky kind
-is a larger share of the new rows than of the catalog; the non-Latin kind grows eighteenfold.
+Kinds overlap. Ambiguity concentrates in classical, Various Artists, soundtracks and multi-artist credits; missing previews in non-Latin, archival, punk, hip hop and experimental. Every risky kind is a larger share of the new rows than of the catalog; the non-Latin kind grows eighteenfold.
 
-The strongest predictor of a missing preview is not a kind but whether RYM lists a store link
-(matched rows, M):
+The strongest predictor of a missing preview is not a kind but whether RYM lists a store link (matched rows, M):
 
 | Links on the RYM page | Catalog albums | No preview | % | Ambiguous % | New rows |
 |---|---|---|---|---|---|
@@ -268,30 +193,17 @@ The strongest predictor of a missing preview is not a kind but whether RYM lists
 | By rating count | 169 | 396 |
 | By store links (× classical or soundtrack for ambiguity) | 565 | 383 |
 
-- No preview: about 565, range 430 to 690. I take the link-based figure because the other methods
-  cannot see that 796 new albums have no Apple or Deezer link, against 59 in the catalog. The
-  range is the binomial uncertainty of the two small cells (27 of 40, 7 of 19). At 10,000 albums
-  that is roughly 600 to 750 albums with an imputed audio block, six to seven times today's 101.
-- Ambiguous: about 300 to 400 new, so 450 to 550 in all against 149. This is a floor: the new
-  albums have no Spotify durations, so the duration fingerprint that settles editions today is
-  unavailable, and that effect could not be measured (19 such albums in the catalog).
-- Not determinable from the sheet: whether an album with no RYM store link is truly absent from
-  Deezer and iTunes (RYM links are user-added), and how many albums are on Japanese or other
-  storefronts the matcher does not search.
+- No preview: about 565, range 430 to 690. I take the link-based figure because the other methods cannot see that 796 new albums have no Apple or Deezer link, against 59 in the catalog. The range is the binomial uncertainty of the two small cells (27 of 40, 7 of 19). At 10,000 albums that is roughly 600 to 750 albums with an imputed audio block, six to seven times today's 101.
+- Ambiguous: about 300 to 400 new, so 450 to 550 in all against 149. This is a floor: the new albums have no Spotify durations, so the duration fingerprint that settles editions today is unavailable, and that effect could not be measured (19 such albums in the catalog).
+- Not determinable from the sheet: whether an album with no RYM store link is truly absent from Deezer and iTunes (RYM links are user-added), and how many albums are on Japanese or other storefronts the matcher does not search.
 
 ## 6. Likely clip trouble (estimate)
 
-The clip policy takes up to eight 30-second previews per album, one per track. An album of one to
-three tracks gives one to three clips, each a sliver of a 20 to 60 minute piece.
+The clip policy takes up to eight 30-second previews per album, one per track. An album of one to three tracks gives one to three clips, each a sliver of a 20 to 60 minute piece.
 
-Calibration (M): in the catalog 27 matched albums have one track, 76 have two or fewer, 145 three
-or fewer, 275 four or fewer (of 3,980). By genre group, share with three tracks or fewer:
-afrobeat 69% (13 albums), minimalism, tape and electroacoustic 27%, free and spiritual jazz 25%,
-drone and dark ambient 18%, ambient and Berlin school 12%, western classical 5%, everything else
-1.4%.
+Calibration (M): in the catalog 27 matched albums have one track, 76 have two or fewer, 145 three or fewer, 275 four or fewer (of 3,980). By genre group, share with three tracks or fewer: afrobeat 69% (13 albums), minimalism, tape and electroacoustic 27%, free and spiritual jazz 25%, drone and dark ambient 18%, ambient and Berlin school 12%, western classical 5%, everything else 1.4%.
 
-Applied to the new rows (E): **about 115 albums with two tracks or fewer, about 220 with three or
-fewer, about 400 with four or fewer.** The sheet has no track counts, so this rests on genre alone.
+Applied to the new rows (E): **about 115 albums with two tracks or fewer, about 220 with three or fewer, about 400 with four or fewer.** The sheet has no track counts, so this rests on genre alone.
 
 | Group (primary genres) | New rows | Est. ≤ 3 tracks | Named examples |
 |---|---|---|---|
@@ -305,11 +217,7 @@ fewer, about 400 with four or fewer.** The sheet has no track counts, so this re
 | Noise | 26 | few | Merzbow, Incapacitants, Hijokaidan, C.C.C.C. |
 | Everything else | 4,844 | 67 | |
 
-Long live sets are the other shape: Grateful Dead (24 rows, mostly Dick's Picks), Phish LivePhish,
-King Gizzard Live at Red Rocks '22, The Complete Live at the Plugged Nickel, The Complete Matrix
-Tapes. They run past the matcher's 30-track "oversized" line (87 catalog albums do today) and
-eight clips cover little of them. DJ mixes are rare: 12 new rows are mashup or plunderphonics
-albums (Neil Cicierega, Eccojams); none is a club mix by title.
+Long live sets are the other shape: Grateful Dead (24 rows, mostly Dick's Picks), Phish LivePhish, King Gizzard Live at Red Rocks '22, The Complete Live at the Plugged Nickel, The Complete Matrix Tapes. They run past the matcher's 30-track "oversized" line (87 catalog albums do today) and eight clips cover little of them. DJ mixes are rare: 12 new rows are mashup or plunderphonics albums (Neil Cicierega, Eccojams); none is a club mix by title.
 
 ## 7. Data quality
 
@@ -329,34 +237,18 @@ albums (Neil Cicierega, Eccojams); none is a club mix by title.
 | Classical rows crediting the composer alone | 179 of 427 | M |
 | Broken encoding, stray whitespace | 0 | M |
 
-- The 29 same-name groups are different albums, not duplicate rows: self-titled series (Tim Maia
-  ×4, Caetano Veloso ×3, Elis ×3, Peter Gabriel, Killing Joke 1980 and 2003), re-recordings (Twin
-  Fantasy 2011 and 2018, Goldberg Variations 1956 and 1982) and separate recordings of one work
-  (Mozart Requiem ×4 credited "Mozart & Süssmayr" with no performer, Matthäus-Passion ×2,
-  Koyaanisqatsi 1983 and 1998). Artist + title cannot tell them apart; only year or `rym_id` can.
-- Same album twice under two editions: Boris Smile (2008, two rows), La La Land (2016, two rows),
-  吉村弘 Green (1986, two rows), Ascension Edition I and II, Dronevil and Dronevil -Example-,
-  Feedbacker and Bootleg -Feedbacker-.
-- Live twins of studio albums: Björk Post, Homogenic, Vespertine and Vulnicura each with a "Live"
-  row; If You're Feeling Sinister: Live at The Barbican; Colors_Live; Sung Tongs Live.
-- Not albums in the strict sense, by title (no EPs or singles; the chart excludes them):
-  bootleg and archive series 26 (Dick's Picks, LivePhish, Bob Dylan Bootleg Series), box or
-  "complete" sets 14 (The Complete Matrix Tapes, Webern Complete Works), compilation wording 10,
-  demos 4 (Life Demo Two to Five), one audio-visual release (Silent Shout: An Audio Visual
-  Experience). No DVD row.
-- Artist naming is inconsistent: 山下達郎 and Tatsuro Yamashita, 山岡晃 and Akira Yamaoka,
-  ボアダムス [Boredoms], Belle and Sebastian and Belle & Sebastian, Zappa and Frank Zappa, DOOM and
-  Doom. Soundtracks credit composers the catalog does not (Bach & 鷺巣詩郎 for The End of
-  Evangelion, Chopin & Disasterpeace for FEZ).
-- Title annotations in brackets that stores do not carry: The Beatles [White Album], Led Zeppelin
-  [IV], ★ [Blackstar], Weezer [Blue Album] (78 rows with a bracket or edition word).
+- The 29 same-name groups are different albums, not duplicate rows: self-titled series (Tim Maia ×4, Caetano Veloso ×3, Elis ×3, Peter Gabriel, Killing Joke 1980 and 2003), re-recordings (Twin Fantasy 2011 and 2018, Goldberg Variations 1956 and 1982) and separate recordings of one work (Mozart Requiem ×4 credited "Mozart & Süssmayr" with no performer, Matthäus-Passion ×2, Koyaanisqatsi 1983 and 1998). Artist + title cannot tell them apart; only year or `rym_id` can.
+- Same album twice under two editions: Boris Smile (2008, two rows), La La Land (2016, two rows), 吉村弘 Green (1986, two rows), Ascension Edition I and II, Dronevil and Dronevil -Example-, Feedbacker and Bootleg -Feedbacker-.
+- Live twins of studio albums: Björk Post, Homogenic, Vespertine and Vulnicura each with a "Live" row; If You're Feeling Sinister: Live at The Barbican; Colors_Live; Sung Tongs Live.
+- Not albums in the strict sense, by title (no EPs or singles; the chart excludes them): bootleg and archive series 26 (Dick's Picks, LivePhish, Bob Dylan Bootleg Series), box or "complete" sets 14 (The Complete Matrix Tapes, Webern Complete Works), compilation wording 10, demos 4 (Life Demo Two to Five), one audio-visual release (Silent Shout: An Audio Visual Experience). No DVD row.
+- Artist naming is inconsistent: 山下達郎 and Tatsuro Yamashita, 山岡晃 and Akira Yamaoka, ボアダムス [Boredoms], Belle and Sebastian and Belle & Sebastian, Zappa and Frank Zappa, DOOM and Doom. Soundtracks credit composers the catalog does not (Bach & 鷺巣詩郎 for The End of Evangelion, Chopin & Disasterpeace for FEZ).
+- Title annotations in brackets that stores do not carry: The Beatles [White Album], Led Zeppelin [IV], ★ [Blackstar], Weezer [Blue Album] (78 rows with a bracket or edition word).
 
 ## Could not determine
 
 - Track counts, runtimes and continuous-piece structure of the new albums (not in the main tab).
 - Whether albums without RYM store links are on Deezer or iTunes at all.
-- The release type of the 477 catalog albums the sheet lacks, beyond the scrape's Live and
-  Archival tags.
+- The release type of the 477 catalog albums the sheet lacks, beyond the scrape's Live and Archival tags.
 - Which of several same-named albums each `yes` flag really refers to.
 - How much ambiguity rises without the Spotify duration fingerprint.
 - Language or country of an album, other than through script and genre names.
