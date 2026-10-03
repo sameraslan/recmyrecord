@@ -63,6 +63,7 @@ family predicted from the candidate's own embedding for seed and candidates alik
                       noren        skip the second L2.
   feel / ball / ridge Essentia scalars: FEEL_S z-scored / all 33 min-max (variant B) / Ridge onto the 13
                       Spotify columns, each rescaled to the Spotify column's std (variant C).
+  spotify             the 13 Spotify columns themselves (variant A): a reference, not an audio candidate.
   random, shuffled/<k>  controls: gaussian noise; effnet/<k> with its rows permuted.
 Everything fitted with RYM genres, RYM descriptors or Spotify targets (inlp, bcs, leace, fampred,
 famoracle's means, ndesc, ridge) is fitted out of fold by artist (GroupKFold 5): each album's vector comes from a fit that saw
@@ -524,6 +525,8 @@ def build(name: str, pool: str, fit: str = "all", oof: bool = True) -> tuple[np.
             B = emb_block(pool, "effnet", fit, oof)[np.random.default_rng(0).permutation(len(src.rows)), :int(k)]
         elif base in ("feel", "ball", "ridge"):
             B = scalar_block(pool, base, fit, oof)
+        elif base == "spotify":
+            B = src.A
         else:
             B = emb_block(pool, base, fit, oof)[:, :int(k)]
         blocks.append(B * np.sqrt(share / total_var(B[tr])))
@@ -550,7 +553,7 @@ def candidates(pool: str) -> dict[str, list[str]]:
         "models": ["effnet/64", "effnet/24", "musicnn/64", "musicnn/24"],
         "removal": removal,
         "head": head,
-        "blends": ["feel", "ridge", "ball", *blends("effnet/64")],
+        "blends": ["spotify", "feel", "ridge", "ball", *blends("effnet/64")],
         "combos": ["effnet-head64/64+feel@0.25", "effnet-head64/64+feel@0.5", "effnet-head400/64+feel@0.25",
                    "effnet-head400/64+feel@0.5", "effnet-inlp2/64+feel@0.25", "effnet-inlp2/64+feel@0.5",
                    "effnet-leace/64+feel@0.25", "effnet-head64-inlp2/64", "effnet-head64-leace/64",
@@ -852,6 +855,8 @@ def report() -> None:
                 "`headonly400` keeps only those 400 directions.", "",
                 *wide(["effnet/64"] + sec["head"]),
                 "### Blends: share of the block's total variance on the feel part", "",
+                "`spotify` is the old site's block, the 13 Spotify columns themselves: a reference row, not an audio "
+                "candidate.", "",
                 *short(["effnet/64"] + sec["blends"]),
                 "### Combinations", "", *short(["effnet/64"] + sec["combos"]),
                 "Paired difference against effnet/64:", "", *diff_table(res, sec["combos"], "effnet/64", xb.b),

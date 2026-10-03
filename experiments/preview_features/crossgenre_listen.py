@@ -46,6 +46,8 @@ CANDIDATES = {
              ("effnet/64~x5", "EffNet, 5 of 10 forced outside the family (RYM genre)"),
              ("effnet/64~x5p", "EffNet, 5 of 10 forced outside the predicted family"),
              (SPOTIFY, "Spotify features (old site)"),
+             ("ridge", "Spotify-like scores predicted from audio"),
+             ("effnet/64+ridge@0.9", "EffNet + Spotify-like scores, scores-heavy"),
              ("ball", "Feel scores only"),
              ("effnet/64+ball@0.9", "EffNet + feel, feel-heavy"),
              ("effnet-leace/64+ball@0.5", "Genre-erased EffNet + feel"),
@@ -62,7 +64,8 @@ CANDIDATES = {
                 ("clap_music-inlp1/64", "CLAP, light genre removal"),
                 ("mert_l5/64", "MERT layer 5"),
                 ("musicnn/64", "MusiCNN"),
-                (SPOTIFY, "Spotify features (old site)")],
+                (SPOTIFY, "Spotify features (old site)"),
+                ("ridge", "Spotify-like scores predicted from audio")],
 }
 # Bake-off seeds beyond evaluate.SEEDS (Bitches Brew is not in this pool): every other Miles Davis
 # album, every album RYM tags Jazz Fusion, then prog / krautrock / jazz / metal to spread the families.

@@ -201,9 +201,12 @@ The layer is linear on the embedding (activations = sigmoid(W e + b), checked ag
 
 ### Blends: share of the block's total variance on the feel part
 
+`spotify` is the old site's block, the 13 Spotify columns themselves: a reference row, not an audio candidate.
+
 | candidate | xg lift | lift primary | out primary | out family | cross out cos (n) | cross out lift | desc_cos_xa | primary_xa | probe | hub skew | lift vs noise | desc_xa vs noise |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | effnet/64 | +0.120 ±0.007 | +0.157 | 0.835 | 0.440 ±0.027 | 0.365 (3.8) | +0.124 ±0.008 | 0.414 ±0.008 | 0.165 | 0.632 | 0.69 | +0.000 | +0.000 |
+| spotify | +0.081 ±0.005 | +0.107 | 0.920 | 0.610 ±0.021 | 0.317 (5.1) | +0.084 ±0.006 | 0.358 ±0.008 | 0.080 | 0.577 | 0.71 | +0.024 | +0.019 |
 | feel | +0.092 ±0.006 | +0.118 | 0.907 | 0.568 ±0.025 | 0.332 (4.8) | +0.095 ±0.006 | 0.372 ±0.008 | 0.093 | 0.608 | 0.72 | +0.023 | +0.018 |
 | ridge | +0.090 ±0.006 | +0.115 | 0.906 | 0.574 ±0.024 | 0.325 (4.8) | +0.088 ±0.006 | 0.369 ±0.008 | 0.094 | 0.584 | 0.60 | +0.022 | +0.017 |
 | ball | +0.099 ±0.007 | +0.124 | 0.906 | 0.560 ±0.025 | 0.334 (4.7) | +0.096 ±0.007 | 0.378 ±0.008 | 0.094 | 0.615 | 1.07 | +0.028 | +0.021 |
@@ -488,9 +491,12 @@ The layer is linear on the embedding (activations = sigmoid(W e + b), checked ag
 
 ### Blends: share of the block's total variance on the feel part
 
+`spotify` is the old site's block, the 13 Spotify columns themselves: a reference row, not an audio candidate.
+
 | candidate | xg lift | lift primary | out primary | out family | cross out cos (n) | cross out lift | desc_cos_xa | primary_xa | probe | hub skew | lift vs noise | desc_xa vs noise |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | effnet/64 | +0.148 ±0.004 | +0.187 | 0.798 | 0.366 ±0.015 | 0.379 (3.0) | +0.156 ±0.005 | 0.432 ±0.005 | 0.202 | 0.721 | 0.79 | +0.000 | +0.000 |
+| spotify | +0.093 ±0.004 | +0.115 | 0.920 | 0.606 ±0.012 | 0.309 (4.8) | +0.091 ±0.004 | 0.352 ±0.005 | 0.080 | 0.568 | 0.77 | +0.034 | +0.027 |
 | feel | +0.121 ±0.004 | +0.150 | 0.885 | 0.488 ±0.016 | 0.341 (3.9) | +0.120 ±0.004 | 0.389 ±0.005 | 0.115 | 0.662 | 0.83 | +0.024 | +0.019 |
 | ridge | +0.112 ±0.004 | +0.140 | 0.895 | 0.521 ±0.015 | 0.332 (4.2) | +0.111 ±0.004 | 0.379 ±0.005 | 0.105 | 0.637 | 0.57 | +0.027 | +0.022 |
 | ball | +0.128 ±0.004 | +0.159 | 0.873 | 0.473 ±0.015 | 0.351 (3.8) | +0.129 ±0.005 | 0.398 ±0.005 | 0.127 | 0.701 | 0.99 | +0.025 | +0.022 |
