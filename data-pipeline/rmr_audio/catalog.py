@@ -9,6 +9,7 @@ import pandas as pd
 
 from rmr_pipeline.artists import clean_artist
 from rmr_pipeline.constants import DEFAULT_OVERRIDES, DEFAULT_TABLE, PIPELINE_DIR
+from rmr_pipeline.keys import DEFAULT_KEYS, load_keys
 from rmr_pipeline.slugs import make_slugs
 from rmr_pipeline.table import dedupe_table, load_table, verify_table_hash
 
@@ -23,13 +24,14 @@ SPOTIFY_PAGE = 50  # the Spotify features averaged at most the first page of an 
 @dataclass(frozen=True)
 class Album:
     """One catalog album and what the tables know about its Spotify release."""
-    key: str  # the feature table's URI: the album's key in the store
+    key: str  # the album's key in the store: its RYM id, or its placeholder (rmr_pipeline.keys)
     title: str
     artist: str  # cleaned credit, manual artist corrections applied
     slug: str  # as the site uses it
     mean_s: float = 0.0  # mean track duration of the Spotify album
     means: tuple[float, float, float] = (0.0, 0.0, 0.0)  # Spotify means of key, mode, time signature over tracks
     override: bool = True  # no usable Spotify numbers: the URI is another album's, or there are none
+    legacy_uri: str = ""  # the feature table's URI: what caches written before the rekey know the album by
 
     def count_fits(self, n: int) -> bool:
         """Could the Spotify album have n tracks? Then n times each mean of integers is an integer."""
@@ -55,12 +57,15 @@ def _spotify_numbers(table: Path, rows: list[int], uris: list[str]) -> list[tupl
     return out
 
 
-def load_catalog(table: Path = DEFAULT_TABLE, overrides: Path = DEFAULT_OVERRIDES) -> list[Album]:
-    """Every album of the feature table, in catalog order. Slugs are assigned as the build does: from the
-    cleaned artists, then again with the artist corrections of overrides.json (keyed by the first slugs).
-    An override with `s` says the table's URI is another album, so its Spotify numbers are not used."""
+def load_catalog(table: Path = DEFAULT_TABLE, overrides: Path = DEFAULT_OVERRIDES,
+                 keys: Path = DEFAULT_KEYS) -> list[Album]:
+    """Every album of the feature table, in catalog order, under the key keys.csv gives its URI. Slugs are
+    assigned as the build does: from the cleaned artists, then again with the artist corrections of
+    overrides.json (keyed by the first slugs). An override with `s` says the table's URI is another album,
+    so its Spotify numbers are not used. Raises StoreError when keys.csv is missing or lacks an album."""
     sub, rows = dedupe_table(load_table(table))
     uris = [str(u) for u in sub["URI"]]
+    album_keys = load_keys(keys).keys_of(uris)
     titles = [str(t) for t in sub["Title"]]
     artists = [clean_artist(a) for a in sub["Artist"].astype(str)]
     first = {slug: i for i, slug in enumerate(make_slugs(titles, artists))}
@@ -74,6 +79,6 @@ def load_catalog(table: Path = DEFAULT_TABLE, overrides: Path = DEFAULT_OVERRIDE
     out = []
     for i, uri in enumerate(uris):
         spotify = None if "s" in fixes.get(i, {}) else numbers[i]
-        out.append(Album(uri, titles[i], artists[i], slugs[i], *(spotify or (0.0, (0.0, 0.0, 0.0))),
-                         override=spotify is None))
+        out.append(Album(album_keys[i], titles[i], artists[i], slugs[i], *(spotify or (0.0, (0.0, 0.0, 0.0))),
+                         override=spotify is None, legacy_uri=uri))
     return out

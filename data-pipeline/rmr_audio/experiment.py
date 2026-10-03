@@ -13,6 +13,7 @@ import numpy as np
 
 from rmr_pipeline.audio_store import read_shard
 from rmr_pipeline.constants import REPO
+from rmr_pipeline.keys import KeyMap
 from rmr_pipeline.table import dedupe_table, load_table
 
 from .clips import ClipCache
@@ -26,10 +27,13 @@ def _read_only(path: Path) -> sqlite3.Connection:
     return sqlite3.connect(f"file:{path}?mode=ro", uri=True)
 
 
-def import_experiment(cache: ClipCache, table: Path, experiment: Path = EXPERIMENT_CACHE) -> int:
-    """Copy every clip the experiment tried into the cache; returns how many. Clips already there are replaced."""
+def import_experiment(cache: ClipCache, table: Path, experiment: Path = EXPERIMENT_CACHE,
+                      keys: KeyMap | None = None) -> int:
+    """Copy every clip the experiment tried into the cache; returns how many. Clips already there are replaced.
+    The experiment knows an album by its Spotify URI; with `keys` the clips are filed under the album's key."""
     sub, rows = dedupe_table(load_table(table))
-    key_of = dict(zip(rows, sub["URI"].astype(str)))
+    uri_of = dict(zip(rows, sub["URI"].astype(str)))
+    key_of = {row: keys.current(uri) if keys else uri for row, uri in uri_of.items()}
     con = _read_only(experiment / "match.sqlite")
     album_of = {row: (uri, SOURCES[source], album_id) for row, uri, source, album_id in con.execute(
         "SELECT row, uri, source, source_album_id FROM albums WHERE status = 'matched'")}
@@ -42,10 +46,10 @@ def import_experiment(cache: ClipCache, table: Path, experiment: Path = EXPERIME
         if row not in key_of:
             continue
         uri, album_source, album_id = album_of[row]
-        assert uri == key_of[row] and album_source == SOURCES[source], (row, uri, source)
+        assert uri == uri_of[row] and album_source == SOURCES[source], (row, uri, source)
         if status == "download_failed" and (error or "").startswith("HTTP 200"):
             status = "no_preview"  # an empty preview, as embed.download now records it: not tried again
-        recs.append({"key": uri, "source": album_source, "album_id": album_id, "track_id": track_id,
+        recs.append({"key": key_of[row], "source": album_source, "album_id": album_id, "track_id": track_id,
                      "track_idx": track_idx, "prio": prio, "status": status, "error": error, "clip_s": clip_s,
                      "emb": emb if status == "ok" else None})
     con.close()

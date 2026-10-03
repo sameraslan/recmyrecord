@@ -10,6 +10,8 @@ fitted albums equals `target_total_variance`, the Spotify block's on the albums 
 the slider stops keep their meaning and nothing here reads the Spotify columns.
 An album with no embedding gets the mean block of its IMPUTE_K nearest albums by descriptor
 distance among the albums that have one, rescaled to those neighbours' mean norm.
+The store knows an album by its key (a RYM id); the feature table knows it by its Spotify URI, and
+audio/keys.csv says which key that is (rmr_pipeline.keys).
 """
 import argparse
 import os
@@ -25,6 +27,7 @@ import pandas as pd
 from .artists import clean_artist
 from .audio_store import DEFAULT_AUDIO, DIM, StoreError, load_store
 from .constants import DEFAULT_TABLE
+from .keys import load_keys
 from .table import dedupe_table, descriptor_cols, load_table
 
 BLOCK_DIMS = 64
@@ -164,15 +167,22 @@ def impute(block: np.ndarray, desc: np.ndarray, has_audio: np.ndarray, k: int = 
     return out
 
 
+def album_keys(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> list[str]:
+    """The store key of each album of `sub`: the key audio/keys.csv gives its URI. Raises StoreError
+    when keys.csv is missing or does not have one of the albums."""
+    return load_keys(audio_dir / "keys.csv").keys_of(sub["URI"])
+
+
 def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> AudioBlock:
-    """The audio block for the albums of `sub` (keyed by its URI column), imputed where the store
-    has no embedding. Raises StoreError when the store or the transform is missing or malformed."""
+    """The audio block for the albums of `sub` (found in the store by their keys, see album_keys),
+    imputed where the store has no embedding. Raises StoreError when the store, the keys or the
+    transform are missing or malformed."""
     store = load_store(audio_dir)
     t = load_transform(audio_dir / "transform.npz")
     if t.model != store.manifest["model"]:
         raise StoreError(f"transform.npz was fitted on {t.model!r} embeddings, the store holds "
                          f"{store.manifest['model']!r}")
-    rows = store.rows(sub["URI"])
+    rows = store.rows(album_keys(sub, audio_dir))
     has_audio = rows >= 0
     if not has_audio.any():
         raise StoreError(f"no album of the feature table has an embedding in {audio_dir}")
@@ -198,9 +208,10 @@ def refit(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> Transform:
     to the target total variance of the transform it replaces."""
     store = load_store(audio_dir)
     old = load_transform(audio_dir / "transform.npz")
-    rows = store.rows(sub["URI"])
+    keys = np.asarray(album_keys(sub, audio_dir), dtype=np.str_)
+    rows = store.rows(keys)
     return fit_transform(store.emb[rows[rows >= 0]], old.target_total_variance, store.manifest["model"],
-                         k=len(old.components), keys=sub["URI"].to_numpy()[rows >= 0])
+                         k=len(old.components), keys=keys[rows >= 0])
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -218,12 +229,13 @@ def main(argv: list[str] | None = None) -> int:
                   f"-> {args.audio_dir / 'transform.npz'}; rebuild the site data")
             return 0
         audio = audio_block(sub, args.audio_dir)
+        keys = album_keys(sub, args.audio_dir)
     except StoreError as e:
         print(f"FAIL\n{e}", file=sys.stderr)
         return 1
     print(audio.summary())
     for i in np.flatnonzero(~audio.has_audio):
-        print(f"imputed\t{sub.loc[i, 'URI']}\t{sub.loc[i, 'Title']}\t{clean_artist(str(sub.loc[i, 'Artist']))}")
+        print(f"imputed\t{keys[i]}\t{sub.loc[i, 'Title']}\t{clean_artist(str(sub.loc[i, 'Artist']))}")
     return 0
 
 

@@ -9,6 +9,9 @@ experiment's four-clip pass), manifest.json, matches.csv, an empty match_overrid
 transform.npz, fitted here with the production code. Then prints how far the result is from the
 experiment's own transform (results/solution_transform.npz applied to the unrounded clip means):
 the store keeps float16 album means, so the block and a few lists differ slightly.
+
+It keyed the store by the feature table's Spotify URI; scripts/rekey_audio_store.py moved the store to
+RYM ids on 3 October 2026 (rmr_pipeline.keys), so what this writes is no longer the store's format of keys.
 """
 import json
 import sqlite3

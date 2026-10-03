@@ -4,7 +4,8 @@ shards, a manifest, the match provenance and the hand corrections of matches.
 Written by the audio stage, read by the build. Only numpy and the standard library, and nothing
 newer than numpy 1.26, so the audio venv (Python 3.11, numpy<2) and the build venv share it.
 
-  embeddings/part-NNNN.npz   keys (str), emb (float16, n x 1280), n_clips (int16), source (str);
+  embeddings/part-NNNN.npz   keys (str: the album's RYM id, or its placeholder, see rmr_pipeline.keys),
+                             emb (float16, n x 1280), n_clips (int16), source (str);
                              a key in a later shard supersedes earlier ones; an entry with n_clips 0
                              (all-zero emb, empty source) removes the album
   manifest.json              model, clip policy (clips.per_album: what a plain sync gives an album),
@@ -43,7 +44,7 @@ class StoreError(Exception):
 
 @dataclass(frozen=True)
 class Shard:
-    keys: np.ndarray  # (n,) unicode album keys (the feature table's URI)
+    keys: np.ndarray  # (n,) unicode album keys (RYM ids, see rmr_pipeline.keys)
     emb: np.ndarray  # (n, DIM) float16 album means of the per-clip embeddings
     n_clips: np.ndarray  # (n,) int16 clips behind each mean
     source: np.ndarray  # (n,) unicode: deezer, itunes:<storefront>, local

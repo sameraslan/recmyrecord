@@ -7,6 +7,7 @@ from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, MATCH_FIELDS, StoreErr
                                       compact_store, drop_albums, init_store, leftovers, load_match_overrides,
                                       load_matches, load_store, read_shard, set_clips_per_album, write_matches,
                                       write_shard)
+from rmr_pipeline.keys import load_keys
 
 
 def _emb(n: int, seed: int = 0) -> np.ndarray:
@@ -201,7 +202,7 @@ def test_match_overrides(tmp_path):
 def test_committed_store(deduped):
     sub, _ = deduped
     s = load_store(DEFAULT_AUDIO)
-    uris = set(sub["URI"])
+    uris = set(load_keys(DEFAULT_AUDIO / "keys.csv").keys_of(sub["URI"]))  # the albums' keys: RYM ids
     assert not leftovers(DEFAULT_AUDIO)  # nothing unlisted or half-written is committed
     # Counts are bounds, not pins: the audio stage adds albums and clips (3,944 albums came from the experiment).
     assert 3944 <= len(s.keys) <= len(uris) and set(s.keys.tolist()) <= uris
@@ -219,4 +220,4 @@ def test_committed_store(deduped):
     skipped = {k for k, e in overrides.items() if e.get("skip")}
     assert not skipped & set(s.keys.tolist())  # an album kept out of matching has no embedding
     # Apple only has cover versions of these two game soundtracks: they stay without audio
-    assert {"spotify:album:3saAefkIXxddLvrh05pFz6", "spotify:album:4WHw7nHg2tlT0ClrJvS8dE"} <= skipped
+    assert {"Album10376", "Album1894233"} <= skipped  # Ocarina of Time, Super Mario Galaxy

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from rmr_pipeline.audio_store import DEFAULT_AUDIO, StoreError, compact_store, load_manifest
 from rmr_pipeline.constants import DEFAULT_OVERRIDES, DEFAULT_TABLE
+from rmr_pipeline.keys import load_keys
 
 from .catalog import DEFAULT_CACHE, load_catalog
 from .match import DEFAULT_STOREFRONTS
@@ -39,7 +40,8 @@ def parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     select = argparse.ArgumentParser(add_help=False)
-    select.add_argument("--keys", default="", help="Only these albums: comma-separated keys (URIs) or slugs.")
+    select.add_argument("--keys", default="", help="Only these albums: comma-separated keys (RYM ids; a Spotify "
+                                                    "URI of before the rekey is understood) or slugs.")
     select.add_argument("--limit", type=int, default=None, help="At most N albums with work to do.")
     select.add_argument("--storefronts", type=_storefronts, default=DEFAULT_STOREFRONTS,
                         help=f"iTunes storefronts to try, in order (default {','.join(DEFAULT_STOREFRONTS)}).")
@@ -80,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
             from .experiment import check_first_shard, import_experiment
 
             cache = ClipCache(args.cache_dir / "clips.sqlite")
-            n = import_experiment(cache, args.table)
+            n = import_experiment(cache, args.table, keys=load_keys(args.audio_dir / "keys.csv"))
             print(f"{n} clips copied into {args.cache_dir / 'clips.sqlite'}")
             from .experiment import EXPERIMENT_CACHE
             from .match import import_responses
@@ -92,7 +94,8 @@ def main(argv: list[str] | None = None) -> int:
                   if checked is not None else "not checked against the first shard: the store was compacted since")
             cache.close()
             return 0
-        catalog = load_catalog(args.table, args.overrides)
+        load_manifest(args.audio_dir)  # a store that is not there is reported as that, not as its missing keys.csv
+        catalog = load_catalog(args.table, args.overrides, args.audio_dir / "keys.csv")
         if args.cmd == "status":
             from .status import status
 
@@ -100,7 +103,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         from .sync import Options, preview_matches, sync
 
-        keys = tuple(k for k in args.keys.split(",") if k)
+        legacy = {al.legacy_uri: al.key for al in catalog}
+        keys = tuple(legacy.get(k, k) for k in args.keys.split(",") if k)
         if args.cmd == "match":
             return preview_matches(Options(args.audio_dir, args.cache_dir, keys=keys, limit=args.limit,
                                            storefronts=args.storefronts, retry_unmatched=args.retry_unmatched), catalog)
