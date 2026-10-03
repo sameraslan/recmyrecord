@@ -1,0 +1,14 @@
+2026-10-01T22:21:39+00:00	STARTED	final_eval.py (script: direct metric functions on test subsets L / A / LA)	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:21+00:00	DONE n_L=360 n_A=227 n_LA=138	final_eval.py (script: direct metric functions on test subsets L / A / LA)	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:21+00:00	STARTED	baseline__most_frequent_fulltrain	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:21+00:00	DONE n_test=227	baseline__most_frequent_fulltrain	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:21+00:00	STARTED	baseline__genre_mean_all_fulltrain	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:22+00:00	DONE n_test=227	baseline__genre_mean_all_fulltrain	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:22+00:00	STARTED	meta63__mb+dz_nodesc	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:23+00:00	DONE n_test=227	meta63__mb+dz_nodesc	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:23+00:00	STARTED	audio63__heads+clap+maest-1-12	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:23+00:00	DONE n_test=227	audio63__heads+clap+maest-1-12	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:23+00:00	STARTED	llm__fable_fewshot200_knowledge	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:24+00:00	DONE n_test=138	llm__fable_fewshot200_knowledge	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:24+00:00	STARTED	fusion63__best	pid=45087	argv=final_eval.py test
+2026-10-01T22:22:25+00:00	DONE n_test=138	fusion63__best	pid=45087	argv=final_eval.py test
