@@ -11,8 +11,8 @@ eight by fetching four, and what album means are pooled from. No audio is in it.
       prio         the clip's rank in the album's clip order (clips.priority_order; windows.plan)
       clip_s       seconds of audio decoded
       track_s      the whole track's length as the listing gives it (a window: the file's)
-      short_preview  1 when the clip is under 25 s and the track over 60 s, 0 when not, NULL when either
-                   length is unknown
+      short_preview  1 when the clip is under 25 s and the track over 60 s (match.short_preview), 0 when not,
+                   NULL when either length is unknown
       start_s      a window: where it starts in its file
       sig          a window: the signature of the album's files and of the sampling rule
 
@@ -57,7 +57,6 @@ CREATE TABLE IF NOT EXISTS listings(key TEXT NOT NULL, source TEXT NOT NULL, alb
     n_previews INTEGER, runtime_s REAL, n_windows INTEGER, updated_at TEXT, PRIMARY KEY(key, source, album_id));
 CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
 """
-SHORT_CLIP_S, LONG_TRACK_S = 25.0, 60.0
 POOLS = ("rank", "below")
 
 
@@ -90,7 +89,9 @@ def short_preview(clip_s: float | None, track_s: float | None) -> int | None:
     cut the preview short: ten-second previews exist), 0 when not, None when a length is unknown."""
     if clip_s is None or not track_s:
         return None
-    return int(clip_s < SHORT_CLIP_S and track_s > LONG_TRACK_S)
+    from .match import short_preview as flagged  # the one definition; imported here: the matcher needs pandas and rapidfuzz
+
+    return int(flagged([(clip_s, track_s)]))
 
 
 def read_only(path: Path | str) -> sqlite3.Connection:

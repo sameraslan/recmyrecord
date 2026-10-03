@@ -582,3 +582,98 @@ def test_the_verification_script_picks_clips_both_caches_have_and_measures_the_d
     assert verify.compare(a.tobytes(), a.tobytes(), "<f4") == (0.0, 0.0, pytest.approx(1.0))
     diff, rel, cos = verify.compare((a + np.array([0, 0.5, 0], "<f4")).tobytes(), a.tobytes(), "<f4")
     assert diff == 0.5 and rel == 0.125 and 0.99 < cos < 1
+
+
+# --- the matcher's side: the matches file as match-new writes it, and the network as the matcher asks it ----------
+
+def test_the_widened_matches_file_is_read_and_skip_imported_selects_the_new_albums_that_have_a_listing(world, tmp_path):
+    """matches.csv after match-new: the site's albums (their embeddings imported), then the new albums' rows.
+    With --skip-imported a run takes exactly the new albums that have a listing with a preview."""
+    from rmr_pipeline.audio_store import MATCH_FIELDS, load_matches, write_matches
+    from rmr_audio.match import Match
+
+    for key, (source, album_id) in (("Album0", ("deezer", "d0")), ("Album1", ("deezer", "d1")), ("Album2", ("itunes:us", "i2"))):
+        old_caches(tmp_path / key, key, source, album_id, world.listings[(source, album_id)], effnet=3, clap=0)
+        onepass.import_caches(world.out_db, tmp_path / key / "clips.sqlite", None, None, lambda s: None)
+    old = [dict.fromkeys(MATCH_FIELDS, "") | {"key": a["key"], "source": a["source"], "source_album_id": a["album_id"],
+                                              "ambiguous": "0", "n_clips_available": str(a["available"] or "")}
+           for a in onepass.read_albums(world.matches)]
+    new = [Match("deezer", "d5", "T", "A", 0.99, False, 10, 10, "", "deezer_id", "", 2000.0).row("Album5"),
+           Match(reason="no candidate").row("Album6"),  # no listing
+           Match("deezer", "d7", "T", "A", 0.99, False, 10, 0, "", "deezer_id", "", 2000.0).row("Album7"),  # no preview
+           Match("itunes:jp", "i8", "T", "A", 0.99, False, 3, 3, "", "apple_id", "split", 2000.0, "i0").row("Album8")]
+    world.matches = tmp_path / "audio" / "matches.csv"
+    write_matches(world.matches, old + new)
+    assert len(load_matches(world.matches)) == 8  # the file the store's own reader accepts
+    albums = onepass.read_albums(world.matches)
+    assert [(a["key"], a["source"], a["album_id"], a["available"]) for a in albums[4:]] == [
+        ("Album5", "deezer", "d5", 10), ("Album6", "", "", None), ("Album7", "deezer", "d7", 0), ("Album8", "itunes:jp", "i8", 3)]
+    cache = OnePassCache(world.out_db, readonly=True)
+    plan = onepass.make_plan(albums, cache, Options(skip_imported=True))
+    assert [(i.key, i.source, i.album_id) for i in plan.items] == [("Album5", "deezer", "d5"), ("Album8", "itunes:jp", "i8")]
+    assert plan.counts == {"imported": 3, "unmatched": 2, "complete": 1}
+    assert [i.key for i in onepass.make_plan(albums, cache, Options(skip_imported=True, limit=1)).items] == ["Album5"]
+    cache.close()
+    world.listings = {("deezer", "d5"): listing("d5", 10), ("itunes:jp", "i8"): listing("i8", 3)}
+    lines = world.run(skip_imported=True)
+    assert world.fetched == [("deezer", "d5"), ("itunes:jp", "i8")] and len(world.downloaded) == 7
+    assert any("2 to fetch" in line and "3 left alone (--skip-imported)" in line for line in lines)
+
+
+def test_limit_albums_is_an_option_of_run():
+    args = onepass.parser().parse_args(["run", "--skip-imported", "--limit-albums", "3"])
+    assert args.limit == 3 and onepass.parser().parse_args(["run", "--limit", "2"]).limit == 2
+
+
+def test_the_committed_matches_file_is_read():
+    from rmr_pipeline.audio_store import DEFAULT_AUDIO, load_matches
+
+    rows = load_matches(DEFAULT_AUDIO / "matches.csv")
+    albums = onepass.read_albums(DEFAULT_AUDIO / "matches.csv")
+    assert [(a["key"], a["source"], a["album_id"]) for a in albums] == [(r["key"], r["source"], r["source_album_id"]) for r in rows]
+    assert len(albums) >= 4081 and all(a["available"] is not None for a in albums if a["source"])
+
+
+def test_the_default_network_asks_the_matcher_for_a_fresh_listing_in_the_sources_storefront(monkeypatch):
+    """default_network against the matcher as it is: an uncached Http, match.tracks with fresh=True, and an
+    Apple id asked for in the storefront its source names. The answers are the recorded ones of test_linked."""
+    pytest.importorskip("rapidfuzz")
+    import json
+    from pathlib import Path
+
+    from rmr_audio import match as matching
+
+    data = json.loads((Path(__file__).parent / "fixtures" / "linked_apple_storefront.json").read_text(encoding="utf-8"))
+    asked = []
+
+    def fetch(self, url):
+        asked.append(url)
+        return data["responses"][url]
+
+    monkeypatch.setattr(matching.Http, "fetch", fetch)
+    monkeypatch.setattr(matching.Throttle, "wait", lambda self: None)
+    monkeypatch.setitem(embed.WORKER, "session", None)
+    row = data["expected"]  # the album's row of matches.csv
+    assert row["source"] == "itunes:br"
+    tracks_of, download, http = onepass.default_network()
+    assert isinstance(http, matching.Http) and http.db is None and download is embed.download
+    tracks = tracks_of(row["source"], str(row["source_album_id"]))
+    assert asked == [f"https://itunes.apple.com/lookup?id={row['source_album_id']}&entity=song&limit=200&country=br"]
+    assert len(tracks) == int(row["n_tracks"]) and sum(bool(t["preview_url"]) for t in tracks) == int(row["n_clips_available"])
+    assert {"track_id", "duration_s", "preview_url"} <= set(tracks[0]) and tracks[0]["duration_s"] > 0
+    deezer = tracks_of("deezer", "15499278")  # the Deezer listing RYM links: no preview
+    assert asked[-1] == "https://api.deezer.com/album/15499278/tracks?limit=200" and not any(t["preview_url"] for t in deezer)
+    tracks_of(row["source"], str(row["source_album_id"]))
+    assert len(asked) == 3  # never cached: preview URLs expire
+    assert onepass.needed_clips("Album60949", row["source"], str(row["source_album_id"]), tracks, {}, BOTH, 4)[0]["suffix"] == ".m4a"
+
+
+def test_short_preview_has_one_definition_the_matchers(monkeypatch):
+    pytest.importorskip("rapidfuzz")
+    from rmr_audio import match as matching, onepass_cache
+
+    assert onepass_cache.short_preview(10.0, 200.0) == 1 and onepass_cache.short_preview(30.0, 200.0) == 0
+    seen = []
+    monkeypatch.setattr(matching, "short_preview", lambda clips: seen.append(clips) or True)
+    assert onepass_cache.short_preview(30.0, 200.0) == 1 and seen == [[(30.0, 200.0)]]
+    assert onepass_cache.short_preview(None, 200.0) is None and len(seen) == 1

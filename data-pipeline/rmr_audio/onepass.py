@@ -2,7 +2,7 @@
 
   cd data-pipeline
   nice -n 19 .venv-audio/bin/python -m rmr_audio.onepass run --clips 4 [--matches audio/matches.csv] [--keys K,...]
-        [--keys-file F] [--skip-imported] [--limit N] [--models effnet,clap] [--decoder own|shared] [--local-dir DIR]
+        [--keys-file F] [--skip-imported] [--limit-albums N] [--models effnet,clap] [--decoder own|shared] [--local-dir DIR]
         [--other-lock PATH] [--torch-python PY] [--dry-run]
   .venv-audio/bin/python -m rmr_audio.onepass import [--effnet clips.sqlite] [--clap clap_clips.sqlite]
   .venv-audio/bin/python -m rmr_audio.onepass means --model effnet|clap --clips N --to FILE.npz [--pool rank|below]
@@ -790,7 +790,8 @@ def parser() -> argparse.ArgumentParser:
     r.add_argument("--keys-file", type=Path, default=None, help="Only the albums whose keys are in this file, one per line.")
     r.add_argument("--skip-imported", action="store_true",
                    help="Leave alone every album that has imported embeddings (the existing catalog): only new albums.")
-    r.add_argument("--limit", type=int, default=None, help="At most N albums with work to do.")
+    r.add_argument("--limit-albums", "--limit", dest="limit", type=int, default=None,
+                   help="At most N albums with work to do (in the order of the matches file).")
     r.add_argument("--decoder", choices=("own", "shared"), default="own")
     r.add_argument("--local-dir", type=Path, default=None, help="Folder of local files: DIR/<album key>/*.mp3|m4a|flac|wav|ogg|aiff.")
     r.add_argument("--other-lock", type=Path, action="append", default=[],
