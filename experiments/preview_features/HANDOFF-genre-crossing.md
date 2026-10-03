@@ -79,6 +79,8 @@ Everything below is in this worktree, gitignored, and must be opened read-only. 
 
 Worktree: `/Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/laughing-sinoussi-95fc12`
 
+Backup of these caches (made 3 October, no venvs, MAEST model left out): `/Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord-preview-caches/`. If the worktree is gone, read from there; its `README.txt` maps the folders.
+
 | Path under the worktree | Contents |
 |---|---|
 | `experiments/preview_features/cache/features.sqlite` | 16,618 clips, 3,944 albums, four clips each (all tracks for a 150-album subset). Per clip: `effnet` (1,280), `musicnn` (200), and `scalars` JSON (tempo, key, loudness, mood heads, arousal/valence, danceability). Keyed by `row` = row index in `all_data_norm.pkl`. |
