@@ -1,6 +1,6 @@
 """The catalog row's store links: direct lookup, the edition rule, the fallbacks, the flags, the search of
 an album without links, the duplicate guard and the dry run. Hand-made store responses in the shape the
-APIs answer (fixtures/linked_*.json are recorded ones); no network: a URL that is not there fails the test."""
+APIs answer, and two recorded ones (fixtures/linked_*.json, written by record_fixtures.py); no network: a URL that is not there fails the test."""
 import csv
 import json
 from pathlib import Path
@@ -145,6 +145,45 @@ def test_an_apple_id_is_asked_for_in_its_links_storefront_then_in_us():
     assert [url.split("country=")[1] for url in http.asked if "entity=song" in url][:2] == ["ru", "us"] and not http.searched()
 
 
+class Replay:
+    """Serves recorded responses by URL; any other URL fails the test."""
+
+    def __init__(self, responses: dict):
+        self.responses, self.asked = responses, []
+
+    def get(self, url, store, fresh=False, search=False):
+        self.asked.append(url)
+        assert url in self.responses, f"not recorded: {url}"
+        return self.responses[url]
+
+
+def _recorded(name: str):
+    data = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
+    return Album(**{**data["album"], "means": tuple(data["album"]["means"])}), data
+
+
+def test_recorded_deezer_link():
+    """Neil Young, "On the Beach", as Deezer answered on 3 October 2026: two requests, no search."""
+    al, data = _recorded("linked_deezer_id")
+    http = Replay(data["responses"])
+    m = match_album(http, al)
+    assert {k: str(v) for k, v in m.row(al.key).items()} == {k: str(v) for k, v in data["expected"].items()}
+    assert (m.source, m.album_id, m.matched_by, m.ambiguous) == ("deezer", al.deezer_id, "deezer_id", False)
+    assert http.asked == [f"https://api.deezer.com/album/{al.deezer_id}", f"https://api.deezer.com/album/{al.deezer_id}/tracks?limit=200"]
+
+
+def test_recorded_apple_link_in_its_storefront_after_a_deezer_listing_without_previews():
+    """Cassiano, "Cuban Soul: 18 kilates": the Deezer listing RYM links has no preview; the Apple link names
+    the Brazilian store, and that is where the id is asked for."""
+    al, data = _recorded("linked_apple_storefront")
+    http = Replay(data["responses"])
+    m = match_album(http, al)
+    assert {k: str(v) for k, v in m.row(al.key).items()} == {k: str(v) for k, v in data["expected"].items()}
+    assert al.apple_link[0] == "br" and (m.source, m.album_id, m.matched_by) == ("itunes:br", al.apple_link[1], "apple_id")
+    assert m.n_previews == m.n_tracks > 0 and not any("/search" in url for url in http.asked)
+    assert all("country=br" in url for url in http.asked if "itunes" in url)
+
+
 # --- the edition rule ------------------------------------------------------------------------------
 
 def test_an_oversized_linked_edition_is_replaced_by_the_standard_one():
@@ -171,6 +210,18 @@ def test_an_oversized_linked_edition_is_kept_when_there_is_no_standard_one():
     m = match_album(http, new_album(deezer=11))  # the other listing of that name is 7 minutes long: not an album
     assert (m.album_id, m.edition, m.linked_id, m.ambiguous) == ("11", "", "", False)
     assert "no standard one was found" in m.reason
+
+
+def test_an_excerpt_or_a_listing_that_reads_worse_is_not_the_standard_edition():
+    """Aphrodite's Child, "666": the linked deluxe listing has 48 tracks, and the other listing of that name has
+    four of them."""
+    http = (Stores().deezer(11, "666 (Deluxe)", "Aphrodite's Child", 7, [200] * 48)
+            .deezer(12, "666", "Aphrodite's Child", 7, [230] * 4))  # 15 minutes of 160
+    m = match_album(http, new_album("666", "Aphrodite's Child", deezer=11))
+    assert (m.album_id, m.edition) == ("11", "") and "no standard one was found" in m.reason
+    http = (Stores().deezer(11, "Album (Deluxe Edition)", "Artist", 7, [240] * 22)
+            .deezer(12, "Album (The Other Story)", "Artist", 7, LP))  # the same core title, but it reads worse
+    assert match_album(http, new_album(deezer=11)).album_id == "11"
 
 
 def test_a_listing_of_one_to_three_tracks_is_replaced_by_a_split_edition_of_the_same_runtime():

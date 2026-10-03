@@ -68,6 +68,7 @@ FEW_TRACKS = 3  # a linked listing of this many tracks or fewer: look for a spli
 SPLIT_RUNTIME = 0.15  # how far a split edition's total runtime may be from the linked listing's
 EDITION_FETCH = {"deezer": 4, "itunes": 3}  # tracklists fetched to find another edition of a linked listing
 LONG_S = 15 * 60  # a listing this long is an album, not a single or an EP
+STANDARD_SHARE = 0.3  # a standard edition runs at least this share of the oversized listing it replaces
 MIN_WINDOWS = 4  # fewer preview windows than this for a listing of LONG_S or more: under-covered
 SHORT_PREVIEW_S, SHORT_PREVIEW_TRACK_S = 25.0, 60.0  # a preview shorter than the first from a track longer than the second
 ARTIST_LIST_MIN = 0.9  # iTunes: how well a search result's artist must read for its album list to be fetched
@@ -631,8 +632,9 @@ def artist_listings(http: Http, al: Album, c: Cand) -> list[Cand]:
 def preferred_edition(http: Http, al: Album, linked: Cand) -> tuple[Cand, str]:
     """(the listing to use, what was done). The linked listing itself, "", unless
     - it is oversized (more than OVERSIZED tracks, or a bigger-edition marker): the standard edition among the
-      same artist's listings of the same release, when there is one that is album-sized (LONG_S) and has a
-      preview, chosen by edition_key ("standard"; "oversized" when none was found);
+      same artist's listings of the same release, when there is one that is album-sized (LONG_S, and
+      STANDARD_SHARE of the linked runtime: not an excerpt), has a preview and whose title reads no worse,
+      chosen by edition_key ("standard"; "oversized" when none was found);
     - it has one to FEW_TRACKS tracks: the listing of the same release with the most previews among those with
       more tracks whose total runtime is within SPLIT_RUNTIME of the linked one ("split"; "few_tracks" when
       none was found). Another performance (a live take, a single edit) has another runtime or another title."""
@@ -641,13 +643,13 @@ def preferred_edition(http: Http, al: Album, linked: Cand) -> tuple[Cand, str]:
         return linked, ""
     store = store_of(linked.source)
     same = [c for c in artist_listings(http, al, linked) if c.kind != "single" and c.same_release(linked)
-            and (c.marker == "other") == (linked.marker == "other")]
+            and (c.marker == "other") == (linked.marker == "other") and c.t >= linked.t - 0.05]
     if linked.oversized:
         if store == "itunes":  # the album list gives track counts: skip what cannot be the standard edition
             same = [c for c in same if c.n_tracks <= OVERSIZED and (c.marker != "bigger" or c.n_tracks < linked.n_tracks)]
         same.sort(key=lambda c: (c.marker == "bigger", c.n_tracks or OVERSIZED))
         ok = [c for c in fetch(http, al, same[:EDITION_FETCH[store]])
-              if not c.oversized and c.n_previews and c.runtime_s >= LONG_S]
+              if not c.oversized and c.n_previews and c.runtime_s >= max(LONG_S, STANDARD_SHARE * linked.runtime_s)]
         return (min(ok, key=edition_key), "standard") if ok else (linked, "oversized")
     if store == "itunes":
         same = [c for c in same if c.n_tracks > linked.n_tracks]
