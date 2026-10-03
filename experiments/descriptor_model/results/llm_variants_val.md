@@ -10,3 +10,17 @@ paired on 300 albums; most_frequent cP@10 0.441
   fable_fewshot200_mb n_albums 300 unk  0 | cP@10 0.792 P@10 0.659 nDCG@10 0.807 mAP 0.513 perfect 0.207 | listed 13.3 set-prec 0.584 first3 0.876 first5 0.807
   ENSEMBLE(mean)                  | cP@10 0.787 P@10 0.655 nDCG@10 0.801 mAP 0.585 perfect 0.173
 ```
+
+## Added 2026-10-01, after the test run: per-descriptor notes in the prompt
+
+Same 300 validation albums. "Notes" = for each descriptor, its share of training albums, the descriptors it
+most often appears with, and five well-known training albums where it ranks near the top
+(`annotations/prompt_variants/descriptor_notes_train.json`; built from training rows only).
+
+| Prompt (Fable, 200 examples) | cP@10 | P@10 | nDCG@10 | mAP | perfect@10 | first 1 / 3 / 5 precise |
+|---|---|---|---|---|---|---|
+| Plain (chosen) | 0.794 | 0.661 | 0.811 | 0.521 | 0.200 | 0.950 / 0.892 / 0.813 |
+| Plus per-descriptor notes | 0.791 | 0.658 | 0.809 | 0.517 | 0.187 | 0.943 / 0.884 / 0.816 |
+
+Paired difference in cP@10 (notes minus plain): -0.003 +/- 0.004 (bootstrap over albums, not artist groups).
+No gain. RYM's own written descriptor definitions were not tried (the site was never fetched).

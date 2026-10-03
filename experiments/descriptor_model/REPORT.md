@@ -643,3 +643,26 @@ $P final_eval.py report                        # rebuilds final_test.md from the
 | `results/llm_*_val.json`, `results/llm_fusion_summary.json` | LLM annotator and fusion on validation (63-shard snapshot) |
 | `annotations/fable_fewshot200/`, `results/llm_variants_val.md` | The chosen annotator's descriptor lists (val, train, test) and the variant comparison |
 | `results/test/FROZEN.md`, `final_test.md`, `final_test.json`, `val_reference.json`, `results/test_invocations.log` | The frozen systems and the single test run |
+
+## 9. Addendum: after the test run (2026-10-01 to 2026-10-03)
+
+Nothing in sections 1–8 changes. This records one further validation experiment and the ideas discussed but not run, so they are not repeated or forgotten.
+
+**Per-descriptor notes in the annotator prompt: no gain.** Adding, for each descriptor, its frequency, the descriptors it co-occurs with and five example training albums gave cP@10 0.791 against 0.794 for the plain prompt on the same 300 val albums (paired −0.003 ±0.004, per-album bootstrap). Vague words stayed as unreliable as before (e.g. "warm" right 56% → 53% of the times it was listed, "nocturnal" 62% → 62%). Details: `results/llm_variants_val.md`; prompt files: `annotations/prompt_variants/`. RYM's own descriptor definitions were not tried.
+
+**How our audio numbers relate to published mood benchmarks.** They are not comparable on headline figures. MTG-Jamendo mood/theme reports average precision per tag of about 0.15–0.17 and ROC-AUC of about 0.78–0.79 for the best encoders. Our audio probe on test has mAP 0.39 and macro AUC 0.83. Ours is an easier, denser task: 9% of album × descriptor cells are positive, some descriptors are plainly audible (male vocals, instrumental, acoustic), and labels are album-level crowd votes. cP@10 (0.66 for audio) is a more forgiving metric again; the most-frequent baseline already scores 0.44 on it.
+
+**Ideas not run, in the order I would try them.**
+
+| # | Idea | What it needs | Expectation (judgement, not measured) |
+|---|---|---|---|
+| 1 | Fine-tune a language model on all ~4,100 albums' lists instead of 200 prompt examples | A fine-tuning service | Most likely to beat 0.79; 0 → 200 examples was worth about +0.04 to +0.05 |
+| 2 | Finish the audio extraction (2,244 albums left) and retrain the probes on all data | ~8 h laptop in gentle mode, or a cloud GPU | A few points for the audio and audio + tags fallback; not enough to reach the annotator |
+| 3 | Clean contamination test: annotate albums released after the model's training cutoff | A batch of post-cutoff albums with RYM lists | Tells us whether the annotator is tagging or reciting |
+| 4 | Closed audio-capable LLM (e.g. Gemini) given clips only, no artist/title | An API key; consent to send previews to that provider | Unknown. Pass mark: beat the 0.69 audio + tags fallback |
+| 5 | Adapter (LoRA) or last-layers fine-tuning of MAEST on our labels | Cloud GPU; previews held temporarily during training | Modest gain at best; head capacity was not the bottleneck |
+| 6 | Last.fm tags as an extra input | `LASTFM_API_KEY` (fetcher is written) | Literature suggests the strongest crowd signal for mood |
+| 7 | Asymmetric vectors (one for an album's own list, one for inbound) | A build-pipeline change | Val only so far: dense-level list quality without hubs |
+| 8 | Annotate test batches 01, 04, 05, 09 (240 albums) with the frozen prompt | Owner approval; they were blocked by a permission check | Narrows the test error bars; the split is already spent |
+
+**Constraint for any future evaluation.** The test split has been used once. New ideas have to be judged on validation, or on a fresh hold-out carved from training albums.

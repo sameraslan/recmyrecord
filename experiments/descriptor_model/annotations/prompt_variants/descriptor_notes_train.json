@@ -1,0 +1,2009 @@
+{
+"melancholic": {
+"share_of_albums": 0.269,
+"often_appears_with": [
+"sad",
+"rain",
+"lonely",
+"autumn",
+"depressive"
+],
+"example_albums": [
+"Pink Floyd – Wish You Were Here",
+"The Cure – Disintegration",
+"Portishead – Dummy",
+"Slowdive – Souvlaki",
+"The Smiths – Hatful of Hollow"
+]
+},
+"anxious": {
+"share_of_albums": 0.143,
+"often_appears_with": [
+"disturbing",
+"scary",
+"noisy",
+"dissonant",
+"depressive"
+],
+"example_albums": [
+"Modest Mouse – The Lonesome Crowded West",
+"Talking Heads – Fear of Music",
+"Portishead – Third",
+"Talking Heads – Remain in Light",
+"Slint – Spiderland"
+]
+},
+"futuristic": {
+"share_of_albums": 0.054,
+"often_appears_with": [
+"mechanical",
+"space",
+"androgynous vocals",
+"party",
+"rain"
+],
+"example_albums": [
+"Daft Punk – Alive 2007",
+"Kraftwerk – Minimum-Maximum",
+"Kraftwerk – Computerwelt",
+"Daft Punk – Discovery",
+"Herbie Hancock – Sextant"
+]
+},
+"male vocals": {
+"share_of_albums": 0.716,
+"often_appears_with": [
+"rock opera",
+"heavy",
+"aggressive",
+"angry",
+"anthemic"
+],
+"example_albums": [
+"Television – Marquee Moon",
+"Milton Nascimento & Lô Borges – Clube da Esquina",
+"Queen – Live at the Rainbow '74",
+"The Who – Live at the Isle of Wight Festival 1970",
+"Kids See Ghosts – KIDS SEE GHOSTS"
+]
+},
+"atmospheric": {
+"share_of_albums": 0.303,
+"often_appears_with": [
+"forest",
+"ethereal",
+"cold",
+"mysterious",
+"meditative"
+],
+"example_albums": [
+"Fishmans – Long Season",
+"Talk Talk – Laughing Stock",
+"Talk Talk – Spirit of Eden",
+"Pink Floyd – Wish You Were Here",
+"Pink Floyd – The Dark Side of the Moon"
+]
+},
+"lonely": {
+"share_of_albums": 0.121,
+"often_appears_with": [
+"sad",
+"depressive",
+"rain",
+"funereal",
+"sparse"
+],
+"example_albums": [
+"Slint – Spiderland",
+"The Smiths – The Queen Is Dead",
+"The Microphones – The Glow Pt. 2",
+"Joy Division – Closer",
+"Townes Van Zandt – Rear View Mirror"
+]
+},
+"cold": {
+"share_of_albums": 0.082,
+"often_appears_with": [
+"winter",
+"mechanical",
+"funereal",
+"scary",
+"depressive"
+],
+"example_albums": [
+"Dissection – Storm of the Light's Bane",
+"The Cure – Pornography",
+"Burzum – Hvis lyset tar oss",
+"Joy Division – Unknown Pleasures",
+"Cannibal Ox – The Cold Vein"
+]
+},
+"depressive": {
+"share_of_albums": 0.078,
+"often_appears_with": [
+"funereal",
+"sad",
+"lethargic",
+"lonely",
+"cold"
+],
+"example_albums": [
+"Have a Nice Life – Deathconsciousness",
+"Lou Reed – Berlin",
+"Joy Division – Closer",
+"Nine Inch Nails – The Fragile",
+"Lil Ugly Mane – Volcanic Bird Enemy and the Voiced Concern"
+]
+},
+"longing": {
+"share_of_albums": 0.125,
+"often_appears_with": [
+"sentimental",
+"romantic",
+"lonely",
+"bittersweet",
+"sad"
+],
+"example_albums": [
+"Black Country, New Road – Ants From Up There",
+"Andrew Prahlow – Outer Wilds",
+"Otis Redding – Otis Blue: Otis Redding Sings Soul",
+"Milton Nascimento – Minas",
+"FKA twigs – Magdalene"
+]
+},
+"dense": {
+"share_of_albums": 0.153,
+"often_appears_with": [
+"chaotic",
+"Wall of Sound",
+"dissonant",
+"apocalyptic",
+"ritualistic"
+],
+"example_albums": [
+"The Jazz Composer's Orchestra – The Jazz Composer's Orchestra",
+"椎名林檎 [Sheena Ringo] – 加爾基 精液 栗ノ花 (Kalk samen kuri no hana)",
+"Miles Davis – Bitches Brew",
+"Tim Hecker – Virgins",
+"Henry Cow – Concerts"
+]
+},
+"urban": {
+"share_of_albums": 0.145,
+"often_appears_with": [
+"sampling",
+"party",
+"rain",
+"nocturnal",
+"rhythmic"
+],
+"example_albums": [
+"Kendrick Lamar – good kid, m.A.A.d city",
+"A Tribe Called Quest – Midnight Marauders",
+"Burial – Untrue",
+"Organized Konfusion – Stress: The Extinction Agenda",
+"A Tribe Called Quest – The Low End Theory"
+]
+},
+"progressive": {
+"share_of_albums": 0.188,
+"often_appears_with": [
+"uncommon time signatures",
+"suite",
+"complex",
+"rock opera",
+"epic"
+],
+"example_albums": [
+"Pink Floyd – Wish You Were Here",
+"King Crimson – In the Court of the Crimson King",
+"Rush – A Farewell to Kings",
+"Camel – A Live Record",
+"Grateful Dead – One From the Vault"
+]
+},
+"passionate": {
+"share_of_albums": 0.374,
+"often_appears_with": [
+"sensual",
+"anthemic",
+"longing",
+"sentimental",
+"Wall of Sound"
+],
+"example_albums": [
+"Talking Heads – Stop Making Sense",
+"Bruce Springsteen & the E Street BandBru – Hammersmith Odeon, London '75",
+"Jeff Buckley – Grace",
+"Van Morrison – Astral Weeks",
+"Bruce Springsteen – Born to Run"
+]
+},
+"concept album": {
+"share_of_albums": 0.097,
+"often_appears_with": [
+"rock opera",
+"suite",
+"funereal",
+"epic",
+"natural"
+],
+"example_albums": [
+"Opeth – Still Life",
+"MF DOOM – Mm.. Food",
+"Kendrick Lamar – good kid, m.A.A.d city",
+"Sufjan Stevens – Illinois",
+"Hüsker Dü – Zen Arcade"
+]
+},
+"bittersweet": {
+"share_of_albums": 0.217,
+"often_appears_with": [
+"sentimental",
+"longing",
+"Wall of Sound",
+"autumn",
+"soft"
+],
+"example_albums": [
+"Fishmans – 98.12.28 男達の別れ (98.12.28 Otokotachi no Wakare)",
+"Built to Spill – Perfect From Now On",
+"Smashing Pumpkins – Siamese Dream",
+"Sweet Trip – You Will Never Know Why",
+"Belle and Sebastian – If You're Feeling Sinister"
+]
+},
+"meditative": {
+"share_of_albums": 0.04,
+"often_appears_with": [
+"natural",
+"peaceful",
+"minimalistic",
+"sparse",
+"soothing"
+],
+"example_albums": [
+"Alice Coltrane featuring Pharoah Sanders – Journey in Satchidananda",
+"Peter Gabriel – Passion (Music for The Last Temptation of Christ)",
+"Stars of the Lid – And Their Refinement of the Decline",
+"Floating Points, Pharoah Sanders & The L – Promises",
+"Coil – Musick to Play in the Dark²"
+]
+},
+"epic": {
+"share_of_albums": 0.155,
+"often_appears_with": [
+"rock opera",
+"triumphant",
+"medieval",
+"choral",
+"martial"
+],
+"example_albums": [
+"Kanye West – My Beautiful Dark Twisted Fantasy",
+"Yes – Close to the Edge",
+"Swans – To Be Kind",
+"Genesis – Selling England by the Pound",
+"Iron Maiden – Seventh Son of a Seventh Son"
+]
+},
+"complex": {
+"share_of_albums": 0.172,
+"often_appears_with": [
+"uncommon time signatures",
+"polyphonic",
+"atonal",
+"technical",
+"dissonant"
+],
+"example_albums": [
+"Frank Zappa – Hot Rats",
+"Mingus – The Black Saint and the Sinner Lady",
+"Camel – Mirage",
+"King Crimson – Radical Action (To Unseat the Hold of Monkey Mind)",
+"Soft Machine – Third"
+]
+},
+"sentimental": {
+"share_of_albums": 0.118,
+"often_appears_with": [
+"ballad",
+"longing",
+"romantic",
+"spring",
+"bittersweet"
+],
+"example_albums": [
+"Black Country, New Road – Ants From Up There",
+"Billy Joel – The Stranger",
+"Joni Mitchell – Blue",
+"Wilco – Yankee Hotel Foxtrot",
+"Van Morrison – Saint Dominic's Preview"
+]
+},
+"melodic": {
+"share_of_albums": 0.447,
+"often_appears_with": [
+"rock opera",
+"romantic",
+"Wall of Sound",
+"spring",
+"bittersweet"
+],
+"example_albums": [
+"The Beatles – Abbey Road",
+"The Beatles – Rubber Soul",
+"The Zombies – Odessey and Oracle",
+"The Stone Roses – The Stone Roses",
+"Weezer – Weezer [Blue Album]"
+]
+},
+"eclectic": {
+"share_of_albums": 0.146,
+"often_appears_with": [
+"quirky",
+"surreal",
+"futuristic",
+"suite",
+"sampling"
+],
+"example_albums": [
+"The Beatles – The Beatles [White Album]",
+"椎名林檎 [Sheena Ringo] – 加爾基 精液 栗ノ花 (Kalk samen kuri no hana)",
+"Tom Waits – Rain Dogs",
+"Gorillaz – Demon Days",
+"JPEGMAFIA – LP!"
+]
+},
+"spiritual": {
+"share_of_albums": 0.075,
+"often_appears_with": [
+"tribal",
+"ritualistic",
+"meditative",
+"natural",
+"choral"
+],
+"example_albums": [
+"Pharoah Sanders – Karma",
+"Charles Mingus – Mingus at Antibes",
+"John Coltrane – Concert in Japan",
+"Kids See Ghosts – KIDS SEE GHOSTS",
+"John Coltrane – A Love Supreme"
+]
+},
+"rhythmic": {
+"share_of_albums": 0.315,
+"often_appears_with": [
+"party",
+"mechanical",
+"sampling",
+"tropical",
+"urban"
+],
+"example_albums": [
+"Talking Heads – Remain in Light",
+"A Tribe Called Quest – The Low End Theory",
+"Fela Ransome Kuti & Africa 70Fela KutiTh – Expensive Shit",
+"Herbie Hancock – Head Hunters",
+"Television – Marquee Moon"
+]
+},
+"uplifting": {
+"share_of_albums": 0.135,
+"often_appears_with": [
+"happy",
+"party",
+"summer",
+"tropical",
+"Wall of Sound"
+],
+"example_albums": [
+"Stevie Wonder – Songs in the Key of Life",
+"Yes – Close to the Edge",
+"Pharoah Sanders – Karma",
+"Rory Gallagher – Irish Tour '74",
+"The Stone Roses – The Stone Roses"
+]
+},
+"surreal": {
+"share_of_albums": 0.133,
+"often_appears_with": [
+"ritualistic",
+"scary",
+"avant-garde",
+"atonal",
+"disturbing"
+],
+"example_albums": [
+"Genesis – The Lamb Lies Down on Broadway",
+"The Jimi Hendrix Experience – Axis: Bold as Love",
+"Miles Davis – The Cellar Door Sessions 1970",
+"Steven Wright – I Have a Pony",
+"Miles Davis – Live-Evil"
+]
+},
+"technical": {
+"share_of_albums": 0.148,
+"often_appears_with": [
+"uncommon time signatures",
+"atonal",
+"polyphonic",
+"complex",
+"improvisation"
+],
+"example_albums": [
+"Between the Buried and Me – Colors_Live",
+"Jimi Hendrix – The Jimi Hendrix Concerts",
+"King Crimson – Absent Lovers: Live in Montreal 1984",
+"Cryptopsy – None So Vile",
+"John Coltrane – Giant Steps"
+]
+},
+"improvisation": {
+"share_of_albums": 0.11,
+"often_appears_with": [
+"instrumental",
+"acoustic",
+"avant-garde",
+"atonal",
+"technical"
+],
+"example_albums": [
+"John Coltrane – A Love Supreme",
+"Miles Davis – The Cellar Door Sessions 1970",
+"The Allman Brothers Band – Live at the Atlanta International Pop Festival: July 3 & 5, 1970",
+"The Allman Brothers Band – At Fillmore East",
+"Charlie Mingus – Blues & Roots"
+]
+},
+"avant-garde": {
+"share_of_albums": 0.106,
+"often_appears_with": [
+"atonal",
+"ritualistic",
+"scary",
+"chaotic",
+"dissonant"
+],
+"example_albums": [
+"Carl Stalling – The Carl Stalling Project: Music From Warner Bros. Cartoons 1936-1958",
+"John Coltrane – Sun Ship",
+"Miles Davis – Black Beauty: Miles Davis at Fillmore West",
+"Eric Dolphy – Out to Lunch",
+"Charles Mingus – Let My Children Hear Music"
+]
+},
+"psychedelic": {
+"share_of_albums": 0.186,
+"often_appears_with": [
+"aquatic",
+"surreal",
+"Wall of Sound",
+"space",
+"hypnotic"
+],
+"example_albums": [
+"The Beatles – Revolver",
+"The Beatles – Sgt. Pepper's Lonely Hearts Club Band",
+"Miles Davis – Bitches Brew",
+"The Doors – The Doors",
+"The Beach Boys – The Smile Sessions"
+]
+},
+"medieval": {
+"share_of_albums": 0.009,
+"often_appears_with": [
+"triumphant",
+"forest",
+"ballad",
+"pastoral",
+"ritualistic"
+],
+"example_albums": [
+"Genesis – Selling England by the Pound",
+"Wishbone Ash – Argus",
+"Marcin Przybyłowicz & Mikolai Stroinski – The Witcher 3: Wild Hunt",
+"Renaissance – Scheherazade and Other Stories",
+"Steeleye Span – Below the Salt"
+]
+},
+"sombre": {
+"share_of_albums": 0.142,
+"often_appears_with": [
+"funereal",
+"depressive",
+"sad",
+"cold",
+"forest"
+],
+"example_albums": [
+"Joy Division – Unknown Pleasures",
+"Swans – Soundtracks for the Blind",
+"Unwound – Leaves Turn Inside You",
+"Opeth – Blackwater Park",
+"Joy Division – Closer"
+]
+},
+"winter": {
+"share_of_albums": 0.035,
+"often_appears_with": [
+"forest",
+"cold",
+"androgynous vocals",
+"natural",
+"funereal"
+],
+"example_albums": [
+"Dissection – Storm of the Light's Bane",
+"Agalloch – Ashes Against the Grain",
+"Agalloch – The Mantle",
+"Paysage d'Hiver – Paysage d'Hiver",
+"Sigur Rós – Ágætis byrjun"
+]
+},
+"hypnotic": {
+"share_of_albums": 0.125,
+"often_appears_with": [
+"meditative",
+"natural",
+"repetitive",
+"ritualistic",
+"minimalistic"
+],
+"example_albums": [
+"King Gizzard & The Lizard Wizard – Live in San Francisco '16",
+"Steve Reich and Musicians – Music for 18 Musicians",
+"Alice Coltrane featuring Pharoah Sanders – Journey in Satchidananda",
+"Komeda Quintet – Astigmatic",
+"Stereolab – Emperor Tomato Ketchup"
+]
+},
+"mysterious": {
+"share_of_albums": 0.106,
+"often_appears_with": [
+"ritualistic",
+"scary",
+"suspenseful",
+"natural",
+"meditative"
+],
+"example_albums": [
+"Portishead – Roseland NYC Live",
+"Portishead – Dummy",
+"Wire – Chairs Missing",
+"Unwound – Leaves Turn Inside You",
+"Massive Attack – Mezzanine"
+]
+},
+"dark": {
+"share_of_albums": 0.219,
+"often_appears_with": [
+"disturbing",
+"scary",
+"infernal",
+"funereal",
+"ominous"
+],
+"example_albums": [
+"King Crimson – Red",
+"Genius/GZA – Liquid Swords",
+"Massive Attack – Mezzanine",
+"The Cure – Pornography",
+"Depeche Mode – Violator"
+]
+},
+"nocturnal": {
+"share_of_albums": 0.187,
+"often_appears_with": [
+"rain",
+"cold",
+"mysterious",
+"sensual",
+"winter"
+],
+"example_albums": [
+"Vangelis – Blade Runner",
+"Massive Attack – Mezzanine",
+"My Morning Jacket – Okonokos",
+"Coil – Musick to Play in the Dark",
+"Nick Cave and The Bad Seeds – Tender Prey"
+]
+},
+"apocalyptic": {
+"share_of_albums": 0.06,
+"often_appears_with": [
+"infernal",
+"scary",
+"ritualistic",
+"funereal",
+"martial"
+],
+"example_albums": [
+"Swans – Swans Are Dead",
+"Swans – The Seer",
+"This Heat – Deceit",
+"Neurosis – Through Silver in Blood",
+"Shiro Sagisu – The End of Evangelion"
+]
+},
+"ethereal": {
+"share_of_albums": 0.095,
+"often_appears_with": [
+"meditative",
+"natural",
+"aquatic",
+"forest",
+"androgynous vocals"
+],
+"example_albums": [
+"Cocteau Twins – Heaven or Las Vegas",
+"Sigur Rós – Ágætis byrjun",
+"Shiro Sagisu – The End of Evangelion",
+"Cocteau Twins – Treasure",
+"My Bloody Valentine – Loveless"
+]
+},
+"noisy": {
+"share_of_albums": 0.096,
+"often_appears_with": [
+"atonal",
+"dissonant",
+"chaotic",
+"scary",
+"lo-fi"
+],
+"example_albums": [
+"My Bloody Valentine – Loveless",
+"Nirvana – In utero",
+"Daughters – You Won't Get What You Want",
+"This Heat – Made Available: John Peel Sessions",
+"Sonic Youth – Sister"
+]
+},
+"romantic": {
+"share_of_albums": 0.113,
+"often_appears_with": [
+"sensual",
+"ballad",
+"Wall of Sound",
+"sentimental",
+"longing"
+],
+"example_albums": [
+"Van Morrison – Moondance",
+"The Cure – Disintegration",
+"D'Angelo and The Vanguard – Black Messiah",
+"Depeche Mode – 101",
+"Frank Ocean – channel ORANGE"
+]
+},
+"female vocals": {
+"share_of_albums": 0.143,
+"often_appears_with": [
+"choral",
+"sensual",
+"ethereal",
+"soft",
+"ballad"
+],
+"example_albums": [
+"Weyes Blood – Titanic Rising",
+"Renaissance – Live at Carnegie Hall",
+"The KT Fellowship – Before the Dawn",
+"Big Thief – Dragon New Warm Mountain I Believe in You",
+"Lauryn Hill – The Miseducation of Lauryn Hill"
+]
+},
+"lush": {
+"share_of_albums": 0.183,
+"often_appears_with": [
+"Wall of Sound",
+"spring",
+"ethereal",
+"soothing",
+"orchestral"
+],
+"example_albums": [
+"Sufjan Stevens – Illinois",
+"Fishmans – Long Season",
+"Beach House – Once Twice Melody",
+"Steely Dan – Aja",
+"Weyes Blood – Titanic Rising"
+]
+},
+"Wall of Sound": {
+"share_of_albums": 0.009,
+"often_appears_with": [
+"aquatic",
+"happy",
+"ethereal",
+"summer",
+"dense"
+],
+"example_albums": [
+"The Beach Boys – Pet Sounds",
+"The Beach Boys – The Smile Sessions",
+"The Ronettes – Presenting The Fabulous Ronettes Featuring Veronica",
+"The Beatles – Let It Be... Naked",
+"The Beach Boys – Surf's Up"
+]
+},
+"warm": {
+"share_of_albums": 0.231,
+"often_appears_with": [
+"tropical",
+"summer",
+"happy",
+"spring",
+"peaceful"
+],
+"example_albums": [
+"Grateful Dead – Cornell 5/8/77",
+"Jorge Ben – A Tábua de Esmeralda",
+"Grateful Dead – Europe '72",
+"The Beatles – Abbey Road",
+"Yo La Tengo – I Can Hear the Heart Beating as One"
+]
+},
+"sensual": {
+"share_of_albums": 0.045,
+"often_appears_with": [
+"romantic",
+"sentimental",
+"longing",
+"soft",
+"nocturnal"
+],
+"example_albums": [
+"D'Angelo – Voodoo",
+"The Jimi Hendrix Experience – Electric Ladyland",
+"Jessie Ware – What's Your Pleasure?",
+"Janet – The Velvet Rope",
+"Depeche Mode – Violator"
+]
+},
+"androgynous vocals": {
+"share_of_albums": 0.012,
+"often_appears_with": [
+"aquatic",
+"chamber music",
+"winter",
+"party",
+"ethereal"
+],
+"example_albums": [
+"Sparks – Kimono My House",
+"Secos & Molhados – Secos & Molhados",
+"Sparks – Propaganda",
+"Beverly Glenn-Copeland – Beverly Glenn-Copeland",
+"Ecco2K – E"
+]
+},
+"soothing": {
+"share_of_albums": 0.088,
+"often_appears_with": [
+"peaceful",
+"calm",
+"soft",
+"meditative",
+"natural"
+],
+"example_albums": [
+"Fishmans – 宇宙 日本 世田谷 (Uchu Nippon Setagaya)",
+"青葉市子 [Ichiko Aoba] – 0%",
+"Simon and Garfunkel – Bridge Over Troubled Water",
+"Sigur Rós – Ágætis byrjun",
+"Nujabes – Modal Soul"
+]
+},
+"mellow": {
+"share_of_albums": 0.183,
+"often_appears_with": [
+"soft",
+"calm",
+"peaceful",
+"soothing",
+"spring"
+],
+"example_albums": [
+"OutKast – ATLiens",
+"Pink Floyd – Meddle",
+"Steely Dan – Aja",
+"Miles Davis – Kind of Blue",
+"Miles Davis – In a Silent Way"
+]
+},
+"space": {
+"share_of_albums": 0.033,
+"often_appears_with": [
+"futuristic",
+"rock opera",
+"ritualistic",
+"meditative",
+"hypnotic"
+],
+"example_albums": [
+"Hawkwind – Space Ritual",
+"King Krule – Live on the Moon",
+"Mario Galaxy Orchestra – Super Mario Galaxy",
+"John Williams / London Symphony Orchestr – Star Wars",
+"John Williams – Star Wars: The Empire Strikes Back"
+]
+},
+"calm": {
+"share_of_albums": 0.061,
+"often_appears_with": [
+"peaceful",
+"soft",
+"soothing",
+"sparse",
+"natural"
+],
+"example_albums": [
+"Bill Evans Trio – Waltz for Debby",
+"青葉市子 [Ichiko Aoba] – 0",
+"Joni Mitchell – Hejira",
+"青葉市子 [Ichiko Aoba] – \"Gift\" at Sogetsu Hall",
+"Miles Davis – Kind of Blue"
+]
+},
+"summer": {
+"share_of_albums": 0.073,
+"often_appears_with": [
+"tropical",
+"happy",
+"Wall of Sound",
+"party",
+"warm"
+],
+"example_albums": [
+"Grateful Dead – Cornell 5/8/77",
+"The Avalanches – Since I Left You",
+"Frank Ocean – channel ORANGE",
+"Novos Baianos – Acabou chorare",
+"Various Artists – Woodstock"
+]
+},
+"happy": {
+"share_of_albums": 0.039,
+"often_appears_with": [
+"party",
+"tropical",
+"uplifting",
+"summer",
+"Wall of Sound"
+],
+"example_albums": [
+"Novos Baianos – Acabou chorare",
+"Michael Jackson – Off the Wall",
+"Tim Buckley – Happy Sad",
+"Caravan – In the Land of Grey and Pink",
+"Common – Be"
+]
+},
+"medley": {
+"share_of_albums": 0.002,
+"often_appears_with": [
+"suite",
+"desert",
+"quirky",
+"summer",
+"psychedelic"
+],
+"example_albums": [
+"The Beatles – Abbey Road",
+"The Beatles – Love",
+"The Grateful Dead – Live / Dead",
+"King Gizzard and The Lizard Wizard – Nonagon Infinity",
+"Kero Kero Bonito – Time 'n' Place"
+]
+},
+"quirky": {
+"share_of_albums": 0.1,
+"often_appears_with": [
+"playful",
+"surreal",
+"eclectic",
+"androgynous vocals",
+"manic"
+],
+"example_albums": [
+"Zappa – You Can't Do That on Stage Anymore, Vol. 2",
+"Life Without Buildings – Live at the Annandale Hotel",
+"Thelonious Monk – Underground",
+"Brockhampton – Saturation III",
+"Talking Heads – Stop Making Sense"
+]
+},
+"playful": {
+"share_of_albums": 0.209,
+"often_appears_with": [
+"quirky",
+"party",
+"tropical",
+"happy",
+"summer"
+],
+"example_albums": [
+"Talking Heads – The Name of This Band Is Talking Heads",
+"The Rolling Stones – Exile on Main St.",
+"Zappa / MothersFrank ZappaThe Mothers of – Roxy & Elsewhere",
+"Madvillain – Madvillainy",
+"The Beatles – Sgt. Pepper's Lonely Hearts Club Band"
+]
+},
+"energetic": {
+"share_of_albums": 0.361,
+"often_appears_with": [
+"anthemic",
+"angry",
+"party",
+"manic",
+"aggressive"
+],
+"example_albums": [
+"The Jimi Hendrix Experience – Are You Experienced",
+"Sonic Youth – Daydream Nation",
+"The Stooges – Fun House",
+"Nirvana – Nevermind",
+"Iron Maiden – Live After Death"
+]
+},
+"suite": {
+"share_of_albums": 0.021,
+"often_appears_with": [
+"polyphonic",
+"chamber music",
+"meditative",
+"concept album",
+"androgynous vocals"
+],
+"example_albums": [
+"Duke Ellington – Duke Ellington's Far East Suite",
+"Mingus – The Black Saint and the Sinner Lady",
+"Chicago Symphony / Fritz Reiner – Scheherazade",
+"Extremoduro – La ley innata",
+"John Coltrane – A Love Supreme"
+]
+},
+"sampling": {
+"share_of_albums": 0.084,
+"often_appears_with": [
+"urban",
+"party",
+"futuristic",
+"mechanical",
+"rhythmic"
+],
+"example_albums": [
+"Madvillain – Madvillainy",
+"MF DOOM – Mm.. Food",
+"Kanye West – Late Registration",
+"The Avalanches – Since I Left You",
+"Beastie Boys – Paul's Boutique"
+]
+},
+"raw": {
+"share_of_albums": 0.158,
+"often_appears_with": [
+"noisy",
+"lo-fi",
+"infernal",
+"manic",
+"angry"
+],
+"example_albums": [
+"Iggy and The Stooges – Raw Power",
+"Tom Waits – Bone Machine",
+"Sonic Youth – Sister",
+"Ten Years After – Live at the Fillmore East 1970",
+"Joy Division – Les Bains Douches 18 December 1979"
+]
+},
+"dissonant": {
+"share_of_albums": 0.066,
+"often_appears_with": [
+"atonal",
+"scary",
+"infernal",
+"chaotic",
+"disturbing"
+],
+"example_albums": [
+"This Heat – Made Available: John Peel Sessions",
+"Ground-Zero – Last Concert",
+"Glenn Branca – The Ascension",
+"Unwound – Repetition",
+"Sonic Youth – Sister"
+]
+},
+"lo-fi": {
+"share_of_albums": 0.046,
+"often_appears_with": [
+"lethargic",
+"noisy",
+"depressive",
+"raw",
+"sparse"
+],
+"example_albums": [
+"Earl Sweatshirt – Some Rap Songs",
+"John Coltrane – The Olatunji Concert: The Last Live Recording",
+"Car Seat Headrest – Twin Fantasy",
+"The Microphones – The Glow Pt. 2",
+"Joy Division – Les Bains Douches 18 December 1979"
+]
+},
+"anthemic": {
+"share_of_albums": 0.071,
+"often_appears_with": [
+"triumphant",
+"Wall of Sound",
+"martial",
+"rock opera",
+"energetic"
+],
+"example_albums": [
+"Tears for Fears – Songs From the Big Chair",
+"Ramones – It's Alive",
+"Iron Maiden – The Number of the Beast",
+"Running Wild – Death or Glory",
+"John Williams – Raiders of the Lost Ark"
+]
+},
+"rock opera": {
+"share_of_albums": 0.011,
+"often_appears_with": [
+"concept album",
+"triumphant",
+"epic",
+"space",
+"martial"
+],
+"example_albums": [
+"Pink Floyd – The Wall",
+"The Who – Quadrophenia",
+"Genesis – The Lamb Lies Down on Broadway",
+"Various Artists – The Rocky Horror Picture Show",
+"Queensrÿche – Operation: Mindcrime"
+]
+},
+"triumphant": {
+"share_of_albums": 0.051,
+"often_appears_with": [
+"medieval",
+"martial",
+"rock opera",
+"choral",
+"anthemic"
+],
+"example_albums": [
+"Bruce Springsteen – Born to Run",
+"Various Artists – A Clockwork Orange",
+"Berlin Philharmonic Orchestra / Herbert  – New World Symphony / The Moldau",
+"Bruce Springsteen & the E Street BandBru – Hammersmith Odeon, London '75",
+"Beyoncé – Homecoming: The Live Album"
+]
+},
+"autumn": {
+"share_of_albums": 0.05,
+"often_appears_with": [
+"rain",
+"sad",
+"soft",
+"lethargic",
+"calm"
+],
+"example_albums": [
+"The Blasting Company – Over the Garden Wall",
+"Yo La Tengo – I Can Hear the Heart Beating as One",
+"Marek Grechuta / Anawa – Korowód",
+"American Football – American Football",
+"Arcade Fire – Funeral"
+]
+},
+"polyphonic": {
+"share_of_albums": 0.014,
+"often_appears_with": [
+"suite",
+"atonal",
+"choral",
+"minimalistic",
+"meditative"
+],
+"example_albums": [
+"Glenn Gould – The Goldberg Variations",
+"Keller Quartett – Die Kunst der Fuge",
+"Grateful Dead – One From the Vault",
+"Pierre Hantaï – Variations Goldberg BWV 988",
+"Steve Reich and Musicians – Music for 18 Musicians"
+]
+},
+"repetitive": {
+"share_of_albums": 0.081,
+"often_appears_with": [
+"minimalistic",
+"ritualistic",
+"hypnotic",
+"meditative",
+"mechanical"
+],
+"example_albums": [
+"Steve Reich and Musicians – Music for 18 Musicians",
+"Swans – To Be Kind",
+"Swans – The Seer",
+"Fishmans – Long Season",
+"King Gizzard and The Lizard Wizard – Nonagon Infinity"
+]
+},
+"manic": {
+"share_of_albums": 0.078,
+"often_appears_with": [
+"atonal",
+"chaotic",
+"disturbing",
+"dissonant",
+"scary"
+],
+"example_albums": [
+"Comus – First Utterance",
+"Danny Brown – Atrocity Exhibition",
+"System of a Down – Toxicity",
+"The Stooges – 1970: The Complete Fun House Sessions",
+"Converge – Jane Doe"
+]
+},
+"tribal": {
+"share_of_albums": 0.015,
+"often_appears_with": [
+"ritualistic",
+"natural",
+"martial",
+"forest",
+"scary"
+],
+"example_albums": [
+"Geinoh Yamashirogumi – Symphonic Suite AKIRA",
+"Peter Gabriel – Passion (Music for The Last Temptation of Christ)",
+"Exuma – Exuma",
+"Dr. John, The Night Tripper – Gris-Gris",
+"Neurosis – Through Silver in Blood"
+]
+},
+"instrumental": {
+"share_of_albums": 0.173,
+"often_appears_with": [
+"chamber music",
+"improvisation",
+"meditative",
+"acoustic",
+"suspenseful"
+],
+"example_albums": [
+"Mingus – The Black Saint and the Sinner Lady",
+"Miles Davis – Kind of Blue",
+"Miles Davis – In a Silent Way",
+"John Coltrane – Giant Steps",
+"John Coltrane – My Favorite Things"
+]
+},
+"suspenseful": {
+"share_of_albums": 0.063,
+"often_appears_with": [
+"scary",
+"chamber music",
+"ritualistic",
+"disturbing",
+"orchestral"
+],
+"example_albums": [
+"Bernard Herrmann – Vertigo",
+"Glenn Branca – The Ascension",
+"Ennio Morricone – Il buono, il brutto, il cattivo",
+"Ground-Zero – Consume Red",
+"Ryan Amon – Bloodborne"
+]
+},
+"acoustic": {
+"share_of_albums": 0.125,
+"often_appears_with": [
+"improvisation",
+"polyphonic",
+"instrumental",
+"ballad",
+"chamber music"
+],
+"example_albums": [
+"Nirvana – MTV Unplugged in New York",
+"Townes Van Zandt – Live at The Old Quarter, Houston, Texas",
+"Joni Mitchell – Blue",
+"Elliott Smith – Elliott Smith",
+"Duke Ellington – Ellington at Newport"
+]
+},
+"aquatic": {
+"share_of_albums": 0.019,
+"often_appears_with": [
+"natural",
+"Wall of Sound",
+"androgynous vocals",
+"forest",
+"ethereal"
+],
+"example_albums": [
+"Isis – Oceanic",
+"Herbie Hancock – Maiden Voyage",
+"Mastodon – Leviathan",
+"Fishmans – Long Season",
+"Gorillaz – Plastic Beach"
+]
+},
+"heavy": {
+"share_of_albums": 0.183,
+"often_appears_with": [
+"infernal",
+"aggressive",
+"apocalyptic",
+"angry",
+"disturbing"
+],
+"example_albums": [
+"Metallica – Ride the Lightning",
+"Deep Purple – Made in Japan",
+"Electric Wizard – Dopethrone",
+"UFO – Strangers in the Night",
+"Swans – Swans Are Dead"
+]
+},
+"ominous": {
+"share_of_albums": 0.115,
+"often_appears_with": [
+"scary",
+"ritualistic",
+"infernal",
+"disturbing",
+"apocalyptic"
+],
+"example_albums": [
+"Viktor Vaughn – Vaudeville Villain",
+"Opeth – Ghost Reveries",
+"Philip Glass – Koyaanisqatsi",
+"Tenhi – Folk Aesthetic",
+"Opeth – The Roundhouse Tapes"
+]
+},
+"funereal": {
+"share_of_albums": 0.015,
+"often_appears_with": [
+"depressive",
+"chamber music",
+"sad",
+"ritualistic",
+"lethargic"
+],
+"example_albums": [
+"Farazi v Kayra – Hayalet Islığı",
+"Anna von Hausswolff – Dead Magic",
+"Nick Cave and Warren Ellis – The Assassination of Jesse James by the Coward Robert Ford",
+"diSEMBOWELMENT – Transcendence Into the Peripheral",
+"Anna von Hausswolff – Live at Montreux Jazz Festival"
+]
+},
+"chamber music": {
+"share_of_albums": 0.006,
+"often_appears_with": [
+"atonal",
+"suspenseful",
+"funereal",
+"suite",
+"desert"
+],
+"example_albums": [
+"Asko Ensemble / WDR Sinfonieorchester Kö – Les espaces acoustiques",
+"Nick Cave and Warren Ellis – The Assassination of Jesse James by the Coward Robert Ford",
+"Univers Zéro – Ceux du dehors",
+"Anthony Braxton – Willisau (Quartet) 1991",
+"Black Country, New Road – Ants From Up There"
+]
+},
+"vocal group": {
+"share_of_albums": 0.004,
+"often_appears_with": [
+"Wall of Sound",
+"polyphonic",
+"choral",
+"spring",
+"happy"
+],
+"example_albums": [
+"The Beach Boys – Sunflower",
+"The Beach Boys – Pet Sounds",
+"The Beach Boys – The Smile Sessions",
+"The Ronettes – Presenting The Fabulous Ronettes Featuring Veronica",
+"The Beach Boys – Surf's Up"
+]
+},
+"orchestral": {
+"share_of_albums": 0.036,
+"often_appears_with": [
+"choral",
+"chamber music",
+"polyphonic",
+"suspenseful",
+"triumphant"
+],
+"example_albums": [
+"Mario Galaxy Orchestra – Super Mario Galaxy",
+"Valve Studio Orchestra – Fight Songs: The Music of Team Fortress 2",
+"Royal Concertgebouw Orchestra / Asko Ens – The Complete Works",
+"Mario Galaxy Orchestra – Super Mario Galaxy 2",
+"Shiro Sagisu – The End of Evangelion"
+]
+},
+"aggressive": {
+"share_of_albums": 0.138,
+"often_appears_with": [
+"infernal",
+"angry",
+"disturbing",
+"heavy",
+"apocalyptic"
+],
+"example_albums": [
+"Metallica – Master of Puppets",
+"Motörhead – No Sleep 'Til Hammersmith",
+"Cryptopsy – None So Vile",
+"Ghostface Killah – Ironman",
+"Sepultura – Arise"
+]
+},
+"uncommon time signatures": {
+"share_of_albums": 0.078,
+"often_appears_with": [
+"complex",
+"polyphonic",
+"chaotic",
+"technical",
+"dissonant"
+],
+"example_albums": [
+"King Crimson – Larks' Tongues in Aspic",
+"King Crimson – Discipline",
+"Rush – Hemispheres",
+"Eric Dolphy – Out to Lunch",
+"Yes – Fragile"
+]
+},
+"monologue": {
+"share_of_albums": 0.003,
+"often_appears_with": [
+"choral",
+"lethargic",
+"suite",
+"minimalistic",
+"calm"
+],
+"example_albums": [
+"Mitch Hedberg – Mitch All Together",
+"Steven Wright – I Have a Pony",
+"Black Country, New Road – For the First Time",
+"Mitch Hedberg – Strategic Grill Locations",
+"Phil Ochs – Phil Ochs in Concert"
+]
+},
+"pastoral": {
+"share_of_albums": 0.064,
+"often_appears_with": [
+"natural",
+"medieval",
+"spring",
+"peaceful",
+"forest"
+],
+"example_albums": [
+"Townes Van Zandt – Our Mother the Mountain",
+"Townes Van Zandt – Live at The Old Quarter, Houston, Texas",
+"Fairport Convention – Liege & Lief",
+"Van Morrison – Saint Dominic's Preview",
+"Silver Jews – American Water"
+]
+},
+"soft": {
+"share_of_albums": 0.061,
+"often_appears_with": [
+"calm",
+"peaceful",
+"sparse",
+"soothing",
+"natural"
+],
+"example_albums": [
+"Bill Evans Trio – Waltz for Debby",
+"青葉市子 [Ichiko Aoba] – 0%",
+"青葉市子 [Ichiko Aoba] – 0",
+"Steely Dan – Aja",
+"Carole King – Tapestry"
+]
+},
+"peaceful": {
+"share_of_albums": 0.045,
+"often_appears_with": [
+"natural",
+"meditative",
+"soothing",
+"calm",
+"soft"
+],
+"example_albums": [
+"C418 – Minecraft: Volume Alpha",
+"Nujabes – Modal Soul",
+"Stars of the Lid – And Their Refinement of the Decline",
+"C418 – Minecraft: Volume Beta",
+"Steve Roach – Structures From Silence"
+]
+},
+"minimalistic": {
+"share_of_albums": 0.03,
+"often_appears_with": [
+"sparse",
+"natural",
+"meditative",
+"repetitive",
+"polyphonic"
+],
+"example_albums": [
+"Townes Van Zandt – Rear View Mirror",
+"Wire – Pink Flag",
+"Steve Reich and Musicians – Music for 18 Musicians",
+"Floating Points, Pharoah Sanders & The L – Promises",
+"Philip Glass – Mishima"
+]
+},
+"sparse": {
+"share_of_albums": 0.024,
+"often_appears_with": [
+"minimalistic",
+"meditative",
+"soft",
+"calm",
+"peaceful"
+],
+"example_albums": [
+"Mount Eerie – (after)",
+"青葉市子 [Ichiko Aoba] – \"Gift\" at Sogetsu Hall",
+"青葉市子 [Ichiko Aoba] – 0",
+"Talk Talk – Laughing Stock",
+"Bruce Springsteen – Nebraska"
+]
+},
+"sad": {
+"share_of_albums": 0.057,
+"often_appears_with": [
+"depressive",
+"funereal",
+"lonely",
+"sparse",
+"lethargic"
+],
+"example_albums": [
+"London Sinfonietta / David Zinman / Dawn – Symphony No. 3",
+"Sufjan Stevens – Carrie & Lowell",
+"Elliott Smith – Elliott Smith",
+"Sun Kil Moon – Ghosts of the Great Highway",
+"Lou Reed – Berlin"
+]
+},
+"rain": {
+"share_of_albums": 0.017,
+"often_appears_with": [
+"natural",
+"autumn",
+"minimalistic",
+"lonely",
+"sad"
+],
+"example_albums": [
+"Vangelis – Blade Runner",
+"Martin O'Donnell & Michael Salvatori – Halo 3: ODST",
+"John Cale – Fragments of a Rainy Season",
+"Burial – Untrue",
+"The Cure – Disintegration"
+]
+},
+"angry": {
+"share_of_albums": 0.083,
+"often_appears_with": [
+"aggressive",
+"infernal",
+"noisy",
+"martial",
+"apocalyptic"
+],
+"example_albums": [
+"Converge – Jane Doe",
+"Modest Mouse – The Lonesome Crowded West",
+"Nine Inch Nails – The Fragile",
+"Metallica – Master of Puppets",
+"Nirvana – Nevermind"
+]
+},
+"chaotic": {
+"share_of_albums": 0.063,
+"often_appears_with": [
+"atonal",
+"dissonant",
+"manic",
+"avant-garde",
+"scary"
+],
+"example_albums": [
+"John Coltrane – The Olatunji Concert: The Last Live Recording",
+"Converge – Jane Doe",
+"Deathspell Omega – Paracletus",
+"black midi – Cavalcade",
+"Ground-Zero – Last Concert"
+]
+},
+"seasonal": {
+"share_of_albums": 0.003,
+"often_appears_with": [
+"natural",
+"forest",
+"spring",
+"aquatic",
+"suite"
+],
+"example_albums": [
+"Grant Kirkhope – Banjo-Kazooie",
+"Mario Galaxy Orchestra – Super Mario Galaxy 2",
+"XTC – Skylarking",
+"Konzerthaus Kammerorchester Berlin / And – Recomposed by Max Richter: Vivaldi - The Four Seasons",
+"The Zombies – Odessey and Oracle"
+]
+},
+"spring": {
+"share_of_albums": 0.025,
+"often_appears_with": [
+"natural",
+"peaceful",
+"forest",
+"pastoral",
+"medieval"
+],
+"example_albums": [
+"Sun Ra and His Arkestra – Sleeping Beauty",
+"Talk Talk – The Colour of Spring",
+"Cleveland Orchestra / Pierre Boulez – Pétrouchka; Le Sacre du printemps",
+"Various Artists – The Sound of Music",
+"Ennio Morricone – Vergogna schifosi"
+]
+},
+"forest": {
+"share_of_albums": 0.015,
+"often_appears_with": [
+"natural",
+"winter",
+"tribal",
+"ritualistic",
+"medieval"
+],
+"example_albums": [
+"GAS – Pop",
+"The Microphones – The Glow Pt. 2",
+"Comus – First Utterance",
+"Wolves in the Throne Room – Two Hunters",
+"Moonsorrow – Verisäkeet"
+]
+},
+"choral": {
+"share_of_albums": 0.008,
+"often_appears_with": [
+"ritualistic",
+"orchestral",
+"martial",
+"natural",
+"polyphonic"
+],
+"example_albums": [
+"Geinoh Yamashirogumi – Symphonic Suite AKIRA",
+"Max Roach and His Chorus and Orchestra – It's Time",
+"Philharmonia Orchestra / Philharmonia Ch – A German Requiem",
+"Estonian Philharmonic Chamber Choir / Ta – Te Deum",
+"Estonian Philharmonic Chamber Choir / Pa – Da pacem"
+]
+},
+"scary": {
+"share_of_albums": 0.019,
+"often_appears_with": [
+"disturbing",
+"ritualistic",
+"atonal",
+"infernal",
+"martial"
+],
+"example_albums": [
+"Akira Yamaoka – Silent Hill",
+"Scott Walker – The Drift",
+"Wojciech Kilar – Bram Stoker's Dracula",
+"Ryan Amon – Bloodborne",
+"Anna von Hausswolff – Live at Montreux Jazz Festival"
+]
+},
+"lethargic": {
+"share_of_albums": 0.033,
+"often_appears_with": [
+"funereal",
+"depressive",
+"lo-fi",
+"sparse",
+"sad"
+],
+"example_albums": [
+"Steven Wright – I Have a Pony",
+"King Krule – You Heat Me Up, You Cool Me Down",
+"Low – I Could Live in Hope",
+"Galaxie 500 – Peel Sessions",
+"Red House Painters – Down Colorful Hill"
+]
+},
+"ballad": {
+"share_of_albums": 0.013,
+"often_appears_with": [
+"medieval",
+"soft",
+"calm",
+"peaceful",
+"romantic"
+],
+"example_albums": [
+"Bill Evans Trio – Waltz for Debby",
+"Grateful Dead – Reckoning",
+"Steeleye Span – Hark! The Village Wait",
+"Kult – Tata Kazika",
+"The Isley Brothers – 3 + 3"
+]
+},
+"disturbing": {
+"share_of_albums": 0.035,
+"often_appears_with": [
+"scary",
+"atonal",
+"infernal",
+"ritualistic",
+"dissonant"
+],
+"example_albums": [
+"Swans – Soundtracks for the Blind",
+"Akira Yamaoka – Silent Hill",
+"Autopsy – Mental Funeral",
+"Acid Bath – When the Kite String Pops",
+"Munly & The Lee Lewis Harlots – Munly & The Lee Lewis Harlots"
+]
+},
+"mechanical": {
+"share_of_albums": 0.035,
+"often_appears_with": [
+"futuristic",
+"martial",
+"scary",
+"cold",
+"atonal"
+],
+"example_albums": [
+"Kraftwerk – Computerwelt",
+"Autechre – Tri repetae",
+"Autechre – Confield",
+"Godflesh – Streetcleaner",
+"New Order – Power, Corruption & Lies"
+]
+},
+"infernal": {
+"share_of_albums": 0.026,
+"often_appears_with": [
+"scary",
+"disturbing",
+"ritualistic",
+"martial",
+"apocalyptic"
+],
+"example_albums": [
+"Immolation – Close to a World Below",
+"Incantation – Onward to Golgotha",
+"Deathspell Omega – Paracletus",
+"Incantation – Diabolical Conquest",
+"Incantation – Mortal Throne of Nazarene"
+]
+},
+"tropical": {
+"share_of_albums": 0.021,
+"often_appears_with": [
+"summer",
+"happy",
+"tribal",
+"desert",
+"warm"
+],
+"example_albums": [
+"Jorge Ben – A Tábua de Esmeralda",
+"The Avalanches – Since I Left You",
+"Exuma – Exuma",
+"Santana – Caravanserai",
+"Buena Vista Social Club – Buena Vista Social Club"
+]
+},
+"party": {
+"share_of_albums": 0.025,
+"often_appears_with": [
+"happy",
+"androgynous vocals",
+"sampling",
+"summer",
+"futuristic"
+],
+"example_albums": [
+"Daft Punk – Alive 2007",
+"Michael Jackson – Off the Wall",
+"James Brown – Love Power Peace: Live at the Olympia, Paris, 1971",
+"Daft Punk – Discovery",
+"Underworld – Everything, Everything"
+]
+},
+"mashup": {
+"share_of_albums": 0.001,
+"often_appears_with": [
+"suite",
+"party",
+"happy",
+"mechanical",
+"sampling"
+],
+"example_albums": [
+"Daft Punk – Alive 2007",
+"The Beatles – Love",
+"The Avalanches – Gimix"
+]
+},
+"ritualistic": {
+"share_of_albums": 0.016,
+"often_appears_with": [
+"tribal",
+"scary",
+"martial",
+"choral",
+"forest"
+],
+"example_albums": [
+"Exuma – Exuma",
+"Geinoh Yamashirogumi – Symphonic Suite AKIRA",
+"Comus – First Utterance",
+"Pharoah Sanders – Elevation",
+"The Pyramids – King of Kings"
+]
+},
+"desert": {
+"share_of_albums": 0.012,
+"often_appears_with": [
+"tribal",
+"martial",
+"chamber music",
+"natural",
+"tropical"
+],
+"example_albums": [
+"Ennio Morricone – Il buono, il brutto, il cattivo",
+"Marty Robbins – Gunfighter Ballads and Trail Songs",
+"The Gun Club – Miami",
+"Peter Gabriel – Passion (Music for The Last Temptation of Christ)",
+"McCoy Tyner – Sama Layuca"
+]
+},
+"martial": {
+"share_of_albums": 0.01,
+"often_appears_with": [
+"ritualistic",
+"scary",
+"tribal",
+"choral",
+"infernal"
+],
+"example_albums": [
+"Anthony Braxton – Creative Orchestra (Köln) 1978",
+"Ennio Morricone – Il buono, il brutto, il cattivo",
+"Martin O'Donnell & Michael Salvatori – Halo 3",
+"Valve Studio Orchestra – Fight Songs: The Music of Team Fortress 2",
+"Bolt Thrower – ...For Victory"
+]
+},
+"natural": {
+"share_of_albums": 0.006,
+"often_appears_with": [
+"forest",
+"tribal",
+"spring",
+"peaceful",
+"rain"
+],
+"example_albums": [
+"Biosphere – Substrata",
+"Pescado Rabioso – Pescado 2",
+"Estonian Philharmonic Chamber Choir / Pa – Da pacem",
+"GAS – Pop",
+"Animal Collective – Feels"
+]
+},
+"skit": {
+"share_of_albums": 0.0,
+"often_appears_with": [
+"sampling",
+"concept album",
+"urban",
+"rhythmic",
+"energetic"
+],
+"example_albums": [
+"Masta Ace – Disposable Arts"
+]
+},
+"parody": {
+"share_of_albums": 0.001,
+"often_appears_with": [
+"happy",
+"chaotic",
+"eclectic",
+"uncommon time signatures",
+"manic"
+],
+"example_albums": [
+"Elio e le Storie Tese – Italyan, Rum Casusu Çikti",
+"The Mothers of Invention – Freak Out!"
+]
+},
+"atonal": {
+"share_of_albums": 0.008,
+"often_appears_with": [
+"chamber music",
+"scary",
+"dissonant",
+"disturbing",
+"avant-garde"
+],
+"example_albums": [
+"The Peter Brötzmann Octet – Machine Gun",
+"Anthony Braxton – Willisau (Quartet) 1991",
+"Anthony Braxton – Saxophone Improvisations Series F",
+"Asko Ensemble / WDR Sinfonieorchester Kö – Les espaces acoustiques",
+"Immolation – Unholy Cult"
+]
+},
+"lyrics": {
+"share_of_albums": 0.002,
+"often_appears_with": [
+"ballad",
+"medieval",
+"tropical",
+"soft",
+"calm"
+],
+"example_albums": [
+"Bill Evans Trio – Waltz for Debby",
+"Steeleye Span – Below the Salt",
+"Cockney Rebel – The Psychomodo",
+"Skip James – Today!",
+"Jorge Ben – Jorge Ben"
+]
+},
+"waltz": {
+"share_of_albums": 0.001,
+"often_appears_with": [
+"ballad",
+"soft",
+"calm",
+"romantic",
+"acoustic"
+],
+"example_albums": [
+"Bill Evans Trio – Waltz for Debby",
+"Cannonball Adderley With Bill Evans – Know What I Mean?"
+]
+},
+"jingle": {
+"share_of_albums": 0.0,
+"often_appears_with": [
+"concept album",
+"quirky",
+"surreal",
+"psychedelic",
+"playful"
+],
+"example_albums": [
+"The Who – The Who Sell Out"
+]
+},
+"opera": {
+"share_of_albums": 0.002,
+"often_appears_with": [
+"choral",
+"polyphonic",
+"orchestral",
+"androgynous vocals",
+"minimalistic"
+],
+"example_albums": [
+"Wilhelm Furtwängler / Ludwig Suthaus / K – Tristan und Isolde",
+"The Philip Glass Ensemble – Einstein on the Beach",
+"Philip Glass / Robert Wilson – Einstein on the Beach",
+"Andrew Lloyd Webber – The Phantom of the Opera",
+"The Residents – Not Available"
+]
+},
+"symphony": {
+"share_of_albums": 0.002,
+"often_appears_with": [
+"orchestral",
+"atonal",
+"suspenseful",
+"scary",
+"acoustic"
+],
+"example_albums": [
+"Chicago Symphony Orchestra / Georg Solti – Symphony No. 9 'From the New World'",
+"New Philharmonia Orchestra / Philharmoni – Das Lied von der Erde",
+"Berlin Philharmonic Orchestra / Herbert  – New World Symphony / The Moldau",
+"London Sinfonietta / David Zinman / Dawn – Symphony No. 3",
+"New York Philharmonic / Leonard Bernstei – Symphonie fantastique"
+]
+},
+"fairy tale": {
+"share_of_albums": 0.001,
+"often_appears_with": [
+"funereal",
+"orchestral",
+"suite",
+"suspenseful",
+"winter"
+],
+"example_albums": [
+"The Blasting Company – Over the Garden Wall",
+"Alan Menken / Howard Ashman – Beauty and the Beast",
+"Kaleidoscope – Tangerine Dream",
+"Danny Elfman – Edward Scissorhands"
+]
+},
+"oratorio": {
+"share_of_albums": 0.0
+},
+"ensemble": {
+"share_of_albums": 0.002,
+"often_appears_with": [
+"polyphonic",
+"martial",
+"orchestral",
+"party",
+"triumphant"
+],
+"example_albums": [
+"Valve Studio Orchestra – Fight Songs: The Music of Team Fortress 2",
+"Pharoah Sanders – Live in Paris (1975)",
+"Beyoncé – Homecoming: The Live Album",
+"Terry Riley – In C",
+"Andrew Lloyd Webber – The Phantom of the Opera"
+]
+},
+"string quartet": {
+"share_of_albums": 0.001,
+"often_appears_with": [
+"polyphonic",
+"minimalistic",
+"acoustic",
+"sombre",
+"instrumental"
+],
+"example_albums": [
+"Alban Berg Quartett – String Quartets",
+"Keller Quartett – Die Kunst der Fuge",
+"Kronos Quartet – Kronos Quartet Performs Philip Glass"
+]
+}
+}
