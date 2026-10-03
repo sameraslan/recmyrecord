@@ -23,18 +23,20 @@ def test_status_counts_and_missing_list(world):
     (world.audio / "match_overrides.json").write_text(json.dumps({"key:4": {"skip": True}}))
     text = status(world.catalog, world.audio)
     assert text.splitlines() == [
-        "5 albums in the feature table, 3 with audio, 2 without (imputed by the build)",
+        "5 albums in the catalog (5 on the site, 0 new), 3 with audio, 2 without (the build imputes the site's)",
         "store: discogs-effnet-bs1-1, 4 clips per album by policy, 1 shard(s)",
         "by source: deezer 2, itunes:us 1",
         "clips per album: 3 clips: 1, 4 clips: 2",
         "ambiguous matches (check them; correct in match_overrides.json): 1",
-        "without audio: 1 unmatched, 0 matched but no usable clip, 0 never synced, 1 skipped by match_overrides.json"]
+        "without audio: 1 unmatched, 0 matched but not in the store (no usable clip, or not embedded yet), 0 never matched, "
+        "1 skipped by match_overrides.json"]
     assert status(world.catalog, world.audio, missing=True).splitlines()[6:] == [
         "title-3-artist-3\tArtist 3 — Title 3", "title-4-artist-4\tArtist 4 — Title 4"]
 
 
 def test_status_of_an_empty_store(world):
-    assert status(world.catalog, world.audio).splitlines()[0] == "5 albums in the feature table, 0 with audio, 5 without (imputed by the build)"
+    assert status(world.catalog, world.audio).splitlines()[0] == (
+        "5 albums in the catalog (5 on the site, 0 new), 0 with audio, 5 without (the build imputes the site's)")
 
 
 def test_cli_compact_and_status(world, capsys):

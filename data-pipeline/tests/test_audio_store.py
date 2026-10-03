@@ -1,3 +1,4 @@
+import csv
 import json
 
 import numpy as np
@@ -247,12 +248,18 @@ def test_committed_store(deduped):
     assert {"deezer", "itunes:us"} <= set(s.source.tolist())
     assert s.manifest["clips"]["per_album"] in (4, 8) and 1 <= s.n_clips.min()
     assert s.n_clips.max() <= s.manifest["clips"]["per_album"] or "local" in s.source.tolist()
+    # matches.csv: a row for every album of the feature table, and rows of the catalog's new albums, which are
+    # matched before they are embedded. load_matches refuses a repeated key.
     matches = load_matches(DEFAULT_AUDIO / "matches.csv")
-    assert {m["key"] for m in matches} == uris
+    match_keys = {m["key"] for m in matches}
+    with open(DEFAULT_AUDIO.parent / "catalog" / "albums.csv", newline="", encoding="utf-8") as f:
+        catalog = {r["rym_id"] for r in csv.DictReader(f)}
+    assert len(match_keys) == len(matches) and uris <= match_keys <= catalog
+    assert set(s.keys.tolist()) <= match_keys
     matched = {m["key"]: m["source"] for m in matches if m["source"]}
     stored = {k: src for k, src in zip(s.keys.tolist(), s.source.tolist()) if src != "local"}
     assert stored == {k: matched.get(k) for k in stored}  # every embedding comes from the listing matches.csv names
-    assert len(matched) - len(stored) <= 5  # matched, but no usable clip: rare
+    assert len(set(matched) & uris) - len(stored) <= 5  # an album of the site matched, but no usable clip: rare
     overrides = load_match_overrides(DEFAULT_AUDIO / "match_overrides.json")
     assert set(overrides) <= uris and all(e.get("note") for e in overrides.values())
     skipped = {k for k, e in overrides.items() if e.get("skip")}
