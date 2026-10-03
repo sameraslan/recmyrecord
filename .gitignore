@@ -7,3 +7,25 @@ data-pipeline/.venv/
 # preview-features experiment: caches, models and venv are never committed
 experiments/preview_features/cache/
 experiments/preview_features/.venv/
+# Secrets must never be committed. Keep credentials in local .env files
+# (ignored below) and document variable names in a committed .env.example.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python
+.cache
+recVenv/
+venv/
+.venv/
+*.pyc
+
+# Node / Next.js
+.next/
+
+# Misc
+.DS_Store
+*.log
+.idea/

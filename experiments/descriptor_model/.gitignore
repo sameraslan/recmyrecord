@@ -1,0 +1,10 @@
+cache/
+.venv/
+.venv-audio/
+__pycache__/
+*.mp3
+*.m4a
+*.wav
+.venv-meta/
+.pytest_cache/
+results/*.lock
