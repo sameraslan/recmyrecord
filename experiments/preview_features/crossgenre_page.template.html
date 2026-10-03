@@ -1,0 +1,310 @@
+<title>Sonic Stop Genre Crossing</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: one reading column in recmyrecord's room palette (same as the first results page); the listening bench is the one wide block, a row of candidate columns that scrolls sideways inside its own frame. */
+:root {
+  color-scheme: dark;
+  --room: #15110d; --room-2: #1c1712; --room-3: #262019; --room-4: #322a21;
+  --paper: #ede5d5; --dust: #b3a792; --ash: #a39887;
+  --rule: rgba(237, 229, 213, 0.11); --rule-2: rgba(237, 229, 213, 0.2);
+  --lamp: #e6a856; --lamp-ink: #1a130b; --lamp-wash: rgba(230, 168, 86, 0.1); --moss: #97a077;
+  --serif: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  --sans: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+* { box-sizing: border-box; }
+body { background: var(--room); color: var(--paper); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 880px; margin: 0 auto; padding-inline: 20px; padding-block: 44px 80px; display: flex; flex-direction: column; gap: 52px; }
+.wide { max-width: 1280px; margin: 0 auto; padding-inline: 20px; width: 100%; }
+section, header { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+h1 { font-family: var(--serif); font-weight: 600; font-size: clamp(2.1rem, 6vw, 3.2rem); line-height: 1.05; margin: 0; text-wrap: balance; }
+h2 { font-family: var(--serif); font-weight: 600; font-size: 1.75rem; line-height: 1.15; margin: 0; text-wrap: balance; }
+h3 { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--dust); margin: 0; }
+p { margin: 0; max-width: 66ch; }
+.eyebrow { font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; color: var(--lamp); }
+.lede { font-family: var(--serif); font-size: 1.4rem; line-height: 1.35; max-width: 42ch; }
+.muted { color: var(--dust); }
+.small { font-size: 0.88rem; }
+ul.plain, ol.plain { margin: 0; padding-left: 1.2em; max-width: 66ch; display: flex; flex-direction: column; gap: 8px; }
+strong { font-weight: 600; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86em; color: var(--dust); overflow-wrap: anywhere; }
+a { color: var(--lamp); }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; }
+
+.tablebox { overflow-x: auto; border-top: 1px solid var(--rule-2); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 500; color: var(--dust); font-size: 0.8rem; }
+td.n, th.n { text-align: right; padding-right: 18px; white-space: nowrap; }
+tr.ref td { color: var(--lamp); }
+tr.ctl td { color: var(--ash); }
+tr.grp td { color: var(--dust); font-size: 0.78rem; letter-spacing: 0.09em; text-transform: uppercase; padding-top: 18px; }
+
+.bench { background: var(--room-2); border: 1px solid var(--rule); border-radius: 6px; padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+select { font: inherit; color: var(--paper); background: var(--room-3); border: 1px solid var(--rule-2); border-radius: 4px; padding: 8px 10px; max-width: 100%; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--rule-2); border-radius: 4px; overflow: hidden; }
+.seg button { font: inherit; color: var(--dust); background: transparent; border: 0; padding: 8px 14px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--lamp); color: var(--lamp-ink); font-weight: 600; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { font: inherit; font-size: 0.8rem; color: var(--ash); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
+.chips button[aria-pressed="true"] { color: var(--paper); border-color: var(--rule-2); background: var(--room-3); }
+.seedline { font-family: var(--serif); font-size: 1.45rem; line-height: 1.2; }
+.seedline a { color: var(--paper); text-decoration: none; }
+.seedline a:hover { text-decoration: underline; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 0.84rem; color: var(--dust); }
+.legend .sw { display: inline-block; width: 0.8em; height: 0.8em; border-radius: 2px; background: var(--lamp); margin-right: 6px; vertical-align: -1px; }
+.scroller { overflow-x: auto; margin-inline: -20px; padding-inline: 20px; padding-bottom: 6px; }
+.cols { display: flex; gap: 18px; width: max-content; }
+.col { width: 236px; flex: none; display: flex; flex-direction: column; gap: 8px; }
+.col header { gap: 3px; min-height: 5.6em; border-bottom: 1px solid var(--rule-2); padding-bottom: 8px; }
+.col .name { font-weight: 600; font-size: 0.92rem; line-height: 1.25; }
+.col .kind { font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ash); }
+.col .stat { font-size: 0.8rem; color: var(--dust); font-variant-numeric: tabular-nums; }
+.col .stat b { color: var(--lamp); font-weight: 600; }
+.col ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.col li { display: grid; grid-template-columns: 1.5em minmax(0, 1fr); gap: 2px; padding: 6px 6px 6px 4px; border-bottom: 1px solid var(--rule); font-size: 0.88rem; line-height: 1.3; }
+.col li .i { color: var(--ash); font-variant-numeric: tabular-nums; }
+.col li a { color: var(--paper); text-decoration: none; overflow-wrap: anywhere; }
+.col li a:hover { text-decoration: underline; }
+.col li .art { display: block; color: var(--dust); font-size: 0.8rem; }
+.col li .meta { display: block; color: var(--ash); font-size: 0.74rem; font-variant-numeric: tabular-nums; }
+.col li.out { background: var(--lamp-wash); }
+.col li.out .meta { color: var(--lamp); }
+.col .targets { font-size: 0.76rem; color: var(--ash); font-variant-numeric: tabular-nums; line-height: 1.45; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.pair > div { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+@media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">recmyrecord experiment · 3 October 2026</div>
+    <h1>Can the sonic stop leave the seed's genre?</h1>
+    <p class="lede">Not by swapping the audio model. Every option that reaches further outside the genre gives up some agreement on how the music feels. One comes close to the <em>Bitches Brew</em> list you expected: Spotify's old scores, predicted from the audio.</p>
+    <p class="muted">Seventeen representations and three ranking rules were compared on cached clips. The lists below are the real test: the numbers are all built from RYM genres and descriptors, and RYM descriptors follow genre themselves. Nothing the site serves was changed.</p>
+  </header>
+</div>
+
+<div class="wide">
+  <section>
+    <div class="bench">
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Album pool">
+          <button type="button" id="pool-full" aria-pressed="true">Whole catalog · 3,944</button>
+          <button type="button" id="pool-bakeoff" aria-pressed="false">CLAP and MERT · 1,000</button>
+        </div>
+        <label class="small muted" for="seed">Album</label>
+        <select id="seed"></select>
+      </div>
+      <div class="seedline" id="seedline"></div>
+      <div class="legend">
+        <span><span class="sw"></span>outside the seed's genre family</span>
+        <span>the number after the genre is the descriptor match with the seed (0 to 1)</span>
+        <span>titles open on Spotify</span>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="Columns shown"></div>
+      <div class="scroller"><div class="cols" id="cols"></div></div>
+      <p class="small muted" id="benchnote"></p>
+    </div>
+  </section>
+</div>
+
+<div class="wrap">
+  <section>
+    <h2>How the measurement works</h2>
+    <p>For every album, take its ten nearest by the audio block alone, with the artist's other records removed. Three numbers per option:</p>
+    <ul class="plain">
+      <li><strong>Outside the family.</strong> How many of the ten are outside the seed's broad genre family (jazz, rock, metal, electronic and so on; 17 families).</li>
+      <li><strong>Descriptor agreement.</strong> Mean similarity between the seed's RYM descriptors and its neighbours'. A random list scores 0.23.</li>
+      <li><strong>Crossing quality.</strong> Rank only albums outside the seed's family, take the ten nearest, and measure how much better their descriptors match than a random outside-family album. This takes genre out of the comparison.</li>
+    </ul>
+    <p class="muted small">Random and shuffled blocks sit exactly at the floors, and plain EffNet reproduces the earlier report's figures, so the measurement is doing what it says. Hubs is the skew of how often albums get recommended: under 1 is healthy, above 2 means a few albums are in far too many lists.</p>
+  </section>
+
+  <section>
+    <h2>Whole catalog</h2>
+    <p>3,944 albums, four clips each. Everything here can be built from the clips already cached.</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>Option</th><th class="n">Outside family, of 10</th><th class="n">Descriptor agreement</th><th class="n">Crossing quality</th><th class="n">Hubs</th></tr></thead>
+      <tbody id="tbl-full"></tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Other models</h2>
+    <p>1,000 albums, two clips each, every model on the same clips. CLAP and MERT exist only here, and <em>Bitches Brew</em> is not among these albums.</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>Option</th><th class="n">Outside family, of 10</th><th class="n">Descriptor agreement</th><th class="n">Crossing quality</th><th class="n">Hubs</th></tr></thead>
+      <tbody id="tbl-bakeoff"></tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <h2>What the numbers show</h2>
+    <ul class="plain">
+      <li><strong>EffNet already crosses more than Bitches Brew suggests.</strong> On average 3.7 of its ten are outside the seed's family, and those are far better matched than chance. Jazz is the hard case: it forms a tight cluster, and the first non-jazz album for <em>Bitches Brew</em> is at rank 164.</li>
+      <li><strong>No model picks better crossings than EffNet.</strong> Forced to choose outside the family, EffNet and CLAP tie, and MusiCNN and MERT are behind. The genre training does not make its out-of-genre picks worse.</li>
+      <li><strong>CLAP reaches a little further for almost nothing.</strong> 4.9 of ten outside the family against 4.4, for 0.007 less descriptor agreement. It was trained on audio paired with text, not on genre labels.</li>
+      <li><strong>MERT reaches furthest and agrees least.</strong> Its middle layers are its best; the early layers are not better. A few albums take over its lists.</li>
+      <li><strong>Removing the Discogs classifier's directions does nothing.</strong> The lists are the same at every rank. Genre is spread through the whole embedding.</li>
+      <li><strong>Removal fitted on RYM genres does move the lists, at a price.</strong> Reach rises, the crossings get about as good as adding noise would make them, and hubs appear.</li>
+      <li><strong>The old Spotify lists crossed by being loose.</strong> They reached furthest of anything real and had the lowest descriptor agreement. The same scores predicted from audio behave the same way, a little tighter.</li>
+      <li><strong>Forcing five slots outside the family works per list and breaks the catalog.</strong> The forced picks are as good as natural ones, but the same few albums fill those slots for hundreds of seeds.</li>
+    </ul>
+    <p>Taken together: measured against EffNet diluted with noise to the same reach, nothing is more than about 0.04 better. The options differ mainly in where they sit on one trade-off.</p>
+  </section>
+
+  <section>
+    <h2>Bitches Brew</h2>
+    <p>Every embedding keeps the list inside jazz. EffNet's first non-jazz album is at rank 164, and <em>Live-Evil</em>, <em>Get Up With It</em> and <em>Rocksession</em> are at 70, 286 and 430.</p>
+    <p>The old Spotify list had eight of ten outside jazz, with King Crimson twice, at a descriptor match of 0.34 against EffNet's 0.50. The Spotify-like scores predicted from audio give the list closest to what you described: Mahavishnu Orchestra, <em>In a Silent Way</em>, Soft Machine's <em>Third</em> and Julia Holter among free and fusion jazz, at a descriptor match of 0.50. Mixing even a tenth of EffNet back in returns it to all jazz.</p>
+    <p class="muted small">One caution on that list: for albums already in the catalog the predictor has seen their real Spotify scores. A new album gets a pure prediction, which recovers energy, acousticness, danceability, loudness and valence well (R² 0.7 to 0.8) and key, mode and tempo poorly.</p>
+    <div class="tablebox"><table>
+      <thead><tr><th>Option</th><th class="n">Live-Evil</th><th class="n">Get Up With It</th><th class="n">Rocksession</th><th class="n">First rock album</th></tr></thead>
+      <tbody id="tbl-bb"></tbody>
+    </table></div>
+    <p class="muted small">Rank among the 3,943 other albums; 10 or lower would be in the list. RYM files Jazz-Rock under jazz, so <em>Rocksession</em> counts as inside the family.</p>
+  </section>
+
+  <section>
+    <h2>What to do next</h2>
+    <div class="pair">
+      <div>
+        <h3>What I would do</h3>
+        <p>Keep EffNet as the store for now. If the CLAP columns sound better to you on the 1,000-album tab, the next step is running CLAP over the whole catalog so it can be judged on <em>Bitches Brew</em> itself. That is a 776 MB download and about 30,000 clips, a few hours of gentle laptop time.</p>
+        <p>If the Spotify-like column sounds right to you, that block can be built today from the clips already stored, with no new downloads. It is the old sonic stop without Spotify: looser than EffNet, further across genres, weaker on the descriptor numbers.</p>
+      </div>
+      <div>
+        <h3>What I would not do</h3>
+        <ul class="plain small">
+          <li>Genre erasure fitted on RYM families: weaker crossings and hubs.</li>
+          <li>Forced crossing as tested: it needs a hub control first.</li>
+          <li>MERT: least agreement, heaviest to run.</li>
+          <li>Pick on these numbers alone. They are RYM proxies; your ears decide.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="muted small">Numbers and every sweep are in <code>experiments/preview_features/results/crossgenre.md</code> on branch <code>experiment/genre-crossing</code>; the summary is <code>REPORT-genre-crossing.md</code> in the same folder.</p>
+  </section>
+</div>
+
+<script type="application/json" id="data">__DATA__</script>
+<script type="application/json" id="tables">__TABLES__</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const TABLES = JSON.parse(document.getElementById('tables').textContent);
+// name shown on the column, and what kind of option it is
+const NAMES = {
+  'effnet/64': ['EffNet', 'in use now'],
+  'effnet/64~x5': ['EffNet, 5 forced outside', 'ranking rule · needs RYM genre'],
+  'effnet/64~x5p': ['EffNet, 5 forced outside', 'ranking rule · family guessed from audio'],
+  'spotify': ['Spotify features', 'old site'],
+  'ridge': ['Spotify-like scores', 'predicted from audio'],
+  'effnet/64+ridge@0.9': ['EffNet + Spotify-like scores', 'blend, scores-heavy'],
+  'ball': ['Essentia feel scores', '33 scalars, no embedding'],
+  'effnet/64+ball@0.9': ['EffNet + feel scores', 'blend, scores-heavy'],
+  'effnet-leace/64+ball@0.5': ['Genre-erased EffNet + feel', 'fitted on RYM families'],
+  'effnet-leace/64': ['Genre-erased EffNet', 'fitted on RYM families'],
+  'effnet-inlp2/64': ['EffNet, light genre removal', 'fitted on RYM families'],
+  'musicnn/64': ['MusiCNN', 'trained on listener tags'],
+  'effnet/64~mmr0.5': ['EffNet, diversified', 'ranking rule · spreads the ten'],
+  'clap_music/64': ['CLAP', 'audio paired with text'],
+  'clap_music/64~x5': ['CLAP, 5 forced outside', 'ranking rule · needs RYM genre'],
+  'clap_music/64~x5p': ['CLAP, 5 forced outside', 'ranking rule · family guessed from audio'],
+  'clap_music-inlp1/64': ['CLAP, light genre removal', 'fitted on RYM families'],
+  'mert_l5/64': ['MERT, layer 5', 'audio only, no labels'],
+};
+const TARGETS = [['Live-Evil', 'Live-Evil'], ['Get Up With It', 'Get Up With It'], ['Rocksession', 'Rocksession'], ['first_rock_family', 'first rock']];
+const state = { pool: 'full', seed: { full: 0, bakeoff: 0 }, hidden: { full: new Set(), bakeoff: new Set() } };
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const url = id => 'https://open.spotify.com/album/' + id;
+
+function albumLink(a) {
+  const link = el('a', null, a[1]);
+  if (a[4]) { link.href = url(a[4]); link.target = '_blank'; link.rel = 'noopener'; }
+  return link;
+}
+
+function renderSeeds() {
+  const sec = DATA.sections[state.pool], sel = $('seed');
+  sel.replaceChildren(...sec.seeds.map((s, i) => {
+    const a = sec.albums[s.row], o = el('option', null, a[0] + ' — ' + a[1]);
+    o.value = i; return o;
+  }));
+  sel.value = state.seed[state.pool];
+}
+
+function renderChips() {
+  const sec = DATA.sections[state.pool], hidden = state.hidden[state.pool];
+  $('chips').replaceChildren(...sec.candidates.map(c => {
+    const n = NAMES[c.id] || [c.label, ''];
+    const b = el('button', null, n[0] + (c.id.includes('~x5p') ? ' (guessed)' : ''));
+    b.type = 'button'; b.setAttribute('aria-pressed', String(!hidden.has(c.id)));
+    b.addEventListener('click', () => { hidden.has(c.id) ? hidden.delete(c.id) : hidden.add(c.id); renderChips(); renderCols(); });
+    return b;
+  }));
+}
+
+function renderCols() {
+  const sec = DATA.sections[state.pool], seed = sec.seeds[state.seed[state.pool]], sa = sec.albums[seed.row];
+  const line = $('seedline');
+  line.replaceChildren(el('span', 'muted', sa[0] + ' — '), albumLink(sa));
+  line.append(el('span', 'muted small', '  ' + (seed.genres || []).join(', ') + ' · family: ' + (sa[3] || 'none')));
+  const wrong = new Set(sec.wrong_features || []);
+  $('cols').replaceChildren(...sec.candidates.filter(c => !state.hidden[state.pool].has(c.id) && seed.lists[c.id]).map(c => {
+    const L = seed.lists[c.id], n = NAMES[c.id] || [c.label, ''];
+    const col = el('div', 'col'), head = el('header');
+    head.append(el('div', 'name', n[0]), el('div', 'kind', n[1]));
+    const stat = el('div', 'stat');
+    const b = el('b', null, String(L.n_out_family));
+    stat.append(b, ' of 10 outside · match ' + (L.mean_desc_cos == null ? '–' : L.mean_desc_cos.toFixed(2)));
+    head.append(stat); col.append(head);
+    const ol = el('ol');
+    L.items.forEach((it, i) => {
+      const a = sec.albums[it[0]], li = el('li', it[1] === 1 ? 'out' : null);
+      const body = el('span');
+      body.append(albumLink(a), el('span', 'art', a[0] + (it[4] ? ' · same artist' : '')));
+      let meta = a[2] || 'no RYM genre';
+      if (it[3] != null) meta += ' · ' + it[3].toFixed(2);
+      if (c.id === 'spotify' && wrong.has(it[0])) meta += ' · features from another record';
+      body.append(el('span', 'meta', meta));
+      li.append(el('span', 'i', String(i + 1)), body); ol.append(li);
+    });
+    col.append(ol);
+    if (L.target_ranks) {
+      const t = el('div', 'targets');
+      t.textContent = TARGETS.map(([k, name]) => name + ' #' + (L.target_ranks[k] ?? '–')).join(' · ');
+      col.append(t);
+    }
+    return col;
+  }));
+  $('benchnote').textContent = state.pool === 'full'
+    ? 'Four clips per album, 3,944 albums. The site\'s own store has up to eight clips, so its live list can differ slightly. Under the Bitches Brew columns: where each expected album ranks.'
+    : 'Two clips per album, and neighbours can only come from these 1,000 albums, so lists are thinner than on the site. Compare columns with each other, not with the other tab.';
+}
+
+function setPool(p) {
+  state.pool = p;
+  $('pool-full').setAttribute('aria-pressed', String(p === 'full'));
+  $('pool-bakeoff').setAttribute('aria-pressed', String(p === 'bakeoff'));
+  renderSeeds(); renderChips(); renderCols();
+}
+$('pool-full').addEventListener('click', () => setPool('full'));
+$('pool-bakeoff').addEventListener('click', () => setPool('bakeoff'));
+$('seed').addEventListener('change', e => { state.seed[state.pool] = +e.target.value; renderCols(); });
+
+function fillTable(id, rows) {
+  $(id).replaceChildren(...rows.map(r => {
+    const tr = el('tr', r.cls || null);
+    if (r.group) { const td = el('td', null, r.group); td.colSpan = 5; tr.append(td); return tr; }
+    tr.append(el('td', null, r.name));
+    r.cells.forEach(c => tr.append(el('td', 'n', c)));
+    return tr;
+  }));
+}
+fillTable('tbl-full', TABLES.full);
+fillTable('tbl-bakeoff', TABLES.bakeoff);
+fillTable('tbl-bb', TABLES.bb);
+setPool('full');
+</script>
