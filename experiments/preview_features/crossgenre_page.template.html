@@ -81,7 +81,7 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
     <div class="eyebrow">recmyrecord experiment · 3 October 2026</div>
     <h1>Can the sonic stop leave the seed's genre?</h1>
     <p class="lede">Not by swapping the audio model. Every option that reaches further outside the genre gives up some agreement on how the music feels. One comes close to the <em>Bitches Brew</em> list you expected: Spotify's old scores, predicted from the audio.</p>
-    <p class="muted">Seventeen representations and three ranking rules were compared on cached clips. The lists below are the real test: the numbers are all built from RYM genres and descriptors, and RYM descriptors follow genre themselves. Nothing the site serves was changed.</p>
+    <p class="muted">Seventeen representations were compared on cached clips. The lists below are the real test: the numbers are all built from RYM genres and descriptors, and RYM descriptors follow genre themselves. Nothing the site serves was changed.</p>
   </header>
 </div>
 
@@ -149,7 +149,6 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
       <li><strong>Removing the Discogs classifier's directions does nothing.</strong> The lists are the same at every rank. Genre is spread through the whole embedding.</li>
       <li><strong>Removal fitted on RYM genres does move the lists, at a price.</strong> Reach rises, the crossings get about as good as adding noise would make them, and hubs appear.</li>
       <li><strong>The old Spotify lists crossed by being loose.</strong> They reached furthest of anything real and had the lowest descriptor agreement. The same scores predicted from audio behave the same way, a little tighter.</li>
-      <li><strong>Forcing five slots outside the family works per list and breaks the catalog.</strong> The forced picks are as good as natural ones, but the same few albums fill those slots for hundreds of seeds.</li>
     </ul>
     <p>Taken together: measured against EffNet diluted with noise to the same reach, nothing is more than about 0.04 better. The options differ mainly in where they sit on one trade-off.</p>
   </section>
@@ -178,7 +177,6 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
         <h3>What I would not do</h3>
         <ul class="plain small">
           <li>Genre erasure fitted on RYM families: weaker crossings and hubs.</li>
-          <li>Forced crossing as tested: it needs a hub control first.</li>
           <li>MERT: least agreement, heaviest to run.</li>
           <li>Pick on these numbers alone. They are RYM proxies; your ears decide.</li>
         </ul>

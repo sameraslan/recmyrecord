@@ -30,8 +30,6 @@ FULL = [
     row("Genre-erased EffNet + feel scores", 0.428, 0.424, 0.139, 1.47),
     {"group": "Ranking rules on EffNet", "cls": "grp"},
     row("Diversified top 10", 0.407, 0.417, None, 0.25),
-    row("5 forced outside, family guessed from audio", 0.454, 0.412, None, 8.71),
-    row("5 forced outside, RYM family", 0.591, 0.406, None, 9.56),
     {"group": "Controls", "cls": "grp"},
     row("EffNet mixed half and half with noise", 0.455, 0.383, 0.110, 1.28, "ctl"),
     row("Random", 0.873, 0.229, -0.001, 0.24, "ctl"),
@@ -58,6 +56,10 @@ BB_NAMES = {"effnet/64": "EffNet (in use now)", "spotify": "Spotify features (ol
 
 def main() -> None:
     data = json.loads((HERE / "results" / "crossgenre_listening.json").read_text())
+    for sec in data["sections"].values():  # forced crossing was rejected as an approach; keep it off the page
+        sec["candidates"] = [c for c in sec["candidates"] if "~x5" not in c["id"]]
+        for seed in sec["seeds"]:
+            seed["lists"] = {k: v for k, v in seed["lists"].items() if "~x5" not in k}
     lists = data["sections"]["full"]["seeds"][0]["lists"]
     bb = []
     for c in BB:
