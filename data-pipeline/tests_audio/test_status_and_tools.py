@@ -58,10 +58,13 @@ def test_site_slugs():
     if not albums.exists():
         pytest.skip("no built site data")
     site = json.loads(albums.read_text(encoding="utf-8"))
-    catalog = load_catalog()
+    everything = load_catalog()
+    catalog = [al for al in everything if not al.new]  # the site's albums come first, in its order
+    assert everything[:len(catalog)] == catalog
+    assert [(al.key, al.slug, al.artist) for al in load_catalog(albums=None)] == [(al.key, al.slug, al.artist) for al in catalog]
     assert [al.slug for al in catalog] == [a["slug"] for a in site]
     assert [al.artist for al in catalog] == [a["a"] for a in site]
-    assert len({al.key for al in catalog}) == len(catalog)
+    assert len({al.key for al in everything}) == len(everything) == len({al.slug for al in everything})
     assert sum(not al.override for al in catalog) > 4000  # the Spotify numbers were found
 
 
