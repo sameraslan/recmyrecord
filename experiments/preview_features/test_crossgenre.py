@@ -4,7 +4,7 @@ Run: python test_crossgenre.py   (or pytest; needs the analysis venv, no caches)
 """
 import numpy as np
 
-from crossgenre import crossing_masks, floors, mmr, parse
+from crossgenre import crossing_masks, floors, forced, mmr, parse
 from simbench import distances, nearest
 
 GENRES = [["Jazz Fusion", "Avant-Garde Jazz"],  # 0 seed: jazz
@@ -54,7 +54,24 @@ def test_mmr():
     assert all(len(set(r)) == 5 for r in spread)
 
 
+def test_forced():
+    X = np.random.default_rng(0).normal(size=(40, 3))
+    D, allowed = distances(X), np.ones((40, 40), bool)
+    grp = np.arange(40) % 2
+    outside = grp[:, None] != grp[None, :]
+    plain, got = nearest(D, allowed, k=6), forced(D, allowed, outside, 3, k=6)
+    rows = np.arange(40)[:, None]
+    assert (outside[rows, got].sum(axis=1) >= 3).all() and all(len(set(r)) == 6 for r in got)
+    assert (np.diff(D[rows, got], axis=1) >= 0).all()
+    enough = outside[rows, plain].sum(axis=1) >= 3
+    assert enough.any() and not enough.all() and np.array_equal(got[enough], plain[enough])
+    for s in np.flatnonzero(~enough):  # the forced picks are the nearest outside albums
+        assert set(got[s][outside[s, got[s]]]) == set(np.flatnonzero(outside[s])[np.argsort(D[s, outside[s]])[:3]])
+    assert np.array_equal(forced(D, allowed, np.zeros((40, 40), bool), 3, k=6), plain)
+
+
 def test_parse():
+    assert parse("effnet/64~x5p") == ([("effnet/64", 1.0)], None)
     assert parse("effnet/64+feel@0.25") == ([("effnet/64", 0.75), ("feel", 0.25)], None)
     assert parse("effnet/64~mmr0.5") == ([("effnet/64", 1.0)], 0.5)
     assert parse("a/64+b/64")[0] == [("a/64", 0.5), ("b/64", 0.5)]

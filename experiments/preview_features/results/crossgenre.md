@@ -370,6 +370,33 @@ Candidates: the seed's 50 nearest; lambda = 1 is the plain list.
 | effnet/64~mmr0.5 | – | – | 0.875 | 0.487 ±0.024 | 0.346 (4.1) | +0.108 ±0.006 | 0.395 ±0.008 | 0.125 | 0.632 | 0.47 | – | +0.008 |
 | effnet/64~mmr0.3 | – | – | 0.904 | 0.516 ±0.024 | 0.336 (4.4) | +0.099 ±0.006 | 0.380 ±0.007 | 0.096 | 0.632 | 1.22 | – | +0.007 |
 
+### Forced crossing: 5 of the 10 outside the seed's family (changes the ranking rule; list-based measures only)
+
+The plain top 10, with its furthest in-family members replaced by the nearest out-of-family albums until 5 are outside; lists that already have 5 are untouched. `~x5`: outside by the RYM family, which needs the RYM genre at run time (a reference, not a qualifying candidate; a seed or candidate without RYM genres is never outside: 0 albums, whose lists stay plain). `~x5p`: outside by the family predicted from the candidate's own embedding, for seed and candidates alike (fampred's classifier, argmax, out of fold by artist; accuracy over the albums with a genre: effnet/64 0.626, clap_music/64 0.568). `out family` and the cosines are always measured with the true RYM family.
+
+| candidate | out family | out primary | families /list | cross out cos (n) | cross in cos (n) | cross out lift | desc_cos_xa | primary_xa | hub skew | never |
+|---|---|---|---|---|---|---|---|---|---|---|
+| effnet/64 | 0.440 ±0.027 | 0.835 | 2.96 | 0.365 (3.8) | 0.456 (4.7) | +0.124 ±0.008 | 0.414 ±0.008 | 0.165 | 0.69 | 0.008 |
+| effnet/64~x5 | 0.622 ±0.013 | 0.884 | 3.87 | 0.359 (5.3) | 0.450 (3.2) | +0.125 ±0.007 | 0.392 ±0.007 | 0.116 | 4.00 | 0.009 |
+| effnet/64~x5p | 0.509 ±0.022 | 0.871 | 3.42 | 0.357 (4.3) | 0.446 (4.2) | +0.120 ±0.007 | 0.399 ±0.007 | 0.129 | 3.66 | 0.008 |
+| clap_music/64 | 0.485 ±0.026 | 0.877 | 3.31 | 0.363 (4.1) | 0.451 (4.3) | +0.123 ±0.007 | 0.407 ±0.008 | 0.123 | 1.01 | 0.013 |
+| clap_music/64~x5 | 0.639 ±0.014 | 0.909 | 4.07 | 0.360 (5.4) | 0.446 (3.0) | +0.126 ±0.007 | 0.389 ±0.007 | 0.090 | 2.44 | 0.016 |
+| clap_music/64~x5p | 0.532 ±0.021 | 0.894 | 3.66 | 0.357 (4.5) | 0.442 (3.9) | +0.121 ±0.007 | 0.395 ±0.007 | 0.106 | 2.57 | 0.015 |
+| effnet/64~mmr0.5 | 0.487 ±0.024 | 0.875 | 3.57 | 0.346 (4.1) | 0.443 (4.3) | +0.108 ±0.006 | 0.395 ±0.008 | 0.125 | 0.47 | 0.000 |
+
+Paired difference against the same embedding's plain list:
+
+| candidate | xg_family | xg_primary | out_family | out_primary | desc_cos_xa | genre_primary_xa |
+|---|---|---|---|---|---|---|
+| effnet/64~x5 | – | – | +0.182* | +0.050* | -0.022* | -0.050* |
+| effnet/64~x5p | – | – | +0.069* | +0.036* | -0.015* | -0.036* |
+| effnet/64~mmr0.5 | – | – | +0.046* | +0.040* | -0.019* | -0.040* |
+
+| candidate | xg_family | xg_primary | out_family | out_primary | desc_cos_xa | genre_primary_xa |
+|---|---|---|---|---|---|---|
+| clap_music/64~x5 | – | – | +0.154* | +0.033* | -0.018* | -0.033* |
+| clap_music/64~x5p | – | – | +0.048* | +0.017* | -0.012* | -0.017* |
+
 ### Noise control: effnet/64 with a share of its variance replaced by gaussian noise
 
 The reference for the trade-off: reach bought by being partly random. `lift vs noise` and `desc_xa vs noise` in every table are the candidate's xg lift / desc_cos_xa minus this curve's value (linear interpolation) at the candidate's own `out family`. No CI; the curve's points carry about ±0.01.
@@ -572,6 +599,25 @@ Candidates: the seed's 50 nearest; lambda = 1 is the plain list.
 | effnet/64~mmr0.7 | – | – | 0.808 | 0.381 ±0.015 | 0.375 (3.1) | +0.152 ±0.005 | 0.427 ±0.005 | 0.192 | 0.721 | 0.52 | – | +0.004 |
 | effnet/64~mmr0.5 | – | – | 0.829 | 0.407 ±0.015 | 0.365 (3.3) | +0.143 ±0.005 | 0.417 ±0.005 | 0.171 | 0.721 | 0.25 | – | +0.009 |
 | effnet/64~mmr0.3 | – | – | 0.851 | 0.432 ±0.015 | 0.357 (3.5) | +0.136 ±0.004 | 0.406 ±0.005 | 0.149 | 0.721 | 0.62 | – | +0.010 |
+
+### Forced crossing: 5 of the 10 outside the seed's family (changes the ranking rule; list-based measures only)
+
+The plain top 10, with its furthest in-family members replaced by the nearest out-of-family albums until 5 are outside; lists that already have 5 are untouched. `~x5`: outside by the RYM family, which needs the RYM genre at run time (a reference, not a qualifying candidate; a seed or candidate without RYM genres is never outside: 1 albums, whose lists stay plain). `~x5p`: outside by the family predicted from the candidate's own embedding, for seed and candidates alike (fampred's classifier, argmax, out of fold by artist; accuracy over the albums with a genre: effnet/64 0.700). `out family` and the cosines are always measured with the true RYM family.
+
+| candidate | out family | out primary | families /list | cross out cos (n) | cross in cos (n) | cross out lift | desc_cos_xa | primary_xa | hub skew | never |
+|---|---|---|---|---|---|---|---|---|---|---|
+| effnet/64 | 0.366 ±0.015 | 0.798 | 2.54 | 0.379 (3.0) | 0.463 (5.0) | +0.156 ±0.005 | 0.432 ±0.005 | 0.202 | 0.79 | 0.007 |
+| effnet/64~x5 | 0.591 ±0.007 | 0.865 | 3.54 | 0.369 (4.8) | 0.461 (3.3) | +0.152 ±0.004 | 0.406 ±0.004 | 0.135 | 9.56 | 0.016 |
+| effnet/64~x5p | 0.454 ±0.012 | 0.836 | 3.02 | 0.375 (3.7) | 0.444 (4.4) | +0.156 ±0.005 | 0.412 ±0.005 | 0.164 | 8.71 | 0.018 |
+| effnet/64~mmr0.5 | 0.407 ±0.015 | 0.829 | 2.99 | 0.365 (3.3) | 0.453 (4.7) | +0.143 ±0.005 | 0.417 ±0.005 | 0.171 | 0.25 | 0.000 |
+
+Paired difference against the same embedding's plain list:
+
+| candidate | xg_family | xg_primary | out_family | out_primary | desc_cos_xa | genre_primary_xa |
+|---|---|---|---|---|---|---|
+| effnet/64~x5 | – | – | +0.225* | +0.067* | -0.026* | -0.067* |
+| effnet/64~x5p | – | – | +0.087* | +0.038* | -0.020* | -0.038* |
+| effnet/64~mmr0.5 | – | – | +0.041* | +0.031* | -0.015* | -0.031* |
 
 ### Noise control: effnet/64 with a share of its variance replaced by gaussian noise
 

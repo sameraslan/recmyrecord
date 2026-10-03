@@ -33,7 +33,12 @@ other albums are never candidates here; descriptor cosine as simbench: albums wi
 CIs: 95% bootstrap over artists (simbench.summarise), paired for differences.
 
 Candidate names: parts joined with `+`, each `spec[@share]` (share of the total variance; parts
-without one split the rest), optional `~mmr<lambda>` at the end.
+without one split the rest), optional ranking rule at the end: `~mmr<lambda>`, or `~x<n>` / `~x<n>p`
+(forced crossing: the plain top 10 with its furthest in-family members replaced by the nearest
+out-of-family albums until n are outside the seed's family. `x<n>` judges "outside" by the RYM family,
+so it needs the RYM genre at run time: a reference, not a qualifying candidate. `x<n>p` judges it by a
+family predicted from the candidate's own embedding for seed and candidates alike, the out-of-fold
+(by artist) argmax of fampred's classifier: audio only).
   <emb>[-op...]/<k>   album mean -> L2 -> ops -> L2 -> PCA k. emb: effnet, musicnn, clap_music (the
                       working laion/larger_clap_music_and_speech), clap (laion/clap-htsat-unfused),
                       mert_l0..mert_l12, mert_mid (4-7), mert_early (1-3), mert_late (9-12), mert_mean,
@@ -189,6 +194,22 @@ def mmr(D: np.ndarray, allowed: np.ndarray, lam: float, pool: int = MMR_POOL, k:
     return np.take_along_axis(cand, chosen, axis=1)
 
 
+def forced(D: np.ndarray, allowed: np.ndarray, outside: np.ndarray, need: int, k: int = K) -> np.ndarray:
+    """Forced crossing: each seed's k nearest allowed albums; while fewer than `need` of them are
+    `outside` (N×N bool), the furthest non-outside member gives way to the nearest outside album not
+    yet listed (until those run out). Lists stay sorted by distance."""
+    D = np.where(allowed, D, np.inf)
+    top = nearest(D, k=k)
+    for s in range(len(D)):
+        out = outside[s, top[s]]
+        cand = np.setdiff1d(np.flatnonzero(outside[s] & np.isfinite(D[s])), top[s])
+        cand = cand[np.argsort(D[s, cand], kind="stable")[:max(need - int(out.sum()), 0)]]
+        if len(cand):
+            new = np.concatenate([top[s][out], top[s][~out][:k - int(out.sum()) - len(cand)], cand])
+            top[s] = new[np.argsort(D[s, new], kind="stable")]
+    return top
+
+
 def probe(X: np.ndarray, xb: XBench) -> float:
     """Out-of-fold accuracy of a linear genre-family classifier on the block."""
     ok = xb.fam >= 0
@@ -201,18 +222,22 @@ def probe(X: np.ndarray, xb: XBench) -> float:
     return round(float(hit[ok].mean()), 4)
 
 
-def xscore(X: np.ndarray, rows: np.ndarray, *, name: str, mmr_lambda: float | None = None, with_probe: bool = True) -> dict:
+def xscore(X: np.ndarray, rows: np.ndarray, *, name: str, mmr_lambda: float | None = None, with_probe: bool = True,
+           rerank=None) -> dict:
     """Every measure for one album-level matrix aligned to `rows`: `seeds` (per-seed arrays),
     `metrics` (mean, ci, n), `ratios` (the pooled crossing-quality numbers), `hubness`, `probe`,
-    `lists` (the same-artist-removed top 10). With `mmr_lambda` the top 10 is re-ranked by MMR and
-    only the list-based measures are reported."""
+    `lists` (the same-artist-removed top 10). With `mmr_lambda` the top 10 is re-ranked by MMR, with
+    `rerank` (D, allowed -> lists; see reranker) by that rule, and only the list-based measures are
+    reported."""
     xb = xbench(rows)
     b, cos = xb.b, xb.b.pair["desc_cos"]
     assert len(X) == len(rows) and np.isfinite(X).all(), name
     D = distances(X)
     take = lambda M, lists: np.take_along_axis(M, lists, axis=1)  # noqa: E731
     v: dict[str, np.ndarray] = {}
-    if mmr_lambda is None:
+    if mmr_lambda is not None:
+        rerank = lambda D, allowed: mmr(D, allowed, mmr_lambda)  # noqa: E731
+    if rerank is None:
         base = simbench.score(X, rows, name=name)
         v |= {m: base["seeds"][m] for m in ("desc_cos", "genre_primary", "feel_mad")}
         for s, allowed in xb.out.items():
@@ -222,7 +247,7 @@ def xscore(X: np.ndarray, rows: np.ndarray, *, name: str, mmr_lambda: float | No
         xa = nearest(D, ~b.same_artist)
         hub = base["hubness"]["audio"]
     else:
-        xa = mmr(D, ~b.same_artist, mmr_lambda)
+        xa = rerank(D, ~b.same_artist)
         hub = hubness(xa)
     c = take(cos, xa)
     out_f, in_f, out_p = take(xb.out["family"], xa), take(xb.in_family, xa), take(xb.out["primary"], xa)
@@ -433,9 +458,50 @@ def scalar_block(pool: str, kind: str, fit: str = "all", oof: bool = True) -> np
     return src.A[tr].mean(axis=0) + (pred - pred[tr].mean(axis=0)) * src.A[tr].std(axis=0) / pred[tr].std(axis=0)
 
 
+@lru_cache(maxsize=None)
+def predicted_family(pool: str, emb: str) -> tuple[np.ndarray, float]:
+    """Every album's genre family (id as Source.fam) predicted from its unit `emb` vector by
+    fampred's classifier (leading PRE PCs, standardised, logistic regression), out of fold by artist;
+    and the accuracy over the albums with an RYM genre."""
+    src = source(pool)
+    V, y, pred = unit(src.emb[emb]), src.fam, np.empty(len(src.rows), int)
+    for f, test in enumerate(src.tests):
+        lab = src.fits[f"fold{f}"]
+        lab = lab[y[lab] >= 0]
+        mt, C, s = _pcs(V[lab], PRE)
+        scaler = StandardScaler().fit((V[lab] - mt) @ C.T / s)
+        clf = _logreg(scaler.transform((V[lab] - mt) @ C.T / s), y[lab])
+        pred[test] = clf.predict(scaler.transform((V[test] - mt) @ C.T / s))
+    return pred, round(float((pred == y)[y >= 0].mean()), 4)
+
+
+def family_outside(pool: str, emb: str | None = None) -> np.ndarray:
+    """N×N: the candidate is outside the seed's family. By RYM family (never when either album has
+    no RYM genre), or with `emb` by the family predicted from that embedding."""
+    src = source(pool)
+    if emb is not None:
+        fam = predicted_family(pool, emb)[0]
+        return fam[:, None] != fam[None, :]
+    return (src.fam[:, None] != src.fam[None, :]) & (src.fam >= 0)[:, None] & (src.fam >= 0)[None, :]
+
+
+def reranker(name: str, pool: str):
+    """The ranking rule a name ends with, as a function (D, allowed) -> top-K lists; None = plain."""
+    rule = name.partition("~")[2]
+    if not rule:
+        return None
+    if rule.startswith("mmr"):
+        return lambda D, allowed: mmr(D, allowed, float(rule[3:]))
+    need, pred = re.fullmatch(r"x(\d+)(p?)", rule).groups()
+    outside = family_outside(pool, re.split(r"[-/]", name)[0] if pred else None)
+    return lambda D, allowed: forced(D, allowed, outside, int(need))
+
+
 def parse(name: str) -> tuple[list[tuple[str, float]], float | None]:
-    """name -> ([(spec, share of the total variance)], MMR lambda or None)."""
-    name, _, lam = name.partition("~mmr")
+    """name -> ([(spec, share of the total variance)], MMR lambda or None). Any `~rule` is dropped
+    from the specs (see reranker)."""
+    name, _, rule = name.partition("~")
+    lam = rule[3:] if rule.startswith("mmr") else ""
     parts = [p.partition("@") for p in name.split("+")]
     given = sum(float(s) for _, _, s in parts if s)
     free = sum(1 for _, _, s in parts if not s)
@@ -444,7 +510,7 @@ def parse(name: str) -> tuple[list[tuple[str, float]], float | None]:
 
 def build(name: str, pool: str, fit: str = "all", oof: bool = True) -> tuple[np.ndarray, np.ndarray]:
     """(rows, X): the album-level matrix of a named candidate on `pool` ("bakeoff" or "full"), rows
-    ascending (the albums of results/bakeoff_rows.txt / pool_rows.txt). An `~mmr` suffix does not change X
+    ascending (the albums of results/bakeoff_rows.txt / pool_rows.txt). A `~rule` suffix does not change X
     (it re-ranks; see xscore)."""
     src = source(pool)
     tr, blocks = src.fits[fit], []
@@ -495,11 +561,13 @@ def candidates(pool: str) -> dict[str, list[str]]:
         "ndesc": ["effnet-ndesc/64", "effnet-ndesc/24", "effnet-ndesc-leace/64", "effnet-ndesc-inlp2/64",
                   "effnet/64+effnet-ndesc/64", "musicnn-ndesc/64", "effnet-ndesc/64+ball@0.5"],
         "mmr": [f"effnet/64~mmr{lam}" for lam in (0.9, 0.7, 0.5, 0.3)],
+        "forced": ["effnet/64~x5", "effnet/64~x5p"],
         "noise": [f"effnet/64+random@{w}" for w in SHARES],
     }
     if pool == "bakeoff":
         out["models"] += ["clap_music/64", "clap_music/24", "clap/64", "mert_mid/64", "mert_mid/24", "mert_early/64",
                           "mert_earlycat/64", "mert_late/64", "mert_mean/64"]
+        out["forced"] += ["clap_music/64~x5", "clap_music/64~x5p"]
         out["mert_layers"] = [f"mert_l{i}/64" for i in range(13)]
         out["blends"] += blends("clap_music/64", ("feel",))
         out["ndesc"] += ["clap_music-ndesc/64", "clap_music-ndesc-leace/64", "clap_music/64+clap_music-ndesc/64",
@@ -529,7 +597,7 @@ def run_one(name: str, pool: str) -> dict:
         z = np.load(npz)
         return json.loads(js.read_text()) | {"seeds": {k: z[k] for k in z.files if k != "lists"}, "lists": z["lists"]}
     rows, X = build(name, pool)
-    r = xscore(X, rows, name=name, mmr_lambda=parse(name)[1])
+    r = xscore(X, rows, name=name, rerank=reranker(name, pool))
     d.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(npz, lists=r["lists"], **r["seeds"])
     js.write_text(json.dumps({k: r[k] for k in ("name", "dims", "metrics", "ratios", "hubness", "probe")}))
@@ -589,8 +657,8 @@ def anchor(names: list[str], pool: str = "full", seed=ANCHOR, targets=ANCHOR_TAR
     for name in names:
         X = build(name, pool)[1]
         D = distances(X)[s]
-        if parse(name)[1] is not None:
-            top = mmr(distances(X), np.ones((len(D), len(D)), bool), parse(name)[1])[s]
+        if reranker(name, pool) is not None:
+            top = reranker(name, pool)(distances(X), np.ones((len(D), len(D)), bool))[s]
         else:
             top = np.argsort(D)[:k]
         rank = np.empty(len(D), int)
@@ -639,6 +707,8 @@ WIDE = ["candidate", "dims", "xg cos", "xg lift", "lift primary", "lift strict",
         "desc_cos_xa", "primary_xa", "probe", "hub skew", "never", "feel_mad", "lift vs noise", "desc_xa vs noise"]
 SHORT = ["candidate", "xg lift", "lift primary", "out primary", "out family", "cross out cos (n)", "cross out lift",
          "desc_cos_xa", "primary_xa", "probe", "hub skew", "lift vs noise", "desc_xa vs noise"]
+FORCED_COLS = ["candidate", "out family", "out primary", "families /list", "cross out cos (n)", "cross in cos (n)",
+               "cross out lift", "desc_cos_xa", "primary_xa", "hub skew", "never"]
 NOISE_KEYS = {"lift vs noise": "xg_family_lift", "desc_xa vs noise": "desc_cos_xa"}
 
 
@@ -754,6 +824,8 @@ def report() -> None:
                                                        "desc_cos_xa", "genre_primary_xa") if k in r["seeds"]}
                                          for n, r in res.items() if n != "effnet/64"}}
         curve = noise_curve(res, sec["noise"])
+        js[pool]["predicted_family_accuracy"] = {e: predicted_family(pool, e.split("/")[0])[1] for e in dict.fromkeys(
+            f.partition("~")[0] for f in sec["forced"] if f in res and f.endswith("p"))}
         wide = lambda names: table(res, names, WIDE, curve)  # noqa: E731
         short = lambda names: table(res, names, SHORT, curve)  # noqa: E731
         out += [f"## {titles[pool]}", "",
@@ -792,6 +864,22 @@ def report() -> None:
                 "### MMR re-ranking of effnet/64 (changes the ranking rule; list-based measures only)", "",
                 f"Candidates: the seed's {MMR_POOL} nearest; lambda = 1 is the plain list.", "",
                 *short(["effnet/64"] + sec["mmr"]),
+                "### Forced crossing: 5 of the 10 outside the seed's family (changes the ranking rule; list-based "
+                "measures only)", "",
+                "The plain top 10, with its furthest in-family members replaced by the nearest out-of-family albums "
+                "until 5 are outside; lists that already have 5 are untouched. `~x5`: outside by the RYM family, which "
+                "needs the RYM genre at run time (a reference, not a qualifying candidate; a seed or candidate without "
+                f"RYM genres is never outside: {int((xb.fam < 0).sum())} albums, whose lists stay plain). `~x5p`: outside "
+                "by the family predicted from the candidate's own embedding, for seed and candidates alike (fampred's "
+                "classifier, argmax, out of fold by artist; accuracy over the albums with a genre: "
+                + ", ".join(f"{e} {a:.3f}" for e, a in js[pool]["predicted_family_accuracy"].items()) + "). `out family` "
+                "and the cosines are always measured with the true RYM family.", "",
+                *table(res, list(dict.fromkeys(n for f in sec["forced"] for n in (f.partition("~")[0], f)))
+                       + ["effnet/64~mmr0.5"], FORCED_COLS, curve),
+                "Paired difference against the same embedding's plain list:", "",
+                *[l for e in dict.fromkeys(f.partition("~")[0] for f in sec["forced"])
+                  for l in diff_table(res, [f for f in sec["forced"] if f.startswith(e + "~")]
+                                      + ["effnet/64~mmr0.5"] * (e == "effnet/64"), e, xb.b)],
                 "### Noise control: effnet/64 with a share of its variance replaced by gaussian noise", "",
                 "The reference for the trade-off: reach bought by being partly random. `lift vs noise` and `desc_xa vs "
                 "noise` in every table are the candidate's xg lift / desc_cos_xa minus this curve's value (linear "
