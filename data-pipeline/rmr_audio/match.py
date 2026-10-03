@@ -152,6 +152,10 @@ class StoreDown(IOError):
     """A store failed STORE_DOWN_AFTER URLs in a row: it is not asked again in this run."""
 
 
+class RateLimited(requests.HTTPError):
+    """The store refused the request for its rate: HTTP 403 or 429, or Deezer's quota error."""
+
+
 class Http:
     """GET JSON, rate-limited per store, with retries and a sqlite response cache (url -> zlib JSON).
     Only successful responses are cached, never an error payload. `fresh=True` neither reads nor writes
@@ -174,6 +178,7 @@ class Http:
         self.abort = lambda: False  # sync sets it: True once the run was asked to stop
         self.search_max_age_days = CACHE_DAYS
         self.failed: Counter = Counter()  # store -> URLs given up on in a row
+        self.limited: Counter = Counter()  # store -> rate-limit answers in this run (match-new stops on them)
 
     def _pause(self, seconds: float) -> None:
         end = time.monotonic() + seconds
@@ -204,11 +209,14 @@ class Http:
         if self.session is None:
             self.session = requests.Session()
         r = self.session.get(url, timeout=30)
-        if r.status_code in (403, 429) or r.status_code >= 500:
+        if r.status_code in (403, 429):
+            raise RateLimited(f"HTTP {r.status_code}")
+        if r.status_code >= 500:
             raise requests.HTTPError(f"HTTP {r.status_code}")
         data = r.json()
         if isinstance(data, dict) and (data.get("error") or {}).get("code") in (4, 700):  # quota or busy, sent as 200
-            raise requests.HTTPError(f"Deezer: {data['error'].get('message', 'quota')}")
+            raise (RateLimited if data["error"]["code"] == 4 else requests.HTTPError)(
+                f"Deezer: {data['error'].get('message', 'quota')}")
         return data
 
     def get(self, url: str, store: str, fresh: bool = False, search: bool = False) -> dict:
@@ -227,6 +235,7 @@ class Http:
             try:
                 data = self.fetch(url)
             except (requests.RequestException, ValueError) as e:
+                self.limited[store] += isinstance(e, RateLimited)
                 pause = throttle.backoff * (attempt + 1)
                 print(f"  retry {attempt + 1} in {pause:.0f}s ({e}): {url[:110]}", file=sys.stderr)
                 self.sleep(pause)

@@ -5,6 +5,8 @@
                                            [--retry-unmatched] [--dry-run]
   .venv-audio/bin/python -m rmr_audio match [--keys K,...] [--retry-unmatched] [--storefronts ...]
   .venv-audio/bin/python -m rmr_audio match-dry-run --sample 300 --seed 1 --out DIR [--storefronts ...]
+  .venv-audio/bin/python -m rmr_audio match-new [--limit N] [--links-only] [--deezer-interval 0.35]
+                                                [--itunes-interval 3.4] [--save-every 25] [--verbose]
   .venv-audio/bin/python -m rmr_audio status [--missing]
   .venv-audio/bin/python -m rmr_audio compact
   .venv-audio/bin/python -m rmr_audio import-experiment
@@ -70,10 +72,19 @@ def parser() -> argparse.ArgumentParser:
     d.add_argument("--sample", type=int, default=300, help="Albums to match (default 300).")
     d.add_argument("--seed", type=int, default=1, help="Seed of the sample (default 1).")
     d.add_argument("--out", type=Path, required=True, help="Folder for matches_dry_run.csv, summary.md and summary.json.")
-    d.add_argument("--storefronts", type=_storefronts, default=DEFAULT_STOREFRONTS,
-                   help=f"iTunes storefronts the text search tries, in order (default {','.join(DEFAULT_STOREFRONTS)}; jp follows).")
-    d.add_argument("--deezer-interval", type=float, default=0.35, help="Seconds between Deezer requests (default 0.35).")
-    d.add_argument("--itunes-interval", type=float, default=3.4, help="Seconds between iTunes requests (default 3.4).")
+    n = sub.add_parser("match-new", parents=[common],
+                       help="Match every catalog album that has no row in matches.csv and write the rows. Store metadata "
+                            "only: no audio, no model. Resumable; stops when a store refuses requests.")
+    n.add_argument("--limit", type=int, default=None, help="At most N albums in this run.")
+    n.add_argument("--links-only", action="store_true", help="Leave out the albums with neither a Deezer nor an Apple link.")
+    n.add_argument("--save-every", type=int, default=25, help="Albums between two writes of matches.csv (default 25).")
+    n.add_argument("--progress-secs", type=float, default=60.0, help="Seconds between two progress lines (default 60).")
+    n.add_argument("--verbose", action="store_true", help="One line per album as well.")
+    for q in (d, n):
+        q.add_argument("--storefronts", type=_storefronts, default=DEFAULT_STOREFRONTS,
+                       help=f"iTunes storefronts the text search tries, in order (default {','.join(DEFAULT_STOREFRONTS)}; jp follows).")
+        q.add_argument("--deezer-interval", type=float, default=0.35, help="Seconds between Deezer requests (default 0.35).")
+        q.add_argument("--itunes-interval", type=float, default=3.4, help="Seconds between iTunes requests (default 3.4).")
     t = sub.add_parser("status", parents=[common], help="Counts, and with --missing the albums without audio.")
     t.add_argument("--missing", action="store_true", help="List the albums without audio: slug<TAB>artist — title.")
     sub.add_parser("compact", parents=[common], help="Rewrite all shards into one.")
@@ -127,6 +138,12 @@ def main(argv: list[str] | None = None) -> int:
 
             return dry_run(catalog, args.out, args.sample, args.seed, args.cache_dir / "http.sqlite", args.audio_dir,
                            args.storefronts, args.deezer_interval, args.itunes_interval)
+        if args.cmd == "match-new":
+            from .matchnew import match_new
+
+            return match_new(catalog, args.audio_dir, args.cache_dir / "http.sqlite", args.storefronts, args.deezer_interval,
+                             args.itunes_interval, args.limit, args.links_only, args.save_every, args.progress_secs,
+                             args.verbose)
         from .sync import Options, preview_matches, sync
 
         legacy = {al.legacy_uri: al.key for al in catalog}
