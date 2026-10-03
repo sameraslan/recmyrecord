@@ -7,6 +7,7 @@ data-pipeline/.venv-audio/
 
 # preview-features experiment: caches, models and venv are never committed
 experiments/preview_features/cache/
+experiments/preview_features/cache_clap/
 experiments/preview_features/.venv/
 experiments/preview_features/scratch/
 
