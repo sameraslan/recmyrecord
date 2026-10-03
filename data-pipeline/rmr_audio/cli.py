@@ -4,6 +4,7 @@
                                            [--local-dir DIR] [--storefronts us,gb,jp,...]
                                            [--retry-unmatched] [--dry-run]
   .venv-audio/bin/python -m rmr_audio match [--keys K,...] [--retry-unmatched] [--storefronts ...]
+  .venv-audio/bin/python -m rmr_audio match-dry-run --sample 300 --seed 1 --out DIR [--storefronts ...]
   .venv-audio/bin/python -m rmr_audio status [--missing]
   .venv-audio/bin/python -m rmr_audio compact
   .venv-audio/bin/python -m rmr_audio import-experiment
@@ -13,11 +14,12 @@ import re
 import sys
 from pathlib import Path
 
-from rmr_pipeline.audio_store import DEFAULT_AUDIO, StoreError, compact_store, load_manifest
+from rmr_pipeline.audio_store import (DEFAULT_AUDIO, StoreError, compact_store, duplicate_listings, load_manifest,
+                                      load_matches)
 from rmr_pipeline.constants import DEFAULT_OVERRIDES, DEFAULT_TABLE
 from rmr_pipeline.keys import load_keys
 
-from .catalog import DEFAULT_CACHE, load_catalog
+from .catalog import DEFAULT_ALBUMS, DEFAULT_CACHE, load_catalog
 from .match import DEFAULT_STOREFRONTS
 
 
@@ -33,6 +35,8 @@ def parser() -> argparse.ArgumentParser:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--audio-dir", type=Path, default=DEFAULT_AUDIO, help="The store (default data-pipeline/audio).")
     common.add_argument("--table", type=Path, default=DEFAULT_TABLE, help="Feature table pickle (read-only).")
+    common.add_argument("--albums", type=Path, default=DEFAULT_ALBUMS,
+                        help="The catalog table (default data-pipeline/catalog/albums.csv): every album, with its store links.")
     common.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES,
                         help="The build's overrides.json (artist corrections, slugs).")
     common.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE,
@@ -60,12 +64,29 @@ def parser() -> argparse.ArgumentParser:
     sub.add_parser("match", parents=[common, select],
                    help="Only ask the stores for the albums a sync would match, and print the verdicts; writes nothing "
                         "to the store.")
+    d = sub.add_parser("match-dry-run", parents=[common],
+                       help="Match a random sample of the new on-chart albums, stratified by rank, and write a CSV and a "
+                            "summary. Store metadata only: no audio, and neither the store nor matches.csv is written.")
+    d.add_argument("--sample", type=int, default=300, help="Albums to match (default 300).")
+    d.add_argument("--seed", type=int, default=1, help="Seed of the sample (default 1).")
+    d.add_argument("--out", type=Path, required=True, help="Folder for matches_dry_run.csv, summary.md and summary.json.")
+    d.add_argument("--storefronts", type=_storefronts, default=DEFAULT_STOREFRONTS,
+                   help=f"iTunes storefronts the text search tries, in order (default {','.join(DEFAULT_STOREFRONTS)}; jp follows).")
+    d.add_argument("--deezer-interval", type=float, default=0.35, help="Seconds between Deezer requests (default 0.35).")
+    d.add_argument("--itunes-interval", type=float, default=3.4, help="Seconds between iTunes requests (default 3.4).")
     t = sub.add_parser("status", parents=[common], help="Counts, and with --missing the albums without audio.")
     t.add_argument("--missing", action="store_true", help="List the albums without audio: slug<TAB>artist — title.")
     sub.add_parser("compact", parents=[common], help="Rewrite all shards into one.")
     sub.add_parser("import-experiment", parents=[common],
                    help="Seed the clip cache from experiments/preview_features/cache.")
     return p
+
+
+def duplicates_report(audio_dir: Path) -> str:
+    """The duplicate guard, as lines: the store listings that two albums of matches.csv are matched to."""
+    path = audio_dir / "matches.csv"
+    dupes = duplicate_listings(load_matches(path)) if path.exists() else {}
+    return "".join(f"duplicate listing\t{store} {album_id}\t{', '.join(keys)}\n" for (store, album_id), keys in dupes.items())
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -95,12 +116,17 @@ def main(argv: list[str] | None = None) -> int:
             cache.close()
             return 0
         load_manifest(args.audio_dir)  # a store that is not there is reported as that, not as its missing keys.csv
-        catalog = load_catalog(args.table, args.overrides, args.audio_dir / "keys.csv")
+        catalog = load_catalog(args.table, args.overrides, args.audio_dir / "keys.csv", args.albums)
         if args.cmd == "status":
             from .status import status
 
             print(status(catalog, args.audio_dir, args.missing))
             return 0
+        if args.cmd == "match-dry-run":
+            from .dryrun import dry_run
+
+            return dry_run(catalog, args.out, args.sample, args.seed, args.cache_dir / "http.sqlite", args.audio_dir,
+                           args.storefronts, args.deezer_interval, args.itunes_interval)
         from .sync import Options, preview_matches, sync
 
         legacy = {al.legacy_uri: al.key for al in catalog}
@@ -110,8 +136,11 @@ def main(argv: list[str] | None = None) -> int:
                                            storefronts=args.storefronts, retry_unmatched=args.retry_unmatched), catalog)
         if args.clips is not None and args.clips < 1:
             parser().error("--clips must be at least 1")
-        return sync(Options(args.audio_dir, args.cache_dir, args.clips, keys, args.limit, max(1, args.workers),
+        code = sync(Options(args.audio_dir, args.cache_dir, args.clips, keys, args.limit, max(1, args.workers),
                             args.local_dir, args.storefronts, args.retry_unmatched, args.dry_run), catalog)
+        if code == 0 and not args.dry_run:
+            print(duplicates_report(args.audio_dir), end="")
+        return code
     except StoreError as e:
         print(f"FAIL\n{e}", file=sys.stderr)
         return 1

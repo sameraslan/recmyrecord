@@ -37,7 +37,10 @@ def test_confident_deezer_match_asks_no_other_store():
     al, data = _fixture("deezer_standard_edition")
     http = Replay(data["responses"])
     m = match_album(http, al)
-    assert {k: str(v) for k, v in m.row(al.key).items()} == {k: str(v) for k, v in data["expected"].items()}
+    row = {k: str(v) for k, v in m.row(al.key).items()}
+    assert {k: row[k] for k in data["expected"]} == {k: str(v) for k, v in data["expected"].items()}  # as recorded
+    assert (row["matched_by"], row["edition"], row["under_covered"], row["short_preview"]) == ("search", "", "0", "")
+    assert int(row["runtime_s"]) == round(sum(t["duration_s"] for t in matching.tracks(http, m.source, m.album_id)))
     assert (m.source, m.album_id, m.ambiguous, m.n_previews) == ("deezer", "1261474", False, 10)
     assert not any("itunes" in url for url in http.asked)
 
