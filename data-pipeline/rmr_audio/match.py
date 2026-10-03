@@ -168,6 +168,8 @@ class Http:
         self.throttles = {"deezer": Throttle(0.2, backoff=5), "itunes": Throttle(3.2, backoff=60)}
         self.attempts, self.sleep, self.session, self.fetched = attempts, sleep or self._pause, None, 0
         self.fetched_by: Counter = Counter()  # store -> requests answered (not served from the cache)
+        self.asked_by: Counter = Counter()  # store -> distinct URLs asked for in this run, cached or not
+        self._asked: set[str] = set()
         self.abort = lambda: False  # sync sets it: True once the run was asked to stop
         self.search_max_age_days = CACHE_DAYS
         self.failed: Counter = Counter()  # store -> URLs given up on in a row
@@ -209,6 +211,9 @@ class Http:
         return data
 
     def get(self, url: str, store: str, fresh: bool = False, search: bool = False) -> dict:
+        if url not in self._asked:
+            self._asked.add(url)
+            self.asked_by[store] += 1
         if not fresh and (data := self.cached(url, self.search_max_age_days if search else CACHE_DAYS)) is not None:
             return data
         if self.failed[store] >= STORE_DOWN_AFTER:

@@ -4,6 +4,9 @@ Matches a random sample of the catalog's new on-chart albums, stratified by char
 DIR/matches_dry_run.csv (one row per album) and DIR/summary.md (and summary.json). It asks the stores for
 metadata only: no audio is downloaded, and neither the store nor matches.csv is written (matches.csv is
 read, for the duplicate guard). The API responses are cached, so the matching that follows asks for less.
+The requests counted per album are the distinct URLs its matching needs, whether or not the cache had
+them, so a run repeated over a warm cache reports the same counts; the projection is those counts times
+the intervals between requests.
 
 The run stops, and writes what it has, when a store stops answering or albums fail in a row: it does
 not insist against a store that is refusing requests.
@@ -109,13 +112,15 @@ def summarise(rows: list[dict], catalog: list[Album], existing: list[dict], meta
             "deezer_requests": sum(r["deezer_requests"] for r in mine), "itunes_requests": sum(r["itunes_requests"] for r in mine),
             "seconds": round(sum(float(r["seconds"]) for r in mine), 1)}
     population = Counter(link_class(al) for al in catalog if al.new)
-    projection = {"albums": sum(population.values()), "deezer_requests": 0, "itunes_requests": 0, "seconds": 0.0}
+    projection = {"albums": sum(population.values()), "deezer_requests": 0, "itunes_requests": 0}
     for c in classes:
         k = by_class[c]["albums"]
         if k:
-            for f in ("deezer_requests", "itunes_requests", "seconds"):
+            for f in ("deezer_requests", "itunes_requests"):
                 projection[f] += by_class[c][f] / k * population[c]
     projection = {k: round(v) for k, v in projection.items()}
+    projection["seconds"] = round(projection["deezer_requests"] * meta["deezer_interval"]
+                                  + projection["itunes_requests"] * meta["itunes_interval"])
     reason = lambda text: [r for r in done if text in r["reason"]]  # noqa: E731
     sample_rows = [{"key": r["key"], "source": r["source"], "source_album_id": r["source_album_id"]} for r in matched]
     sample_keys = {r["key"] for r in sample_rows}
@@ -158,8 +163,9 @@ def markdown(s: dict) -> str:
         "# Matcher dry run", "",
         f"{s['sample']} new on-chart albums sampled (seed {s['seed']}, {STRATA} rank strata), {n} matched to the end, "
         f"{len(s['api_errors'])} API errors. {s['requests'].get('deezer', 0)} Deezer and {s['requests'].get('itunes', 0)} "
-        f"iTunes requests in {s['seconds']:.0f} s (Deezer one every {s['deezer_interval']} s, iTunes one every "
-        f"{s['itunes_interval']} s)." + (f" **Stopped early: {s['stopped']}.**" if s["stopped"] else ""), "",
+        f"iTunes URLs asked for, {s['fetched'].get('deezer', 0)} and {s['fetched'].get('itunes', 0)} of them fetched (the "
+        f"rest came from the response cache), in {s['seconds']:.0f} s (Deezer one every {s['deezer_interval']} s, iTunes "
+        f"one every {s['itunes_interval']} s)." + (f" **Stopped early: {s['stopped']}.**" if s["stopped"] else ""), "",
         "Store metadata only: no audio was downloaded and nothing was listened to. The numbers say whether a "
         "listing was found, how its title and artist read and how many of its tracks have a preview; they do not "
         "say whether it is the right recording.", "",
@@ -194,9 +200,9 @@ def markdown(s: dict) -> str:
     lines += [f"| {k} | {v} |" for k, v in s["preview_windows"].items()]
     p = s["projection_all_new_albums"]
     lines += ["", "## Projection", "",
-              f"All {p['albums']} new albums, at this sample's requests and seconds per album in each link class: about "
+              f"All {p['albums']} new albums, at this sample's requests per album in each link class: about "
               f"{p['deezer_requests']} Deezer and {p['itunes_requests']} iTunes requests, {p['seconds'] / 3600:.1f} hours "
-              "in one process at these rate limits (less what the response cache already holds)."]
+              "in one process at these intervals (requests times interval; less what the response cache already holds)."]
     for name, title in (("no_preview", "No preview"), ("ambiguous", "Ambiguous"), ("edition_replaced", "Edition replaced"),
                         ("under_covered", "Under-covered")):
         lines += ["", f"## Examples: {title}", ""] + (s["examples"][name] or ["- none"])
@@ -213,15 +219,15 @@ def dry_run(catalog: list[Album], out_dir: Path, sample: int, seed: int, cache: 
         http = matching.Http(cache, attempts=2)
         http.throttles["deezer"].interval, http.throttles["itunes"].interval = deezer_interval, itunes_interval
     rows, failed, stopped, t0 = [], 0, "", time.monotonic()
-    fetched = lambda: Counter(getattr(http, "fetched_by", {}))  # noqa: E731
+    asked = lambda: Counter(getattr(http, "asked_by", {}))  # noqa: E731
     for i, al in enumerate(albums, 1):
-        before, t = fetched(), time.monotonic()
+        before, t = asked(), time.monotonic()
         try:
             m, error = matching.match_album(http, al, storefronts), ""
             failed = 0
         except Exception as e:  # the album is reported, the run goes on unless the store keeps failing
             m, error, failed = None, f"{type(e).__name__}: {e}"[:200], failed + 1
-        rows.append(record(al, m, error, fetched() - before, time.monotonic() - t))
+        rows.append(record(al, m, error, asked() - before, time.monotonic() - t))
         r = rows[-1]
         out(f"{i}/{len(albums)}\t#{al.rank}\t{r['path']}\t{al.artist} — {al.title}\t"
             + (f"{r['matched_artist']} — {r['matched_title']}\t{r['n_previews']}/{r['n_tracks']} previews"
@@ -234,7 +240,8 @@ def dry_run(catalog: list[Album], out_dir: Path, sample: int, seed: int, cache: 
             break
     matches = audio_dir / "matches.csv"
     meta = {"sample": len(albums), "seed": seed, "storefronts": list(storefronts), "deezer_interval": deezer_interval,
-            "itunes_interval": itunes_interval, "requests": dict(fetched()), "seconds": round(time.monotonic() - t0, 1),
+            "itunes_interval": itunes_interval, "requests": dict(asked()), "fetched": dict(getattr(http, "fetched_by", {})),
+            "seconds": round(time.monotonic() - t0, 1),
             "stopped": stopped}
     summary = summarise(rows, catalog, load_matches(matches) if matches.exists() else [], meta)
     out_dir.mkdir(parents=True, exist_ok=True)

@@ -30,7 +30,7 @@ class Replay:
 def _fixture(name: str):
     data = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
     a = data["album"]
-    return Album(a["key"], a["title"], a["artist"], a["slug"], a["mean_s"], tuple(a["means"]), a["override"]), data
+    return Album(**{**a, "means": tuple(a["means"])}), data
 
 
 def test_confident_deezer_match_asks_no_other_store():
@@ -166,6 +166,7 @@ def test_http_retries_quota_and_network_errors_then_caches(tmp_path):
     http.fetch = fetch
     assert http.get("https://api.deezer.com/x", "deezer") == {"data": [1]} and slept == [5, 10]
     assert http.get("https://api.deezer.com/x", "deezer") == {"data": [1]} and not answers  # from the cache
+    assert http.asked_by == {"deezer": 1} and http.fetched_by == {"deezer": 1}  # one URL, fetched once
     answers.append({"data": [2]})
     assert http.get("https://api.deezer.com/x", "deezer", fresh=True) == {"data": [2]}  # a fresh listing skips it
     assert Http(tmp_path / "http.sqlite").cached("https://api.deezer.com/x") == {"data": [1]}

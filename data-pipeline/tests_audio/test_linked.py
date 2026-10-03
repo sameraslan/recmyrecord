@@ -31,6 +31,11 @@ class Stores:
         self.responses, self.asked = {}, []
         self.deezer_artists, self.itunes_artists = {}, {}
 
+    @property
+    def asked_by(self) -> dict:
+        """What Http counts: the distinct URLs asked for, by store."""
+        return {store: sum(host in url for url in set(self.asked)) for store, host in (("deezer", "deezer"), ("itunes", "itunes"))}
+
     def deezer(self, id_, title, artist, artist_id, seconds, previews=None, kind="album"):
         n = len(seconds) if previews is None else previews
         self.responses[f"https://api.deezer.com/album/{id_}"] = {
@@ -357,6 +362,11 @@ def test_dry_run_writes_a_csv_and_a_summary_and_nothing_else(tmp_path):
     assert s["duplicate_listings"] == {"deezer 1003": ["old:0", "Album3"], "itunes 2004": ["old:1", "Album4"]}
     assert s["preview_windows"]["0"] == 10 and s["preview_windows"]["2"] == 1 and s["preview_windows"]["8+"] == 29
     assert s["new_albums_by_link_class"] == {"deezer link": 20, "no store link": 10, "apple link, no deezer": 10}
+    assert rows["Album3"]["deezer_requests"] == "2" and rows["Album4"]["itunes_requests"] == "1"  # head and tracks; one lookup
+    assert s["requests"] == http.asked_by and s["projection_all_new_albums"]["itunes_requests"] == sum(
+        v["itunes_requests"] for v in s["by_link_class"].values())  # the sample is every new album
+    assert s["projection_all_new_albums"]["seconds"] == round(
+        s["requests"]["deezer"] * s["deezer_interval"] + s["requests"]["itunes"] * s["itunes_interval"])
     text = (tmp_path / "out" / "summary.md").read_text(encoding="utf-8")
     assert "No preview: 10 of 40 (25.0%)" in text and "Store metadata only" in text and "## Examples: Ambiguous" in text
 
