@@ -639,6 +639,45 @@ The reference for the trade-off: reach bought by being partly random. `lift vs n
 | effnet/64+random@0.9 | +0.030 ±0.002 | +0.047 | 0.969 | 0.730 ±0.009 | 0.249 (5.8) | +0.032 ±0.002 | 0.281 ±0.003 | 0.032 | 0.711 | 0.74 | +0.000 | +0.000 |
 | random | -0.001 ±0.001 | -0.001 | 0.989 | 0.873 ±0.005 | 0.215 (6.9) | -0.001 ±0.002 | 0.229 ±0.003 | 0.011 | 0.259 | 0.24 | +0.000 | +0.000 |
 
+## CLAP on the full pool: the albums with a CLAP vector, 4 clips per album, EffNet on the same albums
+
+3942 albums, 2083 artists. Mean out-of-genre floor of the descriptor cosine: family 0.216, primary 0.228, strict 0.215, disjoint 0.211. Largest family: 0.258 of the albums (the probe's majority-class accuracy). A random list has 0.871 of its members outside the seed's family.
+
+`clap_music` = laion/larger_clap_music_and_speech over the catalog's clips (clap_catalog.py), the same recipe as every embedding: album mean over the clips, L2, PCA. 2 of the full pool's 3944 albums have no CLAP vector (their previews were gone from the store's listing when CLAP was run) and are left out for every model here, so `effnet/64` below is refitted and scored on these albums only: the like-for-like reference. `clap_music-inlp1/64` is fitted with RYM families, out of fold by artist. The noise curve is this pool's own.
+
+### Models and controls
+
+| candidate | dims | xg cos | xg lift | lift primary | lift strict | lift disjoint | out primary | out family | families /list | cross out cos (n) | cross in cos (n) | cross out lift | desc_cos | desc_cos_xa | primary_xa | probe | hub skew | never | feel_mad | lift vs noise | desc_xa vs noise |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| random | 8 | 0.216 | -0.000 ±0.002 | +0.000 | -0.000 | +0.000 | 0.990 | 0.872 ±0.006 | 6.21 | 0.215 (6.9) | 0.326 (1.0) | -0.000 ±0.002 | 0.230 | 0.230 ±0.003 | 0.010 | 0.258 | 0.24 | 0.013 | 1.123 | +0.000 | +0.000 |
+| shuffled/64 | 64 | 0.218 | +0.001 ±0.001 | +0.001 | +0.001 | +0.001 | 0.990 | 0.874 ±0.006 | 6.26 | 0.217 (6.9) | 0.322 (1.0) | +0.002 ±0.002 | 0.231 | 0.231 ±0.003 | 0.010 | 0.229 | 0.79 | 0.007 | 1.121 | +0.002 | +0.001 |
+| effnet/64 | 64 | 0.365 | +0.148 ±0.004 | +0.187 | +0.141 | +0.132 | 0.798 | 0.367 ±0.016 | 2.54 | 0.379 (3.0) | 0.463 (5.0) | +0.156 ±0.005 | 0.446 | 0.432 ±0.005 | 0.202 | 0.723 | 0.79 | 0.007 | 0.638 | +0.000 | +0.000 |
+| effnet/24 | 24 | 0.364 | +0.148 ±0.004 | +0.185 | +0.141 | +0.133 | 0.802 | 0.369 ±0.015 | 2.53 | 0.376 (3.0) | 0.460 (5.0) | +0.153 ±0.005 | 0.441 | 0.429 ±0.005 | 0.198 | 0.740 | 0.68 | 0.004 | 0.645 | +0.001 | -0.002 |
+| clap_music/64 | 64 | 0.372 | +0.156 ±0.004 | +0.186 | +0.150 | +0.144 | 0.843 | 0.410 ±0.015 | 2.77 | 0.383 (3.3) | 0.458 (4.6) | +0.159 ±0.005 | 0.440 | 0.426 ±0.004 | 0.157 | 0.701 | 1.24 | 0.015 | 0.643 | +0.027 | +0.020 |
+| clap_music/24 | 24 | 0.371 | +0.155 ±0.004 | +0.184 | +0.149 | +0.142 | 0.848 | 0.415 ±0.015 | 2.81 | 0.379 (3.3) | 0.457 (4.6) | +0.155 ±0.005 | 0.437 | 0.424 ±0.005 | 0.152 | 0.703 | 1.15 | 0.008 | 0.648 | +0.029 | +0.020 |
+| clap_music-inlp1/64 | 64 | 0.369 | +0.152 ±0.004 | +0.182 | +0.146 | +0.140 | 0.852 | 0.430 ±0.015 | 2.90 | 0.378 (3.4) | 0.457 (4.5) | +0.154 ±0.005 | 0.437 | 0.422 ±0.004 | 0.148 | 0.622 | 1.24 | 0.015 | 0.648 | +0.033 | +0.026 |
+
+Paired difference against effnet/64:
+
+| candidate | xg_family | xg_primary | out_family | out_primary | desc_cos_xa | genre_primary_xa |
+|---|---|---|---|---|---|---|
+| effnet/24 | -0.000 | -0.002* | +0.003 | +0.005* | -0.003* | -0.005* |
+| clap_music/64 | +0.007* | -0.001 | +0.044* | +0.045* | -0.005* | -0.045* |
+| clap_music/24 | +0.006* | -0.004* | +0.049* | +0.050* | -0.008* | -0.050* |
+| clap_music-inlp1/64 | +0.004* | -0.005* | +0.063* | +0.054* | -0.010* | -0.054* |
+
+### Noise control on these albums
+
+| candidate | xg lift | lift primary | out primary | out family | cross out cos (n) | cross out lift | desc_cos_xa | primary_xa | probe | hub skew | lift vs noise | desc_xa vs noise |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| effnet/64 | +0.148 ±0.004 | +0.187 | 0.798 | 0.367 ±0.016 | 0.379 (3.0) | +0.156 ±0.005 | 0.432 ±0.005 | 0.202 | 0.723 | 0.79 | +0.000 | +0.000 |
+| effnet/64+random@0.1 | +0.143 ±0.004 | +0.183 | 0.811 | 0.377 ±0.015 | 0.374 (3.0) | +0.151 ±0.005 | 0.426 ±0.005 | 0.189 | 0.720 | 1.33 | +0.000 | +0.000 |
+| effnet/64+random@0.25 | +0.132 ±0.004 | +0.170 | 0.837 | 0.402 ±0.015 | 0.362 (3.2) | +0.139 ±0.005 | 0.411 ±0.005 | 0.163 | 0.720 | 1.64 | +0.000 | +0.000 |
+| effnet/64+random@0.5 | +0.108 ±0.003 | +0.145 | 0.883 | 0.455 ±0.016 | 0.336 (3.7) | +0.114 ±0.004 | 0.384 ±0.005 | 0.117 | 0.720 | 1.45 | +0.000 | +0.000 |
+| effnet/64+random@0.75 | +0.069 ±0.003 | +0.105 | 0.932 | 0.556 ±0.015 | 0.295 (4.4) | +0.075 ±0.003 | 0.341 ±0.004 | 0.068 | 0.720 | 1.07 | +0.000 | +0.000 |
+| effnet/64+random@0.9 | +0.031 ±0.002 | +0.050 | 0.969 | 0.725 ±0.010 | 0.252 (5.8) | +0.034 ±0.002 | 0.283 ±0.003 | 0.031 | 0.720 | 0.73 | +0.000 | +0.000 |
+| random | -0.000 ±0.002 | +0.000 | 0.990 | 0.872 ±0.006 | 0.215 (6.9) | -0.000 ±0.002 | 0.230 ±0.003 | 0.010 | 0.258 | 0.24 | +0.000 | +0.000 |
+
 ## New-album test
 
 Every step of the candidate (genre removal, scalers, PCA, block weights) fitted on 80% of the artists; the held-out 20% are mapped with that transform and query the whole pool mapped the same way; five folds, so every album is held out once. `in fit`: every step fitted on every album. `oof`: the tables above. `same lists`: share of the in-fit top 10 the held-out transform returns.
@@ -733,6 +772,32 @@ Every step of the candidate (genre removal, scalers, PCA, block weights) fitted 
 | desc_cos_xa | 0.455 ±0.005 | 0.448 ±0.005 | 0.440 ±0.005 | -0.007* |
 | genre_primary_xa | 0.201 ±0.010 | 0.198 ±0.010 | 0.189 ±0.010 | -0.003* |
 | desc_cos | 0.466 ±0.005 | 0.459 ±0.005 | 0.451 ±0.005 | -0.007* |
+
+### clap_music/64 (fullclap pool; same lists 0.995 ±0.001)
+
+| metric | in fit | held out | oof (tables above) | held out − in fit |
+|---|---|---|---|---|
+| xg_family | 0.372 ±0.004 | 0.372 ±0.004 | 0.372 ±0.004 | -0.000 |
+| xg_family_lift | 0.156 ±0.004 | 0.156 ±0.004 | 0.156 ±0.004 | -0.000 |
+| xg_primary_lift | 0.186 ±0.005 | 0.186 ±0.005 | 0.186 ±0.005 | +0.000 |
+| out_family | 0.410 ±0.015 | 0.411 ±0.015 | 0.410 ±0.015 | +0.000 |
+| out_primary | 0.843 ±0.009 | 0.842 ±0.008 | 0.843 ±0.009 | -0.000 |
+| desc_cos_xa | 0.426 ±0.004 | 0.427 ±0.004 | 0.426 ±0.004 | +0.000 |
+| genre_primary_xa | 0.157 ±0.009 | 0.158 ±0.008 | 0.157 ±0.009 | +0.000 |
+| desc_cos | 0.440 ±0.005 | 0.440 ±0.005 | 0.440 ±0.005 | -0.000 |
+
+### effnet/64 (fullclap pool; same lists 0.948 ±0.002)
+
+| metric | in fit | held out | oof (tables above) | held out − in fit |
+|---|---|---|---|---|
+| xg_family | 0.365 ±0.005 | 0.365 ±0.005 | 0.365 ±0.005 | -0.000 |
+| xg_family_lift | 0.148 ±0.004 | 0.148 ±0.004 | 0.148 ±0.004 | -0.000 |
+| xg_primary_lift | 0.187 ±0.005 | 0.187 ±0.005 | 0.187 ±0.005 | -0.000 |
+| out_family | 0.367 ±0.016 | 0.366 ±0.016 | 0.367 ±0.016 | -0.001 |
+| out_primary | 0.798 ±0.010 | 0.798 ±0.010 | 0.798 ±0.010 | +0.000 |
+| desc_cos_xa | 0.432 ±0.005 | 0.432 ±0.005 | 0.432 ±0.005 | -0.000 |
+| genre_primary_xa | 0.202 ±0.010 | 0.202 ±0.010 | 0.202 ±0.010 | -0.000 |
+| desc_cos | 0.446 ±0.005 | 0.446 ±0.005 | 0.446 ±0.005 | +0.000 |
 
 ## Anchor: Miles Davis — Bitches Brew
 
@@ -958,4 +1023,131 @@ In the bake-off pool: {'Miles Davis — Bitches Brew': False, 'Miles Davis — L
 8. Pharoah Sanders — Elevation [Spiritual Jazz]
 9. Bobby Hutcherson — Head On [Jazz Fusion]
 10. Don Cherry — Symphony for Improvisers [Free Jazz]
+
+## Balanced stop, hubness and artist retrieval (fullclap pool, 3942 albums)
+
+simbench.score on the same blocks. `bal_*`: the block scaled to the Spotify block's total variance and joined to the descriptors as the site's balanced stop does; `bal_overlap_A`: overlap@10 with the Spotify block's balanced lists. Hubness: skew of N10, share of albums in no list and the largest N10, on the block alone and at the balanced stop. `artist_mrr`, `artist_share`: same artist kept. `stability`: overlap@10 of the lists built from 2 and from 4 clips per album.
+
+| candidate | bal_genre_primary | bal_genre_family | bal_overlap_A | artist_share | artist_mrr | stability | genre_primary | genre_family | desc_cos | audio skew | audio never | audio max | balanced skew | balanced never | balanced max |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| effnet/64 | 0.270 ±0.012 | 0.669 ±0.014 | 0.340 ±0.007 | 0.095 ±0.007 | 0.362 ±0.021 | 0.397 ±0.009 | 0.239 ±0.010 | 0.652 ±0.014 | 0.446 ±0.005 | 0.791 | 0.0068 | 36 | 2.53 | 0.0459 | 91 |
+| clap_music/64 | 0.237 ±0.011 | 0.631 ±0.014 | 0.337 ±0.006 | 0.090 ±0.007 | 0.360 ±0.021 | 0.393 ±0.008 | 0.194 ±0.009 | 0.611 ±0.014 | 0.440 ±0.005 | 1.24 | 0.015 | 54 | 2.72 | 0.0566 | 110 |
+| effnet/24 | 0.265 ±0.012 | 0.667 ±0.014 | 0.342 ±0.007 | 0.083 ±0.007 | 0.311 ±0.020 | 0.374 ±0.008 | 0.229 ±0.011 | 0.647 ±0.014 | 0.441 ±0.005 | 0.675 | 0.0038 | 34 | 2.37 | 0.0472 | 89 |
+| clap_music/24 | 0.235 ±0.011 | 0.629 ±0.014 | 0.335 ±0.006 | 0.085 ±0.007 | 0.322 ±0.021 | 0.382 ±0.008 | 0.186 ±0.009 | 0.604 ±0.014 | 0.437 ±0.005 | 1.15 | 0.0084 | 50 | 2.59 | 0.0543 | 104 |
+
+Paired difference against effnet/64:
+
+| candidate | bal_genre_primary | bal_genre_family | bal_overlap_A | artist_share | artist_mrr | stability | genre_primary | genre_family | desc_cos |
+|---|---|---|---|---|---|---|---|---|---|
+| clap_music/64 | -0.033* | -0.038* | -0.002 | -0.005 | -0.002 | -0.004 | -0.045* | -0.041* | -0.006* |
+| effnet/24 | -0.006* | -0.002 | +0.002 | -0.012* | -0.051* | -0.023* | -0.010* | -0.005* | -0.005* |
+| clap_music/24 | -0.035* | -0.040* | -0.004 | -0.011* | -0.040* | -0.015* | -0.053* | -0.048* | -0.009* |
+
+## Anchor on the fullclap pool: Miles Davis — Bitches Brew
+
+Sonic = the block alone; balanced = the block joined to the descriptors at the site's balanced stop. Both keep the seed's artist. Each entry: [primary genre; family; descriptor cosine with the seed]. Rank = position among the 3,941 other albums by the block alone.
+
+**effnet/64, sonic** — ranks: Live-Evil 70; Get Up With It 286; Rocksession 430; first rock-family album 265; first outside the jazz family 164. Prog rock in the top 10: none.
+
+1. McCoy Tyner — Asante [Post-Bop; jazz; 0.42]
+2. Bobby Hutcherson — Head On [Jazz Fusion; jazz; –]
+3. John Coltrane — Concert in Japan [Free Jazz; jazz; 0.53]
+4. Sonny Sharrock — Ask the Ages [Avant-Garde Jazz; jazz; 0.53]
+5. John Coltrane — Stellar Regions [Free Jazz; jazz; 0.40]
+6. Gil Evans — The Individualism of Gil Evans [Post-Bop; jazz; –]
+7. Cecil Taylor — Conquistador! [Free Jazz; jazz; 0.46]
+8. Don Cherry — Symphony for Improvisers [Free Jazz; jazz; 0.53]
+9. John Coltrane — Kulu Sé Mama [Free Jazz; jazz; 0.53]
+10. William Parker & In Order to Survive — The Peach Orchard [Free Jazz; jazz; 0.59]
+
+**effnet/64, balanced stop**
+
+1. Miles Davis — Live-Evil [Jazz Fusion; jazz; 0.82]
+2. Miles Davis — The Cellar Door Sessions 1970 [Jazz Fusion; jazz; 0.73]
+3. Miles Davis — Get Up With It [Jazz Fusion; jazz; 0.81]
+4. Alice Coltrane — Universal Consciousness [Spiritual Jazz; jazz; 0.76]
+5. Miles Davis — Big Fun [Jazz Fusion; jazz; 0.73]
+6. Pharoah Sanders — Black Unity [Spiritual Jazz; jazz; 0.71]
+7. Soft Machine — Third [Canterbury Scene; rock; 0.71]
+8. Pharoah Sanders — Thembi [Spiritual Jazz; jazz; 0.63]
+9. William Parker & In Order to Survive — The Peach Orchard [Free Jazz; jazz; 0.59]
+10. Miles Davis — At Fillmore: Live at the Fillmore East [Jazz Fusion; jazz; 0.70]
+
+**clap_music/64, sonic** — ranks: Live-Evil 1; Get Up With It 13; Rocksession 93; first rock-family album 71; first outside the jazz family 71. Prog rock in the top 10: none.
+
+1. Miles Davis — Live-Evil [Jazz Fusion; jazz; 0.82]
+2. Bobby Hutcherson — Dialogue [Post-Bop; jazz; 0.52]
+3. Mingus — The Black Saint and the Sinner Lady [Avant-Garde Jazz; jazz; 0.50]
+4. Miles Davis — At Fillmore: Live at the Fillmore East [Jazz Fusion; jazz; 0.70]
+5. Julian Priester Pepo Mtoto — Love, Love [Jazz Fusion; jazz; –]
+6. Bobby Hutcherson — Head On [Jazz Fusion; jazz; –]
+7. Nucleus — Elastic Rock [Jazz Fusion; jazz; –]
+8. Lee Morgan — Search for the New Land [Post-Bop; jazz; 0.23]
+9. Miles Davis — Big Fun [Jazz Fusion; jazz; 0.73]
+10. Bobby Hutcherson — Stick-Up! [Hard Bop; jazz; –]
+
+**clap_music/64, balanced stop**
+
+1. Miles Davis — Live-Evil [Jazz Fusion; jazz; 0.82]
+2. Miles Davis — Get Up With It [Jazz Fusion; jazz; 0.81]
+3. Miles Davis — The Cellar Door Sessions 1970 [Jazz Fusion; jazz; 0.73]
+4. Miles Davis — Big Fun [Jazz Fusion; jazz; 0.73]
+5. Pharoah Sanders — Black Unity [Spiritual Jazz; jazz; 0.71]
+6. Miles Davis — At Fillmore: Live at the Fillmore East [Jazz Fusion; jazz; 0.70]
+7. Alice Coltrane — Universal Consciousness [Spiritual Jazz; jazz; 0.76]
+8. Soft Machine — Third [Canterbury Scene; rock; 0.71]
+9. Miles Davis — Agharta [Jazz Fusion; jazz; 0.74]
+10. Miles Davis — On the Corner [Jazz Fusion; jazz; 0.67]
+
+**clap_music/24, sonic** — ranks: Live-Evil 2; Get Up With It 22; Rocksession 126; first rock-family album 65; first outside the jazz family 65. Prog rock in the top 10: none.
+
+1. Miles Davis — At Fillmore: Live at the Fillmore East [Jazz Fusion; jazz; 0.70]
+2. Miles Davis — Live-Evil [Jazz Fusion; jazz; 0.82]
+3. Mingus — The Black Saint and the Sinner Lady [Avant-Garde Jazz; jazz; 0.50]
+4. Bobby Hutcherson — Head On [Jazz Fusion; jazz; –]
+5. Bobby Hutcherson — Dialogue [Post-Bop; jazz; 0.52]
+6. Nucleus — Elastic Rock [Jazz Fusion; jazz; –]
+7. Julian Priester Pepo Mtoto — Love, Love [Jazz Fusion; jazz; –]
+8. Lee Morgan — Search for the New Land [Post-Bop; jazz; 0.23]
+9. Arthur Blythe — Lenox Avenue Breakdown [Avant-Garde Jazz; jazz; 0.39]
+10. Bobby Hutcherson — Stick-Up! [Hard Bop; jazz; –]
+
+**clap_music/24, balanced stop**
+
+1. Miles Davis — Live-Evil [Jazz Fusion; jazz; 0.82]
+2. Miles Davis — Get Up With It [Jazz Fusion; jazz; 0.81]
+3. Miles Davis — The Cellar Door Sessions 1970 [Jazz Fusion; jazz; 0.73]
+4. Miles Davis — Big Fun [Jazz Fusion; jazz; 0.73]
+5. Pharoah Sanders — Black Unity [Spiritual Jazz; jazz; 0.71]
+6. Miles Davis — At Fillmore: Live at the Fillmore East [Jazz Fusion; jazz; 0.70]
+7. Alice Coltrane — Universal Consciousness [Spiritual Jazz; jazz; 0.76]
+8. Soft Machine — Third [Canterbury Scene; rock; 0.71]
+9. Miles Davis — Agharta [Jazz Fusion; jazz; 0.74]
+10. Miles Davis — On the Corner [Jazz Fusion; jazz; 0.67]
+
+**clap_music-inlp1/64, sonic** — ranks: Live-Evil 1; Get Up With It 13; Rocksession 88; first rock-family album 80; first outside the jazz family 80. Prog rock in the top 10: none.
+
+1. Miles Davis — Live-Evil [Jazz Fusion; jazz; 0.82]
+2. Miles Davis — Big Fun [Jazz Fusion; jazz; 0.73]
+3. Julian Priester Pepo Mtoto — Love, Love [Jazz Fusion; jazz; –]
+4. Mingus — The Black Saint and the Sinner Lady [Avant-Garde Jazz; jazz; 0.50]
+5. Miles Davis — At Fillmore: Live at the Fillmore East [Jazz Fusion; jazz; 0.70]
+6. Bobby Hutcherson — Dialogue [Post-Bop; jazz; 0.52]
+7. Bobby Hutcherson — Head On [Jazz Fusion; jazz; –]
+8. The Horace Silver Quintet Plus J. J. JohnsonHorace SilverJ.J. Johnson — The Cape Verdean Blues [Hard Bop; jazz; –]
+9. Nucleus — Elastic Rock [Jazz Fusion; jazz; –]
+10. Steve Reid featuring The Legendary Master Brotherhood — Nova [Spiritual Jazz; jazz; 0.39]
+
+**clap_music-inlp1/64, balanced stop**
+
+1. Miles Davis — Live-Evil [Jazz Fusion; jazz; 0.82]
+2. Miles Davis — Get Up With It [Jazz Fusion; jazz; 0.81]
+3. Miles Davis — Big Fun [Jazz Fusion; jazz; 0.73]
+4. Miles Davis — The Cellar Door Sessions 1970 [Jazz Fusion; jazz; 0.73]
+5. Pharoah Sanders — Black Unity [Spiritual Jazz; jazz; 0.71]
+6. Miles Davis — At Fillmore: Live at the Fillmore East [Jazz Fusion; jazz; 0.70]
+7. Alice Coltrane — Universal Consciousness [Spiritual Jazz; jazz; 0.76]
+8. Soft Machine — Third [Canterbury Scene; rock; 0.71]
+9. Miles Davis — Agharta [Jazz Fusion; jazz; 0.74]
+10. Miles Davis — On the Corner [Jazz Fusion; jazz; 0.67]
 
