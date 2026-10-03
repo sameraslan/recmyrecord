@@ -33,35 +33,26 @@
     ZOOM_STEP: 1.6,
     // gas: grids live in raw layout units (the app's positions before the world transform)
     GAS: {
-      GRID: 448, RAW_HALF: 1.5,   // RAW_HALF is reset at load to the data extent plus margin
+      GRID: 512, RAW_HALF: 1.75,   // RAW_HALF is reset at load to the data extent plus margin
       // Gaussian widths of the mockup, in raw units: fine, local colour, big, wide colour, huge, far, very far
-      BLUR: { fine: 0.016, col: 0.024, big: 0.05, wide: 0.13, huge: 0.14, far: 0.3, vfar: 0.62 },
+      BLUR: { fine: 0.016, col: 0.034, big: 0.05, wide: 0.13, huge: 0.14, far: 0.3, vfar: 0.62 },
       BAKE: 4096, LUM: 512,
-      // tone: Y = FLOOR_Y + smoke + LUM_CAP * (1 - exp(-EXPO * E)) * tex * family factor, E = .1*near + (d / D_REF) ^ D_POW,
-      // d = .58 medium + .32 fine + .10 wide density. TEX is the range noise may move luminance over (2x, applied
-      // after the shoulder so it is 2x on screen). LUM_MAX is the hard cap. WARP, WARP2: raw units per unit of noise.
-      LUM_CAP: 0.42, LUM_MAX: 0.56, FLOOR_Y: 0.0014, SMOKE: 0.012,
-      D_REF: 0.92, D_POW: 3.0, EXPO: 0.62, TEX: [0.5, 1.0], WARP: 0.1, WARP2: 0.035,
-      WHITE: 0.35,      // how far the brightest cores lift toward warm white
-      CHROMA: 1.12,    // chroma of a clear fit relative to the family hue as listed
-      NEU_LUM: 0.78,   // luminance factor of mixed (neutral) ground, beside FAM_LUM
-      MIX_POW: 3.0,    // sharpening of the family shares before the hues are mixed (1 = free blend)
-      BLEED: 0.35,      // share of the wide colour average (sigma BLUR.wide) in the blend where albums are
+      LOOK: 'swirl',   // the default look (src/gas.js LOOKS); look=<id> in the hash overrides it
     },
-    // family hues (fierce, warm, quiet, dark, urban) and neutral
-    // rose, gold, teal, blue, violet. Chosen with FAM_LUM so every pair stays apart under protanopia and deuteranopia
-    // (CIE76 20 or more at equal density): blue deeper, violet lighter and pinker, teal lighter than rose.
-    FAM: [[236, 72, 96], [252, 194, 70], [56, 206, 180], [44, 84, 216], [214, 124, 240]],
-    FAM_LUM: [0.85, 1.34, 1.28, 0.66, 1.0],
+    // family hues (fierce, warm, quiet, dark, urban: rose, gold, teal, blue, violet) and neutral, as the mockup. The gas
+    // takes its hues from its palette (src/gas.js); these colour the debug hulls.
+    FAM: [[236, 72, 96], [246, 172, 60], [46, 186, 164], [60, 116, 244], [196, 92, 232]],
     NEU: [150, 140, 138],
-    FAM_IDS: ['fierce', 'warm', 'quiet', 'dark', 'urban'],
     // star magnitude classes by album index: first 40, to 400, to 1,500, the rest; the tail from 3,824 is not chart rank
     STAR_CLASS: [40, 400, 1500, 3824],
     STAR_RADIUS: [2.8, 1.9, 1.4, 1.1],
     STAR_GLOW: [1, 0.55, 0.16, 0.12],   // bloom around the core, per class (the first two fade out with their halos when zoomed far out)
-    STAR_UNDER: [0.3, 0.5],             // dark under-disc: the gas luminance it holds the star's surround to, and its greatest alpha
+    STAR_UNDER: [0.5, 0.26],             // dark under-disc: the gas luminance it holds the star's surround to, and its greatest alpha
     STAR_ALPHA: [1, 0.95, 0.85, 0.72],
-    LABEL_CAP: 14, POINTER_CAP: 4, LABEL_CAP_PHONE: 6, POINTER_CAP_PHONE: 3,
+    // the most region names shown at once: at Overview and Whole map on desktop (names=<number> in the hash overrides it),
+    // on a phone, beside an album, and with names=all (the earlier behaviour)
+    NAME_FONT: 'marcellus',   // lettering of the region names (src/labels.js FONTS); font=<id> in the hash overrides it
+    NAMES_MAX: 9, NAMES_MAX_PHONE: 4, NAMES_MAX_ALBUM: 8, NAMES_ALL_CAP: 14,
     DPR_MAX: 2,
   };
 
@@ -99,8 +90,6 @@
     const lean = 0.5 * Math.pow(f2 / f1, 5), neu = w[o + 5] / (s + w[o + 5] + 1e-9), sat = U.smooth(0.2, 0.5, f1) * (1 - 0.7 * neu);
     return [0, 1, 2].map((k) => { const h = C.FAM[j1][k] + (C.FAM[j2][k] - C.FAM[j1][k]) * lean; return C.NEU[k] + (h - C.NEU[k]) * sat; });
   };
-  /** Leading family of six weights, or -1 when the fit is weak (no family reaches 40% of the five). */
-  U.lead = function (w, o) { o = o || 0; let s = 0, m = 0, j1 = -1; for (let j = 0; j < 5; j++) s += w[o + j]; for (let j = 0; j < 5; j++) if (w[o + j] > m) { m = w[o + j]; j1 = j; } return s > 0 && m / s >= 0.4 ? j1 : -1; };
   U.lighten = (c, k) => c.map((v) => v + (255 - v) * k);
 
   /** CSS for an atlas sprite of album `i` at `size` px (32 x 32 grid of covers, 1,024 per sheet). */
@@ -121,7 +110,6 @@
     fit: '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',
     x: '<path d="M6 6l12 12M18 6 6 18"/>',
     compass: '<circle cx="12" cy="12" r="8.5"/><path d="m15.2 8.8-1.9 4.5-4.5 1.9 1.9-4.5z"/>',
-    arrow: '<path d="M12 19V5M6 11l6-6 6 6"/>',
     chev: '<path d="M6 9l6 6 6-6"/>',
   };
   U.icon = (name, sw) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw || 1.7}" aria-hidden="true" focusable="false">${ICON[name]}</svg>`;

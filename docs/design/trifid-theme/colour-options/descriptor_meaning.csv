@@ -1,0 +1,121 @@
+name,albums,on_site_vocab,sheet_category,sheet_path,has_sheet_description,kind,valence_dark_to_bright,energy_calm_to_intense,warmth_cold_to_warm,setting,colour_drive,s3_family,s3_strength,uncertain,basis
+male vocals,2900,0,vocals,vocals > male vocalist,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+melodic,1833,1,style,style > melodic,1,style,0.4,0.0,0.3,,0.25,,0.0,0,sheet description
+energetic,1508,1,mood,mood > energetic,0,mood,0.3,1.0,0.6,,1.0,fierce,0.4,1,word meaning and RYM tree position (sheet row has no description)
+passionate,1501,1,mood,mood > passionate,0,mood,0.2,0.6,0.8,,0.6,,0.0,1,word meaning and RYM tree position (sheet row has no description)
+rhythmic,1300,1,style,style > rhythmic,1,style,0.3,0.5,0.4,,0.25,,0.0,0,sheet description
+atmospheric,1228,1,style,style > atmospheric,1,style,-0.1,-0.5,-0.4,timbre and texture,0.5,dreamy,0.4,1,sheet description
+melancholic,1106,1,mood,mood > sad > melancholic,0,mood,-0.5,-0.4,-0.1,,1.0,tender,0.6,1,word meaning and RYM tree position (sheet row has no description)
+warm,934,1,atmosphere,atmosphere > warm,1,atmosphere,0.6,-0.1,1.0,"warmth, desert, tropics",1.0,joyful,0.8,0,sheet description
+bittersweet,897,1,mood,mood > bittersweet,0,mood,0.1,-0.2,0.4,,1.0,tender,1.0,0,word meaning and RYM tree position (sheet row has no description)
+dark,893,1,atmosphere,atmosphere > dark,1,atmosphere,-0.8,0.1,-0.4,"infernal, mysterious, ominous, gloomy",1.0,dark,1.0,0,sheet description
+playful,865,1,mood,mood > playful,0,mood,0.8,0.5,0.6,,1.0,joyful,1.0,0,word meaning and RYM tree position (sheet row has no description)
+heavy,778,1,style,style > heavy,1,style,-0.5,0.9,0.5,"distorted, crushing weight",0.8,fierce,0.8,0,sheet description
+nocturnal,765,1,atmosphere,atmosphere > nocturnal,1,atmosphere,-0.2,-0.3,-0.3,night,1.0,nocturnal,1.0,0,sheet description
+progressive,761,1,style,style > progressive,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+psychedelic,748,1,atmosphere,atmosphere > psychedelic,1,atmosphere,0.3,0.2,0.3,"psychedelic drugs, reverb, phasing",0.6,dreamy,0.6,1,sheet description
+lush,734,1,style,style > lush,1,style,0.5,-0.1,0.5,"rich, tender, colourful",0.5,tender,0.5,0,sheet description
+instrumental,716,0,style,style > instrumental,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+mellow,706,1,mood,mood > mellow,0,mood,0.4,-0.7,0.5,,1.0,tender,0.8,0,word meaning and RYM tree position (sheet row has no description)
+complex,676,1,style,style > complex,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+raw,643,1,style,style > raw,1,style,-0.3,0.8,0.5,"unrefined, direct",0.6,fierce,0.7,0,sheet description
+epic,601,1,atmosphere,atmosphere > epic,1,atmosphere,0.2,0.7,0.2,"grand scale, heroes, wars",0.4,,0.0,1,sheet description
+dense,601,1,style,style > dense,1,style,-0.1,0.5,0.1,"busy, thick",0.2,,0.0,0,sheet description
+urban,595,1,atmosphere,atmosphere > urban,1,atmosphere,0.0,0.3,0.0,"city, metropolis",0.8,nocturnal,1.0,0,sheet description
+eclectic,593,1,style,style > eclectic,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+technical,591,1,style,style > technical,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+aggressive,583,1,mood,mood > aggressive,0,mood,-0.6,1.0,0.7,,1.0,fierce,1.0,0,word meaning and RYM tree position (sheet row has no description)
+anxious,578,1,mood,mood > anxious,0,mood,-0.6,0.4,-0.4,,1.0,dark,0.7,1,word meaning and RYM tree position (sheet row has no description)
+sombre,572,1,mood,mood > sad > sombre,0,mood,-0.8,-0.5,-0.5,,1.0,dark,1.0,0,word meaning and RYM tree position (sheet row has no description)
+female vocals,549,0,vocals,vocals > female vocalist,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+uplifting,543,1,mood,mood > uplifting,0,mood,0.9,0.5,0.6,,1.0,joyful,1.0,0,word meaning and RYM tree position (sheet row has no description)
+surreal,539,1,atmosphere,atmosphere > surreal,1,atmosphere,0.0,0.0,-0.1,"dream, hallucination, unreal",0.6,dreamy,0.7,1,sheet description
+hypnotic,517,1,atmosphere,atmosphere > hypnotic,1,atmosphere,0.0,-0.3,-0.1,"trance, lowered awareness",0.8,dreamy,0.6,1,sheet description
+acoustic,505,1,form,form > ensemble > acoustic,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+sentimental,499,1,mood,mood > sentimental,0,mood,0.3,-0.3,0.6,,1.0,tender,1.0,0,word meaning and RYM tree position (sheet row has no description)
+longing,494,1,mood,mood > longing,0,mood,-0.2,-0.3,0.3,,1.0,tender,1.0,0,word meaning and RYM tree position (sheet row has no description)
+lonely,483,1,mood,mood > sad > lonely,0,mood,-0.6,-0.6,-0.5,,1.0,dark,0.7,1,word meaning and RYM tree position (sheet row has no description)
+ominous,459,1,atmosphere,atmosphere > dark > ominous,1,atmosphere,-0.8,0.2,-0.5,something evil will happen,1.0,dark,1.0,0,sheet description
+romantic,443,1,mood,mood > romantic,0,mood,0.6,-0.3,0.8,,1.0,tender,1.0,0,word meaning and RYM tree position (sheet row has no description)
+mysterious,439,1,atmosphere,atmosphere > mysterious,1,atmosphere,-0.3,-0.2,-0.3,something eludes the listener,0.8,dark,0.5,1,sheet description
+improvisation,433,1,technique,technique > composition > improvisation,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+avant-garde,422,1,style,style > avant-garde,1,style,-0.2,0.2,-0.2,"challenging, radical",0.15,,0.0,1,sheet description
+quirky,416,1,mood,mood > quirky,0,mood,0.5,0.4,0.3,,0.8,joyful,0.6,1,word meaning and RYM tree position (sheet row has no description)
+ethereal,405,1,atmosphere,atmosphere > ethereal,1,atmosphere,0.5,-0.5,-0.3,"heavenly, airy, graceful",1.0,dreamy,1.0,0,sheet description
+noisy,392,1,style,style > noisy,1,style,-0.4,0.8,0.2,distorted timbres,0.6,fierce,0.6,0,sheet description
+concept album,390,0,form,form > concept album,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+angry,360,1,mood,mood > angry,0,mood,-0.8,0.9,0.8,,1.0,fierce,1.0,0,word meaning and RYM tree position (sheet row has no description)
+soothing,354,1,mood,mood > mellow > soothing,0,mood,0.6,-0.8,0.4,,1.0,dreamy,0.8,1,word meaning and RYM tree position (sheet row has no description)
+sampling,350,1,technique,technique > production > sampling,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+manic,336,1,mood,mood > energetic > manic,0,mood,-0.2,1.0,0.6,,1.0,fierce,0.8,0,word meaning and RYM tree position (sheet row has no description)
+cold,332,1,atmosphere,atmosphere > cold,1,atmosphere,-0.5,-0.2,-1.0,"low temperature, frost, freezing landscape",1.0,dark,1.0,0,sheet description
+repetitive,327,1,style,style > repetitive,1,style,0.0,0.0,-0.1,,0.1,,0.0,0,sheet description
+uncommon time signatures,318,1,technique,technique > composition > uncommon time signatures,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+spiritual,311,1,atmosphere,atmosphere > spiritual,1,atmosphere,0.5,-0.3,0.2,"higher plane, bliss",0.8,dreamy,0.7,0,sheet description
+depressive,303,1,mood,mood > sad > depressive,0,mood,-1.0,-0.5,-0.6,,1.0,dark,1.0,0,word meaning and RYM tree position (sheet row has no description)
+summer,298,1,atmosphere,atmosphere > seasonal > summer,1,atmosphere,0.8,0.4,0.9,"warm days, beaches, holidays",1.0,joyful,1.0,0,sheet description
+anthemic,295,1,style,style > anthemic,1,style,0.6,0.8,0.5,"powerful, singalong",0.6,joyful,0.6,0,sheet description
+pastoral,281,1,atmosphere,atmosphere > pastoral,1,atmosphere,0.5,-0.6,0.4,"countryside, fields, hills, villages",1.0,tender,0.6,1,sheet description
+calm,265,1,mood,mood > calm,0,mood,0.4,-0.9,0.0,,1.0,dreamy,1.0,0,word meaning and RYM tree position (sheet row has no description)
+dissonant,259,1,style,style > dissonant,1,style,-0.6,0.5,-0.3,"harsh, inharmonious",0.5,dark,0.4,1,sheet description
+chaotic,257,1,style,style > chaotic,1,style,-0.4,1.0,0.3,disorder,0.7,fierce,0.7,0,sheet description
+apocalyptic,246,1,atmosphere,atmosphere > apocalyptic,1,atmosphere,-0.9,0.7,0.2,"end of the world, destruction",1.0,dark,0.8,1,sheet description
+suspenseful,245,1,atmosphere,atmosphere > suspenseful,1,atmosphere,-0.5,0.4,-0.3,"uncertainty, build-up",0.8,dark,0.6,0,sheet description
+futuristic,236,1,atmosphere,atmosphere > futuristic,1,atmosphere,0.0,0.3,-0.6,"advanced technology, science fiction",0.8,nocturnal,0.6,1,sheet description
+autumn,235,1,atmosphere,atmosphere > seasonal > autumn,1,atmosphere,-0.1,-0.5,0.3,autumn,1.0,tender,0.9,0,sheet description
+soft,234,1,style,style > soft,1,style,0.4,-0.8,0.4,"light, gentle, comforting",0.8,tender,0.8,0,sheet description
+sad,226,1,mood,mood > sad,0,mood,-0.7,-0.5,-0.2,,1.0,dark,0.6,1,word meaning and RYM tree position (sheet row has no description)
+lo-fi,199,1,style,style > lo-fi,1,style,0.0,-0.2,0.2,,0.15,,0.0,0,sheet description
+triumphant,198,1,mood,mood > uplifting > triumphant,0,mood,0.8,0.8,0.6,,1.0,joyful,0.8,0,word meaning and RYM tree position (sheet row has no description)
+sensual,187,1,mood,mood > sensual,0,mood,0.5,-0.1,0.9,"night, body",1.0,tender,0.6,1,word meaning and RYM tree position (sheet row has no description)
+peaceful,186,1,atmosphere,atmosphere > peaceful,1,atmosphere,0.7,-0.9,0.2,"tranquillity, serenity",1.0,dreamy,1.0,0,sheet description
+meditative,164,1,mood,mood > calm > meditative,0,mood,0.3,-0.9,-0.1,,1.0,dreamy,1.0,0,word meaning and RYM tree position (sheet row has no description)
+happy,150,1,mood,mood > happy,0,mood,1.0,0.5,0.8,,1.0,joyful,1.0,0,word meaning and RYM tree position (sheet row has no description)
+winter,142,1,atmosphere,atmosphere > seasonal > winter,1,atmosphere,-0.3,-0.6,-1.0,"snow, cold, fireplaces",1.0,dark,0.8,0,sheet description
+mechanical,142,1,atmosphere,atmosphere > mechanical,1,atmosphere,-0.4,0.4,-0.8,"machinery, industrial scenery",0.8,nocturnal,0.5,1,sheet description
+disturbing,138,1,mood,mood > disturbing,0,mood,-0.9,0.3,-0.5,,1.0,dark,1.0,0,word meaning and RYM tree position (sheet row has no description)
+space,136,1,atmosphere,atmosphere > space,1,atmosphere,0.0,-0.3,-0.7,"outer space, dark void, alien planets",0.8,dreamy,0.8,0,sheet description
+minimalistic,135,1,style,style > minimalistic,1,style,0.0,-0.6,-0.3,stripped down,0.3,dreamy,0.3,1,sheet description
+orchestral,128,1,form,form > ensemble > orchestral,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+lethargic,127,1,mood,mood > lethargic,0,mood,-0.3,-0.9,-0.1,,1.0,dreamy,0.5,1,word meaning and RYM tree position (sheet row has no description)
+infernal,119,1,atmosphere,atmosphere > dark > infernal,1,atmosphere,-0.9,0.9,0.9,"hell, fire, demons",1.0,fierce,1.0,0,sheet description
+sparse,110,1,style,style > sparse,1,style,-0.1,-0.8,-0.4,silence,0.4,dreamy,0.3,1,sheet description
+party,103,1,atmosphere,atmosphere > party,1,atmosphere,0.8,0.9,0.7,parties,1.0,joyful,1.0,0,sheet description
+spring,98,1,atmosphere,atmosphere > seasonal > spring,1,atmosphere,0.8,0.0,0.5,"blooming flowers, warming",1.0,joyful,0.7,0,sheet description
+tropical,94,1,atmosphere,atmosphere > natural > tropical,1,atmosphere,0.8,0.4,1.0,"tropics, beaches, lush vegetation",1.0,joyful,1.0,0,sheet description
+suite,84,1,form,form > suite,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+scary,81,1,mood,mood > scary,0,mood,-0.9,0.5,-0.5,,1.0,dark,1.0,0,word meaning and RYM tree position (sheet row has no description)
+aquatic,75,1,atmosphere,atmosphere > natural > aquatic,1,atmosphere,0.3,-0.5,-0.5,"water, oceans",1.0,dreamy,0.9,0,sheet description
+funereal,66,1,atmosphere,atmosphere > dark > funereal,1,atmosphere,-0.9,-0.7,-0.6,"mourning, sorrow",1.0,dark,1.0,0,sheet description
+rain,66,1,atmosphere,atmosphere > natural > rain,1,atmosphere,-0.3,-0.6,-0.4,rain,1.0,tender,0.6,1,sheet description
+forest,66,1,atmosphere,atmosphere > natural > forest,1,atmosphere,0.2,-0.5,-0.1,"forest, trees",0.8,dreamy,0.5,1,sheet description
+ritualistic,64,1,atmosphere,atmosphere > ritualistic,1,atmosphere,-0.2,0.3,0.3,"ritual ceremony, trance, primal",0.4,,0.0,1,sheet description
+medieval,59,1,atmosphere,atmosphere > medieval,1,atmosphere,0.0,-0.1,0.0,Middle Ages,0.0,,0.0,0,sheet description
+tribal,58,1,atmosphere,atmosphere > tribal,1,atmosphere,0.2,0.5,0.6,"tribal rhythm, entrancing",0.4,,0.0,1,sheet description
+polyphonic,54,1,style,style > polyphonic,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+ballad,53,1,form,form > ballad,1,style,0.2,-0.6,0.6,"slow, sentimental love song",0.5,tender,0.6,0,sheet description
+androgynous vocals,52,0,vocals,vocals > androgynous vocals,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+desert,52,1,atmosphere,atmosphere > natural > desert,1,atmosphere,0.0,-0.1,0.9,"arid land, sand, heat",0.6,,0.0,1,sheet description
+Wall of Sound,42,1,technique,technique > production > Wall of Sound,1,technical,0.2,0.4,0.3,"reverb, massed instruments",0.2,,0.0,1,sheet description
+rock opera,40,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)
+martial,37,1,atmosphere,atmosphere > martial,1,atmosphere,-0.4,0.7,0.0,"armed forces, war",0.5,fierce,0.4,1,sheet description
+atonal,36,1,style,style > atonal,1,style,-0.4,0.1,-0.4,,0.2,dark,0.3,1,sheet description
+choral,36,1,form,form > ensemble > choral,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+chamber music,29,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)
+natural,24,1,atmosphere,atmosphere > natural,1,atmosphere,0.4,-0.6,0.0,"natural environment, field recordings",0.6,dreamy,0.4,1,sheet description
+vocal group,17,0,form,form > ensemble > vocal group,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+seasonal,13,1,atmosphere,atmosphere > seasonal,1,atmosphere,0.0,0.0,0.0,time of year,0.0,,0.0,0,sheet description
+monologue,11,1,form,form > monologue,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+symphony,10,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)
+skit,8,1,form,form > skit,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+lyrics,7,1,lyrics,lyrics,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+ensemble,7,1,form,form > ensemble,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+medley,7,1,form,form > medley,1,technical,0.0,0.0,0.0,,0.0,,0.0,0,sheet description
+string quartet,6,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)
+opera,5,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)
+fairy tale,5,1,theme,theme > fairy tale,1,atmosphere,0.5,-0.2,0.3,fantastical children's stories,0.3,dreamy,0.3,1,sheet description
+parody,4,1,form,form > parody,1,technical,0.5,0.3,0.2,humour,0.0,,0.0,0,sheet description
+mashup,3,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)
+waltz,3,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)
+jingle,1,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)
+oratorio,1,1,,,0,technical,0.0,0.0,0.0,,0.0,,0.0,0,word meaning (not in sheet)

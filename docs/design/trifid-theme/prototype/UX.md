@@ -1,5 +1,7 @@
 # Trifid prototype: UX design and build spec
 
+> Partly superseded. This is the earlier design; region cards and sheets, the Regions menu, the colour sentence and legend, name hover evidence, edge pointers, the "you are here" chip, region search rows and the region starting points on Home have since been removed. `README.md` describes what the prototype does now.
+
 This is the design for the interactive prototypes in this folder and the reasoning behind it. It describes what the prototype does, not what the app does today. Nothing in `frontcreck/` is changed. All wording is placeholder until the owner approves it (list in `COPY.md`).
 
 The current app is the reference for behaviour. Where this document is silent, do what the app does (see "App behaviour to reproduce" at the end).

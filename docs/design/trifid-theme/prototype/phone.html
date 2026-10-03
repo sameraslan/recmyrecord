@@ -26,8 +26,8 @@
   // Frames are created one at a time: the next starts when the previous posts 'rmr-ready' (its first drawn frame).
   var FRAMES = [
     ['Album: the list, scrolled to the map strip', 'The list is the album view. WebGL starts only when the strip scrolls into view. The strip shows the same nebula, lines and covers; "Open map" or the Map pill switches to the full map.', '#/album/the-stone-roses-the-stone-roses?scroll=strip'],
-    ['Album: map mode with a name plate', 'A first tap on a numbered cover names it; "Open" or a second tap opens it and stays in map mode. Where covers are under 16 px a tap on stars zooms in. Regions and Colours sit under the top row; the similarity control is one row.', '#/album/the-stone-roses-the-stone-roses?view=map&plate=2'],
-    ['Explore: a region sheet', 'Tap a region name: the map flies there and the sheet rests on the slider at its peek height. The grabber (tap or swipe) opens the full height.', '#/map?region=warm'],
+    ['Album: map mode with a name plate', 'A first tap on a numbered cover names it; "Open" or a second tap opens it and stays in map mode. Where covers are under 16 px a tap on stars zooms in. The similarity control is one row.', '#/album/the-stone-roses-the-stone-roses?view=map&plate=2'],
+    ['Explore: an album picked on the map', 'The Explore sheet rests on the slider at its peek height. The grabber (tap or swipe) opens the full height.', '#/map?pick=pet-sounds-the-beach-boys'],
   ];
   var row = document.getElementById('row'), next = 0;
   function add() {

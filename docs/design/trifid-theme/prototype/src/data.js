@@ -97,7 +97,7 @@
           k, stop, wx, wy, wr: r.radius * s, hullW: (r.hull || []).map((p) => D.toWorld(p[0], p[1])),
           strong: r.strength === 'strong',
           display: r.name || RMR.TEXT.audioWords[r.word] || (r.named_from === 'audio' ? r.plain.split(' · ')[0] : r.word),
-          lead: U.lead(r.fw), col: fam, ink: U.rgb(U.lighten(fam, 0.86)),
+          col: fam,   // the debug hulls are drawn in it
         });
       });
       D.regions[stop] = { list, of: src ? src.album_region : null, byId: new Map(list.map((r) => [r.id, r])) };

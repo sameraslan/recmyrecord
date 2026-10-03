@@ -1,6 +1,6 @@
 # Trifid prototype
 
-An interactive prototype of the Trifid nebula theme for the album map. Design spec: `UX.md`. Placeholder wording: `COPY.md`. Nothing here touches `frontcreck/`.
+An interactive prototype of the Trifid nebula theme for the album map. Wording: `COPY.md`. `UX.md` is the earlier, larger design (region cards, colour legend, Regions menu) and is partly superseded; this file describes what the prototype does now. Nothing here touches `frontcreck/`.
 
 ## Open it
 
@@ -10,7 +10,7 @@ Fonts load from Google Fonts; offline it falls back to system serif and sans.
 
 ## Rebuild the data
 
-`data/data.js` holds everything the page needs (albums, positions, recommendations, family weights, regions per stop) as one script, because `fetch()` of local files is blocked on `file://`.
+`data/data.js` holds everything the page needs (albums, positions, recommendations, family weights, regions per stop; the page does not use every field) as one script, because `fetch()` of local files is blocked on `file://`.
 
 ```bash
 python3 docs/design/trifid-theme/prototype/build_data.py            # Balanced uses the hand-made regions
@@ -27,21 +27,21 @@ Every state is in the URL hash.
 
 | Route | Meaning |
 |---|---|
-| `#/` | Home (hero, shelf, region starting points) |
+| `#/` | Home (the app's hero and cover shelf over the nebula) |
 | `#/map` | The map at Overview |
-| `#/map?region=<id>` | Fly to a region, region card open |
 | `#/map?pick=<slug>` | An album picked on the map, Explore card open |
 | `#/map?stop=sonic\|balanced\|mood` | Similarity stop on the map |
 | `#/album/<slug>` | Album panel and focus on the map |
 | `#/album/<slug>?by=sonic\|mood` | The same at another stop |
 | `#/album/<slug>?more=1` | Ten closest albums instead of five |
 | `#/album/<slug>?view=map` | Phone only: the album in Map mode. Opening another album from the name plate keeps `view=map` |
-| `#/album/<slug>?region=<id>` | The album with a region card open beside it |
 | `#/map?cam=x,y,ppw` | Written by the page itself when the camera settles after a pan or zoom, so a reload lands on the same view |
 | `#/about` | About |
 | `#/404` or anything else | Not found |
 
 The similarity stop (`stop=` or `by=`) rides along on every route, Home, About and 404 included: every link in the page is built with the current stop and the prototype switches.
+
+A `region=` parameter in an old link is ignored.
 
 Prototype switches, on any route (the first seven persist while you navigate):
 
@@ -51,48 +51,72 @@ Prototype switches, on any route (the first seven persist while you navigate):
 | `gas=baked\|live` | One pre-rendered texture per stop over the data bounds (4096 px, or the GPU's limit; default, the path that would ship), or the live shader |
 | `data=10k` | Synthetic 10,000 points (Balanced only) |
 | `regions=default` | With `data=10k`: the default region set instead of the finer one |
-| `home=b` | Home with regions in place of the cover shelf |
+| `names=<number>\|all` | How many region names show at once. Default `NAMES_MAX` in `src/config.js` (9). `all` is the earlier behaviour: every region that fits, strong and fair, data words included. `0` shows none |
 | `hud=1` | Frame-time readout |
 | `hulls=1` | Region hulls (debug) |
 | `cam=x,y,ppw` | Explicit camera: world centre and CSS px per world unit |
 | `fit=whole` | Start at the Whole map framing instead of Overview |
-| `hover=<album index or region id>` | Force a hover state |
-| `legend=fierce\|warm\|quiet\|dark\|urban` | Force one family isolated |
+| `hover=<album index>` | Force the hover state of an album |
 | `q=<text>` | Open the search list with a query (on a phone it opens the sheet) |
-| `menu=regions\|card` | Open the Regions menu, or expand the open region card's album list |
-| `focus=<region id>` | Put keyboard focus on a region name (shows the focus ring) |
 | `plate=<n>` | Phone map mode: the name plate of the nth closest album, as after a first tap |
-| `colours=1` | Phone: the Colours sheet open |
-| `sheet=full` | Phone: the region or Explore sheet at its full height (default is the peek) |
+| `sheet=full` | Phone: the Explore sheet at its full height (default is the peek) |
 | `morph=<0..1>&from=<stop>` | A frozen mid-morph frame from `from` to the route's stop |
 | `scroll=strip` | Phone album list scrolled to the map strip |
 | `then=<url-encoded hash>` | Go to that hash 1.2 s after load (shows where a transition ends) |
 | `bench=1` | Programmatic pan, timed; result in `<html data-bench>` |
 | `idle=1` | Frame counter at 3 s and 8 s in `<html data-idle3 data-idle8>`; `data-gl` and `data-gl3` say whether WebGL has been started (0 on the phone's album list until the strip is scrolled into view or Map is tapped) |
 | `check=1` | Focus layout self-check over 40 albums at 5 and 10 closest; result in `<html data-check>` |
-| `stats=1` | Labels per zoom band, cover spacing, star crowding, luminance against density (Spearman), region centroid colours, computed contrasts; result in `<html data-stats>` |
+| `stats=1` | Names per zoom band, cover spacing, star crowding, the names' computed contrasts; result in `<html data-stats>` |
 
-Keys: `/` focuses search (also after using the slider, and on Home), `L` hides or shows the map names (remembered), `1` `2` `3` choose Sonic, Balanced, Mood, `0` is the fit button. With the map focused: arrows pan, plus and minus zoom, comma and full stop step through the twelve albums nearest the centre and Enter selects the ringed one. Left and Right step through regions when a region card has focus. Escape closes the innermost open thing, in this order: search list, phone search sheet, Colours sheet or Regions menu, name plate, the evidence under a focused name, the region or Explore card, phone map mode (back to the list), the album, About (back to where it was opened from).
+Look switches, read once at load and carried along on every link (changing one reloads the page):
 
-Focus: an album's title takes focus when it opens. When the album panel, a card, the Regions menu or a sheet closes, focus returns to what opened it (a region name on the map, the Regions button, the search field, the chip); if that is gone, to the region's name on the map, else to the map.
+| Parameter | Meaning |
+|---|---|
+| `look=mockup\|swirl\|photo\|marble` | Gas treatment (`LOOKS` at the top of `src/gas.js`; default `cfg.GAS.LOOK`, `swirl`) |
+| `palette=mockup\|emission\|dusty\|hubble\|ember` | Hues for the default five families (`PALETTES` in `src/gas.js`); with `scheme=`, one of that scheme's palettes |
+| `scheme=<id>` | A colour scheme from `data/schemes.js` (up to six channels plus neutral per album); the file is fetched only when this is set |
+| `font=<id>` | Lettering of the region names (`FONTS` in `src/labels.js`; default `cfg.NAME_FONT`, `marcellus`) |
+
+`data/schemes.js` is written by `build_data.py` from `../colour-options/schemes.json` when that file exists.
+
+## The gas
+
+`src/gas.js` is the mockup's recipe (`../mockups/src/trifid.js`) as a WebGL2 shader: the same noise table, blur widths, percentile normalisers and exponential tone map. Every noise lookup is displaced along one slow flow field, which makes the swirl; the colour weights are read through the same flow, so colours interleave at their borders. Kept from the earlier build: every star is an album at its true position; colour comes from the albums near; light and colour end in plain dark sky away from the albums, with no edge; nothing is drawn at rest. Each stop is rendered once to a texture (`gas=baked`, default); `gas=live` runs the shader per frame. Dust, zoom dimming and the dimming around an open album are applied in one shared last step, so the two paths match.
+
+## Option images
+
+`../options/` holds the images the owner chooses from (`index.html` shows them all). `tools/options.sh <list>` renders `name|hash` lines into that folder as JPG.
+
+Keys: `/` focuses search (also after using the slider, and on Home), `1` `2` `3` choose Sonic, Balanced, Mood, `0` is the fit button. With the map focused: arrows pan, plus and minus zoom, comma and full stop step through the twelve albums nearest the centre and Enter selects the ringed one. Escape closes the innermost open thing, in this order: search list, phone search sheet, name plate, the Explore card, phone map mode (back to the list), the album, About (back to where it was opened from).
+
+Focus: an album's title takes focus when it opens. When the album panel or the Explore card closes, focus returns to what opened it (the search field, the map); if that is gone, to the map.
+
+## Region names
+
+Region names are plain lettering on the map: not buttons, no hover, no focus, no click, hidden from screen readers (`src/labels.js`). They show at Whole map and Overview and are gone once covers reach 13 px (`BAND_B`). Beside an open album only the seed's region and its two nearest neighbours can show.
+
+- At most `NAMES_MAX` (9) at once on desktop, 4 on a phone, 8 beside an album; `names=` overrides the first.
+- Only strong regions are candidates. On Sonic and Mood, only regions with an approved place name (a non-null `name` in the data); a region with only a data word shows nothing. `names=all` lifts both rules.
+- Chosen by the data's priority order; a name is skipped when its centre is off screen or it would sit on chrome, a cover, a line or another name. At Overview on Balanced that leaves six.
+- While the slider moves, a name travels only when its id and word match at both stops; the others fade out, then the new ones fade in.
 
 ## Phone layout (under 900 px wide)
 
 - The album view is the list. WebGL is not started and no gas is baked until the map strip scrolls into view or Map is tapped (`src/app.js` `RMR.glStart`, `src/pages.js` `Pages.watchStrip`).
-- Map mode and Explore fit inside the free rectangle: between the top row (two rows beside an album) and the slider or the sheet resting on it. The rectangle is measured from the DOM (`measure()` in `src/app.js`), including the safe-area inset, and written to `Cam.free`; Overview, the whole map, region framing, album framing and the picked album all use it.
-- Taps: a tap on a numbered cover, or on any album once covers are 16 px or more, shows the name plate (cover, title, artist, "Open"); a second tap or the button opens it with `view=map`. Under 16 px a tap on stars zooms one step toward the tap. On the plain map the same rule decides between the Explore sheet and a zoom step. A tap counts under 9 px of travel and 500 ms. Region names stay tappable.
+- Map mode and Explore fit inside the free rectangle: under the header (under the row with "Explore this area" and List beside an album) and above the slider or the sheet resting on it. The rectangle is measured from the DOM (`measure()` in `src/app.js`), including the safe-area inset, and written to `Cam.free`; Overview, the whole map, album framing and the picked album all use it.
+- Taps: a tap on a numbered cover, or on any album once covers are 16 px or more, shows the name plate (cover, title, artist, "Open"); a second tap or the button opens it with `view=map`. Under 16 px a tap on stars zooms one step toward the tap. On the plain map the same rule decides between the Explore sheet and a zoom step. A tap counts under 9 px of travel and 500 ms.
 - The similarity control is one row of three segments (a radio group; the desktop range input is hidden) with the note on one line under it.
-- "Colours" (top row) opens a sheet with five toggle rows; it replaces the colour sentence.
-- Region and Explore sheets open at a peek height; the grabber (a button; it also takes a swipe) switches to the full height. Sheets scroll, and the zoom buttons move up to stay above them.
-- Ghost clicks after a touch pick are swallowed (port of the app's `lib/ghost-click.ts`). `viewport-fit=cover` is set and bottom-anchored chrome adds the safe-area inset. Names, pointers and the chip have `touch-action: none` and hand drags and pinches to the map; every other button and link has `touch-action: manipulation`. Search fields are 16 px.
+- The Explore sheet opens at a peek height; the grabber (a button; it also takes a swipe) switches to the full height. The zoom buttons move up to stay above it.
+- The hint line is desktop only.
+- Ghost clicks after a touch pick are swallowed (port of the app's `lib/ghost-click.ts`). `viewport-fit=cover` is set and bottom-anchored chrome adds the safe-area inset. Buttons and links have `touch-action: manipulation`. Search fields are 16 px.
 
 None of the touch behaviour can be exercised by the headless screenshots: it needs a real phone.
 
-The same switches are in the "Prototype" drawer on the right edge. `window.__rmr = {frames, lastFrameMs, worstFrameMs, gasMs}` is always there.
+The chrome, gas, data, hulls and frame-time switches are also in the "Prototype" drawer on the right edge. `window.__rmr = {frames, lastFrameMs, worstFrameMs, gasMs}` is always there.
 
 ## Other pages
 
-- `screens.html`: a labelled gallery of the key states, each with a link that opens it live.
+- `screens.html`: a labelled gallery of the key states, each with a link that opens it live. The pictures in `shots/` were taken before the simplification and the gas rework and have not been regenerated; the links are current.
 - `phone.html`: three live 390 x 844 frames of the phone layout, loaded one after another.
 
 ## Files
@@ -109,10 +133,10 @@ The same switches are in the "Prototype" drawer on the right edge. `window.__rmr
 | `src/stars.js` | One additive points draw |
 | `src/focus.js` | Cover layout and framing beside an album |
 | `src/overlay.js` | 2D canvas: covers, lines, markers, rings |
-| `src/regions.js` | Evidence sentences, neighbours, region card |
-| `src/labels.js` | Labels, scrims, edge pointers, "you are here" chip |
-| `src/search.js` | Search over albums and regions |
-| `src/panel.js` | Album panel, cards, slider, hint and colour sentence |
+| `src/regions.js` | Which regions sit near an album |
+| `src/labels.js` | Region names on the map: which show, where, and their contrast halo |
+| `src/search.js` | Search over albums and artists |
+| `src/panel.js` | Album panel, Explore card, slider, hint, phone name plate |
 | `src/pages.js` | Home, About, 404; phone search sheet, Map / List button, map strip |
 | `src/app.js` | State, router, frame loop, input, prototype drawer |
 | `src/css/app.css` | The app's chrome with tokens as variables |
@@ -127,7 +151,7 @@ The same switches are in the "Prototype" drawer on the right edge. `window.__rmr
 ```bash
 tools/shots_all.sh            # all of them, serially (about ten minutes)
 tools/shots_all.sh phone      # only names starting with "phone"
-tools/shot.sh '#/map?region=playful' "$PWD/shots/x.png" 1600 1000
+tools/shot.sh '#/map?names=all' "$PWD/shots/x.png" 1600 1000
 tools/shot.sh '#/map?bench=1' --dom 1600 1000 0     # last argument 0 = real time, needed for timings
 ```
 
@@ -135,4 +159,4 @@ The browser path inside `tools/shot.sh` is machine-specific. It runs software We
 
 ## Not built
 
-The search typo fallback; a persisted trail; region label watermark for broad areas (left out as clutter); a pipeline alias table for regions that move or disappear between rebuilds; audio-trait reasons ("Shares ...") at the Sonic stop; a 1,024 px gas image per stop for phones (the phone bakes the same texture as desktop, only later). Safari, a real phone and a screen reader have not been tested.
+The search typo fallback; a persisted trail; audio-trait reasons ("Shares ...") at the Sonic stop; a 1,024 px gas image per stop for phones (the phone bakes the same texture as desktop, only later). Safari, a real phone and a screen reader have not been tested.

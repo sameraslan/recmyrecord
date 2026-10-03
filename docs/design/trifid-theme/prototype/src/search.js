@@ -1,5 +1,4 @@
-/* Search: the app's word-prefix matcher for albums (lib/search.ts, without the typo fallback), plus regions.
- * With the field focused and empty the list is the browse menu of every region at the current stop. */
+/* Search: the app's word-prefix matcher for albums and artists (lib/search.ts, without the typo fallback). */
 (function () {
   'use strict';
   const RMR = window.RMR, U = RMR.util, T = RMR.TEXT, COPY = RMR.COPY;
@@ -52,16 +51,6 @@
     ranked.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
     return ranked.slice(0, limit || 6).map(([, id]) => { const e = index[id]; return { id, title: mark(e.t, e.tw, req), artist: mark(e.a, e.aw, req) }; });
   };
-  /** Regions whose NAME (or name word) has a word starting with every query word; only from three characters. */
-  Search.regions = function (query, limit) {
-    const words = required(wordsAt(fold(query).text).map((x) => x.w)); if (!words.length || words.join('').length < 3) return [];
-    const out = [];
-    for (const r of RMR.Regions.named()) {
-      const name = wordsAt(fold(r.display + ' ' + (r.word || '')).text).map((x) => x.w);
-      if (words.every((w) => name.some((x) => x.startsWith(w)))) out.push(r);
-    }
-    return out.sort((a, b) => b.priority - a.priority).slice(0, limit || 2);
-  };
 
   /** Markup of one search box; several live at once (header, Home hero, 404, the phone sheet). */
   Search.html = function (variant) {
@@ -69,8 +58,8 @@
     return `<div class="combo combo--${variant}"><div class="combo-field">${U.icon('search')}
       <input type="search" role="combobox" aria-expanded="false" aria-controls="${id}" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="${COPY.searchPlaceholder}" aria-label="${COPY.searchLabel}" aria-describedby="${id}-h">
       ${variant === 'sheet' ? '' : '<span class="kbd" aria-hidden="true">/</span>'}</div>
-      <p class="sr-only" id="${id}-h">${T.searchHint}</p><p class="sr-only" aria-live="polite"></p>
-      <div class="combo-pop" hidden><div role="listbox" id="${id}" aria-label="${T.searchList}"></div><p class="combo-empty" hidden></p></div></div>`;
+      <p class="sr-only" id="${id}-h">${COPY.searchHint}</p><p class="sr-only" aria-live="polite"></p>
+      <div class="combo-pop" hidden><div role="listbox" id="${id}" aria-label="${COPY.searchList}"></div><p class="combo-empty" hidden></p></div></div>`;
   };
 
   /** Wire one search box. opts: {onChosen, always (list stays open: the phone sheet)}. */
@@ -79,25 +68,18 @@
     const input = root.querySelector('input'), pop = root.querySelector('.combo-pop'), list = root.querySelector('[role=listbox]');
     let opts = [], active = -1, open = false;
     const live = root.querySelector('[aria-live]');
-    const row = (r, k) => `<li class="opt opt--region" role="option" id="${list.id}-${k}" aria-selected="false" data-k="${k}">${RMR.Regions.dot(r)}<span class="opt-text"><span class="opt-r">${U.esc(r.display)}</span><span class="opt-a">${U.esc(RMR.Regions.tagLine(r))}</span></span></li>`;
     const empty = root.querySelector('.combo-empty');
     function render() {
-      const q = input.value.trim(); opts = []; let html = '', nAlbums = 0, nRegions = 0;
-      if (q) {   // albums always first; regions below them, never preselected, never displacing an album row
-        const albums = Search.albums(q, 6), regs = Search.regions(q, 2); nAlbums = albums.length; nRegions = regs.length;
-        // a valid listbox: each group owns its options directly; the visible heading is presentation (the group carries the name)
-        if (albums.length) {
-          html += `<ul role="group" aria-label="${T.searchAlbums}">`;
-          for (const h of albums) { html += `<li class="opt" role="option" id="${list.id}-${opts.length}" aria-selected="false" data-k="${opts.length}">${U.cover(h.id, 44)}<span class="opt-text"><span class="opt-t">${h.title}</span><span class="opt-a">${h.artist}</span></span></li>`; opts.push({ album: h.id }); }
-          html += '</ul>';
-        }
-        if (regs.length) { html += `<p class="cap opt-h" role="presentation" aria-hidden="true">${T.searchRegions}</p><ul role="group" aria-label="${T.searchRegions}">`; for (const r of regs) { html += row(r, opts.length); opts.push({ region: r }); } html += '</ul>'; }
+      const q = input.value.trim(); opts = [];
+      if (q) {
+        opts = Search.albums(q, 6);
         const none = !opts.length, msg = COPY.searchNoMatches(q);
         empty.hidden = !none; empty.innerHTML = none ? U.esc(COPY.searchNoMatches('\u0000')).replace('\u0000', `<b>${U.esc(q)}</b>`) : '';
-        live.textContent = none ? msg : T.searchCount(nAlbums, nRegions);   // counts and "no match" are announced politely
-        list.hidden = none; list.innerHTML = html; setOpen(true);
+        live.textContent = none ? msg : T.searchCount(opts.length);   // the count and "no match" are announced politely
+        list.hidden = none; setOpen(true);
+        list.innerHTML = opts.map((h, k) => `<div class="opt" role="option" id="${list.id}-${k}" aria-selected="false" data-k="${k}">${U.cover(h.id, 44)}<span class="opt-text"><span class="opt-t">${h.title}</span><span class="opt-a">${h.artist}</span></span></div>`).join('');
       } else { live.textContent = ''; empty.hidden = true; list.innerHTML = ''; setOpen(false); }
-      setActive(nAlbums ? 0 : -1);
+      setActive(opts.length ? 0 : -1);
     }
     function setOpen(v) { open = v; pop.hidden = !v; input.setAttribute('aria-expanded', String(v)); if (!v) input.removeAttribute('aria-activedescendant'); }
     function setActive(k) {
@@ -109,7 +91,7 @@
       const c = opts[k]; if (!c) return;
       RMR.S.openerHint = o.opener || input;   // where focus returns when what this opened is closed
       input.value = ''; setOpen(false); input.blur(); if (o.onChosen) o.onChosen();
-      if (c.region) RMR.go({ name: 'map', region: c.region.id }); else RMR.go({ name: 'album', slug: RMR.D.album(c.album).slug });
+      RMR.go({ name: 'album', slug: RMR.D.album(c.id).slug });
     }
     input.addEventListener('input', render);
     input.addEventListener('focus', render);
@@ -138,6 +120,6 @@
   // on screen and not visibility:hidden (the header field is hidden on Home); the newest box first
   const isShown = (el) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
   Search.visible = () => boxes.slice().reverse().find((b) => isShown(b.input)) || null;
-  /** For screenshots: open the visible list with a query (hash parameter q=; empty shows the browse menu). */
+  /** For screenshots: open the visible list with a query (hash parameter q=). */
   Search.demo = function (q) { const b = Search.visible(); if (b) b.demo(q); };
 })();

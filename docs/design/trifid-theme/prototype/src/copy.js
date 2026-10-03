@@ -7,6 +7,7 @@
   RMR.COPY = {
     wordmark: 'recmyrecord', skip: 'Skip to content', navLabel: 'Main', navMap: 'Map', navAbout: 'About',
     searchPlaceholder: 'Search albums or artists', searchLabel: 'Search albums or artists',
+    searchHint: 'Type to see matching albums. Up and down arrows move, Enter chooses.', searchList: 'Matching albums',
     searchNoMatches: (q) => `No album matches ${q}. Try the artist’s name, or fewer words.`,
     albumLabel: (title, artist) => `${title} by ${artist}`,
     trailLabel: 'Visited', trailNav: 'Albums visited', trailMore: '…',
@@ -50,53 +51,15 @@
   };
 
   RMR.TEXT = {
-    // slider notes: the app's notes with what the regions mean at each stop (UX.md section 8)
     sliderNotes: { sonic: 'Closest in sound.', balanced: 'Sound and mood together.', mood: 'Closest in mood.' },   // the app's notes
-    sliderNames: 'Place names change with this setting.',
-    hint: 'Every star is an album. Albums close together sound or feel alike.',
-    hintAlbum: 'Every star is an album. Albums close together sound or feel alike. Select one to start from it.',
-    famNames: ['Rose', 'Gold', 'Teal', 'Blue', 'Violet'], famWords: ['fierce', 'warm', 'quiet', 'dark', 'urban'], mixed: 'Mixed',
-    regionsButton: 'Regions', regionsMenu: 'Regions at this setting', showAlbums: 'Show more', hideAlbums: 'Show fewer', regionCopy: 'Copy link to this region',
-    regionGone: 'That region is not on the map at this setting.', labelsToggle: 'Hide map names (L)',
-    aboutStars: 'Brighter stars are albums higher on the chart.',
     sliderLocked: 'The stress data has one layout.',
-    // the colour rule: each colour word is set in its hue and isolates its family on hover
-    legend: [['Rose', 'fierce', 0], ['gold', 'warm', 1], ['teal', 'quiet', 2], ['blue', 'dark', 3], ['violet', 'urban', 4]],
-    legendPart: (colour, word, first) => `${colour} where ${first ? 'the music' : 'it'} is ${word}`,
-    legendIsolate: (colour, word) => `${colour}: show only where the music is ${word}`,
-    // evidence sentences (the mockup's wording)
-    evidenceWord: (pct, word, overall) => `${pct}% of albums here are tagged ${word}<i>, against ${overall}% across the map.</i>`,
-    evidenceLive: 'Concert recordings: much more crowd and room sound than the rest of the map.',
-    evidenceQuiet: 'Much quieter than the rest of the map.',
-    evidenceAudio: (dir, feature) => `Named from the sound: much ${dir} ${feature} than the rest of the map.`,
-    // readable label for an audio-named region with no approved place name (placeholder; shown in capitals)
+    // map label (in capitals) of a region named from an audio trait that has no approved place name; seen only with names=all or data=10k
     audioWords: { 'danceability+': 'Danceable', 'instrumentalness+': 'Instrumental', 'liveness+': 'Live', 'loudness-': 'Quiet', 'acousticness+': 'Acoustic', 'energy+': 'Energetic', 'speechiness+': 'Spoken' },
-    // regions as navigation
-    inRegion: 'In', between: (a, b) => `Between ${a} and ${b}`,
-    bestKnown: 'Best known here', nextTo: 'Next to', regionClose: 'Close',
-    regionLabel: (name) => `Region: ${name}`, regionsList: 'Regions of the map',
-    pointerLabel: (name) => `Go to ${name}`, hereLabel: (name) => `You are in ${name}. Open the region.`,
-    searchCount: (albums, regions) => [albums ? `${albums} ${albums === 1 ? 'album' : 'albums'}` : '', regions ? `${regions} ${regions === 1 ? 'region' : 'regions'}` : ''].filter(Boolean).join(', '),
-    // phone map mode: name plate, Colours chip and sheet, sheet grabber
-    plateOpen: 'Open', plateClose: 'Close', colours: 'Colours', coloursClose: 'Close',
-    coloursRow: (word, first) => `where ${first ? 'the music' : 'it'} is ${word}`,
+    searchCount: (albums) => `${albums} ${albums === 1 ? 'album' : 'albums'}`,
+    // phone map mode: name plate, sheet grabber
+    plateOpen: 'Open', plateClose: 'Close',
     sheetMore: 'Show more', sheetLess: 'Show fewer',
-    nearList: 'Albums in view', mapHelp: 'Drag or use arrow keys to pan, plus and minus to zoom. Comma and full stop step through the albums nearest the centre, Enter selects one.',
-    // under "Closest albums": the app's own About sentence, in a new place
-    closestNote: 'An album’s closest albums sit nearby on the map, but not always right beside it.',
-    searchRegions: 'Regions', searchAlbums: 'Albums',
-    searchHint: 'Type to see matching albums and regions. Up and down arrows move, Enter chooses.',
-    searchList: 'Matching regions and albums',
-    // Home, About (new copy, placeholder)
-    homeRegions: 'Or start from a place on the map',
-    aboutReading: { heading: 'Reading the map', body: [
-      'Region names come from the handpicked mood words and the sound of the albums there. Select a name to see why it is there.',
-      'The names change with the similarity setting, because each setting arranges the albums differently.',
-    ] },
-    stripRegion: (name) => `In ${name}`,
     stressBanner: 'Synthetic 10,000-point stress test',
     stressMissing: 'No synthetic data file yet (data/synth10k.js).',
-    // prototype drawer (not part of the design)
-    regionsSwitch: 'Regions', proto: { title: 'Prototype', chrome: 'Chrome', site: 'Site', trifid: 'Trifid', gas: 'Gas', live: 'Live', baked: 'Baked', data: 'Data', real: 'Real', synth: 'Synthetic 10,000', hulls: 'Show region hulls', hud: 'Frame time' },
   };
 })();

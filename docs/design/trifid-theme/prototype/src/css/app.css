@@ -19,6 +19,36 @@ html[data-chrome="trifid"] {
   --lamp: #f1ece4; --lamp-ink: #121016; --lamp-hover: #ffffff; --lamp-soft: rgba(241, 236, 228, .3);
   --float: rgba(11, 10, 15, .95); --panel-bg: #08070b; --top-bg: #07060a; --hot-row: rgba(241, 236, 228, .05);
 }
+/* Chrome options for the owner to choose from (docs/design/trifid-theme/options, "Site colours"). Token sets only;
+ * the few rules that need more than a token are at the end of pages.css. */
+/* ink: the nebula's own shadow colour, a midnight blue-violet, lifted enough to read as a surface; off-white controls. */
+html[data-chrome="ink"] {
+  --room: #0c0e18; --room-2: #131524; --room-3: #1c1f30; --room-4: #2a2d42;
+  --paper: #efece8; --dust: #b8b5ba; --ash: #9f9ca6;
+  --rule: rgba(226, 228, 245, .12); --rule-2: rgba(226, 228, 245, .24); --rule-3: rgba(226, 228, 245, .45);
+  --lamp: #efece8; --lamp-ink: #10111a; --lamp-hover: #ffffff; --lamp-soft: rgba(239, 236, 232, .3);
+  --float: rgba(13, 15, 26, .95); --panel-bg: #0c0e18; --top-bg: #0a0b14; --hot-row: rgba(226, 228, 245, .05);
+}
+/* starlight: the site exactly as it is today (warm room, paper type), with one change: amber becomes pale cream. */
+html[data-chrome="starlight"] {
+  --lamp: #f3ead6; --lamp-ink: #1a130b; --lamp-hover: #fffaf0; --lamp-soft: rgba(243, 234, 214, .32);
+}
+/* glass: the trifid tokens with see-through panels; the blur and dimming of what is behind are in pages.css. */
+html[data-chrome="glass"] {
+  --room: #07060a; --room-2: #0e0d13; --room-3: #17161d; --room-4: #24222c;
+  --paper: #f3eee7; --dust: #c4beb6; --ash: #aaa49d;
+  --rule: rgba(241, 236, 228, .14); --rule-2: rgba(241, 236, 228, .26); --rule-3: rgba(241, 236, 228, .45);
+  --lamp: #f1ece4; --lamp-ink: #121016; --lamp-hover: #ffffff; --lamp-soft: rgba(241, 236, 228, .3);
+  --float: rgba(10, 9, 14, .66); --panel-bg: rgba(8, 7, 11, .7); --top-bg: rgba(7, 6, 10, .58); --hot-row: rgba(241, 236, 228, .06);
+}
+/* plum: a deep wine-violet room, warm like the site but in the nebula's own key; pale rose-cream controls. */
+html[data-chrome="plum"] {
+  --room: #140d16; --room-2: #1c141f; --room-3: #281d2b; --room-4: #37293a;
+  --paper: #f1e9e6; --dust: #bfb2b5; --ash: #a6989c;
+  --rule: rgba(241, 228, 232, .12); --rule-2: rgba(241, 228, 232, .23); --rule-3: rgba(241, 228, 232, .44);
+  --lamp: #f2e4dc; --lamp-ink: #1c1118; --lamp-hover: #fff7f1; --lamp-soft: rgba(242, 228, 220, .32);
+  --float: rgba(25, 17, 28, .95); --panel-bg: #140d16; --top-bg: #110b13; --hot-row: rgba(241, 228, 232, .05);
+}
 @media (max-width: 1100px) and (min-width: 900px) { :root { --gut: 24px; --panel: 480px; } }
 @media (max-width: 899px) { :root { --gut: 20px; --hdr: 60px; --panel: 100vw; } }
 
@@ -76,7 +106,7 @@ ol, ul { padding: 0; list-style: none; }
 .kbd { flex: none; font-size: 12px; line-height: 1; color: var(--ash); border: 1px solid var(--rule-2); border-radius: 2px; padding: 4px 6px; }
 .combo-field:focus-within .kbd { visibility: hidden; }
 .combo-pop { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 80; background: var(--room-2); border: 1px solid var(--rule-2); border-radius: 2px; box-shadow: 0 18px 40px -12px rgba(0, 0, 0, .7); padding: 6px; color: var(--paper); max-height: calc(100vh - var(--hdr) - 40px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--room-4) transparent; }
-.combo-pop ul { display: grid; gap: 2px; }
+.combo-pop [role=listbox] { display: grid; gap: 2px; }
 .opt { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; padding: 6px 8px; min-height: 56px; border-radius: 2px; cursor: pointer; position: relative; user-select: none; -webkit-user-select: none; }
 .opt[aria-selected="true"] { background: var(--room-4); }
 .opt[aria-selected="true"]::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; background: var(--lamp); }

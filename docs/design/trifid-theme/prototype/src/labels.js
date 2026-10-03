@@ -1,46 +1,72 @@
-/* Region labels, edge pointers and the "you are here" chip (UX.md section 5). All real buttons in the DOM.
- * Placement runs every drawn frame: priority order, a density budget, and no label over chrome, a cover or a line.
- * Each label sits on a soft elliptical scrim whose strength is computed from the gas luminance under it. */
+/* Region names: plain lettering on the map. Nothing to hover, focus or click, and hidden from screen readers.
+ * They show at Whole map and Overview (and beside an open album) and are gone once the visitor zooms in.
+ * Placement runs every drawn frame: priority order, a cap (cfg.NAMES_MAX, or names= in the hash), and no name over
+ * chrome, a cover or a line. Contrast comes from a dark halo around the glyphs, solved from the gas luminance under the name. */
 (function () {
   'use strict';
-  const RMR = window.RMR, C = RMR.cfg, U = RMR.util, T = RMR.TEXT;
+  const RMR = window.RMR, C = RMR.cfg, U = RMR.util;
   const Labels = (RMR.Labels = {});
-  let host, ptrHost, chip, srList, mctx;
-  const els = new Map(), ptrs = new Map(), widths = new Map(), sticky = new Map();
+  let host, mctx;
+  const els = new Map(), widths = new Map(), sticky = new Map();
   // nudges tried in order when the true centre is taken; small, so a name stays on its region
   const OFFSETS = [[0, 0], [0, -22], [0, 22], [-40, 0], [40, 0], [0, -46], [0, 46], [-70, -30], [70, 30], [70, -30], [-70, 30], [0, -78], [0, 78]];
 
-  Labels.init = function (h, p, c, sr) {
-    host = h; ptrHost = p; chip = c; srList = sr; mctx = document.createElement('canvas').getContext('2d');
-    chip.addEventListener('click', () => { if (!chip._r) return; const S = RMR.S; S.noFly = true; RMR.go(S.route.name === 'album' ? Object.assign({}, S.route, { region: chip._r.id }) : { name: 'map', region: chip._r.id }); });   // opens the card in place; beside an album the album stays
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { widths.clear(); ptrs.forEach((e) => (e._w = 0)); RMR.requestRender(); });
+  /* Lettering options (font=<id> in the hash; default cfg.NAME_FONT). Each is tuned on its own: weight, tracking in em,
+   * case ('upper', 'lower' or 'title' = as written) and size relative to the Cormorant original. Never italic. `g` is the Google Fonts family spec, loaded on demand. */
+  const FONTS = {
+    cormorant: { name: 'Cormorant Garamond 600, wide capitals (the original)', fam: 'Cormorant Garamond', w: 600, track: 0.17, cs: 'upper', size: 1.1, g: null },
+    'cormorant-light': { name: 'Cormorant Garamond 400, larger, tighter capitals', fam: 'Cormorant Garamond', w: 400, track: 0.09, cs: 'upper', size: 1.25, g: 'Cormorant+Garamond:wght@400' },
+    bodoni: { name: 'Bodoni Moda 500, capitals', fam: 'Bodoni Moda', w: 500, track: 0.17, cs: 'upper', size: 1.0, g: 'Bodoni+Moda:opsz,wght@6..96,500' },
+    playfair: { name: 'Playfair Display 500, capitals', fam: 'Playfair Display', w: 500, track: 0.15, cs: 'upper', size: 0.95, g: 'Playfair+Display:wght@500' },
+    fraunces: { name: 'Fraunces 300, capitals', fam: 'Fraunces', w: 300, track: 0.13, cs: 'upper', size: 1.0, g: 'Fraunces:opsz,wght@9..144,300' },
+    instrument: { name: 'Instrument Serif, mixed case', fam: 'Instrument Serif', w: 400, track: 0.01, cs: 'title', size: 1.45, g: 'Instrument+Serif' },
+    marcellus: { name: 'Marcellus, inscriptional capitals', fam: 'Marcellus', w: 400, track: 0.2, cs: 'upper', size: 0.98, g: 'Marcellus' },
+    cinzel: { name: 'Cinzel 500, classical capitals', fam: 'Cinzel', w: 500, track: 0.14, cs: 'upper', size: 0.92, g: 'Cinzel:wght@500' },
+    forum: { name: 'Forum, classical capitals', fam: 'Forum', w: 400, track: 0.17, cs: 'upper', size: 1.12, g: 'Forum' },
+    jost: { name: 'Jost 300, thin wide capitals', fam: 'Jost', w: 300, track: 0.36, cs: 'upper', size: 0.92, g: 'Jost:wght@300' },
+    josefin: { name: 'Josefin Sans 300, thin wide capitals', fam: 'Josefin Sans', w: 300, track: 0.32, cs: 'upper', size: 0.96, g: 'Josefin+Sans:wght@300' },
+    tenor: { name: 'Tenor Sans, wide capitals', fam: 'Tenor Sans', w: 400, track: 0.26, cs: 'upper', size: 0.88, g: 'Tenor+Sans' },
+    schibsted: { name: 'Schibsted Grotesk 500, small tracked capitals (the site\u2019s body face)', fam: 'Schibsted Grotesk', w: 500, track: 0.24, cs: 'upper', size: 0.76, g: null },
+    'jost-lower': { name: 'Jost 300, lower case', fam: 'Jost', w: 300, track: 0.16, cs: 'lower', size: 1.18, g: 'Jost:wght@300' },
+    plexmono: { name: 'IBM Plex Mono, small capitals (star chart)', fam: 'IBM Plex Mono', w: 400, track: 0.2, cs: 'upper', size: 0.74, g: 'IBM+Plex+Mono:wght@400' },
+  };
+  let F;
+  Labels.fonts = FONTS;
+  const cased = (t) => (F.cs === 'upper' ? t.toUpperCase() : F.cs === 'lower' ? t.toLowerCase() : t);
+
+  Labels.init = function (h) {
+    host = h; mctx = document.createElement('canvas').getContext('2d');
+    const id = (/[?&]font=([^&]*)/.exec(location.hash) || [])[1]; F = FONTS[id] || FONTS[C.NAME_FONT];
+    if (F.g) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = `https://fonts.googleapis.com/css2?family=${F.g}&display=swap`; document.head.appendChild(l); }
+    const st = host.style;
+    st.setProperty('--rl-font', `"${F.fam}"`); st.setProperty('--rl-weight', F.w); st.setProperty('--rl-track', F.track + 'em');
+    st.setProperty('--rl-case', F.cs === 'upper' ? 'uppercase' : F.cs === 'lower' ? 'lowercase' : 'none'); st.setProperty('--rl-stroke', (F.w <= 300 ? 1.7 : 2.1) + 'px');
+    // names are measured again once their face has arrived
+    const again = () => { widths.clear(); RMR.requestRender(); };
+    if (document.fonts) { if (document.fonts.ready) document.fonts.ready.then(again); document.fonts.addEventListener('loadingdone', again); }
   };
 
-  function textW(text, weight, fs) {
-    const key = weight + text; let w = widths.get(key);
-    if (w == null) { mctx.font = `${weight} 100px "Cormorant Garamond", serif`; w = mctx.measureText(text.toUpperCase()).width + 17 * text.length; widths.set(key, w); }
+  function textW(text, fs) {
+    let w = widths.get(text);
+    if (w == null) { mctx.font = `${F.w} 100px "${F.fam}", serif`; w = mctx.measureText(cased(text)).width + 100 * F.track * text.length; widths.set(text, w); }
     return (w * fs) / 100;
   }
   function fontSize(r) {
-    if (r.level === 0) return 21 + 6 * Math.min(1, Math.sqrt(r.n / 1500));
-    return r.strong ? 17 + 7 * Math.min(1, Math.sqrt(r.n / 346)) : 14 + 2 * Math.min(1, Math.sqrt(r.n / 346));
+    const k = F.size;
+    if (r.level === 0) return k * (21 + 6 * Math.min(1, Math.sqrt(r.n / 1500)));
+    return k * (r.strong ? 17 + 7 * Math.min(1, Math.sqrt(r.n / 346)) : 14 + 2 * Math.min(1, Math.sqrt(r.n / 346)));
+  }
+  /** Ink of a name: near white, with a breath of the gas colour under it. */
+  function inkOf(r) {
+    if (r._ink) return r._ink;
+    const c = RMR.Gas.ok ? RMR.Gas.rgbAt(r.stop, r.wx, r.wy) : [240, 236, 228], m = Math.max(c[0], c[1], c[2], 1);
+    return (r._ink = U.lighten(c.map((v) => (v / m) * 255), 0.8));
   }
 
   function ensure(r) {
     let e = els.get(r.id);
-    if (!e) {
-      e = U.el('button', 'rl off', '<span class="rl-scrim" aria-hidden="true"></span><b></b><span class="rl-sub"></span><span class="rl-ev"></span>');
-      e.type = 'button';
-      const on = () => RMR.setHoverRegion(e._r.id), off = () => RMR.setHoverRegion(null, e._r.id);
-      e.addEventListener('mouseenter', on); e.addEventListener('mouseleave', off); e.addEventListener('focus', on); e.addEventListener('blur', off);
-      e.addEventListener('click', () => RMR.go({ name: 'map', region: e._r.id }));
-      host.appendChild(e); els.set(r.id, e);
-    }
-    if (e._r !== r) {
-      e._r = r; e.children[1].textContent = r.display; e.children[2].textContent = RMR.Regions.plain(r); e.children[3].innerHTML = RMR.Regions.evidenceTagged(r);
-      e.style.setProperty('--lc', r.ink); e.classList.toggle('fair', !r.strong); e.classList.toggle('area', r.level === 0);
-      e.setAttribute('aria-label', `${r.display}. ${RMR.Regions.tagLine(r)}. ${RMR.Regions.evidenceText(r)}`);
-    }
+    if (!e) { e = U.el('div', 'rl off', '<b></b>'); host.appendChild(e); els.set(r.id, e); }
+    if (e._r !== r) { e._r = r; e.firstChild.textContent = r.display; e.style.setProperty('--lc', U.rgb(inkOf(r))); e.classList.toggle('fair', !r.strong); e.classList.toggle('area', r.level === 0); }
     return e;
   }
 
@@ -53,7 +79,7 @@
     }
     return 1;
   }
-  Labels.contrast = [];   // measured at the last update: {id, ratio} per shown label (for the report)
+  Labels.contrast = [];   // measured at the last update: {id, ratio} per shown label (for stats=1)
   function segHitsBox(a, b, r, pad) {   // Liang-Barsky: does segment ab cross the box grown by pad?
     const x0 = r[0] - pad, y0 = r[1] - pad, x1 = r[2] + pad, y1 = r[3] + pad, dx = b[0] - a[0], dy = b[1] - a[1]; let t0 = 0, t1 = 1;
     for (const [p, q] of [[-dx, a[0] - x0], [dx, x1 - a[0]], [-dy, a[1] - y0], [dy, y1 - a[1]]]) {
@@ -63,19 +89,14 @@
   }
   const hits = (a, list) => list.some((k) => a[0] < k[2] && a[2] > k[0] && a[1] < k[3] && a[3] > k[1]);
 
-  /** The screen-reader list of every region at the current stop (labels dropped for space are still reachable). */
-  Labels.list = function () {
-    srList.innerHTML = RMR.Regions.named().map((r) => `<li><a tabindex="-1" href="${RMR.href({ name: 'map', region: r.id })}">${U.esc(r.display)}. ${U.esc(RMR.Regions.tagLine(r))}. ${U.esc(RMR.Regions.evidenceText(r))}</a></li>`).join('');
-  };
-
-  /** Focus the placed label of a region (focus returns here when its card closes). False when it is not on the map. */
-  Labels.focus = function (id) { const e = els.get(id); if (!e || e.classList.contains('off')) return false; e.focus({ preventScroll: true }); return document.activeElement === e; };
-  /** st: {cp, album, blockers, hoverId, cardId, morph:{from,to,k}|null, stop, gasK, ppwOverview, pointers} */
+  /** st: {cp, album, blockers, lines, only, morph:{from,to,k}|null, stop, gasK, ppwOverview, phone, names}
+   * names: null (cfg.NAMES_MAX, strong regions, approved place names only on Sonic and Mood), a number (that many), or
+   * 'all' (every region that fits, strong and fair, data words included). */
   Labels.update = function (st) {
-    const Cam = RMR.Cam, D = RMR.D, vis = Cam.vis(), cp = st.cp;
-    // No partial fades: names are at full strength through the whole-map and Overview bands, then gone (the chip takes over).
+    const Cam = RMR.Cam, D = RMR.D, vis = Cam.vis(), cp = st.cp, all = st.names === 'all';
+    // No partial fades: names are at full strength through the whole-map and Overview bands, then gone.
     // Beside an album only the seed's region and its neighbours show, whatever the zoom.
-    const bandAlpha = st.hidden ? 0 : st.album ? 1 : cp < C.BAND_B ? 1 : 0;
+    const on = st.album || cp < C.BAND_B;
     const zoomK = U.clamp(Math.pow(RMR.cam.ppw / st.ppwOverview, 0.3), 0.85, 1.35);
 
     // candidates: this stop's regions, or both sets while the slider moves (a shared id travels with its centroid)
@@ -86,106 +107,50 @@
         if (o) cands.push({ r: k < 0.5 ? r : o, wx: U.lerp(r.wx, o.wx, k), wy: U.lerp(r.wy, o.wy, k), a: 1 }); else cands.push({ r, wx: r.wx, wy: r.wy, a: U.clamp(1 - k / 0.4, 0, 1) }); }
       for (const r of b.list) if (!(a.byId.has(r.id) && a.byId.get(r.id).word === r.word)) cands.push({ r, wx: r.wx, wy: r.wy, a: U.clamp((k - 0.6) / 0.4, 0, 1) });
     } else cands = D.regions[st.stop].list.map((r) => ({ r, wx: r.wx, wy: r.wy, a: 1 }));
+    // which regions may be named: strong ones, and on Sonic and Mood only those with an approved place name
+    const named = (r) => (all ? !st.phone || r.strong || r.level === 0 : r.strong && (r.stop === 'balanced' || !!r.name));
+    cands = cands.filter((c) => c.a > 0 && named(c.r));
     // hierarchy: broad areas alone at whole-map zoom, regions from Overview in; without areas, the top regions
     const hasAreas = cands.some((c) => c.r.level === 0), bandA = cp < C.BAND_A;
-    cands = cands.filter((c) => c.a > 0 && (hasAreas ? (bandA && !st.album ? c.r.level === 0 : c.r.level !== 0) : true) && (!st.only || st.only.has(c.r.id)) && (!st.phone || c.r.strong || c.r.level === 0));
-    const first = (c) => (c.r.id === st.hoverId ? 2 : c.r.id === st.cardId ? 1 : 0);
-    cands.sort((p, q) => first(q) - first(p) || q.r.priority - p.r.priority);
+    cands = cands.filter((c) => (hasAreas ? (bandA && !st.album ? c.r.level === 0 : c.r.level !== 0) : true) && (!st.only || st.only.has(c.r.id)));
+    cands.sort((p, q) => q.r.priority - p.r.priority);
 
     let blocked = 0; for (const k of st.blockers) blocked += Math.max(0, Math.min(k[2], vis.r) - Math.max(k[0], vis.l)) * Math.max(0, Math.min(k[3], vis.b) - Math.max(k[1], vis.t));
-    const cap = Math.min(st.labelCap, st.album || (bandA && !hasAreas) ? 8 : C.LABEL_CAP);
+    const most = all ? C.NAMES_ALL_CAP : st.names != null ? st.names : C.NAMES_MAX;
+    const cap = Math.min(most, st.phone ? C.NAMES_MAX_PHONE : Infinity, st.album || (all && bandA && !hasAreas) ? C.NAMES_MAX_ALBUM : Infinity);
     const budget = Math.min(cap, Math.max(1, Math.floor((vis.w * vis.h - blocked) / (160 * 90))));
-    const placed = [], shown = new Set(), offscreen = []; Labels.contrast = [];
+    const placed = [], shown = new Set(); Labels.contrast = [];
 
-    for (const c of cands) {
-      const r = c.r, isOn = r.id === st.hoverId, p = Cam.toScreen(c.wx, c.wy);
-      if (p[0] < vis.l || p[0] > vis.r || p[1] < vis.t || p[1] > vis.b) { if (r.strong && c.a >= 1) offscreen.push({ r, x: p[0], y: p[1] }); continue; }
-      if (bandAlpha <= 0 || (placed.length >= budget && !isOn)) continue;
-      const fs = st.phone ? U.clamp(fontSize(r) * 0.72, 13, 16) : fontSize(r) * zoomK * (st.album ? 0.92 : 1), weight = r.strong ? 600 : 500;
-      const sub = r.strong && r.level !== 0 && !st.album && !st.phone && cp < C.BAND_B && !isOn && !!RMR.Regions.plain(r);
-      // on a phone the box used for placement is the real 44 px tap box plus 8 px
-      const w = Math.max(textW(r.display, weight, fs), isOn ? 400 : 0) / 2 + (st.phone ? 16 : 6), h = st.phone ? 26 : (fs * 1.05 + (isOn ? 30 : sub ? 19 : 0)) / 2 + 4;
-      // the hovered label never moves (it would slide out from under the pointer); others try their last spot first
-      const keep = sticky.get(r.id) || 0, order = isOn ? [keep] : [keep].concat(OFFSETS.map((_, k) => k).filter((k) => k !== keep));
+    if (on) for (const c of cands) {
+      if (placed.length >= budget) break;
+      const r = c.r, p = Cam.toScreen(c.wx, c.wy);
+      if (p[0] < vis.l || p[0] > vis.r || p[1] < vis.t || p[1] > vis.b) continue;
+      const fs = st.phone ? U.clamp(fontSize(r) * 0.72, 13 * Math.min(1, F.size + 0.15), 16) : fontSize(r) * zoomK * (st.album ? 0.92 : 1);
+      const w = textW(r.display, fs) / 2 + 6, h = (fs * 1.05) / 2 + 4;
+      // a name tries its last spot first, so it does not jump about while the map moves
+      const keep = sticky.get(r.id) || 0, order = [keep].concat(OFFSETS.map((_, k) => k).filter((k) => k !== keep));
       let box = null, used = 0;
       for (const k of order) {
         const x = p[0] + OFFSETS[k][0], y = p[1] + OFFSETS[k][1], b = [x - w, y - h, x + w, y + h];
-        if (!isOn && (b[0] < vis.l + 10 || b[2] > vis.r - 10 || b[1] < vis.t + 10 || b[3] > vis.b - 10 || hits(b, st.blockers) || hits(b, placed) || (st.lines && st.lines.some((l) => segHitsBox(l[0], l[1], b, 8))))) continue;
+        if (b[0] < vis.l + 10 || b[2] > vis.r - 10 || b[1] < vis.t + 10 || b[3] > vis.b - 10 || hits(b, st.blockers) || hits(b, placed) || (st.lines && st.lines.some((l) => segHitsBox(l[0], l[1], b, 8)))) continue;
         box = b; used = k; break;
       }
-      if (!box) { if (r.strong && c.a >= 1 && hits([p[0] - 30, p[1] - 12, p[0] + 30, p[1] + 12], st.blockers.slice(0, st.chromeCount))) offscreen.push({ r, x: p[0], y: p[1], inside: true }); continue; }
+      if (!box) continue;
       sticky.set(r.id, used); placed.push(box); shown.add(r.id);
       const e = ensure(r), x = (box[0] + box[2]) / 2, y = (box[1] + box[3]) / 2;
-      const alpha = c.a, textA = isOn ? 1 : alpha;   // full strength or not at all, beside an album too
       // contrast comes from a tight dark halo around the glyphs, its strength solved from the gas luminance under the label
       const w0 = Cam.toWorld(box[0], box[3]), w1 = Cam.toWorld(box[2], box[1]);
       let bg = RMR.Gas.lumIn(st.morph ? st.morph.from : st.stop, w0[0], w0[1], w1[0], w1[1]);
       if (st.morph) bg = Math.max(bg, RMR.Gas.lumIn(st.morph.to, w0[0], w0[1], w1[0], w1[1]));
       bg *= st.gasK;
-      const ink = sub || isOn ? 0.78 : U.luminance(U.lighten(r.col, 0.86)), halo = haloFor(bg, ink, 1, st.album ? 5.5 : 4.5);
-      { const hb = bg * Math.pow(1 - halo, 2.2), a2 = 1, t = Math.pow(a2 * Math.pow(ink, 1 / 2.2) + (1 - a2) * Math.pow(hb, 1 / 2.2), 2.2); Labels.contrast.push({ id: r.id, ratio: +((t + 0.05) / (hb + 0.05)).toFixed(2), gas: +bg.toFixed(3) }); }
+      const ink = U.luminance(inkOf(r)), halo = haloFor(bg, ink, 1, st.album ? 5.5 : 4.5), hb = bg * Math.pow(1 - halo, 2.2);
+      Labels.contrast.push({ id: r.id, ratio: +((ink + 0.05) / (hb + 0.05)).toFixed(2), gas: +bg.toFixed(3) });
       e.style.setProperty('--h', halo.toFixed(2));
-      e.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-50%)`; e._x = Math.round(x / 80); e._y = Math.round(y / 60);
-      e.children[1].style.fontSize = fs.toFixed(1) + 'px';
-      e.style.setProperty('--a', textA.toFixed(2));
-      const sc = e.children[0].style; sc.width = Math.round(2 * w + 16) + 'px'; sc.height = Math.round(2 * h + 8) + 'px'; sc.opacity = (Math.min(0.2, bg * 0.6) * c.a).toFixed(2);
-      e.classList.toggle('on', isOn); e.classList.toggle('sub', sub); e.classList.remove('off');
+      e.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-50%)`;
+      e.firstChild.style.fontSize = fs.toFixed(1) + 'px';
+      e.style.setProperty('--a', c.a.toFixed(2));   // full strength, except a name fading in or out while the slider moves
+      e.classList.remove('off');
     }
-    els.forEach((e, id) => { if (!shown.has(id)) { e.classList.add('off'); e.classList.remove('on'); } });
-    Labels.boxes = placed;
-    // tab order follows the map: top to bottom, then left to right; re-sorted only once the view has settled and no name has focus
-    if (st.settled && !host.contains(document.activeElement)) {
-      const want = Array.from(els.values()).filter((e) => !e.classList.contains('off')).sort((a, b) => (a._y - b._y) || (a._x - b._x)), key = want.map((e) => e._r.id).join();
-      if (key !== Labels._order) { Labels._order = key; for (const e of want) host.appendChild(e); }
-    }
-
-    // edge pointers: strong regions off screen, nearest first, in the whole-map and Overview bands only
-    const want = new Map();
-    if (st.pointers && cp < C.BAND_B && !st.album && !st.morph) {
-      const dist = (o) => (o.inside ? -1 : 0) + Math.hypot(o.x - U.clamp(o.x, vis.l, vis.r), o.y - U.clamp(o.y, vis.t, vis.b));
-      const chips = [];
-      for (const o of offscreen.filter((q) => (hasAreas ? (bandA ? q.r.level === 0 : q.r.level !== 0) : true)).sort((p, q) => dist(p) - dist(q)).slice(0, st.pointerCap)) {
-        let e = ptrs.get(o.r.id);
-        if (!e) {
-          e = U.el('button', 'ptr off', `${U.icon('arrow', 2)}<span></span>`); e.type = 'button';
-          e.addEventListener('click', () => RMR.go({ name: 'map', region: e._r.id })); ptrHost.appendChild(e); ptrs.set(o.r.id, e);
-        }
-        if (e._r !== o.r) { e._r = o.r; e.lastChild.textContent = o.r.display; e.setAttribute('aria-label', T.pointerLabel(o.r.display)); e._w = 0; }
-        if (!e._w) e._w = e.offsetWidth || 120;
-        const hw = e._w / 2, hh = st.phone ? 22 : 11, rowStep = st.phone ? 50 : 30;   // on a phone the box is the real 44 px tap area, so two pointers never share it
-        // slide along the edge until clear of chrome, labels and other pointers; if the edge is full, step inward
-        const all = st.blockers.concat(placed, chips), bx = U.clamp(o.x, vis.l + 10 + hw, vis.r - 10 - hw), by = U.clamp(o.y, vis.t + 8 + hh, vis.b - 8 - hh);
-        const horiz = o.inside ? true : by <= vis.t + 9 + hh || by >= vis.b - 9 - hh, inward = horiz ? (by > vis.cy ? -1 : 1) : bx > vis.cx ? -1 : 1;
-        let x = bx, y = by, ok = false;
-        for (let row = 0; row < 4 && !ok; row++) for (let n = 0; n < 31 && !ok; n++) {
-          const d = (n % 2 ? 1 : -1) * Math.ceil(n / 2) * 24;
-          x = horiz ? U.clamp(bx + d, vis.l + 10 + hw, vis.r - 10 - hw) : bx + inward * row * rowStep; y = horiz ? by + inward * row * rowStep : U.clamp(by + d, vis.t + 8 + hh, vis.b - 8 - hh);
-          ok = !hits([x - hw - 6, y - hh - 4, x + hw + 6, y + hh + 4], all);
-        }
-        if (!ok) { e.classList.add('off'); continue; }
-        chips.push([x - hw, y - hh, x + hw, y + hh]);
-        e.style.transform = `translate(${x.toFixed(1)}px,${y.toFixed(1)}px) translate(-50%,-50%)`;
-        e.firstChild.style.transform = `rotate(${(Math.atan2(o.y - y, o.x - x) * 180 / Math.PI + 90).toFixed(0)}deg)`;
-        e.classList.remove('off'); want.set(o.r.id, 1);
-      }
-    }
-    ptrs.forEach((e, id) => { if (!want.has(id)) e.classList.add('off'); });
-
-    // "you are here": the region under the centre of the view, once names have faded from the map
-    let here = null;
-    // not beside an album (the panel names the album's own region), not for the region whose card is open, never with its map label
-    if (cp >= C.BAND_B && !st.morph && !st.album) here = RMR.Regions.at(RMR.cam.x, RMR.cam.y);
-    if (here && (here.id === st.cardId || shown.has(here.id))) here = null;
-    // beside an album whose region name found no free spot, the chip carries the name instead
-    if (st.album && !st.hidden && !shown.size && st.seedRegion && st.seedRegion.id !== st.cardId) here = st.seedRegion;
-    if (here !== chip._r) {
-      chip._r = here;
-      if (here) { chip.innerHTML = `${RMR.Regions.dot(here)}<span>${U.esc(here.display)}</span>`; chip.setAttribute('aria-label', T.hereLabel(here.display)); }
-    }
-    chip.classList.toggle('off', !here);
-    if (here) {   // top centre of the visible map; under the similarity card when the map is too narrow for both
-      const tight = !st.phone && vis.w < 760;   // a phone has the slider at the bottom: the chip sits centred under the top row
-      chip.style.left = (tight ? vis.l + 20 : vis.cx).toFixed(0) + 'px'; chip.style.top = st.phone ? (vis.t + st.freeTop + 4) + 'px' : tight ? (vis.t + 36 + st.modeH) + 'px' : ''; chip.style.transform = tight ? 'none' : '';
-    }
+    els.forEach((e, id) => { if (!shown.has(id)) e.classList.add('off'); });
   };
 })();
