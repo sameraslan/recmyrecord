@@ -54,6 +54,25 @@ The store began as 3,944 albums with four clips each, migrated from the experime
 
 Every file of the store is written under a temporary name and renamed into place, and a shard is in place before the manifest lists it. A crash leaves at worst a temporary file or an unlisted shard; the store still loads, `rmr_audio status` names the leftovers, and the next `sync` or `compact` removes them.
 
+### The CLAP store (`data-pipeline/audio/clap/`) and the switch
+
+A store holds one model's embeddings; its manifest names the model and the width (`dim`), and `audio_store.py` checks every shard and the transform against it. `audio/` is the Discogs-EffNet store (1,280 numbers per album). `audio/clap/` is the store of `laion/larger_clap_music_and_speech` (512), with its own `embeddings/`, `manifest.json` and `transform.npz`. It shares `keys.csv`, `matches.csv` and `match_overrides.json` with the store it sits in.
+
+The site build reads the store named by `SITE_MODEL` in `rmr_pipeline/audio_store.py`. It is `"effnet"`. Setting it to `"clap"` makes `rmr_pipeline.build` and `rmr_pipeline.audio status` read `audio/clap/` when no `--audio-dir` is given; nothing changes on the site until the data is rebuilt and committed, and `tests/fixtures/audio_reference.npz` then has to be recorded again.
+
+The CLAP store is not appended to. It is written whole from the one-pass clip cache, for every album of `catalog/albums.csv` that has an ok CLAP clip, and can be written again at any time:
+
+```bash
+cd data-pipeline
+nice -n 19 .venv/bin/python -m rmr_audio.modelstore write                          # audio/clap/embeddings, manifest.json
+nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap   # audio/clap/transform.npz
+.venv/bin/python -m rmr_audio.modelstore status
+```
+
+Both need only numpy, load no model and download nothing. `write` opens the cache read-only and writes nothing when the store already holds exactly what the cache and the catalog give. An album vector is the mean of the album's first four ok clips in rank order (a failed clip does not use up a place; an album with fewer uses what it has; windows of full-length audio replace the previews and all of them count), from one listing, kept as float16 with `n_clips` and `source`. For the 3,978 albums the earlier CLAP run covered it is `clap_catalog.load(4)`'s vector to 1e-8. A cache key the catalog no longer has is followed through `keys.csv`.
+
+`fit-catalog` fits the 64 components on every catalog album the store has, the new ones included, and never writes `audio/transform.npz`. It keeps the EffNet transform's `target_total_variance` (0.3905): `scale` brings any model's block to that total, and the slider stops were tuned against a block of that size.
+
 ### The block
 
 `block = ((e / |e|) - mean) @ components.T * scale`, where `e` is the album's stored embedding. The transform is a PCA fitted on the catalog (last on the eight-clip means of the 3,980 albums). `scale` gives the block the total variance the 13 Spotify columns had on the fitted albums (`target_total_variance`, 0.3905), so the slider stops keep their meaning.
