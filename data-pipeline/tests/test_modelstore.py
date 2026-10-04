@@ -72,7 +72,7 @@ def _write(world, **kw):
     lines = []
     code = modelstore.write(cache_db=world / "onepass.sqlite", catalog=world / "albums.csv",
                             matches=world / "audio" / "matches.csv", audio_dir=world / "audio" / "clap",
-                            out=lines.append, **kw)
+                            out=lines.append, keys_csv=world / "audio" / "keys.csv", **kw)
     return code, lines
 
 
@@ -88,7 +88,8 @@ def test_the_store_is_the_catalogs_albums_with_clap_audio_pooled_by_rank(world):
             _mean("Album2", "itunes:jp", "i2", [0, 2, 3, 4]),  # the clip that failed does not use up a place
             _mean("Album5", "deezer", "d5", [0, 1, 2, 3]), _mean("Album6", "deezer", "d6-old", [0, 1, 2, 3])]
     assert np.array_equal(store.emb, np.stack(want).astype(np.float16))  # the float64 mean, kept as float16
-    assert any("5 of the catalog's 8 albums have audio; 1 album(s) of the cache are not in the catalog" in x for x in lines)
+    assert any("5 of the catalog's 8 albums have audio (0 found under an older key through keys.csv); 1 album(s) of "
+               "the cache are not in the catalog" in x for x in lines)
     assert any(x == "clips per album: 2: 1, 4: 4" for x in lines)
 
 
@@ -113,6 +114,29 @@ def test_writing_again_changes_nothing_and_a_changed_cache_or_catalog_is_followe
     assert np.array_equal(store.emb[-1], _mean("Album8", "local", "", range(6)).astype(np.float16))
     assert [p.name for p in (world / "audio" / "clap" / "embeddings").iterdir()] == ["part-0002.npz"]
     assert files()["audio/matches.csv"] == before["audio/matches.csv"]
+
+
+def test_a_cache_key_of_before_a_re_pairing_is_followed_through_keys_csv(world):
+    """The cache knows two albums by their placeholders; keys.csv has since given both a RYM id. One id has
+    clips of its own in the cache (the chart row's listing): those are used. The other has none: the
+    placeholder's clips are the album's."""
+    from rmr_pipeline.keys import write_keys
+
+    spotify = lambda c: "spotify:album:" + c * 22  # noqa: E731
+    cache = OnePassCache(world / "onepass.sqlite")
+    _put(cache, "sp:" + "a" * 22, "deezer", "old-a", [(r, "ok") for r in range(4)])  # became Album1, which has clips
+    _put(cache, "sp:" + "b" * 22, "deezer", "old-b", [(r, "ok") for r in range(3)])  # became Album8, which has none
+    cache.close()
+    write_keys(world / "audio" / "keys.csv", [
+        {"rym_id": "Album1", "legacy_uri": spotify("a"), "matched_by": "manual", "doubt": ""},
+        {"rym_id": "Album8", "legacy_uri": spotify("b"), "matched_by": "manual", "doubt": ""}])
+    code, lines = _write(world)
+    store = load_store(world / "audio" / "clap")
+    assert store.keys.tolist() == ["Album3", "Album1", "Album2", "Album5", "Album6", "Album8"]
+    assert np.array_equal(store.emb[1], _mean("Album1", "deezer", "d1", range(4)).astype(np.float16))
+    assert np.array_equal(store.emb[5], _mean("sp:" + "b" * 22, "deezer", "old-b", range(3)).astype(np.float16))
+    assert store.n_clips.tolist()[5] == 3
+    assert any("(1 found under an older key through keys.csv); 2 album(s) of the cache are not in the catalog" in x for x in lines)
 
 
 def test_the_cache_is_only_read_and_the_effnet_store_is_never_the_target(world, capsys):
@@ -220,11 +244,13 @@ def test_committed_clap_store():
     catalog = catalog_keys()
     rows = store.rows(catalog)
     assert store.manifest["model"] == CLAP.model_id and store.dim == CLAP.dim and len(store.manifest["shards"]) == 1
-    assert store.keys.tolist() == [k for k, r in zip(catalog, rows) if r >= 0]
+    stale = ("audio/clap is behind the catalog table (a re-pairing, a rebuilt catalog): write it again with "
+             "`python -m rmr_audio.modelstore write`, then `python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap`")
+    assert store.keys.tolist() == [k for k, r in zip(catalog, rows) if r >= 0], stale
     windows = np.isin(store.source, ["local", "youtube", "bandcamp"])
     assert store.n_clips.min() >= 1 and store.n_clips[~windows].max() <= store.manifest["clips"]["per_album"] == 4
     if (clap / "transform.npz").exists():
         t = load_transform(clap / "transform.npz", store.dim)
         assert t.model == CLAP.model_id and t.components.shape == (BLOCK_DIMS, CLAP.dim)
-        assert t.keys.tolist() == store.keys.tolist()
+        assert t.keys.tolist() == store.keys.tolist(), "audio/clap/transform.npz is not fitted on the store's albums: " + stale
         assert t.target_total_variance == load_transform(DEFAULT_AUDIO / "transform.npz").target_total_variance

@@ -3,7 +3,7 @@ store, data-pipeline/audio/clap/ (embeddings/, manifest.json; its transform.npz 
 `python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap`).
 
   python -m rmr_audio.modelstore write  [--model clap] [--clips 4] [--cache SQLITE] [--catalog CSV]
-                                        [--matches CSV] [--audio-dir DIR] [--dry-run]
+                                        [--matches CSV] [--keys-csv CSV] [--audio-dir DIR] [--dry-run]
   python -m rmr_audio.modelstore status [--model clap] [--audio-dir DIR] [--catalog CSV]
 
 `write` reads the cache strictly read-only (`mode=ro`; another job may be writing to it), the catalog
@@ -24,6 +24,8 @@ The pooling rule (OnePassCache.means, pool `rank`):
   youtube, then bandcamp; the mean then takes every window the album has, not `--clips`), else the listing
   matches.csv names when that listing has an ok clip, else the listing with the most ok clips. `source`
   records which.
+  A cache key the catalog no longer has (a placeholder `sp:<id>` whose album has since been given its RYM
+  id) is followed through keys.csv to the album's current key, unless that key has clips of its own.
   Against clap_catalog.load(4) (pool `below`: the ok clips with rank < 4): the same vector whenever the
   album's first four clips in rank order all worked. They differ only for an album where one of them
   failed and a later clip replaced it: `rank` then has four clips, `below` three.
@@ -40,6 +42,7 @@ import numpy as np
 from rmr_pipeline.audio import DEFAULT_CATALOG, catalog_keys
 from rmr_pipeline.audio_store import DEFAULT_AUDIO, STORES, StoreError, load_store, replace_store
 from rmr_pipeline.constants import PIPELINE_DIR
+from rmr_pipeline.keys import load_keys
 
 from .onepass_cache import MODELS, OnePassCache
 
@@ -67,35 +70,48 @@ def listing_of(matches: Path | None, cache: OnePassCache, model: str) -> dict[st
 
 
 def album_means(cache: OnePassCache, model: str, catalog: list[str], matches: Path | None = None,
-                clips: int = CLIPS) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, dict]:
+                clips: int = CLIPS, keys_csv: Path | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, dict]:
     """(keys, X float64, n_clips, source, counts) for the catalog's albums with an ok clip, in catalog
-    order. `counts` says what was left out: albums of the cache the catalog does not have."""
+    order, under their catalog keys. `counts` says what was left out (albums of the cache the catalog does
+    not have) and how many albums were found under an older key through `keys_csv`."""
     keys, X, n, source = cache.means(model, clips, POOL, listing_of(matches, cache, model))
     at = {k: i for i, k in enumerate(keys.tolist())}
+    wanted, followed = set(catalog), 0
+    if keys_csv is not None and Path(keys_csv).exists():
+        keymap = load_keys(Path(keys_csv))
+        for old in sorted(set(at) - wanted):
+            try:
+                now = keymap.current(old)
+            except StoreError:
+                continue
+            if now in wanted and now not in at:  # the album's own key has no clips: these are its clips
+                at[now] = at[old]
+                followed += 1
     seen: set[str] = set()
-    take = [at[k] for k in catalog if k in at and not (k in seen or seen.add(k))]
-    counts = {"catalog": len(catalog), "in_cache": len(keys), "written": len(take),
+    names = [k for k in catalog if k in at and not (k in seen or seen.add(k))]
+    take = np.array([at[k] for k in names], dtype=np.int64)
+    counts = {"catalog": len(catalog), "in_cache": len(keys), "written": len(take), "followed": followed,
               "not_in_catalog": len(keys) - len(take)}
-    take = np.array(take, dtype=np.int64)
-    return keys[take], X[take], n[take], source[take], counts
+    return np.array(names, dtype=np.str_), X[take], n[take], source[take], counts
 
 
 def write(model: str = "clap", clips: int = CLIPS, cache_db: Path = DEFAULT_CACHE_DB, catalog: Path = DEFAULT_CATALOG,
           matches: Path | None = DEFAULT_AUDIO / "matches.csv", audio_dir: Path | None = None, dry_run: bool = False,
-          out=print) -> int:
+          out=print, keys_csv: Path | None = DEFAULT_AUDIO / "keys.csv") -> int:
     spec = MODELS[model]
     audio_dir = Path(audio_dir) if audio_dir is not None else STORES[model]
     if audio_dir.resolve() == DEFAULT_AUDIO.resolve():
         raise StoreError(f"{audio_dir} is the EffNet store, which `rmr_audio sync` writes; give another --audio-dir")
     cache = OnePassCache(cache_db, readonly=True)
     try:
-        keys, X, n, source, counts = album_means(cache, model, catalog_keys(catalog), matches, clips)
+        keys, X, n, source, counts = album_means(cache, model, catalog_keys(catalog), matches, clips, keys_csv)
     finally:
         cache.close()
     if not len(keys):
         raise StoreError(f"{cache_db} has no ok {model} clip for an album of {catalog}")
     out(f"{model} ({spec.model_id}, {spec.dim} numbers): {counts['written']} of the catalog's {counts['catalog']} albums "
-        f"have audio; {counts['not_in_catalog']} album(s) of the cache are not in the catalog and are left out")
+        f"have audio ({counts['followed']} found under an older key through keys.csv); {counts['not_in_catalog']} "
+        f"album(s) of the cache are not in the catalog and are left out")
     out("clips per album: " + ", ".join(f"{c}: {k}" for c, k in sorted(Counter(n.tolist()).items())))
     out("source: " + ", ".join(f"{s}: {k}" for s, k in sorted(Counter(x.split(':')[0] for x in source.tolist()).items())))
     if dry_run:
@@ -134,6 +150,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG, help="The catalog table (catalog/albums.csv).")
     p.add_argument("--matches", type=Path, default=DEFAULT_AUDIO / "matches.csv",
                    help="Which listing each album's mean is taken from.")
+    p.add_argument("--keys-csv", type=Path, default=DEFAULT_AUDIO / "keys.csv",
+                   help="Follows a cache key the catalog no longer has to the album's current key.")
     p.add_argument("--audio-dir", type=Path, default=None, help="The store to write (default: audio/<model>).")
     p.add_argument("--dry-run", action="store_true", help="Print what would be written; write nothing.")
     args = p.parse_args(argv)
@@ -142,7 +160,8 @@ def main(argv: list[str] | None = None) -> int:
             return status(args.model, args.audio_dir, args.catalog)
         if args.clips < 1:
             p.error("--clips must be at least 1")
-        return write(args.model, args.clips, args.cache, args.catalog, args.matches, args.audio_dir, args.dry_run)
+        return write(args.model, args.clips, args.cache, args.catalog, args.matches, args.audio_dir, args.dry_run,
+                     keys_csv=args.keys_csv)
     except (StoreError, FileNotFoundError) as e:
         print(f"FAIL\n{e}", file=sys.stderr)
         return 1
