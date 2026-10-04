@@ -28,6 +28,18 @@
     tenor: { name: 'Tenor Sans, wide capitals', fam: 'Tenor Sans', w: 400, track: 0.26, cs: 'upper', size: 0.88, g: 'Tenor+Sans' },
     schibsted: { name: 'Schibsted Grotesk 500, small tracked capitals (the site\u2019s body face)', fam: 'Schibsted Grotesk', w: 500, track: 0.24, cs: 'upper', size: 0.76, g: null },
     'jost-lower': { name: 'Jost 300, lower case', fam: 'Jost', w: 300, track: 0.16, cs: 'lower', size: 1.18, g: 'Jost:wght@300' },
+    julius: { name: 'Julius Sans One, wide capitals', fam: 'Julius Sans One', w: 400, track: 0.22, cs: 'upper', size: 0.9, g: 'Julius+Sans+One' },
+    italiana: { name: 'Italiana, fine display capitals', fam: 'Italiana', w: 400, track: 0.22, cs: 'upper', size: 1.08, g: 'Italiana' },
+    poiret: { name: 'Poiret One, deco capitals', fam: 'Poiret One', w: 400, track: 0.24, cs: 'upper', size: 1.06, g: 'Poiret+One' },
+    raleway: { name: 'Raleway 300, wide capitals', fam: 'Raleway', w: 300, track: 0.3, cs: 'upper', size: 0.9, g: 'Raleway:wght@300' },
+    montserrat: { name: 'Montserrat 300, wide capitals', fam: 'Montserrat', w: 300, track: 0.3, cs: 'upper', size: 0.82, g: 'Montserrat:wght@300' },
+    syncopate: { name: 'Syncopate, extended capitals', fam: 'Syncopate', w: 400, track: 0.2, cs: 'upper', size: 0.7, g: 'Syncopate' },
+    gilda: { name: 'Gilda Display, capitals', fam: 'Gilda Display', w: 400, track: 0.2, cs: 'upper', size: 0.98, g: 'Gilda+Display' },
+    didone: { name: 'Antic Didone, capitals', fam: 'Antic Didone', w: 400, track: 0.2, cs: 'upper', size: 1.0, g: 'Antic+Didone' },
+    michroma: { name: 'Michroma, technical capitals', fam: 'Michroma', w: 400, track: 0.2, cs: 'upper', size: 0.68, g: 'Michroma' },
+    quattrocento: { name: 'Quattrocento, classical capitals', fam: 'Quattrocento', w: 400, track: 0.22, cs: 'upper', size: 0.95, g: 'Quattrocento' },
+    'tenor-tight': { name: 'Tenor Sans, larger, tighter capitals', fam: 'Tenor Sans', w: 400, track: 0.14, cs: 'upper', size: 1.0, g: 'Tenor+Sans' },
+    'tenor-title': { name: 'Tenor Sans, mixed case', fam: 'Tenor Sans', w: 400, track: 0.06, cs: 'title', size: 1.15, g: 'Tenor+Sans' },
     plexmono: { name: 'IBM Plex Mono, small capitals (star chart)', fam: 'IBM Plex Mono', w: 400, track: 0.2, cs: 'upper', size: 0.74, g: 'IBM+Plex+Mono:wght@400' },
   };
   let F;

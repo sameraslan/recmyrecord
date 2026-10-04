@@ -53,13 +53,13 @@
       pal = sc.palettes.find((p) => p.id === pid) || sc.palettes[0];
     } else {
       for (let i = 0; i < n; i++) { for (let j = 0; j < 5; j++) w[7 * i + j] = D.w[6 * i + j]; w[7 * i + 6] = D.w[6 * i + 5]; }
-      pal = PALETTES[pid] || PALETTES.hubble;
+      pal = PALETTES[pid] || PALETTES.ember;
     }
     const hues = pal.hues.slice(0, 6); while (hues.length < 6) hues.push(pal.neutral);
     // leading channel per album (or -1: weak fit, or neutral leads), for the tint of its star
     const lead = new Int8Array(n);
     for (let i = 0; i < n; i++) { let m = 0, mj = -1; for (let j = 0; j < 6; j++) if (w[7 * i + j] > m) { m = w[7 * i + j]; mj = j; } lead[i] = m > 0.3 && m > w[7 * i + 6] ? mj : -1; }
-    return { id: sc ? sc.id : 'families', palette: pal.id || (PALETTES[pid] ? pid : 'hubble'), w, lead, hues, neutral: pal.neutral, guard: sc ? sc.guard_pairs || [] : [] };
+    return { id: sc ? sc.id : 'families', palette: pal.id || (PALETTES[pid] ? pid : 'ember'), w, lead, hues, neutral: pal.neutral, guard: sc ? sc.guard_pairs || [] : [] };
   }
   Gas.schemes = () => [{ id: 'families', palettes: Object.keys(PALETTES) }].concat(((window.RMR_SCHEMES && window.RMR_SCHEMES.schemes) || []).map((s) => ({ id: s.id, name: s.name, palettes: s.palettes.map((p) => p.id) })));
 
