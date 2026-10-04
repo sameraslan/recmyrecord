@@ -2,6 +2,10 @@
 
 Album recommendations from RateYourMusic's top chart: Euclidean nearest neighbours over audio features plus RYM descriptor weights. `frontcreck/` is the site, `data-pipeline/` builds its data (`data-pipeline/README.md`), `data-retrieval/` holds the source tables.
 
+## Tasks
+
+Work is tracked as GitHub issues on the `recmyrecord` GitHub Project board (Backlog, Todo, In progress, In review, Done). The board is the only task list; do not keep task lists or statuses in this file or in memory. To create, start, move or list tickets, use the `board` skill (`.claude/skills/board/SKILL.md`). The repository is public, so nothing secret goes in an issue.
+
 ## Experiments
 
 The full cycle (starting, running, writing up, merging, referencing) is in `experiments/README.md`. Read it before starting or merging an experiment. The rules in short:
