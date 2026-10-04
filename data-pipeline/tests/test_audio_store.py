@@ -209,7 +209,9 @@ def test_duplicate_listings():
 # SHA-256 over key, source, source_album_id, matched_title, matched_artist, score and ambiguous of the albums
 # matched before 3 October 2026 (the 4,081 of the feature table), tab-separated, one album per line, in file
 # order. n_tracks and n_clips_available are left out: they follow the listing at each sync.
-EXISTING_MATCHES_SHA256 = "fb6f8a503397853d264d4ee967e9907d73880fa8accc9bbd263db5dab59c7c90"
+# 4 October 2026: 43 off-chart albums were paired by hand with their chart rows, so their keys went from the
+# placeholder to the RYM id. Every other field of every row is what it was.
+EXISTING_MATCHES_SHA256 = "f086ec018b4d0dbc99e0526009c854b2ddff133284547fc6c00079aa3bb453dd"
 
 
 def test_the_existing_albums_matches_are_untouched(deduped):
@@ -261,7 +263,7 @@ def test_committed_store(deduped):
     assert stored == {k: matched.get(k) for k in stored}  # every embedding comes from the listing matches.csv names
     assert len(set(matched) & uris) - len(stored) <= 5  # an album of the site matched, but no usable clip: rare
     overrides = load_match_overrides(DEFAULT_AUDIO / "match_overrides.json")
-    assert set(overrides) <= uris and all(e.get("note") for e in overrides.values())
+    assert set(overrides) <= catalog and all(e.get("note") for e in overrides.values())  # the new albums have overrides too
     skipped = {k for k, e in overrides.items() if e.get("skip")}
     assert not skipped & set(s.keys.tolist())  # an album kept out of matching has no embedding
     # Apple only has cover versions of these two game soundtracks: they stay without audio

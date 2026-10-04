@@ -17,7 +17,7 @@
   "album_id": "1439554076",
   "note": "Black Sabbath - Past Lives: Only listed as 'Past Lives (Deluxe Edition)': the same 18 tracks on 2 discs. Not in the US store."
  },
- "sp:67GJo4ajqUWHsuY0f4aQz2": {
+ "Album11810": {
   "source": "itunes:us",
   "album_id": "1657544540",
   "note": "The Mothers - The Grand Wazoo: Listed under Frank Zappa (the table credits The Mothers); 5 tracks."
@@ -27,7 +27,7 @@
   "album_id": "1692802275",
   "note": "Chicago Symphony / Fritz Reiner - Scheherazade: Listed as 'Rimsky-Korsakov: Scheherazade, Op. 35 (Remastered 2023)', Chicago Symphony Orchestra & Fritz Reiner: 4 movements, 45 minutes."
  },
- "sp:25Uej9vkdGxJOclrpDaetA": {
+ "Album85121": {
   "source": "itunes:gb",
   "album_id": "510129517",
   "note": "RCA Victor Symphony Orchestra / Kirill Kondrashin / Van Cliburn - Concerto No. 1: Listed as 'Tchaikovsky: Piano Concerto No. 1, Op. 23', RCA Orchestra, Kondrashin & Van Cliburn: 3 movements, 35 minutes. Not in the US store."
@@ -75,5 +75,73 @@
  "sp:4n8GtrqMTNsmBMr7Yx28Kr": {
   "skip": true,
   "note": "Kool G Rap & DJ Polo - Wanted: Dead or Alive: not on the stores. The matcher takes Kool G Rap's later album 'Dead or Alive' (itunes 377118797) for it, as an ambiguous match."
+ },
+ "Album16600": {
+  "source": "deezer",
+  "album_id": "118443",
+  "note": "Keith Jarrett - Solo-Concerts: Bremen and Lausanne: listed as 'Solo-Concerts Bremen / Lausanne (Live)', ECM, 3 tracks, 128 minutes. The search had taken 'The Köln Concert'."
+ },
+ "Album1142511": {
+  "source": "deezer",
+  "album_id": "352000567",
+  "note": "The Knife - Silent Shout: An Audio Visual Experience: listed as 'Silent Shout - An Audio-Visual Experience (Live)', 10 tracks. The search had taken the studio album 'Silent Shout'."
+ },
+ "Album7919550": {
+  "source": "deezer",
+  "album_id": "14781289",
+  "note": "Justin Hurwitz - La La Land (2016-12-16, Film Score): 'La La Land (Original Motion Picture Score)', 30 tracks. The search had taken the song soundtrack, which is the other RYM entry (Album7918465)."
+ },
+ "Album6016546": {
+  "source": "deezer",
+  "album_id": "804538061",
+  "note": "Cristobal Tapia de Veer - Utopia² (2014): listed as 'Utopia 2 (Original Television Soundtrack)', 17 tracks. The search had taken the first soundtrack (2013)."
+ },
+ "Album10508189": {
+  "source": "deezer",
+  "album_id": "104705542",
+  "note": "Various Artists - Hadestown [Original Broadway Cast] (2019): 'Hadestown (Original Broadway Cast Recording)', 40 tracks. RYM's Apple link is Anaïs Mitchell's 2010 album."
+ },
+ "Album467856": {
+  "skip": true,
+  "note": "Charlie Mingus - Pithycanthropus Erectus (1971, the Paris recordings): not found on Deezer or in the US iTunes store. The search had taken the 1956 album 'Pithecanthropus Erectus'."
+ },
+ "Album16742106": {
+  "skip": true,
+  "note": "billy woods & August Fanon - Gowillog (2025): not found on Deezer or in the US iTunes store. The search had taken 'Golliwog'."
+ },
+ "Album11366": {
+  "source": "deezer",
+  "album_id": "466437525",
+  "note": "Killing Joke - Killing Joke (1980): the 1980 album, 13 tracks (RYM's Deezer link). The stored audio is from 'Killing Joke - 2003 (2017 Remastered Version)' (deezer 422961787), the 2003 album."
+ },
+ "Album2680": {
+  "source": "deezer",
+  "album_id": "680350",
+  "note": "Tindersticks - Tindersticks (1993): only listed as 'The First Tindersticks Album (Deluxe Edition)', 33 tracks (Nectar, Tyed, ...). The stored audio is from deezer 61421342, which is the second album (1995: El Diablo en el Ojo, A Night In, ...)."
+ },
+ "Album26051": {
+  "source": "itunes:us",
+  "album_id": "347496489",
+  "note": "The Philip Glass Ensemble - Einstein on the Beach (1979): 'Glass: Einstein On The Beach', Michael Riesman & The Philip Glass Ensemble, (P) 1979 Sony, 14 tracks, 165 minutes. The stored audio is from itunes 637056287 (Orange Mountain Music, 20 tracks, 201 minutes), whose track list is the 1993 recording's (Knee 1, Train 1, Trial 1...) and which RYM links from the 1993 entry."
+ },
+ "Album5200146": {
+  "source": "itunes:no",
+  "album_id": "797351951",
+  "note": "青葉市子 [Ichiko Aoba] - 0% (2014): the live album, 11 tracks dated 20131125 (RYM's Apple link). The stored audio is from deezer 401025427, the studio album '0' (2013), which the table's Spotify id also is."
+ },
+ "Album436318": {
+  "source": "deezer",
+  "album_id": "796206881",
+  "note": "Os Tincoãs - Os Tincoãs (1973): the 12-track album (RYM's Deezer link). The stored audio is from deezer 91610592, a 4-track EP of the same name."
+ },
+ "Album1039131": {
+  "source": "itunes:us",
+  "album_id": "1575697279",
+  "note": "Berliner Philharmoniker / Herbert von Karajan - Symphony No. 9 (1963): 'Beethoven: Symphony No. 9', Berlin Philharmonic Orchestra & Karajan, (P) 1963 Deutsche Grammophon, 6 tracks. The stored audio is from deezer 187562312, a 2020 release on the orchestra's own label (ambiguous match, not Karajan's 1963 recording by its label and date)."
+ },
+ "sp:70qW8u5D3htj4ALS9lDfof": {
+  "source": "deezer",
+  "album_id": "1347639",
+  "note": "Genesis - Live (1973): 'Genesis Live', 5 tracks, 47 minutes. The stored audio is from 'Seconds Out (Live)' (deezer 1345209), the 1977 live album."
  }
 }
