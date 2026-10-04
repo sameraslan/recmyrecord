@@ -35,7 +35,9 @@ import numpy as np
 DEFAULT_AUDIO = Path(__file__).resolve().parents[1] / "audio"
 DIM = 1280
 SHARD_RE = re.compile(r"^part-(\d{4})\.npz$")
-SOURCE_RE = re.compile(r"^(deezer|local|itunes:[a-z]{2})$")
+# deezer and itunes:<storefront> are store previews; local, youtube and bandcamp are 30-second windows of
+# full-length audio (the owner's files; rmr_audio.fulllength), which is never kept
+SOURCE_RE = re.compile(r"^(deezer|local|youtube|bandcamp|itunes:[a-z]{2})$")
 SHARD_ARRAYS = ("keys", "emb", "n_clips", "source")
 MATCH_FIELDS = ["key", "source", "source_album_id", "matched_title", "matched_artist", "score", "ambiguous",
                 "n_tracks", "n_clips_available", "matched_by", "edition", "runtime_s", "under_covered", "short_preview"]
@@ -53,7 +55,7 @@ class Shard:
     keys: np.ndarray  # (n,) unicode album keys (RYM ids, see rmr_pipeline.keys)
     emb: np.ndarray  # (n, DIM) float16 album means of the per-clip embeddings
     n_clips: np.ndarray  # (n,) int16 clips behind each mean
-    source: np.ndarray  # (n,) unicode: deezer, itunes:<storefront>, local
+    source: np.ndarray  # (n,) unicode: deezer, itunes:<storefront>, local, youtube, bandcamp
 
 
 @dataclass(frozen=True)
@@ -90,7 +92,7 @@ def _check_shard(s: Shard, where: str) -> None:
                          "(a removed album)")
     bad = sorted({x for x in s.source[~gone].tolist() if not SOURCE_RE.match(x)})
     if bad:
-        raise StoreError(f"{where}: unknown source {bad[0]!r} (deezer, itunes:<storefront>, local)")
+        raise StoreError(f"{where}: unknown source {bad[0]!r} (deezer, itunes:<storefront>, local, youtube, bandcamp)")
 
 
 def _tmp(path: Path) -> Path:

@@ -80,7 +80,7 @@ from rmr_pipeline.constants import PIPELINE_DIR, REPO
 
 from . import embed, windows
 from .clips import FINAL, priority_order
-from .onepass_cache import MODELS, POOLS, OnePassCache
+from .onepass_cache import MODELS, POOLS, WINDOW_SOURCES, OnePassCache
 from .onepass_worker import clap_catalog, read_frame, write_frame
 
 DEFAULT_CACHE = PIPELINE_DIR / ".cache" / "audio"  # as rmr_audio.catalog.DEFAULT_CACHE (not imported: it needs pandas)
@@ -346,7 +346,7 @@ class Plan:
         c, kinds = self.counts, Counter(i.kind for i in self.items)
         parts = [f"{c['complete']} complete", f"{kinds['clips']} to fetch", f"{kinds['local']} from local files"]
         parts += [f"{c[k]} {text}" for k, text in (
-            ("unmatched", "with no listing"), ("local_audio", "kept on their local windows"),
+            ("unmatched", "with no listing"), ("local_audio", "kept on their windows of full-length audio"),
             ("imported", "left alone (--skip-imported)"), ("beyond_limit", "left for a later run (--limit)")) if c[k]]
         return f"{clips} clips per album for {' + '.join(models)}. {len(self.items) + sum(c.values())} albums: " + ", ".join(parts)
 
@@ -392,6 +392,8 @@ def make_plan(albums: list[dict], cache: OnePassCache, opts: Options) -> Plan:
     if opts.skip_imported:
         imported = {r[0] for r in cache.con.execute("SELECT DISTINCT key FROM embeddings WHERE origin LIKE 'import:%'")}
     wanted = set(opts.keys)
+    windowed = {k[0] for k, clips in summary.items() if k[1] in WINDOW_SOURCES
+                and any(st == "ok" for clip in clips.values() for st in clip.values())}
     for al in albums:
         key, source, album_id = al["key"], al["source"], al["album_id"]
         if wanted and key not in wanted:
@@ -399,8 +401,8 @@ def make_plan(albums: list[dict], cache: OnePassCache, opts: Options) -> Plan:
         folder = local_folder(opts.local_dir, key)
         if folder is not None:
             item = Item(key, "local", "local", "", folder)
-        elif any(st == "ok" for clip in summary.get((key, "local", ""), {}).values() for st in clip.values()):
-            plan.counts["local_audio"] += 1  # its windows replace the store previews: the stores are not asked
+        elif key in windowed:
+            plan.counts["local_audio"] += 1  # its windows (local files, or rmr_audio.fulllength's) replace the store previews
             continue
         elif not source:
             plan.counts["unmatched"] += 1

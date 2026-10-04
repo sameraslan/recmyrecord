@@ -462,7 +462,7 @@ def test_local_windows_replace_the_previews_and_a_changed_folder_is_sampled_agai
     cache.close()
     world.fetched[:] = []
     lines = world.run(clips=8)  # no --local-dir: the album stays on its windows, the stores are not asked for it
-    assert ("deezer", "d0") not in world.fetched and any("1 kept on their local windows" in line for line in lines)
+    assert ("deezer", "d0") not in world.fetched and any("1 kept on their windows of full-length audio" in line for line in lines)
     (folder / "03 c.flac").write_bytes(b"xy")
     world.lengths["03 c.flac"] = 1200.0
     world.windows[:] = []

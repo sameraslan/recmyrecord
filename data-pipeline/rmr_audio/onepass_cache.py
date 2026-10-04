@@ -5,7 +5,9 @@ eight by fetching four, and what album means are pooled from. No audio is in it.
   clips(key, source, album_id, track_id, track_idx, prio, clip_s, track_s, short_preview, start_s, sig)
       one row per clip: what is true of the clip whatever the model
       key          the album's key (RYM id, or its placeholder; rmr_pipeline.keys)
-      source, album_id   the listing the clip came from; windows of local files: `local` and ''
+      source, album_id   the listing the clip came from; windows of local files: `local` and ''; windows of
+                   a full-length file fetched and deleted (rmr_audio.fulllength): `youtube` and the video id,
+                   `bandcamp` and the album page
       track_id     the store's track id; a window: `<file name>@<start in seconds>`
       track_idx    the track's position in the listing; a window: its position in album order
       prio         the clip's rank in the album's clip order (clips.priority_order; windows.plan)
@@ -27,7 +29,7 @@ eight by fetching four, and what album means are pooled from. No audio is in it.
 
   listings(key, source, album_id, n_tracks, n_previews, runtime_s, n_windows)
       what the last fetched listing (or folder of files) had: lets a later run see without the network that
-      every preview was tried. n_windows: local files only, the number of windows the mean takes.
+      every preview was tried. n_windows: windows of full-length audio only, the number of windows the mean takes.
 
 Embeddings made before the one-pass run are imported, never recomputed: import_effnet reads the pipeline's
 clips.sqlite, import_clap another run's clap_clips.sqlite, both strictly read-only (`mode=ro`), and both
@@ -58,6 +60,9 @@ CREATE TABLE IF NOT EXISTS listings(key TEXT NOT NULL, source TEXT NOT NULL, alb
 CREATE TABLE IF NOT EXISTS meta(k TEXT PRIMARY KEY, v TEXT);
 """
 POOLS = ("rank", "below")
+# Sources whose clips are windows of full-length audio, in the order an album's mean prefers them. Their
+# listing replaces the store previews of the album and its mean takes listings.n_windows windows.
+WINDOW_SOURCES = ("local", "youtube", "bandcamp")
 
 
 @dataclass(frozen=True)
@@ -251,21 +256,28 @@ class OnePassCache:
               common: tuple[str, ...] = ()) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """(keys, X float64 (n, dim), clips per album, source per album) for every album with an ok clip.
 
-        One listing per album, never a mix: its local windows when it has any that worked (they replace the
-        store previews, and then the mean takes the album's own window count, `listings.n_windows`, not
-        `clips`); else the listing `listing_of` names for its key (matches.csv); else, for a key it does
+        One listing per album, never a mix: its windows of full-length audio when it has any that worked
+        (WINDOW_SOURCES: local files before youtube before bandcamp; they replace the store previews, and
+        then the mean takes the album's own window count, `listings.n_windows`, not `clips`); else the listing `listing_of` names for its key (matches.csv); else, for a key it does
         not name, the listing with the most ok clips (clap_catalog.load's rule)."""
         ok: dict[str, Counter] = {}
         for key, source, album_id, n in self.con.execute(
                 "SELECT key, source, album_id, COUNT(*) FROM embeddings WHERE model = ? AND status = 'ok' "
                 "GROUP BY 1, 2, 3 ORDER BY 1, 2, 3", (model,)):
             ok.setdefault(key, Counter())[(source, album_id)] = n
-        windows = {k[0]: v["n_windows"] for k, v in self.listings().items() if k[1] == "local" and v["n_windows"]}
-        local_any = {r[0] for r in self.con.execute("SELECT DISTINCT key FROM embeddings WHERE source = 'local' AND status = 'ok'")}
+        listings = self.listings()
+        windowed: dict[str, tuple] = {}  # key -> its window listing: the preferred source, then the most ok clips
+        for key, source, album_id, n in self.con.execute(
+                "SELECT key, source, album_id, COUNT(*) FROM embeddings WHERE status = 'ok' AND source IN (%s) "
+                "GROUP BY 1, 2, 3 ORDER BY 1, 2, 3" % ", ".join("?" * len(WINDOW_SOURCES)), WINDOW_SOURCES):
+            cand = (WINDOW_SOURCES.index(source), -n, source, album_id)
+            if key not in windowed or cand < windowed[key]:
+                windowed[key] = cand
         keys, embs, counts, sources = [], [], [], []
         for key in sorted(ok):
-            if key in local_any:
-                listing, n = ("local", ""), windows.get(key)
+            if key in windowed:
+                listing = windowed[key][2:]
+                n = listings.get((key, *listing), {}).get("n_windows") or None
             elif listing_of and key in listing_of:
                 listing, n = tuple(listing_of[key]), clips
             else:
