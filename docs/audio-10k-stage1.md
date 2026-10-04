@@ -175,6 +175,8 @@ So about 1 in 40 looks plainly wrong and about 1 in 4 is not a clean match. The 
 
 ## Duplicate listings
 
+*Later the same day:* the ten pairs of class (a) and 33 more were paired by hand, and seven wrong matches of new albums in class (c) were corrected or skipped in `match_overrides.json`. The catalog now has 10,467 albums and 17 duplicate listings: the 12 of class (b), Cowboy Bebop, and four that go once the existing album is embedded again from its corrected listing. The open questions are in `docs/audio-10k-pair-questions.md`. The tables below are as they were this morning.
+
 35 store listings are matched to two catalog albums each (70 albums). 34 involve a new album. The classes below are my reading of names and years.
 
 **(a) The same album twice: an off-chart placeholder and a chart row left unpaired (10).** The existing album has an `sp:` key and the new chart row is very likely the same record. Pairing them in `keys.csv` removes the duplicate.
