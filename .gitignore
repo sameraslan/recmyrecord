@@ -33,3 +33,6 @@ venv/
 .DS_Store
 *.log
 .idea/
+
+# yt-dlp, for rmr_audio.fulllength only
+data-pipeline/.venv-fetch/
