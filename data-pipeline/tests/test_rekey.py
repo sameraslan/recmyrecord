@@ -64,10 +64,11 @@ def test_audio_blocks_are_exactly_what_they_were(reference, audio):
 
 
 def test_matches_keep_their_listing_under_the_new_key(reference):
-    """Each album's row of matches.csv names the source the reference recorded for its embedding."""
+    """Each album's row of matches.csv names the source the reference recorded for its embedding. The file
+    also holds the rows of the catalog's new albums, which the reference does not know."""
     keys = load_keys().keys_of(reference["uris"])
     source = {m["key"]: m["source"] for m in load_matches(DEFAULT_AUDIO / "matches.csv")}
-    assert set(source) == set(keys)
+    assert set(keys) <= set(source)
     for key, has, src in zip(keys, reference["has_audio"].tolist(), reference["source"].tolist()):
         if has and src != "local":
             assert source[key] == src, key
