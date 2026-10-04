@@ -2,6 +2,27 @@
 
 The chosen direction for a space theme on the album map, after two rounds of concept mockups and independent review (2026-10-03). Nothing in `frontcreck/` has been changed; this folder holds static mockups, the data behind them, and the reviews.
 
+## Current state: decisions made on 2026-10-04 (read this first)
+
+After seeing the first prototype Samer changed direction: beauty and simplicity first, "just a vibe", nothing explained. He chose from rendered option images (`options/`). This section supersedes anything below or in `RECOMMENDATION.md`, `prototype/UX.md` and `SCALING.md` that conflicts with it.
+
+| Decision | Choice |
+|---|---|
+| Gas | The original mockup's swirl, ported line by line, with colour carried by the flow (`prototype/src/gas.js`, look `swirl`, called "look 2"). This look was my default; he has not objected to it. |
+| Map colours | **Ember** palette on the existing five colour families (rust, cream, pale ice, blue, steel-lavender). |
+| Region names | **Tenor Sans**, wide capitals. **All** names shown at Overview and Whole map, gone when zoomed in. Plain lettering: no hover, no click, no explanation. |
+| Names toggle | He wants an on/off toggle for the names in the real site so he can decide later whether to keep them. |
+| Site colours | **Glass**: see-through blurred panels over the map (`chrome=glass`), so the map is the main thing. Untested on a real phone; plum was his second choice. |
+| Background | Near-black with a faint blue-violet cast, the same as the map's empty sky (`rgb(6,6,9)`; page `#07060a`). Not pure black, not navy. |
+| Removed | The colour sentence and toggles, evidence on hover, region cards, Regions menu, edge pointers, "you are here" chip, region rows in search, region line in the album panel, "start from a place on the map" on Home, the About "Reading the map" section. Regions are an Easter egg, not navigation. |
+| Kept from the earlier work | White cased lines to the closest albums, the cover layout that keeps covers off lines, the dark under-disc that keeps stars visible, gas baked once per slider stop (about 30 ms a frame on software WebGL against 110 to 150 live), nothing drawn at rest. |
+
+Consequences for the scaling plan: names are decoration now, so the honesty gates, evidence and region navigation in `SCALING.md` matter much less. What still matters at 10,000 albums: the gas needs per-album colour weights (today from `regions/colour.json`, which depends on Spotify's named sound traits), names need positions per slider stop, and both must be regenerated when the layout changes (`scaling/` has the code).
+
+Not verified: anything on a real phone, Safari, touch and keyboard paths, the glass blur's cost over a live WebGL canvas, animation in flight.
+
+Next step: plan and build this in `frontcreck/`.
+
 ## Update: interactive prototype and scaling plan (2026-10-03, later session)
 
 The asks above have been worked through. Start here:
