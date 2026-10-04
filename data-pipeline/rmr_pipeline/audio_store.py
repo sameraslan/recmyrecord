@@ -4,12 +4,16 @@ shards, a manifest, the match provenance and the hand corrections of matches.
 Written by the audio stage, read by the build. Only numpy and the standard library, and nothing
 newer than numpy 1.26, so the audio venv (Python 3.11, numpy<2) and the build venv share it.
 
-  embeddings/part-NNNN.npz   keys (str), emb (float16, n x 1280), n_clips (int16), source (str);
+  embeddings/part-NNNN.npz   keys (str: the album's RYM id, or its placeholder, see rmr_pipeline.keys),
+                             emb (float16, n x 1280), n_clips (int16), source (str);
                              a key in a later shard supersedes earlier ones; an entry with n_clips 0
                              (all-zero emb, empty source) removes the album
   manifest.json              model, clip policy (clips.per_album: what a plain sync gives an album),
                              one entry per shard
-  matches.csv                one row per album key (MATCH_FIELDS); an empty source = unmatched
+  matches.csv                one row per album key (MATCH_FIELDS); an empty source = unmatched. After the
+                             match itself: matched_by (how the listing was found), edition (what the edition
+                             rule put in place of the linked listing), runtime_s, and the flags under_covered
+                             and short_preview (1, 0, or empty: not determined)
   match_overrides.json       key -> {"source", "album_id"} or {"skip": true}, optional "note"
 
 Every file is written under a temporary name (".<name>.tmp", never "*.npz") and renamed into place, and
@@ -34,7 +38,10 @@ SHARD_RE = re.compile(r"^part-(\d{4})\.npz$")
 SOURCE_RE = re.compile(r"^(deezer|local|itunes:[a-z]{2})$")
 SHARD_ARRAYS = ("keys", "emb", "n_clips", "source")
 MATCH_FIELDS = ["key", "source", "source_album_id", "matched_title", "matched_artist", "score", "ambiguous",
-                "n_tracks", "n_clips_available"]
+                "n_tracks", "n_clips_available", "matched_by", "edition", "runtime_s", "under_covered", "short_preview"]
+MATCHED_BY = ("", "deezer_id", "apple_id", "search", "override")  # empty: matched before the column existed
+EDITIONS = ("", "standard", "split")
+MATCH_FLAGS = ("under_covered", "short_preview")
 
 
 class StoreError(Exception):
@@ -43,7 +50,7 @@ class StoreError(Exception):
 
 @dataclass(frozen=True)
 class Shard:
-    keys: np.ndarray  # (n,) unicode album keys (the feature table's URI)
+    keys: np.ndarray  # (n,) unicode album keys (RYM ids, see rmr_pipeline.keys)
     emb: np.ndarray  # (n, DIM) float16 album means of the per-clip embeddings
     n_clips: np.ndarray  # (n,) int16 clips behind each mean
     source: np.ndarray  # (n,) unicode: deezer, itunes:<storefront>, local
@@ -251,10 +258,27 @@ def load_matches(path: Path) -> list[dict[str, str]]:
             raise StoreError(f"{path} line {n}: unknown source {r['source']!r}")
         if r["ambiguous"] not in ("0", "1"):
             raise StoreError(f"{path} line {n}: ambiguous must be 0 or 1")
+        if r["matched_by"] not in MATCHED_BY or r["edition"] not in EDITIONS:
+            raise StoreError(f"{path} line {n}: matched_by must be one of {', '.join(MATCHED_BY[1:])} or empty, "
+                             f"edition one of {', '.join(EDITIONS[1:])} or empty")
+        if any(r[flag] not in ("", "0", "1") for flag in MATCH_FLAGS):
+            raise StoreError(f"{path} line {n}: {' and '.join(MATCH_FLAGS)} must be 0, 1 or empty")
     return rows
 
 
+def duplicate_listings(rows: list[dict]) -> dict[tuple[str, str], list[str]]:
+    """The duplicate guard: store listings that more than one album is matched to, as (store, album id) ->
+    the albums' keys in row order. `rows` are rows of matches.csv. An Apple id is the same listing in every
+    storefront, so `itunes:us` and `itunes:jp` count as one store."""
+    seen: dict[tuple[str, str], list[str]] = {}
+    for r in rows:
+        if r["source"] and r["source"] != "local" and r["source_album_id"]:
+            seen.setdefault((str(r["source"]).split(":")[0], str(r["source_album_id"])), []).append(r["key"])
+    return {listing: keys for listing, keys in seen.items() if len(keys) > 1}
+
+
 def write_matches(path: Path, rows: list[dict]) -> None:
+    """Rows as dicts of MATCH_FIELDS; a field a row does not have is written empty."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(_tmp(path), "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=MATCH_FIELDS, lineterminator="\n")

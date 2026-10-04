@@ -146,6 +146,14 @@ def first_billed(artist: str) -> str:
     return _JOINER.split(artist.strip())[0].strip() or artist
 
 
+def credit_names(artist: str) -> list[str]:
+    """Each name of an " & " credit ("Ludwig van Beethoven & Wiener Philharmoniker & Carlos Kleiber"), in
+    order; nothing for a credit of one name. RYM joins the artists of a release this way, and a store often
+    lists the album under one of them."""
+    parts = [p.strip() for p in artist.split(" & ")]
+    return [p for p in parts if p] if len(parts) > 1 else []
+
+
 def artist_variants(artist: str) -> list[tuple[str, float]]:
     """(normalised variant, weight): every spelling in full, then each billed name on its own. One name out of
     a long credit (a compilation's performers) weighs less than one of two."""

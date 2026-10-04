@@ -30,14 +30,17 @@ class Replay:
 def _fixture(name: str):
     data = json.loads((FIXTURES / f"{name}.json").read_text(encoding="utf-8"))
     a = data["album"]
-    return Album(a["key"], a["title"], a["artist"], a["slug"], a["mean_s"], tuple(a["means"]), a["override"]), data
+    return Album(**{**a, "means": tuple(a["means"])}), data
 
 
 def test_confident_deezer_match_asks_no_other_store():
     al, data = _fixture("deezer_standard_edition")
     http = Replay(data["responses"])
     m = match_album(http, al)
-    assert {k: str(v) for k, v in m.row(al.key).items()} == {k: str(v) for k, v in data["expected"].items()}
+    row = {k: str(v) for k, v in m.row(al.key).items()}
+    assert {k: row[k] for k in data["expected"]} == {k: str(v) for k, v in data["expected"].items()}  # as recorded
+    assert (row["matched_by"], row["edition"], row["under_covered"], row["short_preview"]) == ("search", "", "0", "")
+    assert int(row["runtime_s"]) == round(sum(t["duration_s"] for t in matching.tracks(http, m.source, m.album_id)))
     assert (m.source, m.album_id, m.ambiguous, m.n_previews) == ("deezer", "1261474", False, 10)
     assert not any("itunes" in url for url in http.asked)
 
@@ -163,6 +166,7 @@ def test_http_retries_quota_and_network_errors_then_caches(tmp_path):
     http.fetch = fetch
     assert http.get("https://api.deezer.com/x", "deezer") == {"data": [1]} and slept == [5, 10]
     assert http.get("https://api.deezer.com/x", "deezer") == {"data": [1]} and not answers  # from the cache
+    assert http.asked_by == {"deezer": 1} and http.fetched_by == {"deezer": 1}  # one URL, fetched once
     answers.append({"data": [2]})
     assert http.get("https://api.deezer.com/x", "deezer", fresh=True) == {"data": [2]}  # a fresh listing skips it
     assert Http(tmp_path / "http.sqlite").cached("https://api.deezer.com/x") == {"data": [1]}

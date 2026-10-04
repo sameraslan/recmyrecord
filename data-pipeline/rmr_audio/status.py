@@ -24,10 +24,12 @@ def status(catalog: list[Album], audio_dir: Path, missing: bool = False) -> str:
     by_source = Counter(src for _, src in have)
     by_clips = Counter(n for n, _ in have)
     row = lambda al: matches.get(al.key)  # noqa: E731
+    new = sum(al.new for al in catalog)
     lines = [
-        f"{len(catalog)} albums in the feature table, {len(have)} with audio, {len(without)} without (imputed by the build)",
+        f"{len(catalog)} albums in the catalog ({len(catalog) - new} on the site, {new} new), {len(have)} with audio, "
+        f"{len(without)} without (the build imputes the site's)",
         f"store: {manifest['model']}, {manifest['clips'].get('per_album', '?')} clips per album by policy, "
-        f"{len(manifest['shards'])} shard(s)" + (f", {len(set(stored) - keys)} albums not in the feature table"
+        f"{len(manifest['shards'])} shard(s)" + (f", {len(set(stored) - keys)} albums not in the catalog"
                                                  if set(stored) - keys else ""),
         "by source: " + (", ".join(f"{src} {n}" for src, n in sorted(by_source.items())) or "-"),
         "clips per album: " + (", ".join(f"{n} clips: {by_clips[n]}" for n in sorted(by_clips)) or "-"),
@@ -35,8 +37,8 @@ def status(catalog: list[Album], audio_dir: Path, missing: bool = False) -> str:
         f"{sum(1 for al in catalog if al.key in stored and row(al) and row(al)['ambiguous'] == '1')}",
         "without audio: "
         f"{sum(1 for al in without if row(al) and not row(al)['source'] and al.key not in skips)} unmatched, "
-        f"{sum(1 for al in without if row(al) and row(al)['source'])} matched but no usable clip, "
-        f"{sum(1 for al in without if not row(al) and al.key not in skips)} never synced, "
+        f"{sum(1 for al in without if row(al) and row(al)['source'])} matched but not in the store (no usable clip, or not embedded yet), "
+        f"{sum(1 for al in without if not row(al) and al.key not in skips)} never matched, "
         f"{sum(1 for al in without if al.key in skips)} skipped by match_overrides.json",
     ]
     left = leftovers(audio_dir)

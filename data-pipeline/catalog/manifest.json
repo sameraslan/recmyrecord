@@ -1,0 +1,39 @@
+{
+ "sheet": {
+  "file": "rym10k_sheet.csv",
+  "sha256": "d36c7a48e5c671a565ed471139c4a3d8858ef2030071d03f3023b4b22702e991",
+  "rows": 10000,
+  "retrieved": [
+   "2026-10-01T23:54:09Z",
+   "2026-10-03T08:33:46Z"
+  ]
+ },
+ "albums": 10510,
+ "existing": 4081,
+ "existing_on_chart": 3571,
+ "paired_by": {
+  "spotify_id": 2408,
+  "artist_title_year": 1163
+ },
+ "existing_off_chart": 510,
+ "new": 6429,
+ "doubtful_pairs": 190,
+ "doubtful_by_reason": {
+  "artist_credit_varies": 45,
+  "artist_differs": 14,
+  "competing": 6,
+  "edition_or_sequel": 9,
+  "same_name_group": 2,
+  "same_name_other_year": 3,
+  "same_title_year_other_artist": 17,
+  "sheet_flag_likely": 22,
+  "sheet_flag_missing": 28,
+  "sheet_flag_yes": 39,
+  "similar_title": 5,
+  "spotify_link_names_differ": 27,
+  "spotify_link_year_differs": 3,
+  "year_differs": 3,
+  "year_off_by_one": 11,
+  "year_unknown": 3
+ }
+}

@@ -1,15 +1,24 @@
+import shutil
+
 import numpy as np
 import pytest
 
 from rmr_pipeline.artists import clean_artist
-from rmr_pipeline.audio import (BLOCK_DIMS, IMPUTE_K, audio_block, descriptors, fit_transform, impute, load_transform,
-                                main, refit, save_transform, site_matrix, unit)
+from rmr_pipeline.audio import (BLOCK_DIMS, IMPUTE_K, album_keys, audio_block, descriptors, fit_transform, impute,
+                                load_transform, main, refit, save_transform, site_matrix, unit)
 from rmr_pipeline.audio_store import DEFAULT_AUDIO, DIM, StoreError, append_shard, init_store, load_store
 from rmr_pipeline.constants import AUDIO, REPO, SLIDER, STOPS
 from rmr_pipeline.table import descriptor_cols
 from rmr_pipeline.vocab import build_vocab
 
 EXPERIMENT_TRANSFORM = REPO / "experiments" / "preview_features" / "results" / "solution_transform.npz"
+
+
+def _store_dir(path, model, clips):
+    """An empty store at `path` that knows the albums' keys (a copy of the committed keys.csv)."""
+    init_store(path, model, clips)
+    shutil.copy(DEFAULT_AUDIO / "keys.csv", path / "keys.csv")
+    return path
 
 
 def _first_fit_rows(deduped) -> np.ndarray:
@@ -25,7 +34,7 @@ def _fitted_rows(deduped, transform) -> np.ndarray:
     if transform.keys is None:
         at = _first_fit_rows(deduped)
     else:
-        index = {k: i for i, k in enumerate(deduped[0]["URI"])}
+        index = {k: i for i, k in enumerate(album_keys(deduped[0]))}
         at = np.array([index[k] for k in transform.keys.tolist()])
     assert len(at) == transform.albums
     return at
@@ -56,7 +65,7 @@ def test_fit_matches_the_target_variance_and_is_deterministic(tmp_path):
 
 
 def test_fit_records_the_albums_it_was_fitted_on(tmp_path):
-    emb, keys = _emb(50), [f"spotify:album:{i:03d}" for i in range(50)]
+    emb, keys = _emb(50), [f"Album{i}" for i in range(50)]
     t = fit_transform(emb, 0.39, "m", k=6, keys=keys)
     save_transform(tmp_path / "transform.npz", t)
     loaded = load_transform(tmp_path / "transform.npz")
@@ -74,7 +83,7 @@ def test_block_shape_and_determinism(deduped, audio):
     sub, _ = deduped
     assert audio.block.shape == (len(sub), BLOCK_DIMS) and audio.block.dtype == np.float32
     assert np.isfinite(audio.block).all()
-    assert np.array_equal(audio.has_audio, load_store(DEFAULT_AUDIO).rows(sub["URI"]) >= 0)
+    assert np.array_equal(audio.has_audio, load_store(DEFAULT_AUDIO).rows(album_keys(sub)) >= 0)
     n = int(audio.has_audio.sum())
     assert 0 < audio.transform.albums <= n <= len(sub)  # the store only grows: the fitted albums, plus those added since
     assert np.array_equal(audio_block(sub).block, audio.block)
@@ -122,7 +131,7 @@ def test_a_fit_on_the_fitted_albums_reproduces_the_committed_transform(deduped, 
     sub, _ = deduped
     t = audio.transform
     at = _fitted_rows(deduped, t)
-    keys = sub["URI"].to_numpy()[at]
+    keys = np.asarray(album_keys(sub))[at]
     store = load_store(DEFAULT_AUDIO)
     rows = store.rows(keys)
     assert (rows >= 0).all()
@@ -131,8 +140,7 @@ def test_a_fit_on_the_fitted_albums_reproduces_the_committed_transform(deduped, 
     if drift > 1e-6:
         pytest.skip("a fitted album was embedded again since the fit (a corrected match or a clip top-up): the "
                     "exact comparison needs the embeddings fitted on, and one changed album turns the last components")
-    d = tmp_path / "audio"
-    init_store(d, store.manifest["model"], store.manifest["clips"])
+    d = _store_dir(tmp_path / "audio", store.manifest["model"], store.manifest["clips"])
     append_shard(d, keys, store.emb[rows], store.n_clips[rows], store.source[rows], note="the fitted albums")
     save_transform(d / "transform.npz", t)
     again = refit(sub, d)
@@ -231,11 +239,10 @@ def test_new_albums_go_through_the_frozen_transform(deduped, audio, tmp_path):
     sub, _ = deduped
     store = load_store(DEFAULT_AUDIO)
     new = np.flatnonzero(audio.has_audio)[[3, -1]]
-    new_keys = sub["URI"].to_numpy()[new]
+    new_keys = np.asarray(album_keys(sub))[new]
     theirs = store.rows(new_keys)
     rest = np.setdiff1d(np.arange(len(store.keys)), theirs)
-    d = tmp_path / "audio"
-    init_store(d, store.manifest["model"], store.manifest["clips"])
+    d = _store_dir(tmp_path / "audio", store.manifest["model"], store.manifest["clips"])
     append_shard(d, store.keys[rest], store.emb[rest], store.n_clips[rest], store.source[rest], note="before")
     save_transform(d / "transform.npz", audio.transform)
     before = audio_block(sub, d)
@@ -257,7 +264,7 @@ def test_missing_or_mismatched_store_fails_clearly(deduped, audio, tmp_path, cap
     assert main(["status", "--audio-dir", str(tmp_path)]) == 1
     assert "manifest.json" in capsys.readouterr().err
     init_store(tmp_path, "another-model", {"per_album": 4})
-    append_shard(tmp_path, sub["URI"][:3].tolist(), _emb(3), [4, 4, 4], ["deezer"] * 3, note="test")
+    append_shard(tmp_path, album_keys(sub)[:3], _emb(3), [4, 4, 4], ["deezer"] * 3, note="test")
     with pytest.raises(StoreError, match="transform.npz"):
         audio_block(sub, tmp_path)
     save_transform(tmp_path / "transform.npz", audio.transform)
@@ -268,10 +275,29 @@ def test_missing_or_mismatched_store_fails_clearly(deduped, audio, tmp_path, cap
         audio_block(sub, tmp_path)
 
 
+def test_a_store_without_its_keys_fails_clearly(deduped, audio, tmp_path):
+    """The store is keyed by RYM id and the feature table by URI: without keys.csv no album is found, and an
+    album keys.csv does not have is named."""
+    sub, _ = deduped
+    store = load_store(DEFAULT_AUDIO)
+    init_store(tmp_path, store.manifest["model"], store.manifest["clips"])
+    append_shard(tmp_path, store.keys[:3], store.emb[:3], store.n_clips[:3], store.source[:3], note="test")
+    save_transform(tmp_path / "transform.npz", audio.transform)
+    with pytest.raises(StoreError, match="keys.csv"):
+        audio_block(sub, tmp_path)
+    shutil.copy(DEFAULT_AUDIO / "keys.csv", tmp_path / "keys.csv")
+    assert int(audio_block(sub, tmp_path).has_audio.sum()) == 3
+    new = sub.copy()
+    new.loc[5, "URI"] = "spotify:album:0000000000000000000000"
+    with pytest.raises(StoreError, match="no key for 1 album.*spotify:album:0000000000000000000000"):
+        audio_block(new, tmp_path)
+
+
 def test_status_lists_the_imputed_albums(deduped, audio, capsys):
     sub, _ = deduped
     assert main(["status"]) == 0
     out = capsys.readouterr().out.splitlines()
     assert out[0] == audio.summary()
-    assert out[1:] == [f"imputed\t{sub.loc[i, 'URI']}\t{sub.loc[i, 'Title']}\t{clean_artist(str(sub.loc[i, 'Artist']))}"
+    keys = album_keys(sub)
+    assert out[1:] == [f"imputed\t{keys[i]}\t{sub.loc[i, 'Title']}\t{clean_artist(str(sub.loc[i, 'Artist']))}"
                        for i in np.flatnonzero(~audio.has_audio)]

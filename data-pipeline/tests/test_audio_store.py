@@ -1,12 +1,15 @@
+import csv
 import json
 
 import numpy as np
 import pytest
 
 from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, MATCH_FIELDS, StoreError, append_shard, clean_leftovers,
+                                      duplicate_listings,
                                       compact_store, drop_albums, init_store, leftovers, load_match_overrides,
                                       load_matches, load_store, read_shard, set_clips_per_album, write_matches,
                                       write_shard)
+from rmr_pipeline.keys import load_keys
 
 
 def _emb(n: int, seed: int = 0) -> np.ndarray:
@@ -88,7 +91,7 @@ def test_writes_are_atomic_and_leftovers_are_cleaned_by_the_next_write(store, mo
     assert load_store(store).keys.tolist() == ["a", "b", "c", "f"]
     (store / ".matches.csv.tmp").write_text("x")
     assert clean_leftovers(store) == [".matches.csv.tmp"]
-    rows = [dict(zip(MATCH_FIELDS, ["k1", "deezer", "12", "T", "A", "0.9", "0", "12", "12"]))]
+    rows = [dict(zip(MATCH_FIELDS, ["k1", "deezer", "12", "T", "A", "0.9", "0", "12", "12", "", "", "", "", ""]))]
     write_matches(store / "matches.csv", rows)
     assert load_matches(store / "matches.csv") == rows and not leftovers(store)
 
@@ -173,16 +176,53 @@ def test_store_and_manifest_must_agree(store, tmp_path):
 
 def test_matches_round_trip_and_checks(tmp_path):
     path = tmp_path / "matches.csv"
-    rows = [dict(zip(MATCH_FIELDS, ["k1", "deezer", "12", 'Title, with "quotes"', "Artist", "0.9974", "0", "12", "12"])),
-            dict(zip(MATCH_FIELDS, ["k2", "", "", "", "", "", "0", "", ""]))]
+    rows = [dict(zip(MATCH_FIELDS, ["k1", "deezer", "12", 'Title, with "quotes"', "Artist", "0.9974", "0", "12", "12",
+                                    "deezer_id", "split", "2400", "1", ""])),
+            dict(zip(MATCH_FIELDS, ["k2", "", "", "", "", "", "0", "", "", "", "", "", "", ""]))]
+    assert all(len(r) == len(MATCH_FIELDS) for r in rows)
     write_matches(path, rows)
     assert load_matches(path) == rows
+    old = {k: rows[0][k] for k in MATCH_FIELDS[:9]}  # a row of before the later columns: they are written empty
+    write_matches(path, [old])
+    assert load_matches(path) == [{**dict.fromkeys(MATCH_FIELDS, ""), **old}]
+    for field, bad in (("matched_by", "guess"), ("edition", "deluxe"), ("under_covered", "yes"), ("short_preview", "2")):
+        write_matches(path, [{**rows[0], field: bad}])
+        with pytest.raises(StoreError, match=field):
+            load_matches(path)
     write_matches(path, rows + [rows[0]])
     with pytest.raises(StoreError, match="repeated key 'k1'"):
         load_matches(path)
     path.write_text("key,source\nk1,deezer\n", encoding="utf-8")
     with pytest.raises(StoreError, match="header"):
         load_matches(path)
+
+
+def test_duplicate_listings():
+    """The duplicate guard: one store listing under two album keys. Apple ids are the same in every storefront."""
+    row = lambda key, source, album_id: {"key": key, "source": source, "source_album_id": album_id}  # noqa: E731
+    rows = [row("a", "deezer", "1"), row("b", "deezer", "2"), row("c", "deezer", "1"), row("d", "itunes:us", "1"),
+            row("e", "itunes:jp", "1"), row("f", "", ""), row("g", "", ""), row("h", "itunes:gb", "7")]
+    assert duplicate_listings(rows) == {("deezer", "1"): ["a", "c"], ("itunes", "1"): ["d", "e"]}
+    assert duplicate_listings(rows[:2] + rows[5:]) == {}
+
+
+# SHA-256 over key, source, source_album_id, matched_title, matched_artist, score and ambiguous of the albums
+# matched before 3 October 2026 (the 4,081 of the feature table), tab-separated, one album per line, in file
+# order. n_tracks and n_clips_available are left out: they follow the listing at each sync.
+EXISTING_MATCHES_SHA256 = "fb6f8a503397853d264d4ee967e9907d73880fa8accc9bbd263db5dab59c7c90"
+
+
+def test_the_existing_albums_matches_are_untouched(deduped):
+    """Growing the catalog and widening matches.csv must not move a match the site's albums already have.
+    After a change meant to move one (a corrected match, a --retry-unmatched run), put the new hash here."""
+    import hashlib
+
+    sub, _ = deduped
+    existing = set(load_keys(DEFAULT_AUDIO / "keys.csv").keys_of(sub["URI"]))
+    rows = [m for m in load_matches(DEFAULT_AUDIO / "matches.csv") if m["key"] in existing]
+    assert len(rows) == len(existing)
+    text = "\n".join("\t".join(m[k] for k in MATCH_FIELDS[:7]) for m in rows)
+    assert hashlib.sha256(text.encode()).hexdigest() == EXISTING_MATCHES_SHA256
 
 
 def test_match_overrides(tmp_path):
@@ -201,22 +241,28 @@ def test_match_overrides(tmp_path):
 def test_committed_store(deduped):
     sub, _ = deduped
     s = load_store(DEFAULT_AUDIO)
-    uris = set(sub["URI"])
+    uris = set(load_keys(DEFAULT_AUDIO / "keys.csv").keys_of(sub["URI"]))  # the albums' keys: RYM ids
     assert not leftovers(DEFAULT_AUDIO)  # nothing unlisted or half-written is committed
     # Counts are bounds, not pins: the audio stage adds albums and clips (3,944 albums came from the experiment).
     assert 3944 <= len(s.keys) <= len(uris) and set(s.keys.tolist()) <= uris
     assert {"deezer", "itunes:us"} <= set(s.source.tolist())
     assert s.manifest["clips"]["per_album"] in (4, 8) and 1 <= s.n_clips.min()
     assert s.n_clips.max() <= s.manifest["clips"]["per_album"] or "local" in s.source.tolist()
+    # matches.csv: a row for every album of the feature table, and rows of the catalog's new albums, which are
+    # matched before they are embedded. load_matches refuses a repeated key.
     matches = load_matches(DEFAULT_AUDIO / "matches.csv")
-    assert {m["key"] for m in matches} == uris
+    match_keys = {m["key"] for m in matches}
+    with open(DEFAULT_AUDIO.parent / "catalog" / "albums.csv", newline="", encoding="utf-8") as f:
+        catalog = {r["rym_id"] for r in csv.DictReader(f)}
+    assert len(match_keys) == len(matches) and uris <= match_keys <= catalog
+    assert set(s.keys.tolist()) <= match_keys
     matched = {m["key"]: m["source"] for m in matches if m["source"]}
     stored = {k: src for k, src in zip(s.keys.tolist(), s.source.tolist()) if src != "local"}
     assert stored == {k: matched.get(k) for k in stored}  # every embedding comes from the listing matches.csv names
-    assert len(matched) - len(stored) <= 5  # matched, but no usable clip: rare
+    assert len(set(matched) & uris) - len(stored) <= 5  # an album of the site matched, but no usable clip: rare
     overrides = load_match_overrides(DEFAULT_AUDIO / "match_overrides.json")
     assert set(overrides) <= uris and all(e.get("note") for e in overrides.values())
     skipped = {k for k, e in overrides.items() if e.get("skip")}
     assert not skipped & set(s.keys.tolist())  # an album kept out of matching has no embedding
     # Apple only has cover versions of these two game soundtracks: they stay without audio
-    assert {"spotify:album:3saAefkIXxddLvrh05pFz6", "spotify:album:4WHw7nHg2tlT0ClrJvS8dE"} <= skipped
+    assert {"Album10376", "Album1894233"} <= skipped  # Ocarina of Time, Super Mario Galaxy

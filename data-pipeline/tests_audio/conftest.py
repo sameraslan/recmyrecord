@@ -12,7 +12,7 @@ from concurrent.futures.process import BrokenProcessPool
 import numpy as np
 import pytest
 
-from rmr_pipeline.audio_store import DIM, init_store, write_matches
+from rmr_pipeline.audio_store import DIM, MATCH_FIELDS, init_store, write_matches
 from rmr_audio.catalog import Album
 from rmr_audio.embed import MODEL
 
@@ -77,10 +77,11 @@ def album(n: int) -> Album:
 
 
 def match_row(key: str, source: str = "deezer", album_id: str = "", n: int = 10) -> dict:
+    """A row of matches.csv as it was written before the columns after n_clips_available existed (they are empty)."""
+    blank = dict.fromkeys(MATCH_FIELDS, "")
     if not source:
-        return {"key": key, "source": "", "source_album_id": "", "matched_title": "", "matched_artist": "", "score": "",
-                "ambiguous": "0", "n_tracks": "", "n_clips_available": ""}
-    return {"key": key, "source": source, "source_album_id": album_id, "matched_title": "T", "matched_artist": "A",
+        return {**blank, "key": key, "ambiguous": "0"}
+    return {**blank, "key": key, "source": source, "source_album_id": album_id, "matched_title": "T", "matched_artist": "A",
             "score": "0.9900", "ambiguous": "0", "n_tracks": str(n), "n_clips_available": str(n)}
 
 

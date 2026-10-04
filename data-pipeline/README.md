@@ -5,7 +5,7 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 ## Inputs (read-only)
 
 - `data-retrieval/Recommender/data/all_data_norm.pkl`: the recommender's feature table (4,000+ rows in catalog-rank order; `Title`, `Artist`, `URI`, `Descriptor Count`, 13 min-max Spotify audio features, 176 descriptor columns). Override with `--table`. The build no longer reads the 13 Spotify columns; only the live-site replica does (see step 2).
-- `data-pipeline/audio/`: the committed audio store and the frozen transform (see Audio). Override with `--audio-dir`.
+- `data-pipeline/audio/`: the committed audio store, the frozen transform (see Audio) and `keys.csv`, which gives each Spotify URI of the feature table its album key (see Catalog and keys). Override with `--audio-dir`.
 - The music map worktree of the personal site, passed as `--map-root` (for example `/path/to/music_map`). The pipeline reads:
   - `public/data/metadata.json`: cluster id (0 to 7), atlas sheet and UV for each Spotify URI.
   - `public/data/atlas-0.webp` to `atlas-3.webp`: 96 px cover sprites in the map's own order.
@@ -41,10 +41,11 @@ The audio block is 64 numbers per album computed from 30-second preview clips (t
 
 | File | Contents |
 |---|---|
-| `embeddings/part-NNNN.npz` | Append-only shards: `keys` (the feature table's `URI`), `emb` (float16, 1,280 per album: the mean of its clips' embeddings), `n_clips`, `source` (`deezer`, `itunes:us`, `local`, ...). A key in a later shard replaces the earlier one; an entry with `n_clips` 0 removes the album. |
+| `embeddings/part-NNNN.npz` | Append-only shards: `keys` (the album's key: its RYM id, see Catalog and keys), `emb` (float16, 1,280 per album: the mean of its clips' embeddings), `n_clips`, `source` (`deezer`, `itunes:us`, `local`, ...). A key in a later shard replaces the earlier one; an entry with `n_clips` 0 removes the album. |
 | `manifest.json` | Model id, clip policy (`clips.per_album`: how many clips a plain `sync` gives an album), one entry per shard. |
-| `matches.csv` | One row per album: source, source album id, matched title and artist, score, `ambiguous`, track count, clips available. An empty source means no match. |
+| `matches.csv` | One row per album: source, source album id, matched title and artist, score, `ambiguous`, track count, clips available; then `matched_by` (`deezer_id` or `apple_id`: the catalog row's link; `search`; `override`), `edition` (`standard` or `split` when the edition rule replaced the linked listing), `runtime_s` and the flags `under_covered` and `short_preview` (1, 0, or empty: not determined). An empty source means no match. The five later columns are empty for the albums matched before 3 October 2026. |
 | `match_overrides.json` | Hand corrections for the audio stage: key -> `{"source", "album_id"}` to force a match, or `{"skip": true}`. |
+| `keys.csv` | One row per album that had a Spotify URI as its key: `rym_id` (the key), `legacy_uri`, `matched_by`, `doubt`. Written by the catalog builder. |
 | `transform.npz` | The frozen transform: `mean`, `components` (64 x 1,280), `scale`, `target_total_variance`, and the fit's date, album count and model id. |
 
 `audio_store.py` reads and writes these and rejects a malformed store with a message naming the file. It needs only numpy (1.26 or 2.x), so the audio stage can use it from its own environment.
@@ -75,7 +76,7 @@ The settings come from `experiments/preview_features/imputation.py` (`results/im
 
 ### Adding albums
 
-1. The album has a row in the feature table (descriptors, a unique `URI`, title, artist). Its Spotify audio columns can be empty. The table is a pickle pinned by hash, so after changing it put its new SHA-256 (`shasum -a 256`) in `DEFAULT_TABLE_SHA256` in `rmr_pipeline/constants.py`: `load_table` refuses a table whose hash differs.
+1. The album has a row in the feature table (descriptors, a unique `URI`, title, artist) and a key for that URI in `audio/keys.csv` (the build and the audio stage stop with a message naming an album that has none). Its Spotify audio columns can be empty. The table is a pickle pinned by hash, so after changing it put its new SHA-256 (`shasum -a 256`) in `DEFAULT_TABLE_SHA256` in `rmr_pipeline/constants.py`: `load_table` refuses a table whose hash differs.
 2. `.venv-audio/bin/python -m rmr_audio sync` (audio venv, below). It matches the album, embeds its clips, writes one new shard and adds the album's row to `matches.csv`.
 3. `.venv-audio/bin/python -m rmr_audio status --missing`. Check the ambiguous matches and the albums without audio; correct them in `match_overrides.json` or with local files, and run `sync` again. (`python -m rmr_audio match` shows what the stores answer for a new album before anything is embedded.)
 4. Rebuild (`rmr_pipeline.build`). An album with no shard entry is imputed.
@@ -94,6 +95,7 @@ cd data-pipeline
 .venv-audio/bin/python -m rmr_audio status [--missing]    # counts; with --missing, the albums without audio
 .venv-audio/bin/python -m rmr_audio sync --dry-run        # what a sync would do; no network, nothing written
 .venv-audio/bin/python -m rmr_audio match [--retry-unmatched]   # ask the stores, print each verdict; the store is not written
+.venv-audio/bin/python -m rmr_audio match-dry-run --sample 300 --seed 1 --out DIR   # match a sample of the new albums; writes only DIR
 nice -n 19 .venv-audio/bin/python -m rmr_audio sync       # albums missing from the store, at the store's clip policy
 nice -n 19 .venv-audio/bin/python -m rmr_audio sync --clips 8    # top every album up to 8 clips
 .venv-audio/bin/python -m rmr_audio compact               # rewrite all shards into one
@@ -105,28 +107,73 @@ The venv is about 560 MB. The model (`discogs-effnet-bs1-1.pb`, 18 MB) is fetche
 `sync` works on every album of the feature table that is missing from the store or has fewer clips than asked. For each it reads the match from `matches.csv` (searching the stores only for an album never matched), fetches the track listing again (Deezer's preview URLs expire after 15 minutes), downloads the clips it still needs into memory, embeds them and records each clip in the local clip cache. At the end it writes one new shard with the mean of each finished album's clips and updates `matches.csv`. An album whose clips did not change is not rewritten.
 
 - Clips: the first track, then tracks spread evenly through the album, so an album's four clips are the first four of its eight. `--clips N` asks for N; without it the store's policy (`clips.per_album` in `manifest.json`) applies. A `--clips` run over the whole catalog that finishes makes N the policy. An album with fewer previews than N gets what there is. A run that left albums unfinished (a store not answering, an interruption, `--limit`, `--keys`) does not change the policy.
-- Resuming: Ctrl-C or SIGTERM stops taking albums, lets the clips in flight finish (a few seconds; a wait between API retries ends at once) and writes the shard for the albums that finished. Running `sync` again continues; no clip is downloaded twice. `--limit N` stops after N albums, `--keys` takes URIs or slugs.
-- The clip cache (`.cache/audio/clips.sqlite`, gitignored) holds every clip's embedding. It is what lets a top-up from four to eight clips download only four. If it is lost nothing committed is lost; a top-up then downloads all eight. `python -m rmr_audio import-experiment` seeds it from the experiment's cache (only on the machine that ran the experiment) and, while the store still has its first shard, checks that those clips reproduce it exactly.
+- Resuming: Ctrl-C or SIGTERM stops taking albums, lets the clips in flight finish (a few seconds; a wait between API retries ends at once) and writes the shard for the albums that finished. Running `sync` again continues; no clip is downloaded twice. `--limit N` stops after N albums, `--keys` takes album keys or slugs (a Spotify URI of before the rekey is understood).
+- The clip cache (`.cache/audio/clips.sqlite`, gitignored) holds every clip's embedding, by album key. A cache written before 3 October 2026 knows the albums by their Spotify URI and was not rekeyed with the store: until it is, a sync finds none of its clips and downloads again what a top-up needs. `rmr_pipeline.keys.load_keys().legacy(key)` gives the URI such a cache knows an album by, `.current(uri)` the key. It is what lets a top-up from four to eight clips download only four. If it is lost nothing committed is lost; a top-up then downloads all eight. `python -m rmr_audio import-experiment` seeds it from the experiment's cache (only on the machine that ran the experiment) and, while the store still has its first shard, checks that those clips reproduce it exactly.
 - Load: 2 worker processes by default (`--workers`), one thread each, at the lowest priority. Measured on an M-series laptop: about 2 clips a second, 600 to 770 MB per worker and 1.4 to 1.6 GB in all. The laptop must stay awake: a sleeping machine pauses the run and the preview URLs fetched before the sleep expire (those clips fail and the next sync fetches them); `caffeinate -i` in front of the command prevents idle sleep on macOS. No audio is written to disk beyond a temp file deleted right after decoding.
 - Failures: API errors and Deezer's quota answer are retried with backoff (Deezer is asked at most 5 times a second, iTunes once every 3.2 seconds; four attempts per URL). A store that fails three URLs in a row is left alone for the rest of the run, and the albums that needed it are listed and left for the next run. A clip that cannot be downloaded or decoded is recorded with its status. A preview that is empty, too short or undecodable is final, and the next track in the clip order takes its place, so the album still gets its N clips when it has enough previews. A download that failed is tried again by the next sync; a fresh URL refused (HTTP 4xx) in two runs is final. An album with no usable clip stays out of the store and is listed at the end. A worker that crashes costs one clip.
 
-**Matching.** Deezer first; iTunes when Deezer has no match, a doubtful one, or previews for fewer than half the tracks. The iTunes storefronts are tried in order (`--storefronts`, by default `us,gb,de`): the first one as the fallback, each further one only while there is still no confident match with a preview. A probe of nine storefronts over the albums the US store lacks found 16 of them elsewhere, all of them in the British or the German store; pass others (`jp`, `br`, `pl`...) explicitly when wanted. Album ids are the same in every storefront. When a search finds the artist but not the album, the artist's album list is read as well (search misses albums the store has). The source is recorded as `deezer` or `itunes:<storefront>`. Albums recorded as unmatched are not looked at again unless `--retry-unmatched` is given (or the album is named in `--keys`). API responses are cached for 30 days in `.cache/audio/http.sqlite`; error answers are never cached. With `--retry-unmatched` a cached search older than a day is asked again, so a `match --retry-unmatched` followed the same day by `sync --retry-unmatched` asks only once.
+**Matching.** The audio stage works on every row of `catalog/albums.csv`: the site's albums, then the chart's new ones by rank. An album that already has a row in `matches.csv` is not matched again.
+
+*By link.* When the album's catalog row has a Deezer or an Apple Music link (the ones RYM lists), that listing is fetched by its id and accepted, with no search: the RYM community chose it. Deezer's link comes first. An Apple id only resolves in its own storefront, so it is asked for in the storefront the link names (`music.apple.com/jp/...` is `jp`), then in `us`; the source records the storefront that answered (`itunes:jp`). The listing is not verified. Its title and artist are compared with the album's native and Latin spellings, and `ambiguous` is set when either reads below the search's floors; the listing is kept either way. The edition rule then looks at the same artist's other listings of the same release in that store: a linked listing with more than 30 tracks or a bigger-edition marker (deluxe, expanded, box set...) gives way to the standard edition when there is one (15 minutes or longer, with previews), and a linked listing of one to three tracks gives way to a split edition of the same recording, the one with the most previews among those with more tracks whose total runtime is within 15% of the linked one. `edition` says `standard` or `split` when that happened. When the linked listing has no preview, the other store's link is tried, then the text search; if none has a preview the album is recorded with its linked listing and no clips.
+
+*Flags.* `under_covered`: one to three preview windows for a listing of 15 minutes or more. `short_preview`: a preview shorter than 25 s from a track longer than 60 s. Neither store's API gives a preview's length, so the matcher leaves it empty; the embedder, which decodes the clips, sets it (`match.short_preview`). Two albums matched to one store listing are printed after a `sync` (`duplicate listing`; `audio_store.duplicate_listings`).
+
+*Dry run.* `match-dry-run` matches a random sample of the new on-chart albums, stratified by rank, and writes `matches_dry_run.csv`, `summary.md` and `summary.json` into `--out`: counts by path, the no-preview, ambiguous and under-covered rates, what the edition rule did, duplicate listings, API errors, the distribution of preview windows and a projection of requests and time for all new albums. It reads store metadata only (no audio), writes neither the store nor `matches.csv`, asks Deezer every 0.35 s and iTunes every 3.4 s, and stops when a store stops answering. Its rates say what the stores list, not whether a listing is the right recording.
+
+*The new albums.* `match-new` matches every catalog album that has no row in `matches.csv` and writes the rows, in catalog order, after the existing ones, which are written back unchanged. It reads store metadata only: no audio, no model. It works through the albums with a Deezer link, then those with an Apple link only, then those with no link (`--links-only` leaves these out; `--limit N` takes the first N). `matches.csv` is rewritten through a temporary file every 25 albums (`--save-every`), at the end and on Ctrl-C or SIGTERM, and the API responses are cached, so a killed run continues where it stopped and asks for nothing twice. It asks Deezer every 0.35 s and iTunes every 3.4 s (`--deezer-interval`, `--itunes-interval`), tries a URL twice, and stops (exit code 2, the reason in its last lines) when a store is marked down, refuses a URL twice for its rate (HTTP 403 or 429, Deezer's quota error) or has given five such answers in the run. It prints a progress line with an ETA every minute (`--progress-secs`; `--verbose` adds a line per album) and ends with the counts by path, the albums without a preview, the ambiguous and under-covered ones and the duplicate listings. An album with `skip` in `match_overrides.json` gets no row. The dry run projects about 11 hours for all 6,429 new albums, of which the 804 without a link take more than half.
+
+```bash
+nice -n 19 .venv-audio/bin/python -m rmr_audio match-new --links-only   # then again without --links-only
+```
+
+*By text search*, for an album with neither link (or whose linked listings have no preview). The catalog's Latin spellings and each name of an " & " credit are searched for as well, and `jp` is asked after the storefronts given. Deezer first; iTunes when Deezer has no match, a doubtful one, or previews for fewer than half the tracks. The iTunes storefronts are tried in order (`--storefronts`, by default `us,gb,de`): the first one as the fallback, each further one only while there is still no confident match with a preview. A probe of nine storefronts over the albums the US store lacks found 16 of them elsewhere, all of them in the British or the German store; pass others (`jp`, `br`, `pl`...) explicitly when wanted. Album ids are the same in every storefront. When a search finds the artist but not the album, the artist's album list is read as well (search misses albums the store has). The source is recorded as `deezer` or `itunes:<storefront>`. Albums recorded as unmatched are not looked at again unless `--retry-unmatched` is given (or the album is named in `--keys`). API responses are cached for 30 days in `.cache/audio/http.sqlite`; error answers are never cached. With `--retry-unmatched` a cached search older than a day is asked again, so a `match --retry-unmatched` followed the same day by `sync --retry-unmatched` asks only once.
 
 What the matcher will not do by itself, and an override does: an album listed under another credit ("The Grand Wazoo" under Frank Zappa, not The Mothers), under another title ("Pappo's Blues, Vol. 3" for "Vol. 3"), or a classical recording listed with its composer in front ("Beethoven: Symphony No. 5" for "Symphonie Nr.5": the title alone does not say whose fifth it is, so this is checked by hand against the track list and the durations). Game soundtracks on Apple are mostly cover versions; two are kept out with `skip`.
 
-**Match overrides** (`audio/match_overrides.json`, keyed by the album's `URI`):
+**Match overrides** (`audio/match_overrides.json`, keyed by the album's key):
 
 ```json
 {
-  "spotify:album:...": { "source": "deezer", "album_id": "1261474", "note": "the match was a tribute album" },
-  "spotify:album:...": { "source": "itunes:jp", "album_id": "826492492" },
-  "spotify:album:...": { "skip": true, "note": "no store has the right recording" }
+  "Album45": { "source": "deezer", "album_id": "1261474", "note": "the match was a tribute album" },
+  "Album974": { "source": "itunes:jp", "album_id": "826492492" },
+  "sp:4Hbe1M0BDbgMwbw6Tw2fmD": { "skip": true, "note": "no store has the right recording" }
 }
 ```
 
 Precedence, highest first: `skip`; a folder given with `--local-dir`; a forced listing that is not yet the one in `matches.csv`; local audio already in the store; the listing in `matches.csv`. A forced listing replaces the album's embedding at the next sync (with or without `--retry-unmatched`), also when that embedding came from local files; if the forced listing has no preview the old embedding is removed. `skip` keeps the album out of matching, and an embedding it already has is removed at the next sync (the shard gets an entry with `n_clips` 0, and `compact` then forgets the album). This is how a wrong embedding is taken out: add `{"skip": true, "note": "..."}` and run `sync`. Every entry carries a `note` saying what was checked.
 
 **Local files.** For an album no store has: put its files in `DIR/<album slug>/` (mp3, m4a, flac, wav, ogg, aiff; file-name order is track order) and run `sync --local-dir DIR`. `status --missing` prints the slugs as `slug<TAB>artist — title`. One excerpt per file: 30 seconds starting 30 seconds in, centred when the track is shorter than a minute, the whole file when it is shorter than 30 seconds (under 5 seconds is skipped). A folder takes precedence over the stores for that album, the source is recorded as `local`, and a later sync without `--local-dir` leaves the album alone. Adding, removing or replacing a file updates the album at the next `sync --local-dir`. The files are only read.
+
+## Catalog and keys
+
+An album's key is its RateYourMusic id (`Album45`), in the catalog table, the audio store, `matches.csv`, `match_overrides.json` and `transform.npz`. Until 3 October 2026 it was the feature table's Spotify URI; `audio/keys.csv` says which key each URI became, and the build and the audio stage find an album's store row through it. The Spotify id stays what the site links to.
+
+| File | Contents |
+|---|---|
+| `catalog/albums.csv` | Every album, keyed by `rym_id`: the site's albums first, in their order (row number = album number on the site), then the chart's new albums by rank. `rank`, `on_chart`, `artist`, `title`, `artist_latin`, `title_latin`, `rym_artist`, `rym_title` (the sheet's spellings), `year`, `release_date`, `type`, genres, `top_descriptors`, the Spotify, Apple Music, Deezer, Bandcamp, YouTube and SoundCloud links RYM lists, `rym_url`, `legacy_uri`. |
+| `audio/keys.csv` | `rym_id`, `legacy_uri`, `matched_by` (`spotify_id`, `artist_title_year`, `manual`, `none`), `doubt` (the reasons the album is in the doubtful list). One row per existing album, one key per row. |
+| `catalog/doubtful_pairs.csv` | Old-to-new pairs to decide by hand, the undecided first: both sides' artist, title, year and links, the reason, and what the builder did (`default`: `paired` or `unpaired`). |
+| `catalog/manifest.json` | The sheet export the catalog was built from (SHA-256, retrieval dates) and the counts. |
+
+The catalog only grows. An existing album that is not on the chart stays, with `on_chart` 0. It has no RYM id until its page is read, so its key is the placeholder `sp:<Spotify album id>`. An existing album keeps the feature table's title and artist, because the site's slugs are made from them. The build still takes its albums and descriptors from the feature table. The audio stage reads every row of `catalog/albums.csv`, the new ones included (see Matching): a plain `rmr_audio sync` matches and embeds them.
+
+```bash
+cd data-pipeline
+.venv-audio/bin/python -m rmr_catalog            # rewrites catalog/ and audio/keys.csv from the sheet export
+.venv-audio/bin/python -m rmr_catalog --check    # writes nothing; fails when the committed files are stale
+.venv/bin/python scripts/rekey_audio_store.py    # brings the store's keys to keys.csv; does nothing when they are current
+```
+
+The builder reads a CSV export of the sheet's "Top 10K Chart" tab (`experiments/audio_10k/cache/rym10k_sheet.csv` by default, not committed; `--sheet` for another), the feature table, `overrides.json` and the old scrape (for release years). It runs in the audio venv because it folds names with `rmr_audio/textnorm.py`. It uses no network.
+
+**The pairing rule** (`rmr_catalog/pairing.py`). The sheet's own `in_recmyrecord` flag is not used. A chart row is an existing album when:
+
+1. it links the album's Spotify id (the `s` of `overrides.json` where the URI is known to be another album) and the names do not contradict it: artist and title equal after folding; or both close and the release year equal; or title and year equal (a classical recording credited to the composer on one side, the performers on the other). An equal id with other names is not a match: the feature table gave "Silent Hill" the id of "Silent Hill 2".
+2. otherwise, folded artist, folded title and release year are all equal. Artists are compared under each spelling (the bracketed romanisation, the sheet's `artist_latin`, the corrected artist of `overrides.json`). When no row has the album's artist, a row with the same title and year whose credit shares a billed name is taken ("Bob Marley & The Wailers" and "The Wailers") and listed.
+
+Never a title alone across artists, never a title that extends another (a sequel, an edition, a live version), never a year that differs unless the Spotify id and the names agree. An album pairs with one row and a row with one album; when two candidates compete, or the Spotify id says one row and artist, title and year another, nothing is paired. The release year of an existing album comes from the scrape row with its artist and title; when two albums share those (two self-titled albums), the table's order, which is the scrape's, says which row it is.
+
+**Deciding a doubtful pair, or giving an album its RYM id.** Edit the album's row of `audio/keys.csv`: put the right `rym_id` (or its placeholder, to say it is not that chart row) and set `matched_by` to `manual`. Then run the builder, which keeps rows set by hand and rewrites the catalog and the doubtful list around them, and `scripts/rekey_audio_store.py`, which renames the album in the store. A placeholder that became a RYM id is found by itself; when one RYM id replaces another, give the script the previous file (`git show HEAD:data-pipeline/audio/keys.csv > /tmp/keys.csv`, then `--previous /tmp/keys.csv`). The script rewrites keys only: `tests/test_rekey.py` checks every album's store row (bit for bit) and audio block (exactly) against `tests/fixtures/audio_reference.npz`, recorded before the first rekey by `scripts/record_audio_reference.py`. Record that file again only after a change meant to move the blocks (a refit, a top-up, a corrected match).
 
 ## Commands
 
@@ -141,7 +188,7 @@ cd data-pipeline
 RMR_MAP_ROOT=/path/to/music_map .venv/bin/python -m pytest   # also compares sprites with the map's atlases
 ```
 
-`pytest` here runs `tests/` (the build). The audio stage's tests are in `tests_audio/` and run with the audio venv (see The audio stage); `tests/test_audio_store.py` passes in both.
+`pytest` here runs `tests/` (the build). The tests of the audio stage and of the catalog builder are in `tests_audio/` and run with the audio venv (see The audio stage); `tests/test_audio_store.py`, `tests/test_keys.py` and `tests/test_rekey.py` pass in both.
 
 The pinned requirements need Python 3.12.
 
@@ -172,7 +219,7 @@ Only the Spotify link, the cover, the sprites, the ambient colours and (for `a`)
 ## Known data problems (documented, not fixed)
 
 - 34 Spotify URIs in the feature table are assigned to two or three different albums (69 rows). The pipeline keeps the first row and drops the other 35.
-- Some Spotify URIs in the feature table point at a different album. The verified ones are corrected in `overrides.json` (see Overrides). The URI stays the album's key in the audio store.
+- Some Spotify URIs in the feature table point at a different album. The verified ones are corrected in `overrides.json` (see Overrides). The album's key in the audio store is its RYM id, not the URI (see Catalog and keys).
 - 101 albums have no audio and an imputed audio block (see Audio).
 - Audio matches are not all right: in the experiment's hand audit about 1% of confident matches and about a third of the 148 then flagged `ambiguous` in `matches.csv` (149 now) were the wrong album or edition.
 - 798 albums have fewer than eight clips (27 have one): their listing has fewer previews, or fewer tracks.
