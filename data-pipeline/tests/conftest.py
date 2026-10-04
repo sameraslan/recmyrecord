@@ -16,8 +16,9 @@ def deduped(table):
 @pytest.fixture(scope="session")
 def audio(deduped):
     from rmr_pipeline.audio import audio_block
+    from rmr_pipeline.audio_store import site_store
 
-    return audio_block(deduped[0])
+    return audio_block(deduped[0], site_store())  # the store the site build reads (audio_store.SITE_MODEL)
 
 
 @pytest.fixture(scope="session")

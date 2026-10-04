@@ -26,3 +26,14 @@ def test_hub_correction_is_off_by_default_and_takes_stops(capsys):
     with pytest.raises(SystemExit):
         parse_args(["--map-root", "map", "--hub-correction", "loud"])
     assert "unknown stop 'loud'" in capsys.readouterr().err
+
+
+def test_the_build_reads_the_store_of_the_site_model_which_is_effnet(monkeypatch):
+    """audio_store.SITE_MODEL is the switch; without --audio-dir the build reads that model's store."""
+    import rmr_pipeline.audio_store as store
+
+    assert store.SITE_MODEL == "effnet"
+    assert parse_args(["--map-root", "map"]).audio_dir == store.DEFAULT_AUDIO
+    assert parse_args(["--map-root", "map", "--audio-dir", "x"]).audio_dir.name == "x"
+    monkeypatch.setattr(store, "SITE_MODEL", "clap")  # what changing the constant does
+    assert parse_args(["--map-root", "map"]).audio_dir == store.DEFAULT_AUDIO / "clap"

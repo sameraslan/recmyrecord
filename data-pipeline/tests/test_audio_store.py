@@ -4,11 +4,11 @@ import json
 import numpy as np
 import pytest
 
-from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, MATCH_FIELDS, StoreError, append_shard, clean_leftovers,
-                                      duplicate_listings,
-                                      compact_store, drop_albums, init_store, leftovers, load_match_overrides,
-                                      load_matches, load_store, read_shard, set_clips_per_album, write_matches,
-                                      write_shard)
+from rmr_pipeline.audio_store import (DEFAULT_AUDIO, DIM, MATCH_FIELDS, SITE_MODEL, STORES, StoreError, append_shard,
+                                      clean_leftovers, duplicate_listings,
+                                      compact_store, drop_albums, init_store, keys_csv, leftovers, load_manifest,
+                                      load_match_overrides, load_matches, load_store, read_shard, replace_store,
+                                      set_clips_per_album, site_store, write_matches, write_shard)
 from rmr_pipeline.keys import load_keys
 
 
@@ -139,7 +139,7 @@ def test_bad_shard_is_rejected(tmp_path, arrays, message):
     path = tmp_path / "part-0001.npz"
     np.savez(path, **(good | arrays))
     with pytest.raises(StoreError, match=message):
-        read_shard(path)
+        read_shard(path, dim=DIM)  # as load_store reads it: with the width its manifest gives
 
 
 def test_missing_array_and_garbage_are_rejected(tmp_path):
@@ -266,3 +266,86 @@ def test_committed_store(deduped):
     assert not skipped & set(s.keys.tolist())  # an album kept out of matching has no embedding
     # Apple only has cover versions of these two game soundtracks: they stay without audio
     assert {"Album10376", "Album1894233"} <= skipped  # Ocarina of Time, Super Mario Galaxy
+
+
+# --- a store per model: the width comes from the manifest ---------------------------------------------------
+
+def _emb_of(n: int, dim: int, seed: int = 0) -> np.ndarray:
+    return np.random.default_rng(seed).normal(size=(n, dim)).astype(np.float16)
+
+
+def test_a_store_of_another_width_round_trips(tmp_path):
+    d = tmp_path / "audio" / "clap"
+    init_store(d, "laion/larger_clap_music_and_speech", {"per_album": 4}, dim=512)
+    emb = _emb_of(3, 512)
+    append_shard(d, ["a", "b", "c"], emb, [4, 3, 12], ["deezer", "itunes:jp", "youtube"], note="first")
+    s = load_store(d)
+    assert s.dim == 512 and s.manifest["dim"] == 512 and s.manifest["model"] == "laion/larger_clap_music_and_speech"
+    assert s.emb.shape == (3, 512) and np.array_equal(s.emb, emb) and s.source.tolist()[2] == "youtube"
+    assert read_shard(d / "embeddings" / "part-0001.npz").emb.shape == (3, 512)  # on its own: any width
+    drop_albums(d, ["b"], note="gone")  # a removal is as wide as the store
+    append_shard(d, ["e"], _emb_of(1, 512, seed=2), [4], ["bandcamp"], note="more")
+    compact_store(d, note="compacted")
+    s = load_store(d)
+    assert s.keys.tolist() == ["a", "c", "e"] and s.emb.shape == (3, 512) and s.dim == 512
+
+
+def test_the_manifests_width_is_enforced(tmp_path):
+    d = tmp_path / "clap"
+    init_store(d, "m", {"per_album": 4}, dim=512)
+    with pytest.raises(StoreError, match=r"shape \(1, 512\)"):  # EffNet vectors do not go into a CLAP store
+        append_shard(d, ["a"], _emb(1), [4], ["deezer"], note="wrong model")
+    append_shard(d, ["a"], _emb_of(1, 512), [4], ["deezer"], note="first")
+    write_shard(d / "embeddings" / "part-0001.npz", ["a"], _emb(1), [4], ["deezer"])  # a shard of another width in its place
+    with pytest.raises(StoreError, match=r"shape \(1, 512\)"):
+        load_store(d)
+    manifest = json.loads((d / "manifest.json").read_text())
+    for bad in (0, "512", 512.0, True):
+        (d / "manifest.json").write_text(json.dumps({**manifest, "dim": bad}))
+        with pytest.raises(StoreError, match="dim must be a positive integer"):
+            load_manifest(d)
+    del manifest["dim"]  # a manifest of before stores recorded the width is EffNet's
+    (d / "manifest.json").write_text(json.dumps(manifest))
+    assert write_shard(d / "embeddings" / "part-0001.npz", ["a"], _emb(1), [4], ["deezer"]) and load_store(d).dim == DIM
+
+
+def test_replace_store_rewrites_whole_and_leaves_an_identical_store_alone(tmp_path):
+    d = tmp_path / "clap"
+    emb = _emb_of(3, 16)
+    args = dict(model="m", dim=16, clips={"per_album": 4}, n_clips=[4, 4, 2], source=["deezer", "local", "itunes:us"])
+    first = replace_store(d, keys=["a", "b", "c"], emb=emb, note="first", created="2026-10-04", extra={"pooling": "x"}, **args)
+    assert first.name == "part-0001.npz" and load_store(d).manifest == {
+        "model": "m", "dim": 16, "clips": {"per_album": 4}, "pooling": "x",
+        "shards": [{"file": "part-0001.npz", "albums": 3, "created": "2026-10-04", "note": "first"}]}
+    before = {p.name: p.read_bytes() for p in d.rglob("*") if p.is_file()}
+    assert replace_store(d, keys=["a", "b", "c"], emb=emb, note="again", extra={"pooling": "x"}, **args) is None
+    assert {p.name: p.read_bytes() for p in d.rglob("*") if p.is_file()} == before  # not one byte
+    # a renamed album, one gone, another order: the store is exactly what it is given
+    second = replace_store(d, keys=["c", "Album1"], emb=emb[[2, 0]], note="rekeyed", extra={"pooling": "x"},
+                           **(args | {"n_clips": [2, 4], "source": ["itunes:us", "deezer"]}))
+    assert second.name == "part-0002.npz" and [p.name for p in (d / "embeddings").iterdir()] == ["part-0002.npz"]
+    s = load_store(d)
+    assert s.keys.tolist() == ["c", "Album1"] and np.array_equal(s.emb, emb[[2, 0]]) and not leftovers(d)
+    with pytest.raises(StoreError, match="shape"):
+        replace_store(d, keys=["a"], emb=_emb_of(1, 8), note="x", **(args | {"n_clips": [4], "source": ["deezer"]}))
+    with pytest.raises(StoreError, match="no clips"):
+        replace_store(d, keys=["a"], emb=np.zeros((1, 16), np.float16), note="x", **(args | {"n_clips": [0], "source": [""]}))
+    assert load_store(d).keys.tolist() == ["c", "Album1"]  # a refused write leaves the store as it was
+
+
+def test_the_site_reads_the_effnet_store_until_the_switch_is_changed():
+    """audio_store.SITE_MODEL is the one switch. The build's default store follows it (tests/test_build.py)."""
+    assert SITE_MODEL == "effnet" and site_store() == STORES["effnet"] == DEFAULT_AUDIO
+    assert STORES["clap"] == DEFAULT_AUDIO / "clap"
+    assert load_manifest(DEFAULT_AUDIO)["model"] == "discogs-effnet-bs1-1" and load_store(DEFAULT_AUDIO).dim == DIM == 1280
+
+
+def test_a_store_inside_another_shares_its_keys(tmp_path):
+    outer = tmp_path / "audio"
+    (outer / "clap").mkdir(parents=True)
+    assert keys_csv(outer) == outer / "keys.csv" and keys_csv(outer / "clap") == outer / "clap" / "keys.csv"  # none anywhere
+    (outer / "keys.csv").write_text("rym_id,legacy_uri,matched_by,doubt\n")
+    assert keys_csv(outer / "clap") == outer / "keys.csv" and keys_csv(outer) == outer / "keys.csv"
+    (outer / "clap" / "keys.csv").write_text("rym_id,legacy_uri,matched_by,doubt\n")
+    assert keys_csv(outer / "clap") == outer / "clap" / "keys.csv"
+    assert keys_csv(STORES["clap"]) == DEFAULT_AUDIO / "keys.csv"

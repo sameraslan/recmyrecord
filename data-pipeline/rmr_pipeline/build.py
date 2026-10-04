@@ -7,7 +7,7 @@ from pathlib import Path
 
 from .artists import clean_artist
 from .audio import audio_block
-from .audio_store import DEFAULT_AUDIO, StoreError
+from .audio_store import StoreError, site_store
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, STOPS
 from .images import load_album_sprites, write_sheets
@@ -31,8 +31,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--out", type=Path, default=None,
                    help="Output folder (default frontcreck/public/data). Required with --skip-images.")
     p.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES, help="Manual corrections keyed by slug.")
-    p.add_argument("--audio-dir", type=Path, default=DEFAULT_AUDIO,
-                   help="The audio store: embeddings, manifest and transform.npz (default data-pipeline/audio).")
+    p.add_argument("--audio-dir", type=Path, default=None,
+                   help="The audio store: embeddings, manifest and transform.npz (default: the store of "
+                        "audio_store.SITE_MODEL, data-pipeline/audio while that is effnet).")
     p.add_argument("--hub-correction", default="", metavar="STOPS",
                    help="Comma-separated stops whose recommendations rank by mutual proximity instead of the raw "
                         "distance (for example: balanced). Off by default.")
@@ -40,6 +41,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                    help="Fast run for development: keep fallback ambient colours and do not write sprite sheets. "
                         "Needs an explicit --out so the committed albums.json keeps its extracted colours.")
     args = p.parse_args(argv)
+    args.audio_dir = args.audio_dir or site_store()
     args.hub_correction = tuple(s for s in args.hub_correction.split(",") if s)
     unknown = [s for s in args.hub_correction if s not in STOPS]
     if unknown:

@@ -1,15 +1,21 @@
 """The committed audio store (data-pipeline/audio/): album-mean clip embeddings in append-only
 shards, a manifest, the match provenance and the hand corrections of matches.
 
+A store holds one model's embeddings. The manifest names the model and its width (`dim`); nothing here
+assumes a width. data-pipeline/audio/ is the Discogs-EffNet store (1,280 numbers per album) and
+data-pipeline/audio/clap/ the CLAP one (512; written by rmr_audio.modelstore), with its own embeddings/,
+manifest.json and transform.npz. A store inside another shares the outer one's keys.csv, matches.csv and
+match_overrides.json (keys_csv). STORES names them and SITE_MODEL says which one the site build reads.
+
 Written by the audio stage, read by the build. Only numpy and the standard library, and nothing
 newer than numpy 1.26, so the audio venv (Python 3.11, numpy<2) and the build venv share it.
 
   embeddings/part-NNNN.npz   keys (str: the album's RYM id, or its placeholder, see rmr_pipeline.keys),
-                             emb (float16, n x 1280), n_clips (int16), source (str);
+                             emb (float16, n x dim), n_clips (int16), source (str);
                              a key in a later shard supersedes earlier ones; an entry with n_clips 0
                              (all-zero emb, empty source) removes the album
-  manifest.json              model, clip policy (clips.per_album: what a plain sync gives an album),
-                             one entry per shard
+  manifest.json              model, dim (a manifest without it is EffNet's: 1280), clip policy
+                             (clips.per_album: what a plain sync gives an album), one entry per shard
   matches.csv                one row per album key (MATCH_FIELDS); an empty source = unmatched. After the
                              match itself: matched_by (how the listing was found), edition (what the edition
                              rule put in place of the linked listing), runtime_s, and the flags under_covered
@@ -33,7 +39,12 @@ from pathlib import Path
 import numpy as np
 
 DEFAULT_AUDIO = Path(__file__).resolve().parents[1] / "audio"
-DIM = 1280
+DIM = 1280  # Discogs-EffNet's width: what a manifest without `dim` means, and init_store's default
+# One store per embedding model. SITE_MODEL is the switch: the store rmr_pipeline.build (and
+# `rmr_pipeline.audio status`) read when no --audio-dir is given. It stays "effnet" until the owner signs
+# off on CLAP; changing it changes the site's data at the next build, nothing before that.
+STORES = {"effnet": DEFAULT_AUDIO, "clap": DEFAULT_AUDIO / "clap"}
+SITE_MODEL = "effnet"
 SHARD_RE = re.compile(r"^part-(\d{4})\.npz$")
 # deezer and itunes:<storefront> are store previews; local, youtube and bandcamp are 30-second windows of
 # full-length audio (the owner's files; rmr_audio.fulllength), which is never kept
@@ -53,7 +64,7 @@ class StoreError(Exception):
 @dataclass(frozen=True)
 class Shard:
     keys: np.ndarray  # (n,) unicode album keys (RYM ids, see rmr_pipeline.keys)
-    emb: np.ndarray  # (n, DIM) float16 album means of the per-clip embeddings
+    emb: np.ndarray  # (n, dim) float16 album means of the per-clip embeddings
     n_clips: np.ndarray  # (n,) int16 clips behind each mean
     source: np.ndarray  # (n,) unicode: deezer, itunes:<storefront>, local, youtube, bandcamp
 
@@ -72,13 +83,37 @@ class Store:
         index = {k: i for i, k in enumerate(self.keys.tolist())}
         return np.array([index.get(str(k), -1) for k in keys], dtype=np.int64)
 
+    @property
+    def dim(self) -> int:
+        return manifest_dim(self.manifest)
 
-def _check_shard(s: Shard, where: str) -> None:
+
+def site_store() -> Path:
+    """The store the site build reads: STORES[SITE_MODEL]."""
+    return STORES[SITE_MODEL]
+
+
+def manifest_dim(manifest: dict) -> int:
+    """The width of the store's embeddings. A manifest written before stores recorded it is EffNet's."""
+    return int(manifest.get("dim", DIM))
+
+
+def keys_csv(audio_dir: Path) -> Path:
+    """The keys.csv a store's albums are found through: its own, or, for a store kept inside another
+    (audio/clap/ inside audio/), the outer one's."""
+    own = Path(audio_dir) / "keys.csv"
+    outer = Path(audio_dir).parent / "keys.csv"
+    return own if own.exists() or not outer.exists() else outer
+
+
+def _check_shard(s: Shard, where: str, dim: int | None = None) -> None:
+    """`dim` None accepts any width (a shard read on its own does not know its store's)."""
     n = len(s.keys)
     if s.keys.ndim != 1 or s.keys.dtype.kind != "U" or s.source.dtype.kind != "U":
         raise StoreError(f"{where}: keys and source must be 1-d fixed-width unicode arrays")
-    if s.emb.dtype != np.float16 or s.emb.ndim != 2 or s.emb.shape != (n, DIM):
-        raise StoreError(f"{where}: emb must be float16 of shape ({n}, {DIM}), got {s.emb.dtype} {s.emb.shape}")
+    wide = dim if dim is not None else s.emb.shape[1] if s.emb.ndim == 2 and s.emb.shape[1] > 0 else "dim"
+    if s.emb.dtype != np.float16 or s.emb.ndim != 2 or s.emb.shape != (n, wide):
+        raise StoreError(f"{where}: emb must be float16 of shape ({n}, {wide}), got {s.emb.dtype} {s.emb.shape}")
     if s.n_clips.dtype != np.int16 or s.n_clips.shape != (n,) or s.source.shape != (n,):
         raise StoreError(f"{where}: n_clips (int16) and source must have one entry per key ({n})")
     keys = s.keys.tolist()
@@ -99,11 +134,12 @@ def _tmp(path: Path) -> Path:
     return path.with_name("." + path.name + ".tmp")
 
 
-def write_shard(path: Path, keys, emb: np.ndarray, n_clips, source) -> Shard:
-    """Validate and write one shard (compressed, no pickled objects), complete or not at all."""
+def write_shard(path: Path, keys, emb: np.ndarray, n_clips, source, dim: int | None = None) -> Shard:
+    """Validate and write one shard (compressed, no pickled objects), complete or not at all. `dim`:
+    the width the store expects (append_shard passes its manifest's)."""
     s = Shard(np.asarray(keys, dtype=np.str_), np.asarray(emb, dtype=np.float16),
               np.asarray(n_clips, dtype=np.int16), np.asarray(source, dtype=np.str_))
-    _check_shard(s, path.name)
+    _check_shard(s, path.name, dim)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(_tmp(path), "wb") as f:
         np.savez_compressed(f, keys=s.keys, emb=s.emb, n_clips=s.n_clips, source=s.source)
@@ -111,7 +147,9 @@ def write_shard(path: Path, keys, emb: np.ndarray, n_clips, source) -> Shard:
     return s
 
 
-def read_shard(path: Path) -> Shard:
+def read_shard(path: Path, dim: int | None = None) -> Shard:
+    """One shard, checked; with `dim`, also that its embeddings have that width (load_store passes its
+    manifest's)."""
     try:
         with np.load(path, allow_pickle=False) as z:
             missing = [a for a in SHARD_ARRAYS if a not in z.files]
@@ -122,7 +160,7 @@ def read_shard(path: Path) -> Shard:
         raise StoreError(f"missing shard {path}") from None
     except (ValueError, OSError, zipfile.BadZipFile) as e:
         raise StoreError(f"{path.name} is not a readable shard: {e}") from None
-    _check_shard(s, path.name)
+    _check_shard(s, path.name, dim)
     return s
 
 
@@ -137,6 +175,8 @@ def load_manifest(audio_dir: Path = DEFAULT_AUDIO) -> dict:
     if (not isinstance(m, dict) or not isinstance(m.get("model"), str) or not isinstance(m.get("clips"), dict)
             or not isinstance(m.get("shards"), list)):
         raise StoreError(f"{path}: needs model (str), clips (object) and shards (list)")
+    if "dim" in m and (type(m["dim"]) is not int or m["dim"] < 1):
+        raise StoreError(f"{path}: dim must be a positive integer (the width of the model's embeddings)")
     for e in m["shards"]:
         if (not isinstance(e, dict) or not isinstance(e.get("file"), str) or not SHARD_RE.match(e["file"])
                 or type(e.get("albums")) is not int):
@@ -147,10 +187,11 @@ def load_manifest(audio_dir: Path = DEFAULT_AUDIO) -> dict:
     return m
 
 
-def init_store(audio_dir: Path, model: str, clips: dict) -> None:
-    """An empty store: the manifest with no shards. `clips` is the clip policy (per_album, order)."""
+def init_store(audio_dir: Path, model: str, clips: dict, dim: int = DIM) -> None:
+    """An empty store: the manifest with no shards. `clips` is the clip policy (per_album, order), `dim`
+    the width of the model's embeddings."""
     audio_dir.mkdir(parents=True, exist_ok=True)
-    _write_json(audio_dir / "manifest.json", {"model": model, "dim": DIM, "clips": clips, "shards": []})
+    _write_json(audio_dir / "manifest.json", {"model": model, "dim": int(dim), "clips": clips, "shards": []})
 
 
 def append_shard(audio_dir: Path, keys, emb: np.ndarray, n_clips, source, note: str,
@@ -161,7 +202,7 @@ def append_shard(audio_dir: Path, keys, emb: np.ndarray, n_clips, source, note: 
     clean_leftovers(audio_dir)
     number = 1 + max((int(SHARD_RE.match(e["file"])[1]) for e in m["shards"]), default=0)
     path = audio_dir / "embeddings" / f"part-{number:04d}.npz"
-    s = write_shard(path, keys, emb, n_clips, source)
+    s = write_shard(path, keys, emb, n_clips, source, manifest_dim(m))
     m["shards"].append({"file": path.name, "albums": len(s.keys), "created": created or date.today().isoformat(),
                         "note": note})
     _write_json(audio_dir / "manifest.json", m)
@@ -195,7 +236,8 @@ def clean_leftovers(audio_dir: Path) -> list[str]:
 def drop_albums(audio_dir: Path, keys, note: str, created: str | None = None) -> Path:
     """Remove albums from the store: a new shard whose entries (n_clips 0) supersede their embeddings."""
     keys = [str(k) for k in keys]
-    return append_shard(audio_dir, keys, np.zeros((len(keys), DIM), np.float16), [0] * len(keys), [""] * len(keys),
+    dim = manifest_dim(load_manifest(audio_dir))
+    return append_shard(audio_dir, keys, np.zeros((len(keys), dim), np.float16), [0] * len(keys), [""] * len(keys),
                         note=note, created=created)
 
 
@@ -207,13 +249,47 @@ def compact_store(audio_dir: Path, note: str, created: str | None = None) -> Pat
     clean_leftovers(audio_dir)
     old = [e["file"] for e in store.manifest["shards"]]
     path = audio_dir / "embeddings" / f"part-{1 + int(SHARD_RE.match(old[-1])[1]):04d}.npz"
-    s = write_shard(path, store.keys, store.emb, store.n_clips, store.source)
+    s = write_shard(path, store.keys, store.emb, store.n_clips, store.source, store.dim)
     m = dict(store.manifest)
     m["shards"] = [{"file": path.name, "albums": len(s.keys), "created": created or date.today().isoformat(),
                     "note": note}]
     _write_json(audio_dir / "manifest.json", m)
     for name in old:
         (audio_dir / "embeddings" / name).unlink()
+    return path
+
+
+def replace_store(audio_dir: Path, model: str, dim: int, clips: dict, keys, emb: np.ndarray, n_clips, source,
+                  note: str, created: str | None = None, extra: dict | None = None) -> Path | None:
+    """Make the store exactly these albums, in this order, in one shard: for a store that is derived
+    whole from something else (the CLAP store, from the clip cache) and so is rewritten, not appended to.
+    A store that already holds exactly this (model, dim, clip policy, `extra`, and every array bit for
+    bit) is left alone and None is returned, so a rerun with nothing new changes no file. Otherwise the
+    new shard takes the next number, the manifest then lists only it, and the older shards are deleted:
+    a crash leaves the old store or the new one. `extra`: further manifest fields (how it was pooled)."""
+    audio_dir = Path(audio_dir)
+    head = {"model": model, "dim": int(dim), "clips": clips, **(extra or {})}
+    new = Shard(np.asarray(keys, dtype=np.str_), np.asarray(emb, dtype=np.float16),
+                np.asarray(n_clips, dtype=np.int16), np.asarray(source, dtype=np.str_))
+    _check_shard(new, "the new store", int(dim))
+    if (new.n_clips == 0).any():
+        raise StoreError("the new store: an album with no clips has no place in it")
+    old = []
+    if (audio_dir / "manifest.json").exists():
+        m = load_manifest(audio_dir)
+        old = [e["file"] for e in m["shards"]]
+        if old and {k: v for k, v in m.items() if k != "shards"} == head:
+            have = load_store(audio_dir)
+            if all(np.array_equal(getattr(have, a), getattr(new, a)) for a in SHARD_ARRAYS):
+                return None
+        clean_leftovers(audio_dir)
+    number = 1 + max((int(SHARD_RE.match(f)[1]) for f in old), default=0)
+    path = audio_dir / "embeddings" / f"part-{number:04d}.npz"
+    write_shard(path, new.keys, new.emb, new.n_clips, new.source, int(dim))
+    _write_json(audio_dir / "manifest.json", {**head, "shards": [
+        {"file": path.name, "albums": len(new.keys), "created": created or date.today().isoformat(), "note": note}]})
+    for name in old:
+        (audio_dir / "embeddings" / name).unlink(missing_ok=True)
     return path
 
 
@@ -227,7 +303,7 @@ def load_store(audio_dir: Path = DEFAULT_AUDIO) -> Store:
     folder = audio_dir / "embeddings"
     shards = []
     for e in m["shards"]:
-        s = read_shard(folder / e["file"])
+        s = read_shard(folder / e["file"], manifest_dim(m))
         if len(s.keys) != e["albums"]:
             raise StoreError(f"{e['file']}: {len(s.keys)} albums, the manifest says {e['albums']}")
         shards.append(s)

@@ -2,6 +2,10 @@
 
 CLI: python -m rmr_pipeline.audio status [--audio-dir DIR] [--table PATH]   summary and the imputed albums
      python -m rmr_pipeline.audio fit    [--audio-dir DIR] [--table PATH]   refit transform.npz (explicit, see README)
+     python -m rmr_pipeline.audio fit-catalog --audio-dir DIR [--catalog CSV] [--target-from DIR]
+                                         fit DIR/transform.npz on every catalog album the store has (the CLAP store)
+
+--audio-dir defaults to the store the site reads (audio_store.SITE_MODEL); `fit-catalog` has no default.
 
   block = ((e / |e|) - mean) @ components.T * scale      e: the album's mean clip embedding (store)
 
@@ -12,8 +16,11 @@ An album with no embedding gets the mean block of its IMPUTE_K nearest albums by
 distance among the albums that have one, rescaled to those neighbours' mean norm.
 The store knows an album by its key (a RYM id); the feature table knows it by its Spotify URI, and
 audio/keys.csv says which key that is (rmr_pipeline.keys).
+Nothing here depends on the embedding model: the width comes from the store's manifest, and the transform
+must have been fitted on that store's model.
 """
 import argparse
+import csv
 import os
 import sys
 import zipfile
@@ -25,8 +32,8 @@ import numpy as np
 import pandas as pd
 
 from .artists import clean_artist
-from .audio_store import DEFAULT_AUDIO, DIM, StoreError, load_store
-from .constants import DEFAULT_TABLE
+from .audio_store import DEFAULT_AUDIO, StoreError, keys_csv, load_store, site_store
+from .constants import DEFAULT_TABLE, PIPELINE_DIR
 from .keys import load_keys
 from .table import dedupe_table, descriptor_cols, load_table
 
@@ -35,13 +42,14 @@ BLOCK_DIMS = 64
 IMPUTE_K = 3
 IMPUTE_RESCALE = True
 TRANSFORM_ARRAYS = ("mean", "components", "scale", "target_total_variance", "fitted", "albums", "model")
+DEFAULT_CATALOG = PIPELINE_DIR / "catalog" / "albums.csv"
 
 
 @dataclass(frozen=True)
 class Transform:
     """The fitted map from an album's mean clip embedding to its audio block."""
-    mean: np.ndarray  # (DIM,) float32: mean of the fitted albums' unit vectors
-    components: np.ndarray  # (k, DIM) float32, orthonormal rows
+    mean: np.ndarray  # (dim,) float32: mean of the fitted albums' unit vectors
+    components: np.ndarray  # (k, dim) float32, orthonormal rows
     scale: float
     target_total_variance: float
     fitted: str  # ISO date of the fit
@@ -50,7 +58,7 @@ class Transform:
     keys: np.ndarray | None = None  # the fitted albums' keys in fit order; None in a file written before fits recorded them
 
     def apply(self, emb: np.ndarray) -> np.ndarray:
-        """(n, DIM) album-mean embeddings -> (n, k) float32 block; works for albums never fitted on."""
+        """(n, dim) album-mean embeddings -> (n, k) float32 block; works for albums never fitted on."""
         centred = unit(emb) - self.mean.astype(np.float64)
         return (centred @ self.components.T.astype(np.float64) * self.scale).astype(np.float32)
 
@@ -106,7 +114,9 @@ def save_transform(path: Path, t: Transform) -> None:
     os.replace(tmp, path)
 
 
-def load_transform(path: Path) -> Transform:
+def load_transform(path: Path, dim: int | None = None) -> Transform:
+    """The transform file, checked. `dim`: the width its store's embeddings have (audio_block passes it);
+    without it only the file's own consistency is checked."""
     try:
         with np.load(path, allow_pickle=False) as z:
             missing = [a for a in TRANSFORM_ARRAYS if a not in z.files]
@@ -118,10 +128,11 @@ def load_transform(path: Path) -> Transform:
         raise StoreError(f"missing {path}: the frozen transform is not there (see data-pipeline/README.md)") from None
     except (ValueError, OSError, zipfile.BadZipFile) as e:
         raise StoreError(f"{path.name} is not a readable transform: {e}") from None
-    if (t.mean.shape != (DIM,) or t.components.ndim != 2 or t.components.shape[1] != DIM
+    width = dim if dim is not None else t.mean.shape[0] if t.mean.ndim == 1 and len(t.mean) else "dim"
+    if (t.mean.shape != (width,) or t.components.ndim != 2 or t.components.shape[1] != width
             or not np.isfinite(t.mean).all() or not np.isfinite(t.components).all()
             or not (np.isfinite(t.scale) and t.scale > 0 and t.target_total_variance > 0)):
-        raise StoreError(f"{path.name}: needs mean ({DIM},), components (k, {DIM}), finite, and a positive scale "
+        raise StoreError(f"{path.name}: needs mean ({width},), components (k, {width}), finite, and a positive scale "
                          "and target_total_variance")
     if t.keys is not None and (t.keys.dtype.kind != "U" or t.keys.shape != (t.albums,)):
         raise StoreError(f"{path.name}: keys must be one string per fitted album ({t.albums})")
@@ -168,9 +179,10 @@ def impute(block: np.ndarray, desc: np.ndarray, has_audio: np.ndarray, k: int = 
 
 
 def album_keys(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> list[str]:
-    """The store key of each album of `sub`: the key audio/keys.csv gives its URI. Raises StoreError
-    when keys.csv is missing or does not have one of the albums."""
-    return load_keys(audio_dir / "keys.csv").keys_of(sub["URI"])
+    """The store key of each album of `sub`: the key audio/keys.csv gives its URI (a store kept inside
+    another, audio/clap/, uses the outer one's: audio_store.keys_csv). Raises StoreError when keys.csv is
+    missing or does not have one of the albums."""
+    return load_keys(keys_csv(audio_dir)).keys_of(sub["URI"])
 
 
 def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> AudioBlock:
@@ -178,7 +190,7 @@ def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> AudioBloc
     imputed where the store has no embedding. Raises StoreError when the store, the keys or the
     transform are missing or malformed."""
     store = load_store(audio_dir)
-    t = load_transform(audio_dir / "transform.npz")
+    t = load_transform(audio_dir / "transform.npz", store.dim)
     if t.model != store.manifest["model"]:
         raise StoreError(f"transform.npz was fitted on {t.model!r} embeddings, the store holds "
                          f"{store.manifest['model']!r}")
@@ -207,19 +219,77 @@ def refit(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> Transform:
     """A transform fitted on every album of `sub` that has an embedding, in catalog order, scaled
     to the target total variance of the transform it replaces."""
     store = load_store(audio_dir)
-    old = load_transform(audio_dir / "transform.npz")
+    old = load_transform(audio_dir / "transform.npz", store.dim)
     keys = np.asarray(album_keys(sub, audio_dir), dtype=np.str_)
     rows = store.rows(keys)
     return fit_transform(store.emb[rows[rows >= 0]], old.target_total_variance, store.manifest["model"],
                          k=len(old.components), keys=keys[rows >= 0])
 
 
+def catalog_keys(path: Path = DEFAULT_CATALOG) -> list[str]:
+    """The key (`rym_id`) of every row of the catalog table, in its order."""
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            return [r["rym_id"] for r in csv.DictReader(f)]
+    except FileNotFoundError:
+        raise StoreError(f"missing {path}: the catalog table is not there (python -m rmr_catalog)") from None
+
+
+def refit_catalog(audio_dir: Path, catalog: Path = DEFAULT_CATALOG, target_from: Path = DEFAULT_AUDIO,
+                  k: int = BLOCK_DIMS, fitted: str | None = None) -> Transform:
+    """A transform for the store at `audio_dir`, fitted on every album of the catalog table that the
+    store has an embedding for, in catalog order: the whole 10k catalog, not only the feature table's
+    albums as `refit`. It needs no transform to be there already. The target total variance is read from
+    the transform of `target_from` (the EffNet store's: the Spotify block's variance on the albums of the
+    first fit). It is kept whatever the model: `scale` brings any block to that total, and the slider
+    stops divide the descriptors by constants that were tuned against a block of that size, so a block of
+    another size would move the stops, not improve the audio."""
+    store = load_store(audio_dir)
+    target = load_transform(Path(target_from) / "transform.npz").target_total_variance
+    keys = np.asarray(catalog_keys(catalog), dtype=np.str_)
+    rows = store.rows(keys)
+    if (rows >= 0).sum() <= k:
+        raise StoreError(f"{audio_dir} has embeddings for {(rows >= 0).sum()} album(s) of {catalog}: too few to fit "
+                         f"{k} components")
+    return fit_transform(store.emb[rows[rows >= 0]], target, store.manifest["model"], k=k, fitted=fitted,
+                         keys=keys[rows >= 0])
+
+
+def _same_fit(a: Transform, b: Transform) -> bool:
+    """Everything but the date: a refit on the same embeddings is not written again."""
+    return (a.model == b.model and a.albums == b.albums and a.scale == b.scale
+            and a.target_total_variance == b.target_total_variance and np.array_equal(a.mean, b.mean)
+            and np.array_equal(a.components, b.components) and a.keys is not None and b.keys is not None
+            and np.array_equal(a.keys, b.keys))
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m rmr_pipeline.audio", description="The audio block of the site matrix.")
-    p.add_argument("cmd", choices=("status", "fit"))
-    p.add_argument("--audio-dir", type=Path, default=DEFAULT_AUDIO, help="The audio store (default data-pipeline/audio).")
+    p.add_argument("cmd", choices=("status", "fit", "fit-catalog"))
+    p.add_argument("--audio-dir", type=Path, default=None,
+                   help="The audio store (default: the one the site reads, audio_store.SITE_MODEL).")
     p.add_argument("--table", type=Path, default=DEFAULT_TABLE, help="Feature table pickle (read-only).")
+    p.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG, help="fit-catalog: the catalog table.")
+    p.add_argument("--target-from", type=Path, default=DEFAULT_AUDIO,
+                   help="fit-catalog: the store whose transform gives the target total variance (default data-pipeline/audio).")
     args = p.parse_args(argv)
+    if args.cmd == "fit-catalog":
+        if args.audio_dir is None:
+            p.error("fit-catalog needs an explicit --audio-dir (for example audio/clap): it writes that store's transform.npz")
+        try:
+            t = refit_catalog(args.audio_dir, args.catalog, args.target_from)
+            old = args.audio_dir / "transform.npz"
+            if old.exists() and _same_fit(load_transform(old), t):
+                print(f"{old} is already this fit ({t.albums} albums); nothing written")
+                return 0
+            save_transform(old, t)
+        except StoreError as e:
+            print(f"FAIL\n{e}", file=sys.stderr)
+            return 1
+        print(f"fitted on {t.albums} catalog albums ({t.model}), {len(t.components)} components, scale {t.scale:.4f}, "
+              f"target total variance {t.target_total_variance:.4f} -> {old}")
+        return 0
+    args.audio_dir = args.audio_dir or site_store()
     sub, _ = dedupe_table(load_table(args.table))
     try:
         if args.cmd == "fit":
