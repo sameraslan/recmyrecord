@@ -8,7 +8,7 @@
     route: { name: 'map' }, stop: 'balanced', t: 0.5, morph: null,
     focus: null, pool: null, hot: null, hover: null, pick: null,
     trail: [], framing: null, started: false, instant: false,
-    proto: { chrome: 'trifid', gas: 'baked', data: 'real', hud: false, hulls: false, names: null }, force: {},
+    proto: { chrome: 'glass', gas: 'baked', data: 'real', hud: false, hulls: false, names: null }, force: {},
     amt: { pool: 0 },   // animated 0..1 amounts
   });
   const stats = (window.__rmr = { frames: 0, lastFrameMs: 0, worstFrameMs: 0, gasMs: 0 });
@@ -28,7 +28,7 @@
     const nm = q.get('names'), names = nm === 'all' ? 'all' : /^\d+$/.test(nm || '') ? Number(nm) : null;   // names=<number>|all: how many region names show (default cfg.NAMES_MAX)
     return {
       route, stop: stopOf(route.name === 'album' ? q.get('by') : q.get('stop')),
-      proto: { chrome: ['site', 'ink', 'starlight', 'glass', 'plum'].includes(q.get('chrome')) ? q.get('chrome') : 'trifid', gas: q.get('gas') === 'live' ? 'live' : 'baked', data: q.get('data') === '10k' ? '10k' : 'real', hud: q.get('hud') === '1', hulls: q.get('hulls') === '1', regions: q.get('regions') === 'default' ? 'default' : 'fine', names, look: q.get('look'), scheme: q.get('scheme'), palette: q.get('palette'), font: q.get('font') },
+      proto: { chrome: ['site', 'ink', 'starlight', 'trifid', 'plum'].includes(q.get('chrome')) ? q.get('chrome') : 'glass', gas: q.get('gas') === 'live' ? 'live' : 'baked', data: q.get('data') === '10k' ? '10k' : 'real', hud: q.get('hud') === '1', hulls: q.get('hulls') === '1', regions: q.get('regions') === 'default' ? 'default' : 'fine', names, look: q.get('look'), scheme: q.get('scheme'), palette: q.get('palette'), font: q.get('font') },
       force: { hover: q.get('hover'), cam: q.get('cam'), fit: q.get('fit'), q: q.get('q'), bench: q.get('bench'), check: q.get('check'), idle: q.get('idle'), then: q.get('then'), morph: q.get('morph'), from: q.get('from'), scroll: q.get('scroll'), stats: q.get('stats'), plate: q.get('plate'), sheet: q.get('sheet') },
     };
   }
@@ -39,7 +39,7 @@
     else if (r.name !== 'map') { path = r.name === 'home' ? '/' : r.name === 'about' ? '/about' : '/404'; if (stop !== 'balanced') q.set('stop', stop); }   // pages keep the stop too
     else { if (r.pick) q.set('pick', r.pick); if (stop !== 'balanced') q.set('stop', stop); }
     if (r.name === 'map' && S.camHash && !r.pick && S.route.name === 'map' && S.framing == null) q.set('cam', S.camHash);
-    const p = S.proto; if (p.chrome !== 'trifid') q.set('chrome', p.chrome); if (p.gas === 'live') q.set('gas', 'live'); if (p.data === '10k') q.set('data', '10k'); if (p.hud) q.set('hud', '1'); if (p.hulls) q.set('hulls', '1'); if (p.regions === 'default') q.set('regions', 'default'); if (p.names != null) q.set('names', String(p.names));
+    const p = S.proto; if (p.chrome !== 'glass') q.set('chrome', p.chrome); if (p.gas === 'live') q.set('gas', 'live'); if (p.data === '10k') q.set('data', '10k'); if (p.hud) q.set('hud', '1'); if (p.hulls) q.set('hulls', '1'); if (p.regions === 'default') q.set('regions', 'default'); if (p.names != null) q.set('names', String(p.names));
     for (const k of LOOK_KEYS) if (p[k]) q.set(k, p[k]);
     const s = q.toString(); return '#' + path + (s ? '?' + s.replace(/%2C/g, ',') : '');
   };

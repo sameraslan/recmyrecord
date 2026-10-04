@@ -52,7 +52,7 @@
     // the most region names shown at once: at Overview and Whole map on desktop (names=<number> in the hash overrides it),
     // on a phone, beside an album, and with names=all (the earlier behaviour)
     NAME_FONT: 'tenor',   // lettering of the region names (src/labels.js FONTS); font=<id> in the hash overrides it
-    NAMES_MAX: 9, NAMES_MAX_PHONE: 4, NAMES_MAX_ALBUM: 8, NAMES_ALL_CAP: 14,
+    NAMES_MAX: 17, NAMES_MAX_PHONE: 4, NAMES_MAX_ALBUM: 8, NAMES_ALL_CAP: 14,
     DPR_MAX: 2,
   };
 

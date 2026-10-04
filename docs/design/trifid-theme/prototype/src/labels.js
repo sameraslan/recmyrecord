@@ -66,7 +66,7 @@
   function fontSize(r) {
     const k = F.size;
     if (r.level === 0) return k * (21 + 6 * Math.min(1, Math.sqrt(r.n / 1500)));
-    return k * (r.strong ? 17 + 7 * Math.min(1, Math.sqrt(r.n / 346)) : 14 + 2 * Math.min(1, Math.sqrt(r.n / 346)));
+    return k * (r.strong ? 17 + 7 * Math.min(1, Math.sqrt(r.n / 346)) : 15 + 3 * Math.min(1, Math.sqrt(r.n / 346)));
   }
   /** Ink of a name: near white, with a breath of the gas colour under it. */
   function inkOf(r) {
@@ -120,7 +120,7 @@
       for (const r of b.list) if (!(a.byId.has(r.id) && a.byId.get(r.id).word === r.word)) cands.push({ r, wx: r.wx, wy: r.wy, a: U.clamp((k - 0.6) / 0.4, 0, 1) });
     } else cands = D.regions[st.stop].list.map((r) => ({ r, wx: r.wx, wy: r.wy, a: 1 }));
     // which regions may be named: strong ones, and on Sonic and Mood only those with an approved place name
-    const named = (r) => (all ? !st.phone || r.strong || r.level === 0 : r.strong && (r.stop === 'balanced' || !!r.name));
+    const named = (r) => (all ? !st.phone || r.strong || r.level === 0 : (r.stop === 'balanced' || !!r.name) && r.level !== 0);   // every named region, strong and fair; never a bare data word
     cands = cands.filter((c) => c.a > 0 && named(c.r));
     // hierarchy: broad areas alone at whole-map zoom, regions from Overview in; without areas, the top regions
     const hasAreas = cands.some((c) => c.r.level === 0), bandA = cp < C.BAND_A;
