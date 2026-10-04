@@ -10,7 +10,7 @@ for i in $(seq 1 300); do mkdir "$LOCK" 2>/dev/null && break; sleep 2; done
 W="${3:-1600}"; H="${4:-1000}"; T="${5:-9000}"; D="$(mktemp -d)"
 BIN="/Users/saslan.19/Library/Caches/ms-playwright/chromium_headless_shell-1243/chrome-headless-shell-mac-arm64/chrome-headless-shell"
 FLAGS=(--disable-gpu --enable-unsafe-swiftshader --use-angle=swiftshader --hide-scrollbars --allow-file-access-from-files
-  --force-device-scale-factor=1 --window-size="$W,$H" --user-data-dir="$D")
+  --force-device-scale-factor=${RMR_DPR:-1} --window-size="$W,$H" --user-data-dir="$D")
 [ "$T" != "0" ] && FLAGS+=(--virtual-time-budget="$T")
 URL="file://$PAGE$1"
 if [ "$2" = "--dom" ]; then
