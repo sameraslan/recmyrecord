@@ -52,6 +52,7 @@ Prototype switches, on any route (the first seven persist while you navigate):
 | `data=10k` | Synthetic 10,000 points (Balanced only) |
 | `regions=default` | With `data=10k`: the default region set instead of the finer one |
 | `names=<number>\|all` | How many region names show at once. Default `NAMES_MAX` in `src/config.js` (9). `all` is the earlier behaviour: every region that fits, strong and fair, data words included. `0` shows none |
+| `toggle=a\|b\|c` | A names on/off control (default none): `a` a fourth button on the zoom stack, `b` the same button 8 px above it, `c` the word NAMES left of the stack. A click flips `names=0`; options in `../options/toggle-*.jpg` |
 | `hud=1` | Frame-time readout |
 | `hulls=1` | Region hulls (debug) |
 | `cam=x,y,ppw` | Explicit camera: world centre and CSS px per world unit |

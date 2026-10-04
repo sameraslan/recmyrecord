@@ -28,7 +28,7 @@
     const nm = q.get('names'), names = nm === 'all' ? 'all' : /^\d+$/.test(nm || '') ? Number(nm) : null;   // names=<number>|all: how many region names show (default cfg.NAMES_MAX)
     return {
       route, stop: stopOf(route.name === 'album' ? q.get('by') : q.get('stop')),
-      proto: { chrome: ['site', 'ink', 'starlight', 'trifid', 'plum'].includes(q.get('chrome')) ? q.get('chrome') : 'glass', gas: q.get('gas') === 'live' ? 'live' : 'baked', data: q.get('data') === '10k' ? '10k' : 'real', hud: q.get('hud') === '1', hulls: q.get('hulls') === '1', regions: q.get('regions') === 'default' ? 'default' : 'fine', names, look: q.get('look'), scheme: q.get('scheme'), palette: q.get('palette'), font: q.get('font') },
+      proto: { chrome: ['site', 'ink', 'starlight', 'trifid', 'plum'].includes(q.get('chrome')) ? q.get('chrome') : 'glass', gas: q.get('gas') === 'live' ? 'live' : 'baked', data: q.get('data') === '10k' ? '10k' : 'real', hud: q.get('hud') === '1', hulls: q.get('hulls') === '1', regions: q.get('regions') === 'default' ? 'default' : 'fine', names, toggle: ['a', 'b', 'c'].includes(q.get('toggle')) ? q.get('toggle') : null, look: q.get('look'), scheme: q.get('scheme'), palette: q.get('palette'), font: q.get('font') },
       force: { hover: q.get('hover'), cam: q.get('cam'), fit: q.get('fit'), q: q.get('q'), bench: q.get('bench'), check: q.get('check'), idle: q.get('idle'), then: q.get('then'), morph: q.get('morph'), from: q.get('from'), scroll: q.get('scroll'), stats: q.get('stats'), plate: q.get('plate'), sheet: q.get('sheet') },
     };
   }
@@ -39,7 +39,7 @@
     else if (r.name !== 'map') { path = r.name === 'home' ? '/' : r.name === 'about' ? '/about' : '/404'; if (stop !== 'balanced') q.set('stop', stop); }   // pages keep the stop too
     else { if (r.pick) q.set('pick', r.pick); if (stop !== 'balanced') q.set('stop', stop); }
     if (r.name === 'map' && S.camHash && !r.pick && S.route.name === 'map' && S.framing == null) q.set('cam', S.camHash);
-    const p = S.proto; if (p.chrome !== 'glass') q.set('chrome', p.chrome); if (p.gas === 'live') q.set('gas', 'live'); if (p.data === '10k') q.set('data', '10k'); if (p.hud) q.set('hud', '1'); if (p.hulls) q.set('hulls', '1'); if (p.regions === 'default') q.set('regions', 'default'); if (p.names != null) q.set('names', String(p.names));
+    const p = S.proto; if (p.chrome !== 'glass') q.set('chrome', p.chrome); if (p.gas === 'live') q.set('gas', 'live'); if (p.data === '10k') q.set('data', '10k'); if (p.hud) q.set('hud', '1'); if (p.hulls) q.set('hulls', '1'); if (p.regions === 'default') q.set('regions', 'default'); if (p.names != null) q.set('names', String(p.names)); if (p.toggle) q.set('toggle', p.toggle);
     for (const k of LOOK_KEYS) if (p[k]) q.set(k, p[k]);
     const s = q.toString(); return '#' + path + (s ? '?' + s.replace(/%2C/g, ',') : '');
   };
@@ -129,7 +129,7 @@
     $('ui').style.left = (album ? panelW() : 0) + 'px';
     $('explore-here').hidden = !album; $('ui').hidden = page;
     document.documentElement.dataset.route = S.route.name; RMR.Pages.show(); RMR.Pages.fab();
-    RMR.UI.panel(); RMR.UI.card(); RMR.UI.slider(); RMR.UI.plate(); syncProto();
+    RMR.UI.panel(); RMR.UI.card(); RMR.UI.slider(); RMR.UI.plate(); syncProto(); namesToggle();
     if (album) RMR.Pages.watchStrip();
     measure();
     // the camera, now that the free rectangle is known
@@ -300,6 +300,8 @@
     const f = Cam.free || { top: 0, bottom: modeH + 12 };
     const B = S.narrow ? [[0, view.H - f.bottom - 10, view.W, view.H], [view.W - 64, view.H - f.bottom - 150, view.W, view.H - f.bottom], [0, view.hdr, 230, view.hdr + f.top]]
       : [[L + 12, view.hdr + 12, L + 272, view.hdr + 28 + modeH], [view.W - 68, view.H - 148, view.W, view.H]];
+    if (S.proto.toggle && S.proto.toggle !== 'c') B[1][1] -= S.proto.toggle === 'a' ? 46 : 54;   // toggle=a|b: the zoom stack is one button taller
+    if (S.proto.toggle === 'c') B.push([B[1][0] - 96, B[1][3] - 64, B[1][2], B[1][3]]);   // toggle=c: the word left of the stack
     if (page) B.length = 0;
     if (fade <= 0 && !cardBox && !page && !S.narrow) B.push([L, view.H - 46, L + Math.min(S.focus ? 580 : 380, view.W - L - 80), view.H]);   // the hint line (desktop)
     if (cardBox && !S.narrow) B.push([L + 12, view.H - 28 - cardBox[1], L + 28 + cardBox[0], view.H]);   // the Explore card
@@ -441,6 +443,24 @@
     const p = S.proto;
     document.querySelectorAll('#proto input').forEach((i) => { if (i.type === 'radio') i.checked = (i.name === 'data' ? (p.data === '10k' ? '10k' : 'real') : p[i.name]) === i.value; else i.checked = !!p[i.name]; });
     $('hud').hidden = !p.hud; $('proto-note').textContent = S.synthMissing ? T.stressMissing : '';
+  }
+  /** toggle=a|b|c: a quiet control that turns the region names off and on (names=0 in the hash is off). a: a fourth button
+   * on the zoom stack; b: the same button set 8 px above it; c: the word NAMES, in the names' lettering, left of the stack. */
+  function namesToggle() {
+    const kind = S.proto.toggle, on = S.proto.names !== 0; let b = $('names-toggle');
+    if (kind) document.documentElement.dataset.toggle = kind; else delete document.documentElement.dataset.toggle;
+    if (!kind) { if (b) b.remove(); return; }
+    if (!b) {
+      b = document.createElement('button'); b.type = 'button'; b.id = 'names-toggle'; b.setAttribute('aria-label', 'Region names');
+      b.addEventListener('click', () => { S.proto.names = S.proto.names === 0 ? null : 0; RMR.go(S.route, true); });
+      document.querySelector('.map-zoom').prepend(b);
+    }
+    if (b.dataset.kind !== kind) {
+      b.dataset.kind = kind;
+      b.innerHTML = kind === 'c' ? '<span>Names</span>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 18 7.5 6l5 12M4.4 13.6h6.2"/><circle cx="17.6" cy="14.6" r="3.2"/><path d="M20.8 11.2V18"/><path class="tg-slash" d="M3.5 21 20.5 3"/></svg>';
+    }
+    b.setAttribute('aria-pressed', String(on));
   }
   function bindProto() {
     $('proto-tab').addEventListener('click', () => { const b = $('proto-body'); b.hidden = !b.hidden; $('proto-tab').setAttribute('aria-expanded', String(!b.hidden)); });
