@@ -101,3 +101,29 @@ All three together: about 4.5e-8. Over 50 other windows of 400 seeds (1 to 20,00
 7. **Note, no change asked. A change of album count keeps the seed but deals again, so every album's class changes.** `stars.ts:74-78`. That differs from "keeps its class through ... a reloaded catalogue" only if the catalogue size changes mid-session, which does not happen within one deploy. Both callers (Task 2, Task 8) pass `data.n`, so they stay consistent with each other. Fine as is. If ever wanted, the docstring could say "for the same number of albums".
 
 None of findings 1 to 6 blocks pushing this commit. Findings 2 to 4 are worth folding in before Task 2 lands, since Task 2's review leans on Task 1's tests for Review Focus item 6.
+
+## Re-check after fix round 1 (commit `149bd5c2`)
+
+**Verdict: APPROVED.** All six findings are addressed. The plan's Task 1 code blocks now equal the committed `stars.ts` and `stars.test.ts` byte for byte (extracted and diffed). Note 7 is now covered by the docstring wording "a reloaded catalogue of the same size".
+
+| Check | Result |
+|---|---|
+| `stars.test.ts` x5 | 5/5 passed, 28 tests each (24 + 4 new, as the plan's Step 5 now says) |
+| `npm run typecheck`, `npm run lint` | clean |
+| Mutation: class 2 dealt by index, classes 0 and 1 still fair (scratch edit, reverted) | 3 tests fail, including the new order test and the golden test (before the fix, all tests passed on this mutation) |
+| Golden values recomputed independently: `RMR.rng` read live from `prototype/src/config.js`, the deal re-typed from `data.js` L70-75 | `333333232232332233123322`, FNV-1a 3530857145 (first 200) and 4280700235 (all), as in the test. `proto-golden.cjs` is a verbatim copy of `data.js` L70-75 plus `RMR.rng`, with `RMR.param` stubbed to 20261004 |
+
+Findings:
+1. **Addressed.** `pageStarClasses` returns a throwaway deal without a `window` and keeps nothing (`stars.ts`, first line of the function). It is tested with `vi.stubGlobal('window', undefined)`, which is restored in a `finally`. The client path afterwards still deals and caches.
+2. **Addressed.** There is a new test for the first 1,510 albums in classes 0 to 2, and for the mean index of class 1 and class 2 separately. The seeds are still fixed at 1 to 400, so the test is deterministic. If the seeds were ever fresh, a fair deal would fail as follows:
+   - top37: fair mean 223,484, sd 297.9. The bounds are z -5.99 / +6.09, so P = 1.1e-9 / 5.5e-10. The claim of "6 sd" holds.
+   - Mean index of class 1: sd 2.93, bound 20 (6.8 sd), P = 9e-12.
+   - Mean index of class 2: sd 1.52, bound 10 (6.6 sd), P = 4e-11.
+3. **Addressed.** The comment on `length` now says what it does not see. The self-equality check is replaced by "the `() => 0` and `() => 0.5` sources give different deals", which fails for a function that ignores `random`.
+4. **Addressed.** A golden test pins seed 20261004: the counts, the first 24 classes and two FNV-1a fingerprints. The values really come from the prototype (verified above).
+5. **Addressed.** `StarClass = 0 | 1 | 2 | 3` now types `starCoreCssPx`, pinned by `expectTypeOf`. The plan's Interfaces list `StarClass`.
+   - Task 8's driver casts `classes[pick.index] as StarClass`. The cast is correct: the array comes from `pageStarClasses`, which only ever writes 0 to 3.
+   - That driver line is the only `starCoreCssPx` call outside the tests in any plan. `glintFor` still takes `cls: number`, which accepts a `StarClass`.
+6. **Addressed.** The seed choice is now an if/else chain, with `freshSeed()` factored out. Its behaviour is unchanged.
+
+Nothing new found.
