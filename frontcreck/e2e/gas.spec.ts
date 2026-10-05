@@ -955,7 +955,7 @@ test('a drag or a wheel zoom held longer than the longest wait gets no upload un
 
 test('a drag that begins between two strips of a sharper image, or inside one, gets no further strip', async ({ page }, info) => {
   test.skip(isPhone(info), 'the sharper image is for desktops');
-  test.setTimeout(90_000);
+  test.setTimeout(240_000); // two loads; a slow software renderer needs most of a minute for each
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(() => {
@@ -1001,8 +1001,21 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
     const drag = await stopGesture(page, info, `drag begun at a ${when}`);
     expect(drag.uploadsAtEnd - drag.uploadsAtStart, `strips inside the drag (begun at a ${when}). ${told(drag)}`).toBe(0);
     expect(await page.evaluate(() => window.__rmr!.gasSharp), 'the image is still on its way').toBe('loading');
-    // Left alone, the rest goes in and the image is used.
-    await expect.poll(() => page.evaluate(() => window.__rmr!.gasSharp), { timeout: 30_000 }).toBe('balanced');
+    // Left alone, the rest goes in and the image is used. How long that takes depends on the renderer (about 2 s
+    // here, with the main thread throttled 20 times as well), so the wait is on progress and not on a fixed time:
+    // it fails when no further strip has gone in for 20 s, and says what the map was doing meanwhile (frames still
+    // being drawn mean the map never became quiet; none mean a strip is stuck behind its idle slot, fence or cut).
+    const seen: string[] = [];
+    let last = { strips: -1, at: Date.now() };
+    for (;;) {
+      const st = await page.evaluate(() => ({ sharp: window.__rmr!.gasSharp, strips: (window as unknown as GestureWindow).__gesture.strips, frames: window.__rmr!.frames ?? 0, animating: window.__rmr!.map!.isAnimating() }));
+      seen.push(`+${Date.now() - last.at} ms since the last strip: ${JSON.stringify(st)}`);
+      if (st.sharp === 'balanced') break;
+      if (st.strips !== last.strips) last = { strips: st.strips, at: Date.now() };
+      expect(st.sharp, `the sharper image while its strips go in (begun at a ${when}): ${seen.slice(-8).join(' | ')}`).toBe('loading');
+      expect(Date.now() - last.at, `no further strip for 20 s after the drag (begun at a ${when}): ${seen.slice(-8).join(' | ')}`).toBeLessThan(20_000);
+      await page.waitForTimeout(250);
+    }
     expect((await gestureCounts(page)).strips).toBe(16);
     await waitForMapQuiet(page, 400);
     expectGapsOfControl(drag, await controlGesture(page, info, 'drag', 1200));
