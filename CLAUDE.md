@@ -23,7 +23,7 @@ The full cycle (starting, running, writing up, merging, referencing) is in `expe
 |---|---|---|---|
 | Descriptor model | Can we predict an album's RYM descriptors for new albums without scraping? | `experiments/descriptor_model/REPORT.md` | on `main` |
 | Preview features | Can preview-clip embeddings replace Spotify audio features? | `experiments/preview_features/REPORT.md` | on `main` |
-| Genre crossing | Can the sonic slider stop cross genres? | `experiments/preview_features/REPORT-genre-crossing.md` | branch `experiment/genre-crossing` (open PR #26, stacked on #25) |
+| Genre crossing | Can the sonic slider stop cross genres? | `experiments/preview_features/REPORT-genre-crossing.md` | scripts on `main`; the newer report and the `common.py` change are on branch `experiment/genre-crossing` (open PR #26, stacked on #25), see `experiments/preview_features/NOTE-genre-crossing-code.md` |
 
 To read code or newer notes that are only on a branch:
 
