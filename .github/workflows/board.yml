@@ -1,0 +1,84 @@
+# Moves cards on the recmyrecord Project board with .claude/skills/board/board.sh.
+#
+# Cloud sessions can only reach this repository, not the account's Project, so they start this workflow
+# instead of running board.sh themselves (see .claude/skills/board/SKILL.md). It also moves a PR's linked
+# issue (`Closes #n`) to In progress when a draft PR opens and to Final review when the PR is ready.
+#
+# Needs the repo secret BOARD_TOKEN: a classic personal access token with the `project` scope.
+name: board
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: board.sh command
+        type: choice
+        options: [list, move, add, remove]
+        default: list
+      number:
+        description: Issue or PR number (not used by list)
+        type: string
+        required: false
+      status:
+        description: Column (list filters by it; move and add set it; remove ignores it)
+        type: choice
+        options: ['', Backlog, Todo, In progress, Needs answer, Final review]
+        default: ''
+  pull_request:
+    types: [opened, reopened, ready_for_review, converted_to_draft]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: board
+  cancel-in-progress: false
+
+jobs:
+  manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run board.sh
+        env:
+          GH_TOKEN: ${{ secrets.BOARD_TOKEN }}
+          COMMAND: ${{ inputs.command }}
+          NUMBER: ${{ inputs.number }}
+          STATUS: ${{ inputs.status }}
+        run: |
+          set -euo pipefail
+          [ -n "$GH_TOKEN" ] || { echo "::error::The BOARD_TOKEN secret is not set."; exit 1; }
+          if [ "$COMMAND" != list ]; then
+            [[ "$NUMBER" =~ ^[0-9]+$ ]] || { echo "::error::number must be an issue or PR number"; exit 1; }
+          fi
+          case "$COMMAND" in
+            list)   args=(list "$STATUS") ;;
+            add)    args=(add "$NUMBER" "${STATUS:-Backlog}") ;;
+            move)   [ -n "$STATUS" ] || { echo "::error::move needs a status"; exit 1; }
+                    args=(move "$NUMBER" "$STATUS") ;;
+            remove) args=(remove "$NUMBER") ;;
+          esac
+          out="$(.claude/skills/board/board.sh "${args[@]}")"
+          echo "$out"
+          { echo '```'; echo "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+  pull-request:
+    # Fork PRs get no secrets, so only PRs from branches of this repository.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Move the linked issues
+        env:
+          GH_TOKEN: ${{ secrets.BOARD_TOKEN }}
+          BODY: ${{ github.event.pull_request.body }}
+          DRAFT: ${{ github.event.pull_request.draft }}
+        run: |
+          set -euo pipefail
+          [ -n "$GH_TOKEN" ] || { echo "::notice::BOARD_TOKEN is not set; skipping."; exit 0; }
+          status="Final review"
+          [ "$DRAFT" = true ] && status="In progress"
+          nums="$(grep -oiE '\b(close[sd]?|fix(e[sd])?|resolve[sd]?) +#[0-9]+' <<<"$BODY" | grep -oE '[0-9]+' | sort -u || true)"
+          [ -n "$nums" ] || { echo "No linked issue (Closes #n) in the PR description."; exit 0; }
+          for n in $nums; do .claude/skills/board/board.sh move "$n" "$status"; done
