@@ -533,6 +533,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         const blocked = gasSharpBlocked({
           maxTextureSize: gl.capabilities.maxTextureSize,
           coarsePointer: typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches,
+          maxTouchPoints: navigator.maxTouchPoints ?? 0,
           // "force" (review captures and tests on a software renderer) skips only the renderer's name
           renderer: override === "force" ? "" : String(ctx.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : ctx.RENDERER)),
           deviceMemory: nav.deviceMemory,

@@ -212,17 +212,51 @@ export function gasUploadWait(now: number, lastInput: number, lastFrame: number,
   return Math.max(0, Math.max(lastInput, lastFrame) + GAS_UPLOAD_QUIET_MS - now);
 }
 
-/** Why the sharper image may not be used on this device, or null when it may. It is for desktops with a real
- * GPU: a phone or tablet keeps the first image (fewer CSS px per texel there, and less memory), and so does a
- * software renderer (it would pay for the upload and show no more), a GPU whose textures are too small, a
- * visitor who asked to save data and a device that reports little memory. */
-export function gasSharpBlocked(d: { maxTextureSize: number; coarsePointer: boolean; renderer: string; deviceMemory?: number; saveData?: boolean }): string | null {
+/** A device that reports less memory than this (GB) keeps the first image. Chrome reports at most 8. */
+export const GAS_SHARP_MIN_MEMORY_GB = 8;
+
+/** What gasSharpBlocked is told about the device. */
+export interface GasSharpDevice {
+  /** The GPU's largest texture side. */
+  maxTextureSize: number;
+  /** `(pointer: coarse)`: the primary pointer is a finger. */
+  coarsePointer: boolean;
+  /** navigator.maxTouchPoints: 0 on a device with no touch screen. */
+  maxTouchPoints: number;
+  /** The renderer's name (WEBGL_debug_renderer_info), or "" when it is not known or not to be judged. */
+  renderer: string;
+  /** navigator.deviceMemory in GB, where the browser reports it (Chrome does; Safari and Firefox do not). */
+  deviceMemory?: number;
+  /** navigator.connection.saveData. */
+  saveData?: boolean;
+}
+
+/**
+ * Why the sharper image may not be used on this device, or null when it may. It is for ordinary desktops and
+ * laptops and nothing else. The rule, all of it:
+ *   1. the GPU takes textures of GAS_SHARP_TEXTURE_PX (4096) px;
+ *   2. the primary pointer is fine (a mouse or a trackpad, not a finger) AND the device has no touch screen at
+ *      all (maxTouchPoints is 0), so a phone or a tablet with a mouse or a keyboard cover attached, which reports
+ *      a fine pointer, is still left out. A laptop with a touch screen is left out with them: it cannot be told
+ *      from a tablet with a keyboard, and the cost of guessing wrong is a phone's memory budget;
+ *   3. the renderer is a real GPU, not a software one (which would pay for the upload and show no more);
+ *   4. where the browser reports the device's memory, it is at least GAS_SHARP_MIN_MEMORY_GB (8). A browser that
+ *      does not report it passes this test;
+ *   5. the visitor has not asked to save data.
+ * Everything else keeps the first image: fewer CSS px per texel on a phone, and a third of the GPU memory.
+ */
+export function gasSharpBlocked(d: GasSharpDevice): string | null {
   if (d.maxTextureSize < GAS_SHARP_TEXTURE_PX) return "textures too small";
-  if (d.coarsePointer) return "touch device";
-  if (/swiftshader|llvmpipe|software|basic render/i.test(d.renderer)) return "software renderer";
-  if (d.deviceMemory !== undefined && d.deviceMemory < 4) return "little memory";
+  if (d.coarsePointer || d.maxTouchPoints > 0) return "touch device";
+  if (gasSoftwareRenderer(d.renderer)) return "software renderer";
+  if (d.deviceMemory !== undefined && d.deviceMemory < GAS_SHARP_MIN_MEMORY_GB) return "little memory";
   if (d.saveData) return "save data";
   return null;
+}
+
+/** True when the renderer's name is a software renderer's: the CPU shades every pixel. */
+export function gasSoftwareRenderer(renderer: string): boolean {
+  return /swiftshader|llvmpipe|software|basic render/i.test(renderer);
 }
 
 /**

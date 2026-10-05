@@ -13,6 +13,7 @@ import {
   GAS_GLOW,
   GAS_REFERENCE_PX,
   GAS_SHARP_STRIPS,
+  GAS_SHARP_MIN_MEMORY_GB,
   GAS_SHARP_TEXTURE_PX,
   GAS_SKY,
   GAS_TEXTURE_PX,
@@ -31,6 +32,7 @@ import {
   gasRectUniform,
   gasRestingStop,
   gasSharpBlocked,
+  gasSoftwareRenderer,
   gasSharpPlan,
   gasSharpStrips,
   gasSharpWanted,
@@ -45,6 +47,7 @@ import {
   stopMix,
   stopsOnPath,
   stopsShown,
+  type GasSharpDevice,
 } from "./gas";
 
 const ALL = { sonic: true, balanced: true, mood: true };
@@ -309,20 +312,48 @@ describe("texture and noise", () => {
 });
 
 describe("the sharper image (one stop at a time, desktops with a real GPU)", () => {
-  const DESKTOP = { maxTextureSize: 16384, coarsePointer: false, renderer: "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)" };
+  const M1 = "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)";
+  const DESKTOP: GasSharpDevice = { maxTextureSize: 16384, coarsePointer: false, maxTouchPoints: 0, renderer: M1 };
 
-  it("is for desktops with a real GPU only", () => {
+  it("reaches ordinary desktops and laptops", () => {
     expect(GAS_SHARP_TEXTURE_PX).toBe(4096);
+    expect(GAS_SHARP_MIN_MEMORY_GB).toBe(8);
+    // Safari and Firefox on a desktop: no memory and no save-data report
     expect(gasSharpBlocked(DESKTOP)).toBeNull();
+    // Chrome on a desktop or laptop with 8 GB or more (it reports at most 8)
     expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 8, saveData: false })).toBeNull();
     expect(gasSharpBlocked({ ...DESKTOP, maxTextureSize: 4096 })).toBeNull();
+    expect(gasSharpBlocked({ ...DESKTOP, renderer: "ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)", deviceMemory: 8 })).toBeNull();
+    // the renderer's name not yet asked for (it needs an answer from the GPU process): judged on the rest
+    expect(gasSharpBlocked({ ...DESKTOP, renderer: "" })).toBeNull();
+  });
+
+  it("and nothing else", () => {
     expect(gasSharpBlocked({ ...DESKTOP, maxTextureSize: 2048 })).toBe("textures too small");
-    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: true })).toBe("touch device");
+    // a phone or a tablet
+    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: true, maxTouchPoints: 5 })).toBe("touch device");
+    // a phone or a tablet with a mouse or a keyboard cover: the primary pointer reads fine, the touch screen is still there
+    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: false, maxTouchPoints: 5 })).toBe("touch device");
+    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: false, maxTouchPoints: 1 })).toBe("touch device");
+    // a laptop with a touch screen cannot be told from those, and is left out with them
+    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: false, maxTouchPoints: 10, deviceMemory: 8 })).toBe("touch device");
     expect(gasSharpBlocked({ ...DESKTOP, renderer: "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)" })).toBe("software renderer");
     expect(gasSharpBlocked({ ...DESKTOP, renderer: "llvmpipe (LLVM 15.0.7, 256 bits)" })).toBe("software renderer");
     expect(gasSharpBlocked({ ...DESKTOP, renderer: "Microsoft Basic Render Driver" })).toBe("software renderer");
+    // 4 GB (a small Chromebook) and under
+    expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 4 })).toBe("little memory");
     expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 2 })).toBe("little memory");
+    expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 0.5 })).toBe("little memory");
     expect(gasSharpBlocked({ ...DESKTOP, saveData: true })).toBe("save data");
+  });
+
+  it("knows a software renderer by its name", () => {
+    expect(gasSoftwareRenderer(M1)).toBe(false);
+    expect(gasSoftwareRenderer("")).toBe(false);
+    expect(gasSoftwareRenderer("ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)")).toBe(true);
+    expect(gasSoftwareRenderer("llvmpipe (LLVM 15.0.7, 256 bits)")).toBe(true);
+    expect(gasSoftwareRenderer("Microsoft Basic Render Driver")).toBe(true);
+    expect(gasSoftwareRenderer("Google SwiftShader")).toBe(true);
   });
 
   const AT = { allowed: true, interactive: true, stop: "balanced" as const, sliderT: 0.5, ppr: 1005, texelsPerRaw: 700, deep: 0 };
