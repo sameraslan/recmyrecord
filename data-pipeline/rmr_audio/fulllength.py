@@ -4,7 +4,8 @@ windows, embedded by both models, and deleted. The audio is never kept.
 
   cd data-pipeline
   nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength [--bandcamp] [--sample N --seed S] [--limit N]
-        [--keys K,...] [--pause 5] [--format F] [--fetch-python PY] [--torch-python PY] [--dry-run]
+        [--keys K,...] [--pause 5] [--format F] [--models effnet,clap[,clap_mp3]] [--no-refetch]
+        [--check-baseline] [--fetch-python PY] [--torch-python PY] [--dry-run]
 
 Which albums: the new ones (in catalog/albums.csv, not in audio/keys.csv) whose row in audio/matches.csv has no
 preview (n_clips_available empty or 0), and that have a link. YouTube first. Bandcamp only with --bandcamp,
@@ -30,6 +31,17 @@ Per album, one at a time:
   3. The outcome is a row of audio/fulllength.csv (key, source, url, class, duration_s, title, uploader,
      n_windows, status), written after every album. status: embedded | skipped (not a full album: final) |
      failed | blocked (both tried again by the next run). A run skips the albums that are embedded or skipped.
+
+The variant clap_mp3 (--models effnet,clap,clap_mp3; rmr_audio.mp3trip): each window is decoded once WITH
+its channels; EffNet and clap get the channel average (the numbers the mono decode gives) and clap_mp3 the
+channels through the 128 kbit/s stereo MP3 round trip, all from the one download. An album that is already
+embedded but has no clap_mp3 windows is fetched once more for clap_mp3 alone (a top-up; --no-refetch leaves
+those albums alone, --models clap_mp3 does only them): the windows are the ones the cache has (same starts
+and lengths, not laid out again), EffNet and clap are not computed, their rows and audio/fulllength.csv are
+not written. The top-up is refused, and nothing changed, when the link no longer leads to the video that
+was embedded, is no longer a full album, or a file's length differs by more than 2 seconds from the
+embedded one's. --check-baseline: the top-up also embeds each window for clap and prints its cosine with the
+stored clap vector (is it the same audio?); nothing of clap is written.
 
 Polite and easy to stop: no cookies, no account, no login, yt-dlp's own config files ignored
 (--ignore-config), a pause after every album, the lowest priority, the one-pass cache's lock held (so no
@@ -63,8 +75,7 @@ from rmr_pipeline.constants import PIPELINE_DIR
 
 from . import embed, onepass, textnorm, windows
 from .clips import FINAL
-from .onepass_cache import MODELS, OnePassCache
-from .onepass_worker import clap_catalog
+from .onepass_cache import MODELS, VARIANT_OF, OnePassCache, read_only
 
 FIELDS = ["key", "source", "url", "class", "duration_s", "title", "uploader", "n_windows", "status"]
 CLASSES = ("full_album", "single_track", "mismatch", "unavailable")
@@ -81,6 +92,7 @@ MAX_ALBUM_S = 6 * 3600.0
 RUNTIME_SHARE = 0.6
 UNAVAILABLE_IN_A_ROW = 5
 MIN_FREE_BYTES = 2 * 2 ** 30
+TOPUP_LENGTH_TOLERANCE_S = 2.0  # a top-up's file may differ this much in length from the one that was embedded
 HINT = re.compile(r"full[\s-]*(album|ep|lp|length|record|mixtape|tape|ost|soundtrack|stream)|complete album|"
                   r"[\[(]full[\])]|(album|disco|álbum) complet[oa]|album complet|álbum completo|"
                   r"フル\s*アルバム|полный альбом|весь альбом|全专辑|完整专辑|전곡", re.I)
@@ -387,10 +399,34 @@ class Options:
     cache_dir: Path = onepass.DEFAULT_CACHE
     formats: dict | None = None
     dry_run: bool = False
+    refetch: bool = True  # fetch an embedded album again for a variant it lacks
+    check_base: bool = False  # a top-up also embeds the base model and compares with its stored vector
 
 
-def plan(opts: Options, outcomes: dict) -> tuple[list[tuple[dict, str, str]], Counter]:
-    """The (album, source, url) with work to do, and counts of the rest. No network."""
+def lacking_variants(cache_db: Path, models) -> set[tuple[str, str]]:
+    """(key, source) of the albums on fetched windows with a window that is ok for a base model and has no
+    final answer for its variant among `models`. The cache is only read."""
+    variants = [m for m in models if m in VARIANT_OF]
+    if not variants or not Path(cache_db).exists():
+        return set()
+    con = read_only(cache_db)
+    try:
+        out = set()
+        for m in variants:
+            out |= {tuple(r) for r in con.execute(
+                "SELECT DISTINCT b.key, b.source FROM embeddings b WHERE b.model = ? AND b.status = 'ok' AND b.source IN (%s) AND NOT "
+                "EXISTS (SELECT 1 FROM embeddings v WHERE v.key = b.key AND v.source = b.source AND v.album_id = b.album_id AND "
+                "v.track_id = b.track_id AND v.model = ? AND v.status IN (%s))" % (", ".join("?" * len(SOURCES)), ", ".join("?" * len(FINAL))),
+                (VARIANT_OF[m], *SOURCES, m, *FINAL))}
+        return out
+    finally:
+        con.close()
+
+
+def plan(opts: Options, outcomes: dict, lacking=frozenset()) -> tuple[list[tuple[dict, str, str]], Counter]:
+    """The (album, source, url) with work to do, and counts of the rest. No network. `lacking`: the
+    (key, source) already embedded that lack a variant the run was asked for (lacking_variants): they are
+    work too (a top-up) unless opts.refetch is off."""
     albums = no_audio_albums(opts.catalog, opts.keys_csv, opts.matches)
     counts = Counter(no_audio=len(albums), youtube=sum(bool(a.get("youtube_url")) for a in albums),
                      bandcamp_only=sum(bool(a.get("bandcamp_url")) and not a.get("youtube_url") for a in albums),
@@ -401,13 +437,17 @@ def plan(opts: Options, outcomes: dict) -> tuple[list[tuple[dict, str, str]], Co
         chosen = {a["key"] for a in stratified([a for a in albums if a.get("youtube_url")], opts.sample, opts.seed)}
         albums = [a for a in albums if a["key"] in chosen]
     todo = []
+    base_too = any(m not in VARIANT_OF for m in opts.models)
     for al, source, url in targets(albums, outcomes, opts.bandcamp):
-        if outcomes.get((al["key"], source), {}).get("status") in DONE:
-            counts["done"] += 1
+        status = outcomes.get((al["key"], source), {}).get("status")
+        top_up = status == "embedded" and opts.refetch and (al["key"], source) in lacking
+        if (status in DONE or not base_too) and not top_up:  # a run of variants alone only tops up
+            counts["done" if status in DONE else "not_embedded"] += 1
         elif opts.limit is not None and len(todo) >= opts.limit:
             counts["beyond_limit"] += 1
         else:
             todo.append((al, source, url))
+            counts["top_up"] += top_up
     return todo, counts
 
 
@@ -421,10 +461,13 @@ def run(opts: Options, fetcher=None, embedder=None, out=print, stop=None, durati
         print(f"unknown model {unknown}: {', '.join(MODELS)}", file=sys.stderr)
         return 1
     outcomes = load_outcomes(opts.csv)
-    todo, counts = plan(opts, outcomes)
+    todo, counts = plan(opts, outcomes, lacking_variants(opts.out, opts.models))
     out(f"{counts['no_audio']} new albums without a preview: {counts['youtube']} with a YouTube link, "
         f"{counts['bandcamp_only']} with Bandcamp only, {counts['no_link']} with neither. "
         f"{len(todo)} to do now ({dict(Counter(s for _, s, _ in todo))}), {counts['done']} already done"
+        + (f"; {counts['top_up']} of those to do are embedded albums fetched again for "
+           f"{' + '.join(m for m in opts.models if m in VARIANT_OF)} alone" if counts["top_up"] else "")
+        + (f"; {counts['not_embedded']} not embedded yet are left for a run with the base models" if counts["not_embedded"] else "")
         + (f", {counts['beyond_limit']} left for a later run (--limit)" if counts["beyond_limit"] else ""))
     if opts.dry_run:
         out("dry run: nothing fetched or written")
@@ -460,8 +503,7 @@ def run(opts: Options, fetcher=None, embedder=None, out=print, stop=None, durati
             embedder = onepass.Embedder(onepass.worker_factories(opts.models, opts.cache_dir, str(workers_tmp), opts.torch_python),
                                         "own", None, out)
         if decode_window is None:
-            decode_window = lambda path, start, length: windows.decode_window(  # noqa: E731
-                path, start, length, ffmpeg, clap_catalog().mono_of_wav)
+            decode_window = onepass.window_decoder(opts.models, ffmpeg)
         durations = durations or (lambda p: windows.probe_duration(p, ffprobe))
         stop.install()
         code = _work(todo, outcomes, opts, cache, fetcher, embedder, out, stop, durations, decode_window, sleep)
@@ -474,6 +516,66 @@ def run(opts: Options, fetcher=None, embedder=None, out=print, stop=None, durati
         shutil.rmtree(opts.tmp, ignore_errors=True)
         lock.close()
     return code
+
+
+def top_up(al: dict, source: str, url: str, folder: Path, opts: Options, cache: OnePassCache, fetcher, embedder,
+           durations, decode_window, stop, out) -> tuple[str, str, int]:
+    """An embedded album fetched again for the variants it lacks. (state, note, windows now ok): state is
+    `topped_up`, or `failed` when the link is no longer what was embedded (nothing is changed then). Only
+    rows of the variants are written: the base models' rows, the clip rows and the listing stay as they are.
+    The windows are the cache's own (start and length), not laid out again."""
+    key = al["key"]
+    variants = [m for m in opts.models if m in VARIANT_OF]
+    verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s"))
+    if verdict.cls != "full_album":
+        return "failed", f"the link is now {verdict.cls} ({verdict.reason}): not what was embedded; nothing changed", 0
+    cached = cache.album(key, source, verdict.album_id)
+    wanted = {t: [m for m in variants if c["status"].get(VARIANT_OF[m]) == "ok" and c["status"].get(m) not in FINAL]
+              for t, c in cached.items()}
+    if not any(wanted.values()):
+        there = sorted({r[0] for r in cache.con.execute("SELECT DISTINCT album_id FROM embeddings WHERE key = ? AND source = ? "
+                                                        "AND status = 'ok'", (key, source))})
+        return "failed", f"the link is now {verdict.album_id}; the cache has windows of {', '.join(there) or 'nothing'}: nothing changed", 0
+    facts = {t: (start, clip_s, track_s) for t, start, clip_s, track_s in cache.con.execute(
+        "SELECT track_id, start_s, clip_s, track_s FROM clips WHERE key = ? AND source = ? AND album_id = ?", (key, source, verdict.album_id))}
+    folder.mkdir(parents=True)
+    files = fetcher.download(url, source, folder)
+    lengths = [durations(p) or 0.0 for p in files]
+    recs = []
+    for track_id in sorted((t for t, todo in wanted.items() if todo), key=lambda t: (cached[t]["prio"] is None, cached[t]["prio"] or 0)):
+        start, clip_s, track_s = facts.get(track_id, (None, None, None))
+        file = int(track_id.split("@")[0]) - 1
+        if start is None or not 0 <= file < len(files):
+            return "failed", f"window {track_id} has no place in the {len(files)} file(s) fetched now; nothing changed", 0
+        if track_s and abs(lengths[file] - track_s) > TOPUP_LENGTH_TOLERANCE_S:
+            return "failed", (f"file {file + 1} is {lengths[file]:.1f} s now and was {track_s:.1f} s when it was embedded: "
+                              "not the same audio; nothing changed"), 0
+        recs.append({"key": key, "source": source, "album_id": verdict.album_id, "track_id": track_id, "start_s": start,
+                     "length_s": min(windows.WINDOW_S, track_s - start) if track_s else windows.WINDOW_S,  # as windows.place
+                     "path": str(files[file]),
+                     "models": wanted[track_id], "follows": True, **({"check": VARIANT_OF[variants[0]]} if opts.check_base else {})})
+    cosines = []
+    for rec in recs:
+        if stop is not None and stop.asked:
+            break
+        results = onepass._clip(rec, None, embedder, decode_window)
+        if stop is not None and stop.asked and not all(r["status"] == "ok" for r in results.values()):
+            break
+        for m, r in results.items():
+            cache.put_result(rec, m, r["status"], r.get("error"), r.get("emb"), r.get("clip_s"))
+        cache.commit()
+        cos = onepass.base_cosine(cache, rec)
+        if cos is not None:
+            cosines.append(cos)
+            out(f"check\t{key}\t{source}\t{rec['track_id']}\t{cos:.5f}")
+    now = cache.album(key, source, verdict.album_id)
+    ok = sum(all(c["status"].get(m) == "ok" for m in variants) for c in now.values())
+    left = sum(any(c["status"].get(VARIANT_OF[m]) == "ok" and c["status"].get(m) not in FINAL for m in variants) for c in now.values())
+    note = (f"{len(files)} file(s), {sum(p.stat().st_size for p in files) / 2 ** 20:.1f} MB, {ok} windows ok for "
+            f"{' + '.join(variants)}" + (f", {left} left" if left else "")
+            + (f"; baseline check: cosine with the stored {VARIANT_OF[variants[0]]} vector median "
+               f"{statistics.median(cosines):.4f}, lowest {min(cosines):.4f} over {len(cosines)} windows" if cosines else ""))
+    return ("stopped" if left and stop is not None and stop.asked else "topped_up" if ok else "failed"), note, ok
 
 
 def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, durations, decode_window, sleep) -> int:
@@ -492,53 +594,69 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
         t, key = time.monotonic(), al["key"]
         row = {"key": key, "source": source, "url": url, "class": "", "duration_s": "", "title": "", "uploader": "",
                "n_windows": "", "status": "failed"}
-        note, folder, blocked = "", Path(opts.tmp) / hashlib.sha1(f"{source}:{key}".encode()).hexdigest()[:12], False
+        note, folder, blocked, gone = "", Path(opts.tmp) / hashlib.sha1(f"{source}:{key}".encode()).hexdigest()[:12], False, False
+        again = outcomes.get((key, source), {}).get("status") == "embedded"  # a top-up: its row is not rewritten
         try:
-            verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s"))
-            row.update({"class": verdict.cls, "duration_s": f"{verdict.duration_s:.0f}" if verdict.duration_s else "",
-                        "title": verdict.title, "uploader": verdict.uploader, "status": "skipped"})
-            note = verdict.reason
-            if verdict.cls == "full_album":
-                row["status"] = "failed"
+            if again:
                 if shutil.disk_usage(Path(opts.tmp)).free < MIN_FREE_BYTES:
                     out("under 2 GB of free disk: stopping")
                     stop.asked, code = True, 2
                     break
-                folder.mkdir(parents=True)
-                files = fetcher.download(url, source, folder)
-                size = sum(p.stat().st_size for p in files)
-                ok, in_mean, runtime = embed_files(key, source, verdict.album_id, files, cache, embedder, opts.models,
-                                                   durations, decode_window, stop)
-                if stop.asked and ok < in_mean:
+                state, note, ok = top_up(al, source, url, folder, opts, cache, fetcher, embedder, durations, decode_window, stop, out)
+                if state == "stopped":
                     out(f"{key}\tstopped inside the album: it is finished by the next run")
                     break
-                row.update({"n_windows": str(min(ok, in_mean)), "status": "embedded" if ok else "failed"})
-                note += f"; {len(files)} file(s), {size / 2 ** 20:.1f} MB, {ok} windows embedded, {in_mean} in the mean"
-                if ok:
-                    sizes.append(size)
-                    n_embedded += ok
-                else:
-                    note += "; no window could be embedded"
+                row = {**outcomes[(key, source)], "status": state}
+                n_embedded += ok
+            else:
+                verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s"))
+                row.update({"class": verdict.cls, "duration_s": f"{verdict.duration_s:.0f}" if verdict.duration_s else "",
+                            "title": verdict.title, "uploader": verdict.uploader, "status": "skipped"})
+                note = verdict.reason
+                if verdict.cls == "full_album":
+                    row["status"] = "failed"
+                    if shutil.disk_usage(Path(opts.tmp)).free < MIN_FREE_BYTES:
+                        out("under 2 GB of free disk: stopping")
+                        stop.asked, code = True, 2
+                        break
+                    folder.mkdir(parents=True)
+                    files = fetcher.download(url, source, folder)
+                    size = sum(p.stat().st_size for p in files)
+                    ok, in_mean, runtime = embed_files(key, source, verdict.album_id, files, cache, embedder, opts.models,
+                                                       durations, decode_window, stop)
+                    if stop.asked and ok < in_mean:
+                        out(f"{key}\tstopped inside the album: it is finished by the next run")
+                        break
+                    row.update({"n_windows": str(min(ok, in_mean)), "status": "embedded" if ok else "failed"})
+                    note += f"; {len(files)} file(s), {size / 2 ** 20:.1f} MB, {ok} windows embedded, {in_mean} in the mean"
+                    if ok:
+                        sizes.append(size)
+                        n_embedded += ok
+                    else:
+                        note += "; no window could be embedded"
         except Blocked as e:
-            row["status"], note, blocked = "blocked", str(e), True
+            row = {**row, "status": "blocked"}
+            note, blocked = str(e), True
         except Unavailable as e:
-            row.update({"class": "unavailable", "status": "skipped"})
-            note = str(e)
+            row = {**row, "status": "failed"} if again else {**row, "class": "unavailable", "status": "skipped"}
+            note, gone = str(e) + ("; the embedded windows are kept" if again else ""), True
         except FetchError as e:
+            row = {**row, "status": "failed"}
             note = str(e)
         finally:
             shutil.rmtree(folder, ignore_errors=True)  # the audio is never kept
-        outcomes[(key, source)] = row
-        write_outcomes(opts.csv, outcomes)
+        if not again:
+            outcomes[(key, source)] = row
+            write_outcomes(opts.csv, outcomes)
         took = time.monotonic() - t
         if row["status"] == "embedded":
             seconds.append(took)
-        done[row["class"] or row["status"]] += 1
+        done[row["status"] if again else row["class"] or row["status"]] += 1
         out(f"[{time.strftime('%H:%M:%S')}] {i + 1}/{len(todo)}\t{key}\trank {al.get('rank', '')}\t{source}\t{row['status']}\t"
             f"{row['class'] or '-'}\t{row['duration_s'] or '-'} s\t{took:.0f} s\t{al.get('artist', '')} — {al.get('title', '')}"
             f" || {row['title']} | {row['uploader']} || {note}")
         failures = failures + 1 if row["status"] == "failed" else 0
-        unavailable = unavailable + 1 if row["class"] == "unavailable" else 0
+        unavailable = unavailable + 1 if gone or (row["class"] == "unavailable" and not again) else 0
         if blocked:
             out("the site is refusing or rate-limiting us: stopping. Run again another day; nothing is retried now")
             code = 2
@@ -583,6 +701,10 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--torch-python", type=Path, default=None, help="The torch venv's python (or RMR_TORCH_PYTHON).")
     p.add_argument("--cache-dir", type=Path, default=onepass.DEFAULT_CACHE, help="Where models/ (the EffNet graph) is.")
     p.add_argument("--dry-run", action="store_true", help="Print what would be done; no network, nothing written.")
+    p.add_argument("--no-refetch", action="store_true",
+                   help="Leave alone the embedded albums that lack a variant asked for (default: fetch them again for it alone).")
+    p.add_argument("--check-baseline", action="store_true",
+                   help="A top-up also embeds each window for the base model and prints its cosine with the stored vector.")
     return p
 
 
@@ -595,7 +717,7 @@ def main(argv: list[str] | None = None) -> int:
         pass
     return run(Options(a.catalog, a.keys_csv, a.matches, a.csv, a.out, a.tmp, a.models, tuple(k for k in a.keys.split(",") if k),
                        a.bandcamp, a.sample, a.seed, a.limit, a.pause, a.max_failures, a.fetch_python, a.torch_python,
-                       a.cache_dir, {"youtube": a.format} if a.format else None, a.dry_run))
+                       a.cache_dir, {"youtube": a.format} if a.format else None, a.dry_run, not a.no_refetch, a.check_baseline))
 
 
 if __name__ == "__main__":
