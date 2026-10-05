@@ -3,7 +3,7 @@
   cd data-pipeline
   nice -n 19 .venv-audio/bin/python -m rmr_audio.onepass run --clips 4 [--matches audio/matches.csv] [--keys K,...]
         [--keys-file F] [--skip-imported] [--limit-albums N] [--models effnet,clap] [--decoder own|shared] [--local-dir DIR]
-        [--other-lock PATH] [--torch-python PY] [--dry-run]
+        [--other-lock PATH] [--torch-python PY] [--check-baseline] [--itunes-interval S] [--dry-run]
   .venv-audio/bin/python -m rmr_audio.onepass import [--effnet clips.sqlite] [--clap clap_clips.sqlite]
   .venv-audio/bin/python -m rmr_audio.onepass means --model effnet|clap --clips N --to FILE.npz [--pool rank|below]
   .venv-audio/bin/python -m rmr_audio.onepass status [--clips N]
@@ -373,6 +373,7 @@ class Options:
     dry_run: bool = False
     progress_secs: float = 60.0
     check_base: bool = False  # the variant top-up: also embed the base model and compare with its stored vector
+    itunes_interval: float | None = None  # seconds between iTunes API calls, when longer than the matcher's 3.2
 
 
 @dataclass
@@ -709,6 +710,8 @@ def run(opts: Options, listing=None, download=None, embedder=None, out=print, st
         if (listing is None or download is None) and any(i.kind == "clips" for i in plan.items):
             net_listing, net_download, http = default_network()
             http.abort = lambda: stop.asked
+            if opts.itunes_interval:  # never faster than the matcher's own spacing
+                http.throttles["itunes"].interval = max(http.throttles["itunes"].interval, opts.itunes_interval)
             listing, download = listing or net_listing, download or net_download
         stop.install()
         _work(plan, cache, opts, listing, download, embedder, out, stop, durations, decode_window)
@@ -1016,6 +1019,9 @@ def parser() -> argparse.ArgumentParser:
                    help="With a run of a variant alone: embed each clip for the base model too and print its cosine with the "
                         "stored vector. Nothing of the base model is written.")
 
+    r.add_argument("--itunes-interval", type=float, default=None,
+                   help="Seconds between iTunes API calls (one per album), when longer than the matcher's 3.2: 3.4 is under 18 a minute.")
+
     c = sub.add_parser("copy", parents=[common], help="A variant's Deezer clips: the base model's rows, copied inside the cache.")
     c.add_argument("--model", choices=tuple(VARIANT_OF), default="clap_mp3")
     c.add_argument("--keys", default="", help="Only these albums: comma-separated keys.")
@@ -1057,7 +1063,7 @@ def main(argv: list[str] | None = None) -> int:
             pass
         return run(Options(args.matches, args.out, args.clips, args.models, keys, args.skip_imported, args.limit, args.decoder,
                            args.local_dir, tuple(args.other_lock), args.torch_python, args.cache_dir, args.dry_run,
-                           args.progress_secs, args.check_baseline))
+                           args.progress_secs, args.check_baseline, args.itunes_interval))
     if args.cmd == "import":
         if args.effnet is None and args.clap is None:
             parser().error("give --effnet and/or --clap (or set RMR_CLIPS_DB)")
