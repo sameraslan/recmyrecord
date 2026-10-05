@@ -224,6 +224,10 @@ def world(tmp_path):
     return World()
 
 
+def opts_models(world) -> tuple:
+    return Options(**world.opts).models  # the models a run embeds unless told otherwise
+
+
 def test_full_albums_are_embedded_in_windows_under_their_source_and_the_rest_is_recorded(world):
     lines = world.run()
     assert "7 new albums without a preview: 6 with a YouTube link, 1 with Bandcamp only, 0 with neither" in lines[0]
@@ -242,7 +246,7 @@ def test_full_albums_are_embedded_in_windows_under_their_source_and_the_rest_is_
     assert cache.listings()[("Album0", "youtube", "full")] == {"n_tracks": 1, "n_previews": 8, "runtime_s": 2400.0, "n_windows": 8}
     assert cache.listings()[("Album4", "youtube", "mid")]["n_windows"] == windows.n_windows(1500.0) == 5
     assert {r[0] for r in cache.con.execute("SELECT DISTINCT source FROM clips")} == {"youtube"}  # not disguised as local
-    for model in MODELS:
+    for model in opts_models(world):
         keys, X, n, sources = cache.means(model, 4)
         assert list(keys) == ["Album0", "Album4"] and list(sources) == ["youtube", "youtube"] and list(n) == [8, 5]
     cache.close()

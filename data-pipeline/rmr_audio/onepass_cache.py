@@ -21,11 +21,13 @@ eight by fetching four, and what album means are pooled from. No audio is in it.
   embeddings(key, source, album_id, track_id, model, status, error, clip_s, emb, origin)
       one row per clip and model
       model        effnet (discogs-effnet-bs1-1, 1,280 float16 LE) | clap (laion/larger_clap_music_and_speech,
-                   512 float32 LE)
+                   512 float32 LE) | clap_mp3 (a variant of clap, beside it and never in its place: the clip
+                   through a 128 kbit/s stereo MP3 round trip first, rmr_audio.mp3trip; for a deezer clip the
+                   clap vector itself, copied by copy_variant)
       status       ok | no_preview | too_short | decode_failed    final: never tried again
                    download_failed | analysis_failed | embed_failed | crashed    tried again by the next run
       clip_s       seconds as this model's decoder gave them
-      origin       onepass, or the cache the row was imported from
+      origin       onepass, the cache the row was imported from, or `copy:clap` (a variant row of a deezer clip)
 
   listings(key, source, album_id, n_tracks, n_previews, runtime_s, n_windows)
       what the last fetched listing (or folder of files) had: lets a later run see without the network that
@@ -46,6 +48,7 @@ import numpy as np
 
 from rmr_pipeline.audio_store import StoreError
 
+from . import mp3trip
 from .clips import FINAL
 
 SCHEMA = """
@@ -86,7 +89,24 @@ MODELS = {
     "clap": Model("clap", "laion/larger_clap_music_and_speech", 512, "<f4",
                   "44.1 kHz mono -> resample_poly(160,147) -> 3 x 10 s windows -> get_audio_features -> L2 per "
                   "window -> mean; float32 (clap_catalog.py)", "prio"),
+    "clap_mp3": Model("clap_mp3", "laion/larger_clap_music_and_speech+mp3-128k-stereo", 512, "<f4", mp3trip.RECIPE, "prio"),
 }
+# A variant is another preprocessing of the clip for a model that is already there: variant -> its base. It
+# is served by the base's child process, a run for the variant alone embeds the clips the base has
+# (rmr_audio.onepass), and for the sources the preprocessing is meant to imitate the variant IS the base
+# vector (same_as_base).
+VARIANT_OF = {"clap_mp3": "clap"}
+
+
+def worker_of(model: str) -> str:
+    """The child process that serves the model: its own, or its base's."""
+    return VARIANT_OF.get(model, model)
+
+
+def same_as_base(model: str, source: str) -> bool:
+    """Is the variant's vector of a clip from this source the base model's vector? clap_mp3: a Deezer
+    preview already is a 128 kbit/s stereo MP3, so it is not encoded a second time."""
+    return model in VARIANT_OF and source.split(":")[0] == "deezer"
 
 
 def short_preview(clip_s: float | None, track_s: float | None) -> int | None:
@@ -172,6 +192,34 @@ class OnePassCache:
                 self.con.execute("UPDATE clips SET track_s = ?, short_preview = ? WHERE key = ? AND source = ? "
                                  "AND album_id = ? AND track_id = ?",
                                  (seconds, short_preview(clip_s, seconds), key, source, album_id, track_id))
+
+    def copy_variant(self, model: str, keys=None) -> Counter:
+        """Give every clip whose variant vector is the base's (same_as_base: the deezer clips) the base
+        model's row under the variant's name: status, error, seconds and the embedding's bytes as they are,
+        origin `copy:<base>`. Nothing is downloaded or computed and no base row is written. A variant row
+        that is ok is never replaced; one that is not ok is replaced only by an ok one. `keys`: only these
+        albums. Returns the rows copied, by status."""
+        base = VARIANT_OF[model]
+        final = sorted(FINAL)
+        sql = ("INSERT OR REPLACE INTO embeddings(key, source, album_id, track_id, model, status, error, clip_s, emb, origin, "
+               "updated_at) SELECT b.key, b.source, b.album_id, b.track_id, ?, b.status, b.error, b.clip_s, b.emb, ?, datetime('now') "
+               "FROM embeddings b WHERE b.model = ? AND b.source = 'deezer' AND b.status IN (%s) AND NOT EXISTS (SELECT 1 FROM "
+               "embeddings v WHERE v.key = b.key AND v.source = b.source AND v.album_id = b.album_id AND v.track_id = b.track_id "
+               "AND v.model = ? AND (v.status = 'ok' OR b.status != 'ok'))" % ", ".join("?" * len(final)))
+        args = [model, f"copy:{base}", base, *final, model]
+        before = Counter(dict(self.con.execute("SELECT status, COUNT(*) FROM embeddings WHERE model = ? AND origin = ? GROUP BY 1",
+                                               (model, f"copy:{base}"))))
+        if keys is None:
+            self.con.execute(sql, args)
+        else:
+            keys = sorted(set(keys))
+            for i in range(0, len(keys), 500):
+                part = keys[i:i + 500]
+                self.con.execute(sql + " AND b.key IN (%s)" % ", ".join("?" * len(part)), [*args, *part])
+        after = Counter(dict(self.con.execute("SELECT status, COUNT(*) FROM embeddings WHERE model = ? AND origin = ? GROUP BY 1",
+                                              (model, f"copy:{base}"))))
+        self.con.commit()
+        return Counter({k: n for k, n in (after - before).items() if n})
 
     def forget(self, key: str, source: str, album_id: str) -> int:
         """Drop every clip of one listing (a folder of local files that changed). Returns how many."""

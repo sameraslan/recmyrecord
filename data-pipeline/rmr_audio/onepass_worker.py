@@ -16,9 +16,15 @@ A request carries either the clip's bytes as downloaded (`kind` bytes: the backe
 decoder, as it always has) or mono float32 at 44.1 kHz decoded by the parent (`kind` mono: a window of a
 local file, or the shared-decoder mode).
 
+The clap child also serves the variant `clap_mp3` (rmr_audio.mp3trip): a request with `recipe: mp3` carries
+the clip's bytes (`kind` bytes: decoded here WITH its channels) or the parent's decode with its channels
+(`kind` pcm: interleaved float32 at 44.1 kHz, `ch` channels in the header; a window of a full-length file).
+The channels go through the 128 kbit/s stereo MP3 round trip, are averaged, and the recipe after that is
+the clap recipe unchanged. A one-channel signal is duplicated to L = R for the encode.
+
 Wire format, both directions: 4 bytes little-endian header length, a JSON header, then `n` payload bytes
 (`n` is in the header).  ready: {op, model, dim, dtype, device, pid}.  request: {op: embed, id, kind,
-suffix, n} or {op: quit}.  reply: {id, status, error, clip_s, secs, rss, mps, n} + the embedding.
+suffix, n[, recipe, ch]} or {op: quit}.  reply: {id, status, error, clip_s, secs, rss, mps, n} + the embedding.
 status: ok | too_short | decode_failed | analysis_failed, as rmr_audio.clips knows them.
 
 The worker's stdout is the pipe; anything a library prints goes to stderr. It leaves when the pipe closes,
@@ -103,7 +109,7 @@ def _reader(f):
     return read
 
 
-# --- backends: embed(kind, data, suffix) -> (status, error, clip seconds, embedding bytes) ---------
+# --- backends: embed(kind, data, suffix[, recipe, ch]) -> (status, error, clip seconds, embedding bytes)
 
 class EffNet:
     model, dim, dtype, device = "effnet", 1280, "<f2", "cpu"
@@ -146,8 +152,26 @@ class Clap:
             raise RuntimeError("ffmpeg not found on PATH: it decodes the previews for CLAP")
         self.fn, self.device, self.mps = self.cc.load_model()
 
-    def embed(self, kind: str, data: bytes, suffix: str):
-        if kind == "mono":
+    def embed(self, kind: str, data: bytes, suffix: str, recipe: str | None = None, ch: int = 1):
+        if recipe not in (None, "mp3"):
+            return "analysis_failed", f"unknown recipe {recipe!r}", None, b""
+        if recipe == "mp3":
+            from rmr_audio import mp3trip
+
+            try:
+                if kind == "bytes":
+                    channels = mp3trip.decode_channels(data, suffix, self.tmp, self.ffmpeg)
+                else:  # pcm with `ch` channels, or mono (one channel)
+                    channels = np.frombuffer(data, "<f4").reshape(-1, max(1, ch) if kind == "pcm" else 1)
+            except Exception as e:
+                return "decode_failed", str(e)[:300], None, b""
+            if len(channels) < self.cc.MIN_SAMPLES:
+                return "too_short", f"{len(channels) / SR:.1f} s", len(channels) / SR, b""
+            try:
+                mono = mp3trip.roundtrip(channels, self.ffmpeg)
+            except Exception as e:
+                return "analysis_failed", f"mp3 round trip: {e}"[:300], len(channels) / SR, b""
+        elif kind == "mono":
             mono = np.frombuffer(data, "<f4").copy()  # writable, as a decoder returns it
         else:
             try:
@@ -172,17 +196,23 @@ class Stub:
     def __init__(self, model: str = "stub", dim: int = 8, dtype: str = "<f4"):
         self.model, self.dim, self.dtype = model, dim, dtype
 
-    def embed(self, kind: str, data: bytes, suffix: str):
+    def embed(self, kind: str, data: bytes, suffix: str, recipe: str | None = None, ch: int = 1):
         if data.startswith(b"CRASH"):
             os._exit(3)
-        clip_s = len(data) / 4 / SR if kind == "mono" else 30.0
+        clip_s = len(data) / 4 / SR if kind == "mono" else len(data) / 4 / max(1, ch) / SR if kind == "pcm" else 30.0
         for prefix, status in ((b"SHORT", "too_short"), (b"BAD", "decode_failed"), (b"FAIL", "analysis_failed")):
             if data.startswith(prefix):
                 return status, prefix.decode().lower(), (None if status == "decode_failed" else clip_s), b""
-        return "ok", None, clip_s, stub_embedding(data, self.dim, self.dtype).tobytes()
+        return "ok", None, clip_s, stub_embedding(stub_input(data, kind, recipe, ch), self.dim, self.dtype).tobytes()
 
     def mps(self) -> int:
         return 0
+
+
+def stub_input(data: bytes, kind: str = "bytes", recipe: str | None = None, ch: int = 1) -> bytes:
+    """What the stub's embedding is a function of: the payload alone for the plain recipe; for another
+    recipe also its name, the kind of payload and the channel count, so a test can tell which path a clip took."""
+    return bytes(data) if recipe is None else f"{recipe}:{kind}:{ch}:".encode() + bytes(data)
 
 
 def stub_embedding(data: bytes, dim: int, dtype: str) -> np.ndarray:
@@ -202,7 +232,8 @@ def serve(backend, rd, wr) -> None:
             return
         header, payload = frame
         t = time.perf_counter()
-        status, error, clip_s, emb = backend.embed(header.get("kind", "bytes"), payload, header.get("suffix", ".mp3"))
+        more = {"recipe": header["recipe"], "ch": int(header.get("ch", 1))} if header.get("recipe") else {}
+        status, error, clip_s, emb = backend.embed(header.get("kind", "bytes"), payload, header.get("suffix", ".mp3"), **more)
         del payload
         write_frame(wr, {"id": header.get("id"), "status": status, "error": error, "clip_s": clip_s,
                          "secs": round(time.perf_counter() - t, 4), "mps": int(backend.mps()),

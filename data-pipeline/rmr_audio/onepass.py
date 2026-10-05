@@ -7,6 +7,7 @@
   .venv-audio/bin/python -m rmr_audio.onepass import [--effnet clips.sqlite] [--clap clap_clips.sqlite]
   .venv-audio/bin/python -m rmr_audio.onepass means --model effnet|clap --clips N --to FILE.npz [--pool rank|below]
   .venv-audio/bin/python -m rmr_audio.onepass status [--clips N]
+  .venv-audio/bin/python -m rmr_audio.onepass copy [--model clap_mp3] [--keys K,...] [--keys-file F]
 
 Processes (at most three Python processes, two of them with a model):
 
@@ -49,6 +50,22 @@ Local files (--local-dir DIR, one folder per album named by its key, `:` may be 
 windows spread through the album (rmr_audio.windows), not one excerpt per file. They replace the store
 previews of that album: its mean is taken from the windows only, and the stores are not asked.
 
+The variant clap_mp3 (rmr_audio.mp3trip; stored beside clap, never in its place). A clip that is not from
+Deezer goes through a 128 kbit/s stereo MP3 round trip before the clap recipe; a Deezer clip's clap_mp3
+vector is its clap vector, copied inside the cache (`copy`, which a run also does for its albums: no
+download, no model). The clap child serves both, so no other process is started.
+  run --models clap_mp3              the top-up for what is embedded: per album the clips that are ok for
+                                     clap (its first --clips in rank order), each downloaded once and embedded
+                                     for clap_mp3 only. EffNet and clap are not computed and the EffNet child
+                                     is not started. An album with no ok clap clip is left alone (embed it
+                                     with all three models). A clap clip whose preview the store no longer
+                                     has is recorded (no_preview, "gone") and replaced by the next track in
+                                     the usual order; the run counts both.
+  run --models effnet,clap,clap_mp3  new albums: one download per clip, all three.
+  --check-baseline                   with the top-up: also embed each downloaded clip for clap, compare with
+                                     the stored clap vector (cosine, printed) and write nothing of it. It
+                                     says whether the store still serves the audio the baseline was made of.
+
 No audio is written anywhere that lasts: a preview is in memory, and for the length of a decode in a temp
 file that is already unlinked (ffmpeg) or unlinked right after (Essentia), inside a per-run temp directory.
 This module writes the cache and nothing else; `means` writes an .npz where it is told, never the committed
@@ -78,9 +95,9 @@ import numpy as np
 from rmr_pipeline.audio_store import DEFAULT_AUDIO
 from rmr_pipeline.constants import PIPELINE_DIR, REPO
 
-from . import embed, windows
+from . import embed, mp3trip, windows
 from .clips import FINAL, priority_order
-from .onepass_cache import MODELS, POOLS, WINDOW_SOURCES, OnePassCache
+from .onepass_cache import MODELS, POOLS, VARIANT_OF, WINDOW_SOURCES, OnePassCache, same_as_base, worker_of
 from .onepass_worker import clap_catalog, read_frame, write_frame
 
 DEFAULT_CACHE = PIPELINE_DIR / ".cache" / "audio"  # as rmr_audio.catalog.DEFAULT_CACHE (not imported: it needs pandas)
@@ -90,6 +107,8 @@ STORE_DOWN_AFTER = 3  # listings in a row a store may fail before its other albu
 NETWORK_DOWN_AFTER = 12  # downloads in a row that may fail on the network before the run stops itself
 WORKER_DEAD_AFTER = 3  # times in a row a child may die before the run gives up
 REPLY_TIMEOUT, READY_TIMEOUT = 600.0, 1800.0  # seconds: one clip; loading a model (CLAP's first download is 776 MB)
+BASE_MODELS = tuple(m for m in MODELS if m not in VARIANT_OF)
+GONE = "gone: the listing no longer has a preview of this track"
 
 
 # --- locks -------------------------------------------------------------------------------------------
@@ -173,10 +192,10 @@ class Worker:
             raise WorkerDied(f"{self.model}: the worker process died (exit {code})")
         return frame
 
-    def send(self, kind: str, payload: bytes, suffix: str) -> None:
+    def send(self, kind: str, payload: bytes, suffix: str, extra: dict | None = None) -> None:
         self.n += 1
         try:
-            write_frame(self.proc.stdin, {"op": "embed", "id": self.n, "kind": kind, "suffix": suffix}, payload)
+            write_frame(self.proc.stdin, {"op": "embed", "id": self.n, "kind": kind, "suffix": suffix, **(extra or {})}, payload)
         except (BrokenPipeError, OSError, ValueError):
             self.kill()
             raise WorkerDied(f"{self.model}: the worker process died") from None
@@ -210,7 +229,7 @@ class Worker:
 
 
 def worker_factories(models: tuple[str, ...], cache_dir: Path, tmp: str, torch_python: Path | None = None) -> dict:
-    """model -> a function that makes its (not yet started) Worker."""
+    """worker -> a function that makes it (not yet started). A variant is served by its base model's worker."""
     env = {**os.environ, "PYTHONPATH": os.pathsep.join(filter(None, [str(PIPELINE_DIR), os.environ.get("PYTHONPATH")])),
            "PYTHONDONTWRITEBYTECODE": "1"}
     module = ["-m", "rmr_audio.onepass_worker"]
@@ -220,43 +239,57 @@ def worker_factories(models: tuple[str, ...], cache_dir: Path, tmp: str, torch_p
                                             str(cache_dir / "models"), "--tmp", tmp], PIPELINE_DIR, env),
         "clap": lambda: Worker("clap", [str(torch), *module, "--backend", "clap", "--tmp", tmp], PIPELINE_DIR, env),
     }
-    return {m: made[m] for m in models}
+    return {w: made[w] for w in dict.fromkeys(worker_of(m) for m in models)}
 
 
 class Embedder:
-    """Both models for one clip from one download (or one decoded window). `factories`: model -> a function
-    returning a Worker; a worker is started when first needed."""
+    """Every model for one clip from one download (or one decoded window). `factories`: worker name -> a
+    function returning a Worker (a variant has its base model's worker); a worker is started when first
+    needed."""
 
     def __init__(self, factories: dict, decoder: str = "own", decode=None, out=print):
         if decoder not in ("own", "shared"):
             raise ValueError("decoder must be own or shared")
         self.factories, self.decoder, self.decode, self.out = factories, decoder, decode, out
         self.workers: dict[str, Worker] = {}
-        self.peak: dict[str, dict] = {}  # model -> {rss, mps, pid, device}
-        self.died: Counter = Counter()  # model -> deaths in a row
+        self.peak: dict[str, dict] = {}  # worker -> {rss, mps, pid, device}
+        self.died: Counter = Counter()  # worker -> deaths in a row
         self.secs: Counter = Counter()
 
-    def worker(self, model: str) -> Worker:
-        if model not in self.workers:
+    def worker(self, name: str) -> Worker:
+        if name not in self.workers:
             t = time.perf_counter()
-            w = self.factories[model]()
+            w = self.factories[name]()
             w.start()
-            self.workers[model] = w
-            self.peak.setdefault(model, {"rss": 0, "mps": 0}).update(device=w.info.get("device"), pid=w.info.get("pid"))
-            self.out(f"{model} worker ready on {w.info.get('device')} in {time.perf_counter() - t:.1f} s (pid {w.info.get('pid')})")
-        return self.workers[model]
+            self.workers[name] = w
+            self.peak.setdefault(name, {"rss": 0, "mps": 0}).update(device=w.info.get("device"), pid=w.info.get("pid"))
+            self.out(f"{name} worker ready on {w.info.get('device')} in {time.perf_counter() - t:.1f} s (pid {w.info.get('pid')})")
+        return self.workers[name]
 
-    def _lost(self, model: str, error: Exception) -> dict:
-        self.workers.pop(model, None)
-        self.died[model] += 1
-        if self.died[model] >= WORKER_DEAD_AFTER:
-            raise RuntimeError(f"the {model} worker died {self.died[model]} times in a row: {error}")
+    def _lost(self, name: str, error: Exception) -> dict:
+        self.workers.pop(name, None)
+        self.died[name] += 1
+        if self.died[name] >= WORKER_DEAD_AFTER:
+            raise RuntimeError(f"the {name} worker died {self.died[name]} times in a row: {error}")
         return {"status": "crashed", "error": str(error)[:300], "clip_s": None, "emb": None}
 
     def embed(self, models: list[str], data: bytes | None = None, suffix: str = ".mp3",
-              mono: np.ndarray | None = None) -> dict[str, dict]:
-        """model -> {status, error, clip_s, emb} for one clip, given as downloaded bytes or as decoded mono."""
-        if mono is None and self.decoder == "shared":
+              mono: np.ndarray | None = None, channels: np.ndarray | None = None, source: str = "") -> dict[str, dict]:
+        """model -> {status, error, clip_s, emb} for one clip, given as downloaded bytes or as decoded mono
+        (and, for a variant that needs them, the decoded channels: (samples, channels) float32).
+        `source`: the clip's source; it decides what a variant is (onepass_cache.same_as_base): a variant
+        that is its base's vector is not embedded a second time when the base is among `models`."""
+        jobs, alias = [], {}  # (model, recipe); variant -> the model of this call whose result it takes
+        for m in models:
+            base = VARIANT_OF.get(m)
+            if base and same_as_base(m, source):
+                if base in models:
+                    alias[m] = base
+                else:
+                    jobs.append((m, None))  # the base recipe, stored under the variant's name
+            else:
+                jobs.append((m, "mp3" if base else None))
+        if mono is None and self.decoder == "shared" and any(recipe is None for _, recipe in jobs):
             t = time.perf_counter()
             try:
                 mono = self.decode(data, suffix)
@@ -264,27 +297,43 @@ class Embedder:
                 return {m: {"status": "decode_failed", "error": str(e)[:300], "clip_s": None, "emb": None} for m in models}
             finally:
                 self.secs["decode"] += time.perf_counter() - t
-        kind, payload = ("bytes", data) if mono is None else ("mono", np.ascontiguousarray(mono, "<f4").tobytes())
-        out, sent = {}, []
-        for m in models:  # both children get the clip before either is waited for: they work side by side
-            try:
-                self.worker(m).send(kind, payload, suffix)
-                sent.append(m)
-            except WorkerDied as e:
-                out[m] = self._lost(m, e)
-        for m in sent:
-            try:
-                header, emb = self.workers[m].recv()
-            except WorkerDied as e:
-                out[m] = self._lost(m, e)
-                continue
-            self.died[m] = 0
-            peak = self.peak[m]
-            peak["rss"], peak["mps"] = max(peak["rss"], header.get("rss", 0)), max(peak["mps"], header.get("mps", 0))
-            self.secs[m] += header.get("secs", 0.0)
-            out[m] = {"status": header["status"], "error": header.get("error"), "clip_s": header.get("clip_s"),
-                      "emb": emb if header["status"] == "ok" else None}
-        return out
+        plain = ("bytes", data, None) if mono is None else ("mono", np.ascontiguousarray(mono, "<f4").tobytes(), None)
+        if channels is not None:  # a window decoded by the parent with its channels
+            ch = 1 if channels.ndim == 1 else channels.shape[1]
+            tripped = ("pcm", np.ascontiguousarray(channels, "<f4").tobytes(), {"recipe": "mp3", "ch": ch})
+        elif data is not None:  # the worker decodes the bytes itself, keeping the channels
+            tripped = ("bytes", data, {"recipe": "mp3"})
+        else:  # only a mono buffer exists: one channel, duplicated for the encode
+            tripped = ("pcm", plain[1], {"recipe": "mp3", "ch": 1})
+        out, queues = {}, {}
+        for m, recipe in jobs:
+            queues.setdefault(worker_of(m), []).append((m, tripped if recipe else plain))
+        while any(queues.values()):  # every child gets a clip before any is waited for: they work side by side
+            sent = []
+            for name, queue in queues.items():
+                if not queue:
+                    continue
+                m, (kind, payload, extra) = queue.pop(0)
+                try:
+                    self.worker(name).send(kind, payload, suffix, *([extra] if extra else []))
+                    sent.append((name, m))
+                except WorkerDied as e:
+                    out[m] = self._lost(name, e)
+            for name, m in sent:
+                try:
+                    header, emb = self.workers[name].recv()
+                except WorkerDied as e:
+                    out[m] = self._lost(name, e)
+                    continue
+                self.died[name] = 0
+                peak = self.peak[name]
+                peak["rss"], peak["mps"] = max(peak["rss"], header.get("rss", 0)), max(peak["mps"], header.get("mps", 0))
+                self.secs[m] += header.get("secs", 0.0)
+                out[m] = {"status": header["status"], "error": header.get("error"), "clip_s": header.get("clip_s"),
+                          "emb": emb if header["status"] == "ok" else None}
+        for m, base in alias.items():
+            out[m] = dict(out[base])
+        return {m: out[m] for m in models}
 
     def close(self) -> None:
         for w in self.workers.values():
@@ -323,6 +372,7 @@ class Options:
     cache_dir: Path = DEFAULT_CACHE  # the EffNet model file lives in its models/
     dry_run: bool = False
     progress_secs: float = 60.0
+    check_base: bool = False  # the variant top-up: also embed the base model and compare with its stored vector
 
 
 @dataclass
@@ -346,6 +396,8 @@ class Plan:
         c, kinds = self.counts, Counter(i.kind for i in self.items)
         parts = [f"{c['complete']} complete", f"{kinds['clips']} to fetch", f"{kinds['local']} from local files"]
         parts += [f"{c[k]} {text}" for k, text in (
+            ("by_copy", "from Deezer, whose vector is the base model's (copied, never downloaded)"),
+            ("no_baseline", "with no ok clip of the base model (embed those with all models)"),
             ("unmatched", "with no listing"), ("local_audio", "kept on their windows of full-length audio"),
             ("imported", "left alone (--skip-imported)"), ("beyond_limit", "left for a later run (--limit)")) if c[k]]
         return f"{clips} clips per album for {' + '.join(models)}. {len(self.items) + sum(c.values())} albums: " + ", ".join(parts)
@@ -385,9 +437,24 @@ def all_final(status: dict[str, str], models) -> bool:
     return all(status.get(m) in FINAL for m in models)
 
 
+def following(models) -> str | None:
+    """The base model whose clips a run follows: when every model asked for is a variant of it."""
+    bases = {VARIANT_OF.get(m) for m in models}
+    return next(iter(bases)) if len(bases) == 1 and None not in bases else None
+
+
+def with_copies(status: dict[str, str], models, source: str) -> dict[str, str]:
+    """A clip's statuses with a variant that is its base's vector (same_as_base) read from the base: the
+    copy a run makes before it plans."""
+    borrowed = {m: status.get(VARIANT_OF[m]) for m in models if same_as_base(m, source)
+                and status.get(m) not in FINAL and status.get(VARIANT_OF[m]) in FINAL}
+    return {**status, **borrowed} if borrowed else status
+
+
 def make_plan(albums: list[dict], cache: OnePassCache, opts: Options) -> Plan:
     """What each album needs, from files only (no network)."""
     plan, summary, listings = Plan(), cache.summary(), cache.listings()
+    follow = following(opts.models)
     imported = set()
     if opts.skip_imported:
         imported = {r[0] for r in cache.con.execute("SELECT DISTINCT key FROM embeddings WHERE origin LIKE 'import:%'")}
@@ -411,12 +478,22 @@ def make_plan(albums: list[dict], cache: OnePassCache, opts: Options) -> Plan:
             plan.counts["imported"] += 1
             continue
         else:
-            clips = summary.get((key, source, album_id), {})
+            clips = {t: with_copies(st, opts.models, source) for t, st in summary.get((key, source, album_id), {}).items()}
             known = listings.get((key, source, album_id))
             available = known["n_previews"] if known and known["n_previews"] is not None else al["available"]
+            target = opts.clips
+            if follow:  # a variant alone: the clips its base model has, and nothing for an album the base has not
+                theirs = sum(st.get(follow) == "ok" for st in clips.values())
+                if not theirs:
+                    plan.counts["no_baseline"] += 1
+                    continue
+                if all(same_as_base(m, source) for m in opts.models):
+                    plan.counts["by_copy"] += 1
+                    continue
+                target = min(opts.clips, theirs)
             good = sum(all_ok(st, opts.models) for st in clips.values())
             tried = sum(all_final(st, opts.models) for st in clips.values())
-            if good >= opts.clips or (available is not None and tried >= available):
+            if good >= target or (available is not None and tried >= available):
                 plan.counts["complete"] += 1
                 continue
             item = Item(key, "clips", source, album_id, good=good)
@@ -451,6 +528,50 @@ def needed_clips(key: str, source: str, album_id: str, listing: list[dict], cach
                     "prio": have["prio"] if have["prio"] is not None else rank, "url": t["preview_url"],
                     "suffix": ".mp3" if source == "deezer" else ".m4a", "track_s": t.get("duration_s") or None,
                     "models": todo, "refused_before": refused})
+    return out
+
+
+def variant_clips(key: str, source: str, album_id: str, listing: list[dict], cached: dict[str, dict],
+                  models: tuple[str, ...], clips: int, base: str) -> list[dict]:
+    """The clips to download now for a run of variants alone: the album's first `clips` clips that are ok
+    for `base`, in rank order (the clips its base mean is taken over), each for the variants it lacks. One
+    of them that the fresh listing has no preview of any more comes back with `gone` (no URL: it is
+    recorded as no_preview without a download). While the album then has fewer ok clips than the base, the
+    next tracks in priority order stand in (`replacement`), as needed_clips replaces a clip that failed for
+    good. A clip the base has keeps its rank and position."""
+    def record(track_id, have, idx, rank, t, **more):
+        todo = [m for m in models if have["status"].get(m) not in FINAL]
+        refused = [m for m in todo if have["status"].get(m) == "download_failed" and (have["error"].get(m) or "").startswith("HTTP 4")]
+        return todo and {"key": key, "source": source, "album_id": album_id, "track_id": track_id,
+                         "track_idx": have["track_idx"] if have["track_idx"] is not None else idx,
+                         "prio": have["prio"] if have["prio"] is not None else rank, "url": (t or {}).get("preview_url"),
+                         "suffix": ".mp3" if source == "deezer" else ".m4a", "track_s": (t or {}).get("duration_s") or None,
+                         "models": todo, "refused_before": refused, **more}
+
+    at = {t["track_id"]: (i, t) for i, t in enumerate(listing)}
+    theirs = sorted(((t, c) for t, c in cached.items() if c["status"].get(base) == "ok"),
+                    key=lambda tc: (tc[1]["prio"] is None, tc[1]["prio"] or 0, tc[1]["track_idx"] or 0))[:clips]
+    missing = len(theirs) - sum(all_ok(c["status"], models) for c in cached.values())
+    out = []
+    for track_id, have in theirs:
+        if len(out) >= missing:
+            break
+        idx, t = at.get(track_id, (None, None))
+        rec = record(track_id, have, idx, None, t, follows=True, gone=not (t or {}).get("preview_url"))
+        if rec:
+            out.append(rec)
+    taken = {t for t, _ in theirs}
+    playable = [(i, t) for i, t in enumerate(listing) if t.get("preview_url")]
+    for rank, pos in enumerate(priority_order(len(playable)) if playable else []):
+        if len(out) >= missing:
+            break
+        idx, t = playable[pos]
+        if t["track_id"] in taken:
+            continue
+        have = cached.get(t["track_id"], {"status": {}, "error": {}, "prio": None, "track_idx": None})
+        rec = record(t["track_id"], have, idx, rank, t, replacement=True)
+        if rec:
+            out.append(rec)
     return out
 
 
@@ -506,6 +627,14 @@ def store_of(source: str) -> str:
     return source.split(":")[0]
 
 
+def window_decoder(models, ffmpeg: str):
+    """decode(path, start, length) for a window of a file: mono float32 at 44.1 kHz, or, when a variant
+    is among the models, the window WITH its channels ((samples, channels); the mono buffer the other
+    models get is its channel average, the same numbers as the mono decode)."""
+    of_wav = mp3trip.channels_of_wav if any(m in VARIANT_OF for m in models) else clap_catalog().mono_of_wav
+    return lambda path, start, length: windows.decode_window(path, start, length, ffmpeg, of_wav)
+
+
 def default_network():
     """(listing(source, album_id) -> tracks, download(url) -> bytes): the matcher's fresh track listing (its
     rate limits and retries) and embed.download. Imported here: the matcher needs pandas and rapidfuzz."""
@@ -548,7 +677,14 @@ def run(opts: Options, listing=None, download=None, embedder=None, out=print, st
     stop = stop or Stop()
     tmp, own_embedder, http = None, embedder is None, None
     try:
-        plan = make_plan(read_albums(opts.matches), cache, opts)
+        albums = read_albums(opts.matches)
+        for m in opts.models:  # a variant's Deezer clips are its base's: copied inside the cache, never fetched
+            if m in VARIANT_OF:
+                copied = cache.copy_variant(m, [a["key"] for a in albums if not opts.keys or a["key"] in set(opts.keys)])
+                if copied:
+                    out(f"{m}: {sum(copied.values())} Deezer clips took their {VARIANT_OF[m]} row (copied in the cache, "
+                        f"nothing downloaded): {dict(copied)}")
+        plan = make_plan(albums, cache, opts)
         out(plan.summary(opts.clips, opts.models))
         if not plan.items:
             return 0
@@ -568,8 +704,7 @@ def run(opts: Options, listing=None, download=None, embedder=None, out=print, st
             embedder = Embedder(worker_factories(opts.models, opts.cache_dir, tmp, opts.torch_python), opts.decoder,
                                 lambda data, suffix: cc.decode(data, suffix, tmp, ffmpeg), out)
         if decode_window is None:
-            decode_window = lambda path, start, length: windows.decode_window(  # noqa: E731
-                path, start, length, ffmpeg, clap_catalog().mono_of_wav)
+            decode_window = window_decoder(opts.models, ffmpeg)
         durations = durations or (lambda p: windows.probe_duration(p, ffprobe))
         if (listing is None or download is None) and any(i.kind == "clips" for i in plan.items):
             net_listing, net_download, http = default_network()
@@ -593,6 +728,7 @@ def _work(plan: Plan, cache: OnePassCache, opts: Options, listing, download, emb
           durations, decode_window) -> None:
     status: dict[str, Counter] = {m: Counter() for m in opts.models}
     failing, n, done_albums, network_fails = Counter(), 0, 0, 0
+    follow, followed, checks = following(opts.models), Counter(), []
     t0 = last = time.monotonic()
     downloads = ThreadPoolExecutor(1)  # one at a time, ahead of the models: the next clip is usually in memory
 
@@ -628,7 +764,7 @@ def _work(plan: Plan, cache: OnePassCache, opts: Options, listing, download, emb
             attempted: set[str] = set()
             recs, broke = first, False
             while recs and not broke:  # again while a clip that failed for good can be replaced by the next track
-                pending = [None if rec.get("path") else downloads.submit(download, rec["url"]) for rec in recs]
+                pending = [None if rec.get("path") or rec.get("gone") else downloads.submit(download, rec["url"]) for rec in recs]
                 for i, (rec, fut) in enumerate(zip(recs, pending)):
                     if stop.asked:
                         for p in pending[i:]:
@@ -636,12 +772,21 @@ def _work(plan: Plan, cache: OnePassCache, opts: Options, listing, download, emb
                         broke = True
                         break
                     attempted.add(rec["track_id"])
+                    if opts.check_base and rec.get("follows") and not rec.get("gone"):
+                        rec["check"] = follow
                     results = _clip(rec, fut, embedder, decode_window)
                     if stop.asked and not all(r["status"] == "ok" for r in results.values()):
                         broke = True  # a failure while stopping may be the stop itself: the clip is left for the next run
                         break
                     clip_s = next((r["clip_s"] for r in results.values() if r.get("clip_s") is not None), None)
-                    cache.put_clip({**rec, "clip_s": clip_s})
+                    if not rec.get("follows"):  # a clip the base model has keeps its row as it is
+                        cache.put_clip({**rec, "clip_s": clip_s})
+                    followed.update(k for k in ("follows", "gone", "replacement") if rec.get(k))
+                    followed["replacement_ok"] += bool(rec.get("replacement")) and all(r["status"] == "ok" for r in results.values())
+                    cos = base_cosine(cache, rec)
+                    if cos is not None:
+                        checks.append(cos)
+                        out(f"check\t{rec['key']}\t{rec['source']}\t{rec['track_id']}\t{cos:.5f}")
                     for m, r in results.items():
                         cache.put_result(rec, m, r["status"], r.get("error"), r.get("emb"), r.get("clip_s"))
                         status[m][r["status"]] += 1
@@ -672,6 +817,14 @@ def _work(plan: Plan, cache: OnePassCache, opts: Options, listing, download, emb
         out(embedder.memory())
         if embedder.secs:
             out("model seconds per clip: " + ", ".join(f"{k} {v / max(n, 1):.2f}" for k, v in embedder.secs.items()))
+    if follow:
+        out(f"following {follow}: {followed['follows']} of its clips asked for, {followed['gone']} of them gone from the "
+            f"store's listing (recorded as no_preview); {followed['replacement']} other tracks tried in their place, "
+            f"{followed['replacement_ok']} ok (those albums' {' + '.join(opts.models)} mean is not over the {follow} mean's clips)")
+    if checks:
+        c = np.array(checks)
+        out(f"baseline check: {len(c)} clips embedded again for {follow}; cosine with the stored vector: median "
+            f"{np.median(c):.5f}, 5th percentile {np.percentile(c, 5):.5f}, lowest {c.min():.5f}; {int((c < 0.99).sum())} under 0.99")
     for item in plan.items:
         if item.problem:
             out(f"problem\t{item.key}\t{item.problem}")
@@ -683,23 +836,55 @@ def _work(plan: Plan, cache: OnePassCache, opts: Options, listing, download, emb
 def _needed(item: Item, tracks, cache: OnePassCache, opts: Options, durations) -> list[dict]:
     if item.kind == "local":
         return local_clips(item, cache, opts.models, durations)
-    return needed_clips(item.key, item.source, item.album_id, tracks, cache.album(item.key, item.source, item.album_id),
-                        opts.models, opts.clips)
+    cached, base = cache.album(item.key, item.source, item.album_id), following(opts.models)
+    if base:
+        return variant_clips(item.key, item.source, item.album_id, tracks, cached, opts.models, opts.clips, base)
+    return needed_clips(item.key, item.source, item.album_id, tracks, cached, opts.models, opts.clips)
+
+
+def base_cosine(cache: OnePassCache, rec: dict) -> float | None:
+    """The cosine between the base-model vector just made of the clip for a check (rec `checked`, left by
+    _clip) and the one the cache holds; None when either is missing. Nothing is written."""
+    made = rec.pop("checked", None)
+    if not made or made.get("status") != "ok":
+        return None
+    row = cache.con.execute("SELECT emb FROM embeddings WHERE key = ? AND source = ? AND album_id = ? AND track_id = ? "
+                            "AND model = ? AND status = 'ok'", (rec["key"], rec["source"], rec["album_id"], rec["track_id"],
+                                                               rec["check"])).fetchone()
+    if row is None or row[0] is None:
+        return None
+    spec = MODELS[rec["check"]]
+    a, b = (np.frombuffer(v, spec.dtype).astype(np.float64) for v in (made["emb"], row[0]))
+    return float(a @ b / max(np.linalg.norm(a) * np.linalg.norm(b), 1e-30))
 
 
 def _clip(rec: dict, fut, embedder, decode_window) -> dict[str, dict]:
-    """model -> result for one clip: its one download (or one decoded window), then every model it needs."""
+    """model -> result for one clip: its one download (or one decoded window), then every model it needs.
+    rec `check`: a base model embedded as well, for comparison only: its result is left in rec `checked`
+    and is not among the results."""
     models = rec["models"]
+    asked = [*models, rec["check"]] if rec.get("check") and rec["check"] not in models else models
+    more = {"source": rec["source"]} if any(m in VARIANT_OF for m in asked) else {}
 
     def every(status: str, error: str) -> dict:
         return {m: {"status": status, "error": error, "clip_s": None, "emb": None} for m in models}
 
+    def checked(results: dict) -> dict:
+        if len(asked) > len(models):
+            rec["checked"] = results.pop(rec["check"], None)
+        return results
+
+    if rec.get("gone"):
+        return every("no_preview", GONE)
     if rec.get("path"):
         try:
-            mono = decode_window(rec["path"], rec["start_s"], rec["length_s"])
+            audio = np.asarray(decode_window(rec["path"], rec["start_s"], rec["length_s"]))
         except Exception as e:
             return every("decode_failed", str(e)[:300])
-        results = embedder.embed(models, mono=mono)
+        mono = audio if audio.ndim == 1 else mp3trip.mono_of(audio)
+        if more:
+            more["channels"] = audio if audio.ndim == 2 else None  # a mono decode: one channel, duplicated for the encode
+        results = checked(embedder.embed(asked, mono=mono, **more))
         for r in results.values():
             r["clip_s"] = r["clip_s"] if r.get("clip_s") is not None else len(mono) / windows.SR
         return results
@@ -713,7 +898,7 @@ def _clip(rec: dict, fut, embedder, decode_window) -> dict[str, dict]:
             for m in rec.get("refused_before", ()):
                 results[m].update(status="no_preview", error=str(e)[:280] + ", twice")
         return results
-    return embedder.embed(models, data=data, suffix=rec.get("suffix", ".mp3"))
+    return checked(embedder.embed(asked, data=data, suffix=rec.get("suffix", ".mp3"), **more))
 
 
 # --- commands ----------------------------------------------------------------------------------------
@@ -739,6 +924,31 @@ def import_caches(out_db: Path, effnet: Path | None, clap: Path | None, keys_csv
     finally:
         cache.close()
         lock.close()
+    return 0
+
+
+def copy_variant(out_db: Path, model: str, keys=None, out=print) -> int:
+    """The `copy` command: the variant's rows for the Deezer clips, taken from the base model's rows inside
+    the cache. No network, no model, no audio; the base rows are read, never written."""
+    if not Path(out_db).exists():
+        print(f"{out_db}: no one-pass cache there", file=sys.stderr)
+        return 1
+    try:
+        lock = take_lock(lock_path(out_db))
+    except Locked as e:
+        print(f"{e} is held by a running job: not copying", file=sys.stderr)
+        return 1
+    cache = OnePassCache(out_db)
+    try:
+        copied = cache.copy_variant(model, keys)
+        have = dict(cache.con.execute("SELECT status, COUNT(*) FROM embeddings WHERE model = ? AND source = 'deezer' GROUP BY 1", (model,)))
+        base = dict(cache.con.execute("SELECT status, COUNT(*) FROM embeddings WHERE model = ? AND source = 'deezer' GROUP BY 1",
+                                      (VARIANT_OF[model],)))
+    finally:
+        cache.close()
+        lock.close()
+    out(f"{model}: {sum(copied.values())} Deezer clips took their {VARIANT_OF[model]} row {dict(copied)}; the cache now has "
+        f"{have} for {model} and {base} for {VARIANT_OF[model]} on Deezer clips")
     return 0
 
 
@@ -802,6 +1012,14 @@ def parser() -> argparse.ArgumentParser:
     r.add_argument("--cache-dir", type=Path, default=DEFAULT_CACHE, help="Where models/ (the EffNet graph) is.")
     r.add_argument("--progress-secs", type=float, default=60.0)
     r.add_argument("--dry-run", action="store_true", help="Print what would be done; no network, nothing written.")
+    r.add_argument("--check-baseline", action="store_true",
+                   help="With a run of a variant alone: embed each clip for the base model too and print its cosine with the "
+                        "stored vector. Nothing of the base model is written.")
+
+    c = sub.add_parser("copy", parents=[common], help="A variant's Deezer clips: the base model's rows, copied inside the cache.")
+    c.add_argument("--model", choices=tuple(VARIANT_OF), default="clap_mp3")
+    c.add_argument("--keys", default="", help="Only these albums: comma-separated keys.")
+    c.add_argument("--keys-file", type=Path, default=None, help="Only the albums whose keys are in this file, one per line.")
 
     i = sub.add_parser("import", parents=[common], help="Copy embeddings already computed into the cache (sources read-only).")
     i.add_argument("--effnet", type=Path, default=Path(os.environ["RMR_CLIPS_DB"]) if os.environ.get("RMR_CLIPS_DB") else None,
@@ -813,7 +1031,7 @@ def parser() -> argparse.ArgumentParser:
     m.add_argument("--model", choices=tuple(MODELS), required=True)
     m.add_argument("--clips", type=int, default=None, help="Clips per album (default: every ok clip).")
     m.add_argument("--pool", choices=POOLS, default="rank")
-    m.add_argument("--common", action="store_true", help="Only clips that are ok for both models.")
+    m.add_argument("--common", action="store_true", help="Only clips that are ok for both models (effnet and clap).")
     m.add_argument("--matches", type=Path, default=None, help="Which listing each album's mean is taken from.")
     m.add_argument("--to", type=Path, required=True)
 
@@ -824,19 +1042,22 @@ def parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     sys.stdout.reconfigure(line_buffering=True)
-    if args.cmd == "run":
-        if args.clips < 1:
-            parser().error("--clips must be at least 1")
+    if args.cmd in ("run", "copy"):
         keys = tuple(k for k in args.keys.split(",") if k)
         if args.keys_file:
             keys += tuple(line.strip() for line in args.keys_file.read_text(encoding="utf-8").splitlines() if line.strip())
+    if args.cmd == "copy":
+        return copy_variant(args.out, args.model, keys or None)
+    if args.cmd == "run":
+        if args.clips < 1:
+            parser().error("--clips must be at least 1")
         try:
             os.nice(19)
         except OSError:
             pass
         return run(Options(args.matches, args.out, args.clips, args.models, keys, args.skip_imported, args.limit, args.decoder,
                            args.local_dir, tuple(args.other_lock), args.torch_python, args.cache_dir, args.dry_run,
-                           args.progress_secs))
+                           args.progress_secs, args.check_baseline))
     if args.cmd == "import":
         if args.effnet is None and args.clap is None:
             parser().error("give --effnet and/or --clap (or set RMR_CLIPS_DB)")
@@ -847,7 +1068,7 @@ def main(argv: list[str] | None = None) -> int:
     cache = OnePassCache(args.out, readonly=True)
     try:
         if args.cmd == "means":
-            n = write_means(cache, args.model, args.clips, args.pool, args.to, args.matches, tuple(MODELS) if args.common else ())
+            n = write_means(cache, args.model, args.clips, args.pool, args.to, args.matches, BASE_MODELS if args.common else ())
             print(f"{n} album means ({args.model}, {'all' if args.clips is None else args.clips} clips, pool {args.pool}) -> {args.to}")
         else:
             print(status_text(cache, read_albums(args.matches) if args.matches.exists() else None, args.clips, args.models))
