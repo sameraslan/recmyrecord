@@ -36,6 +36,7 @@ loader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none" });
 
 interface LoadedGas {
   texture: THREE.Texture;
+  /** The decoded image, 16 MB. Closed as soon as the GPU has it (uploadGas). */
   bitmap: ImageBitmap;
 }
 
@@ -62,10 +63,16 @@ function loadGas(url: string): Promise<LoadedGas> {
   });
 }
 
-/** The bitmap is kept as long as the texture: after a lost WebGL context three uploads it again. */
+/** Uploads the image and builds its mips now, outside a frame, then frees the decoded copy: the GPU holds the
+ * only one from here on (three keeps no pixels). After a lost WebGL context the image is fetched again. */
+function uploadGas(gl: THREE.WebGLRenderer, g: LoadedGas): void {
+  gl.initTexture(g.texture);
+  g.bitmap.close();
+}
+
 function disposeGas(g: LoadedGas): void {
   g.texture.dispose();
-  g.bitmap.close();
+  g.bitmap.close(); // closing twice is allowed
 }
 
 function setGasFlag(value: "loading" | "ready" | "off"): void {
@@ -85,7 +92,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   const camera = useThree((s) => s.camera);
   const invalidate = useThree((s) => s.invalidate);
   const enabled = gasTextureFits(gl.capabilities.maxTextureSize);
-  const loaded = useRef<Partial<Record<StopId, LoadedGas>>>({});
+  const loaded = useRef<Partial<Record<StopId, THREE.Texture>>>({});
   // Strength factor of the dimmed pages, eased like AlbumField's dot alpha; -1 until the first frame.
   const dim = useRef(-1);
   // Pool amount (0 to 1) and its easing; value -1 until the first frame.
@@ -141,7 +148,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       return;
     }
     let alive = true;
-    const store: Partial<Record<StopId, LoadedGas>> = {};
+    const store: Partial<Record<StopId, THREE.Texture>> = {};
     loaded.current = store;
     // A stop is "started" from the moment it is scheduled, also while its fetch still waits for an idle slot.
     const started = new Set<StopId>();
@@ -149,33 +156,41 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     let settled = 0;
     let firstIn = false;
     let idle: { cancel: () => void } | null = null;
+    // Goes up when the WebGL context is lost: a fetch started before that belongs to the old context and is dropped.
+    let gen = 0;
+    let lost = false;
     // 'loading' while any started stop is unsettled, 'ready' once every started stop is in or has failed.
     function flag(): void {
       if (alive) setGasFlag(settled === started.size ? "ready" : "loading");
     }
     function fetchStop(stop: StopId): void {
       if (!alive || fetching.has(stop)) return;
-      fetching.add(stop);
       started.add(stop);
       flag();
+      // While the context is lost nothing can be uploaded; the stop is fetched when the context is back.
+      if (lost) return;
+      fetching.add(stop);
+      const mine = gen;
       loadGas(gasUrl(stop))
         .then((g) => {
-          if (!alive) {
+          // (the context can be lost a moment before its event arrives)
+          if (!alive || mine !== gen || gl.getContext().isContextLost()) {
             disposeGas(g);
             return;
           }
-          store[stop] = g;
           // Upload now, outside a frame, so the first frame that shows this stop does not stall on it.
-          gl.initTexture(g.texture);
+          uploadGas(gl, g);
+          store[stop] = g.texture;
           // frameloop="demand": a texture arriving is not an input event. Draw one frame if this stop is on
           // screen now, or if nothing is (it may stand in until the wanted stop arrives).
           const m = stopMix(useMapStore.getState().sliderT);
           if (stop === m.a || stop === m.b || !mesh.visible) invalidate();
         })
         .catch((err) => {
-          console.error("gas texture failed", gasUrl(stop), err);
+          if (alive && mine === gen) console.error("gas texture failed", gasUrl(stop), err);
         })
         .finally(() => {
+          if (mine !== gen) return;
           settled += 1;
           flag();
           if (!firstIn) {
@@ -217,26 +232,40 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       // back to 'loading' until they are in.
       if (s.input.interactive && !prev.input.interactive) schedule(gasStopsToStart(s.input.stop, true));
     });
-    // three rebuilds its GL state after a restored context; mark every texture so it is uploaded again.
+    // A lost WebGL context takes the uploaded gas with it, and the decoded images were freed after upload. So
+    // when the context is lost every stop is forgotten (the quad hides and the flag says 'loading'), and when it
+    // is restored the started stops are fetched again, in the same order as at the start: the stop on screen at
+    // once, the others in an idle slot. The files come from the HTTP cache.
     const canvas = gl.domElement;
-    const onRestored = () => {
+    const onLost = () => {
+      lost = true;
+      gen += 1;
+      idle?.cancel();
+      idle = null;
       for (const stop of STOP_IDS) {
-        const g = store[stop];
-        if (g) g.texture.needsUpdate = true;
+        store[stop]?.dispose();
+        delete store[stop];
       }
+      fetching.clear();
+      settled = 0;
+      firstIn = false;
+      flag();
+    };
+    const onRestored = () => {
+      lost = false;
       noise.needsUpdate = true;
+      fetchStop(useMapStore.getState().input.stop);
       invalidate();
     };
+    canvas.addEventListener("webglcontextlost", onLost);
     canvas.addEventListener("webglcontextrestored", onRestored);
     return () => {
       alive = false;
       idle?.cancel();
       unsubscribe();
+      canvas.removeEventListener("webglcontextlost", onLost);
       canvas.removeEventListener("webglcontextrestored", onRestored);
-      for (const stop of STOP_IDS) {
-        const g = store[stop];
-        if (g) disposeGas(g);
-      }
+      for (const stop of STOP_IDS) store[stop]?.dispose();
       loaded.current = {};
     };
   }, [enabled, gl, invalidate, mesh, noise]);
@@ -253,8 +282,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     if (window.__rmr && window.__rmr.gasShownMs === undefined) window.__rmr.gasShownMs = performance.now();
     const u = material.uniforms;
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-    u.u_gasA.value = got[pair.a]!.texture;
-    u.u_gasB.value = got[pair.b]!.texture;
+    u.u_gasA.value = got[pair.a]!;
+    u.u_gasB.value = got[pair.b]!;
     u.u_mix.value = pair.k;
 
     const zoom = (camera as THREE.OrthographicCamera).zoom;

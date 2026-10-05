@@ -223,23 +223,55 @@ test('moving the slider to a stop whose gas has not arrived keeps gas on screen,
 
 test('the gas comes back after the WebGL context is lost and restored', async ({ page }, info) => {
   test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  const gasRequests: string[] = [];
+  page.on('request', (r) => {
+    if (/\/data\/theme\/gas-\w+\.webp$/.test(r.url())) gasRequests.push(new URL(r.url()).pathname);
+  });
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);
   const patch = await patchAt(page, IN_RAINBOWS, [0, 0], 80);
-  expect(await lumaAt(page, patch)).toBeGreaterThan(SKY_LUMA * 3);
-  await page.evaluate(async () => {
+  const before = await lumaAt(page, patch);
+  expect(before).toBeGreaterThan(SKY_LUMA * 3);
+  expect([...gasRequests].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp']);
+  // The decoded images are freed once they are on the GPU, so a lost context takes the gas with it: the flag
+  // must say so while the context is gone and right after it is back, until the images have been fetched again.
+  const flags = await page.evaluate(async () => {
     const canvas = document.querySelector<HTMLCanvasElement>('canvas.map-canvas')!;
     const lose = canvas.getContext('webgl2')!.getExtension('WEBGL_lose_context')!;
+    const lostEvent = new Promise((resolve) => canvas.addEventListener('webglcontextlost', resolve, { once: true }));
     const restored = new Promise((resolve) => canvas.addEventListener('webglcontextrestored', resolve, { once: true }));
     lose.loseContext();
+    await lostEvent;
     await new Promise((resolve) => setTimeout(resolve, 300));
+    const whileLost = window.__rmr!.gas;
     lose.restoreContext();
     await restored;
+    return { whileLost, onRestore: window.__rmr!.gas };
   });
+  expect(flags).toEqual({ whileLost: 'loading', onRestore: 'loading' });
+  await waitForMap(page);
   await waitForMapQuiet(page, 300);
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
   expect(await page.evaluate(() => window.__rmr!.getState().webgl)).toBe('ok');
-  expect(await lumaAt(page, patch)).toBeGreaterThan(SKY_LUMA * 3);
+  // every stop was fetched a second time (from the HTTP cache), and the same patch of gas is back
+  expect([...gasRequests].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp', '/data/theme/gas-sonic.webp']);
+  const after = await lumaAt(page, patch);
+  expect(after).toBeGreaterThan(SKY_LUMA * 3);
+  expect(Math.abs(after - before), 'the same gas as before the loss').toBeLessThan(2);
+  // a slider move after the restore draws the other stops from their new textures, with no error
+  await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForMapQuiet(page, 300);
+  const vp = page.viewportSize()!;
+  expect(await lumaAt(page, { x: vp.width / 2 - 150, y: vp.height / 2 - 150, w: 300, h: 300 })).toBeGreaterThan(SKY_LUMA * 2);
+  expect(errors).toEqual([]);
+  // and at rest nothing draws
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBeLessThanOrEqual(1);
 });
 
 test('without theme data the map still works, with plain sky and no gas requests', async ({ page }, info) => {
