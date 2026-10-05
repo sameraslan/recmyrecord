@@ -195,7 +195,7 @@ test('Escape in the header search does not close the card', async ({ page, isMob
   await expect(page.locator('.card')).toBeVisible();
 });
 
-test('the hint hides once covers show and returns at the overview', async ({ page, isMobile }) => {
+test('the hint hides once covers show and returns at the whole map', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the hint is desktop only');
   await page.goto('/map');
   await waitForMap(page);

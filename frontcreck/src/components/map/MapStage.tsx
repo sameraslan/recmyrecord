@@ -201,6 +201,7 @@ export function MapStage() {
       hot,
       selected: view === 'explore' ? selected : null,
       interactive,
+      explore: view === 'explore',
       dimmed,
       insetLeft: view === 'album' && !narrow ? panelInset : 0,
       framePadding: narrow ? phonePadding.frame : DESKTOP_PADDING,
@@ -222,11 +223,14 @@ export function MapStage() {
   }, []);
 
   // Explore camera memory (mockup render: exploreCam). Leaving Explore saves the camera and drops the card;
-  // coming back from an album (its close control, Escape or the header nav) restores it, or frames the whole map.
+  // coming back from an album (its close control, Escape or the header nav) restores it, or frames the whole map;
+  // coming from Home, About or 404 with nothing saved glides to the opening view (the Overview); leaving for Home
+  // with the Overview untouched glides back to the whole map and keeps nothing.
   // "Explore this area" is the exception: it asks for Explore with the camera left where the album had it.
   const prevView = useRef<View>(view);
   const pendingReturn = useRef(false);
   const exploreHere = useRef(false);
+  const pendingOpening = useRef(false);
   // A layout effect, declared before the one below, so both see the same commit.
   useLayoutEffect(() => {
     const prev = prevView.current;
@@ -234,10 +238,17 @@ export function MapStage() {
     if (prev === view) return;
     const s = useAppStore.getState();
     if (prev === 'explore') {
-      if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
+      // To Home with the Overview untouched: Home shows the Whole map, as on a fresh load (prototype app.js L114,
+      // final-home.jpg), and nothing is kept, so the Map link opens at the Overview again (Task 0).
+      const toHome = view === 'home' && apiRef.current?.homeBackdrop() === true;
+      if (toHome) s.saveExploreCamera(null);
+      else if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
       s.setSelected(null);
     }
     pendingReturn.current = view === 'explore' && prev === 'album' && !exploreHere.current;
+    // Home, About or 404 to the map, with no camera saved in Explore: the map glides to its opening view (Task 0,
+    // prototype app.js L118). A saved camera stays where the visitor left it.
+    pendingOpening.current = view === 'explore' && (prev === 'home' || prev === 'about' || prev === 'other') && s.exploreCamera === null;
     exploreHere.current = false;
   }, [view]);
   // The pathname can change a commit before the album panel unmounts and clears the focus, so the camera moves
@@ -249,6 +260,13 @@ export function MapStage() {
     const saved = useAppStore.getState().exploreCamera;
     if (saved) apiRef.current.setCamera(saved, true);
     else apiRef.current.reset();
+  }, [view, input]);
+  // Runs in the commit whose input says Explore (MusicMap applied it in its own layout effect). Without a map yet
+  // there is nothing to move: when the map mounts, InitialFrame opens it at the same framing.
+  useLayoutEffect(() => {
+    if (!pendingOpening.current || view !== 'explore' || input.focus !== null) return;
+    pendingOpening.current = false;
+    apiRef.current?.opening(true);
   }, [view, input]);
 
   // Escape closes the card (mockup keydown order: after the About layer and the album view, both other routes).

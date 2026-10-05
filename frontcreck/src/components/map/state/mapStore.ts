@@ -10,6 +10,7 @@ export const DEFAULT_INPUT: MapInput = {
   hot: null,
   selected: null,
   interactive: false,
+  explore: false,
   dimmed: true,
   insetLeft: 0,
   framePadding: { top: 96, right: 96, bottom: 96, left: 96 },

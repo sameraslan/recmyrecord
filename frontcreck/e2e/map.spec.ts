@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { camera, coversSettled, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet } from './helpers';
+import { albumSpread, camera, coversSettled, isPhone, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet, wholeMapMiss } from './helpers';
 
 test('the map is a lazily loaded WebGL canvas that renders on demand', async ({ page }, info) => {
   const atlasRequests: string[] = [];
@@ -34,7 +34,7 @@ test('the map is a lazily loaded WebGL canvas that renders on demand', async ({ 
   await shot(page, info, 'explore-zoomed');
 });
 
-test('keyboard pans and zooms, 0 resets', async ({ page }) => {
+test('keyboard pans and zooms, 0 gives the whole map', async ({ page }, info) => {
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);
@@ -49,10 +49,17 @@ test('keyboard pans and zooms, 0 resets', async ({ page }) => {
   expect((await camera(page)).zoom).toBeGreaterThan(start.zoom);
   await page.keyboard.press('0');
   await waitForCameraIdle(page);
-  expect((await camera(page)).zoom).toBeCloseTo(start.zoom, 3);
+  // The map opens at the Overview (Task 0); 0 is the fit button, which gives the whole map.
+  expect(wholeMapMiss(await albumSpread(page), isPhone(info))).toEqual([]);
+  const whole = await camera(page);
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('0');
+  await waitForCameraIdle(page);
+  const again = await camera(page);
+  expect(Math.hypot(again.x - whole.x, again.y - whole.y) + Math.abs(again.zoom - whole.zoom)).toBeLessThan(1e-6);
 });
 
-test('zoom buttons work', async ({ page }) => {
+test('zoom buttons work', async ({ page }, info) => {
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);
@@ -62,7 +69,14 @@ test('zoom buttons work', async ({ page }) => {
   expect((await camera(page)).zoom).toBeGreaterThan(start.zoom);
   await page.getByRole('button', { name: COPY.map.reset }).click();
   await waitForCameraIdle(page);
-  expect((await camera(page)).zoom).toBeCloseTo(start.zoom, 3);
+  expect(wholeMapMiss(await albumSpread(page), isPhone(info))).toEqual([]);
+  const whole = await camera(page);
+  await page.getByRole('button', { name: COPY.map.zoomIn }).click();
+  await waitForCameraIdle(page);
+  await page.getByRole('button', { name: COPY.map.reset }).click();
+  await waitForCameraIdle(page);
+  const again = await camera(page);
+  expect(Math.hypot(again.x - whole.x, again.y - whole.y) + Math.abs(again.zoom - whole.zoom)).toBeLessThan(1e-6);
 });
 
 test.describe('desktop pointer', () => {

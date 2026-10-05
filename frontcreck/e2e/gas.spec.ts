@@ -25,6 +25,11 @@ const LATE_IMAGE = /\/data\/theme\/gas-(sonic|mood)\.[0-9a-f]{10}\.webp$/;
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     window.__rmrGasLite = 'off';
+    // Every reading here was measured at the map's old opening view, the whole cloud ("as the map opens, the whole
+    // cloud fits the pane", the lighter shader's mip level "at the overview", the registration test's px per raw
+    // unit). /map now opens at the Overview (Task 0 of part 2); these tests open where they were written, and
+    // e2e/opening.spec.ts reads the gas at the Overview.
+    window.__rmrOpen = 'whole';
   });
 });
 

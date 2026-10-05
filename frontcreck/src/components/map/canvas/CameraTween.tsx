@@ -9,7 +9,8 @@ import { STOP_T, interpolated } from '../data';
 import { focusCamera } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
 import { worldToScreen } from '../state/projection';
-import { getOverviewFraming } from '../state/view';
+import { overviewView } from '../state/bounds';
+import { getFitCamera, getFitKind, getOverviewFraming, openingKind, setFitKind, untouchedOverview } from '../state/view';
 import { COVER_FADE_END_PX, zoomForCoverPx } from '../state/zoomLimits';
 import type { MapApi } from '../types';
 import { clampZoom, stopCameraRig } from './CameraRig';
@@ -108,9 +109,32 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
         const { input, rearmFocus } = useMapStore.getState();
         // Back to the focus framing, and FocusFramer follows stop and inset changes again.
         if (input.focus) rearmFocus();
-        start(focusTarget() ?? (input.selected !== null ? flyTarget(input.selected) : overview()), DURATION.camera);
+        const framed = focusTarget() ?? (input.selected !== null ? flyTarget(input.selected) : null);
+        // The fit button's whole map (Task 0): a resize before the visitor moves the map keeps it.
+        if (framed === null) setFitKind('whole', overview());
+        start(framed ?? overview(), DURATION.camera);
       },
       flyTo: (id) => start(flyTarget(id), FLY_MS),
+      opening: (animate = true) => {
+        const { input, data, sliderT, insetCurrent } = useMapStore.getState();
+        if (!data) return;
+        const kind = openingKind(input, window.__rmrOpen);
+        const { width, height } = get().size;
+        const whole = overview();
+        const to = kind === 'overview' ? overviewView(data, sliderT, { width, height, insetLeft: insetCurrent, bottomCover: input.bottomCover }, whole.zoom) : null;
+        const target = to ? { x: to.center.x, y: to.center.y, zoom: to.zoom } : whole;
+        setFitKind(kind, target);
+        start(target, animate ? DURATION.camera : 0);
+      },
+      homeBackdrop: () => {
+        // Still the Overview the map opened at (no tween running, nothing moved it): Home's Whole map, as on a fresh
+        // load of Home (prototype app.js L114). A moved camera stays, as today.
+        if (tween.current || !untouchedOverview(getFitKind(), getFitCamera(), current())) return false;
+        const whole = overview();
+        setFitKind('whole', whole);
+        start(whole, DURATION.camera);
+        return true;
+      },
       frameFocus: (animate = true) => {
         const t = focusTarget();
         if (t) start(t, animate ? DURATION.camera : 0);

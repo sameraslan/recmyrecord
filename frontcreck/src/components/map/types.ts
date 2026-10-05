@@ -17,6 +17,8 @@ export interface MapInput {
   hot: AlbumId | null;
   selected: AlbumId | null;
   interactive: boolean;
+  /** The route is /map (Explore): the one view that opens at the Overview (state/view.ts openingKind). */
+  explore: boolean;
   /** Home, About, 404: low contrast, no pointer input. */
   dimmed: boolean;
   /** CSS px covered by the album panel on the left; the map re-centres on the rest. */
@@ -48,6 +50,12 @@ export interface MapApi {
   reset: () => void;
   /** Fly to an album and zoom until covers show. */
   flyTo: (id: AlbumId) => void;
+  /** Glide (or jump, with `animate` false) to the framing /map opens at: the Overview, or the Whole map where
+   * state/view.ts openingKind says so. */
+  opening: (animate?: boolean) => void;
+  /** Leaving /map for Home: when the camera is still the untouched Overview, glide to the Whole map (Home's own
+   * framing) and return true; otherwise leave the camera and return false. */
+  homeBackdrop: () => boolean;
   /** Fit the focus (seed and visible recs, at the target stop) inside the padded visible area. */
   frameFocus: (animate?: boolean) => void;
   getCamera: () => MapCamera;

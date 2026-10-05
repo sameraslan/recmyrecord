@@ -5,9 +5,9 @@ import { useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 
 import type { MapData } from "../data";
-import { fitView, getCloudBounds } from "../state/bounds";
+import { fitView, getCloudBounds, overviewView } from "../state/bounds";
 import { useMapStore } from "../state/mapStore";
-import { setFramed, setOverviewFraming } from "../state/view";
+import { setFitKind, setFramed, setOverviewFraming, snapKind } from "../state/view";
 import { FRUSTUM_HALF_HEIGHT } from "../state/zoomLimits";
 
 /**
@@ -45,9 +45,12 @@ export function applyFrustum(camera: THREE.OrthographicCamera, width: number, he
  *   inside the visible area less MapInput.fitPadding, and publishes them (state/view.ts) for
  *   CameraRig, AlbumField, AtlasManager, CameraBounds and CameraTween. Recomputed on data, sliderT and size changes.
  * - Snap: once per MapData the camera jumps, without animation, to the
- *   framing centre and fitted zoom. A resize re-snaps only while the user
- *   has not yet grabbed the camera and no album is in focus; a slider change
- *   never moves the camera.
+ *   opening framing (state/view.ts openingKind): the Overview on /map
+ *   (state/bounds.ts fitOverview), the whole-cloud fit everywhere else. The
+ *   published framing stays the whole-cloud fit. A resize re-snaps only while
+ *   the user has not yet grabbed the camera and no album is in focus: on /map
+ *   to the framing last applied (getFitKind), elsewhere to the whole-cloud
+ *   fit (state/view.ts snapKind). A slider change never moves the camera.
  *
  * A layout effect, so all of this lands before R3F draws the first frame.
  *
@@ -103,11 +106,19 @@ export function InitialFrame() {
     const untouched = lastCameraGrab === 0 && input.focus === null;
     if (newData || (sizeChanged && untouched)) {
       framedData.current = data;
+      // A page load opens at the route's framing; a resize on /map re-fits the framing on screen (the fit button
+      // may have turned the Overview into the whole map), and on any other route the whole map.
+      const kind = snapKind(newData, input, window.__rmrOpen);
+      const view =
+        kind === "overview"
+          ? overviewView(data, currentSliderT, { width, height, insetLeft: useMapStore.getState().insetCurrent, bottomCover: input.bottomCover }, zoom)
+          : { zoom, center };
+      setFitKind(kind, { x: view.center.x, y: view.center.y, zoom: view.zoom });
       // eslint-disable-next-line react-hooks/immutability -- mutating the R3F camera in place (position/zoom/frustum) is the standard R3F pattern; the camera is a long-lived GPU-backed object, not React-owned state, and this is not itself inside a hook callback.
-      camera.position.x = center.x;
-      camera.position.y = center.y;
+      camera.position.x = view.center.x;
+      camera.position.y = view.center.y;
       // eslint-disable-next-line react-hooks/immutability -- see the comment above.
-      camera.zoom = zoom;
+      camera.zoom = view.zoom;
       camera.updateProjectionMatrix();
       setFramed(true);
     }
