@@ -37,18 +37,19 @@
 <body>
 <main>
   <h1>Open questions</h1>
-  <p class="lede">Eight things to look at. Each has a picture where a picture helps, and links that open the live prototype in a new tab. Open one live tab at a time to keep the laptop cool.</p>
+  <p class="lede">Eight things to look at. One is decided. Each has a picture where a picture helps, and links that open the live prototype in a new tab. Open one live tab at a time to keep the laptop cool.</p>
 
   <section id="deep">
     <div class="n">One</div>
     <h2>Deep zoom</h2>
-    <p>The gas now keeps fading as the covers grow. At full zoom the covers sit in near black space, with a very faint trace of the colour that was there.</p>
-    <p>The first picture shows full zoom on the brightest part of the map, before and with three strengths. The second shows five steps of one zoom with the recommended strength.</p>
+    <p><strong>Decided: C, Faint.</strong> It is now the default.</p>
+    <p>The gas keeps fading as the covers grow. At full zoom the covers sit in near black space, with a faint trace of the colour that was there.</p>
+    <p>The first picture shows full zoom on the brightest part of the map, before and with three strengths. The second shows five steps of one zoom. It was made with B, so its last step is a little darker than the default is now.</p>
     <ul class="links">
       <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999&amp;deep=old" target="_blank" rel="noopener">Before</a></li>
       <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999&amp;deep=0" target="_blank" rel="noopener">A. Pure black</a></li>
-      <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999" target="_blank" rel="noopener">B. Barely there</a></li>
-      <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999&amp;deep=0.06" target="_blank" rel="noopener">C. Faint</a></li>
+      <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999&amp;deep=0.025" target="_blank" rel="noopener">B. Barely there</a></li>
+      <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999" target="_blank" rel="noopener">C. Faint, the default</a></li>
     </ul>
     <figure><img src="../options/q-deep.jpg" alt="Full zoom on bright gas: before, pure black, barely there and faint" loading="lazy"><figcaption>The links open at full zoom. Zoom out and back in to see the fade.</figcaption></figure>
     <figure style="margin-top: 20px;"><img src="../options/q-deepseq.jpg" alt="Five steps of a zoom from Overview to full zoom" loading="lazy"><figcaption>One zoom in five steps, with B.</figcaption></figure>
@@ -57,14 +58,16 @@
   <section id="twinkle">
     <div class="n">Two</div>
     <h2>Twinkle</h2>
-    <p>The glints were there before but far too faint to see. Now a star swells into a soft glow for a second or so, and the brighter stars also show a thin cross of light.</p>
-    <p>The map must be still and zoomed out. Glints stop while you pan, zoom or move the slider, and once covers show. They are also off if the Mac has Reduce motion turned on.</p>
+    <p>What was wrong: nothing was broken. The glints were tested in a browser running in real time, and every one played from start to end. They were too small, too pale and too rare to notice. One came every 2 to 5 seconds and was about the size of a bright star.</p>
+    <p>What changed: a glint now comes every 1 to 3 seconds, and up to three can show at once. Each one is larger, whiter and has a solid bright centre. About one in three is on a bright star and shows a thin cross of light.</p>
+    <p>What to look for: open the first link and keep your hands off the mouse for five seconds. Somewhere on the map a star swells to a bright point, holds for a moment and fades, all within two seconds. The cross of light is the easiest kind to spot. Moving the mouse over the map does not stop them.</p>
+    <p>The map must be still and zoomed out. Glints stop while you pan, zoom or move the slider, and for half a second after. One zoom in from the opening view brings the covers in, and there are no glints once covers show. They are also off if the Mac has Reduce motion turned on. It is turned off on this Mac.</p>
     <ul class="links">
       <li><a href="index.html#/map?twinkle=0" target="_blank" rel="noopener">Off</a></li>
-      <li><a href="index.html#/map" target="_blank" rel="noopener">Subtle, one every 2 to 5 seconds</a></li>
-      <li><a href="index.html#/map?twinkle=2" target="_blank" rel="noopener">More, one every 0.7 to 2 seconds</a></li>
+      <li><a href="index.html#/map" target="_blank" rel="noopener">On, one every 1 to 3 seconds</a></li>
+      <li><a href="index.html#/map?twinkle=2" target="_blank" rel="noopener">More, one every 0.5 to 1.4 seconds</a></li>
     </ul>
-    <figure><img src="../options/q-twinkle.jpg" alt="The same patch of stars with no glint and with glints at their peak at both levels, at actual size and enlarged" loading="lazy"><figcaption>What to look for. The picture freezes many glints at once. Live there are one or two at a time, and each fades in and out.</figcaption></figure>
+    <figure><img src="../options/q-twinkle-live.jpg" alt="Four photographs of one glint on a bright star: growing, at its brightest with a cross of light, fading, and gone" loading="lazy"><figcaption>One glint from start to end, photographed while it played in a real time browser. Enlarged four times.</figcaption></figure>
   </section>
 
   <section id="stars">

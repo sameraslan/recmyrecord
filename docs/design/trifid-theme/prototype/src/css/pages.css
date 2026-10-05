@@ -228,11 +228,11 @@ html[data-toggle="c"] #names-toggle:focus-visible { outline-offset: -6px; }
 .tw { position: absolute; left: 0; top: 0; display: block; }
 .tw b { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; opacity: 0; will-change: opacity, transform; animation: tw-glint 1.5s ease-in-out both; }
 /* the two brightest star classes: a thin four-point flare, --fl long from tip to tip */
-.tw b.tw-flare::before, .tw b.tw-flare::after { content: ""; position: absolute; left: 50%; top: 50%; width: var(--fl, 40px); height: 1px; margin: -.5px 0 0 calc(var(--fl, 40px) / -2); background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .7) 50%, rgba(255, 255, 255, 0)); }
+.tw b.tw-flare::before, .tw b.tw-flare::after { content: ""; position: absolute; left: 50%; top: 50%; width: var(--fl, 40px); height: 1px; margin: -.5px 0 0 calc(var(--fl, 40px) / -2); background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .9) 50%, rgba(255, 255, 255, 0)); }
 .tw b.tw-flare::after { transform: rotate(90deg); }
-.tw b.tw-hold { animation: none; opacity: var(--peak, .85); }                      /* glints=<n>: frozen at its peak for a screenshot */
+.tw b.tw-hold { animation: none; opacity: var(--peak, 1); }                      /* glints=<n>: frozen at its peak for a screenshot */
 .tw b.tw-ring { animation: none; opacity: 1; border: 1px solid #f0f; }             /* glints=<n>: a debug ring, to check the position */
-@keyframes tw-glint { 0% { opacity: 0; transform: scale(.5); } 45% { opacity: var(--peak, .85); transform: scale(1); } 58% { opacity: var(--peak, .85); transform: scale(1); } 100% { opacity: 0; transform: scale(.7); } }
+@keyframes tw-glint { 0% { opacity: 0; transform: scale(.4); } 40% { opacity: var(--peak, 1); transform: scale(1); } 58% { opacity: var(--peak, 1); transform: scale(1); } 100% { opacity: 0; transform: scale(.6); } }
 @media (prefers-reduced-motion: reduce) { #twinkle { display: none; } }
 
 /* --- header=below: as the site is today, the map starts under the header, which has nothing behind it --- */

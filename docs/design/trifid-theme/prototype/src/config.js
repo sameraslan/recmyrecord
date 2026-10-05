@@ -26,7 +26,7 @@
     // out, so full-size covers sit in near-black space. Over the same stretch the gas loses `desat` of its colour, its
     // fine detail fades out and it is read from a blurred copy of the bake (the mean of mip levels `lod`), so the faint
     // colour that remains is smooth. deep=<0..1> in the hash overrides `floor`; deep=old is the earlier floor of 0.3.
-    DEEP: { end: 56, floor: 0.025, desat: 0.35, lod: [4.5, 6] },
+    DEEP: { end: 56, floor: 0.06, desat: 0.35, lod: [4.5, 6] },
     // focus
     MARKER: { seed: 64, rec: 46, gap: 10, hot: 1.16 },
     FOCUS_PAD: { top: 262, right: 96, bottom: 90, left: 96 },
@@ -62,11 +62,11 @@
     NAMES_MAX: 17, NAMES_MAX_PHONE: 4, NAMES_MAX_ALBUM: 8, NAMES_ALL_CAP: 14,
     DPR_MAX: 2,
     // twinkle (src/twinkle.js): per level, the wait between glints in ms [min, max], peak opacity, size factor, most alive at once
-    TWINKLE: { 1: { wait: [2000, 5000], peak: 0.85, size: 1, max: 2 }, 2: { wait: [700, 2000], peak: 1, size: 1.2, max: 3 } },
+    TWINKLE: { 1: { wait: [1200, 3000], peak: 1, size: 1, max: 3 }, 2: { wait: [500, 1400], peak: 1, size: 1.3, max: 5 } },
     TWINKLE_DUR: [1200, 1800],        // one glint, in and out, ms
-    TWINKLE_WEIGHT: [8, 5, 2.5, 1],   // how much likelier a star of each magnitude class is to glint (brighter stars more often)
-    TWINKLE_BLOOM: [4, 3],            // bloom radius in px = [0] * the star's radius + [1]
-    TWINKLE_FLARE: 9,                 // the two brightest classes also get a thin four-point flare, this many star radii long each way
+    TWINKLE_WEIGHT: [12, 7, 2.5, 1],  // how much likelier a star of each magnitude class is to glint (brighter stars more often)
+    TWINKLE_BLOOM: [5.5, 5],          // bloom radius in px = [0] * the star's radius + [1]
+    TWINKLE_FLARE: 12,                // the two brightest classes also get a thin four-point flare, this many star radii long each way
   };
   /** Gas strength for a cover size in px, and how far into deep zoom the view is (0..1).
    * strength: 1 under BAND_B; a straight line to 0.6 at BAND_C; a straight line to 0.3 at BAND_D; then

@@ -1,6 +1,6 @@
 /* Twinkle: every so often one star on screen catches the light. A DOM layer over the star canvas and under the names;
  * the WebGL canvas is never redrawn for it. One timer (setTimeout), no frame loop. A glint is one positioned element
- * with one animated child: a soft near-white bloom about four times the star's radius and, on the two brightest
+ * with one animated child: a near-white bloom (cfg.TWINKLE_BLOOM, about 20 to 40 px across) with a solid core and, on the two brightest
  * classes only, a thin four-point flare. Its keyframe animates only opacity and transform, and the element is removed
  * when the animation ends. Brighter stars glint more often (cfg.TWINKLE_WEIGHT).
  * Cost: at most cfg.TWINKLE[level].max glints alive (two DOM nodes each), one timer, no layout or style reads (the
@@ -15,7 +15,7 @@
   const Tw = (RMR.Twinkle = {});
   let host = null, timer = 0, lastKey = '', lastMove = 0, alive = 0;
   const pt = [0, 0], rm = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
-  const st = (Tw.stats = { ticks: 0, notResting: 0, capped: 0, spawned: 0, ended: 0, cleared: 0, worstSpawnMs: 0 });
+  const st = (Tw.stats = { ticks: 0, notResting: 0, capped: 0, spawned: 0, played: 0, ended: 0, cleared: 0, worstSpawnMs: 0 });
   const log = () => { if (RMR.S.force.twlog) document.documentElement.dataset.twlog = JSON.stringify(st).replace(/"/g, ''); };
 
   const level = () => RMR.S.proto.twinkle || 0;
@@ -82,13 +82,13 @@
     const L = C.TWINKLE[level()] || C.TWINKLE[1], col = RMR.Stars.col, cls = D.cls[pick];
     const sr = Math.max(0.8, C.STAR_RADIUS[cls] * RMR.Stars.sizeK(Cam.coverPx()));   // the star's own radius, as the shader draws it
     const R = mode === 'ring' ? 7 : (C.TWINKLE_BLOOM[0] * sr + C.TWINKLE_BLOOM[1]) * L.size;
-    const c = [0, 1, 2].map((k) => Math.round((col[4 * pick + k] + 255) / 2)).join();   // the star's tint, half way to white
+    const c = [0, 1, 2].map((k) => Math.round((col[4 * pick + k] + 765) / 4)).join();   // the star's tint, three quarters of the way to white
     const g = document.createElement('i'), dot = document.createElement('b');
     g.className = 'tw'; g.style.transform = `translate(${(px - R).toFixed(2)}px,${(py - R).toFixed(2)}px)`; g.style.width = g.style.height = (2 * R).toFixed(2) + 'px';
     const dur = Math.round(C.TWINKLE_DUR[0] + (mode ? 0 : rnd()) * (C.TWINKLE_DUR[1] - C.TWINKLE_DUR[0]));
     if (mode === 'ring') dot.className = 'tw-ring';
     else {
-      dot.style.background = `radial-gradient(circle closest-side, rgba(${c},1) 0, rgba(${c},.95) 14%, rgba(${c},.5) 30%, rgba(${c},.18) 55%, rgba(${c},.05) 80%, rgba(${c},0) 100%)`;
+      dot.style.background = `radial-gradient(circle closest-side, rgba(${c},1) 0, rgba(${c},1) 16%, rgba(${c},.62) 32%, rgba(${c},.24) 56%, rgba(${c},.07) 80%, rgba(${c},0) 100%)`;
       dot.style.setProperty('--peak', (L.peak * U.lerp(1, 0.6, S.amt.pool)).toFixed(2));   // quieter beside an open album, where the stars are dimmed
       if (cls < 2) { dot.className = 'tw-flare'; dot.style.setProperty('--fl', (2 * C.TWINKLE_FLARE * sr * L.size).toFixed(1) + 'px'); }
       if (mode === 'hold') dot.className += ' tw-hold'; else dot.style.animationDuration = dur + 'ms';
@@ -97,6 +97,6 @@
     if (mode) return;
     alive++; st.spawned++;
     const done = () => { if (g.parentNode) { g.remove(); alive = Math.max(0, alive - 1); st.ended++; } };
-    dot.addEventListener('animationend', done); setTimeout(done, dur + 300);
+    dot.addEventListener('animationend', () => { st.played++; done(); }); setTimeout(done, dur + 300);
   }
 })();
