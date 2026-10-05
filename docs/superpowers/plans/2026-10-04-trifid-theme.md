@@ -4,9 +4,9 @@
 
 The detail is in three plans next to this file: part 1 (`...-1-data-gas.md`), part 2 (`...-2-stars-lines-names.md`), part 3 (`...-3-chrome-tests.md`). Below, "2.6" means part 2, task 6.
 
-## Decisions made on 2026-10-04 (these win over the three parts and over "Decisions for the owner" below)
+## Decisions made on 2026-10-04 (these win over the three parts)
 
-The three parts were written before these answers. Fold them into the parts before building. Tracking issue: 45. Pull request: 47.
+The three parts were written before these answers. They were folded into the parts on 2026-10-04 and the parts were cross-checked against each other, this list, the baseline and the real code (`.superpowers/sdd/preflight.md`, `.superpowers/sdd/crosscheck-report.md`). Tracking issue: 45. Pull request: 47.
 
 * **Snappiness is a core requirement.** No effect may cost responsiveness. Measure each one. If it costs speed, drop it or ship the cheaper version without asking again. Add this line to the Global Constraints of every part.
 * **No regressions.** Everything the current site does well stays: speed, the clean look, and details such as the way overlapping covers are handled on the map. Capture the current site first (screenshots of every state and a full performance run) and compare against it at the end of each part.
@@ -27,14 +27,22 @@ The three parts were written before these answers. Fold them into the parts befo
 
 ## The approach
 
-* **Gas baked at build time.** `npm run theme` paints the gas of each slider stop once, into three images, and writes a small `theme.json` (star colours, gas brightness under each album, region names and where they go). Both are committed.
-* **Gas behind the albums.** One flat layer under the album points shows the baked image, fades between two stops as the slider moves, and dims around an open album. No clock, so nothing moves at rest.
-* **Stars in the existing single draw.** Albums stay in the one draw call they use today. Each is a star with a soft glow and a faint dark disc under it so it stays visible on bright gas (premultiplied alpha). Covers still fade in as you zoom.
+* **Gas baked at build time.** `npm run theme` paints the gas of each slider stop once, into three images, and writes a small `theme.json` (star colours, gas brightness under each album, region names and where they go). Both are committed. `theme.json` says nothing about star size or brightness.
+* **Gas behind the albums.** One flat layer under the album points shows the baked image, fades between two stops as the slider moves, and dims around an open album. Past 32 px covers it keeps fading to a faint remnant (0.06 from 56 px covers), losing colour and detail and blurring on the same ease. No clock, so the canvas does not redraw at rest. Only the image of the stop on screen is loaded first; the other two load at idle once the map is interactive, and Home loads only the one it shows.
+* **Stars in the existing single draw.** Albums stay in the one draw call they use today. Each is a star with a soft glow and a faint dark disc under it so it stays visible on bright gas (premultiplied alpha). Size and brightness are dealt at random on each page load (1% brightest, 9% bright, 27% medium, the rest small); album order and rank are used nowhere. Covers still fade in as you zoom, with today's cross-fade band and today's dimming of other covers around a pick.
 * **Cover layout and white cased lines.** Beside an open album the covers are spread so none sits on a line, and the lines are white on a dark casing, from frame edge to frame edge.
-* **Names layer and toggle (option B).** Region names are plain lettering in Tenor Sans, shown at Overview and Whole map, gone when zoomed in. A separate icon button above the zoom buttons turns them off and on and remembers the choice.
-* **Glass with a solid fallback.** The same colour tokens get new values. Panels are glass on desktop and near solid on phones, where blur is unsupported, and under reduced transparency.
-* **Phone strip.** The small map in the phone album list gets the gas, white stars and cased lines.
-* **Tests, budgets and review.** Colour coupled tests are rewritten without loosening them, contrast is computed and measured, budgets are measured with glass on and off, and reviewers check the result before you see it.
+* **Names layer and toggle (option B).** Region names are plain lettering in Tenor Sans, shown at Overview and Whole map, gone once covers show and while an album is open. A separate icon button above the zoom buttons turns them off and on and remembers the choice.
+* **Twinkle.** A DOM and CSS layer over the canvas plays one glint every 1.2 to 3 seconds (at most 3 alive) on a timer. It never redraws the canvas, stops during pan, zoom and slider moves, stops once covers show, and is off under reduced motion and in hidden tabs. With an album open it follows the prototype: quieter, never under a focus cover. If it costs responsiveness it is dropped.
+* **The map behind the header.** The map pane reaches up under the header, which is glass over it. The camera takes the header's height as a top inset (64 px on desktop, 60 px on phones), so every framing is the same on screen as today.
+* **Glass with a solid fallback.** The same colour tokens get new values. Panels are glass on desktop and fully solid on phones (header included), where blur is unsupported, and under reduced transparency. One line switches phone glass on later. No film grain.
+* **Phone strip.** The small map in the phone album list gets the gas, white stars of one size and cased lines.
+* **Tests, budgets and review.** Colour coupled tests are rewritten without loosening them, contrast is computed and measured, every part ends with three perf runs, the size check, the hover measure and the regression checklist against the baseline, and reviewers check the result before you see it.
+
+**How speed is judged (the same in all three parts).** Run `npm run perf` three times, one after another. Each measure is judged on the median of the three runs: the median must be inside its budget, and it is compared with the baseline's median and min to max in `docs/design/trifid-theme/reviews/baseline/BASELINE-PERF.md`. A median above the baseline's worst run is a finding even when it is inside budget. Any single run over budget is named and explained in the write-up (the baseline has three such single run outliers). First-load JS is read from the perf script's own number against the baseline's 190.5 KB (budget 200 KB), and the first hover is measured with `baseline/hover-measure.mjs`. From 1.6 on the perf script also prints, reported only and never budgeted, a fifth column `gpu desktop2x` (1440 x 900 at device pixel ratio 2) and three rows: a drag in deep zoom, a slider move in deep zoom, and the time until the nebula is visible. 1.6 measures that column once for today's site too (commit 6f10463e, built in a temporary worktree) and adds it to the baseline. For it the 50 ms frame gap is a yardstick, not a budget.
+
+**Commit, do not push.** A push to this branch makes Vercel build a preview deployment, so commits that change anything under `frontcreck/` or `data-pipeline/` are not pushed until you say yes (3.11 stops and asks). Commits that touch only documents may be pushed.
+
+**Repeatable screenshots.** From 2.9 on every capture with `baseline/capture.mjs` uses its new `--still` option (one fixed star deal, no glints, gas settled). The baseline pictures are not retaken.
 
 ## The three parts and their tasks
 
@@ -42,70 +50,71 @@ The three parts were written before these answers. Fold them into the parts befo
 |---|---|
 | 1.1 | Theme inputs from the design analysis (Python, additions only), with a staleness check |
 | 1.2 | Shared constants, the raw to world transform, the `theme.json` loader and hook |
-| 1.3 | The theme build (`npm run theme`) and its committed output |
-| 1.4 | Gas shader and its pure helpers |
+| 1.3 | The theme build (`npm run theme`) and its committed output, with the README section |
+| 1.4 | Gas shader and its pure helpers, with the deep zoom curve |
 | 1.5 | `GasField` in the scene, the theme in the map store, the readiness flag tests wait for |
-| 1.6 | Browser checks for the gas and its failure modes, then a fidelity check |
-| 2.1 | Star classes, tints and per album attributes |
-| 2.2 | Stars in the one album draw (shader, material, attributes) |
+| 1.6 | Browser checks for the gas and its failure modes, perf, size and hover against the baseline, the regression checklist, then a fidelity check |
+| 2.1 | Random star classes, tints and per album attributes |
+| 2.2 | Stars in the one album draw (shader, material, attributes), keeping today's overlapping covers look |
 | 2.3 | Cover layout that keeps covers off the lines |
 | 2.4 | White cased lines, frames and badges |
 | 2.5 | Region names layout: sizes, placement, fades, halo strength for 4.5:1 |
 | 2.6 | Names toggle: saved preference, store flag, detached button |
-| 2.7 | Region names layer: font, lettering, per frame placement |
-| 2.8 | End to end checks for names and the toggle, phone screenshots, then a fidelity check |
+| 2.7 | Region names layer: font, lettering, per frame placement, the stage top value |
+| 2.8 | Twinkle: star glints on a timer, DOM and CSS only, with its cost measured |
+| 2.9 | End to end checks for stars, names and the toggle, perf, size and hover against the baseline, the regression checklist, then a fidelity check |
 | 3.1 | Tokens, the glass switch and the worst case contrast function |
-| 3.2 | Glass surfaces and the sweep of every old colour literal |
-| 3.3 | Phone strip on the nebula, and a guard for the phone zoom corner |
-| 3.4 | Home, About and 404 over the nebula |
-| 3.5 | Theme coupled tests (frame colour, cover dimming, search focus ring) |
-| 3.6 | Optional: favicon without the amber dot |
-| 3.7 | Budgets and the cost of the blur (glass on against off) |
-| 3.8 | Visual comparison, the five lens review panel, your phone trial |
-| 3.9 | Docs and the draft pull request (stacked on PR 32) |
+| 3.2 | Glass surfaces, the sweep of every old colour literal, and no film grain |
+| 3.3 | The map runs behind the glass header (camera top inset, framing record and compare) |
+| 3.4 | A dark casing for the selected ring and for the focus rings on the map |
+| 3.5 | Phone strip on the nebula, and a guard for the phone zoom corner |
+| 3.6 | Home, About and 404 over the nebula |
+| 3.7 | Theme coupled tests (frame colour, cover dimming, search focus ring) |
+| 3.8 | Favicon in the Trifid colours |
+| 3.9 | Speed against the baseline, and what each effect costs (glass and twinkle on against off) |
+| 3.10 | The review rounds: re-capture of every baseline state, fidelity, the five lens panel, the regression reviewer |
+| 3.11 | Docs, then a stop: the push that updates PR 47 also makes a preview, so it waits for your yes; then your trial |
 
 **Order.** Part 1, then part 2, then part 3, each in task order. What depends on what across parts:
 
-* 2.1, 2.2, 2.5 and 2.7 need 1.2 (constants, transform, theme types) and 1.5 (theme in the map store). 2.8 needs 1.3 and 1.5, since names only exist once the theme data is served. 2.3, 2.4 and 2.6 need nothing from part 1.
-* 3.1 and 3.2 could start early. 3.3 needs 1.2, 1.3, 2.2, 2.3 and 2.6. 3.4 needs 1.5 and 2.7. 3.5 needs 2.2 and 2.4. 3.7, 3.8 and 3.9 need everything.
-* Between parts some things look wrong on purpose. After part 2 the rings, focus outlines and panels are still amber and brown until 3.1 changes the token values. One existing browser test (the picked cover check in `e2e/explore.spec.ts`) fails from 1.5 until 3.5 rewrites it. The full browser suite is expected green only at 3.5.
+* 2.1, 2.2, 2.5 and 2.7 need 1.2 (constants, transform, theme types) and 1.5 (theme in the map store). 2.3, 2.4 and 2.6 need nothing from part 1. 2.8 needs 2.1 (the star deal), 2.7 (`state/stageTop.ts`) and 1.6 (it adds one line to `e2e/gas.spec.ts`). 2.9 needs 1.3 and 1.5, since names only exist once the theme data is served, and the rest of part 2.
+* 3.1 and 3.2 could start early. 3.3 needs 3.1, 3.2, 1.3 (`theme.json`), 2.7 (`setStageTop`, the names driver) and 2.8 (`twinkleOff`, the glint layer). 3.4 needs 3.1 and 3.3. 3.5 needs 1.2, 1.3, 2.2, 2.3 and 2.6. 3.6 needs 1.5 and 2.7. 3.7 needs 2.2 and 2.4. 3.8 needs 3.2 (it adds a test to `glass.test.ts`). 3.9, 3.10 and 3.11 need everything.
+* Three signatures change in 3.3 and every caller is listed there: `visibleArea` gains a required fifth argument (the names driver of 2.7 is edited by 3.3 Step 8), `applyFrustum`, `fitView` and `focusCamera` gain the top inset. 2.7 and 2.8 read the top of the visible map only through `getStageTop()`, which is 0 until 3.3 sets it.
+* The perf script is edited twice: 1.6 adds one reported row (deep zoom drag), 3.9 adds the `--glass` and `--twinkle` flags and the comparison script. The twinkle switch everywhere is the app store's `setTwinkleOn` (`window.__rmr.getState().setTwinkleOn(false)`, or `twinkleOff(page)` in `e2e/helpers.ts`).
+* Between parts some things look wrong on purpose. After part 2 the rings, focus outlines and panels are still amber and brown until 3.1 changes the token values. One existing browser test (the picked cover check in `e2e/explore.spec.ts`) fails from 1.5 until 3.7 rewrites it. The full browser suite is expected green only at 3.7.
 
 ## What changes outside frontcreck
 
 * New `data-pipeline/rmr_pipeline/theme.py` and `data-pipeline/tests/test_theme.py`. No existing pipeline file is edited.
 * New folder `data-pipeline/theme/` with `weights.json`, `regions.json` and a README.
 * Two added lines in `docs/superpowers/specs/2026-09-29-recmyrecord-redesign-design.md` recording that you set aside the ban on blue black, glass and starfields for this theme.
-* Review notes under `docs/design/trifid-theme/reviews/app-*.md`.
+* Review notes, perf runs and re-captured screenshots under `docs/design/trifid-theme/reviews/` (`app-*.md`, `perf-part1/`, `perf-part2/`, `after/`). The `after/` screenshots are committed, like the baseline ones.
+* Three additions to the baseline folder, none of which changes a baseline picture or number: the dpr 2 column for today's site (1.6: `baseline/perf/perf-dpr2-run1` to `run3` and a section in `BASELINE-PERF.md`); the `--still` option of `baseline/capture.mjs` (2.9); and one line of the same script (3.10), whose edge hover state reads the top of `#stage` in place of the top of the canvas, the same pixel as when the baseline was taken.
 
 ## Decisions for the owner
 
-1. **Replace the current look, or keep a theme switch?** Recommend replace. The plans assume it (all tasks, most directly 2.2 and 3.1).
-2. **Glass on phone.** Recommend solid panels on phone, where blur is unsupported and under reduced transparency, glass on desktop. Phone glass is a one line switch once you have tried it on a real phone through a preview build and seen the blur on/off numbers (3.1, 3.2, 3.7, 3.8).
-3. **Sonic shows 7 names and Mood 6 at launch**, because only regions with an approved name are shown. Recommend accept (1.1, 1.3, 2.7).
-4. **Where the data comes from.** Committed inputs under `data-pipeline/theme/` made by an additions only step, gas baked by `npm run theme`, and guard tests that fail when positions change so a stale bake cannot ship. Balanced uses the 17 names made by hand. Recommend as planned (1.1, 1.3).
-5. **Star brightness follows album order** until a real rank field exists. Recommend accept (2.1).
-6. **The header has no map behind it.** In the real app the map starts below the header, while the approved album picture shows nebula through it. Recommend extending the map under the header as a separate small task after the rest, since it changes camera framing. Not yet in the plan (it would touch what 3.2 and 3.8 cover).
-7. **Phone slider.** The approved phone picture shows a compact row of three buttons; the site has a track with stops. Recommend keeping the site's slider (no task changes it; 3.3 and 3.8 treat it as intended).
-8. **Film grain.** The approved pictures have none; part 3 keeps the site's grain with a cool tint. Recommend removing it over the map (3.2).
-9. **A region name beside an open album.** The approved album picture shows one, but the rule says names are gone when zoomed in. Recommend following the rule (2.5, 2.7).
-10. **Favicon** still has the amber dot. Recommend updating it (optional 3.6).
-11. **Album accent colours** reach only about 3:1 on glass (3.10 at worst). They are never used as text. Recommend holding them to 3:1 as a mark, pinned by a test (3.1, 3.2).
-12. **Wording that needs your approval.**
-    * The region names themselves (1.1, shown by 2.7). Balanced: The Live Belt, Urban Cluster, Improv Arm, The Quiet Deep, Pastoral Nebula, Lonely Drift, The Bittersweet Reach, Warm Halo, Playful Way, Eclectic Cloud, Progressive Spiral, Ethereal Veil, Aggressive Rift, Raw Flare, Epic Expanse, Sombre Void, Hypnotic Orbit. Sonic: The Bittersweet Reach, Improv Arm, The Quiet Deep, Urban Cluster, The Live Belt, Playful Way, Progressive Spiral. Mood: Aggressive Rift, Urban Cluster, Progressive Spiral, Sombre Void, Epic Expanse, Warm Halo.
-    * The toggle's screen reader label (2.6, checked in 2.8). Either one fixed label "Place names" with a pressed state, or swapping "Hide place names" and "Show place names" without a pressed state. The plan as written does both at once (swaps the label and sets pressed). Recommend the single fixed label.
+The twelve questions that stood here were answered on 2026-10-04; the answers are in "Decisions made on 2026-10-04" above. What is still open:
+
+1. **The toggle's screen reader label.** Built as one fixed label, "Place names", with an on or off state (2.6). The wording is yours to approve.
+2. **Things changed from today's site that you have not seen yet.** The full list is the section "Changed from today's site, for the owner to see" at the end of part 3, and it goes into the pull request. The ones that are not in the decisions above, so a look is asked for: the pale tiles of the cover cross-fade (the look you singled out; first thing to show you when it is rendered); the small marks on the map (hollow ring on the true position, cased hover mark, badge, shadow, hot ring, no album accent on the map's rings and lines); an open album possibly framed a little further out; no album colour wash over the map (the approved picture has it in the panel only); Home's lighter veil with a pad behind the hero and a scrim behind the shelf; the hint line on a dark band; the names toggle shown beside an open album; glints on Home and, quieter, beside an open album; a dark casing round keyboard focus rings on the map; the toast lifted above the phone's bottom safe area.
+3. **Wording for your read through, not on the site.** The README texts of 1.1 and 1.3 and the "Theme" section of 3.11 are in the draft pull request.
+4. **The cross-check's open points were ruled on 2026-10-05** and are folded into the parts. What is left open is in `.superpowers/sdd/crosscheck-report.md`, section 2.
 
 ## Not verified until built
 
-* The shaders (gas and stars) have never been compiled. Their text was checked for undeclared names only.
+* The shaders (gas and stars) have never been compiled. Their text was checked for undeclared names, and the star shader was compared line by line with today's.
 * The bake has never been run, so the three images, their file sizes and `theme.json` do not exist yet.
 * No real phone and no Safari. Safari may read the gas image's dust channel differently.
-* Motion in flight: pan, zoom, the slider morph, name fades, the panel sliding in.
-* The cost of stars, names and blur against the 50 ms frame budget. It is measured in 1.6 and 3.7, not before.
+* Motion in flight: pan, zoom, the slider morph, name fades, glints, the panel sliding in.
+* The cost of gas, stars, names, glints and blur against the 50 ms frame budget (the phone zoom gap is 44 ms today). It is measured in 1.6, 2.8, 2.9 and 3.9, not before. Each effect has a cheaper version written down that is taken without asking.
+* First-load JS: the estimate from the import graph is about 1.6 KB of growth against 9.5 KB of room (the theme loader, the names toggle and its icons, two store flags). Everything else is in the lazy map chunk. Measured at the end of each part.
+* How the pale cross-fade tiles look, and how the default keyboard focus ring reads on bright gas.
 
-What was checked on paper: the pure logic of five modules (bake maths, gas helpers, stars, cover layout, names layout) was run against the plans' own tests and passed, and the contrast table of part 3 was recomputed from the album data.
+What was checked on paper or by running without a browser: the pure logic of the modules (bake maths, gas helpers and deep zoom curve, random stars, cover layout, names layout, twinkle timer, stage top) was run against the plans' own tests and passed; part 1's edits were applied to a copy of the app and type checked and linted; every "before" text was matched against the real files; the contrast table of part 3 was recomputed.
 
 ## How it will be reviewed
 
-* **Per part fidelity checks.** At the end of each part a fresh reviewer compares screenshots of what that part built with the matching `final-*.jpg` and lists differences (1.6, 2.8, 3.8).
-* **The five lens panel (3.8).** Once everything is assembled, five separate reviewers, each with one lens and no sight of the others: visual craft, first visit ("just a vibe", nothing to decode), phone, accessibility, interaction states. Findings are fixed, the reviewer who raised each one looks again, and you see the work only after a clean round. Notes are kept in `docs/design/trifid-theme/reviews/app-*.md`.
-* **Your phone checklist (3.8).** Reviewers see stills and code. They cannot judge motion or a real phone, so the preview build and your eight point checklist stay.
+* **Per part checks against the baseline.** At the end of each part: three perf runs, the size check, the hover measure, a re-capture of the baseline's screenshots and a walk of its 234 item regression checklist (1.6, 2.9, 3.9 and 3.10).
+* **Per part fidelity checks.** At the end of each part a fresh reviewer compares screenshots of what that part built with the matching `final-*.jpg` and lists differences (1.6, 2.9, 3.10).
+* **The five lens panel and the regression reviewer (3.10).** Once everything is assembled, five separate reviewers, each with one lens and no sight of the others: visual craft, first visit ("just a vibe", nothing to decode), phone, accessibility, interaction states. A sixth compares every state with the baseline and marks anything not on the "changed on purpose" list as lost. Findings are fixed, the reviewer who raised each one looks again, and you see the work only after a clean round. Notes are kept in `docs/design/trifid-theme/reviews/app-*.md`.
+* **Your phone checklist (3.11).** Reviewers see stills and code. They cannot judge motion or a real phone, so a preview build and your checklist stay. No preview is made, and nothing is merged or deployed, before you say yes.

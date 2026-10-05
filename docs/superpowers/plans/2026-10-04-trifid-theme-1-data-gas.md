@@ -4,28 +4,30 @@
 
 **Goal:** Give the real app the Trifid nebula gas: a build step that bakes the gas of each slider stop into a texture plus a small `theme.json`, a client loader for that data, the shared theme constants, and a three.js gas layer drawn behind the album points. Parts 2 (stars and region names) and 3 (chrome, CSS tokens, names toggle) build on the interfaces this part produces.
 
-**Architecture:** The gas is baked at build time, not in the visitor's browser. `npm run theme` (a Node script) drives one headless Chromium on software WebGL, runs the prototype's field code and swirl shader (copied into `frontcreck/scripts/theme/`), and writes three 2048 x 2048 RGBA WebP files (RGB = toned gas, A = dust transmission) and `theme.json` into `frontcreck/public/data/theme/`, which are committed. Its inputs are two committed copies of the design analysis under `data-pipeline/theme/`, produced by a small additions-only Python module. At runtime the map loads `theme.json` beside the catalog, and `GasField` draws one world-space quad under the album points: it cross-fades two stop textures with the slider, applies the prototype's `finish()` (strength, dust, pool, grain), adds the detail octaves the bake could not hold, and takes its glow from the bake's own mips. Nothing is drawn at rest. If the theme data is missing or stale the map still works with plain sky.
+**Architecture:** The gas is baked at build time, not in the visitor's browser. `npm run theme` (a Node script) drives one headless Chromium on software WebGL, runs the prototype's field code and swirl shader (copied into `frontcreck/scripts/theme/`), and writes three 2048 x 2048 RGBA WebP files (RGB = toned gas, A = dust transmission) and `theme.json` into `frontcreck/public/data/theme/`, which are committed. Its inputs are two committed copies of the design analysis under `data-pipeline/theme/`, produced by a small additions-only Python module. At runtime the map loads `theme.json` beside the catalog, and `GasField` draws one world-space quad under the album points: it cross-fades two stop textures with the slider, applies the prototype's `finish()` (strength, dust, pool, dither), adds the detail octaves the bake could not hold, takes its glow from the bake's own mips, and past 32 px covers fades on to a faint, blurred, greyer remnant (the prototype's deep zoom). The map canvas does not redraw at rest. If the theme data is missing or stale the map still works with plain sky. Trifid replaces the current look: there is no theme switch, and nothing here is behind a flag.
 
 **Tech Stack:** Node 22.23.3 (arm64), Next 16.3.8, React 19.3.0, three 0.186.1 through @react-three/fiber 9.8.1, zustand 5.0.15, TypeScript 6.0.3, Vitest 4.1.11 (jsdom), @playwright/test 1.63.0 (bundled Chromium, SwiftShader), sharp 0.35.5 (new exact devDependency; already in the lockfile as an optional dependency of Next). Python 3.11 with the pipeline's own virtualenv and pytest 9.1.1; the new module uses the standard library only.
 
-**Spec:** docs/design/trifid-theme/HANDOFF.md (section "Current state: decisions made on 2026-10-04")
+**Spec:** docs/design/trifid-theme/HANDOFF.md (section "Current state: decisions made on 2026-10-04") and the section "Decisions made on 2026-10-04" of the overview, `docs/superpowers/plans/2026-10-04-trifid-theme.md`, which wins wherever the two differ. Tracking issue 45, pull request 47.
 
 ## Global Constraints
 
 - Album positions never move: the gas, the pool and every helper here read positions, none writes them.
-- Nothing animates at rest: every easing in this part (dim, pool) asks for another frame only while it is unsettled; no clock uniform exists in the gas shader.
+- The map canvas does not redraw at rest: every easing in this part (dim, pool) asks for another frame only while it is unsettled; no clock uniform exists in the gas shader, and the deep zoom values are a pure function of the camera. (Part 2's twinkle is DOM and CSS on a timer and never redraws the canvas; nothing in this part moves on a timer.)
+- Snappiness is a core requirement: no effect may cost responsiveness. Measure each one. If it costs speed it is dropped or replaced by its cheaper version without asking the owner again, and he is told afterwards. The budgets in `frontcreck/scripts/perf/budgets.json` do not change.
+- No regressions against the current site: the baseline screenshots, performance runs and regression checklist are in `docs/design/trifid-theme/reviews/baseline/` (`README.md`, `REGRESSION-CHECKLIST.md`, `BASELINE-PERF.md`, the raw output in `perf/`, the screenshots in `shots/desktop/` and `shots/phone/`, and the two scripts `capture.mjs` and `hover-measure.mjs`). Nothing in that folder is edited, with one exception in Task 6 Step 7 (the dpr 2 column of today's site is added to it). A number that got worse than baseline while still inside budget is a finding to explain or fix (the exact rule is in Task 6 Step 7).
 - Text contrast 4.5:1: this part only supplies `ThemeLabel.lum` and `ThemeLabel.rgb` so part 2 can solve its halo; it draws no text.
-- Covers stay legible: gas strength falls to 0.6 by 22 px covers and 0.3 by 32 px, dust is gone by 22 px.
+- Covers stay legible, and deep zoom goes to space: gas strength falls to 0.6 by 22 px covers and 0.3 by 32 px, then keeps fading to a floor of 0.06 at 56 px covers and over, losing colour, detail and focus on the same ease (the owner's choice C, "Faint", `docs/design/trifid-theme/options/q-deep.jpg`). Dust is gone by 22 px.
 - 44 px tap targets on phone: this part adds no control.
-- Every star is an album: the gas layer draws no points; `stars.lead` and `stars.bg` hold one entry per album.
-- Budgets (`frontcreck/scripts/perf/budgets.json`): at most one idle frame, 50 ms frame gap, 200 KB first-load JS, 250 ms startup long task, no idle long task. `GasField` and `shaders/gas.ts` are imported only from `canvas/Scene.tsx` (the lazy map chunk).
-- Copy rules: never show the owner's name, the only catalogue number is "4,000+", never a number of recommendations, mood words are "handpicked", no dashes or emoji. This covers READMEs, code comments and test titles written here. Any new wording that a visitor can see needs the owner's approval; the region names in `data-pipeline/theme/regions.json` are such wording and are still marked placeholder in `docs/design/trifid-theme/prototype/COPY.md`.
-- Machine rules: every shell that runs `node`, `npm` or `npx` starts with `export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"` and `node -p process.arch` must print `arm64`. One browser at a time, never in parallel: Playwright runs carry `--workers=1` (the config default is 2). Be gentle with the laptop: one heavy job at a time, no watch modes.
-- No edits to `data-pipeline/rmr_pipeline/validate.py`, `constants.py`, `build.py`, or to `frontcreck/public/data/albums.json` (open PRs 25 and 31 change them). The new Python module only reads `constants.py` and `io.py`.
+- Every star is an album: the gas layer draws no points; `stars.lead` (colour family) and `stars.bg` (gas brightness under the album) hold one entry per album. `theme.json` carries no star size, brightness class or rank: those are drawn at random on each page load in the browser (part 2) and never come from album order.
+- Budgets (`frontcreck/scripts/perf/budgets.json`): at most one idle frame, 50 ms frame gap, 200 KB first-load JS, 250 ms startup long task, no idle long task. `GasField` is imported only from `canvas/Scene.tsx` and `shaders/gas.ts` only from `GasField` (the lazy map chunk). The baseline's first-load JS is 190.5 KB, so all three parts together have 9.5 KB of room.
+- Copy rules: never show the owner's name, the only catalogue number is "4,000+", never a number of recommendations, mood words are "handpicked", no dashes or emoji. This covers READMEs, code comments and test titles written here. Any new wording that a visitor can see needs the owner's approval. The region names in `data-pipeline/theme/regions.json` are such wording: the owner approved them on 2026-10-04 exactly as listed in the overview (17 on Balanced, 7 on Sonic, 6 on Mood; `docs/design/trifid-theme/prototype/COPY.md` still calls them placeholder, the overview wins). Nothing is added to that list, and a new or changed name needs approval again. The two README texts written here (Task 1 Step 6 and Task 3 Step 12) are new prose in a public repository and are listed for the owner's read through before the pull request leaves draft.
+- Machine rules: every shell that runs `node`, `npm` or `npx` starts with `export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"` and `node -p process.arch` must print `arm64`. One browser at a time, never in parallel: Playwright runs carry `--workers=1` (the config default is 2). Jobs run one after the other, never side by side: one heavy job at a time, no watch modes.
+- Existing site data and pipeline files are not edited: `frontcreck/public/data/albums.json`, `positions.json`, `recs.json`, and `data-pipeline/rmr_pipeline/validate.py`, `constants.py`, `build.py` (open PRs 25 and 31 change some of them). The theme only adds files beside them. The new Python module only reads `constants.py` and `io.py`.
 - Production code never imports from `docs/`. The prototype is the reference; the code is copied.
 - The gas textures hold data in the alpha channel. They are never drawn through a 2D canvas and never decoded with premultiplied alpha.
 - Paths are relative to the worktree root unless a command starts with `cd`.
-- Commits: one per task, conventional message, ending with a blank line and `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Never push, never open a PR, never deploy.
+- Commits: at least one per task, conventional message, then a blank line, `Refs #45`, a blank line and the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. Commit, do not push. A push to this branch makes Vercel build a preview deployment, so commits that change anything under `frontcreck/` or `data-pipeline/` are not pushed until the owner says yes (part 3 Task 11 asks). Commits that touch only documents may be pushed. Never open a PR, never merge, never deploy.
 
 ## Review Focus
 
@@ -393,7 +395,7 @@ Regenerate and check:
 ## When these files go stale
 
 They describe one album list and one set of layouts. When `albums.json` or `positions.json` change (the
-preview audio work and the growth to about 10,000 albums both change them), `--check` fails, and so does
+preview audio work and any growth of the catalogue both change them), `--check` fails, and so does
 the theme build. The order of work is then:
 
 1. Rerun the colour and region analysis under `docs/design/trifid-theme/` (`regions/` and `scaling/`) on the new data.
@@ -404,6 +406,8 @@ The region names are text a visitor reads on the map. A new or changed name need
 before it ships.
 ```
 
+This README is new prose in a public repository. It follows the copy rules (no owner name, no album count, no number of recommendations, no dashes, no emoji) and is listed for the owner's read through; do not reword it while building.
+
 - [ ] **Step 7: Run the tests to see them pass**
 
 ```bash
@@ -412,12 +416,14 @@ cd data-pipeline && .venv/bin/python -m pytest tests/test_theme.py
 
 Expected: `8 passed`.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Commit, do not push**
 
 ```bash
 git add data-pipeline/rmr_pipeline/theme.py data-pipeline/tests/test_theme.py data-pipeline/theme/weights.json data-pipeline/theme/regions.json data-pipeline/theme/README.md
 git commit -F - <<'EOF'
 feat(pipeline): theme inputs copied from the design analysis, with a staleness check
+
+Refs #45
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -434,26 +440,26 @@ EOF
 - Modify: `frontcreck/src/components/map/state/bounds.test.ts` (L17, the hand-built `MapData`)
 - Modify: `frontcreck/src/lib/data/client.ts` (L18 `fetchJson`, L54 `Resource`, L78 `idle`, L86 `load`, L169-174 `resetDataCache`)
 - Create: `frontcreck/src/lib/data/theme.ts`
-- Modify: `frontcreck/src/lib/data/useData.ts` (imports, two new hooks at the end)
+- Modify: `frontcreck/src/lib/data/useData.ts` (imports, one new hook at the end)
 - Test: `frontcreck/src/lib/data/theme.test.ts`
 
 **Interfaces:**
 - Consumes: `STOP_IDS`, `StopId`, `Positions` from `@/lib/types`; the private loader helpers of `client.ts`, exported here.
 - Produces (parts 2 and 3 import these names exactly):
   - `frontcreck/src/components/map/theme.ts`: `SKY_RGB`, `EMBER_RGB`, `NEUTRAL_RGB`, `STAR_WHITE`, `FRAME_RGB`, `NAMES_BAND_PX`, `GAS_LUM_MAX` (values in Step 3).
-  - `frontcreck/src/components/map/data.ts`: `interface MapTransform { cx: number; cy: number; s: number }`, `MapData.tx: MapTransform`, `positionsTransform(p: Positions): MapTransform`, `rawToWorld(data: Pick<MapData, 'tx'>, x: number, y: number): [number, number]` (world = (raw - centre) * s, the transform of `normalizePositions`).
+  - `frontcreck/src/components/map/data.ts`: `interface MapTransform { cx: number; cy: number; s: number }`, `MapData.tx: MapTransform`, `positionsTransform(p: Positions): MapTransform`, `normalizePositions(p: Positions, tx: MapTransform = positionsTransform(p)): Record<StopId, Float32Array>` (the second argument is new and optional, so existing callers are unchanged), `rawToWorld(data: Pick<MapData, 'tx'>, x: number, y: number): [number, number]` (world = (raw - centre) * s, the transform of `normalizePositions`).
   - `frontcreck/src/lib/data/theme.ts`: `interface ThemeLabel`, `interface ThemeData`, `THEME_URL = '/data/theme/theme.json'`, `isTheme(x: unknown): x is ThemeData`, `loadTheme(): Promise<ThemeData>`, `peekTheme(): ThemeData | null`, `themeState(): DataState`, `themeFor(theme: ThemeData | null, n: number): ThemeData | null`.
-  - `frontcreck/src/lib/data/useData.ts`: `useThemeLoad(enabled: boolean): { status: LoadStatus; theme: ThemeData | null }`, `useTheme(enabled: boolean): ThemeData | null`.
+  - `frontcreck/src/lib/data/useData.ts`: `useThemeLoad(enabled: boolean): { status: LoadStatus; theme: ThemeData | null }`. It is the only theme hook: there is no `useTheme` (code inside the canvas tree reads the theme from the map store, Task 5).
   - `frontcreck/src/lib/data/client.ts` now also exports `fetchJson`, `Resource`, `idle`, `load`, `registerReset(fn: () => void): void`.
 
-- [ ] **Step 1: Install dependencies (this worktree has no `frontcreck/node_modules`)**
+- [ ] **Step 1: Install dependencies unless `frontcreck/node_modules` is already there**
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; node -p process.arch
-cd frontcreck && npm ci
+cd frontcreck && { test -d node_modules/vitest || npm ci; } && node -e "console.log(require('./node_modules/vitest/package.json').version)"
 ```
 
-Expected: `arm64`, then an install with no error.
+Expected: `arm64`, then `4.1.11` (after an install with no error when one was needed).
 
 - [ ] **Step 2: Write the failing tests**
 
@@ -492,7 +498,7 @@ import { cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DataLoadError, resetDataCache } from './client';
 import { THEME_URL, isTheme, loadTheme, peekTheme, themeFor, type ThemeData } from './theme';
-import { useTheme, useThemeLoad } from './useData';
+import { useThemeLoad } from './useData';
 
 const LABEL = { id: 'live', name: 'The Live Belt', x: -0.236, y: 0.883, strong: true, n: 174, p: 2.1772, rgb: [255, 236, 224] as [number, number, number], lum: 0.31 };
 const THEME: ThemeData = {
@@ -569,15 +575,15 @@ describe('themeFor', () => {
   });
 });
 
-describe('theme hooks', () => {
-  it('give null until the theme has loaded, then the theme', async () => {
+describe('useThemeLoad', () => {
+  it('gives null until the theme has loaded, then the theme', async () => {
     vi.stubGlobal('fetch', serve(THEME));
-    const h = renderHook(() => useTheme(true));
-    expect(h.result.current).toBeNull();
-    await waitFor(() => expect(h.result.current).toEqual(THEME));
+    const h = renderHook(() => useThemeLoad(true));
+    expect(h.result.current.theme).toBeNull();
+    await waitFor(() => expect(h.result.current).toEqual({ status: 'ready', theme: THEME }));
   });
 
-  it('do not fetch while disabled', () => {
+  it('does not fetch while disabled', () => {
     const f = serve(THEME);
     vi.stubGlobal('fetch', f);
     const h = renderHook(() => useThemeLoad(false));
@@ -585,7 +591,7 @@ describe('theme hooks', () => {
     expect(f).not.toHaveBeenCalled();
   });
 
-  it('report an error and keep null when the file is missing, so the map can go on without a theme', async () => {
+  it('reports an error and keeps null when the file is missing, so the map can go on without a theme', async () => {
     vi.stubGlobal('fetch', serve('nope', 404));
     const h = renderHook(() => useThemeLoad(true));
     await waitFor(() => expect(h.result.current.status).toBe('error'));
@@ -945,7 +951,7 @@ export function themeFor(loaded: ThemeData | null, n: number): ThemeData | null 
 }
 ```
 
-- [ ] **Step 8: Add the hooks**
+- [ ] **Step 8: Add the hook**
 
 In `frontcreck/src/lib/data/useData.ts`, after the import block that ends with `} from '@/lib/data/client';` (L14), add:
 
@@ -962,11 +968,6 @@ export function useThemeLoad(enabled: boolean): { status: LoadStatus; theme: The
   const { status, value } = useLoaded(loadTheme, peekTheme, themeState, enabled);
   return { status, theme: value };
 }
-
-/** The map theme, or null while it loads, when it failed to load, and while disabled. */
-export function useTheme(enabled: boolean): ThemeData | null {
-  return useThemeLoad(enabled).theme;
-}
 ```
 
 - [ ] **Step 9: Run the tests to see them pass, then typecheck and lint**
@@ -978,12 +979,14 @@ cd frontcreck && npm run test -- src/components/map/data.test.ts src/lib/data/th
 
 Expected: all five files pass, typecheck and lint print no error.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 10: Commit, do not push**
 
 ```bash
 git add frontcreck/src/components/map/theme.ts frontcreck/src/components/map/data.ts frontcreck/src/components/map/data.test.ts frontcreck/src/components/map/state/bounds.test.ts frontcreck/src/lib/data/client.ts frontcreck/src/lib/data/theme.ts frontcreck/src/lib/data/theme.test.ts frontcreck/src/lib/data/useData.ts
 git commit -F - <<'EOF'
 feat(map): theme constants, raw to world transform and the theme.json loader
+
+Refs #45
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -994,20 +997,21 @@ EOF
 ### Task 3: The theme build (`npm run theme`) and its committed output
 
 **Files:**
-- Modify: `frontcreck/package.json` (scripts L17-18, devDependencies) and `frontcreck/package-lock.json` (through npm)
+- Modify: `frontcreck/package.json` (scripts L18-19, devDependencies) and `frontcreck/package-lock.json` (through npm)
 - Create: `frontcreck/scripts/theme/bake-core.js` (DOM-free shared code: constants, fields, luminance and label maths, `theme.json` assembly)
 - Create: `frontcreck/scripts/theme/bake-core.test.mjs`
 - Create: `frontcreck/scripts/theme/bake-page.js` (browser side: WebGL2, the swirl shader)
 - Create: `frontcreck/scripts/theme/build-theme.mjs` (Node driver)
 - Create (generated, committed): `frontcreck/public/data/theme/gas-sonic.webp`, `gas-balanced.webp`, `gas-mood.webp`, `theme.json`
 - Test: `frontcreck/src/lib/data/theme.data.test.ts` (guards the committed output against the committed data)
+- Modify: `frontcreck/README.md` (one row in the Commands table, one new section "Map theme data")
 
 **Interfaces:**
 - Consumes: `data-pipeline/theme/weights.json` and `regions.json` (Task 1), `frontcreck/public/data/albums.json` and `positions.json`, `isTheme` (Task 2), `assertNativeChrome` from `frontcreck/scripts/check-native.mjs`.
 - Produces:
-  - `npm run theme` (from `frontcreck/`).
+  - `npm run theme` (from `frontcreck/`), documented in `frontcreck/README.md` together with the staleness guard (Step 12).
   - `frontcreck/public/data/theme/gas-<stop>.webp`: 2048 x 2048, lossy RGB with lossless alpha, not premultiplied. RGB = toned gas with no sky and no dust (the prototype's `u_bake` output); A = dust transmission (255 = no dust, never under 51). The image is upright: pixel (0, 0) is raw (-bakeHalf, +bakeHalf), the last pixel is raw (+bakeHalf, -bakeHalf). Drawn over the sky colour with ordinary alpha blending it is a fair still of the gas (useful to part 3 for a non-WebGL strip).
-  - `frontcreck/public/data/theme/theme.json`: `ThemeData` (Task 2). `stars.lead[i]`: family 0..4 when its share is over 0.3 and over the neutral share, else -1. `stars.bg[3i + k]`: `min(255, round(L / 0.6 * 255))` with L the gas luminance at album i's position at stop k (sonic, balanced, mood), sky and grain included, full strength, no dust. `labels[stop][j]`: `x, y` = region centre in raw units; `p` = priority; `strong`; `n`; `rgb` = gas colour under the centre scaled so its largest channel is 255, then 80% of the way to white; `lum` = brightest gas luminance (same scale as L, 0..1, three decimals) in the box centred on the region centre with half size `((0.47 * fs * name.length + 30) / 600 / s, (0.525 * fs + 28) / 600 / s)` raw units, where `fs = 0.88 * (strong ? 17 + 7 * min(1, sqrt(n / 346)) : 15 + 3 * min(1, sqrt(n / 346)))` is the prototype's Tenor Sans size in px, 600 px per world unit is the desktop overview scale of the current app, 30 and 28 px allow for the name being nudged, and `s` is `MapTransform.s`.
+  - `frontcreck/public/data/theme/theme.json`: `ThemeData` (Task 2). `stars.lead[i]`: family 0..4 when its share is over 0.3 and over the neutral share, else -1 (the star's colour tint; nothing in the file says how large or bright a star is, which part 2 draws at random on each page load). `stars.bg[3i + k]`: `min(255, round(L / 0.6 * 255))` with L the gas luminance at album i's position at stop k (sonic, balanced, mood), sky and grain included, full strength, no dust. `labels[stop][j]`: `x, y` = region centre in raw units; `p` = priority; `strong`; `n`; `rgb` = gas colour under the centre scaled so its largest channel is 255, then 80% of the way to white; `lum` = brightest gas luminance (same scale as L, 0..1, three decimals) in the box centred on the region centre with half size `((0.47 * fs * name.length + 30) / 600 / s, (0.525 * fs + 28) / 600 / s)` raw units, where `fs = 0.88 * (strong ? 17 + 7 * min(1, sqrt(n / 346)) : 15 + 3 * min(1, sqrt(n / 346)))` is the prototype's Tenor Sans size in px, 600 px per world unit is the desktop overview scale of the current app, 30 and 28 px allow for the name being nudged, and `s` is `MapTransform.s`.
   - `globalThis.RMR_THEME` (inside the build only): `GAS`, `EMBER`, `STOPS`, `noiseTable`, `blur`, `at`, `halves`, `fieldData`, `leadFamilies`, `positionsTransform`, `luminance`, `lumCell`, `lumGrid`, `lumIn`, `labelFontPx`, `labelBox`, `labelInk`, `assemble`; in the page also `start`, `renderStop`, `readRows`.
 
 Differences from the prototype, all deliberate: the bake is 2048 px, not 4096 (so `u_ppr` during the bake is 640 px per raw unit and the runtime adds the missing octaves, Task 4); only one stop's fields are bound at a time (the build never mixes stops, so `u_b0..4` and `u_mix` are gone); `HALF` is a uniform (`u_rawHalf`) instead of a string-built constant; the colour scheme switch, the guard pairs and the other looks are removed, with the `swirl` numbers written into the shader.
@@ -1739,6 +1743,10 @@ describe('committed theme data (public/data/theme)', () => {
     expect(1 + b.readUIntLE(27, 3)).toBe(2048);
     expect(b.length).toBeLessThan(1_500_000);
   });
+
+  it('keeps theme.json under 80 KB on disk, since every map visit loads it', () => {
+    expect(read('theme/theme.json').length).toBeLessThan(80_000);
+  });
 });
 ```
 
@@ -1773,12 +1781,55 @@ cd frontcreck && npm run test -- src/lib/data/theme.data.test.ts scripts/theme/b
 
 Expected: all pass, lint prints no error.
 
-- [ ] **Step 12: Commit**
+- [ ] **Step 12: Document the command and the staleness guard in the README**
+
+In `frontcreck/README.md`, in the Commands table, after the row that starts `| `npm run shots` |`, add this row:
+
+```markdown
+| `npm run theme` | Bakes the map theme into `public/data/theme/`: the gas of each slider stop as three images, plus `theme.json`. Uses Playwright's own Chromium on software rendering. Run it after `albums.json` or `positions.json` change (see "Map theme data"). |
+```
+
+Then, between the end of the section "How it works" (the paragraph that starts `App state (current stop, focus, hover, selection`) and the heading `## Deployment`, add this section:
+
+```markdown
+## Map theme data
+
+The gas behind the albums is painted once, at build time, not in the visitor's browser. `npm run theme` starts one headless Chromium on software WebGL and writes four files to `public/data/theme/`, which are committed:
+
+- `gas-sonic.webp`, `gas-balanced.webp`, `gas-mood.webp`: the gas of each slider stop, 2048 px square.
+- `theme.json`: for every album its colour family and the gas brightness under it at each stop, plus the region names and where they sit.
+
+It reads `public/data/albums.json`, `public/data/positions.json` and two input files in `../data-pipeline/theme/` (`weights.json` and `regions.json`, described in that folder's README). It changes none of them.
+
+### When the theme goes stale
+
+The baked files describe one album list and one set of layouts. `theme.json` records which: `n` is the album count and `positionsHash` is the first 12 hex characters of the SHA-256 of `positions.json`. When the album count or `positions.json` changes, the committed theme no longer matches the data and `npm test` fails in `src/lib/data/theme.data.test.ts`, in the test named "was built for the committed albums and layouts (run npm run theme after either changes)". The inputs have their own guard: in `../data-pipeline`, `.venv/bin/python -m rmr_pipeline.theme --check` and `tests/test_theme.py` fail when the albums were added, removed or reordered, or when the layouts moved, and `npm run theme` refuses to run until they pass.
+
+To bake again:
+
+1. Refresh the inputs, following `../data-pipeline/theme/README.md`. Its last step is `cd ../data-pipeline && .venv/bin/python -m rmr_pipeline.theme`.
+2. `npm run theme`, on arm64 Node with nothing else heavy running.
+3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit the four files in `public/data/theme/`.
+
+A stale or missing theme never breaks the map for a visitor: the map checks the album count, and without a matching theme it shows plain sky.
+```
+
+This is the only place the staleness guard is explained to someone who did not read this plan; keep the test name in the README identical to the one in `theme.data.test.ts` (Step 8). The text is new prose in a public repository. It follows the copy rules (no owner name, no album count, no number of recommendations, no dashes used as punctuation, no emoji) and is listed for the owner's read through; do not reword it while building.
 
 ```bash
-git add frontcreck/package.json frontcreck/package-lock.json frontcreck/scripts/theme/bake-core.js frontcreck/scripts/theme/bake-core.test.mjs frontcreck/scripts/theme/bake-page.js frontcreck/scripts/theme/build-theme.mjs frontcreck/src/lib/data/theme.data.test.ts frontcreck/public/data/theme/gas-sonic.webp frontcreck/public/data/theme/gas-balanced.webp frontcreck/public/data/theme/gas-mood.webp frontcreck/public/data/theme/theme.json
+grep -n "npm run theme" frontcreck/README.md | head -5 && grep -c "was built for the committed albums and layouts (run npm run theme after either changes)" frontcreck/README.md frontcreck/src/lib/data/theme.data.test.ts
+```
+
+Expected: the table row and the section lines, then a count of 1 for each of the two files.
+
+- [ ] **Step 13: Commit, do not push**
+
+```bash
+git add frontcreck/README.md frontcreck/package.json frontcreck/package-lock.json frontcreck/scripts/theme/bake-core.js frontcreck/scripts/theme/bake-core.test.mjs frontcreck/scripts/theme/bake-page.js frontcreck/scripts/theme/build-theme.mjs frontcreck/src/lib/data/theme.data.test.ts frontcreck/public/data/theme/gas-sonic.webp frontcreck/public/data/theme/gas-balanced.webp frontcreck/public/data/theme/gas-mood.webp frontcreck/public/data/theme/theme.json
 git commit -F - <<'EOF'
-feat(theme): npm run theme bakes the gas of each stop and theme.json at build time
+feat(theme): npm run theme bakes the gas of each stop and theme.json at build time, documented in the README
+
+Refs #45
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -1795,16 +1846,29 @@ EOF
 **Interfaces:**
 - Consumes: `NAMES_BAND_PX`, `SKY_RGB`, `EMBER_RGB`, `NEUTRAL_RGB`, `STAR_WHITE`, `FRAME_RGB`, `GAS_LUM_MAX` from `../theme` (Task 2); `smoothstep` from `../state/zoomLimits`; `STOP_IDS`, `StopId` from `@/lib/types`.
 - Produces (`frontcreck/src/components/map/shaders/gas.ts`):
-  - `GAS_VERTEX_SHADER: string`, `GAS_FRAGMENT_SHADER: string` (three `ShaderMaterial` sources; uniforms `u_tx: vec3`, `u_quadHalf: float`, `u_gasA`, `u_gasB`, `u_noise: sampler2D`, `u_mix`, `u_ppr`, `u_bakePpr`, `u_bakeHalf`, `u_strength`, `u_dust`, `u_poolAmt: float`, `u_pool: vec3`).
-  - `gasStrength(coverPx: number): number` (1 under 13 px covers, 0.6 at 22, 0.3 from 32, linear between).
+  - `GAS_VERTEX_SHADER: string`, `GAS_FRAGMENT_SHADER: string` (three `ShaderMaterial` sources; uniforms `u_tx: vec3`, `u_quadHalf: float`, `u_gasA`, `u_gasB`, `u_noise: sampler2D`, `u_mix`, `u_ppr`, `u_bakePpr`, `u_bakeHalf`, `u_strength`, `u_deep`, `u_dust`, `u_poolAmt: float`, `u_pool: vec3`).
+  - `gasCurve(coverPx: number): { strength: number; deep: number }`, the prototype's `RMR.gasCurve` with its default floor. `strength`: 1 under 13 px covers, a straight line to 0.6 at 22, a straight line to 0.3 at 32, then `0.3 + (0.06 - 0.3) * e` with `u = clamp((coverPx - 32) / (56 - 32), 0, 1)` and `e = 1 - (1 - u)^2`, so 0.06 at 56 px and over. `deep`: 0 under 32 px, `e` from there on (1 at 56 px and over). There is no `gasStrength` any more.
   - `gasDust(coverPx: number): number` (1 under 13 px, 0 from 22, smoothstep between).
   - `stopMix(t: number): { a: StopId; b: StopId; k: number }` (the piecewise rule of `shaders/album.ts` `interpolatePos`).
   - `gasPair(t: number, ready: Record<StopId, boolean>): { a: StopId; b: StopId; k: number } | null` (the textures to bind; falls back to a loaded stop; null when none is loaded).
   - `focusPool(pos: Float32Array, ids: readonly number[], minRadius: number): [number, number, number] | null` (centre and radius, in the units of `pos`, of the dim pool around a focus group).
+  - `gasStopsToStart(current: StopId, interactive: boolean): StopId[]` (the stops a map starts loading, the one on screen first: only that one on the dimmed backdrop, all three on an interactive map).
   - `gasTextureFits(maxTextureSize: number): boolean`, `gasNoise(): Uint8Array`, `gasUrl(stop: StopId): string`.
-  - Constants `GAS_TEXTURE_PX = 2048`, `GAS_BAND_MID_PX = 22`, `GAS_BAND_COVERS_PX = 32`, `GAS_QUAD_SCALE = 5`, `GAS_GLOW = 0.18`, `GAS_DIMMED_STRENGTH = 0.6`, `POOL_MS = 400`, `POOL_MIN_PX = 170`, `GAS_SKY: [number, number, number] = [0.024, 0.022, 0.034]`.
+  - Constants `GAS_TEXTURE_PX = 2048`, `GAS_BAND_MID_PX = 22`, `GAS_BAND_COVERS_PX = 32`, `GAS_DEEP_END_PX = 56`, `GAS_DEEP_FLOOR = 0.06`, `GAS_DEEP_DESAT = 0.35`, `GAS_DEEP_LOD: [number, number] = [3.5, 5]`, `GAS_QUAD_SCALE = 5`, `GAS_GLOW = 0.18`, `GAS_DIMMED_STRENGTH = 0.6`, `POOL_MS = 400`, `POOL_MIN_PX = 170`, `GAS_SKY: [number, number, number] = [0.024, 0.022, 0.034]`.
 
-What the shader keeps from the prototype (`gas.js` `FINISH`, `FS_BAKED`, `FS_BLIT`): strength, dust and pool applied as `1 - (1 - c)^k`; the pool's dim (0.6 outside, 0.25 at its centre) and half desaturation; the grain; plain sky beyond the bake; the detail octaves 5 to 8 past the bake's resolution. What changes: the glow is taken in the same pass from blurred mip levels of the bake (the prototype blurred the finished screen image in a second pass); the image is upright, so `v` runs north to south.
+What the shader keeps from the prototype (`gas.js` `FINISH`, `FS_BAKED`, `FS_BLIT`): strength, dust and pool applied as `1 - (1 - c)^k`; the pool's dim (0.6 outside, 0.25 at its centre) and half desaturation; the grain; plain sky beyond the bake; the detail octaves 5 to 8 past the bake's resolution. What changes: the glow is taken in the same pass from blurred mip levels of the bake (the prototype blurred the finished screen image in a second pass); the image is upright, so `v` runs north to south. The grain is the gas shader's own dither, which the prototype keeps so that dark gradients do not band. It is not the site's film grain overlay, which the owner removed and part 3 takes out.
+
+Deep zoom is ported from the prototype as it stands (`RMR.gasCurve` and `DEEP` in `src/config.js`, `u_deep` in `src/gas.js`, the Deep zoom section of the prototype README). The owner chose option C, "Faint" (`docs/design/trifid-theme/options/q-deep.jpg`). Past 32 px covers the strength goes on from 0.3 to the floor 0.06 at 56 px, and three more things follow the same ease `e`, which the shader receives as `u_deep`:
+
+| What | Prototype | Here |
+|---|---|---|
+| Colour | mixed toward its own grey by `0.35 * e`, combined with the pool's loss of colour as `1 - (1 - pool) * (1 - 0.35 * e)` | the same line, `GAS_DEEP_DESAT = 0.35` |
+| Detail | the extra octaves are multiplied by `1 - e` | the same factor |
+| Focus | the bake is mixed by `e` toward the mean of its mip levels 4.5 and 6 | the same mix, at levels 3.5 and 5 (`GAS_DEEP_LOD`) |
+
+The two mip levels are the one number that is converted and not copied. The prototype's bake is 4096 px and this one is 2048 px over the same raw square (the outermost album plus 0.6 on every side in both), so a texel here is twice as wide and the same blur sits exactly one level lower: 4.5 and 6 become 3.5 and 5. One line is added that the prototype did not need: its glow was a blur of the finished image, so in deep zoom it was already soft, while the glow here reads the bake directly. The two glow taps are therefore never sharper than `u_deep` times the deep zoom levels (`max(lod + 3.5, 3.5 * u_deep)` and `max(lod + 5.0, 5.0 * u_deep)`), which at full deep zoom makes them the same two blurred copies. With an album open the pool still multiplies the strength (0.6 far from the group, 0.25 at its centre), so an open album in deep zoom is darker still and never brighter. The values `stars.bg` and `ThemeLabel.lum` are read at strength 1 and do not change.
+
+Cost: outside deep zoom (`u_deep` is 0 under 32 px covers) the shader does no extra work. In deep zoom it reads each bound stop twice more. That is measured in Task 6, and if it costs a frame the blurred copy is dropped there without asking (the fade, the loss of colour and the detail fade cost nothing and stay).
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1815,6 +1879,12 @@ import { describe, expect, it } from "vitest";
 
 import { EMBER_RGB, FRAME_RGB, GAS_LUM_MAX, NAMES_BAND_PX, NEUTRAL_RGB, SKY_RGB, STAR_WHITE } from "../theme";
 import {
+  GAS_BAND_COVERS_PX,
+  GAS_BAND_MID_PX,
+  GAS_DEEP_DESAT,
+  GAS_DEEP_END_PX,
+  GAS_DEEP_FLOOR,
+  GAS_DEEP_LOD,
   GAS_DIMMED_STRENGTH,
   GAS_FRAGMENT_SHADER,
   GAS_GLOW,
@@ -1822,10 +1892,11 @@ import {
   GAS_TEXTURE_PX,
   GAS_VERTEX_SHADER,
   focusPool,
+  gasCurve,
   gasDust,
   gasNoise,
   gasPair,
-  gasStrength,
+  gasStopsToStart,
   gasTextureFits,
   gasUrl,
   stopMix,
@@ -1850,15 +1921,43 @@ describe("theme constants the three parts share", () => {
   });
 });
 
-describe("gasStrength and gasDust (zoom bands by cover size)", () => {
+describe("gasCurve and gasDust (zoom bands by cover size)", () => {
+  it("has the prototype's bands and deep zoom numbers", () => {
+    expect([NAMES_BAND_PX, GAS_BAND_MID_PX, GAS_BAND_COVERS_PX, GAS_DEEP_END_PX]).toEqual([13, 22, 32, 56]);
+    expect(GAS_DEEP_FLOOR).toBe(0.06);
+    expect(GAS_DEEP_DESAT).toBe(0.35);
+    // the prototype's mip levels 4.5 and 6 on its 4096 px bake are one level lower on a 2048 px bake
+    expect(GAS_DEEP_LOD).toEqual([4.5 - Math.log2(4096 / GAS_TEXTURE_PX), 6 - Math.log2(4096 / GAS_TEXTURE_PX)]);
+    expect(GAS_DEEP_LOD).toEqual([3.5, 5]);
+  });
+
   it("keeps the gas at full strength while names show, then yields to the covers", () => {
-    expect(gasStrength(5)).toBe(1);
-    expect(gasStrength(12.99)).toBe(1);
-    expect(gasStrength(17.5)).toBeCloseTo(0.8, 10);
-    expect(gasStrength(22)).toBeCloseTo(0.6, 10);
-    expect(gasStrength(27)).toBeCloseTo(0.45, 10);
-    expect(gasStrength(32)).toBeCloseTo(0.3, 10);
-    expect(gasStrength(64)).toBe(0.3);
+    expect(gasCurve(5)).toEqual({ strength: 1, deep: 0 });
+    expect(gasCurve(12.99)).toEqual({ strength: 1, deep: 0 });
+    expect(gasCurve(17.5).strength).toBeCloseTo(0.8, 10);
+    expect(gasCurve(22).strength).toBeCloseTo(0.6, 10);
+    expect(gasCurve(27).strength).toBeCloseTo(0.45, 10);
+    expect(gasCurve(31.99).strength).toBeCloseTo(0.3003, 10);
+    for (const px of [17.5, 22, 27, 31.99]) expect(gasCurve(px).deep, String(px)).toBe(0);
+  });
+
+  it("past 32 px covers fades on to the faint floor at 56 px, eased out, with no step at 32", () => {
+    expect(gasCurve(32)).toEqual({ strength: 0.3, deep: 0 });
+    expect(gasCurve(38).strength).toBeCloseTo(0.195, 10);
+    expect(gasCurve(38).deep).toBeCloseTo(0.4375, 10);
+    expect(gasCurve(44).strength).toBeCloseTo(0.12, 10);
+    expect(gasCurve(44).deep).toBeCloseTo(0.75, 10);
+    expect(gasCurve(50).strength).toBeCloseTo(0.075, 10);
+    expect(gasCurve(50).deep).toBeCloseTo(0.9375, 10);
+    expect(gasCurve(56)).toEqual({ strength: 0.06, deep: 1 });
+    expect(gasCurve(64)).toEqual({ strength: 0.06, deep: 1 });
+    // never rises again as covers grow
+    let last = 1;
+    for (let px = 0; px <= 64; px += 0.25) {
+      const { strength } = gasCurve(px);
+      expect(strength, String(px)).toBeLessThanOrEqual(last);
+      last = strength;
+    }
   });
 
   it("removes the dust before covers show", () => {
@@ -1893,6 +1992,18 @@ describe("stopMix and gasPair (which baked stops the slider shows)", () => {
     expect(gasPair(0.9, { sonic: false, balanced: false, mood: true })).toEqual({ a: "mood", b: "mood", k: 0 });
     expect(gasPair(0.1, { sonic: false, balanced: false, mood: true })).toEqual({ a: "mood", b: "mood", k: 0 });
     expect(gasPair(0.5, { sonic: false, balanced: false, mood: false })).toBeNull();
+  });
+});
+
+describe("gasStopsToStart (which baked stops a map loads)", () => {
+  it("starts only the stop on screen while the map is a dimmed backdrop", () => {
+    expect(gasStopsToStart("balanced", false)).toEqual(["balanced"]);
+    expect(gasStopsToStart("mood", false)).toEqual(["mood"]);
+  });
+
+  it("starts all three on an interactive map, the stop on screen first", () => {
+    expect(gasStopsToStart("balanced", true)).toEqual(["balanced", "sonic", "mood"]);
+    expect(gasStopsToStart("mood", true)).toEqual(["mood", "sonic", "balanced"]);
   });
 });
 
@@ -1939,7 +2050,7 @@ describe("texture and noise", () => {
 
 describe("gas shader source", () => {
   it("declares every uniform GasField sets", () => {
-    for (const name of ["u_gasA", "u_gasB", "u_noise", "u_mix", "u_ppr", "u_bakePpr", "u_bakeHalf", "u_strength", "u_dust", "u_poolAmt", "u_pool"]) {
+    for (const name of ["u_gasA", "u_gasB", "u_noise", "u_mix", "u_ppr", "u_bakePpr", "u_bakeHalf", "u_strength", "u_deep", "u_dust", "u_poolAmt", "u_pool"]) {
       expect(GAS_FRAGMENT_SHADER, name).toMatch(new RegExp(`uniform \\w+ ${name};`));
     }
     for (const name of ["u_tx", "u_quadHalf"]) expect(GAS_VERTEX_SHADER, name).toMatch(new RegExp(`uniform \\w+ ${name};`));
@@ -1947,6 +2058,19 @@ describe("gas shader source", () => {
 
   it("has no clock: nothing in the gas can move at rest", () => {
     expect(GAS_VERTEX_SHADER + GAS_FRAGMENT_SHADER).not.toMatch(/u_time|u_clock|u_frame/);
+  });
+
+  it("in deep zoom loses colour, detail and focus on one uniform, as the prototype does", () => {
+    expect(GAS_FRAGMENT_SHADER).toContain("const float DEEP_DESAT = 0.3500;");
+    expect(GAS_FRAGMENT_SHADER).toContain("const float DEEP_LOD_A = 3.5000;");
+    expect(GAS_FRAGMENT_SHADER).toContain("const float DEEP_LOD_B = 5.0000;");
+    expect(GAS_FRAGMENT_SHADER).toContain("t.rgb *= 1.0 + 1.6 * d * (1.0 - u_deep);");
+    // at full deep zoom that factor is 0, so the four noise reads are skipped
+    expect(GAS_FRAGMENT_SHADER).toContain("if (u_ppr > u_bakePpr && u_deep < 1.0) {");
+    expect(GAS_FRAGMENT_SHADER).toContain("if (u_deep > 0.0) t = mix(t, 0.5 * (gasLod(uv, DEEP_LOD_A) + gasLod(uv, DEEP_LOD_B)), u_deep);");
+    expect(GAS_FRAGMENT_SHADER).toContain("des = 1.0 - (1.0 - des) * (1.0 - DEEP_DESAT * u_deep);");
+    expect(GAS_FRAGMENT_SHADER).toContain("max(lod + 3.5, DEEP_LOD_A * u_deep)");
+    expect(GAS_FRAGMENT_SHADER).toContain("max(lod + 5.0, DEEP_LOD_B * u_deep)");
   });
 
   it("applies strength, dust and the pool to the light, not to the colour", () => {
@@ -2005,7 +2129,8 @@ import { NAMES_BAND_PX } from "../theme";
  * scripts/theme/) into public/data/theme/gas-<stop>.webp, where rgb is the toned gas with no sky and no dust and
  * a is what the dust lets through. This shader draws one quad in world space: it cross-fades two stops, applies
  * the zoom band strength, the dust and the pool around an open album, adds the fine octaves the bake could not
- * hold, a soft glow from the bake's mips, the sky and a little grain. It has no clock.
+ * hold, a soft glow from the bake's mips, the sky and a little grain. In deep zoom (covers past 32 px) what is
+ * left of the gas is fainter, greyer, smooth and out of focus. It has no clock.
  */
 
 /** Edge of a baked stop in px. WebGL2 guarantees textures this large. */
@@ -2013,6 +2138,15 @@ export const GAS_TEXTURE_PX = 2048;
 /** Cover sizes (CSS px) where the gas has yielded to 0.6 and to 0.3 of its strength; dust is gone by the first. */
 export const GAS_BAND_MID_PX = 22;
 export const GAS_BAND_COVERS_PX = 32;
+/** Deep zoom (the prototype's DEEP): past GAS_BAND_COVERS_PX the gas goes on fading, from 0.3 to the floor at
+ * this cover size, eased out, so full-size covers sit in near-black space. */
+export const GAS_DEEP_END_PX = 56;
+export const GAS_DEEP_FLOOR = 0.06;
+/** Share of its colour the gas loses over the same stretch. */
+export const GAS_DEEP_DESAT = 0.35;
+/** Over the same stretch the gas is read more and more from a blurred copy of the bake: the mean of these two
+ * mip levels. The prototype uses 4.5 and 6 on a 4096 px bake of the same square; a 2048 px bake is one level lower. */
+export const GAS_DEEP_LOD: [number, number] = [3.5, 5];
 /** The quad is this many times the baked square, so sky and grain run on past anything the camera can show. */
 export const GAS_QUAD_SCALE = 5;
 /** Share of the blurred gas added back as glow. */
@@ -2027,12 +2161,22 @@ export const GAS_SKY: [number, number, number] = [0.024, 0.022, 0.034];
 
 export const gasUrl = (stop: StopId): string => `/data/theme/gas-${stop}.webp`;
 
-/** Gas strength by cover size: full while region names show, 0.6 by 22 px covers, 0.3 from 32 px. */
-export function gasStrength(coverPx: number): number {
-  if (coverPx < NAMES_BAND_PX) return 1;
-  if (coverPx < GAS_BAND_MID_PX) return 1 - 0.4 * ((coverPx - NAMES_BAND_PX) / (GAS_BAND_MID_PX - NAMES_BAND_PX));
-  if (coverPx < GAS_BAND_COVERS_PX) return 0.6 - 0.3 * ((coverPx - GAS_BAND_MID_PX) / (GAS_BAND_COVERS_PX - GAS_BAND_MID_PX));
-  return 0.3;
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+
+/**
+ * Gas strength for a cover size in CSS px, and how far into deep zoom the view is (0 to 1). A port of the
+ * prototype's RMR.gasCurve with its default floor.
+ * strength: 1 while region names show; a straight line to 0.6 at 22 px covers; a straight line to 0.3 at 32 px;
+ * then 0.3 + (floor - 0.3) * e, with u = (coverPx - 32) / (56 - 32) clamped to 0..1 and e = 1 - (1 - u)^2.
+ * deep: e. The shader applies strength as 1 - (1 - c)^strength and uses deep for colour, detail and focus.
+ */
+export function gasCurve(coverPx: number): { strength: number; deep: number } {
+  if (coverPx < NAMES_BAND_PX) return { strength: 1, deep: 0 };
+  if (coverPx < GAS_BAND_MID_PX) return { strength: lerp(1, 0.6, (coverPx - NAMES_BAND_PX) / (GAS_BAND_MID_PX - NAMES_BAND_PX)), deep: 0 };
+  if (coverPx < GAS_BAND_COVERS_PX) return { strength: lerp(0.6, 0.3, (coverPx - GAS_BAND_MID_PX) / (GAS_BAND_COVERS_PX - GAS_BAND_MID_PX)), deep: 0 };
+  const u = Math.min(1, Math.max(0, (coverPx - GAS_BAND_COVERS_PX) / (GAS_DEEP_END_PX - GAS_BAND_COVERS_PX)));
+  const e = 1 - (1 - u) * (1 - u);
+  return { strength: lerp(0.3, GAS_DEEP_FLOOR, e), deep: e };
 }
 
 /** How much of the dust shows: all of it at the overview, none once covers approach. */
@@ -2083,6 +2227,15 @@ export function focusPool(pos: Float32Array, ids: readonly number[], minRadius: 
   return [(x0 + x1) / 2, (y0 + y1) / 2, Math.max(Math.hypot(x1 - x0, y1 - y0) * 0.3, minRadius)];
 }
 
+/**
+ * The stops whose gas a map starts loading, the one on screen first. The dimmed backdrop of Home, About and 404
+ * takes no input and cannot reach another stop, so it starts only the stop it shows. An interactive map also
+ * starts the other two, which GasField fetches at idle priority.
+ */
+export function gasStopsToStart(current: StopId, interactive: boolean): StopId[] {
+  return interactive ? [current, ...STOP_IDS.filter((s) => s !== current)] : [current];
+}
+
 /** A smaller limit would make three resize the bake through a 2D canvas, which multiplies the dust channel into
  * the colour. Then there is no gas (plain sky). */
 export function gasTextureFits(maxTextureSize: number): boolean {
@@ -2131,6 +2284,7 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
   uniform float u_bakePpr;    // texels per raw unit in the bake
   uniform float u_bakeHalf;   // the bake covers raw -half to half on both axes
   uniform float u_strength;   // zoom band times the dim of Home and About
+  uniform float u_deep;       // 0 to 1: how far into deep zoom the view is (gasCurve)
   uniform float u_dust;       // 1 at the overview, 0 once covers approach
   uniform float u_poolAmt;    // 0 to 1, eased while an album opens or closes
   uniform vec3 u_pool;        // raw centre x, y and radius of the pool around an open album's group
@@ -2139,6 +2293,9 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
 
   const vec3 SKY = vec3(${GAS_SKY.map(f).join(", ")});
   const float GLOW = ${f(GAS_GLOW)};
+  const float DEEP_DESAT = ${f(GAS_DEEP_DESAT)};
+  const float DEEP_LOD_A = ${f(GAS_DEEP_LOD[0])};
+  const float DEEP_LOD_B = ${f(GAS_DEEP_LOD[1])};
 
   float sm(float a, float b, float x) {
     float t = clamp((x - a) / (b - a), 0.0, 1.0);
@@ -2193,8 +2350,10 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
     }
 
     vec4 t = gas(uv);
-    // Past the bake's resolution, world-anchored noise octaves (the ones the bake could not hold) keep the gas textured.
-    if (u_ppr > u_bakePpr) {
+    // Past the bake's resolution, world-anchored noise octaves (the ones the bake could not hold) keep the gas
+    // textured. They fade out in deep zoom, where the faint gas that is left must be smooth, and are not read
+    // at all once deep zoom is complete (their weight is 0 there).
+    if (u_ppr > u_bakePpr && u_deep < 1.0) {
       vec2 p = vec2(v_raw.x * 5.0 + 20.0, -v_raw.y * 5.0 + 20.0) * 1.25;
       float d = 0.0;
       float a = 0.0778;
@@ -2206,16 +2365,22 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
         a *= 0.6;
         fq *= 2.07;
       }
-      t.rgb *= 1.0 + 1.6 * d;
+      t.rgb *= 1.0 + 1.6 * d * (1.0 - u_deep);
     }
+    // Deep zoom: the gas goes out of focus as it fades (a blurred copy, the mean of two mip levels), so there are
+    // no blotches and no detail behind full-size covers.
+    if (u_deep > 0.0) t = mix(t, 0.5 * (gasLod(uv, DEEP_LOD_A) + gasLod(uv, DEEP_LOD_B)), u_deep);
     vec3 c = lit(t, k);
 
     // Glow: the same gas about 11 and 32 CSS px wide, read from the bake's mips (level 0 is one texel per
-    // 1 / u_bakePpr raw units, the screen shows u_ppr px per raw unit).
+    // 1 / u_bakePpr raw units, the screen shows u_ppr px per raw unit). In deep zoom it is never sharper than
+    // the blurred copy above.
     float lod = log2(max(u_bakePpr / max(u_ppr, 1.0), 0.0001));
-    vec3 g = lit(gasLod(uv, max(lod + 3.5, 0.0)), k) * 0.6 + lit(gasLod(uv, max(lod + 5.0, 0.0)), k) * 0.4;
+    vec3 g = lit(gasLod(uv, max(lod + 3.5, DEEP_LOD_A * u_deep)), k) * 0.6 + lit(gasLod(uv, max(lod + 5.0, DEEP_LOD_B * u_deep)), k) * 0.4;
     c += g * GLOW;
 
+    // The pool takes half the colour at its centre and deep zoom takes DEEP_DESAT of it; the two combine.
+    des = 1.0 - (1.0 - des) * (1.0 - DEEP_DESAT * u_deep);
     c = mix(c, vec3((c.r + c.g + c.b) / 3.0), des);
     float n = (texelFetch(u_noise, ivec2(gl_FragCoord.xy) & 255, 0).r - 0.5) * 0.012;
     // Colours are authored in sRGB and written straight to the framebuffer (see canvas/Scene.tsx onCreated).
@@ -2231,14 +2396,16 @@ export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"
 cd frontcreck && npm run test -- src/components/map/shaders/gas.test.ts && npm run typecheck && npm run lint
 ```
 
-Expected: 21 tests pass; typecheck and lint print no error.
+Expected: 26 tests pass; typecheck and lint print no error.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit, do not push**
 
 ```bash
 git add frontcreck/src/components/map/shaders/gas.ts frontcreck/src/components/map/shaders/gas.test.ts
 git commit -F - <<'EOF'
-feat(map): gas shader over the baked stops, with its zoom band, mix and pool helpers
+feat(map): gas shader over the baked stops, with its zoom curve, deep zoom, mix and pool helpers
+
+Refs #45
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -2253,9 +2420,9 @@ EOF
 - Modify: `frontcreck/src/components/map/state/mapStore.ts` (L1-4 imports, L21-57 `MapStore`, L59-94 store body)
 - Test: `frontcreck/src/components/map/state/mapStore.theme.test.ts`
 - Modify: `frontcreck/src/components/map/types.ts` (L1-2 imports, L59-66 `MusicMapProps`)
-- Modify: `frontcreck/src/components/map/MusicMap.tsx` (L25-34)
-- Modify: `frontcreck/src/components/map/MapStage.tsx` (L6-7 imports, L170, L338)
-- Modify: `frontcreck/src/components/map/canvas/Scene.tsx` (L21-22 imports, L138-139, L167-169)
+- Modify: `frontcreck/src/components/map/MusicMap.tsx` (L25-28)
+- Modify: `frontcreck/src/components/map/MapStage.tsx` (L6-7 imports, L170, L337)
+- Modify: `frontcreck/src/components/map/canvas/Scene.tsx` (L21-22 imports, L138-139, L168-169)
 - Modify: `frontcreck/src/types/global.d.ts` (L14-15)
 - Modify: `frontcreck/e2e/helpers.ts` (L31-34 `waitForMap`)
 - Modify: `frontcreck/scripts/perf/perf.mjs` (L179), `frontcreck/scripts/review-shots.mjs` (L20)
@@ -2266,8 +2433,12 @@ EOF
   - `GasField({ data, theme }: { data: MapData; theme: ThemeData }): JSX.Element` in `frontcreck/src/components/map/canvas/GasField.tsx`, mounted in `SceneInner` after `MorphDriver` and before `AlbumField`, only while the store has a theme.
   - `useMapStore`: `theme: ThemeData | null` and `setTheme(theme: ThemeData | null): void` (asks for one frame when the theme changes). Parts 2 and 3 read the theme inside the canvas tree with `useMapStore((s) => s.theme)`.
   - `MusicMapProps.theme: ThemeData | null`; `MapStage` passes `themeFor(loaded, mapData.n)`.
-  - `window.__rmr.gas?: 'loading' | 'ready' | 'off'`: `'loading'` from the moment `GasField` starts fetching; `'ready'` once every stop's texture has been uploaded or has failed; `'off'` when there is no gas to wait for (theme missing, failed, built for another album count, or textures too large for the GPU). `window.__rmr.gasPool?: number`: the eased pool amount of the last drawn frame (0 = no open album, 1 = fully dimmed around it).
-  - `waitForMap` (e2e) and the perf and review scripts now also wait for `gas` to be `'ready'` or `'off'`.
+  - `window.__rmr.gas?: 'loading' | 'ready' | 'off'`. A stop is "started" from the moment it is scheduled: the stop on screen always, and the other two as soon as the map is interactive (`MapInput.interactive`: Explore, and the album view on desktop or in phone map mode), also while their fetch still waits for an idle slot. The flag is `'loading'` while any started stop is unsettled, `'ready'` when every started stop has settled (uploaded or failed), and `'off'` when there is no gas to wait for (theme missing, failed, built for another album count, or textures too large for the GPU). So on `/map` and on an open album `'ready'` still means all three stops are in, and on Home, About and 404 it means the one shown is in. When the backdrop turns into the map on the same page (no reload) the flag goes back to `'loading'` until the other two have settled.
+  - Loading order, which the flag follows: only the current stop's image is fetched at once. The other two are fetched only on an interactive map, in an idle slot (`requestIdleCallback`, timeout 600 ms) after the first stop has settled, so they never compete with the first frame, search or covers. Home loads only the stop it shows. A stop the slider asks for is fetched at once, whether or not it was waiting. `gasStopsToStart(current, interactive)` in `shaders/gas.ts` (Task 4) is the rule.
+  - `window.__rmr.gasShownMs?: number`: `performance.now()` of the first drawn frame with a gas texture on screen, written once per page load by `GasField`. The perf script reports it as "Nebula visible".
+  - `window.__rmr.gasPool?: number`: the eased pool amount of the last drawn frame (0 = no open album, 1 = fully dimmed around it). `window.__rmr.gasDeep?: number`: the deep zoom amount of the last drawn frame (`gasCurve(cover).deep`: 0 up to 32 px covers, 1 from 56 px).
+  - `waitForMap` (e2e) and the perf and review scripts now also wait for `gas` to be `'ready'` or `'off'`. Their code is the same for every page; what `'ready'` covers follows the rule above. A test that goes from Home to the map without a reload must first wait for the view to change (the URL, or `data-view="explore"` on `.map-pane`) and only then call `waitForMap`, or it can read the `'ready'` that Home left behind.
+- Independent of where the stage starts. Part 3 extends the map stage under the header (today `.stage` has `top: var(--hdr)` in `src/styles/shell.css`). Nothing here reads the header height or the stage's offset: the quad is placed in world space, `u_ppr` and the cover size come from the canvas's own height (`state.size.height`, as `AlbumField` does), the pool radius is in px of that same scale, and the `gas` flag depends only on textures. A taller canvas changes the cover size at a given zoom for the gas and the albums alike.
 - Dependency on part 3 (not done here): the map pane's CSS background must become the sky colour `rgb(6, 6, 9)` (`--color-pane`), since the pane shows before the first texture arrives and whenever the gas is off. The gas quad is opaque, so `AmbientLayers variant="map"` under the canvas and the brown `.veil` gradient on Home no longer read as designed; part 3 decides what replaces them.
 
 - [ ] **Step 1: Write the failing store test**
@@ -2419,11 +2590,18 @@ with:
 ```ts
       /** Frames the map has rendered. */
       frames?: number;
-      /** The gas layer: 'loading' while a stop's texture is on its way, 'ready' once all are in (or failed),
-       * 'off' when there is no gas to wait for (no theme data, a stale theme, textures too large). */
+      /** The gas layer. A stop is started from the moment it is scheduled: the stop on screen always, the other
+       * two as soon as the map is interactive (also while their fetch waits for an idle slot). 'loading' while any
+       * started stop is unsettled, 'ready' once every started stop is uploaded or has failed, 'off' when there is
+       * no gas to wait for (no theme data, a stale theme, textures too large). So on the map 'ready' means all
+       * three are in, and on Home, About and 404 it means the one shown is in. */
       gas?: 'loading' | 'ready' | 'off';
+      /** performance.now() of the first drawn frame with a gas texture on screen. Written once per page load. */
+      gasShownMs?: number;
       /** Eased pool amount of the last drawn frame: 0 with no album open, 1 fully dimmed around the open one. */
       gasPool?: number;
+      /** Deep zoom amount of the last drawn frame: 0 up to 32 px covers, 1 once covers are 56 px or larger. */
+      gasDeep?: number;
 ```
 
 - [ ] **Step 4: Write `GasField`**
@@ -2450,10 +2628,11 @@ import {
   POOL_MIN_PX,
   POOL_MS,
   focusPool,
+  gasCurve,
   gasDust,
   gasNoise,
   gasPair,
-  gasStrength,
+  gasStopsToStart,
   gasTextureFits,
   gasUrl,
   stopMix,
@@ -2484,7 +2663,7 @@ function loadGas(url: string): Promise<LoadedGas> {
         texture.colorSpace = THREE.NoColorSpace;
         texture.minFilter = THREE.LinearMipmapLinearFilter;
         texture.magFilter = THREE.LinearFilter;
-        texture.generateMipmaps = true; // the glow reads the mips
+        texture.generateMipmaps = true; // the glow and the deep zoom blur read the mips
         texture.needsUpdate = true;
         resolve({ texture, bitmap });
       },
@@ -2506,9 +2685,11 @@ function setGasFlag(value: "loading" | "ready" | "off"): void {
 
 /**
  * The nebula gas: one quad in world space under the album points, textured with the stop baked at build time.
- * The current stop's texture loads first, the other two in an idle slot (or at once when the slider asks).
+ * The current stop's texture loads first. The other two load only on an interactive map, in an idle slot after
+ * the first is on screen (or at once when the slider asks); the dimmed backdrop loads only the stop it shows.
  * Nothing here draws at rest: the dim and the pool ask for another frame only while they are easing, and a
- * texture that arrives asks for one frame.
+ * texture that arrives asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
+ * they change only in frames the camera has already asked for.
  */
 export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   const gl = useThree((s) => s.gl);
@@ -2551,6 +2732,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         u_bakePpr: { value: GAS_TEXTURE_PX / (2 * theme.bakeHalf) },
         u_bakeHalf: { value: theme.bakeHalf },
         u_strength: { value: 1 },
+        u_deep: { value: 0 },
         u_dust: { value: 1 },
         u_poolAmt: { value: 0 },
         u_pool: { value: new THREE.Vector3(0, 0, 1) },
@@ -2569,15 +2751,24 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       setGasFlag("off");
       return;
     }
-    setGasFlag("loading");
     let alive = true;
     const store: Partial<Record<StopId, LoadedGas>> = {};
     loaded.current = store;
+    // A stop is "started" from the moment it is scheduled, also while its fetch still waits for an idle slot.
     const started = new Set<StopId>();
+    const fetching = new Set<StopId>();
     let settled = 0;
-    const start = (stop: StopId) => {
-      if (!alive || started.has(stop)) return;
+    let firstIn = false;
+    let idle: { cancel: () => void } | null = null;
+    // 'loading' while any started stop is unsettled, 'ready' once every started stop is in or has failed.
+    function flag(): void {
+      if (alive) setGasFlag(settled === started.size ? "ready" : "loading");
+    }
+    function fetchStop(stop: StopId): void {
+      if (!alive || fetching.has(stop)) return;
+      fetching.add(stop);
       started.add(stop);
+      flag();
       loadGas(gasUrl(stop))
         .then((g) => {
           if (!alive) {
@@ -2597,18 +2788,45 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         })
         .finally(() => {
           settled += 1;
-          if (alive && settled === STOP_IDS.length) setGasFlag("ready");
+          flag();
+          if (!firstIn) {
+            firstIn = true;
+            queueRest();
+          }
         });
-    };
-    start(useMapStore.getState().input.stop);
-    const rest = () => {
-      for (const stop of STOP_IDS) start(stop);
-    };
-    const hasIdle = typeof window.requestIdleCallback === "function";
-    const handle = hasIdle ? window.requestIdleCallback(rest, { timeout: 600 }) : window.setTimeout(rest, 300);
-    // A stop asked for before the idle slot loads at once.
+    }
+    function rest(): void {
+      idle = null;
+      for (const stop of [...started]) fetchStop(stop);
+    }
+    // The stops that are started but not yet fetched wait until the first stop is on screen, and then for an
+    // idle slot, so they never compete with the first frame, the search index or the covers.
+    function queueRest(): void {
+      if (!alive || idle || !firstIn || fetching.size === started.size) return;
+      if (typeof window.requestIdleCallback === "function") {
+        const handle = window.requestIdleCallback(rest, { timeout: 600 });
+        idle = { cancel: () => window.cancelIdleCallback(handle) };
+      } else {
+        const handle = window.setTimeout(rest, 300);
+        idle = { cancel: () => window.clearTimeout(handle) };
+      }
+    }
+    function schedule(stops: StopId[]): void {
+      for (const stop of stops) started.add(stop);
+      flag();
+      queueRest();
+    }
+    // The stop on screen is fetched at once. The dimmed backdrop (Home, About, 404) starts nothing else; an
+    // interactive map also starts the other two, which are fetched at idle priority.
+    const first = useMapStore.getState().input;
+    fetchStop(first.stop);
+    schedule(gasStopsToStart(first.stop, first.interactive));
     const unsubscribe = useMapStore.subscribe((s, prev) => {
-      if (s.input.stop !== prev.input.stop) start(s.input.stop);
+      // The slider asked for a stop: fetch it at once, whether or not it was waiting for an idle slot.
+      if (s.input.stop !== prev.input.stop) fetchStop(s.input.stop);
+      // The backdrop became the map (same page, no reload): the other stops are started now, so the flag goes
+      // back to 'loading' until they are in.
+      if (s.input.interactive && !prev.input.interactive) schedule(gasStopsToStart(s.input.stop, true));
     });
     // three rebuilds its GL state after a restored context; mark every texture so it is uploaded again.
     const canvas = gl.domElement;
@@ -2623,8 +2841,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     canvas.addEventListener("webglcontextrestored", onRestored);
     return () => {
       alive = false;
-      if (hasIdle) window.cancelIdleCallback(handle);
-      else window.clearTimeout(handle);
+      idle?.cancel();
       unsubscribe();
       canvas.removeEventListener("webglcontextrestored", onRestored);
       for (const stop of STOP_IDS) {
@@ -2643,7 +2860,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
     mesh.visible = pair !== null;
     if (!pair) return;
+    // When the nebula first showed, on the page clock. Written once; the perf script reports it.
+    if (window.__rmr && window.__rmr.gasShownMs === undefined) window.__rmr.gasShownMs = performance.now();
     const u = material.uniforms;
+    // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
     u.u_gasA.value = got[pair.a]!.texture;
     u.u_gasB.value = got[pair.b]!.texture;
     u.u_mix.value = pair.k;
@@ -2664,7 +2884,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     else dim.current += (dimTarget - dim.current) * (1 - Math.exp(-dt / 0.12));
     if (Math.abs(dimTarget - dim.current) < 0.002) dim.current = dimTarget;
     else invalidate();
-    u.u_strength.value = gasStrength(cover) * dim.current;
+    // Zoom bands, and past 32 px covers the deep zoom fade to a faint remnant (strength, colour, detail, focus).
+    const curve = gasCurve(cover);
+    u.u_strength.value = curve.strength * dim.current;
+    u.u_deep.value = curve.deep;
 
     // The pool: a soft dim, half desaturated area around the open album's group, at the target stop's positions.
     const focus = input.focus;
@@ -2691,7 +2914,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     u.u_poolAmt.value = p.value;
     const [wx, wy, wr] = poolAt.current;
     (u.u_pool.value as THREE.Vector3).set(wx / data.tx.s + data.tx.cx, wy / data.tx.s + data.tx.cy, wr / data.tx.s);
-    if (window.__rmr) window.__rmr.gasPool = p.value;
+    if (window.__rmr) {
+      window.__rmr.gasPool = p.value;
+      window.__rmr.gasDeep = curve.deep;
+    }
   });
 
   useEffect(() => {
@@ -2797,7 +3023,7 @@ with:
   }, [themeStatus, mapData, loadedTheme, theme]);
 ```
 
-Replace L338:
+Replace L337:
 
 ```tsx
           <MusicMap data={mapData} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
@@ -2872,9 +3098,10 @@ export async function waitForMap(page: Page): Promise<void> {
 with:
 
 ```ts
-/** Waits until the map has loaded, rendered and exposed its API, and its gas has settled: every stop's texture
- * is in ('ready'), or there is none to wait for ('off'). After this no late texture can cost a frame inside a
- * test's idle window. */
+/** Waits until the map has loaded, rendered and exposed its API, and its gas has settled: every started stop's
+ * texture is in ('ready': all three on an interactive map, the one shown on Home, About and 404), or there is
+ * none to wait for ('off'). After this no late texture can cost a frame inside a test's idle window. After going
+ * from Home to the map without a reload, wait for the view to change before calling this. */
 export async function waitForMap(page: Page): Promise<void> {
   await page.waitForFunction(
     () => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'),
@@ -2915,7 +3142,7 @@ export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"
 cd frontcreck && npm run test && npm run typecheck && npm run lint
 ```
 
-Expected: every unit test passes; typecheck and lint print no error. If lint reports `react-hooks/immutability` on another line of `GasField.tsx` that mutates a three.js object or a ref inside `useFrame`, put the same comment on the line above it, exactly as `AlbumField.tsx` does: `// eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design`.
+Expected: every unit test passes; typecheck and lint print no error. `GasField.tsx` as written above carries three `react-hooks/immutability` comments (above `useFrame`, above `mesh.visible` and above the first uniform write); with those three, ESLint 9.39.4 with this repo's config reports nothing on the file, and it reports the first uniform write when the third is missing. If lint still reports the rule on another line of `GasField.tsx` that mutates a three.js object or a ref inside `useFrame`, put the same comment on the line above it, exactly as `AlbumField.tsx` does: `// eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design`.
 
 - [ ] **Step 9: The existing demand-rendering test still holds with the gas in (one browser)**
 
@@ -2926,12 +3153,14 @@ cd frontcreck && npx playwright test map.spec.ts --project=desktop --workers=1
 
 Expected: `arm64`; every test of `map.spec.ts` passes, including `the map is a lazily loaded WebGL canvas that renders on demand` (at most one frame in its 1200 ms idle window). The run builds the app first, which takes a few minutes. Then open `frontcreck/test-results/shots/desktop-explore.png` with the Read tool: the Ember gas is behind the albums, north up, and matches `frontcreck/test-results/theme/gas-balanced.png` in shape. The pane beyond the gas is still the old brown until part 3 changes `--color-pane`; that is expected here.
 
-- [ ] **Step 10: Commit**
+- [ ] **Step 10: Commit, do not push**
 
 ```bash
 git add frontcreck/src/components/map/canvas/GasField.tsx frontcreck/src/components/map/canvas/Scene.tsx frontcreck/src/components/map/state/mapStore.ts frontcreck/src/components/map/state/mapStore.theme.test.ts frontcreck/src/components/map/types.ts frontcreck/src/components/map/MusicMap.tsx frontcreck/src/components/map/MapStage.tsx frontcreck/src/types/global.d.ts frontcreck/e2e/helpers.ts frontcreck/scripts/perf/perf.mjs frontcreck/scripts/review-shots.mjs
 git commit -F - <<'EOF'
 feat(map): gas layer under the album points, loaded per stop after first paint
+
+Refs #45
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
@@ -2944,10 +3173,17 @@ EOF
 **Files:**
 - Create: `frontcreck/e2e/gas.spec.ts`
 - Modify: `frontcreck/e2e/nowebgl.spec.ts` (L4-16, the first test)
+- Modify: `frontcreck/scripts/perf/perf.mjs` (`VIEWPORTS` and a `--no-gas` flag, `exploreFlow`, `measure`, `main`: six edits), `frontcreck/scripts/perf/lib.mjs` (`ROWS`, three reported rows and an `n/a` formatter), `frontcreck/scripts/perf/lib.test.mjs` (one added test). `budgets.json`, `BUDGET_KEYS`, `GAP_KEYS` and `checkBudgets` are not touched.
+- Create: `docs/design/trifid-theme/reviews/app-perf-part1.md` (the comparison with the baseline and the regression checklist), its raw output beside it (`perf-part1/perf-run1.txt` and `.json` to `perf-part1/perf-run3.txt` and `.json`, `app-hover-part1.json`, `app-hover-part1.txt`), and `docs/design/trifid-theme/reviews/app-fidelity-part1.md`
+- Read, and edited in one place only: `docs/design/trifid-theme/reviews/baseline/`. The one allowed edit is the dpr 2 column of today's site, which the baseline lacks (Step 7): six new files `perf/perf-dpr2-run1.json` to `perf-dpr2-run3.json` and `.txt`, and one section appended to `BASELINE-PERF.md`. Everything else there is never edited (`REGRESSION-CHECKLIST.md`, `README.md`, the existing files in `perf/`, `shots/`, `hover-measure.mjs`, `capture.mjs`, and every existing line of `BASELINE-PERF.md`)
 
 **Interfaces:**
-- Consumes: `waitForMap`, `waitForCameraIdle`, `waitForMapQuiet`, `visibleAlbumPoint`, `isPhone` from `e2e/helpers.ts`; `window.__rmr.gas`, `window.__rmr.gasPool`, `window.__rmr.map` (`screenPoint`, `isAnimating`), `window.__rmr.getState()` (`setStop`, `webgl`, `selected`); `COPY.map.exploreHere`, `COPY.map.noWebgl`.
-- Produces: nothing other parts import. `lumaAt` in `gas.spec.ts` (luma at a quantile of a screenshot rectangle; the median reads the background between dots and covers) may be copied by part 2 for star checks.
+- Consumes: `waitForMap`, `waitForCameraIdle`, `waitForMapQuiet`, `visibleAlbumPoint`, `isPhone`, `shot` from `e2e/helpers.ts`; `window.__rmr.gas`, `window.__rmr.gasPool`, `window.__rmr.gasDeep`, `window.__rmr.map` (`screenPoint`, `isAnimating`, `flyTo`, `getCamera`, `setCamera`), `window.__rmr.getState()` (`setStop`, `webgl`, `selected`); `COPY.map.exploreHere`, `COPY.map.noWebgl`, `COPY.nav.label`, `COPY.nav.map`.
+- Produces: nothing other parts import. `lumaAt` in `gas.spec.ts` (luma at a quantile of a screenshot rectangle; the median reads the background between dots and covers) may be copied by part 2 for star checks. The perf script gains, all reported only (Step 6): the viewport `desktop2x` and with it a fifth column `gpu desktop2x`; the rows "Nebula visible (reported only)" (`gasShownMs`), "Deep zoom drag worst frame gap (reported only)" (`deepDragGapMs`) and "Deep zoom, slider between stops, worst frame gap (reported only)" (`deepMorphGapMs`); `deepZoom` in the raw JSON; and the flag `--no-gas`. Parts 2 and 3 see all of them in their runs. The baseline folder gains the dpr 2 column of today's site (Step 7): `baseline/perf/perf-dpr2-run1.json` to `perf-dpr2-run3.json` and `.txt`, and one section in `BASELINE-PERF.md`.
+
+Nothing in these checks assumes the map starts below the header, which part 3 changes. Positions come from `screenPoint`, which is in client px from the canvas's own rectangle; screenshots are of the whole page; a sampled patch must pass `onCanvas`, which rejects a point with anything over the canvas; and the bare patch search of the deep zoom test stays 140 px inside the top and bottom of the window, clear of a header of any kind.
+
+A limit of two thresholds until part 3. The map pane keeps its old brown background (`#17120e`, luma about 19) until part 3 Task 1 changes the token to the sky colour, and a canvas with no gas quad would show that pane. So in tests 1, 4 and 5 the bounds `SKY_LUMA * 3` (18.6) and `SKY_LUMA * 2` (12.4) do not by themselves tell gas from no gas while part 1 and part 2 are being built: there the proof that the gas is on screen is the `gas` flag, the list of requested files, the dimming and deep zoom ratios of tests 2 and 3 (a plain pane has no ratio) and the screenshot looked at in Task 5. From part 3 Task 1 on the bounds alone prove it. Do not raise them here without a measured gas value; record the luma these two tests read in `app-perf-part1.md` so part 3 can tighten the bound to a measured number if it wants to.
 
 There is no `e2e/data.ts` in this repo; the helpers are in `e2e/helpers.ts` and the pixel readers are local to `e2e/explore.spec.ts`.
 
@@ -2958,7 +3194,7 @@ Create `frontcreck/e2e/gas.spec.ts`:
 ```ts
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { isPhone, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet } from './helpers';
+import { isPhone, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet } from './helpers';
 
 /** In Rainbows in albums.json: near the middle of every layout, where the gas is dense. */
 const IN_RAINBOWS = 11;
@@ -3019,6 +3255,34 @@ async function onCanvas(page: Page, r: Rect): Promise<boolean> {
 /** Offsets tried, in order, for a patch of bare map beside an open album: inside its pool, clear of its markers. */
 const BESIDE: readonly (readonly [number, number])[] = [[200, 0], [-200, 0], [0, -180], [0, 180], [260, 0], [-260, 0]];
 
+/** The point on the canvas that is furthest from every album (in the larger of its x and y distances), if that
+ * is at least `clearance` client px: bare gas with no cover near it. Kept 140 px inside the top and bottom of
+ * the window and 100 px inside its sides, away from the header and the controls. */
+async function barePoint(page: Page, clearance: number): Promise<{ x: number; y: number } | null> {
+  return page.evaluate((need) => {
+    const api = window.__rmr!.map!;
+    const pts: { x: number; y: number }[] = [];
+    for (let id = 0; ; id++) {
+      const p = api.screenPoint(id);
+      if (!p) break;
+      if (p.x > -need && p.y > -need && p.x < innerWidth + need && p.y < innerHeight + need) pts.push(p);
+    }
+    let best: { x: number; y: number; d: number } | null = null;
+    for (let y = 140; y <= innerHeight - 140; y += 12) {
+      for (let x = 100; x <= innerWidth - 100; x += 12) {
+        let d = Infinity;
+        for (const p of pts) {
+          d = Math.min(d, Math.max(Math.abs(p.x - x), Math.abs(p.y - y)));
+          if (d < need) break;
+        }
+        if (d < need || (best && d <= best.d)) continue;
+        if (document.elementFromPoint(x, y)?.classList.contains('map-canvas')) best = { x, y, d };
+      }
+    }
+    return best ? { x: best.x, y: best.y } : null;
+  }, clearance);
+}
+
 test('the gas is drawn behind the albums at the overview, and nothing draws at rest', async ({ page }, info) => {
   test.skip(isPhone(info), 'the gas checks use the desktop framing');
   const requested: string[] = [];
@@ -3029,7 +3293,8 @@ test('the gas is drawn behind the albums at the overview, and nothing draws at r
   await waitForMap(page);
   await waitForCameraIdle(page);
   expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
-  expect(requested.sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp', '/data/theme/theme.json']);
+  // polled: the other two stops are fetched in an idle slot, so their requests must not be raced
+  await expect.poll(() => [...requested].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp', '/data/theme/theme.json']);
   expect(await lumaAt(page, await patchAt(page, IN_RAINBOWS, [0, 0], 80))).toBeGreaterThan(SKY_LUMA * 3);
   expect(await page.evaluate(() => window.__rmr!.gasPool)).toBe(0);
   const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
@@ -3074,7 +3339,45 @@ test('the gas dims around an open album and comes back when it closes', async ({
   expect(dimmed - SKY_LUMA).toBeLessThan((plain - SKY_LUMA) * 0.85);
 });
 
-test('moving the slider to a stop whose gas has not arrived keeps gas on screen and breaks nothing', async ({ page }, info) => {
+test('past 32 px covers the gas fades on to a faint remnant at full-size covers', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  // flyTo centres the album and zooms until covers are 32 px: the end of the bands, where deep zoom starts.
+  await page.evaluate((id) => window.__rmr!.map!.flyTo(id), IN_RAINBOWS);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForCameraIdle(page);
+  const at32 = await page.evaluate(() => window.__rmr!.map!.getCamera());
+  // (rounding may leave the cover a hair past 32 px, so this is "about 0", not exactly 0)
+  expect(await page.evaluate(() => window.__rmr!.gasDeep)).toBeLessThan(0.001);
+  // Twice the zoom: 64 px covers, past the 56 px where the fade ends.
+  await page.evaluate((c) => window.__rmr!.map!.setCamera({ ...c, zoom: c.zoom * 2 }, false), at32);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 300);
+  expect(await page.evaluate(() => window.__rmr!.gasDeep)).toBe(1);
+  await shot(page, info, 'gas-deep');
+  // A point of bare gas: 60 px clear of every album here, so 30 px clear at half the zoom, where covers are 32 px.
+  const bare = await barePoint(page, 60);
+  expect(bare, 'a point of bare map at full zoom').not.toBeNull();
+  const seed64 = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
+  const deep = await lumaAt(page, { x: bare!.x - 8, y: bare!.y - 8, w: 16, h: 16 });
+  // The same point of the map with 32 px covers: half as far from the album on screen.
+  await page.evaluate((c) => window.__rmr!.map!.setCamera(c, false), at32);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 300);
+  expect(await page.evaluate(() => window.__rmr!.gasDeep)).toBeLessThan(0.001);
+  const seed32 = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
+  const same = { x: seed32.x + (bare!.x - seed64.x) / 2 - 8, y: seed32.y + (bare!.y - seed64.y) / 2 - 8, w: 16, h: 16 };
+  expect(await onCanvas(page, same), 'the same point is on the map at 32 px covers').toBe(true);
+  const mid = await lumaAt(page, same);
+  expect(mid, 'the sampled point must show gas at 32 px covers').toBeGreaterThan(SKY_LUMA + 4);
+  // Strength 0.06 against 0.3 leaves about a fifth of the light; the old floor of 0.3 would leave all of it.
+  expect(deep - SKY_LUMA).toBeLessThan((mid - SKY_LUMA) * 0.6);
+  expect(deep, 'a faint remnant, not a hole in the sky').toBeGreaterThan(SKY_LUMA - 2);
+});
+
+test('moving the slider to a stop whose gas has not arrived keeps gas on screen, draws nothing at rest and breaks nothing', async ({ page }, info) => {
   test.skip(isPhone(info), 'the gas checks use the desktop framing');
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -3097,8 +3400,14 @@ test('moving the slider to a stop whose gas has not arrived keeps gas on screen 
   await waitForMapQuiet(page, 300);
   const vp = page.viewportSize()!;
   const middle = { x: vp.width / 2 - 150, y: vp.height / 2 - 150, w: 300, h: 300 };
-  // the Balanced gas stands in while the Mood texture is held back
+  // the Balanced gas stands in while the Mood texture is held back: no blank frame
   expect(await lumaAt(page, middle)).toBeGreaterThan(SKY_LUMA * 2);
+  // and no redraw loop while it waits: the frame counter stops
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('loading');
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  expect(f2 - f1, 'frames drawn while the stand-in stop shows').toBeLessThanOrEqual(1);
   release();
   await waitForMap(page);
   await waitForMapQuiet(page, 300);
@@ -3148,6 +3457,25 @@ test('without theme data the map still works, with plain sky and no gas requests
   expect(gasRequests).toEqual([]);
   expect(errors).toEqual([]);
 });
+
+test('Home loads only the gas of the stop it shows, and the other two wait for the map', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  const requested: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/data/theme/')) requested.push(new URL(r.url()).pathname);
+  });
+  await page.goto('/');
+  await waitForMap(page);
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+  await page.waitForTimeout(1500); // well past the idle slot in which an interactive map fetches the other stops
+  expect([...requested].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/theme.json']);
+  // The same canvas becomes the interactive map: now, and only now, the other two stops are fetched.
+  await page.getByRole('navigation', { name: COPY.nav.label }).getByRole('link', { name: COPY.nav.map, exact: true }).click();
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
+  await expect.poll(() => [...requested].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp', '/data/theme/theme.json']);
+  await waitForMap(page);
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+});
 ```
 
 - [ ] **Step 2: Extend the no-WebGL test**
@@ -3193,6 +3521,8 @@ test('without WebGL the map shows a message, asks for no theme file, and search 
 });
 ```
 
+This test is extended, not loosened: every earlier assertion is still there (the message, no canvas, `webgl` is `'unavailable'`, search works, no page error), and it now also proves that a browser without WebGL never asks for a theme file.
+
 - [ ] **Step 3: Run the gas spec (one browser)**
 
 ```bash
@@ -3200,7 +3530,11 @@ export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; node -p process.arch
 cd frontcreck && npx playwright test gas.spec.ts --project=desktop --workers=1
 ```
 
-Expected: `arm64`; 5 tests pass. These tests exercise code that Task 5 already wrote, so they are expected to pass on the first run; to see each one fail for the right reason once, temporarily change `u.u_strength.value = gasStrength(cover) * dim.current;` in `GasField.tsx` to `u.u_strength.value = 0;`, rerun (tests 1, 3 and 4 fail on the luma checks, test 2 on `the sampled patch must show gas`), and restore the line. If test 4 fails because the album points themselves do not come back after the restore (a fault of the existing map, not of the gas), stop and report it with the trace instead of changing `Scene.tsx`.
+Expected: `arm64`; 7 tests pass. These tests exercise code that Task 5 already wrote, so they are expected to pass on the first run; to see each one fail for the right reason once, temporarily change `u.u_strength.value = curve.strength * dim.current;` in `GasField.tsx` to `u.u_strength.value = 0;`, rerun (tests 1, 4 and 5 fail on the luma checks, test 2 on `the sampled patch must show gas`, test 3 on `the sampled point must show gas at 32 px covers`), and restore the line. To see the deep zoom test catch the old behaviour, temporarily change `return { strength: lerp(0.3, GAS_DEEP_FLOOR, e), deep: e };` in `shaders/gas.ts` to `return { strength: 0.3, deep: e };`, rerun (test 3 fails on its ratio), and restore the line. If the context loss test fails because the album points themselves do not come back after the restore (a fault of the existing map, not of the gas), stop and report it with the trace instead of changing `Scene.tsx`.
+
+If test 3 fails on `a point of bare map at full zoom` (no 120 px gap between albums around In Rainbows at full zoom), do not lower the clearance, which would let a cover into the sample: move the test to a sparser place by replacing `IN_RAINBOWS` in that test with the id of an album near the edge of the dense middle, and say which in the hand-off note.
+
+Then open `frontcreck/test-results/shots/desktop-gas-deep.png` with the Read tool beside `docs/design/trifid-theme/options/q-deep.jpg` (panel C, "Faint"): full-size covers on near-black sky with a faint, smooth trace of the local colour, no blotches, no texture.
 
 - [ ] **Step 4: Run the no-WebGL project (one browser)**
 
@@ -3219,41 +3553,429 @@ export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"
 (cd frontcreck && npx playwright test map.spec.ts --project=phone --workers=1)
 ```
 
-Expected: the frame-count checks pass (`map.spec.ts` idle window, `focus.spec.ts` `rendered frames to settle`). One existing assertion may no longer hold, because it measures against the old pane colour: `explore.spec.ts` `in cover mode the picked album is drawn large on top, framed in lamp, with the other covers dimmed` compares mean luma with `PANE_LUMA = 19` (the brown pane), and there is gas behind those covers now. If only that assertion fails, do not edit the test here: part 3 owns the pane colour and that check, so list it in the hand-off note with the measured `dimmed` and `plain` values. Any other failure is this part's to fix before committing.
+Expected: the frame-count checks pass (`map.spec.ts` idle window, `focus.spec.ts` `rendered frames to settle`). One existing assertion may no longer hold, because it measures against the old pane colour: `explore.spec.ts` `in cover mode the picked album is drawn large on top, framed in lamp, with the other covers dimmed` compares mean luma with `PANE_LUMA = 19` (the brown pane), and there is gas behind those covers now. If only that assertion fails, do not edit the test here: part 3 owns the pane colour (its Task 1) and rewrites that check (its Task 7), so list it in the hand-off note with the measured `dimmed` and `plain` values. Any other failure is this part's to fix before committing.
 
-- [ ] **Step 6: Measure the budgets once (heavy; run it when nothing else is running)**
+- [ ] **Step 6: Extend the perf script: deep zoom, the nebula's first frame, a dpr 2 column (all reported, none budgeted)**
+
+`npm run perf` drags and zooms at the overview, at device pixel ratio 1 on desktop, and never reaches full-size covers. So it would not see the three places where the gas costs most: the deep zoom blur, a slider move at full zoom (both stops bound, the blur read from both), and a desktop screen at device pixel ratio 2, where the quad covers four times the pixels. This step adds them. Everything added is reported only: `budgets.json`, `BUDGET_KEYS`, `GAP_KEYS` and `checkBudgets` stay exactly as they are, and a value that is missing prints `n/a` and never throws. Part 3 edits these two files again, so make the seven edits below and no others.
+
+What is added:
+
+- `VIEWPORTS.desktop2x`: 1440 x 900 at `deviceScaleFactor: 2`. A default run gains a fifth column, `gpu desktop2x`, measured in gpu mode only and never passed to `checkBudgets`. `--viewport desktop2x` runs it alone.
+- `deepDragGapMs`, row "Deep zoom drag worst frame gap (reported only)": the overview drag again with covers at full size.
+- `deepMorphGapMs`, row "Deep zoom, slider between stops, worst frame gap (reported only)": at full zoom another stop is chosen and the worst frame gap of the morph is read. This is the gas's worst case.
+- `gasShownMs`, row "Nebula visible (reported only)": `window.__rmr.gasShownMs` of the first page load (Task 5), rounded.
+- `--no-gas`: skips every wait for `window.__rmr.gas`, so the same script can measure a build that has no gas (the site as it is today). The nebula row then prints `n/a`; the two deep zoom rows are still measured, since full zoom and the slider exist without the gas.
+
+In `frontcreck/scripts/perf/perf.mjs` make these six edits.
+
+1. The viewport and the flag. Replace:
+
+```js
+  phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+};
+```
+
+with:
+
+```js
+  phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  // Reported only and gpu only: a desktop screen at device pixel ratio 2, where the map shades four times the pixels.
+  desktop2x: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 },
+};
+// --no-gas: do not wait for window.__rmr.gas, so a build without the gas layer can be measured with this script.
+const NO_GAS = args.includes('--no-gas');
+```
+
+2. The wait in `exploreFlow` (the line Task 5 Step 7 wrote). Replace:
+
+```js
+  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), null, { timeout: 20000 });
+```
+
+with:
+
+```js
+  await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
+```
+
+3. The two deep zoom measures, in `exploreFlow`. Replace:
+
+```js
+    res.zoomGapMs = Math.round(longest);
+    await new Promise((r2) => setTimeout(r2, 1500));
+```
+
+with:
+
+```js
+    res.zoomGapMs = Math.round(longest);
+    // Deep zoom, reported only: the same drag with covers at full size, where the gas is read from a blurred
+    // copy. setCamera clamps the zoom to its maximum. The camera is put back before the idle window is measured.
+    const api = window.__rmr.map;
+    const home = api.getCamera();
+    api.setCamera({ ...home, zoom: 1000 }, false);
+    await P.settled();
+    fire('pointerdown', cx, cy);
+    longest = 0;
+    last = performance.now();
+    const t2 = last;
+    while (performance.now() - t2 < 2000) {
+      const k = (performance.now() - t2) / 2000;
+      fire('pointermove', cx + Math.sin(k * 6.28) * 140, cy + Math.cos(k * 6.28) * 100);
+      const now = await P.raf();
+      longest = Math.max(longest, now - last);
+      last = now;
+    }
+    fire('pointerup', cx, cy);
+    res.deepDragGapMs = Math.round(longest);
+    res.deepZoom = window.__rmr.gasDeep ?? null;
+    // The worst case for the gas, reported only: still at full zoom, another stop is chosen, so both stops are
+    // bound and the blurred copy is read from both while the albums morph. Then the stop is put back.
+    await P.settled();
+    const stop0 = window.__rmr.getState().stop;
+    window.__rmr.getState().setStop(stop0 === 'sonic' ? 'mood' : 'sonic');
+    res.deepMorphGapMs = await P.gaps(700);
+    await P.settled();
+    window.__rmr.getState().setStop(stop0);
+    await P.settled();
+    api.setCamera(home, false);
+    // Full zoom makes the atlas fetch cover sheets; wait until the map has stopped drawing so a late sheet
+    // cannot land in the idle window measured below.
+    await P.settled();
+    await new Promise((r2) => setTimeout(r2, 1500));
+```
+
+4. When the nebula first showed, in `measure`. Replace:
+
+```js
+  await page.waitForFunction(() => window.__mapFirstFrame !== null, null, { timeout: 20000 }).catch(() => {});
+  const startup = await page.evaluate(() => ({
+    lt: window.__lt.slice(),
+```
+
+with:
+
+```js
+  await page.waitForFunction(() => window.__mapFirstFrame !== null, null, { timeout: 20000 }).catch(() => {});
+  // The gas of the stop Home shows arrives after the first frame; wait for it so its upload is inside the startup
+  // long tasks and its time can be reported. A page with no gas (or --no-gas) is not waited for.
+  if (!NO_GAS) await page.waitForFunction(() => typeof window.__rmr?.gasShownMs === 'number' || window.__rmr?.gas === 'off', null, { timeout: 20000 }).catch(() => {});
+  const startup = await page.evaluate(() => ({
+    gasShown: window.__rmr?.gasShownMs ?? null,
+    lt: window.__lt.slice(),
+```
+
+and replace:
+
+```js
+    mapFirstFrameMs: startup.mapFirstFrame,
+```
+
+with:
+
+```js
+    mapFirstFrameMs: startup.mapFirstFrame,
+    gasShownMs: typeof startup.gasShown === 'number' ? Math.round(startup.gasShown) : null,
+```
+
+5. The dpr 2 column, in `main`. Replace:
+
+```js
+        const r = await measure(mode, vp);
+        rows.push(r);
+        fails.push(...checkBudgets(r, mode, BUDGETS, { allowSoftwareGpu: args.includes('--allow-software-gpu') }));
+```
+
+with:
+
+```js
+        if (vp === 'desktop2x' && mode !== 'gpu') continue; // dpr 2 is measured on the GPU only
+        const r = await measure(mode, vp);
+        rows.push(r);
+        // The dpr 2 column is reported only: it has no budget and is never checked.
+        if (vp !== 'desktop2x') fails.push(...checkBudgets(r, mode, BUDGETS, { allowSoftwareGpu: args.includes('--allow-software-gpu') }));
+```
+
+6. A line under the table, in `main`. Replace:
+
+```js
+    console.log(`\n${formatTable(rows)}\n`);
+```
+
+with:
+
+```js
+    console.log(`\n${formatTable(rows)}\n`);
+    if (rows.some((r) => r.vp === 'desktop2x')) console.log('The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.\n');
+    if (NO_GAS) console.log('Run with --no-gas: the script did not wait for a gas layer.\n');
+```
+
+In `frontcreck/scripts/perf/lib.mjs` make one edit, in and above `ROWS`. Replace:
+
+```js
+const ROWS = [
+  ['Renderer', (r) => r.renderer],
+  ['Search usable', (r) => `${r.searchUsableMs} ms`],
+  ['Startup worst long task', (r) => `${r.startupLongTaskMs} ms`],
+  ['WebGL warm-up end (reported only)', (r) => (r.warmUp ? `${r.warmUp.ms} ms (${r.warmUp.why})` : 'none')],
+  ['Map first frame (reported only)', (r) => `${r.mapFirstFrameMs} ms`],
+  ['Typing to suggestions', (r) => `${r.typeToSuggestionsMs} ms`],
+  ['Select to album', (r) => `${r.selectToAlbumMs} ms`],
+  ['Transition worst frame gap', (r) => `${r.transitionGapMs} ms`],
+  ['Slider to list', (r) => `${r.sliderToListMs} ms`],
+  ['Morph worst frame gap', (r) => `${r.morphGapMs} ms`],
+  ['Drag worst frame gap', (r) => `${r.dragGapMs} ms`],
+  ['Zoom worst frame gap', (r) => `${r.zoomGapMs} ms`],
+```
+
+with:
+
+```js
+/** A reported-only value that an older build or a run with --no-gas may not have: never throws. */
+const ms = (v) => (typeof v === 'number' && Number.isFinite(v) ? `${v} ms` : 'n/a');
+
+const ROWS = [
+  ['Renderer', (r) => r.renderer],
+  ['Search usable', (r) => `${r.searchUsableMs} ms`],
+  ['Startup worst long task', (r) => `${r.startupLongTaskMs} ms`],
+  ['WebGL warm-up end (reported only)', (r) => (r.warmUp ? `${r.warmUp.ms} ms (${r.warmUp.why})` : 'none')],
+  ['Map first frame (reported only)', (r) => `${r.mapFirstFrameMs} ms`],
+  ['Nebula visible (reported only)', (r) => ms(r.gasShownMs)],
+  ['Typing to suggestions', (r) => `${r.typeToSuggestionsMs} ms`],
+  ['Select to album', (r) => `${r.selectToAlbumMs} ms`],
+  ['Transition worst frame gap', (r) => `${r.transitionGapMs} ms`],
+  ['Slider to list', (r) => `${r.sliderToListMs} ms`],
+  ['Morph worst frame gap', (r) => `${r.morphGapMs} ms`],
+  ['Drag worst frame gap', (r) => `${r.dragGapMs} ms`],
+  ['Zoom worst frame gap', (r) => `${r.zoomGapMs} ms`],
+  ['Deep zoom drag worst frame gap (reported only)', (r) => ms(r.deepDragGapMs)],
+  ['Deep zoom, slider between stops, worst frame gap (reported only)', (r) => ms(r.deepMorphGapMs)],
+```
+
+Pin the `n/a` rule with one new test. In `frontcreck/scripts/perf/lib.test.mjs` replace:
+
+```js
+  it('formats a markdown table', () => {
+```
+
+with:
+
+```js
+  it('prints n/a for a reported-only value a run does not have, and the value when it does', () => {
+    const none = formatTable([{ mode: 'gpu', ...ok }]);
+    expect(none).toContain('| Nebula visible (reported only) | n/a |');
+    expect(none).toContain('| Deep zoom drag worst frame gap (reported only) | n/a |');
+    expect(none).toContain('| Deep zoom, slider between stops, worst frame gap (reported only) | n/a |');
+    const some = formatTable([{ mode: 'gpu', ...ok, gasShownMs: 640, deepDragGapMs: 21, deepMorphGapMs: 33 }]);
+    expect(some).toContain('| Nebula visible (reported only) | 640 ms |');
+    expect(some).toContain('| Deep zoom drag worst frame gap (reported only) | 21 ms |');
+    expect(some).toContain('| Deep zoom, slider between stops, worst frame gap (reported only) | 33 ms |');
+  });
+
+  it('formats a markdown table', () => {
+```
+
+This adds a test; no existing test is edited.
 
 ```bash
 export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"
-cd frontcreck && npm run perf -- --build
+cd frontcreck && node --check scripts/perf/perf.mjs && npm run test -- scripts/perf/lib.test.mjs && npm run lint
 ```
 
-Expected: the table shows `idleFrames` at most 1, `idleLongTasks` 0, `startupLongTaskMs` under 250, `frameGapMs` under 50 in GPU mode and `firstLoadJsKb` under 200 in every row. If a row fails, do not change `budgets.json`: record the row and the numbers in the hand-off note. The two likely causes and their fixes inside this part are: a startup long task from uploading three 2048 px textures in a row (in `GasField.tsx`, give `window.requestIdleCallback(rest, { timeout: 600 })` a longer `timeout: 2000` so the uploads spread out) and frame gaps from the six mip reads while the slider moves (in `shaders/gas.ts`, drop the wider glow tap: replace the `vec3 g = ...` line with `vec3 g = lit(gasLod(uv, max(lod + 4.0, 0.0)), k);`).
+Expected: no syntax error, the perf library's tests pass with one more than before (the existing ones unchanged), lint prints no error.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 7: Measure three times, compare with the baseline, write it down (heavy; run it alone, nothing else running)**
+
+First read `docs/design/trifid-theme/reviews/baseline/BASELINE-PERF.md`. Its layout, which the write-up of this step mirrors:
+
+- "Sizes": one table (first-load JS with and without nomodule scripts, the three.js chunk in the first-load scripts, the server HTML of `/` and of `/album/in-rainbows-radiohead`).
+- "Medians (three runs)": one table with the four columns of the perf script, in its order: software desktop, software phone, gpu desktop, gpu phone.
+- "Budget results per run": one line per run naming every budget that run missed.
+- "Every run, per combination": one table per column with `Metric | Run 1 | Run 2 | Run 3 | Median | Min to max | Budget`.
+- "Hover path": the first, second and third hover after a fresh load, per mode, each as median and min to max of five loads.
+
+The raw output of the baseline is in `baseline/perf/`: `perf-run1.json` to `perf-run3.json` (the perf script's own JSON), `perf-run1.txt` to `perf-run3.txt` (its console output), `hover.json` and `hover.txt`.
+
+The rule for this step, and for the same step of parts 2 and 3: run `npm run perf` three times, one after another. Each measure is judged on the median of the three runs: the median must be inside its budget, and it is compared with the baseline's median and min to max in `BASELINE-PERF.md`. A median above the baseline's worst run is a finding even when it is inside budget. Any single run over budget is named and explained in the write-up (the baseline has three such single run outliers).
+
+First write the small helper that turns three runs into medians (it is not part of the repository; it reads the perf script's JSON files and prints, per column, run 1 to 3, the median and min to max of every measure):
 
 ```bash
-git add frontcreck/e2e/gas.spec.ts frontcreck/e2e/nowebgl.spec.ts
+cat > "${TMPDIR:-/tmp}/perf-medians.mjs" <<'EOF'
+import fs from 'node:fs';
+const runs = process.argv.slice(2).map((f) => JSON.parse(fs.readFileSync(f, 'utf8')));
+const KEYS = ['searchUsableMs', 'startupLongTaskMs', 'mapFirstFrameMs', 'typeToSuggestionsMs', 'selectToAlbumMs', 'transitionGapMs', 'sliderToListMs', 'morphGapMs', 'dragGapMs', 'zoomGapMs', 'deepDragGapMs', 'deepMorphGapMs', 'gasShownMs', 'idleLongTasks', 'idleFrames'];
+console.log(`first-load JS (KB): ${runs.map((r) => r.js.kb).join(', ')}; without nomodule: ${runs.map((r) => r.js.modernKb).join(', ')}; three.js on first load (KB): ${runs.map((r) => r.js.threeKb).join(', ')}`);
+for (const col of runs[0].rows.map((r) => `${r.mode} ${r.vp}`)) {
+  console.log(`\n${col}\n| Measure | Run 1 | Run 2 | Run 3 | Median | Min to max |\n|---|---|---|---|---|---|`);
+  for (const k of KEYS) {
+    const v = runs.map((r) => r.rows.find((x) => `${x.mode} ${x.vp}` === col)?.[k]);
+    if (v.some((x) => typeof x !== 'number')) { console.log(`| ${k} | ${v.join(' | ')} | missing | missing |`); continue; }
+    const s = [...v].sort((a, b) => a - b);
+    console.log(`| ${k} | ${v.join(' | ')} | ${s[1]} | ${s[0]} to ${s[2]} |`);
+  }
+}
+runs.forEach((r, i) => console.log(`\nrun ${i + 1} budget misses: ${r.fails.length ? r.fails.join('; ') : 'none'}`));
+EOF
+```
+
+Then, once, the dpr 2 column of today's site. The baseline has no column at device pixel ratio 2, so `gpu desktop2x` would have nothing to be compared with. Measure it with the extended script of Step 6 on commit `6f10463e` (the baseline's own commit; its app code is the live site's), in a temporary worktree. This is not a branch switch: the working tree stays where it is. Serial, nothing else running. Skip this block when `docs/design/trifid-theme/reviews/baseline/perf/perf-dpr2-run3.json` already exists. Use a path in the session's scratch directory for `W` when one is given.
+
+```bash
+export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; node -p process.arch
+ROOT="$PWD"; W="${TMPDIR:-/tmp}/baseline-6f10463e"; B="$ROOT/docs/design/trifid-theme/reviews/baseline/perf"
+git worktree add "$W" 6f10463e
+ln -s "$ROOT/frontcreck/node_modules" "$W/frontcreck/node_modules"
+cp "$ROOT/frontcreck/scripts/perf/perf.mjs" "$ROOT/frontcreck/scripts/perf/lib.mjs" "$W/frontcreck/scripts/perf/"
+(cd "$W/frontcreck" && npm run build && for i in 1 2 3; do npm run perf -- --mode gpu --viewport desktop2x --no-gas > "$B/perf-dpr2-run$i.txt" 2>&1; cp "$(ls -t scripts/perf/out/*.json | head -1)" "$B/perf-dpr2-run$i.json"; tail -n 3 "$B/perf-dpr2-run$i.txt"; sleep 20; done)
+node "${TMPDIR:-/tmp}/perf-medians.mjs" "$B/perf-dpr2-run1.json" "$B/perf-dpr2-run2.json" "$B/perf-dpr2-run3.json"
+git worktree remove --force "$W" && git worktree list
+```
+
+Expected: `arm64`; a detached worktree at `6f10463e`; a build with no error; three runs that each end in `All budgets met.` (the dpr 2 column is never checked, so only the size checks could fail, and they pass on this commit); the helper's table for the one column `gpu desktop2x`, with `gasShownMs` marked missing; and a worktree list without `$W`. Run from the worktree root (the directory that holds `frontcreck/`). If `npm run build` fails because of the linked `node_modules` (the bundler may refuse a link that leaves the project), remove the link, run `npm ci` in `$W/frontcreck` and repeat from the build. `--force` is needed because the worktree holds the copied scripts and the build output.
+
+Append this section to the end of `docs/design/trifid-theme/reviews/baseline/BASELINE-PERF.md`, with the numbers the helper printed (this, and the six files just written, are the only changes this part makes in the baseline folder):
+
+```markdown
+## gpu desktop at dpr 2, added later with the same script
+
+The three runs above have no column at device pixel ratio 2. This one was added on <date> from commit `6f10463e` (app code identical to `1e9ef508`), built in a temporary worktree. The script was the extended `scripts/perf/perf.mjs` and `lib.mjs` of the Trifid plan (part 1, Task 6 Step 6), run as `npm run perf -- --mode gpu --viewport desktop2x --no-gas`, three times, one after another. Viewport 1440 x 900 at device pixel ratio 2, gpu mode. The column has no budget; the 50 ms frame gap of the other gpu columns is the yardstick. Raw output: `perf/perf-dpr2-run1.json` to `perf-dpr2-run3.json` and `.txt`.
+
+Renderer: <renderer string>
+
+| Metric | Run 1 | Run 2 | Run 3 | Median | Min to max | Budget |
+|---|---|---|---|---|---|---|
+| Search usable (ms) | | | | | | none (reported only) |
+| Startup worst long task (ms) | | | | | | none (reported only) |
+| Map first frame (ms) | | | | | | none (reported only) |
+| Typing to suggestions (ms) | | | | | | none (reported only) |
+| Select to album (ms) | | | | | | none (reported only) |
+| Transition worst frame gap (ms) | | | | | | none; 50 as yardstick |
+| Slider to list (ms) | | | | | | none (reported only) |
+| Morph worst frame gap (ms) | | | | | | none; 50 as yardstick |
+| Drag worst frame gap (ms) | | | | | | none; 50 as yardstick |
+| Zoom worst frame gap (ms) | | | | | | none; 50 as yardstick |
+| Deep zoom drag worst frame gap (ms) | | | | | | none; 50 as yardstick |
+| Deep zoom, slider between stops, worst frame gap (ms) | | | | | | none; 50 as yardstick |
+| Long tasks while idle (3 s) | | | | | | none (reported only) |
+| Frames while idle (3 s) | | | | | | none (reported only) |
+
+Nebula visible: n/a (this commit has no gas).
+```
+
+Now part 1 itself. Build once, then the three runs (each about two minutes, all five columns, one browser after the other), then the medians:
+
+```bash
+export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; node -p process.arch
+cd frontcreck && npm run build
+R=../docs/design/trifid-theme/reviews; mkdir -p $R/perf-part1
+for i in 1 2 3; do npm run perf > $R/perf-part1/perf-run$i.txt 2>&1; cp "$(ls -t scripts/perf/out/*.json | head -1)" $R/perf-part1/perf-run$i.json; tail -n 3 $R/perf-part1/perf-run$i.txt; sleep 20; done
+node "${TMPDIR:-/tmp}/perf-medians.mjs" $R/perf-part1/perf-run1.json $R/perf-part1/perf-run2.json $R/perf-part1/perf-run3.json
+```
+
+Expected: `arm64`; a build with no error; after each run its last lines, which are either `All budgets met.` or `FAIL` and the budgets that run missed (the script exits 1 on a miss, and the loop goes on). If a `.txt` ends in a stack trace instead, that run did not finish and the JSON copied beside it belongs to an earlier run: delete both and repeat that run alone (`npm run perf > $R/perf-part1/perf-run2.txt 2>&1`, then the same `cp`). Then the helper prints the three first-load JS numbers, one table per column (five, the last being `gpu desktop2x`) with the three runs, the median and min to max of every measure, and the budget misses of each run. The same helper pointed at `$R/baseline/perf/perf-run1.json` to `perf-run3.json` prints the numbers of `BASELINE-PERF.md` for its four columns, with the rows the baseline does not have marked missing.
+
+Then the first hover, with the baseline's own script (desktop only; gpu, then software, five fresh loads each; it starts and stops its own `next start` on port 3500):
+
+```bash
+export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"
+cd frontcreck && node ../docs/design/trifid-theme/reviews/baseline/hover-measure.mjs ../docs/design/trifid-theme/reviews/app-hover-part1.json http://127.0.0.1:3500 --start 2>&1 | tee ../docs/design/trifid-theme/reviews/app-hover-part1.txt
+```
+
+Expected: ten lines `gpu load 1: #1 tip ... ms, long task ... ms, gap ... ms | #2 ... | #3 ...` to `software load 5: ...`, then per mode three lines `hover 1: tip <median> ms (<min> to <max>), longest long task ..., frame gap ...`, and `wrote .../app-hover-part1.json`. It uses the build made above; build again first if the code changed since. Compare it line by line with `baseline/perf/hover.txt` (the same format) and with the "Hover path" tables of `BASELINE-PERF.md`.
+
+Write `docs/design/trifid-theme/reviews/app-perf-part1.md` with these sections, in the order of `BASELINE-PERF.md`:
+
+1. The commit measured, the date, the load on the machine if it was shared, and the two renderer strings.
+2. "Sizes": the five rows of the baseline's table, each with the baseline value, the part 1 value and the budget. Baseline: first-load JS 190.5 KB with nomodule scripts (budget 200 KB) and 151.9 KB without, three.js chunk in the first-load scripts 0 KB (must be 0), server HTML 28.3 KB and 34 KB (budget 150 KB each).
+3. "Every run, per combination": one table per column (five tables; `gpu desktop2x` is compared with the section "gpu desktop at dpr 2" just added to `BASELINE-PERF.md`, has no budget, and names the 50 ms frame gap as its yardstick) with `Metric | Run 1 | Run 2 | Run 3 | Median | Baseline median | Baseline min to max | Budget | Verdict`. The verdict is "same" when the median lies inside the baseline's min to max, "better" when it is below the baseline's best run, "worse" when it is above the baseline's worst run. The two deep zoom rows have a baseline only in the dpr 2 column (measured above with the same script); in the other four columns put them beside the same column's "Drag worst frame gap" and "Morph worst frame gap" medians of these runs and of the baseline. "Nebula visible" has no baseline anywhere: report it beside "Map first frame" of the same column.
+4. "Budget results per run": one line per run, as the baseline has. Every single run over budget is named and explained here, also when the median is inside budget.
+5. "Hover path": per mode, for the first, second and third hover, "Pointer move to tip visible", "Longest long task" and "Longest frame gap" as median (min to max), each beside the baseline's value (gpu first hover: tip visible 150.3 ms (135.7 to 169.3), longest long task 0 ms (0 to 55), longest frame gap 33.3 ms (16.8 to 50)). The same rule applies: a median above the baseline's max is a finding.
+6. For every "worse" and every median over budget, one of: the cause and why it is accepted, or the fix made and the three numbers after it. The software columns draw the gas on the CPU, so their frame gaps are expected to grow; say by how much. A worse number with no explanation is not acceptable.
+7. What was dropped or made cheaper under the snappiness rule, if anything, with the medians before and after. The owner reads this list afterwards; he is not asked first.
+
+Rules for this step:
+
+- Do not change `budgets.json`.
+- Size. The perf script's own first line is the number to use: `First-load JS of / (gzip): <a> KB with nomodule scripts (budget 200 KB), <b> KB without; three.js chunk on first load: <c> KB`. `<a>` must stay under 200 and is compared with the baseline's 190.5; `<c>` must be 0 (the script fails the run otherwise). Part 1 adds one small module to the first load, `src/lib/data/theme.ts` (a loader and a validator, reached from `MapStage.tsx` and `useData.ts`), so `<a>` should grow by well under 1 KB. Growth of more than 1.5 KB is a finding even inside budget, because all three parts share 9.5 KB: from the worktree root run `grep -rnE "from ['\"](\.\./shaders/gas|\./gas|\./GasField|\.\./theme|@/components/map/theme)['\"]" frontcreck/src` and make sure it prints five lines and no more: `canvas/GasField.tsx` importing `../shaders/gas`, `canvas/Scene.tsx` importing `./GasField`, `shaders/gas.ts` importing `../theme`, and `shaders/gas.test.ts` importing `../theme` and `./gas`. This has no cheaper version: a miss is a bug in the imports.
+- `idleFrames` must be at most 1 and `idleLongTasks` 0 in every column of every run. These are the gas's own promises (the map canvas does not redraw at rest, nothing new runs at rest) and have no cheaper version: a miss is a bug to fix in Task 5.
+- The gas has six costs. Each has a row that shows it and a cheaper version. When a median in a gpu column is over 50 ms, or above the baseline's worst run, apply the cheaper version of the cost that row belongs to, without asking, then run that column three times again (`for i in 1 2 3; do npm run perf -- --mode gpu --viewport <desktop or phone>; done`) and judge the new median. When only the gpu phone column is worse, start with item 4, which leaves the desktop look alone.
+  1. The deep zoom blur (two more reads of each bound stop per pixel past 32 px covers). Row: "Deep zoom drag worst frame gap". Cheaper version: drop the blurred copy. In `shaders/gas.ts` delete the line `if (u_deep > 0.0) t = mix(t, 0.5 * (gasLod(uv, DEEP_LOD_A) + gasLod(uv, DEEP_LOD_B)), u_deep);` and in the glow line replace `max(lod + 3.5, DEEP_LOD_A * u_deep)` with `max(lod + 3.5, 0.0)` and `max(lod + 5.0, DEEP_LOD_B * u_deep)` with `max(lod + 5.0, 0.0)`; in the deep zoom test in `gas.test.ts` remove the `toContain` line for the mix and the two for `max(lod + `. The fade to 0.06, the loss of colour and the detail fade stay; they cost nothing.
+  2. The glow (two blurred reads of each bound stop per pixel, at every zoom). Rows: "Transition", "Morph" and "Drag worst frame gap", and the hover's "Longest frame gap". Cheaper version: drop the wider tap. In `shaders/gas.ts` replace the `vec3 g = ...` line with `vec3 g = lit(gasLod(uv, max(lod + 4.0, DEEP_LOD_A * u_deep)), k);` (with `max(lod + 4.0, 0.0)` if item 1 was applied), and remove the two `toContain` lines for `max(lod + ` from the deep zoom test in `gas.test.ts` if they are still there.
+  3. The work a zoom switches on, frame by frame. In every frame of a zoom `GasField` writes `u_ppr`, `u_dust`, `u_strength` and `u_deep`, and as soon as `u_ppr` passes `u_bakePpr` (640 texels per raw unit, which the screen reaches at covers of about 7.5 px, a little under twice the desktop overview zoom) the shader adds four noise reads per pixel for the detail octaves. Row: "Zoom worst frame gap", which is the row with the least room in the baseline (gpu desktop median 38 ms, 34 to 43; gpu phone median 44 ms, 42 to 53, budget 50). Cheaper version, after item 2: drop the detail octaves. In `shaders/gas.ts` delete the block that starts with the line `if (u_ppr > u_bakePpr && u_deep < 1.0) {` and ends with the closing brace after `t.rgb *= 1.0 + 1.6 * d * (1.0 - u_deep);`, together with the two comment lines above it, and in the deep zoom test in `gas.test.ts` remove the `toContain` line for `t.rgb *= 1.0 + 1.6 * d * (1.0 - u_deep);` and the one for `if (u_ppr > u_bakePpr && u_deep < 1.0) {`. The gas is then a little softer between 7.5 px and 32 px covers. The JavaScript side of a zoom frame (one `gasCurve` call, one `gasDust` call and a dozen uniform writes) has no cheaper version worth having, since the zoom changes in every such frame and nothing can be cached; if the row is still worse with the octaves gone, record the numbers and stop for the owner.
+  4. The fill rate of the opaque quad on a phone. The quad is shaded for every pixel of the canvas (390 x 844 CSS px at a device pixel ratio capped at 1.5 in `Scene.tsx`), with seven texture reads per pixel at the overview while the slider is between stops (two for the gas, four for the glow, one for the grain) and more once zoomed in. Rows: every frame gap row of the gpu phone column. Cheaper version: a lighter shader on narrow layouts only, one read of each bound stop per pixel plus the grain. In `shaders/gas.ts` put a line `#ifndef GAS_LITE` directly above the line `if (u_ppr > u_bakePpr && u_deep < 1.0) {` and a line `#endif` directly above the line `vec3 c = lit(t, k);`; put a line `#ifndef GAS_LITE` directly above the line that starts `float lod = log2(` and a line `#endif` directly below the line `c += g * GLOW;`. In `GasField.tsx` change the import `import { easeOutCubic, prefersReducedMotion } from "@/lib/media";` to `import { easeOutCubic, isNarrow, prefersReducedMotion } from "@/lib/media";` and add the line `defines: isNarrow() ? { GAS_LITE: "" } : {},` to the `ShaderMaterial` options, directly below `depthWrite: false,`. On a phone the gas then has no glow, no added detail and no blur in deep zoom; the zoom bands, the fade to 0.06, the loss of colour, the dust and the pool are unchanged, and no existing test line changes (this was checked: the tests of `gas.test.ts`, the typecheck and lint pass with these edits). The choice is made when the map mounts, so a desktop window dragged narrower keeps the full shader until reload.
+  5. The texture uploads (one 2048 px texture with mips after first paint, and two more in an idle slot on an interactive map). Row: "Startup worst long task" (baseline median 0 ms in the gpu columns, with one run at 345 ms). Cheaper version: spread the uploads. In `GasField.tsx` change `window.requestIdleCallback(rest, { timeout: 600 })` to `window.requestIdleCallback(rest, { timeout: 2000 })`.
+  6. The fill rate at device pixel ratio 2. On a desktop screen at dpr 2 the quad is shaded for four times the pixels of the `gpu desktop` column. Rows: "Drag worst frame gap" and "Zoom worst frame gap" of the `gpu desktop2x` column (and its two deep zoom rows). The column has no budget; apply the cheaper version, without asking, when its drag or zoom median is over 50 ms or above the worst run of the baseline's dpr 2 section. Cheaper version, in two stages, measuring between them (`for i in 1 2 3; do npm run perf -- --mode gpu --viewport desktop2x; done`). Stage one, no detail octaves at dpr 2 or more: in `shaders/gas.ts` put a line `#ifndef GAS_NO_DETAIL` directly above the line `if (u_ppr > u_bakePpr && u_deep < 1.0) {` and a line `#endif` directly below the closing brace of that block (the line after `t.rgb *= 1.0 + 1.6 * d * (1.0 - u_deep);`); in `GasField.tsx` add the line `defines: gl.getPixelRatio() >= 2 ? { GAS_NO_DETAIL: "" } : {},` to the `ShaderMaterial` options, directly below `depthWrite: false,`, and change the dependency list of that `useMemo` from `}, [data, theme]);` to `}, [data, theme, gl]);`. If item 4 already added a `defines` line, replace it with `defines: isNarrow() ? { GAS_LITE: "" } : gl.getPixelRatio() >= 2 ? { GAS_NO_DETAIL: "" } : {},` instead of adding a second one. Stage two, if still over: no glow either, which is the lighter shader of item 4 at dpr 2. Make item 4's four line additions in `shaders/gas.ts` if they are not there yet, and in the `defines` line of `GasField.tsx` change `{ GAS_NO_DETAIL: "" }` to `{ GAS_LITE: "" }`. A screen at dpr 2 has pixels fine enough that the added detail and the glow are the least missed there. No existing test line changes in either stage (stage one was checked: tests, typecheck and lint pass).
+- The first hover is judged the same way: the median "Pointer move to tip visible" of the first hover against the baseline's 150.3 ms (135.7 to 169.3) in gpu mode, and the median "Longest long task" must stay 0. A hover draws three map frames, each over the whole gas quad, so its cheaper version is item 2. A single load with a long task is named in the write-up (the baseline has one of 55 ms).
+- If a row is still worse after its cheaper version, record the numbers and stop for the owner: that is a finding, not something to hide inside the budget.
+- After any change made here, run Step 3 again and `npm run test -- src/components/map/shaders/gas.test.ts`, build again, and replace the affected numbers in the write-up with the new medians (keep the old ones in section 7).
+
+- [ ] **Step 8: Walk the regression checklist against fresh screenshots**
+
+`docs/design/trifid-theme/reviews/baseline/REGRESSION-CHECKLIST.md` has 18 numbered sections ("1. Overlapping covers on the map" to "18. Performance niceties") and 234 items. Each item is a checkbox line with a bold title, `- [ ] **Title.**`, and three lines under it: `Sees:` (what a visitor sees), `How:` (where the code does it) and `Verify:` (how to check it). A `Verify:` line names one or more of: baseline screenshots by base name (they are in `baseline/shots/desktop/` and `baseline/shots/phone/`; full views are `.jpg`, names ending in `-crop` are `.png`; `baseline/README.md` lists every name and its state), an e2e test by its title, a `grep` to run from `frontcreck/`, or a probe marked "Manual:".
+
+Take the same screenshots of the app as it is now, with the baseline's own script (one headless Chrome at a time, about four minutes; it starts and stops its own `next start` on port 3400):
+
+```bash
+export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; node -p process.arch
+cd frontcreck && npm run build && node ../docs/design/trifid-theme/reviews/baseline/capture.mjs test-results/part1-shots http://127.0.0.1:3400 --start
+```
+
+Expected: `arm64`; then `frontcreck/test-results/part1-shots/desktop/` and `phone/` hold the same file names as `baseline/shots/desktop/` and `baseline/shots/phone/`, beside `capture-log-desktop.json` and `capture-log-phone.json`. These files are not committed (`test-results/` is ignored). The script exits non-zero and leaves a `FAILED-<state>.jpg` when it could not reach a state; part 1 renames no class in its `SEL` list, so a failed state is a regression to look into, not a selector to update. Never write into `baseline/shots/`. One state can be taken again with `--only <part of its name>`, one viewport with `--viewport desktop` or `--viewport phone`. The script waits for the map to stop drawing but does not know the `gas` flag: if a map shot shows the plain pane where its neighbours show gas, it was taken before the texture arrived, so take that state again.
+
+Then go through every item, section by section, and do what its `Verify:` line says:
+
+- A screenshot name: open the baseline file and the file of the same name under `frontcreck/test-results/part1-shots/` with the Read tool, one pair at a time.
+- An e2e test: it already ran in Step 3, 4 or 5 of this task; if its spec was not among them, run it alone (`cd frontcreck && npx playwright test <spec file> --project=desktop --workers=1`, with the arm64 path set first).
+- A `grep`: run it from `frontcreck/`.
+- A "Manual:" probe that needs a person at a browser and that no screenshot or test covers: do not start a browser for it; write it down as "routed to part 3". Part 3 Task 10's regression reviewer does the ones that can be done from a running build and stills or by reading code, and the rest go on the owner's trial list in part 3 Task 11. No probe may be left without an owner: every "Manual:" line of the checklist ends up as held, regressed or routed.
+
+Do not tick or edit `REGRESSION-CHECKLIST.md` itself. Add a section "Regression checklist" to `docs/design/trifid-theme/reviews/app-perf-part1.md`: one line per section, 1 to 18, with how many of its items hold, and under it one line for every item that does not simply hold, quoting its bold title, with one of these marks: "changed on purpose in part 1" (only the map background: gas where the pane was plain, in every shot that shows the map), "waits for part 2 or 3" (stars, names, panels, header, the grain), "routed to part 3" (a "Manual:" probe, with the probe's own words so part 3 can pick it up), or "regressed". Pay particular attention to sections 1 to 6 and 13: the way overlapping covers are drawn and picked, hover and selection, dots turning into covers, the marker layout, the lines and badges, and the camera. The gas sits under the album points and must change none of them. Fix every "regressed" item before committing.
+
+- [ ] **Step 9: Commit, do not push**
+
+```bash
+git add frontcreck/e2e/gas.spec.ts frontcreck/e2e/nowebgl.spec.ts frontcreck/scripts/perf/perf.mjs frontcreck/scripts/perf/lib.mjs docs/design/trifid-theme/reviews/app-perf-part1.md docs/design/trifid-theme/reviews/perf-part1/perf-run1.txt docs/design/trifid-theme/reviews/perf-part1/perf-run1.json docs/design/trifid-theme/reviews/perf-part1/perf-run2.txt docs/design/trifid-theme/reviews/perf-part1/perf-run2.json docs/design/trifid-theme/reviews/perf-part1/perf-run3.txt docs/design/trifid-theme/reviews/perf-part1/perf-run3.json docs/design/trifid-theme/reviews/app-hover-part1.json docs/design/trifid-theme/reviews/app-hover-part1.txt frontcreck/scripts/perf/lib.test.mjs docs/design/trifid-theme/reviews/baseline/BASELINE-PERF.md docs/design/trifid-theme/reviews/baseline/perf/perf-dpr2-run1.txt docs/design/trifid-theme/reviews/baseline/perf/perf-dpr2-run1.json docs/design/trifid-theme/reviews/baseline/perf/perf-dpr2-run2.txt docs/design/trifid-theme/reviews/baseline/perf/perf-dpr2-run2.json docs/design/trifid-theme/reviews/baseline/perf/perf-dpr2-run3.txt docs/design/trifid-theme/reviews/baseline/perf/perf-dpr2-run3.json
 git commit -F - <<'EOF'
-test(e2e): gas is drawn, dims around an open album, survives a late texture, a lost context and missing data
+test(e2e): gas is drawn, dims around an open album, fades in deep zoom, survives a late texture, a lost context and missing data; part 1 measured against the baseline
+
+Refs #45
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 EOF
 ```
 
-- [ ] **Step 8: Fidelity check of this part (one reviewer subagent, no browser)**
+If Step 7 changed `shaders/gas.ts`, `gas.test.ts` or `GasField.tsx`, add those files to the same commit.
+
+- [ ] **Step 10: Fidelity check of this part (one reviewer subagent, no browser)**
 
 Dispatch one fresh reviewer subagent that did not write this part. Give it only the paths below and this brief. It opens the images one at a time with the Read tool and starts no browser.
 
-> Compare what part 1 built with the approved pictures and list every difference in the gas, worst first. App images: `frontcreck/test-results/theme/gas-balanced.png`, `gas-sonic.png` and `gas-mood.png` (the bake previews of Task 3), and `frontcreck/test-results/shots/desktop-explore.png` (written by `map.spec.ts` in Step 5). Approved: `docs/design/trifid-theme/options/final-overview.jpg`, `final-whole.jpg` and `final-mood.jpg`. Judge only the gas: its five colours and where each sits, the swirl, the dust lanes, how bright it is, where it ends, and that north is up. Mark each difference "worse than approved", "equal" or "expected until parts 2 and 3". The only expected ones: albums are still the old coloured dots, there are no region names, and the panels and the pane beyond the gas are still the old warm brown.
+> Compare what part 1 built with the approved pictures and list every difference in the gas, worst first. App images: `frontcreck/test-results/theme/gas-balanced.png`, `gas-sonic.png` and `gas-mood.png` (the bake previews of Task 3), `frontcreck/test-results/shots/desktop-explore.png` (written by `map.spec.ts` in Step 5) and `frontcreck/test-results/shots/desktop-gas-deep.png` (full zoom, written by `gas.spec.ts` in Step 3). Approved: `docs/design/trifid-theme/options/final-overview.jpg`, `final-whole.jpg` and `final-mood.jpg`, and for full zoom panel C, "Faint", of `docs/design/trifid-theme/options/q-deep.jpg`. Judge only the gas: its five colours and where each sits, the swirl, the dust lanes, how bright it is, where it ends, that north is up, and at full zoom that the covers sit on near-black sky with only a faint, smooth trace of colour (no blotches, no texture, not as bright as the "Before" panel, not pure black). Mark each difference "worse than approved", "equal" or "expected until parts 2 and 3". The only expected ones: albums are still the old coloured dots, there are no region names, the panels and the pane beyond the gas are still the old warm brown, the header still sits above the map and not over it, and the site's film grain is still there.
 
-Fix every "worse than approved" item here (the bake in Task 3 or the shader in Task 4), run the affected step again and have the same reviewer look again. Save its final list as `docs/design/trifid-theme/reviews/app-fidelity-part1.md` and commit it (`docs(design): part 1 fidelity notes`, with the trailer). The reviewer sees stills only. It cannot judge motion in flight (the slider cross-fade, the pool easing) or a real phone, which is why the owner's own preview checklist in part 3 Task 8 stays.
+Fix every "worse than approved" item here (the bake in Task 3 or the shader in Task 4), run the affected step again and have the same reviewer look again. Save its final list as `docs/design/trifid-theme/reviews/app-fidelity-part1.md` and commit it (commit, do not push):
+
+```bash
+git add docs/design/trifid-theme/reviews/app-fidelity-part1.md
+git commit -F - <<'EOF'
+docs(design): part 1 fidelity notes
+
+Refs #45
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+EOF
+```
+
+The reviewer sees stills only. It cannot judge motion in flight (the slider cross-fade, the pool easing, the fade into deep zoom) or a real phone, which is why the owner's own preview checklist in part 3 Task 11 stays.
 
 ---
 
 ## Self-review
 
-**Spec coverage (HANDOFF decisions of 2026-10-04 and the part 1 brief)**
+Revised on 2026-10-04 after the owner's decisions (overview, "Decisions made on 2026-10-04"). This section describes the revised text.
+
+**Spec coverage (HANDOFF decisions of 2026-10-04, the overview's decisions of the same day, and the part 1 brief)**
 
 | Requirement | Where |
 |---|---|
@@ -3262,15 +3984,25 @@ Fix every "worse than approved" item here (the bake in Task 3 or the shader in T
 | Gas baked once per slider stop, at build time | Task 3 (`npm run theme`, committed output) |
 | Per-album colour weights and named regions per stop as committed inputs, regenerated when layouts change | Task 1 (`weights.json`, `regions.json`, hashes, README) |
 | `theme.json` shape, `stars.lead`, `stars.bg`, `labels`, `positionsHash` | Task 2 (types and guard), Task 3 (`assemble`, `theme.data.test.ts`) |
-| Client loader, `useTheme`, map works without theme data | Task 2, Task 5 (`themeFor`, `'off'`), Task 6 (404 test) |
+| Stars are random: no star size, brightness class or rank in `theme.json`, nothing from album order | Global Constraints; `ThemeData.stars` holds only the colour family and the gas brightness under each album (Tasks 2 and 3) |
+| Existing site data and pipeline files do not change, the theme only adds files | Global Constraints; Task 1 reads `constants.py` and `io.py`; Task 3 reads `albums.json` and `positions.json` and writes only under `public/data/theme/` |
+| `npm run theme` and the staleness guard documented in `frontcreck/README.md` | Task 3 Step 12 (exact text) |
+| Client loader, `useThemeLoad`, map works without theme data | Task 2, Task 5 (`themeFor`, `'off'`), Task 6 (404 test) |
 | Shared constants and `rawToWorld` | Task 2 |
 | Gas layer: cross-fade by the points' rule, `finish()`, detail octaves, glow from mips, bands 13/22/32, pool eased over 400 ms, dimmed mode | Task 4 (shader and helpers), Task 5 (`GasField`) |
-| Nothing drawn at rest, textures lazy, readiness flag | Task 5 (`gas` flag, `waitForMap`), Task 6 test 1, Task 5 Step 9 |
-| No growth of first-load JS | `GasField` and `shaders/gas.ts` are only imported from `Scene.tsx`; `lib/data/theme.ts` (a validator and a loader) is the only new first-load code; measured in Task 6 Step 6 |
+| Deep zoom goes to space: floor 0.06 at 56 px covers and over, with loss of colour, detail fade and blur on the same ease | Task 4 (`gasCurve`, the `GAS_DEEP_*` constants, `u_deep` in the shader, unit tests with the prototype's values), Task 5 (`u_deep`, `gasDeep`), Task 6 (browser test 3, fidelity against `q-deep.jpg` panel C) |
+| The map canvas does not redraw at rest, textures lazy, readiness flag | Task 4 (no clock, pinned by a test; `gasStopsToStart`), Task 5 (`gas` flag, `waitForMap`), Task 6 tests 1, 4 and 7, Task 5 Step 9 |
+| Gas images: only the stop on screen at first; the other two only on an interactive map, at idle priority; Home loads one | Task 4 (`gasStopsToStart`, two unit tests), Task 5 (`GasField` effect, flag wording), Task 6 test 7 (Home requests one image, the map the other two), test 4 (a slider move before a stop has arrived: stand-in gas, no page error, no redraw loop), test 1 (polled request list) |
+| Commit, do not push | Global Constraints; every commit step is headed "Commit, do not push" |
+| `theme.json` stays small | Task 3 `theme.data.test.ts` (under 80 KB on disk) |
+| Snappiness: each effect measured, the cheaper version taken without asking | Global Constraints; Task 6 Step 6 (reported measures for deep zoom, a slider move at full zoom, the nebula's first frame and a dpr 2 column), Step 7 (the dpr 2 column of today's site, three runs judged on the median, the first hover with the baseline's script, and one cheaper version for each of the gas's six costs) |
+| No regressions: compared with the baseline at the end of the part | Task 6 Step 7 (`app-perf-part1.md`, against `BASELINE-PERF.md` and `baseline/perf/`), Step 8 (fresh screenshots with `baseline/capture.mjs`, then every item of `REGRESSION-CHECKLIST.md`) |
+| No growth of first-load JS | `GasField` is only imported from `Scene.tsx` and `shaders/gas.ts` only from `GasField`; `lib/data/theme.ts` (a validator and a loader) is the only new first-load code; the size check of Task 6 Step 7 compares the perf script's number with the baseline's 190.5 KB and requires the three.js chunk to stay at 0 |
 | Review Focus 1 to 5 | Tasks 2, 3, 4, 5 and 6 as listed under Review Focus |
-| Names toggle, Tenor Sans, glass chrome, sky-coloured pane, star tints | Not this part: parts 2 and 3. The dependencies are stated in Task 5's Interfaces |
+| The stage will extend under the header (part 3) | Nothing here depends on where the stage starts: Task 5 Interfaces, Task 6 Interfaces |
+| Random stars, twinkle, names toggle, Tenor Sans, glass chrome, header over the map, removal of the film grain, sky-coloured pane, star tints | Not this part: parts 2 and 3. The dependencies are stated in Task 5's Interfaces |
 
-**Placeholder scan.** No step says "TBD", "similar to", "add error handling" or "write tests for the above". Every new file is given in full, every edit as exact before and after text. Two steps name a concrete follow-up instead of a guess: Task 5 Step 8 (where to put the lint comment if the rule fires on another line) and Task 6 Step 6 (the two specific changes to try if a budget row fails).
+**Placeholder scan.** No step says "TBD", "similar to", "add error handling" or "write tests for the above". Every new file is given in full, every edit as exact before and after text. Three steps name a concrete follow-up instead of a guess: Task 5 Step 8 (where to put the lint comment if the rule fires on another line), Task 6 Step 3 (what to do if no bare point is found at full zoom) and Task 6 Step 7 (the specific cheaper version of each cost if a row gets worse). Task 6 Steps 7 and 8 were rewritten on 2026-10-04 against the finished baseline folder: they use its real file names, the real arguments of `hover-measure.mjs` and `capture.mjs`, and the real table layout of `BASELINE-PERF.md` and `REGRESSION-CHECKLIST.md`.
 
 **Type and name consistency.**
 - `ThemeData` and `ThemeLabel` are defined once (`lib/data/theme.ts`) and used by `useData.ts`, `mapStore.ts`, `types.ts`, `GasField.tsx` and the tests; `assemble` in `bake-core.js` writes exactly those keys, and `theme.data.test.ts` checks the committed file with `isTheme`.
@@ -3278,12 +4010,21 @@ Fix every "worse than approved" item here (the bake in Task 3 or the shader in T
 - The noise table is built by `noiseTable` (bake) and `gasNoise` (runtime) from the same seed; both tests pin the same eight values, last value and sum.
 - Hashes: `short_hash` (Python), `shortHash` (Node) and the vitest guard all take the first 12 hex characters of SHA-256 over the same bytes.
 - Image orientation: `build-theme.mjs` stores row 0 at the north edge; `GasField` sets `flipY = false`; the shader computes `v` as `u_bakeHalf - v_raw.y`; Task 4's test pins that line; Task 3 Step 10 and Task 5 Step 9 check it by eye.
-- Uniform names set in `GasField.tsx` are the ones Task 4's test requires the shader to declare.
+- Uniform names set in `GasField.tsx`, `u_deep` included, are the ones Task 4's test requires the shader to declare.
+- `gasCurve` is the only zoom curve: defined and tested in Task 4, called once per frame in `GasField` (Task 5) for both `u_strength` and `u_deep`, named in Task 6 Step 3. No step calls `gasStrength`, which no longer exists. Parts 2 and 3 never called it.
 - `gasPair` returns stops whose textures exist, so the non-null assertions `got[pair.a]!` in `GasField` hold.
-- `window.__rmr.gas` values `'loading' | 'ready' | 'off'` are written by `GasField` (`loading`, `ready`, `off` for large-texture failure) and `MapStage` (`off`), typed in `global.d.ts`, and read by `waitForMap`, `perf.mjs`, `review-shots.mjs` and `gas.spec.ts`.
+- `window.__rmr.gas` values `'loading' | 'ready' | 'off'` are written by `GasField` (`loading`, `ready`, `off` for large-texture failure) and `MapStage` (`off`), typed in `global.d.ts`, and read by `waitForMap`, `perf.mjs`, `review-shots.mjs` and `gas.spec.ts`. `gasPool` and `gasDeep` are written by `GasField` in every drawn frame, typed in `global.d.ts`, and read by `gas.spec.ts` (and `gasDeep` by `perf.mjs`).
+- Every commit block carries `Refs #45` and the trailer; every `node`, `npm` and `npx` command starts from the arm64 Node path; every Playwright run has `--workers=1`.
 
-**Fixed during this review.**
+**Checked by running (independent check, 2026-10-04, repeated on 2026-10-05 after the coordinator's rulings).** A copy of `frontcreck/` (sources only) was made outside the repository and every edit of Tasks 2, 5 and 6 was applied to it by exact text match: each of the 38 before texts occurs exactly once in the file it names, in task order (the perf script's edits included). In that copy the unit tests of this part pass (`gas.test.ts` 26, `bake-core.test.mjs` 9, `theme.test.ts` 17, `mapStore.theme.test.ts` 2, perf `lib.test.mjs` 11, and the existing `data`, `client` and `useData` tests), `node --check` accepts `perf.mjs`, `tsc --noEmit` reports nothing (it covers `GasField.tsx` and `e2e/gas.spec.ts`), and ESLint reports nothing. The cheaper versions 4 and 6 (stage one) of Task 6 Step 7 were applied together to that copy: tests, typecheck and lint still pass. Task 1's module was run against the real design files without writing anything: 7, 17 and 6 named regions, the names of the overview one for one, `positionsHash` `a7c1dbd996fd`, no validation error. Not run: the bake, any browser, any shader compile, the perf script itself, and the loading order of `GasField` in a real page (Task 6 tests 4 and 7 are its first run).
+
+**Checked by running (reviser).** The deep zoom curve was run in Node against the prototype's own `RMR.gasCurve` (loaded from `prototype/src/config.js`) at every 0.01 px from 0 to 80 px covers with no difference, and the expected values in Task 4's test are that function's output. The whole of Task 4's test file was run against Task 4's `gas.ts` as written here, with the three imports stubbed: 24 tests pass. The shader itself has not been compiled; that first happens in Task 5 Step 9.
+
+**Fixed during review.**
 - `gasPair` first normalised the pair and then looked for a fallback, which sent a slider at Mood with a missing Mood texture to Sonic instead of Balanced; the fallback now runs on the unnormalised pair, and the test covers that case.
 - The first draft measured "gas behind most stars" with a byte threshold of 12, which thin outer gas may not reach; the committed-data test uses 2 (just above the empty sky's 1).
 - The pool check first compared whole-screen luma between two routes, which album dots and covers dominate; it now reads `gasPool` and compares the median luma of the same patch of the map at the same zoom.
 - The quad was first the size of the bake, which would have left a seam where the grain stops; it is `GAS_QUAD_SCALE` times larger and the shader returns sky beyond the bake.
+- Revision of 2026-10-04: `gasStrength` and its floor of 0.3 gave way to `gasCurve` and deep zoom. The prototype's blur levels 4.5 and 6 belong to a 4096 px bake; copied as they are onto the 2048 px bake they would have blurred twice as wide, so they are 3.5 and 5 here. The glow, which here reads the bake and not the finished image, would have put sharp gas back over the blurred copy at full zoom; its two taps are now held to the deep zoom levels.
+- Revision of 2026-10-04: the perf script never reached full-size covers, so the deep zoom blur would have gone unmeasured; Task 6 Step 6 adds a reported measure for it.
+- Rulings of 2026-10-05: the gas of the other two stops is no longer fetched on the dimmed backdrop, and on the map only at idle after the first stop is in; the `gas` flag counts started stops. `useTheme` is gone (nothing used it). The perf script also reports a slider move at full zoom, the nebula's first frame and a `gpu desktop2x` column, and can run without the gas. The four detail octave reads are skipped once deep zoom is complete.
