@@ -16,6 +16,10 @@ Branch `feat/trifid-theme` (draft PR 47, stacked on draft PR 32). Tracking issue
 
 ### Part 1 closing
 
+**Update, 2026-10-05: the original session on the owner's laptop is finishing this. Other sessions must not redo it.** Parts 2 and 3 were started as cloud sessions before the closing pass ended. They proceed with their own steps and leave part 1's open list alone. Two sessions push to this branch, so fetch and rebase before every push and never force push. The original session only touches `docs/design/trifid-theme/reviews/`, this note, the part 1 ledger, and at most a last small gas fix in `GasField.tsx`, `shaders/gas.ts` or `e2e/gas.spec.ts`.
+
+**Cloud sessions and speed.** The baseline and every part 1 timing were taken on the owner's M1 Pro with headless Chrome on the real GPU. A cloud machine very likely has no GPU and a different CPU, so its numbers cannot be compared with the baseline and the GPU rows may not be measurable there. In the cloud, compare old and new builds in turn for relative cost and say so. The comparison against the baseline, the hover measure and real GPU captures for parts 2 and 3 still have to be run on the laptop before the owner is shown a final result.
+
 The last pass (minor fixes from the final review, the perf write-up recomputed from the raw files, the full browser suite on all three projects, cleanup) was in flight when this note was written. Its result is in `docs/design/trifid-theme/reviews/app-perf-part1.md` (headline section) and in the part 1 ledger copied to `docs/superpowers/plans/2026-10-04-trifid-theme-ledger-part1.md`. If the ledger's last lines do not say "Task 6: complete", finish that first: the open list is at the end of the ledger.
 
 ## Rules that changed since the plan parts were written
