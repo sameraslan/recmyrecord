@@ -1,7 +1,9 @@
+/** WebGL2 only: three.js's WebGLRenderer asks for a webgl2 context and throws without one, so a browser with
+ * just WebGL1 gets the no-WebGL message instead of a renderer that takes the page down. */
 export function isWebGLAvailable(): boolean {
   try {
     const c = document.createElement('canvas');
-    const gl = c.getContext('webgl2') ?? c.getContext('webgl');
+    const gl = c.getContext('webgl2');
     // Release the probe context at once: browsers cap live WebGL contexts, and the map needs one.
     gl?.getExtension('WEBGL_lose_context')?.loseContext();
     return !!gl;
