@@ -264,7 +264,8 @@ async function exploreFlow(page, isPhone) {
   await page.waitForTimeout(1500);
   return page.evaluate(async (phone) => {
     const P = window.__perf;
-    const res = {};
+    // The camera the budget rows start from: the whole map (__rmrOpen above), as in the baseline.
+    const res = { wholeCamera: window.__rmr.map.getCamera() };
     const c = document.querySelector('canvas.map-canvas');
     const r = c.getBoundingClientRect();
     const cx = r.left + r.width / 2;
@@ -334,7 +335,6 @@ async function exploreFlow(page, isPhone) {
     // again) at rest, and its fade draws up to 14 frames. The idle window starts once it has settled.
     res.idleSharpSettled = await P.sharpSettled();
     res.sharpFlag = String(window.__rmr?.gasSharp);
-    res.wholeCamera = window.__rmr.map.getCamera();
     window.__lt.length = 0;
     const f0 = window.__rmr.frames;
     await new Promise((r2) => setTimeout(r2, 3000));
