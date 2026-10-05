@@ -11,11 +11,14 @@
  *
  *   export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; node -p process.arch   # arm64
  *   cd frontcreck && npm run build
- *   node ../docs/design/trifid-theme/reviews/app-gas-detail/capture-detail.mjs --out <dir> [--dpr 1,2] [--only <state>] [--sharp]
+ *   node ../docs/design/trifid-theme/reviews/app-gas-detail/capture-detail.mjs --out <dir> [--dpr 1,2] [--only <state>] [--sharp] [--lite]
  *
  * One headless Chromium (Playwright's own, software WebGL: the renderer the approved pictures were taken with),
  * 1600 x 1000 CSS px, one page at a time. `--sharp` asks the app for its sharper gas image, which it does not
  * load by itself on a software renderer (window.__rmrGasSharp, see GasField.tsx), and waits for it.
+ * The app draws the gas with a lighter shader on a software renderer. The notes built on these captures describe
+ * the full shader (what a GPU draws), so this script always asks for the full one (window.__rmrGasLite = 'off').
+ * `--lite` captures the lighter shader on purpose instead; write those to a directory of their own.
  *
  * Per state and pixel ratio it writes into <dir>:
  *   <state>-d<dpr>-app.jpg             the app as a visitor sees it (JPEG quality 92)
@@ -45,6 +48,7 @@ const OUT = path.resolve(flag('--out') ?? path.join(HERE, 'out'));
 const ONLY = flag('--only');
 const DPRS = (flag('--dpr') ?? '1,2').split(',').map(Number);
 const SHARP = argv.includes('--sharp');
+const LITE = argv.includes('--lite');
 const BANDS_ONLY = argv.includes('--bands-only');
 const PROTO = pathToFileURL(path.resolve(HERE, '../../prototype/index.html')).href;
 const W = 1600;
@@ -311,6 +315,7 @@ async function capture() {
         if (ONLY && !ONLY.split(',').includes(name)) continue;
         const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
         if (SHARP) await ctx.addInitScript(() => { window.__rmrGasSharp = 'force'; });
+        await ctx.addInitScript((v) => { window.__rmrGasLite = v; }, LITE ? 'force' : 'off');
         const app = await ctx.newPage();
         const errors = [];
         app.on('pageerror', (e) => errors.push(e.message));

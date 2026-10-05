@@ -6,7 +6,7 @@
  *
  *   export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; node -p process.arch   # arm64
  *   cd frontcreck && npm run build
- *   node ../docs/design/trifid-theme/reviews/app-part1/capture-pairs.mjs [--only <state>] [--out <dir>]
+ *   node ../docs/design/trifid-theme/reviews/app-part1/capture-pairs.mjs [--only <state>] [--out <dir>] [--lite]
  *
  * One headless Chromium (Playwright's own, software WebGL: the renderer the approved pictures were taken with),
  * 1600 x 1000 at device pixel ratio 1, one page at a time. For every state it writes, as JPEG quality 90:
@@ -18,6 +18,10 @@
  *   <state>-app-gas.jpg             the app with everything but the map canvas hidden (album dots and covers
  *                                   remain: they are drawn in the same canvas)
  *   <state>-prototype-gas.jpg       the prototype's gas alone at the app's framing (its `gasonly=1` debug switch)
+ *
+ * The app draws the gas with a lighter shader on a software renderer. The notes built on these captures describe
+ * the full shader (what a GPU draws), so this script always asks for the full one (window.__rmrGasLite = 'off').
+ * `--lite` captures the lighter shader on purpose instead; write those to a directory of their own (--out).
  *
  * and `stats.json` / `stats.md`: mean and standard deviation of luma, mean saturation, hue of the mean colour and a
  * fine-detail figure (standard deviation of luma minus its 9 px box blur) over a 4 x 3 grid of patches of the
@@ -39,6 +43,7 @@ const argv = process.argv.slice(2);
 const flag = (n) => (argv.includes(n) ? argv[argv.indexOf(n) + 1] : null);
 const OUT = path.resolve(flag('--out') ?? HERE);
 const ONLY = flag('--only');
+const LITE = argv.includes('--lite');
 const PROTO = pathToFileURL(path.resolve(HERE, '../../prototype/index.html')).href;
 const W = 1600;
 const H = 1000;
@@ -456,6 +461,7 @@ async function main() {
     for (const [name, st] of Object.entries(STATES)) {
       if (ONLY && name !== ONLY) continue;
       const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+      await ctx.addInitScript((v) => { window.__rmrGasLite = v; }, LITE ? 'force' : 'off');
       const app = await ctx.newPage();
       const errors = [];
       app.on('pageerror', (e) => errors.push(e.message));

@@ -11,12 +11,17 @@
  *        ../docs/design/trifid-theme/reviews/baseline/shots http://127.0.0.1:3400 --start
  *
  * Arguments: <outDir> <baseURL> [--start] [--viewport desktop|phone|both] [--mode gpu|software] [--only <text>]
+ *            [--gas full|lighter]
  *   --start      starts `next start` on the base URL's port for the run and stops it afterwards. Without it the
  *                script expects a server that is already answering at <baseURL> (`npx next start --port 3400`).
  *   --viewport   desktop (1440 x 900), phone (390 x 844, dpr 2, mobile, touch) or both (default).
  *   --mode       gpu (default: headless Google Chrome on Metal, what visitors see) or software (Playwright's own
  *                Chromium on SwiftShader, what the e2e tests use).
  *   --only       capture only states whose name contains <text> (for example --only album-open).
+ *   --gas        which gas shader the themed app draws with: full (default: what a GPU draws and what the review
+ *                notes describe; asked for explicitly, because on a software renderer the app would choose its
+ *                lighter shader by itself) or lighter (to capture that one on purpose). It sets
+ *                window.__rmrGasLite before the app loads and means nothing to a build without the gas.
  *
  * Output: <outDir>/desktop/*.jpg|png, <outDir>/phone/*.jpg|png and <outDir>/capture-log-<viewport>.json (what was
  * captured, what failed, and the camera at each shot). JPEG quality 90; tight crops are PNG.
@@ -54,7 +59,7 @@ for (let i = 0; i < argv.length; i++) {
   else positional.push(argv[i]);
 }
 if (positional.length < 2) {
-  console.error('usage: node capture.mjs <outDir> <baseURL> [--start] [--viewport desktop|phone|both] [--mode gpu|software] [--only text]');
+  console.error('usage: node capture.mjs <outDir> <baseURL> [--start] [--viewport desktop|phone|both] [--mode gpu|software] [--only text] [--gas full|lighter]');
   process.exit(2);
 }
 const OUT = path.resolve(positional[0]);
@@ -62,6 +67,11 @@ const BASE = positional[1].replace(/\/$/, '');
 const MODE = flags.mode ?? 'gpu';
 const ONLY = flags.only ?? '';
 const WHICH = flags.viewport ?? 'both';
+const GAS = flags.gas ?? 'full';
+if (GAS !== 'full' && GAS !== 'lighter') {
+  console.error('--gas takes full or lighter');
+  process.exit(2);
+}
 
 const LAUNCH = {
   gpu: { channel: 'chrome', headless: true, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-features=Metal'] },
@@ -872,7 +882,7 @@ async function startServer() {
 async function runViewport(vp, assertNativeChrome) {
   const dir = path.join(OUT, vp);
   fs.mkdirSync(dir, { recursive: true });
-  const log = { viewport: vp, mode: MODE, base: BASE, date: new Date().toISOString(), nodeArch: process.arch, browser: null, renderer: null, shots: [], notes: {}, failed: [] };
+  const log = { viewport: vp, mode: MODE, gasShader: GAS, base: BASE, date: new Date().toISOString(), nodeArch: process.arch, browser: null, renderer: null, shots: [], notes: {}, failed: [] };
   let browser = await chromium.launch(LAUNCH[MODE]);
   let special = false;
   try {
@@ -888,6 +898,7 @@ async function runViewport(vp, assertNativeChrome) {
         special = !!state.launch;
       }
       const ctx = await browser.newContext({ ...VIEWPORTS[vp], ...(state.context ?? {}) });
+      await ctx.addInitScript((v) => { window.__rmrGasLite = v; }, GAS === 'lighter' ? 'force' : 'off');
       const page = await ctx.newPage();
       const t0 = Date.now();
       const s = {

@@ -77,7 +77,8 @@ async function oneLoad(browser, vp, gesture, late) {
     release = r;
   });
   if (late) {
-    await page.route(/\/data\/theme\/gas-(sonic|mood)\.webp$/, async (route) => {
+    // (the images carry the hash of their content in their name: gas-<stop>.<10 hex>.webp)
+    await page.route(/\/data\/theme\/gas-(sonic|mood)\.[0-9a-f]{10}\.webp$/, async (route) => {
       await held;
       await route.continue();
     });
