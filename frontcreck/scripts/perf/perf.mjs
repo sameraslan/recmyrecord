@@ -30,6 +30,9 @@ const VIEWPORTS = {
 };
 // --no-gas: do not wait for window.__rmr.gas, so a build without the gas layer can be measured with this script.
 const NO_GAS = args.includes('--no-gas');
+// --gas-lite off|force: measure with the full gas shader on a software renderer too ('off'), or with the lighter
+// one on a GPU too ('force'), to compare the two on one build. Without it the app chooses, as for a visitor.
+const GAS_LITE = opt('--gas-lite');
 
 function sh(cmd, cmdArgs) {
   return new Promise((resolve, reject) => {
@@ -270,6 +273,7 @@ async function measure(mode, vpName) {
     if (m.type() === 'error') errors.push(m.text());
   });
   await page.addInitScript(PAGE_HELPERS);
+  if (GAS_LITE) await page.addInitScript((v) => (window.__rmrGasLite = v), GAS_LITE);
   let thumbsOnFirstLoad = false;
   const onRequest = (r) => {
     if (r.url().endsWith('/data/thumbs.webp')) thumbsOnFirstLoad = true;
@@ -315,6 +319,8 @@ async function measure(mode, vpName) {
     ...(await albumFlow(page, vpName === 'phone')),
     ...(await exploreFlow(page, vpName === 'phone')),
   };
+  // Which gas shader drew the map (reported only): the lighter one on a software renderer, the full one on a GPU.
+  result.gasLite = await page.evaluate(() => window.__rmr?.gasLite ?? null);
   await browser.close();
   return result;
 }
@@ -347,6 +353,7 @@ async function main() {
     console.log(`\n${formatTable(rows)}\n`);
     if (rows.some((r) => r.vp === 'desktop2x')) console.log('The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.\n');
     if (NO_GAS) console.log('Run with --no-gas: the script did not wait for a gas layer.\n');
+    if (GAS_LITE) console.log(`Run with --gas-lite ${GAS_LITE}: the gas shader was not the app's own choice.\n`);
     for (const r of rows) {
       // settled() gives up after 6 s; the next step then measures a map that is still animating.
       if (r.settled?.includes(false)) console.warn(`WARNING ${r.mode} ${r.vp}: the map did not settle before a step (settled: ${JSON.stringify(r.settled)})`);

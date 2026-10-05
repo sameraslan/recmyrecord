@@ -10,7 +10,7 @@ import { STOP_IDS, type StopId } from "@/lib/types";
 import { STOP_T, type MapData } from "../data";
 import {
   GAS_DIMMED_STRENGTH,
-  GAS_FRAGMENT_SHADER,
+  GAS_FRAGMENT_SOURCE,
   GAS_QUAD_SCALE,
   GAS_BUSY_UPLOAD_CAP_MS,
   GAS_FIRST_UPLOAD_CAP_MS,
@@ -24,6 +24,7 @@ import {
   gasDust,
   gasGestureActive,
   gasImageFits,
+  gasLiteLod,
   gasLodBias,
   gasNoise,
   gasPair,
@@ -35,6 +36,7 @@ import {
   gasSharpRetry,
   gasSharpStrips,
   gasSharpWanted,
+  gasSoftwareRenderer,
   gasStopsToStart,
   gasTexelsPerRaw,
   gasTextureFits,
@@ -158,6 +160,8 @@ function emptySharpTexture(width: number, height: number): THREE.Texture {
  * to the GPU in strips (each cut out as a small image of its own), each in its own quiet moment, and faded in
  * over a fifth of a second (one frame with reduced motion). Only one sharper image is
  * held at a time; it is freed when the slider comes to rest at another stop (gasSharpPlan).
+ * A software renderer gets a lighter shader (GAS_FRAGMENT_SHADER_LITE), chosen by a define before the gas first
+ * draws; a GPU compiles the full shader as before.
  * Nothing here draws at rest: the dim, the pool and the fade to a sharper image ask for another frame only while
  * they are easing, and a texture that arrives or is released asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
  * they change only in frames the camera has already asked for.
@@ -178,6 +182,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   const frameAt = useRef(-Infinity);
   // The sharper image of one stop, when it is in.
   const sharp = useRef<SharpGas | null>(null);
+  // True once the lighter shader was chosen (a software renderer): decided before the gas first draws.
+  const lite = useRef(false);
   // The short fade from a stop's first image to its sharper one: the stop, and when its first frame was drawn.
   const fade = useRef<{ stop: StopId; start: number } | null>(null);
   // Zoom of the last drawn frame, as the sharper image's rule reads it.
@@ -203,7 +209,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     noiseTex.needsUpdate = true;
     const mat = new THREE.ShaderMaterial({
       vertexShader: GAS_VERTEX_SHADER,
-      fragmentShader: GAS_FRAGMENT_SHADER,
+      fragmentShader: GAS_FRAGMENT_SOURCE,
       // Opaque and under everything: drawn in the opaque pass, before the transparent album points.
       transparent: false,
       depthTest: false,
@@ -219,6 +225,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         u_bakePpr: { value: 1 },
         u_octPpr: { value: 1 },
         u_lodBias: { value: 0 },
+        u_liteLod: { value: 0 },
         u_rectA: { value: new THREE.Vector4(0, 0, 1, 1) },
         u_rectB: { value: new THREE.Vector4(0, 0, 1, 1) },
         u_strength: { value: 1 },
@@ -332,8 +339,34 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
           noGas(stop);
         });
     }
+    // The renderer's name, asked once: the call needs an answer from the GPU process, so it is made only when the
+    // GPU has caught up (before the first upload) or the map is quiet (the sharper image's look).
+    let rendererName: string | null = null;
+    function renderer(): string {
+      if (rendererName === null) {
+        const ctx = gl.getContext();
+        const dbg = ctx.getExtension("WEBGL_debug_renderer_info");
+        rendererName = String(ctx.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : ctx.RENDERER));
+      }
+      return rendererName;
+    }
+    /** Chooses the lighter shader on a software renderer. Called before the gas first becomes visible, so the
+     * material is compiled once, as what it will stay. */
+    let shaderChosen = false;
+    function chooseShader(): void {
+      if (shaderChosen) return;
+      shaderChosen = true;
+      const override = window.__rmrGasLite;
+      lite.current = override === "force" || (override !== "off" && gasSoftwareRenderer(renderer()));
+      if (lite.current) {
+        material.defines = { ...material.defines, GAS_LITE: "" };
+        material.needsUpdate = true;
+      }
+      if (window.__rmr) window.__rmr.gasLite = lite.current;
+    }
     /** The stop's image cannot be used: the stop shows plain sky (emptyGas), and the load is settled. */
     function noGas(stop: StopId): void {
+      chooseShader();
       store[stop] = emptyGas();
       if (stopsShown(useMapStore.getState().sliderT).includes(stop) || !mesh.visible) invalidate();
       settle();
@@ -358,6 +391,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         disposeGas(g); // the lost-context handler runs next and starts over
         return;
       }
+      chooseShader();
       uploadGas(gl, g);
       store[stop] = g.texture;
       // frameloop="demand": a texture arriving is not an input event. Draw one frame if this stop is on
@@ -559,15 +593,9 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         },
       };
     }
-    /** The renderer's name is asked once, at the first quiet look: it needs an answer from the GPU process. */
     function sharpIsAllowed(): boolean {
-      if (sharpAllowed === null) {
-        const ctx = gl.getContext();
-        const dbg = ctx.getExtension("WEBGL_debug_renderer_info");
-        // "force" (review captures and tests on a software renderer) skips only the renderer's name
-        const renderer = sharpOverride === "force" ? "" : String(ctx.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : ctx.RENDERER));
-        sharpAllowed = gasSharpBlocked(sharpDevice(renderer)) === null;
-      }
+      // "force" (review captures and tests on a software renderer) skips only the renderer's name
+      if (sharpAllowed === null) sharpAllowed = gasSharpBlocked(sharpDevice(sharpOverride === "force" ? "" : renderer())) === null;
       return sharpAllowed;
     }
     function sharpFlag(): void {
@@ -819,6 +847,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     return () => {
       alive = false;
       setSharpFlag(undefined);
+      if (window.__rmr) delete window.__rmr.gasLite;
       offFrame();
       idle?.cancel();
       dropWaiting();
@@ -832,7 +861,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       for (const stop of STOP_IDS) store[stop]?.dispose();
       loaded.current = {};
     };
-  }, [enabled, gl, invalidate, mesh, noise, theme, images]);
+  }, [enabled, gl, invalidate, mesh, material, noise, theme, images]);
 
   // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
   useFrame((state, delta) => {
@@ -897,6 +926,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     const ppw = pxPerWorld(zoom, height);
     const cover = coverCssPx(zoom, height);
     u.u_ppr.value = ppw * data.tx.s;
+    if (lite.current) u.u_liteLod.value = gasLiteLod(u.u_bakePpr.value as number, u.u_ppr.value as number, state.viewport.dpr);
     u.u_dust.value = gasDust(cover);
 
     // The dimmed backdrop (Home, About, 404) eases with the dots (AlbumField). With frameloop="demand" the first

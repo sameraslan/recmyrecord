@@ -19,6 +19,15 @@ const SHARP_IMAGE = /\/data\/theme\/gas-(sonic|balanced|mood)-sharp\.[0-9a-f]{10
 /** The first images of the two stops the map does not open on. */
 const LATE_IMAGE = /\/data\/theme\/gas-(sonic|mood)\.[0-9a-f]{10}\.webp$/;
 
+// The test browser renders in software, where the app draws the gas with its lighter shader. These tests are
+// about the full shader (what a GPU draws) unless they say otherwise, so it is asked for here; a test of the
+// lighter shader sets window.__rmrGasLite again in its own init script, which runs after this one.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+});
+
 /** In Rainbows in albums.json: near the middle of every layout, where the gas is dense. */
 const IN_RAINBOWS = 11;
 /** Luma of the empty sky, rgb(6, 6, 9). The old brown pane, #17120e, is about 19. */
@@ -1324,4 +1333,112 @@ test('with reduced motion the sharper image is swapped in with one frame, and no
   expect(firstLoading).toBeGreaterThan(-1);
   // From the moment it began to load (the map was at rest by then) to 700 ms after it is in: one frame, the swap.
   expect(log[log.length - 1][0] - log[firstLoading][0]).toBe(1);
+});
+
+test('a software renderer draws the gas with the lighter shader: the same nebula, the pool, the deep zoom fade, and nothing at rest', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && /shader|WebGL|GLSL/i.test(m.text())) errors.push(m.text());
+  });
+  /** Median luma of a 5 by 3 grid of 100 px patches over the map pane. */
+  const picture = async (): Promise<number[]> => {
+    const vp = page.viewportSize()!;
+    const out: number[] = [];
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 5; i++) out.push(await lumaAt(page, { x: 150 + (i * (vp.width - 400)) / 4, y: 150 + (j * (vp.height - 400)) / 2, w: 100, h: 100 }));
+    return out;
+  };
+  // The full shader first (asked for by this file's beforeEach), for the picture to compare with.
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 400);
+  expect(await page.evaluate(() => window.__rmr!.gasLite)).toBe(false);
+  const full = await picture();
+  await shot(page, info, 'gas-full-shader');
+
+  // Then as the app chooses for this renderer.
+  await page.addInitScript(() => {
+    delete window.__rmrGasLite;
+  });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 400);
+  expect(await page.evaluate(() => window.__rmr!.gasLite), 'the test browser renders in software').toBe(true);
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+  const light = await picture();
+  await shot(page, info, 'gas-lighter-shader');
+  // The same nebula: every patch within a few levels of the full shader's (which adds a blurred glow and grain).
+  expect(Math.max(...full), 'the patches show gas').toBeGreaterThan(SKY_LUMA * 3);
+  light.forEach((v, i) => expect(Math.abs(v - full[i]), `patch ${i}: ${full[i].toFixed(1)} full, ${v.toFixed(1)} lighter`).toBeLessThan(Math.max(4, full[i] * 0.12)));
+  let f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
+
+  // Deep zoom: the gas still fades to a faint remnant at full-size covers.
+  await page.evaluate((id) => window.__rmr!.map!.flyTo(id), IN_RAINBOWS);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForCameraIdle(page);
+  const at32 = await page.evaluate(() => window.__rmr!.map!.getCamera());
+  await page.evaluate((c) => window.__rmr!.map!.setCamera({ ...c, zoom: c.zoom * 2 }, false), at32);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 300);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.gasDeep)).toBe(1);
+  const bare = await barePoint(page, 60);
+  expect(bare, 'a point of bare map at full zoom').not.toBeNull();
+  const seed64 = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
+  const deep = await lumaAt(page, { x: bare!.x - 8, y: bare!.y - 8, w: 16, h: 16 });
+  await page.evaluate((c) => window.__rmr!.map!.setCamera(c, false), at32);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 300);
+  const seed32 = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
+  const mid = await lumaAt(page, { x: seed32.x + (bare!.x - seed64.x) / 2 - 8, y: seed32.y + (bare!.y - seed64.y) / 2 - 8, w: 16, h: 16 });
+  expect(mid, 'the sampled point must show gas at 32 px covers').toBeGreaterThan(SKY_LUMA + 4);
+  expect(deep - SKY_LUMA).toBeLessThan((mid - SKY_LUMA) * 0.6);
+  expect(deep).toBeGreaterThan(SKY_LUMA - 2);
+
+  // The pool: the gas dims around an open album.
+  await page.goto('/album/in-rainbows-radiohead');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 300);
+  expect(await page.evaluate(() => window.__rmr!.gasLite)).toBe(true);
+  expect(await page.evaluate(() => window.__rmr!.gasPool)).toBe(1);
+  let offset: readonly [number, number] | null = null;
+  for (const o of BESIDE) {
+    if (await onCanvas(page, await patchAt(page, IN_RAINBOWS, o, 120))) {
+      offset = o;
+      break;
+    }
+  }
+  expect(offset).not.toBeNull();
+  const zoom = (await page.evaluate(() => window.__rmr!.map!.getCamera())).zoom;
+  const dimmed = await lumaAt(page, await patchAt(page, IN_RAINBOWS, offset!, 120));
+  await page.getByRole('button', { name: COPY.map.exploreHere }).click();
+  await expect(page).toHaveURL(/\/map$/);
+  await waitForCameraIdle(page);
+  await page.evaluate((z) => {
+    const api = window.__rmr!.map!;
+    const cam = api.getCamera();
+    if (Math.abs(cam.zoom - z) > 1e-3) api.setCamera({ ...cam, zoom: z }, false);
+  }, zoom);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 300);
+  const plain = await lumaAt(page, await patchAt(page, IN_RAINBOWS, offset!, 120));
+  expect(plain).toBeGreaterThan(SKY_LUMA + 4);
+  expect(dimmed - SKY_LUMA).toBeLessThan((plain - SKY_LUMA) * 0.85);
+
+  // A slider move between stops (two reads) draws gas all the way and ends at rest.
+  await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForMapQuiet(page, 400);
+  const vp = page.viewportSize()!;
+  expect(await lumaAt(page, { x: vp.width / 2 - 150, y: vp.height / 2 - 150, w: 300, h: 300 })).toBeGreaterThan(SKY_LUMA * 2);
+  f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
+  expect(errors).toEqual([]);
 });

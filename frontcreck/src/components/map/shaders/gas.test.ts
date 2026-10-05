@@ -10,6 +10,8 @@ import {
   GAS_DEEP_LOD,
   GAS_DIMMED_STRENGTH,
   GAS_FRAGMENT_SHADER,
+  GAS_FRAGMENT_SHADER_LITE,
+  GAS_FRAGMENT_SOURCE,
   GAS_GLOW,
   GAS_REFERENCE_PX,
   GAS_SHARP_STRIPS,
@@ -48,6 +50,7 @@ import {
   gasTextureFits,
   gasGestureActive,
   gasImageFits,
+  gasLiteLod,
   gasUrl,
   stopMix,
   stopsOnPath,
@@ -565,5 +568,59 @@ describe("gas shader source", () => {
   it("dims the gas on the dimmed pages", () => {
     expect(GAS_DIMMED_STRENGTH).toBeGreaterThan(0.3);
     expect(GAS_DIMMED_STRENGTH).toBeLessThan(1);
+  });
+});
+
+describe("the lighter gas for software renderers", () => {
+  it("is compiled only under the GAS_LITE define, and leaves the full shader's text as it was", () => {
+    expect(GAS_FRAGMENT_SOURCE).toBe(`#ifdef GAS_LITE\n${GAS_FRAGMENT_SHADER_LITE}\n#else\n${GAS_FRAGMENT_SHADER}\n#endif\n`);
+    // one #ifdef, one #else, one #endif, and none inside either shader: without the define the compiler sees
+    // GAS_FRAGMENT_SHADER and nothing else
+    expect(GAS_FRAGMENT_SOURCE.match(/^#\w+/gm)).toEqual(["#ifdef", "#else", "#endif"]);
+    expect(GAS_FRAGMENT_SHADER).not.toMatch(/#|GAS_LITE|u_liteLod/);
+    expect(GAS_FRAGMENT_SHADER_LITE).not.toMatch(/#/);
+  });
+
+  it("reads one texture at a stop and two between stops: no glow reads, no octaves, no blurred copy, no grain", () => {
+    const main = GAS_FRAGMENT_SHADER_LITE.slice(GAS_FRAGMENT_SHADER_LITE.indexOf("void main()"));
+    // image A always, image B only while two stops are mixed
+    expect(main.match(/bake\(/g)).toHaveLength(2);
+    expect(main).toContain("vec4 t = bake(u_gasA, u_rectA);");
+    expect(main).toContain("if (u_mix > 0.0) t = mix(t, bake(u_gasB, u_rectB), u_mix);");
+    // the only read in the whole shader is the one inside bake(), at one mip level
+    expect(GAS_FRAGMENT_SHADER_LITE.match(/texture2D\(|textureLod\(|texelFetch\(|texture\(/g)).toEqual(["textureLod("]);
+    expect(GAS_FRAGMENT_SHADER_LITE).toContain("textureLod(image, clamp(uv, 0.0, 1.0), u_liteLod)");
+    expect(GAS_FRAGMENT_SHADER_LITE).not.toMatch(/u_noise|vn\(|gasLod|for \(/);
+  });
+
+  it("keeps the zoom bands, the dust, the pool and the deep zoom fade with its loss of colour, and has no clock", () => {
+    // the same expressions as the full shader
+    expect(GAS_FRAGMENT_SHADER_LITE).toContain("1.0 - pow(max(1.0 - t.rgb, vec3(0.002)), vec3(k * mix(1.0, t.a, u_dust)))");
+    expect(GAS_FRAGMENT_SHADER_LITE).toContain("k *= mix(1.0, mix(0.6, 0.25, e), u_poolAmt);");
+    expect(GAS_FRAGMENT_SHADER_LITE).toContain("des = 1.0 - (1.0 - des) * (1.0 - DEEP_DESAT * u_deep);");
+    expect(GAS_FRAGMENT_SHADER_LITE).toContain("float k = u_strength;");
+    expect(GAS_FRAGMENT_SHADER_LITE).toContain("const vec3 SKY = vec3(0.0240, 0.0220, 0.0340);");
+    expect(GAS_FRAGMENT_SHADER_LITE).toContain("return mix(textureLod(image, clamp(uv, 0.0, 1.0), u_liteLod), vec4(0.0, 0.0, 0.0, 1.0), sky);");
+    expect(GAS_FRAGMENT_SHADER_LITE).toContain("sm(0.48, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)))");
+    expect(GAS_FRAGMENT_SHADER_LITE).not.toMatch(/u_time|u_clock|u_frame/);
+    for (const name of ["u_gasA", "u_gasB", "u_mix", "u_liteLod", "u_rectA", "u_rectB", "u_strength", "u_deep", "u_dust", "u_poolAmt", "u_pool"]) {
+      expect(GAS_FRAGMENT_SHADER_LITE, name).toMatch(new RegExp(`uniform \\w+ ${name};`));
+    }
+    for (const [open, close] of [["{", "}"], ["(", ")"]]) expect(GAS_FRAGMENT_SHADER_LITE.split(open).length, open).toBe(GAS_FRAGMENT_SHADER_LITE.split(close).length);
+  });
+
+  it("reads the mip level nearest the screen's resolution", () => {
+    // the desktop overview: 700 texels against 377 px per raw unit, nearly two texels a px: level 1
+    expect(gasLiteLod(700, 377, 1)).toBe(1);
+    // magnified (beside an album, or any zoom past the image's own resolution): level 0, never below
+    expect(gasLiteLod(700, 700, 1)).toBe(0);
+    expect(gasLiteLod(700, 1609, 1)).toBe(0);
+    expect(gasLiteLod(700, 9000, 2)).toBe(0);
+    // a phone's opening view at device pixel ratio 2: 700 texels against 2 x 110 px
+    expect(gasLiteLod(700, 110, 2)).toBe(2);
+    expect(gasLiteLod(700, 110, 1)).toBe(3);
+    expect(gasLiteLod(700, 0, 1)).toBeGreaterThanOrEqual(0);
+    expect(Number.isFinite(gasLiteLod(700, 0, 1))).toBe(true);
+    expect(gasLiteLod(NaN, 100, 1)).toBe(0);
   });
 });

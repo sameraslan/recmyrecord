@@ -511,3 +511,74 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
     gl_FragColor = vec4(SKY + c + n, 1.0);
   }
 `;
+
+/**
+ * The lighter gas for software renderers only (gasSoftwareRenderer), where the CPU shades every pixel of every
+ * frame and the full shader made frame gaps longer than the site had before the gas. It keeps what shows the
+ * nebula and drops what costs reads: one read of the image at a stop and two between stops (from the one mip
+ * level nearest the screen's resolution, u_liteLod, worked out once per frame), no glow reads (the glow's light is
+ * added from the same read), no noise octaves, no blurred copy in deep zoom and no grain. The zoom bands, the
+ * dust, the pool, the deep zoom fade and its loss of colour are the full shader's.
+ */
+export const GAS_FRAGMENT_SHADER_LITE = /* glsl */ `
+  precision highp float;
+
+  uniform sampler2D u_gasA;
+  uniform sampler2D u_gasB;
+  uniform float u_mix;
+  uniform float u_liteLod;    // the mip level nearest one texel per screen px (gasLiteLod)
+  uniform vec4 u_rectA;
+  uniform vec4 u_rectB;
+  uniform float u_strength;
+  uniform float u_deep;
+  uniform float u_dust;
+  uniform float u_poolAmt;
+  uniform vec3 u_pool;
+
+  varying vec2 v_raw;
+
+  const vec3 SKY = vec3(${GAS_SKY.map(f).join(", ")});
+  const float GLOW = ${f(GAS_GLOW)};
+  const float DEEP_DESAT = ${f(GAS_DEEP_DESAT)};
+
+  float sm(float a, float b, float x) {
+    float t = clamp((x - a) / (b - a), 0.0, 1.0);
+    return t * t * (3.0 - 2.0 * t);
+  }
+
+  // One read of an image over its rectangle (stored upright, north at the top), ending in plain sky at its edge.
+  vec4 bake(sampler2D image, vec4 r) {
+    vec2 uv = vec2((v_raw.x - r.x) * r.z, (r.y - v_raw.y) * r.w);
+    float sky = sm(0.48, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));
+    return mix(textureLod(image, clamp(uv, 0.0, 1.0), u_liteLod), vec4(0.0, 0.0, 0.0, 1.0), sky);
+  }
+
+  void main() {
+    float k = u_strength;
+    float des = 0.0;
+    if (u_poolAmt > 0.0) {
+      vec2 dd = (v_raw - u_pool.xy) / u_pool.z;
+      float e = exp(-dot(dd, dd) * 0.5);
+      k *= mix(1.0, mix(0.6, 0.25, e), u_poolAmt);
+      des = 0.5 * e * u_poolAmt;
+    }
+    vec4 t = bake(u_gasA, u_rectA);
+    if (u_mix > 0.0) t = mix(t, bake(u_gasB, u_rectB), u_mix);
+    // the light as the full shader works it out, with the glow's share added from the same read
+    vec3 c = (1.0 - pow(max(1.0 - t.rgb, vec3(0.002)), vec3(k * mix(1.0, t.a, u_dust)))) * (1.0 + GLOW);
+    des = 1.0 - (1.0 - des) * (1.0 - DEEP_DESAT * u_deep);
+    if (des > 0.0) c = mix(c, vec3((c.r + c.g + c.b) / 3.0), des);
+    gl_FragColor = vec4(SKY + c, 1.0);
+  }
+`;
+
+/** The source GasField compiles: the lighter shader when the material defines GAS_LITE, else the full one, whose
+ * text is GAS_FRAGMENT_SHADER unchanged, so a GPU compiles exactly what it did before the lighter one existed. */
+export const GAS_FRAGMENT_SOURCE = `#ifdef GAS_LITE\n${GAS_FRAGMENT_SHADER_LITE}\n#else\n${GAS_FRAGMENT_SHADER}\n#endif\n`;
+
+/** The mip level the lighter shader reads: the one nearest one texel per device px, never under 0. `texelsPerRaw`
+ * is the image's, `pxPerRaw` the screen's in CSS px. */
+export function gasLiteLod(texelsPerRaw: number, pxPerRaw: number, dpr: number): number {
+  const lod = Math.round(Math.log2(texelsPerRaw / Math.max(pxPerRaw * dpr, 1e-6)));
+  return Number.isFinite(lod) ? Math.max(0, lod) : 0;
+}

@@ -51,6 +51,7 @@ const ms = (v) => (typeof v === 'number' && Number.isFinite(v) ? `${v} ms` : 'n/
 
 const ROWS = [
   ['Renderer', (r) => r.renderer],
+  ['Gas shader (reported only)', (r) => (r.gasLite === true ? 'lighter' : r.gasLite === false ? 'full' : 'n/a')],
   ['Search usable', (r) => `${r.searchUsableMs} ms`],
   ['Startup worst long task', (r) => `${r.startupLongTaskMs} ms`],
   ['WebGL warm-up end (reported only)', (r) => (r.warmUp ? `${r.warmUp.ms} ms (${r.warmUp.why})` : 'none')],

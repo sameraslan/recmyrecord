@@ -27,6 +27,9 @@ declare global {
        * 'loading' while one is on its way, else the stop whose sharper image is on the GPU. Absent when no gas
        * layer is mounted. */
       gasSharp?: 'off' | 'waiting' | 'loading' | 'sonic' | 'balanced' | 'mood';
+      /** True when the gas is drawn with the lighter shader (a software renderer), false with the full one. Set
+       * when the first image of a map goes in; absent before that and when no gas layer is mounted. */
+      gasLite?: boolean;
       /** Eased pool amount of the last drawn frame: 0 with no album open, 1 fully dimmed around the open one. */
       gasPool?: number;
       /** Deep zoom amount of the last drawn frame: 0 up to 32 px covers, 1 once covers are 56 px or larger. */
@@ -35,6 +38,9 @@ declare global {
     /** Set before the map loads by review captures and tests: 'force' loads the sharper gas image on a software
      * renderer too, 'off' never loads it. */
     __rmrGasSharp?: 'force' | 'off';
+    /** Set before the map loads by review captures, measurements and tests: 'force' draws the gas with the lighter
+     * shader on any renderer, 'off' with the full shader on any renderer. */
+    __rmrGasLite?: 'force' | 'off';
   }
 }
 
