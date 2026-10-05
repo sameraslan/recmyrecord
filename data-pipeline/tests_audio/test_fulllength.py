@@ -453,19 +453,27 @@ def test_the_full_album_is_taken_from_a_realistic_result():
     why = {c.id: judge(c, SEASON).why for c in REALISTIC}
     assert "live" in why["live"] and "cover" in why["cover"] and "reaction" in why["react"]
     assert "does not have the album's title" in why["other"] and "does not have the album's title" in why["clip"]
-    assert judge(REALISTIC[1], SEASON).score is not None  # the artist's own channel, the album's title: a candidate
+    topic = judge(REALISTIC[1], SEASON)  # the Topic channel's video of that name: a candidate, not enough on its own
+    assert topic.score is not None and topic.score < fulllength.PICK_SCORE
     # the album of another night is a recording of another length: the runner-up, well behind
     assert choice.runner_up is not None and choice.pick.score - choice.runner_up >= fulllength.AMBIGUOUS_MARGIN
 
 
 @pytest.mark.parametrize("candidate, row, runtime, refused", [
     (cand("a", "Boris - Flood (Full Album)", 4230), ROW, None, None),
-    (cand("a", "Flood", 4230, "Boris - Topic"), ROW, None, None),  # the artist is the uploader
-    (cand("a", "Boris - Flood", 4230), ROW, None, None),
-    (cand("a", "Boris - Flood", 4230), ROW, 4200.0, None),
+    (cand("a", "Flood", 4230, "Boris - Topic"), ROW, None, "under 65"),  # a Topic video is one track: not taken on its own
+    (cand("a", "Boris - Flood", 4230), ROW, None, "under 65"),  # title, artist and a plausible length are not enough
+    (cand("a", "Boris - Flood", 4230), ROW, 4200.0, None),  # with the listing's runtime they are
+    (cand("a", "Boris - Flood", 4230, "Boris"), ROW, None, None),  # or on the artist's own channel
+    (cand("a", "Flood", 1200, "Boris"), ROW, None, "not the length of an album"),  # 20 minutes, not said to be the album: a long track
+    (cand("a", "Full Flood Album Boris", 4230), ROW, None, None),
+    (cand("a", "Boris - Flood (2xLP) | Full Vinyl Rip", 4230), ROW, None, None),
+    (cand("a", "david s. ware - godspelized [1998] álbum completo", 4008), {"artist": "David S. Ware Quartet", "title": "Godspelized"}, None, None),
+    (cand("a", "David S. Ware Quartet - Godspelized", 948), {"artist": "David S. Ware Quartet", "title": "Godspelized"}, None,
+     "not the length of an album"),  # the title track
     (cand("a", "Boris - Pink (Full Album)", 2800), ROW, None, "does not have the album's title"),  # another album of the artist
     (cand("a", "Flood (Full Album)", 4230, "someone else"), ROW, None, "artist"),
-    (cand("a", "Boris - Flood I", 840), ROW, None, "not the length of an album"),  # one track
+    (cand("a", "Boris - Flood I (full album)", 400), ROW, None, "not the length of an album"),  # one track
     (cand("a", "Boris - Flood [FULL ALBUM]", 700), ROW, None, None),  # says so: believed from eight minutes
     (cand("a", "Boris - Flood (Full Album)", 4230), ROW, 3000.0, "against a listing of 50 min"),  # 41% over the listing
     (cand("a", "Boris - Flood (Full Album)", 3400), ROW, 3000.0, None),  # 13% over
@@ -491,12 +499,12 @@ def test_the_full_album_is_taken_from_a_realistic_result():
     # self-titled: the artist's name alone does not say which album
     (cand("a", "Dystopia - Human = Garbage (Full Album)", 2400), {"artist": "Dystopia", "title": "Dystopia"}, None, "self-titled"),
     (cand("a", "Dystopia - Dystopia (Full Album)", 2400), {"artist": "Dystopia", "title": "Dystopia"}, None, None),
-    (cand("a", "Dystopia - S/T (2008)", 2400), {"artist": "Dystopia", "title": "Dystopia"}, None, None),
+    (cand("a", "Dystopia - S/T (2008) full album", 2400), {"artist": "Dystopia", "title": "Dystopia"}, None, None),
     (cand("a", "Dystopia [Full Album]", 2400, "Dystopia"), {"artist": "Dystopia", "title": "Dystopia"}, None, None),
     # other scripts and the catalog's Latin names
     (cand("a", "ボアダムス - Vision Creation Newsun (full album)", 4000),
      {"artist": "ボアダムス [Boredoms]", "title": "ヴィジョン クリエイション ニューサン", "title_latin": "Vision Creation Newsun"}, None, None),
-    (cand("a", "Boredoms ヴィジョンクリエイションニューサン", 4000),
+    (cand("a", "Boredoms ヴィジョンクリエイションニューサン フルアルバム", 4000),
      {"artist": "ボアダムス [Boredoms]", "title": "ヴィジョン クリエイション ニューサン", "title_latin": ""}, None, None),
     # various artists: the title alone, when it is more than a word
     (cand("a", "Odour Of Dust & Rot [Full Album]", 4209, "setdifference"), {"artist": "Various Artists", "title": "Odour of Dust & Rot"}, None, None),
@@ -504,10 +512,11 @@ def test_the_full_album_is_taken_from_a_realistic_result():
 ])
 def test_a_candidate_is_scored_or_refused_from_its_title_uploader_and_length(candidate, row, runtime, refused):
     j = judge(candidate, row, runtime)
+    choice = choose([candidate], row, runtime)
     if refused is None:
-        assert j.score is not None and j.score >= fulllength.PICK_SCORE, j.why
+        assert j.score is not None and choice.pick is not None, choice.why
     else:
-        assert j.score is None and refused in j.why, j.why
+        assert choice.pick is None and refused in choice.why, choice.why
 
 
 def test_the_score_prefers_full_album_the_artists_channel_and_the_listings_length():
@@ -517,7 +526,7 @@ def test_the_score_prefers_full_album_the_artists_channel_and_the_listings_lengt
     near, far = (judge(cand("a", "Boris - Flood", d), ROW, 4200.0).score for d in (4210, 4700))
     assert near > far > plain.score - 1  # the listing's runtime only ever adds
     wordy = judge(cand("a", "Boris - Flood (1999) drone doom sludge stoner japan import", 4230), ROW)
-    assert wordy.score < plain.score < fulllength.PICK_SCORE + 5
+    assert wordy.score < plain.score < fulllength.PICK_SCORE <= hinted.score
     assert judge(cand("a", "Boris - Flood", 4230, position=5), ROW).score < plain.score  # the search's own order, a little
 
 
@@ -535,7 +544,7 @@ def test_nothing_is_taken_when_two_recordings_match_equally_or_none_is_good_enou
     # the same video listed by two queries is one candidate
     assert choose([two[0], cand("a", "Boris - Flood (Full Album)", 4230, position=4)], ROW).pick.cand.id == "a"
     weak = choose([cand("w", "Flood (1999) drone doom sludge stoner", 4230, "Borisfan88 boris archive", position=6)], ROW)
-    assert weak.pick is None and "under 60" in weak.why and weak.refused.cand.id == "w"
+    assert weak.pick is None and "under 65" in weak.why and weak.refused.cand.id == "w"
     none = choose([cand("x", "Top 10 cat videos", 4000), cand("y", "Boris - Flood live", 4000)], ROW)
     assert none.pick is None and none.refused.cand.id == "y" and "live" in none.why  # the one that came closest
     assert choose([], ROW).why == "the search listed no video"

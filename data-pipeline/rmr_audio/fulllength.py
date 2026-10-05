@@ -101,13 +101,15 @@ UNAVAILABLE_IN_A_ROW = 5
 # The search (see "searching for the album" below)
 SEARCH_N = 10  # results asked of each query
 RUNTIME_TOLERANCE = 0.15  # a candidate's length against the store listing's runtime, when the album has one
-PICK_SCORE = 60.0  # the least a candidate needs to be taken
+PICK_SCORE = 65.0  # the least a candidate needs to be taken: more than its title, its artist and a plausible length
+MIN_UNHINTED_S = 25 * 60.0  # no listing runtime and no "full album" in the title: shorter may be one long track
 SURE_SCORE = 80.0  # a pick this good ends the search: the query forms left are not sent
 AMBIGUOUS_MARGIN = 5.0  # a candidate of another length this close to the best one: nothing is taken
 SAME_LENGTH = 0.07  # two candidates whose lengths differ by less are uploads of the same recording
 MIN_FREE_BYTES = 2 * 2 ** 30
 TOPUP_LENGTH_TOLERANCE_S = 2.0  # a top-up's file may differ this much in length from the one that was embedded
-HINT = re.compile(r"full[\s-]*(album|ep|lp|length|record|mixtape|tape|ost|soundtrack|stream)|complete album|"
+HINT = re.compile(r"full[\s-]*(album|ep|lp|length|record|mixtape|tape|ost|soundtrack|stream|vinyl|cd|cassette)|complete album|"
+                  r"full\b[^|/()\[\]]{0,30}\balb[uü]m|"
                   r"[\[(]full[\])]|(album|disco|álbum) complet[oa]|album complet|álbum completo|"
                   r"フル\s*アルバム|полный альбом|весь альбом|全专辑|完整专辑|전곡", re.I)
 BLOCKED = re.compile(r"HTTP Error 429|Too Many Requests|not a bot|rate[- ]?limit|try again later|unusual traffic|captcha", re.I)
@@ -299,6 +301,7 @@ NOT_THE_ALBUM = {  # said by the video's title and by none of the album's own na
                                     r"\btutorial\b|\blesson\b|\bplaythrough\b",
     "one part of it": r"\bside\s+(?:[ab12]|one|two)\b|\bpart\s*(?:\d+|one|two|three|i{1,3})\b|\bpt\.?\s*\d+\b|\b(?:dis[ck]|cd)\s*\d\b",
 }
+GROUPS = frozenset("duo trio quartet quintet sextet septet octet band group ensemble orchestra".split())
 SELF_TITLED = re.compile(r"\bself[\s-]*titled\b|\bs\s*/\s*t\b", re.I)
 NOISE = frozenset(  # words of a video title that say nothing about which recording it is
     "full album albums lp ep hq hd 4k official audio video stream vinyl rip cd remaster remastered original complete entire "
@@ -371,7 +374,8 @@ def contains(needle: str, hay: str) -> bool:
 def search_names(row: dict) -> tuple[list[str], list[str]]:
     """(titles, artists) a video has to show, normalised, longest first: the title in every spelling the
     catalog has, whole, without its bracketed parts, the bracketed name alone ("呼吸 (Kokyuu)"), and before
-    its subtitle when that still is two words or six letters; the credit and each name of a joint credit."""
+    its subtitle when that still is two words or six letters; the credit, each name of a joint credit, and
+    a group's name without its last word when that says what kind of group it is ("David S. Ware Quartet")."""
     titles = []
     for t in filter(None, (row.get("title", ""), row.get("title_latin", ""), row.get("rym_title", ""))):
         titles += [t, textnorm.strip_edition(t), textnorm.core_title(t), *textnorm._BRACKET.findall(t)]
@@ -379,7 +383,9 @@ def search_names(row: dict) -> tuple[list[str], list[str]]:
         if len(main.split()) > 1 or len(main) >= 6 or textnorm.has_non_latin(main):
             titles.append(main)
     titles = sorted(dict.fromkeys(filter(None, (textnorm.norm(t) for t in titles))), key=lambda t: -len(t))
-    return titles, sorted(album_names(row)[1], key=lambda a: -len(a))
+    artists = album_names(row)[1]
+    artists += [a.rsplit(" ", 1)[0] for a in artists if len(a.split()) > 2 and a.rsplit(" ", 1)[1] in GROUPS]
+    return titles, sorted(dict.fromkeys(artists), key=lambda a: -len(a))
 
 
 def judge(c: Candidate, row: dict, runtime_s: float | None = None) -> Judged:
@@ -392,13 +398,18 @@ def judge(c: Candidate, row: dict, runtime_s: float | None = None) -> Judged:
                the title says it is something else (NOT_THE_ALBUM) with a word none of the album's own
                names has
                the length: outside the store listing's runtime by more than 15%, when the album has one;
-               else under 15 minutes (8 when the title says "full album") or over six hours
+               else under 25 minutes (8 when the title says "full album": an album's title track can
+               run 20 minutes) or over six hours
                self-titled, and the title names the artist once and does not say "self-titled" or "s/t"
-      score    50; +20 the title says "full album"; +10 the artist is in the title; +12 the uploader is the
-               artist ("<artist>", "<artist> - Topic", VEVO) or else +4 a verified channel or "official";
-               up to +15 for a length near the listing's runtime; -1.5 for each word of the title that is
-               neither a name of the album nor noise (six at most); +3, +2, +1 for the first three results
-               of a query. choose adds +3 for each other candidate of the same length (three at most)."""
+      score    50; +20 the title says "full album"; +10 the artist is in the title; +10 the uploader is the
+               artist ("<artist>", "<artist> official", VEVO; not "<artist> - Topic", whose videos are
+               single tracks) or else +4 a verified channel or "official"; up to +15 for a length near the
+               listing's runtime; -1.5 for each word of the title that is neither a name of the album nor
+               noise (six at most); +3, +2, +1 for the first three results of a query. choose adds +3 for
+               each other candidate of the same length (three at most).
+
+    PICK_SCORE (65) is more than the title, the artist and a plausible length give (60 to 63): a video is
+    taken only when something else speaks for it too."""
     def no(stage: int, why: str) -> Judged:
         return Judged(c, None, why, stage)
 
@@ -421,7 +432,7 @@ def judge(c: Candidate, row: dict, runtime_s: float | None = None) -> Judged:
     if runtime_s:
         if abs(d - runtime_s) > RUNTIME_TOLERANCE * runtime_s:
             return no(4, f"{d / 60:.0f} min against a listing of {runtime_s / 60:.0f} min")
-    elif d > MAX_ALBUM_S or d < (MIN_HINTED_S if hinted else MIN_ALBUM_S):
+    elif d > MAX_ALBUM_S or d < (MIN_HINTED_S if hinted else MIN_UNHINTED_S):
         return no(4, f"{d / 60:.0f} min is not the length of an album")
     name = textnorm.norm(title, artist=True)  # the title as an artist's name would be normalised
     if any(contains(name, a) for a in artists):  # self-titled: the artist's name alone does not say which album
@@ -439,8 +450,8 @@ def judge(c: Candidate, row: dict, runtime_s: float | None = None) -> Judged:
         score, parts = score + 20, parts + ["says full album"]
     if artist and contains(artist, in_title):
         score += 10
-    if artist and (uploader in (artist, f"{artist} topic", f"{artist} official") or uploader.replace(" ", "") == artist.replace(" ", "") + "vevo"):
-        score, parts = score + 12, parts + ["the artist's channel"]
+    if artist and (uploader in (artist, f"{artist} official") or uploader.replace(" ", "") == artist.replace(" ", "") + "vevo"):
+        score, parts = score + 10, parts + ["the artist's channel"]
     elif c.verified or re.search(r"\bofficial\b", folded):
         score, parts = score + 4, parts + ["official or verified"]
     if runtime_s:
