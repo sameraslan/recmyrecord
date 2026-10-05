@@ -74,13 +74,20 @@ from rmr_pipeline.audio_store import DEFAULT_AUDIO, SOURCE_RE
 from rmr_pipeline.constants import PIPELINE_DIR
 
 from . import embed, onepass, textnorm, windows
+from .album_status import edge_case, listing_facts
 from .clips import FINAL
-from .onepass_cache import MODELS, VARIANT_OF, OnePassCache, read_only
+from .onepass_cache import MODELS, VARIANT_OF, WINDOW_SOURCES, OnePassCache, read_only
 
-FIELDS = ["key", "source", "url", "class", "duration_s", "title", "uploader", "n_windows", "status"]
+OLD_FIELDS = ["key", "source", "url", "class", "duration_s", "title", "uploader", "n_windows", "status"]
+FIELDS = OLD_FIELDS + ["matched_by", "reason", "query", "score", "runner_up", "note"]
 CLASSES = ("full_album", "single_track", "mismatch", "unavailable")
 DONE = ("embedded", "skipped")  # final: a later run leaves the album alone
+SEARCH_DONE = DONE + ("search_none",)  # a search row: final unless --retry-search
+STATUSES = ("embedded", "skipped", "failed", "blocked", "topped_up", "search_none")
 SOURCES = {"youtube": "youtube_url", "bandcamp": "bandcamp_url"}  # source -> its column of the catalog
+SEARCH = "search"  # the slot of a row whose video was found by a search: (key, "search") beside (key, "youtube")
+MATCHED_BY = ("link", SEARCH)
+REASONS = ("no_audio", "edge_case")
 DEFAULT_CSV = DEFAULT_AUDIO / "fulllength.csv"
 DEFAULT_TMP = onepass.DEFAULT_CACHE / "fulllength-tmp"
 DEFAULT_FETCH_PYTHON = PIPELINE_DIR / ".venv-fetch" / "bin" / "python"
@@ -91,6 +98,13 @@ MIN_HINTED_S = 8 * 60.0  # a title that says "full album" is believed from eight
 MAX_ALBUM_S = 6 * 3600.0
 RUNTIME_SHARE = 0.6
 UNAVAILABLE_IN_A_ROW = 5
+# The search (see "searching for the album" below)
+SEARCH_N = 10  # results asked of each query
+RUNTIME_TOLERANCE = 0.15  # a candidate's length against the store listing's runtime, when the album has one
+PICK_SCORE = 60.0  # the least a candidate needs to be taken
+SURE_SCORE = 80.0  # a pick this good ends the search: the query forms left are not sent
+AMBIGUOUS_MARGIN = 5.0  # a candidate of another length this close to the best one: nothing is taken
+SAME_LENGTH = 0.07  # two candidates whose lengths differ by less are uploads of the same recording
 MIN_FREE_BYTES = 2 * 2 ** 30
 TOPUP_LENGTH_TOLERANCE_S = 2.0  # a top-up's file may differ this much in length from the one that was embedded
 HINT = re.compile(r"full[\s-]*(album|ep|lp|length|record|mixtape|tape|ost|soundtrack|stream)|complete album|"
@@ -150,6 +164,17 @@ class YtDlp:
             return json.loads(p.stdout.decode())
         except ValueError:
             raise FetchError("yt-dlp's metadata is not JSON") from None
+
+    def search(self, query: str, n: int = SEARCH_N) -> dict:
+        """The first n videos YouTube's own search gives for the query: titles, lengths and uploaders only
+        (--flat-playlist: one request, no video page is opened, nothing is downloaded)."""
+        p = self._run(["--flat-playlist", "--skip-download", "-J", f"ytsearch{int(n)}:{query}"], 120)
+        if p.returncode:
+            raise fetch_error(p.stderr.decode(errors="replace"))
+        try:
+            return json.loads(p.stdout.decode())
+        except ValueError:
+            raise FetchError("yt-dlp's search result is not JSON") from None
 
     def download(self, url: str, source: str, folder: Path) -> list[Path]:
         """The audio-only stream(s) of the link into `folder`, in track order. No video, no conversion."""
@@ -255,21 +280,256 @@ def classify(info: dict, row: dict, source: str, url: str, runtime_s: float | No
     return verdict("full_album" if long else "single_track", f"{seen}; {duration / 60:.0f} min" + (", says full album" if hinted else ""))
 
 
+# --- searching for the album -------------------------------------------------------------------------
+# An album without a usable link: YouTube's own search is asked (queries), every video it lists is judged
+# from its title, uploader and length alone (judge), and one is taken or none (choose). A missed album is
+# better than a wrong one: whatever is doubtful is refused, and the refusal is recorded.
+
+NOT_THE_ALBUM = {  # said by the video's title and by none of the album's own names: another recording
+    "live": r"\blive\b|\bconcert\b|\bbootleg\b|ライブ",
+    "cover": r"\bcover(?:s|ed)?\b",
+    "reaction": r"\breact(?:ion|ions|s|ing)?\b",
+    "review": r"\breview(?:s|ed)?\b|\branked\b|\bexplained\b|\bunboxing\b|\bfirst listen\b|\banalysis\b",
+    "8D, slowed, nightcore or sped up": r"\b8d\b|\bslowed\b|\breverb\b|\bnightcore\b|\bsped[\s-]*up\b|\bspeed[\s-]*up\b|\bbass[\s-]*boost",
+    "karaoke or instrumental": r"\bkaraoke\b|\binstrumentals?\b",
+    "tribute": r"\btribute\b",
+    "remix": r"\bremix(?:es|ed)?\b|\bmash[\s-]*up\b|\bmegamix\b",
+    "demo": r"\bdemos?\b|\brehearsals?\b|\bouttakes?\b",
+    "interview, trailer or lesson": r"\binterview\b|\bdocumentary\b|\bpodcast\b|\btrailer\b|\bteaser\b|\bsampler\b|\bsnippets?\b|"
+                                    r"\btutorial\b|\blesson\b|\bplaythrough\b",
+    "one part of it": r"\bside\s+(?:[ab12]|one|two)\b|\bpart\s*(?:\d+|one|two|three|i{1,3})\b|\bpt\.?\s*\d+\b|\b(?:dis[ck]|cd)\s*\d\b",
+}
+SELF_TITLED = re.compile(r"\bself[\s-]*titled\b|\bs\s*/\s*t\b", re.I)
+NOISE = frozenset(  # words of a video title that say nothing about which recording it is
+    "full album albums lp ep hq hd 4k official audio video stream vinyl rip cd remaster remastered original complete entire "
+    "whole stereo mono flac lyrics with and by from of a topic music records recordings edition version reissue ost soundtrack "
+    "disco completo completa release self titled st kbps high quality best sound tracklist timestamps length in".split())
+
+
+@dataclass(frozen=True)
+class Candidate:
+    """One video of a search result, as the result lists it."""
+    id: str
+    title: str
+    uploader: str
+    duration_s: float | None
+    query: str = ""
+    position: int = 0  # its place in the result of its query, from 0
+    verified: bool = False
+    live: bool = False
+
+    @property
+    def url(self) -> str:
+        return "https://www.youtube.com/watch?v=" + self.id
+
+
+@dataclass(frozen=True)
+class Judged:
+    cand: Candidate
+    score: float | None  # None: refused
+    why: str  # the rule that refused it, or what its score is made of
+    stage: int = 0  # how many of the checks it passed, for naming the best refused candidate
+
+
+@dataclass(frozen=True)
+class Choice:
+    pick: Judged | None
+    runner_up: float | None  # the score of the best candidate of another length (another recording), if any
+    refused: Judged | None  # when nothing is taken: the candidate that came closest
+    why: str
+
+
+def queries(row: dict) -> list[str]:
+    """The forms the album is searched in, in order: "artist title full album"; with the catalog's Latin
+    names when it has any; "artist title"."""
+    clean = lambda s: " ".join(re.sub(r"[\[\]]", " ", s or "").split())  # noqa: E731
+    artist, title = clean(row.get("artist")), clean(row.get("title"))
+    latin = (clean(row.get("artist_latin")) or artist, clean(row.get("title_latin")) or title)
+    forms = [f"{artist} {title} full album", f"{latin[0]} {latin[1]} full album", f"{artist} {title}"]
+    return list(dict.fromkeys(q for q in forms if q.strip() not in ("", "full album")))
+
+
+def candidates(info: dict, query: str = "") -> list[Candidate]:
+    """The videos of one search result (yt-dlp's flat playlist)."""
+    out = []
+    for i, e in enumerate(e for e in info.get("entries") or [] if e):
+        if not e.get("id") or e.get("ie_key", "Youtube") != "Youtube":
+            continue
+        out.append(Candidate(e["id"], e.get("title") or "", e.get("uploader") or e.get("channel") or "", e.get("duration"), query, i,
+                             bool(e.get("channel_is_verified")), e.get("live_status") in ("is_live", "is_upcoming")))
+    return out
+
+
+def contains(needle: str, hay: str) -> bool:
+    """Is the (normalised) name in the (normalised) text as a run of whole words (without spaces for a script
+    that has none)? Stricter than `resembles`: most of the words is not enough."""
+    if not needle or not hay:
+        return False
+    return f" {needle} " in f" {hay} " or (textnorm.has_non_latin(needle) and needle.replace(" ", "") in hay.replace(" ", ""))
+
+
+def search_names(row: dict) -> tuple[list[str], list[str]]:
+    """(titles, artists) a video has to show, normalised, longest first: the title in every spelling the
+    catalog has, whole, without its bracketed parts, the bracketed name alone ("呼吸 (Kokyuu)"), and before
+    its subtitle when that still is two words or six letters; the credit and each name of a joint credit."""
+    titles = []
+    for t in filter(None, (row.get("title", ""), row.get("title_latin", ""), row.get("rym_title", ""))):
+        titles += [t, textnorm.strip_edition(t), textnorm.core_title(t), *textnorm._BRACKET.findall(t)]
+        main = textnorm.norm(textnorm.main_title(t))
+        if len(main.split()) > 1 or len(main) >= 6 or textnorm.has_non_latin(main):
+            titles.append(main)
+    titles = sorted(dict.fromkeys(filter(None, (textnorm.norm(t) for t in titles))), key=lambda t: -len(t))
+    return titles, sorted(album_names(row)[1], key=lambda a: -len(a))
+
+
+def judge(c: Candidate, row: dict, runtime_s: float | None = None) -> Judged:
+    """A candidate's score, or why it is refused. In order:
+
+      refused  no length, or live
+               the title does not contain the album's title
+               the artist is in neither the title nor the uploader (a various-artists album: its title
+               has to be two words or more)
+               the title says it is something else (NOT_THE_ALBUM) with a word none of the album's own
+               names has
+               the length: outside the store listing's runtime by more than 15%, when the album has one;
+               else under 15 minutes (8 when the title says "full album") or over six hours
+               self-titled, and the title names the artist once and does not say "self-titled" or "s/t"
+      score    50; +20 the title says "full album"; +10 the artist is in the title; +12 the uploader is the
+               artist ("<artist>", "<artist> - Topic", VEVO) or else +4 a verified channel or "official";
+               up to +15 for a length near the listing's runtime; -1.5 for each word of the title that is
+               neither a name of the album nor noise (six at most); +3, +2, +1 for the first three results
+               of a query. choose adds +3 for each other candidate of the same length (three at most)."""
+    def no(stage: int, why: str) -> Judged:
+        return Judged(c, None, why, stage)
+
+    if c.live or not c.duration_s:
+        return no(0, "no length, or a live stream")
+    titles, artists = search_names(row)
+    title = next((t for t in titles if contains(t, textnorm.norm(c.title))), None)
+    if title is None:
+        return no(1, "the title does not have the album's title")
+    in_title, uploader = textnorm.norm(c.title, artist=True), textnorm.norm(c.uploader, artist=True)
+    artist = next((a for a in artists if contains(a, in_title) or contains(a, uploader)), None)
+    if artist is None and not (textnorm.is_various(row.get("artist", "")) and len(title.split()) > 1):
+        return no(2, "the artist is in neither the title nor the uploader")
+    folded = textnorm.fold(c.title)
+    own = textnorm.fold(" | ".join(row.get(k) or "" for k in ("title", "title_latin", "rym_title", "artist", "artist_latin", "rym_artist")))
+    for name, pattern in NOT_THE_ALBUM.items():
+        if re.search(pattern, folded) and not re.search(pattern, own):
+            return no(3, f"the title says it is something else: {name}")
+    hinted, d = bool(HINT.search(c.title)), float(c.duration_s)
+    if runtime_s:
+        if abs(d - runtime_s) > RUNTIME_TOLERANCE * runtime_s:
+            return no(4, f"{d / 60:.0f} min against a listing of {runtime_s / 60:.0f} min")
+    elif d > MAX_ALBUM_S or d < (MIN_HINTED_S if hinted else MIN_ALBUM_S):
+        return no(4, f"{d / 60:.0f} min is not the length of an album")
+    name = textnorm.norm(title, artist=True)  # the title as an artist's name would be normalised
+    if any(contains(name, a) for a in artists):  # self-titled: the artist's name alone does not say which album
+        times = len(re.findall(rf"(?<!\S){re.escape(name)}(?!\S)", in_title)) + contains(name, uploader)
+        if times < 2 and not SELF_TITLED.search(folded):
+            return no(5, "self-titled, and the title names the artist once: it could be any of the artist's albums")
+    rest, joined = f" {in_title} ", []
+    for phrase in filter(None, (artist, name)):
+        rest = rest.replace(f" {phrase} ", "  ")
+        if textnorm.has_non_latin(phrase):
+            joined.append(phrase.replace(" ", ""))
+    extra = [w for w in rest.split() if w not in NOISE and not w.isdigit() and not any(w in j or j in w for j in joined)]
+    score, parts = 50.0, [f"title+{'artist' if artist else 'various artists'}", f"{d / 60:.0f} min"]
+    if hinted:
+        score, parts = score + 20, parts + ["says full album"]
+    if artist and contains(artist, in_title):
+        score += 10
+    if artist and (uploader in (artist, f"{artist} topic", f"{artist} official") or uploader.replace(" ", "") == artist.replace(" ", "") + "vevo"):
+        score, parts = score + 12, parts + ["the artist's channel"]
+    elif c.verified or re.search(r"\bofficial\b", folded):
+        score, parts = score + 4, parts + ["official or verified"]
+    if runtime_s:
+        score += 15 * (1 - abs(d - runtime_s) / (RUNTIME_TOLERANCE * runtime_s))
+        parts.append(f"listing {runtime_s / 60:.0f} min")
+    if extra:
+        score -= 1.5 * min(len(extra), 6)
+        parts.append(f"{len(extra)} other word(s)")
+    return Judged(c, score + max(0, 3 - c.position), "; ".join(parts), 6)
+
+
+def same_recording(a: Candidate, b: Candidate) -> bool:
+    return abs(a.duration_s - b.duration_s) <= SAME_LENGTH * max(a.duration_s, b.duration_s)
+
+
+def choose(cands: list[Candidate], row: dict, runtime_s: float | None = None) -> Choice:
+    """The candidate to take, or none. Each video is judged once (its best showing over the queries); the
+    ones that pass get +3 for each other passing video of the same length, three at most (several uploads
+    of one length: that length is the album). Nothing is taken when the best is under PICK_SCORE, or when a
+    video of another length (another recording: a longer edition, another album whose name contains this
+    one's, one long track) scores within AMBIGUOUS_MARGIN of it."""
+    judged: dict[str, Judged] = {}
+    for c in cands:
+        j = judge(c, row, runtime_s)
+        old = judged.get(c.id)
+        if old is None or (j.score is not None, j.score or 0.0, j.stage) > (old.score is not None, old.score or 0.0, old.stage):
+            judged[c.id] = j
+    passed = [j for j in judged.values() if j.score is not None]
+    ranked = sorted((Judged(j.cand, j.score + 3 * min(3, sum(same_recording(j.cand, o.cand) for o in passed if o is not j)), j.why, j.stage)
+                     for j in passed), key=lambda j: (-j.score, j.cand.position, j.cand.id))
+    if not ranked:
+        refused = min(judged.values(), key=lambda j: (-j.stage, j.cand.position, j.cand.id), default=None)
+        return Choice(None, None, refused, refused.why if refused else "the search listed no video")
+    best = ranked[0]
+    rival = next((j for j in ranked[1:] if not same_recording(best.cand, j.cand)), None)
+    runner_up = rival.score if rival else None
+    if best.score < PICK_SCORE:
+        return Choice(None, runner_up, best, f"the best scores {best.score:.0f}, under {PICK_SCORE:.0f} ({best.why})")
+    if rival and best.score - rival.score < AMBIGUOUS_MARGIN:
+        return Choice(None, runner_up, best, f"two recordings match equally: this one ({best.cand.duration_s / 60:.0f} min, {best.score:.0f}) and "
+                                             f"\"{rival.cand.title}\" ({rival.cand.duration_s / 60:.0f} min, {rival.score:.0f})")
+    return Choice(best, runner_up, None, best.why)
+
+
+def search_album(fetcher, row: dict, runtime_s: float | None, n: int = SEARCH_N, wait=lambda: None) -> Choice:
+    """Search the album in each form until a pick is sure (SURE_SCORE) or the forms are used up; the choice
+    is made over everything the queries listed. `wait` is called between two queries."""
+    seen: list[Candidate] = []
+    choice = Choice(None, None, None, "nothing to search for")
+    for i, query in enumerate(queries(row)):
+        if i:
+            wait()
+        seen += candidates(fetcher.search(query, n), query)
+        choice = choose(seen, row, runtime_s)
+        if choice.pick and choice.pick.score >= SURE_SCORE:
+            break
+    return choice
+
+
 # --- the outcomes file -------------------------------------------------------------------------------
 
+def slot_of(row: dict) -> str:
+    """Where a row sits beside the album's other rows: its source, or `search` for a video a search found."""
+    return SEARCH if row.get("matched_by") == SEARCH else row["source"]
+
+
+def source_of(slot: str) -> str:
+    """The source the windows of a slot are cached under: a searched video is a YouTube video."""
+    return "youtube" if slot == SEARCH else slot
+
+
 def load_outcomes(path: Path) -> dict[tuple[str, str], dict]:
-    """(key, source) -> row of fulllength.csv; empty when the file is not there yet."""
+    """(key, slot) -> row of fulllength.csv; empty when the file is not there yet. A file written before
+    the search existed (OLD_FIELDS) is read as rows of the sheet's links for albums without audio."""
     if not Path(path).exists():
         return {}
     with open(path, newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        if reader.fieldnames != FIELDS:
+        if reader.fieldnames not in (FIELDS, OLD_FIELDS):
             raise ValueError(f"{path}: the header must be {','.join(FIELDS)}")
         rows = {}
         for n, r in enumerate(reader, start=2):
-            if not SOURCE_RE.match(r["source"]) or r["source"] not in SOURCES or (r["class"] and r["class"] not in CLASSES):
-                raise ValueError(f"{path} line {n}: unknown source or class")
-            rows[(r["key"], r["source"])] = r
+            r = {**dict.fromkeys(FIELDS, ""), **r}
+            r["matched_by"], r["reason"] = r["matched_by"] or "link", r["reason"] or "no_audio"
+            if (not SOURCE_RE.match(r["source"]) or r["source"] not in SOURCES or (r["class"] and r["class"] not in CLASSES)
+                    or r["matched_by"] not in MATCHED_BY or r["reason"] not in REASONS or r["status"] not in STATUSES
+                    or (r["matched_by"] == SEARCH and r["source"] != "youtube")):
+                raise ValueError(f"{path} line {n}: unknown source, class, status, matched_by or reason")
+            rows[(r["key"], slot_of(r))] = r
     return rows
 
 
@@ -292,17 +552,50 @@ def read_csv(path: Path) -> list[dict]:
 
 
 def no_audio_albums(catalog: Path, keys_csv: Path, matches: Path) -> list[dict]:
-    """The catalog rows of the new albums no store has a preview of, in catalog order; each gets `key` and,
-    when matches.csv knows it, `runtime_s`."""
+    """The catalog rows of the albums no store has a preview of, in catalog order: a row of matches.csv
+    without a listing, or with a listing of no previews. Each gets `key`, `reason` and, when matches.csv
+    knows it, `runtime_s`. An album that was on the site before the 10k catalog (keys.csv) and has a
+    listing was matched before preview counts were recorded: it has previews."""
     existing = {r["rym_id"] for r in read_csv(keys_csv)} if Path(keys_csv).exists() else set()
     match = {r["key"]: r for r in read_csv(matches)}
     out = []
     for r in read_csv(catalog):
         m = match.get(r["rym_id"])
-        if r["rym_id"] in existing or m is None or int(m.get("n_clips_available") or 0):
+        if m is None or int(m.get("n_clips_available") or 0):
+            continue
+        if r["rym_id"] in existing and m.get("source") and (m.get("n_clips_available") or "") == "":
             continue
         runtime = (m.get("runtime_s") or "").strip()
-        out.append({**r, "key": r["rym_id"], "runtime_s": float(runtime) if runtime else None})
+        out.append({**r, "key": r["rym_id"], "reason": "no_audio", "runtime_s": float(runtime) if runtime else None})
+    return out
+
+
+def edge_case_albums(catalog: Path, matches: Path, cache_db: Path) -> list[dict]:
+    """The catalog rows of the albums that have store previews and are under-covered by them
+    (album_status.edge_case: 1 to 3 previews of a listing of 15 minutes or more, or of unknown runtime), in
+    catalog order, without the ones that already have windows of full-length audio in the cache. Each gets
+    `key`, `reason` and `runtime_s` (the listing's, None when unknown). The cache is only read; without one
+    the rows of matches.csv decide alone."""
+    listed, windowed = {}, set()
+    if Path(cache_db).exists():
+        con = read_only(cache_db)
+        try:
+            listed = {tuple(r[:3]): dict(zip(("n_tracks", "n_previews", "runtime_s"), r[3:])) for r in con.execute(
+                "SELECT key, source, album_id, n_tracks, n_previews, runtime_s FROM listings")}
+            windowed = {r[0] for r in con.execute("SELECT DISTINCT key FROM embeddings WHERE status = 'ok' AND source IN (%s)"
+                                                  % ", ".join("?" * len(WINDOW_SOURCES)), WINDOW_SOURCES)}
+        finally:
+            con.close()
+    match = {r["key"]: r for r in read_csv(matches)}
+    out = []
+    for r in read_csv(catalog):
+        m = match.get(r["rym_id"])
+        if m is None or not m.get("source") or r["rym_id"] in windowed:
+            continue
+        facts = {k: m.get(k) or "" for k in ("n_tracks", "n_clips_available", "runtime_s")}
+        _, previews, runtime = listing_facts(facts, listed.get((r["rym_id"], m["source"], m.get("source_album_id", "")), {}))
+        if edge_case(previews, runtime):
+            out.append({**r, "key": r["rym_id"], "reason": "edge_case", "runtime_s": float(runtime) if runtime else None})
     return out
 
 
@@ -324,16 +617,25 @@ def video_unusable(al: dict, outcomes: dict) -> bool | None:
     return None if status not in DONE else status == "skipped"
 
 
-def targets(albums: list[dict], outcomes: dict, bandcamp: bool) -> list[tuple[dict, str, str]]:
-    """(album, source, url) to consider, in catalog order: its YouTube link; with `bandcamp`, its Bandcamp
-    page unless its video is already embedded (the run looks again, once it knows what the video is, and
-    leaves the page alone unless video_unusable)."""
+def link_unusable(al: dict, outcomes: dict) -> bool:
+    """Is the album left without a usable link, so that it is searched for: its video is unusable
+    (video_unusable), and its Bandcamp page, if one was fetched, was not embedded."""
+    return video_unusable(al, outcomes) is True and outcomes.get((al["key"], "bandcamp"), {}).get("status") != "embedded"
+
+
+def targets(albums: list[dict], outcomes: dict, bandcamp: bool, search: bool = False) -> list[tuple[dict, str, str]]:
+    """(album, slot, url) to consider, in catalog order: its YouTube link; with `bandcamp`, its Bandcamp
+    page unless its video is already embedded; with `search`, a search (slot `search`; the url is the video
+    an earlier search took, or empty) unless its video is already embedded. The run looks again once it
+    knows what the link is, and leaves the page alone unless video_unusable, the search unless link_unusable."""
     out = []
     for al in albums:
         if al.get("youtube_url"):
             out.append((al, "youtube", al["youtube_url"]))
         if bandcamp and al.get("bandcamp_url") and video_unusable(al, outcomes) is not False:
             out.append((al, "bandcamp", al["bandcamp_url"]))
+        if search and video_unusable(al, outcomes) is not False:
+            out.append((al, SEARCH, outcomes.get((al["key"], SEARCH), {}).get("url", "")))
     return out
 
 
@@ -401,6 +703,11 @@ class Options:
     dry_run: bool = False
     refetch: bool = True  # fetch an embedded album again for a variant it lacks
     check_base: bool = False  # a top-up also embeds the base model and compares with its stored vector
+    search: bool = False  # search YouTube for an album left without a usable link
+    edge_cases: bool = False  # the albums under-covered by their store previews, not the albums without audio
+    retry_failed: bool = False  # only the rows whose last outcome is `failed`
+    retry_search: bool = False  # search again for the albums a search gave nothing usable for
+    search_n: int = SEARCH_N
 
 
 def lacking_variants(cache_db: Path, models) -> set[tuple[str, str]]:
@@ -427,26 +734,31 @@ def plan(opts: Options, outcomes: dict, lacking=frozenset()) -> tuple[list[tuple
     """The (album, source, url) with work to do, and counts of the rest. No network. `lacking`: the
     (key, source) already embedded that lack a variant the run was asked for (lacking_variants): they are
     work too (a top-up) unless opts.refetch is off."""
-    albums = no_audio_albums(opts.catalog, opts.keys_csv, opts.matches)
+    albums = (edge_case_albums(opts.catalog, opts.matches, opts.out) if opts.edge_cases
+              else no_audio_albums(opts.catalog, opts.keys_csv, opts.matches))
     counts = Counter(no_audio=len(albums), youtube=sum(bool(a.get("youtube_url")) for a in albums),
                      bandcamp_only=sum(bool(a.get("bandcamp_url")) and not a.get("youtube_url") for a in albums),
                      no_link=sum(not a.get("bandcamp_url") and not a.get("youtube_url") for a in albums))
     if opts.keys:
         albums = [a for a in albums if a["key"] in set(opts.keys)]
-    if opts.sample is not None:
-        chosen = {a["key"] for a in stratified([a for a in albums if a.get("youtube_url")], opts.sample, opts.seed)}
+    if opts.sample is not None:  # with a search every album can be worked on, not only the ones with a link
+        chosen = {a["key"] for a in stratified([a for a in albums if opts.search or a.get("youtube_url")], opts.sample, opts.seed)}
         albums = [a for a in albums if a["key"] in chosen]
     todo = []
     base_too = any(m not in VARIANT_OF for m in opts.models)
-    for al, source, url in targets(albums, outcomes, opts.bandcamp):
-        status = outcomes.get((al["key"], source), {}).get("status")
-        top_up = status == "embedded" and opts.refetch and (al["key"], source) in lacking
-        if (status in DONE or not base_too) and not top_up:  # a run of variants alone only tops up
-            counts["done" if status in DONE else "not_embedded"] += 1
+    for al, slot, url in targets(albums, outcomes, opts.bandcamp, opts.search):
+        status = outcomes.get((al["key"], slot), {}).get("status")
+        top_up = status == "embedded" and opts.refetch and (al["key"], source_of(slot)) in lacking
+        done = status in (SEARCH_DONE if slot == SEARCH else DONE) and not (
+            slot == SEARCH and opts.retry_search and status != "embedded")
+        if opts.retry_failed and status != "failed":
+            counts["not_failed"] += 1
+        elif (done or not base_too) and not top_up:  # a run of variants alone only tops up
+            counts["done" if done else "not_embedded"] += 1
         elif opts.limit is not None and len(todo) >= opts.limit:
             counts["beyond_limit"] += 1
         else:
-            todo.append((al, source, url))
+            todo.append((al, slot, url))
             counts["top_up"] += top_up
     return todo, counts
 
@@ -462,9 +774,12 @@ def run(opts: Options, fetcher=None, embedder=None, out=print, stop=None, durati
         return 1
     outcomes = load_outcomes(opts.csv)
     todo, counts = plan(opts, outcomes, lacking_variants(opts.out, opts.models))
-    out(f"{counts['no_audio']} new albums without a preview: {counts['youtube']} with a YouTube link, "
+    out((f"{counts['no_audio']} albums under-covered by their store previews (1 to 3 previews of 15 minutes or more, or of "
+         "unknown runtime)" if opts.edge_cases else f"{counts['no_audio']} albums without a preview")
+        + f": {counts['youtube']} with a YouTube link, "
         f"{counts['bandcamp_only']} with Bandcamp only, {counts['no_link']} with neither. "
         f"{len(todo)} to do now ({dict(Counter(s for _, s, _ in todo))}), {counts['done']} already done"
+        + (f"; only the failed ones are tried (--retry-failed): {counts['not_failed']} others left alone" if opts.retry_failed else "")
         + (f"; {counts['top_up']} of those to do are embedded albums fetched again for "
            f"{' + '.join(m for m in opts.models if m in VARIANT_OF)} alone" if counts["top_up"] else "")
         + (f"; {counts['not_embedded']} not embedded yet are left for a run with the base models" if counts["not_embedded"] else "")
@@ -583,19 +898,22 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
     sizes, seconds, n_embedded = [], [], 0
     t0 = time.monotonic()
     asked = False
-    for i, (al, source, url) in enumerate(todo):
+    for i, (al, slot, url) in enumerate(todo):
         if stop.asked:
             break
-        if source == "bandcamp" and not video_unusable(al, outcomes):
+        source, key = source_of(slot), al["key"]
+        if slot == "bandcamp" and not video_unusable(al, outcomes):
             continue  # its video is the album, or is not known yet (it failed just now): the page is left alone
+        if slot == SEARCH and not link_unusable(al, outcomes):
+            continue  # a link of its own is the album, or is not known yet: no search
         if asked:
             sleep(opts.pause * random.uniform(1.0, 1.5))
         asked = True
-        t, key = time.monotonic(), al["key"]
-        row = {"key": key, "source": source, "url": url, "class": "", "duration_s": "", "title": "", "uploader": "",
-               "n_windows": "", "status": "failed"}
-        note, folder, blocked, gone = "", Path(opts.tmp) / hashlib.sha1(f"{source}:{key}".encode()).hexdigest()[:12], False, False
-        again = outcomes.get((key, source), {}).get("status") == "embedded"  # a top-up: its row is not rewritten
+        t, before = time.monotonic(), outcomes.get((key, slot), {})
+        row = {**dict.fromkeys(FIELDS, ""), "key": key, "source": source, "url": url, "status": "failed",
+               "matched_by": SEARCH if slot == SEARCH else "link", "reason": al.get("reason") or "no_audio"}
+        note, folder, blocked, gone = "", Path(opts.tmp) / hashlib.sha1(f"{slot}:{key}".encode()).hexdigest()[:12], False, False
+        again = before.get("status") == "embedded"  # a top-up: its row is not rewritten
         try:
             if again:
                 if shutil.disk_usage(Path(opts.tmp)).free < MIN_FREE_BYTES:
@@ -606,14 +924,30 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
                 if state == "stopped":
                     out(f"{key}\tstopped inside the album: it is finished by the next run")
                     break
-                row = {**outcomes[(key, source)], "status": state}
+                row = {**before, "status": state}
                 n_embedded += ok
             else:
-                verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s"))
-                row.update({"class": verdict.cls, "duration_s": f"{verdict.duration_s:.0f}" if verdict.duration_s else "",
-                            "title": verdict.title, "uploader": verdict.uploader, "status": "skipped"})
-                note = verdict.reason
-                if verdict.cls == "full_album":
+                found = True
+                if slot == SEARCH and before.get("status") == "failed" and before.get("url") and not opts.retry_search:
+                    row.update({k: before[k] for k in ("url", "query", "score", "runner_up")})  # the video taken before: fetched again
+                elif slot == SEARCH:
+                    choice = search_album(fetcher, al, al.get("runtime_s"), opts.search_n,
+                                          lambda: sleep(min(opts.pause, 2.0) * random.uniform(1.0, 1.5)))
+                    shown, found = choice.pick or choice.refused, choice.pick is not None
+                    if shown:  # the video taken, or the one that came closest
+                        row.update({"url": shown.cand.url, "title": shown.cand.title, "uploader": shown.cand.uploader,
+                                    "duration_s": f"{shown.cand.duration_s:.0f}" if shown.cand.duration_s else "",
+                                    "query": shown.cand.query, "score": "" if shown.score is None else f"{shown.score:.1f}"})
+                    row["runner_up"] = "" if choice.runner_up is None else f"{choice.runner_up:.1f}"
+                    if not found:
+                        row["status"], note = "search_none", choice.why
+                url = row["url"]
+                verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s")) if found else None
+                if verdict is not None:
+                    row.update({"class": verdict.cls, "duration_s": f"{verdict.duration_s:.0f}" if verdict.duration_s else "",
+                                "title": verdict.title, "uploader": verdict.uploader, "status": "skipped"})
+                    note = verdict.reason
+                if verdict is not None and verdict.cls == "full_album":
                     row["status"] = "failed"
                     if shutil.disk_usage(Path(opts.tmp)).free < MIN_FREE_BYTES:
                         out("under 2 GB of free disk: stopping")
@@ -646,15 +980,16 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
         finally:
             shutil.rmtree(folder, ignore_errors=True)  # the audio is never kept
         if not again:
-            outcomes[(key, source)] = row
+            outcomes[(key, slot)] = {**row, "note": " ".join(note.split())[:400]}
             write_outcomes(opts.csv, outcomes)
         took = time.monotonic() - t
         if row["status"] == "embedded":
             seconds.append(took)
         done[row["status"] if again else row["class"] or row["status"]] += 1
-        out(f"[{time.strftime('%H:%M:%S')}] {i + 1}/{len(todo)}\t{key}\trank {al.get('rank', '')}\t{source}\t{row['status']}\t"
+        out(f"[{time.strftime('%H:%M:%S')}] {i + 1}/{len(todo)}\t{key}\trank {al.get('rank', '')}\t{slot}\t{row['status']}\t"
             f"{row['class'] or '-'}\t{row['duration_s'] or '-'} s\t{took:.0f} s\t{al.get('artist', '')} — {al.get('title', '')}"
-            f" || {row['title']} | {row['uploader']} || {note}")
+            f" || {row['title']} | {row['uploader']} || {note}"
+            + (f" || search: score {row['score'] or '-'}, runner-up {row['runner_up'] or '-'}, \"{row['query']}\"" if slot == SEARCH else ""))
         failures = failures + 1 if row["status"] == "failed" else 0
         unavailable = unavailable + 1 if gone or (row["class"] == "unavailable" and not again) else 0
         if blocked:
@@ -683,7 +1018,18 @@ def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="python -m rmr_audio.fulllength", description=__doc__.split("\n\n")[0])
     p.add_argument("--bandcamp", action="store_true",
                    help="Also fetch the Bandcamp page of an album without a usable YouTube link (off by default).")
-    p.add_argument("--sample", type=int, default=None, help="Only N albums with a YouTube link, spread over the ranks.")
+    p.add_argument("--search", action="store_true",
+                   help="Search YouTube for an album left without a usable link (none, or unavailable, a mismatch, a single track) "
+                        "and take the best video, or none.")
+    p.add_argument("--edge-cases", action="store_true",
+                   help="Work on the albums under-covered by their store previews (1 to 3 previews of 15 minutes or more, or of "
+                        "unknown runtime), not on the albums without audio: their full-length windows replace the previews.")
+    p.add_argument("--retry-failed", action="store_true", help="Only the rows whose last outcome is `failed`.")
+    p.add_argument("--retry-search", action="store_true",
+                   help="Search again for the albums an earlier search gave nothing usable for (with --search).")
+    p.add_argument("--search-results", type=int, default=SEARCH_N, help=f"Videos asked of each query (default {SEARCH_N}).")
+    p.add_argument("--sample", type=int, default=None,
+                   help="Only N albums spread over the ranks: of those with a YouTube link, or of all of them with --search.")
     p.add_argument("--seed", type=int, default=1, help="The seed of --sample (default 1).")
     p.add_argument("--limit", type=int, default=None, help="At most N albums with work to do.")
     p.add_argument("--keys", default="", help="Only these albums: comma-separated keys.")
@@ -717,7 +1063,9 @@ def main(argv: list[str] | None = None) -> int:
         pass
     return run(Options(a.catalog, a.keys_csv, a.matches, a.csv, a.out, a.tmp, a.models, tuple(k for k in a.keys.split(",") if k),
                        a.bandcamp, a.sample, a.seed, a.limit, a.pause, a.max_failures, a.fetch_python, a.torch_python,
-                       a.cache_dir, {"youtube": a.format} if a.format else None, a.dry_run, not a.no_refetch, a.check_baseline))
+                       a.cache_dir, {"youtube": a.format} if a.format else None, a.dry_run, not a.no_refetch, a.check_baseline,
+                       search=a.search, edge_cases=a.edge_cases, retry_failed=a.retry_failed, retry_search=a.retry_search,
+                       search_n=a.search_results))
 
 
 if __name__ == "__main__":

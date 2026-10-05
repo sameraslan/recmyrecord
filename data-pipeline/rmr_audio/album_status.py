@@ -45,8 +45,15 @@ Columns
                   from another store listing: the album has to be embedded again
   duplicate_listing       another catalog album is matched to the same store listing
   has_youtube_url the sheet has a YouTube link for the album
-  fulllength      the last YouTube row of fulllength.csv: embedded, unavailable, single_track, mismatch,
-                  failed (tried again by the next run) or not_tried
+  edge_case       `edge_case`, below: on 1 to 3 previews of a listing of 15 minutes or more, or of unknown
+                  runtime. These are the albums rmr_audio.fulllength --edge-cases fetches full-length audio for.
+  has_youtube_url the sheet has a YouTube link for the album
+  fulllength      the sheet's YouTube link, by its row of fulllength.csv: embedded, unavailable, single_track,
+                  mismatch, failed (tried again by the next run) or not_tried
+  youtube_search  the YouTube search for the album (rmr_audio.fulllength --search), by its row of
+                  fulllength.csv: found (a video was taken and embedded), none (nothing passed, or the
+                  video taken turned out not to be usable: final unless --retry-search), failed (the video
+                  taken could not be fetched: tried again by the next run) or not_tried
   state, next_step        `decide`, below: the one place the rules are
 """
 import argparse
@@ -71,23 +78,48 @@ LONG_S = 15 * 60  # a listing this long is an album (rmr_audio.match.LONG_S; tha
 STATES = ("done", "partial", "no_audio")
 NEXT_STEPS = ("none", "embed", "reembed", "youtube_link", "youtube_search", "youtube_full_length", "none_available")
 FULLLENGTH = ("embedded", "unavailable", "single_track", "mismatch", "failed", "not_tried")
+SEARCHED = ("found", "none", "failed", "not_tried")
 HEAD = ["key", "rank", "on_chart", "existing_or_new", "artist", "title", "year",
         "match_source", "listing_id", "matched_by", "ambiguous", "n_tracks", "previews_available", "runtime_s"]
 TAIL = ["audio_source", "under_covered", "few_long_tracks", "short_preview", "wrong_listing_pending",
-        "duplicate_listing", "has_youtube_url", "fulllength", "state", "next_step"]
+        "duplicate_listing", "edge_case", "has_youtube_url", "fulllength", "youtube_search", "state", "next_step"]
 
 
-def decide(used: dict[str, int], windowed: bool = False, previews_available: int = 0, under_covered: bool = False,
-           few_long_tracks: bool = False, wrong_listing_pending: bool = False, has_youtube_url: bool = False,
+def edge_case(previews: int | None, runtime_s: float | None) -> bool:
+    """Is an album on store previews under-covered by them, so that full-length audio should replace them
+    (rmr_audio.fulllength --edge-cases)? The one rule:
+
+      the listing has 1 to 3 previews, and it runs 15 minutes or more, or its runtime is not known.
+
+    That takes in the albums of one to three long tracks (Long Season: one track, one 30-second preview of
+    35 minutes) and the albums of which a store previews only a few tracks. It leaves out the singles and
+    short EPs, whose few previews already cover them (a listing under 15 minutes). The runtime is unknown
+    only for albums that were on the site before the 10k catalog (matched before runtimes were recorded):
+    they are taken in, and the fetch's own floor (a video under 15 minutes is not a full album) keeps the
+    short ones on their previews."""
+    return previews is not None and 0 < previews < CLIPS and (runtime_s is None or runtime_s >= LONG_S)
+
+
+def listing_facts(m: dict, listed: dict) -> tuple[int | None, int | None, int | None]:
+    """(tracks, previews, runtime in seconds) of an album's store listing: its row of matches.csv, falling
+    back on what the cache recorded for that listing (`listed`) where the row has nothing."""
+    n_tracks = _int(m["n_tracks"]) if m["n_tracks"] != "" else listed.get("n_tracks")
+    previews = _int(m["n_clips_available"]) if m["n_clips_available"] != "" else listed.get("n_previews")
+    runtime = _int(m["runtime_s"]) if m["runtime_s"] != "" else _int(listed.get("runtime_s"))
+    return n_tracks, previews, runtime
+
+
+def decide(used: dict[str, int], windowed: bool = False, previews_available: int = 0, edge_case: bool = False,
+           wrong_listing_pending: bool = False, has_youtube_url: bool = False,
            fulllength: str = "not_tried", youtube_search_tried: bool = False) -> tuple[str, str]:
     """(state, next_step) of one album. Every rule for the two columns is here.
 
     used               clips (or windows) in the album mean, per required model (REQUIRED)
     windowed           that audio is windows of full-length audio (local, youtube, bandcamp), not previews
     previews_available previews of the album's store listing
+    edge_case          the album is under-covered by its previews (edge_case, above)
     fulllength         the outcome of the sheet's YouTube link (FULLLENGTH)
-    youtube_search_tried  a YouTube search was run for the album and found nothing. Nothing records one
-                       yet (the search is approved, not built), so the command always passes False.
+    youtube_search_tried  a YouTube search was run for the album and gave nothing usable
 
     state
       done      every required model has 4 or more clips, or windows of full-length audio
@@ -102,10 +134,12 @@ def decide(used: dict[str, int], windowed: bool = False, previews_available: int
         none_available     no usable sheet link, and the search found nothing
         youtube_search     no usable sheet link (none, or unavailable, a single track, a mismatch)
       none                 the audio already is full-length
-      youtube_full_length  preview audio of an edge case: under-covered, or few long tracks
+      (preview audio of an edge case)
+        none_available     no usable sheet link, and the search found nothing: the album stays on its previews
+        youtube_full_length  the link or the search is still to try
       embed                partial and not an edge case: the listing has more previews than were embedded,
                            or one model is behind the other
-      none                 done
+      none                 done, or every preview of a short listing (1 to 3 previews, under 15 minutes) is embedded
     """
     n = [used.get(m, 0) for m in REQUIRED]
     if not any(n):
@@ -115,21 +149,23 @@ def decide(used: dict[str, int], windowed: bool = False, previews_available: int
     else:
         state = "partial"
 
+    link_open = has_youtube_url and fulllength in ("not_tried", "failed")
     if wrong_listing_pending:
         step = "reembed"
     elif state == "no_audio":
         if previews_available > 0:
             step = "embed"
-        elif has_youtube_url and fulllength in ("not_tried", "failed"):
+        elif link_open:
             step = "youtube_link"
         else:
             step = "none_available" if youtube_search_tried else "youtube_search"
     elif windowed and state == "done":
         step = "none"
-    elif (under_covered or few_long_tracks) and not windowed:
-        step = "youtube_full_length"
+    elif edge_case and not windowed:
+        step = "none_available" if youtube_search_tried and not link_open else "youtube_full_length"
     else:
-        step = "embed" if state == "partial" else "none"
+        covered = 0 < previews_available < CLIPS and min(n) >= previews_available  # a short listing, all of it embedded
+        step = "embed" if state == "partial" and not covered else "none"
     return state, step
 
 
@@ -198,19 +234,22 @@ def _read(path: Path) -> list[dict]:
         raise StoreError(f"missing {path}") from None
 
 
-def youtube_outcomes(path: Path) -> dict[str, str]:
-    """key -> the outcome of its last YouTube row in fulllength.csv. A missing file means nothing was tried."""
-    out = {}
+def youtube_outcomes(path: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """(key -> the outcome of the sheet's YouTube link, key -> the outcome of the YouTube search), from the
+    rows of fulllength.csv (a search's row has matched_by `search`). A missing file means nothing was tried."""
+    link, search = {}, {}
     for r in _read(path) if path.exists() else []:
         if r["source"] != "youtube":
             continue
-        if r["status"] == "embedded":
-            out[r["key"]] = "embedded"
+        if r.get("matched_by") == "search":
+            search[r["key"]] = {"embedded": "found", "search_none": "none", "skipped": "none"}.get(r["status"], "failed")
+        elif r["status"] == "embedded":
+            link[r["key"]] = "embedded"
         elif r["status"] == "skipped" and r["class"] in ("unavailable", "single_track", "mismatch"):
-            out[r["key"]] = r["class"]
+            link[r["key"]] = r["class"]
         else:  # failed or blocked: the next run tries again
-            out[r["key"]] = "failed"
-    return out
+            link[r["key"]] = "failed"
+    return link, search
 
 
 def build(cache_db: Path = DEFAULT_CACHE_DB, catalog: Path = DEFAULT_CATALOG, audio_dir: Path = DEFAULT_AUDIO) -> tuple[list[str], list[dict]]:
@@ -223,7 +262,7 @@ def build(cache_db: Path = DEFAULT_CACHE_DB, catalog: Path = DEFAULT_CATALOG, au
     forced = {k: (e["source"], e["album_id"]) for k, e in load_match_overrides(audio_dir / "match_overrides.json").items()
               if not e.get("skip")}
     shared = {k for keys in duplicate_listings(matches).values() for k in keys}
-    youtube = youtube_outcomes(audio_dir / "fulllength.csv")
+    youtube, searched = youtube_outcomes(audio_dir / "fulllength.csv")
     models = list(REQUIRED) + sorted(set(cache["ok"]) - set(REQUIRED))
     columns = HEAD + [f"{m}_{c}" for m in models for c in ("ok", "source", "used")] + TAIL
 
@@ -234,9 +273,7 @@ def build(cache_db: Path = DEFAULT_CACHE_DB, catalog: Path = DEFAULT_CATALOG, au
                                              "n_clips_available", "runtime_s", "short_preview"), "")
         named = (m["source"], m["source_album_id"]) if m["source"] else None
         listed = cache["listings"].get((key, *named), {}) if named else {}
-        previews = _int(m["n_clips_available"]) if m["n_clips_available"] != "" else listed.get("n_previews")
-        n_tracks = _int(m["n_tracks"]) if m["n_tracks"] != "" else listed.get("n_tracks")
-        runtime = _int(m["runtime_s"]) if m["runtime_s"] != "" else _int(listed.get("runtime_s"))
+        n_tracks, previews, runtime = listing_facts(m, listed)
 
         row = {"key": key, "rank": al["rank"], "on_chart": al["on_chart"],
                "existing_or_new": "existing" if key in existing else "new", "artist": al["artist"], "title": al["title"],
@@ -259,12 +296,14 @@ def build(cache_db: Path = DEFAULT_CACHE_DB, catalog: Path = DEFAULT_CATALOG, au
         short = True if m["short_preview"] == "1" or any(a for a, _ in flagged) else (
             False if m["short_preview"] == "0" or any(b for _, b in flagged) else None)
         wrong = key in forced and any(l[0] not in WINDOW_SOURCES and l != forced[key] for l in mine)
-        outcome = youtube.get(key, "not_tried")
-        state, step = decide({mo: used[mo] for mo in REQUIRED}, windowed, previews or 0, under, bool(few), wrong,
-                             bool(al["youtube_url"]), outcome)
+        outcome, search = youtube.get(key, "not_tried"), searched.get(key, "not_tried")
+        edge = bool(named) and edge_case(previews, runtime)
+        state, step = decide({mo: used[mo] for mo in REQUIRED}, windowed, previews or 0, edge, wrong,
+                             bool(al["youtube_url"]), outcome, search == "none")
         row.update({"under_covered": _flag(under), "few_long_tracks": _flag(few), "short_preview": _flag(short),
-                    "wrong_listing_pending": _flag(wrong), "duplicate_listing": _flag(key in shared),
-                    "has_youtube_url": _flag(al["youtube_url"]), "fulllength": outcome, "state": state, "next_step": step})
+                    "wrong_listing_pending": _flag(wrong), "duplicate_listing": _flag(key in shared), "edge_case": _flag(edge),
+                    "has_youtube_url": _flag(al["youtube_url"]), "fulllength": outcome, "youtube_search": search,
+                    "state": state, "next_step": step})
         rows.append({c: str(row[c]) for c in columns})
     return columns, rows
 
@@ -291,12 +330,13 @@ def summary(columns: list[str], rows: list[dict]) -> str:
     lines += _table("next_step", rows, "next_step", NEXT_STEPS)
     lines += _table("audio_source", by_store, "audio_source", sources)
     lines += _table("fulllength (the sheet's YouTube link)", rows, "fulllength", FULLLENGTH)
+    lines += _table("youtube_search", rows, "youtube_search", SEARCHED)
     lines += ["| albums | existing | new | all |", "|---|---:|---:|---:|"]
     for title, test in ([(f"{m}: an ok clip", lambda r, m=m: r[f"{m}_ok"] != "0") for m in models] +
                         [(f"{m}: {CLIPS} clips or full-length windows",
                           lambda r, m=m: int(r[f"{m}_used"]) >= CLIPS or r[f"{m}_source"] in WINDOW_SOURCES) for m in models] +
                         [(f, lambda r, f=f: r[f] == "1") for f in ("ambiguous", "under_covered", "few_long_tracks",
-                         "short_preview", "wrong_listing_pending", "duplicate_listing", "has_youtube_url")]):
+                         "short_preview", "wrong_listing_pending", "duplicate_listing", "edge_case", "has_youtube_url")]):
         n = Counter(r["existing_or_new"] for r in rows if test(r))
         lines.append(f"| {title} | {n['existing']} | {n['new']} | {n['existing'] + n['new']} |")
     return "\n".join(lines) + "\n"

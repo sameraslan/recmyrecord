@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from rmr_audio import album_status
-from rmr_audio.album_status import NEXT_STEPS, STATES, build, decide, main
+from rmr_audio.album_status import NEXT_STEPS, STATES, build, decide, edge_case, main
 from rmr_audio.onepass_cache import MODELS, OnePassCache
 from rmr_pipeline.audio import DEFAULT_CATALOG, catalog_keys
 from rmr_pipeline.audio_store import DEFAULT_AUDIO, MATCH_FIELDS, write_matches
@@ -23,17 +23,30 @@ NONE = {"effnet": 0, "clap": 0}
     # full-length windows count as done whatever their number, and need nothing more
     (dict(used={"effnet": 5, "clap": 5}, windowed=True), ("done", "none")),
     (dict(used={"effnet": 2, "clap": 2}, windowed=True, has_youtube_url=True, fulllength="embedded"), ("done", "none")),
-    # 1 to 3 clips of a listing with 1 to 3 previews: an edge case, full-length audio
-    (dict(used={"effnet": 3, "clap": 3}, previews_available=3, under_covered=True), ("partial", "youtube_full_length")),
-    (dict(used={"effnet": 1, "clap": 1}, previews_available=1, under_covered=True, few_long_tracks=True),
-     ("partial", "youtube_full_length")),
+    # 1 to 3 clips of a listing with 1 to 3 previews that runs 15 minutes or more: an edge case, full-length audio
+    (dict(used={"effnet": 3, "clap": 3}, previews_available=3, edge_case=True), ("partial", "youtube_full_length")),
+    (dict(used={"effnet": 1, "clap": 1}, previews_available=1, edge_case=True, has_youtube_url=True), ("partial", "youtube_full_length")),
+    (dict(used={"effnet": 1, "clap": 1}, previews_available=1, edge_case=True, has_youtube_url=True, fulllength="single_track"),
+     ("partial", "youtube_full_length")),  # its link is not the album: the search is still to try
+    (dict(used={"effnet": 1, "clap": 1}, previews_available=1, edge_case=True, has_youtube_url=True, fulllength="failed",
+          youtube_search_tried=True), ("partial", "youtube_full_length")),  # the link is tried again first
+    # the link and the search gave nothing: it stays on its previews
+    (dict(used={"effnet": 1, "clap": 1}, previews_available=1, edge_case=True, has_youtube_url=True, fulllength="single_track",
+          youtube_search_tried=True), ("partial", "none_available")),
+    (dict(used={"effnet": 2, "clap": 2}, previews_available=2, edge_case=True, youtube_search_tried=True), ("partial", "none_available")),
+    # once its windows are embedded the step is cleared
+    (dict(used={"effnet": 7, "clap": 7}, windowed=True, previews_available=1, edge_case=True, has_youtube_url=True,
+          fulllength="embedded"), ("done", "none")),
+    # a single or a short EP whose few previews are all embedded: nothing to do
+    (dict(used={"effnet": 2, "clap": 2}, previews_available=2), ("partial", "none")),
+    (dict(used={"effnet": 1, "clap": 1}, previews_available=2), ("partial", "embed")),  # one of its two is missing
     # partial for another reason: a clip failed, or one model is behind
     (dict(used={"effnet": 4, "clap": 3}, previews_available=15), ("partial", "embed")),
     (dict(used={"effnet": 4, "clap": 0}, previews_available=26), ("partial", "embed")),
     (dict(used={"effnet": 6, "clap": 0}, windowed=True), ("partial", "embed")),
     # wrong listing pending comes first, whatever the clips
     (dict(used=BOTH4, previews_available=12, wrong_listing_pending=True), ("done", "reembed")),
-    (dict(used={"effnet": 2, "clap": 2}, previews_available=2, under_covered=True, wrong_listing_pending=True),
+    (dict(used={"effnet": 2, "clap": 2}, previews_available=2, edge_case=True, wrong_listing_pending=True),
      ("partial", "reembed")),
     # no audio
     (dict(used=NONE, previews_available=10), ("no_audio", "embed")),
@@ -51,6 +64,12 @@ def test_decide(kwargs, expected):
     assert expected[0] in STATES and expected[1] in NEXT_STEPS
 
 
+def test_the_edge_case_rule_is_the_one_the_fetch_uses():
+    assert edge_case(1, 2100) and edge_case(3, None) and not edge_case(3, 600) and not edge_case(4, 2100) and not edge_case(0, None)
+    fulllength = pytest.importorskip("rmr_audio.fulllength", reason="the fetch needs the audio environment")
+    assert fulllength.edge_case is edge_case
+
+
 def _put(cache, key, source, album_id, clips, models=("effnet", "clap"), track_s=None):
     """clips: (rank, status) per clip of one listing; a window listing gets a `<file>@<start>` track id."""
     for rank, status in clips:
@@ -63,7 +82,7 @@ def _put(cache, key, source, album_id, clips, models=("effnet", "clap"), track_s
 
 
 CATALOG = ["A_done", "A_failed_clip", "A_two", "A_long", "A_none_link", "A_none", "A_tube", "A_wrong", "A_dup",
-           "A_clap_behind", "A_dead_link", "A_pending", "A_skip"]
+           "A_clap_behind", "A_dead_link", "A_pending", "A_skip", "A_single", "A_searched", "A_found", "A_stays"]
 
 
 @pytest.fixture
@@ -82,6 +101,10 @@ def world(tmp_path):
     _put(cache, "A_clap_behind", "deezer", "d10", ok(4), models=("effnet",))
     _put(cache, "A_clap_behind", "deezer", "d10", ok(3), models=("clap", "clap_mp3"))
     _put(cache, "A_done", "deezer", "d1", ok(4), models=("clap_mp3",))
+    _put(cache, "A_single", "deezer", "d14", ok(2))
+    _put(cache, "A_found", "youtube", "vid16", ok(8))
+    cache.set_listing("A_found", "youtube", "vid16", n_tracks=1, n_previews=8, runtime_s=2400.0, n_windows=8)
+    _put(cache, "A_stays", "deezer", "d17", ok(1))
     cache.close()
 
     with open(tmp_path / "albums.csv", "w", newline="", encoding="utf-8") as f:
@@ -103,7 +126,10 @@ def world(tmp_path):
         row("A_clap_behind", "deezer", "d10", n_tracks="10", n_clips_available="10"),
         row("A_dead_link"),
         row("A_pending", "deezer", "d12", n_tracks="10", n_clips_available="10", matched_by="override"),
-        row("A_skip")])
+        row("A_skip"),
+        row("A_single", "deezer", "d14", n_tracks="2", n_clips_available="2", runtime_s="420"),  # a single: its two previews cover it
+        row("A_searched"), row("A_found"),
+        row("A_stays", "deezer", "d17", n_tracks="1", n_clips_available="1", runtime_s="2100")])
     with open(audio / "keys.csv", "w", newline="", encoding="utf-8") as f:
         f.write("rym_id,legacy_uri,matched_by,doubt\nA_two,spotify:album:2,spotify_id,\nA_wrong,spotify:album:8,spotify_id,\n")
     (audio / "match_overrides.json").write_text(json.dumps({
@@ -113,9 +139,13 @@ def world(tmp_path):
         "A_skip": {"skip": True, "note": "covers only"}}), encoding="utf-8")
     with open(audio / "fulllength.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
-        w.writerow(["key", "source", "url", "class", "duration_s", "title", "uploader", "n_windows", "status"])
-        w.writerow(["A_tube", "youtube", "https://youtu.be/vid7", "full_album", 1500, "t", "u", 5, "embedded"])
-        w.writerow(["A_dead_link", "youtube", "https://youtu.be/x", "unavailable", "", "", "", "", "skipped"])
+        w.writerow(["key", "source", "url", "class", "duration_s", "title", "uploader", "n_windows", "status",
+                    "matched_by", "reason", "query", "score", "runner_up", "note"])
+        w.writerow(["A_tube", "youtube", "https://youtu.be/vid7", "full_album", 1500, "t", "u", 5, "embedded", "link", "no_audio", "", "", "", ""])
+        w.writerow(["A_dead_link", "youtube", "https://youtu.be/x", "unavailable", "", "", "", "", "skipped", "link", "no_audio", "", "", "", ""])
+        w.writerow(["A_searched", "youtube", "", "", "", "", "", "", "search_none", "search", "no_audio", "", "", "", "the search listed no video"])
+        w.writerow(["A_found", "youtube", "https://youtu.be/vid16", "full_album", 2400, "t", "u", 8, "embedded", "search", "no_audio", "q", "93.0", "", ""])
+        w.writerow(["A_stays", "youtube", "https://youtu.be/y", "", 600, "t", "u", "", "search_none", "search", "edge_case", "q", "", "", "live"])
     return tmp_path
 
 
@@ -151,6 +181,10 @@ def test_states_and_next_steps(world):
         "A_dead_link": ("no_audio", "youtube_search"),
         "A_pending": ("no_audio", "embed"),
         "A_skip": ("no_audio", "youtube_search"),
+        "A_single": ("partial", "none"),  # under-covered, not an edge case: 7 minutes
+        "A_searched": ("no_audio", "none_available"),  # the search found nothing
+        "A_found": ("done", "none"),  # the search found its video
+        "A_stays": ("partial", "none_available"),  # an edge case the search found nothing for: on its preview
     }
 
 
@@ -161,7 +195,12 @@ def test_columns(world):
     assert pick("A_failed_clip", "clap_ok", "clap_used", "audio_source", "matched_by") == ("4", "4", "itunes:jp", "apple_id")
     assert pick("A_tube", "effnet_ok", "effnet_used", "audio_source", "fulllength", "has_youtube_url") == ("8", "5", "youtube", "embedded", "1")
     assert pick("A_none", "effnet_ok", "effnet_source", "audio_source", "fulllength", "has_youtube_url") == ("0", "none", "none", "not_tried", "0")
-    assert pick("A_dead_link", "fulllength") == ("unavailable",)
+    assert pick("A_dead_link", "fulllength", "youtube_search") == ("unavailable", "not_tried")
+    assert pick("A_searched", "fulllength", "youtube_search", "audio_source") == ("not_tried", "none", "none")
+    assert pick("A_found", "fulllength", "youtube_search", "audio_source", "clap_used") == ("not_tried", "found", "youtube", "8")
+    assert pick("A_stays", "edge_case", "youtube_search", "audio_source") == ("1", "none", "deezer")
+    assert pick("A_two", "edge_case") == ("1",) and pick("A_long", "edge_case") == ("1",)  # runtime unknown; 35 minutes
+    assert pick("A_single", "under_covered", "edge_case") == ("1", "0") and pick("A_done", "edge_case") == ("0",)
     assert pick("A_clap_behind", "effnet_used", "clap_used", "clap_mp3_used") == ("4", "3", "3")
     # flags
     assert pick("A_two", "under_covered", "few_long_tracks", "short_preview") == ("1", "", "")  # runtime unknown
@@ -198,7 +237,7 @@ def test_writes_the_same_bytes_again(world, capsys):
     table, counts = (world / "audio" / "album_status.csv"), (world / "audio" / "album_status.md")
     first = table.read_bytes(), counts.read_bytes()
     out = capsys.readouterr().out
-    assert "| done | 1 | 4 | 5 |" in out and "| youtube_search | 0 | 3 | 3 |" in out
+    assert "| done | 1 | 5 | 6 |" in out and "| youtube_search | 0 | 3 | 3 |" in out and "| none_available | 0 | 2 | 2 |" in out
     assert out.count("written") >= 2
     assert main(args) == 0
     assert (table.read_bytes(), counts.read_bytes()) == first
