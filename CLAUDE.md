@@ -6,6 +6,8 @@ Album recommendations from RateYourMusic's top chart: Euclidean nearest neighbou
 
 Work is tracked as GitHub issues on the `recmyrecord` GitHub Project board (Backlog, Todo, In progress, Needs answer, Final review, Done). The board is the only task list; do not keep task lists or statuses in this file or in memory. To create, start, move or list tickets, use the `board` skill (`.claude/skills/board/SKILL.md`). The repository is public, so nothing secret goes in an issue.
 
+When you start a piece of work, pause on a question for Samer, or open its final PR, find its ticket (or create one) and move it to the matching column, even if the request did not mention a ticket.
+
 ## Experiments
 
 The full cycle (starting, running, writing up, merging, referencing) is in `experiments/README.md`. Read it before starting or merging an experiment. The rules in short:
