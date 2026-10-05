@@ -1,0 +1,1046 @@
+{
+ "generated": "2026-10-04",
+ "note": "Stored vectors and RYM-catalog proxies. Nobody listened. The target shares are computed for the pool of each table.",
+ "pick": {
+  "seed": 0,
+  "drawn_from": "the catalog's new albums whose CLAP mean is from iTunes clips, one from each of 250 equal slices of their rank order",
+  "population": 2730,
+  "picked": 250,
+  "rank_quartiles_population": [
+   4263.0,
+   6744.0,
+   8509.0
+  ],
+  "rank_quartiles_picked": [
+   4278.0,
+   6744.0,
+   8504.0
+  ],
+  "genre_family_population": {
+   "rock": 547,
+   "metal": 376,
+   "jazz": 343,
+   "folk & country": 267,
+   "classical": 237,
+   "pop": 168,
+   "latin & world": 156,
+   "punk": 127,
+   "soundtrack": 119,
+   "soul & funk": 85,
+   "hip hop": 76,
+   "electronic": 62,
+   "ambient": 54,
+   "reggae": 46,
+   "blues": 40,
+   "experimental": 23,
+   "spoken & comedy": 4
+  },
+  "genre_family_picked": {
+   "rock": 46,
+   "metal": 42,
+   "folk & country": 27,
+   "jazz": 26,
+   "classical": 25,
+   "soundtrack": 15,
+   "latin & world": 14,
+   "pop": 13,
+   "punk": 13,
+   "hip hop": 6,
+   "soul & funk": 6,
+   "electronic": 6,
+   "reggae": 5,
+   "ambient": 4,
+   "experimental": 1,
+   "blues": 1
+  },
+  "decade_picked": {
+   "-1": 1,
+   "1950": 2,
+   "1960": 12,
+   "1970": 42,
+   "1980": 34,
+   "1990": 51,
+   "2000": 58,
+   "2010": 35,
+   "2020": 15
+  },
+  "storefront_picked": {
+   "itunes:us": 132,
+   "itunes:ca": 26,
+   "itunes:ru": 17,
+   "itunes:gb": 15,
+   "itunes:br": 9,
+   "itunes:se": 9,
+   "itunes:es": 6,
+   "itunes:au": 4,
+   "itunes:jp": 3,
+   "itunes:hu": 3,
+   "itunes:ar": 3,
+   "itunes:pl": 3,
+   "itunes:sa": 2,
+   "itunes:nz": 2,
+   "itunes:de": 2,
+   "itunes:mx": 2,
+   "itunes:th": 1,
+   "itunes:cl": 1,
+   "itunes:it": 1,
+   "itunes:my": 1,
+   "itunes:ph": 1,
+   "itunes:pa": 1,
+   "itunes:dk": 1,
+   "itunes:tr": 1,
+   "itunes:fr": 1,
+   "itunes:gr": 1,
+   "itunes:ec": 1,
+   "itunes:no": 1
+  },
+  "clips_picked": {
+   "1": 1,
+   "2": 4,
+   "3": 5,
+   "4": 240
+  },
+  "youtube_population": 80,
+  "youtube_picked": 20
+ },
+ "sanity": {
+  "generated": "2026-10-04",
+  "deezer_copy": {
+   "albums": [
+    "Album33001",
+    "Album4667842",
+    "Album8182"
+   ],
+   "exit": 0,
+   "clips": 12,
+   "same_status": 12,
+   "same_embedding_bytes": 12,
+   "same_seconds": 12,
+   "origin": {
+    "copy:clap": 12
+   },
+   "embedding_bytes": [
+    2048
+   ]
+  },
+  "itunes_vs_experiment": {
+   "clips": 10,
+   "albums": 4,
+   "not_compared": [],
+   "cosine_clap_mp3_vs_mp3st": {
+    "min": 1.0,
+    "median": 1.0
+   },
+   "cosine_clap_vs_base": {
+    "min": 1.0,
+    "median": 1.0
+   },
+   "rows": [
+    {
+     "key": "Album35041",
+     "unit": 2,
+     "source": "itunes:us",
+     "track_id": "79023439",
+     "bytes": 1015229,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.9049,
+     "experiment_cosine_mp3st_vs_base": 0.9049
+    },
+    {
+     "key": "Album35041",
+     "unit": 6,
+     "source": "itunes:us",
+     "track_id": "79023495",
+     "bytes": 1013651,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.8637,
+     "experiment_cosine_mp3st_vs_base": 0.8637
+    },
+    {
+     "key": "Album35041",
+     "unit": 10,
+     "source": "itunes:us",
+     "track_id": "79023509",
+     "bytes": 1067263,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.842,
+     "experiment_cosine_mp3st_vs_base": 0.842
+    },
+    {
+     "key": "Album185430",
+     "unit": 1,
+     "source": "itunes:ar",
+     "track_id": "1722339997",
+     "bytes": 1005182,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.8917,
+     "experiment_cosine_mp3st_vs_base": 0.8917
+    },
+    {
+     "key": "Album185430",
+     "unit": 4,
+     "source": "itunes:ar",
+     "track_id": "1722340000",
+     "bytes": 977930,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.9374,
+     "experiment_cosine_mp3st_vs_base": 0.9374
+    },
+    {
+     "key": "Album185430",
+     "unit": 7,
+     "source": "itunes:ar",
+     "track_id": "1722340004",
+     "bytes": 995620,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.7562,
+     "experiment_cosine_mp3st_vs_base": 0.7562
+    },
+    {
+     "key": "Album188617",
+     "unit": 3,
+     "source": "itunes:us",
+     "track_id": "1358511393",
+     "bytes": 1010687,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.9753,
+     "experiment_cosine_mp3st_vs_base": 0.9753
+    },
+    {
+     "key": "Album188617",
+     "unit": 11,
+     "source": "itunes:us",
+     "track_id": "1358512311",
+     "bytes": 1017293,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.8768,
+     "experiment_cosine_mp3st_vs_base": 0.8768
+    },
+    {
+     "key": "Album188617",
+     "unit": 19,
+     "source": "itunes:us",
+     "track_id": "1358512326",
+     "bytes": 1055508,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.9418,
+     "experiment_cosine_mp3st_vs_base": 0.9418
+    },
+    {
+     "key": "Album28235",
+     "unit": 4,
+     "source": "itunes:us",
+     "track_id": "1079243377",
+     "bytes": 1060081,
+     "status": {
+      "clap": "ok",
+      "clap_mp3": "ok"
+     },
+     "cosine_clap_vs_base": 1.0,
+     "cosine_clap_mp3_vs_mp3st": 1.0,
+     "max_abs_clap_mp3_vs_mp3st": 0.0,
+     "cosine_clap_mp3_vs_its_own_clap": 0.9026,
+     "experiment_cosine_mp3st_vs_base": 0.9026
+    }
+   ]
+  }
+ },
+ "run": {
+  "logs": [
+   "mp3_variant_albums.log",
+   "mp3_variant_youtube.log"
+  ],
+  "check": {
+   "itunes": {
+    "clips": 984,
+    "median": 1.0,
+    "p05": 1.0,
+    "p01": 1.0,
+    "min": 1.0,
+    "under_0.999": 0,
+    "under_0.99": 0,
+    "under_0.9": 0
+   },
+   "youtube": {
+    "clips": 152,
+    "median": 1.0,
+    "p05": 1.0,
+    "p01": 1.0,
+    "min": 1.0,
+    "under_0.999": 0,
+    "under_0.99": 0,
+    "under_0.9": 0
+   }
+  },
+  "lines": [
+   "4 clips per album for clap_mp3. 250 albums: 0 complete, 250 to fetch, 0 from local files",
+   "finished: 984 clips of 250 albums in 1615 s = 1.64 s per clip",
+   "peak memory: clap 663 MB + MPS 1219 MB, parent 119 MB; together at most 2000 MB",
+   "model seconds per clip: clap_mp3 1.09, clap 0.42",
+   "following clap: 984 of its clips asked for, 0 of them gone from the store's listing (recorded as no_preview); 0 other tracks tried in their place, 0 ok (those albums' clap_mp3 mean is not over the clap mean's clips)",
+   "baseline check: 984 clips embedded again for clap; cosine with the stored vector: median 1.00000, 5th percentile 1.00000, lowest 1.00000; 0 under 0.99",
+   "782 new albums without a preview: 567 with a YouTube link, 62 with Bandcamp only, 153 with neither. 20 to do now ({'youtube': 20}), 0 already done; 20 of those to do are embedded albums fetched again for clap_mp3 alone",
+   "[23:42:12] 1/20\tAlbum13394\trank 406\tyoutube\ttopped_up\tfull_album\t4193 s\t35 s\t\u30dc\u30a2\u30c0\u30e0\u30b9 [Boredoms] \u2014 \u30f4\u30a3\u30b8\u30e7\u30f3 \u30af\u30ea\u30a8\u30a4\u30b7\u30e7\u30f3 \u30cb\u30e5\u30fc\u30b5\u30f3 || Boredoms - Vision Creation Newsun | ErrorIsProgress || 1 file(s), 59.9 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:43:06] 2/20\tAlbum2424365\trank 571\tyoutube\ttopped_up\tfull_album\t9582 s\t48 s\tNatural Snow Buildings \u2014 Shadow Kingdom || Natural Snow Buildings - Shadow Kingdom (2009) [Full Album] | IDreamOfNaturalSnow || 1 file(s), 156.7 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:43:56] 3/20\tAlbum15712476\trank 713\tyoutube\ttopped_up\tfull_album\t7342 s\t43 s\tCindy Lee \u2014 Diamond Jubilee || Cindy Lee - Diamond Jubilee (2024) Full Album HQ | REALISTIK || 1 file(s), 113.1 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:44:39] 4/20\tAlbum286654\trank 1096\tyoutube\ttopped_up\tfull_album\t6888 s\t36 s\tMt. Eerie \u2014 Live in Copenhagen || Mount Eerie - Live in Copenhagen (Full Album) (2004) | Rare Music || 1 file(s), 108.4 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:44:49] 5/20\tAlbum7576907\trank 1131\tyoutube\tfailed\t-\t- s\t3 s\t\u1283\u12ed\u1209 \u1218\u122d\u130a\u12eb & \u12cb\u120a\u12eb\u1235 \u1263\u1295\u12f5 \u2014 \u12d8\u122b\u134c ||  |  || ERROR: unable to download video data: HTTP Error 403: Forbidden",
+   "[23:45:22] 6/20\tAlbum4319730\trank 1284\tyoutube\ttopped_up\tfull_album\t3551 s\t25 s\tMaria & The Mirrors \u2014 Vision Quest || MARIA & THE MIRRORS 'Vision Quest' CD 2012 (Compilation - Japanese Release) | blackoperations || 1 file(s), 55.1 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:45:53] 7/20\tAlbum15237\trank 1320\tyoutube\ttopped_up\tfull_album\t3000 s\t26 s\tMALICE MIZER \u2014 Merveilles || Malice Mizer -merveilles  full album | malice mizer jrock music || 1 file(s), 46.4 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:46:49] 8/20\tAlbum2365936\trank 1356\tyoutube\ttopped_up\tfull_album\t10684 s\t50 s\tRoland Kayn \u2014 Infra || Roland Kayn - Infra [full album] | Exhaustive Lore || 1 file(s), 160.0 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:47:20] 9/20\tAlbum215491\trank 1499\tyoutube\ttopped_up\tfull_album\t3257 s\t25 s\tMyslovitz \u2014 Korova Milky Bar || Myslovitz - Korova Milky Bar (2002) FULL ALBUM | Polish music || 1 file(s), 51.9 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:48:33] 10/20\tAlbum592521\trank 1519\tyoutube\ttopped_up\tfull_album\t17185 s\t67 s\tRoland Kayn \u2014 Tektra || Roland Kayn - Tektra (Full Album) | io || 1 file(s), 266.0 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:49:07] 11/20\tAlbum26421\trank 1625\tyoutube\ttopped_up\tfull_album\t3375 s\t27 s\tTalk Talk \u2014 London 1986 || London 1986 (full live album) - Talk Talk | Blue Bamboo Music || 1 file(s), 52.5 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:49:40] 12/20\tAlbum1530403\trank 1788\tyoutube\ttopped_up\tfull_album\t3688 s\t26 s\tTommy Wright III \u2014 Ashes 2 Ashes, Dust 2 Dust || Tommy Wright III - Ashes 2 Ashes, Dust 2 Dust (1994) | Watkins Brown || 1 file(s), 61.4 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:50:11] 13/20\tAlbum238689\trank 1834\tyoutube\ttopped_up\tfull_album\t4008 s\t26 s\tChris Morris \u2014 Blue Jam || Chris Morris - Blue Jam (2000) [Sketch Comedy, Electronic] | wockstantinople || 1 file(s), 60.0 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:50:51] 14/20\tAlbum4029336\trank 1890\tyoutube\ttopped_up\tfull_album\t4943 s\t33 s\tTommy Wright, III \u2014 Runnin - n - Gunnin || Tommy Wright III - Runnin-N-Gunnin [FULL ALBUM, 1995] | Underworld Library || 1 file(s), 79.9 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:51:17] 15/20\tAlbum2855083\trank 1978\tyoutube\ttopped_up\tfull_album\t1787 s\t19 s\tMurmu\u00fcre \u2014 Murmu\u00fcre || Murmu\u00fcre - Murmu\u00fcre [2010][Full Album] | Speaking the Truth || 1 file(s), 27.5 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:51:42] 16/20\tAlbum5606317\trank 3106\tyoutube\ttopped_up\tfull_album\t1717 s\t19 s\tBucketheadland \u2014 Hold Me Forever (In Memory of My Mom Nancy York Carroll) || Buckethead Pike 65 - Hold Me Forever (In memory of my mom Nancy York Carroll) | Zoran Lozanoski || 1 file(s), 26.8 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:52:12] 17/20\tAlbum577767\trank 3649\tyoutube\ttopped_up\tfull_album\t2924 s\t23 s\tSusumu Hirasawa \u2014 Switched-On Lotus || [\u5e73\u6ca2\u9032] Susumu Hirasawa - Switched-On Lotus [2004] | TwizzyBroke || 1 file(s), 44.2 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:52:40] 18/20\tAlbum823914\trank 6264\tyoutube\ttopped_up\tfull_album\t2851 s\t22 s\tAlfonia Tims and His Flying Tigers \u2014 Future Funk / Uncut! || Alfonia Tims and His Flying Tigers  - Future Funk/Uncut! (1982, Cassette) | jazzvocate || 1 file(s), 43.3 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:53:09] 19/20\tAlbum7936335\trank 7083\tyoutube\ttopped_up\tfull_album\t2101 s\t23 s\tMobbyn \u2014 Mobbyn || Mobbyn - Mobbyn [ca\u0142a p\u0142yta] [2017] | MrBoss2432 || 1 file(s), 32.8 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "[23:53:56] 20/20\tAlbum15517924\trank 9355\tyoutube\ttopped_up\tfull_album\t6769 s\t40 s\tPatricia Taxxon \u2014 Techdog 5 || TECHDOG 5 | Patricia Taxxon || 1 file(s), 115.1 MB, 8 windows ok for clap_mp3; baseline check: cosine with the stored clap vector median 1.0000, lowest 1.0000 over 8 windows",
+   "finished: 20 albums in 739 s: {'topped_up': 19, 'failed': 1}; 152 windows embedded for clap_mp3",
+   "peak memory: clap 567 MB + MPS 1219 MB, parent 106 MB; together at most 1891 MB"
+  ]
+ },
+ "cache": {
+  "clap_mp3_rows": {
+   "deezer / ok / copy:clap": 12,
+   "itunes / ok / onepass": 984,
+   "youtube / ok / onepass": 152
+  },
+  "clap_rows": {
+   "deezer / no_preview": 8,
+   "deezer / ok": 26123,
+   "deezer / too_short": 2,
+   "itunes / ok": 11644,
+   "itunes / too_short": 5,
+   "youtube / ok": 638
+  },
+  "gone": [
+   0,
+   0
+  ],
+  "clap_mp3_ok_without_a_clap_row": 0
+ },
+ "channels": {
+  "experiment_previews": {
+   "deezer: 2 channel(s)": 349,
+   "itunes: 2 channel(s)": 349
+  },
+  "experiment_youtube_files": {
+   "2": 25
+  }
+ },
+ "albums": {
+  "picked": 250,
+  "with_a_clap_mp3_vector": 250,
+  "of_them_over_the_same_clips_as_clap": 250,
+  "left_out": [],
+  "other_clips": [],
+  "clips_behind_the_clap_mp3_mean": {
+   "1": 1,
+   "2": 4,
+   "3": 5,
+   "4": 240
+  }
+ },
+ "pool": {
+  "albums": 6871,
+  "deezer": 6621,
+  "itunes": 250,
+  "share_itunes": 0.0364,
+  "new_deezer": 2869,
+  "existing_deezer": 3752
+ },
+ "catalog": {
+  "baseline (clap as stored)": {
+   "neighbours_flagged": {
+    "the picked iTunes albums": {
+     "seeds": 250,
+     "seeds_with_genre": 237,
+     "share_of_neighbours": 0.4612,
+     "same_genre_share": 0.0574,
+     "seeds_with_genre_decade_cell": 219,
+     "same_genre_decade_share": 0.0617,
+     "ci95": [
+      0.4276,
+      0.4932
+     ]
+    },
+    "Deezer seeds": {
+     "seeds": 6621,
+     "seeds_with_genre": 6063,
+     "share_of_neighbours": 0.0044,
+     "same_genre_share": 0.0368,
+     "seeds_with_genre_decade_cell": 5674,
+     "same_genre_decade_share": 0.0362,
+     "ci95": null
+    },
+    "new Deezer seeds": {
+     "seeds": 2869,
+     "seeds_with_genre": 2758,
+     "share_of_neighbours": 0.0045,
+     "same_genre_share": 0.0363,
+     "seeds_with_genre_decade_cell": 2539,
+     "same_genre_decade_share": 0.0379,
+     "ci95": null
+    },
+    "existing Deezer seeds": {
+     "seeds": 3752,
+     "seeds_with_genre": 3305,
+     "share_of_neighbours": 0.0044,
+     "same_genre_share": 0.0373,
+     "seeds_with_genre_decade_cell": 3135,
+     "same_genre_decade_share": 0.0348,
+     "ci95": null
+    }
+   },
+   "n10_flagged": {
+    "albums": 250,
+    "mean": 5.78,
+    "median": 5.0,
+    "in_no_list": 10,
+    "max": 19
+   },
+   "n10_others_mean": 10.16,
+   "flagged_seeds": {
+    "genre_primary": 0.1241,
+    "genre_family": 0.5192,
+    "desc_jaccard": 0.1739
+   },
+   "other_seeds": {
+    "genre_primary": 0.1851,
+    "genre_family": 0.595,
+    "desc_jaccard": 0.1932
+   },
+   "probes": {
+    "flagged vs new Deezer albums matched 1:1 on first genre x decade": {
+     "n": 366,
+     "n_pos": 183,
+     "n_neg": 183,
+     "auc": 0.9849,
+     "fold_mean": 0.9843,
+     "fold_sd": 0.0085
+    },
+    "flagged vs every new Deezer album": {
+     "n": 3119,
+     "n_pos": 250,
+     "n_neg": 2869,
+     "auc": 0.9889,
+     "fold_mean": 0.9899,
+     "fold_sd": 0.0073
+    },
+    "matched, on the 64-number block": {
+     "n": 366,
+     "n_pos": 183,
+     "n_neg": 183,
+     "auc": 0.9864,
+     "fold_mean": 0.9859,
+     "fold_sd": 0.0117
+    }
+   }
+  },
+  "pair map (residual, lambda 1)": {
+   "neighbours_flagged": {
+    "the picked iTunes albums": {
+     "seeds": 250,
+     "seeds_with_genre": 237,
+     "share_of_neighbours": 0.0776,
+     "same_genre_share": 0.0574,
+     "seeds_with_genre_decade_cell": 219,
+     "same_genre_decade_share": 0.0617,
+     "ci95": [
+      0.0656,
+      0.0896
+     ]
+    },
+    "Deezer seeds": {
+     "seeds": 6621,
+     "seeds_with_genre": 6063,
+     "share_of_neighbours": 0.0278,
+     "same_genre_share": 0.0368,
+     "seeds_with_genre_decade_cell": 5674,
+     "same_genre_decade_share": 0.0362,
+     "ci95": null
+    },
+    "new Deezer seeds": {
+     "seeds": 2869,
+     "seeds_with_genre": 2758,
+     "share_of_neighbours": 0.0309,
+     "same_genre_share": 0.0363,
+     "seeds_with_genre_decade_cell": 2539,
+     "same_genre_decade_share": 0.0379,
+     "ci95": null
+    },
+    "existing Deezer seeds": {
+     "seeds": 3752,
+     "seeds_with_genre": 3305,
+     "share_of_neighbours": 0.0254,
+     "same_genre_share": 0.0373,
+     "seeds_with_genre_decade_cell": 3135,
+     "same_genre_decade_share": 0.0348,
+     "ci95": null
+    }
+   },
+   "n10_flagged": {
+    "albums": 250,
+    "mean": 8.14,
+    "median": 7.0,
+    "in_no_list": 9,
+    "max": 31
+   },
+   "n10_others_mean": 10.07,
+   "flagged_seeds": {
+    "genre_primary": 0.1772,
+    "genre_family": 0.5603,
+    "desc_jaccard": 0.1889
+   },
+   "other_seeds": {
+    "genre_primary": 0.187,
+    "genre_family": 0.5959,
+    "desc_jaccard": 0.1937
+   },
+   "probes": {
+    "flagged vs new Deezer albums matched 1:1 on first genre x decade": {
+     "n": 366,
+     "n_pos": 183,
+     "n_neg": 183,
+     "auc": 0.5575,
+     "fold_mean": 0.5631,
+     "fold_sd": 0.0667
+    },
+    "flagged vs every new Deezer album": {
+     "n": 3119,
+     "n_pos": 250,
+     "n_neg": 2869,
+     "auc": 0.6892,
+     "fold_mean": 0.692,
+     "fold_sd": 0.0524
+    },
+    "matched, on the 64-number block": {
+     "n": 366,
+     "n_pos": 183,
+     "n_neg": 183,
+     "auc": 0.5125,
+     "fold_mean": 0.5152,
+     "fold_sd": 0.0748
+    }
+   }
+  },
+  "clap_mp3 (round trip)": {
+   "neighbours_flagged": {
+    "the picked iTunes albums": {
+     "seeds": 250,
+     "seeds_with_genre": 237,
+     "share_of_neighbours": 0.0572,
+     "same_genre_share": 0.0574,
+     "seeds_with_genre_decade_cell": 219,
+     "same_genre_decade_share": 0.0617,
+     "ci95": [
+      0.0464,
+      0.0692
+     ]
+    },
+    "Deezer seeds": {
+     "seeds": 6621,
+     "seeds_with_genre": 6063,
+     "share_of_neighbours": 0.0291,
+     "same_genre_share": 0.0368,
+     "seeds_with_genre_decade_cell": 5674,
+     "same_genre_decade_share": 0.0362,
+     "ci95": null
+    },
+    "new Deezer seeds": {
+     "seeds": 2869,
+     "seeds_with_genre": 2758,
+     "share_of_neighbours": 0.031,
+     "same_genre_share": 0.0363,
+     "seeds_with_genre_decade_cell": 2539,
+     "same_genre_decade_share": 0.0379,
+     "ci95": null
+    },
+    "existing Deezer seeds": {
+     "seeds": 3752,
+     "seeds_with_genre": 3305,
+     "share_of_neighbours": 0.0277,
+     "same_genre_share": 0.0373,
+     "seeds_with_genre_decade_cell": 3135,
+     "same_genre_decade_share": 0.0348,
+     "ci95": null
+    }
+   },
+   "n10_flagged": {
+    "albums": 250,
+    "mean": 8.29,
+    "median": 7.0,
+    "in_no_list": 8,
+    "max": 46
+   },
+   "n10_others_mean": 10.06,
+   "flagged_seeds": {
+    "genre_primary": 0.1812,
+    "genre_family": 0.5524,
+    "desc_jaccard": 0.1895
+   },
+   "other_seeds": {
+    "genre_primary": 0.187,
+    "genre_family": 0.596,
+    "desc_jaccard": 0.1936
+   },
+   "probes": {
+    "flagged vs new Deezer albums matched 1:1 on first genre x decade": {
+     "n": 366,
+     "n_pos": 183,
+     "n_neg": 183,
+     "auc": 0.6024,
+     "fold_mean": 0.6074,
+     "fold_sd": 0.0648
+    },
+    "flagged vs every new Deezer album": {
+     "n": 3119,
+     "n_pos": 250,
+     "n_neg": 2869,
+     "auc": 0.7765,
+     "fold_mean": 0.7793,
+     "fold_sd": 0.0381
+    },
+    "matched, on the 64-number block": {
+     "n": 366,
+     "n_pos": 183,
+     "n_neg": 183,
+     "auc": 0.5448,
+     "fold_mean": 0.5442,
+     "fold_sd": 0.0467
+    }
+   }
+  }
+ },
+ "agreement": {
+  "albums": 250,
+  "cosine_clap_mp3_vs_pair_map": {
+   "n": 250,
+   "mean": 0.973,
+   "median": 0.9787,
+   "p10": 0.9503,
+   "p90": 0.9885
+  },
+  "cosine_clap_mp3_vs_baseline": {
+   "n": 250,
+   "mean": 0.7961,
+   "median": 0.805,
+   "p10": 0.6727,
+   "p90": 0.9127
+  },
+  "cosine_pair_map_vs_baseline": {
+   "n": 250,
+   "mean": 0.8088,
+   "median": 0.8175,
+   "p10": 0.7291,
+   "p90": 0.8867
+  },
+  "albums_where_clap_mp3_is_nearer_the_pair_map_than_the_baseline": 239,
+  "shared_neighbours_of_10, iTunes seeds": {
+   "clap_mp3 and pair map": 6.7,
+   "clap_mp3 and baseline": 1.8,
+   "pair map and baseline": 1.81
+  },
+  "shared_neighbours_of_10, Deezer seeds": {
+   "clap_mp3 and pair map": 9.79,
+   "clap_mp3 and baseline": 9.66,
+   "pair map and baseline": 9.67
+  },
+  "cosine_of_the_two_moves_from_the_baseline": {
+   "n": 250,
+   "mean": 0.9351,
+   "median": 0.9564,
+   "p10": 0.892,
+   "p90": 0.9768
+  }
+ },
+ "nearest_deezer_cosine": {
+  "baseline (clap as stored)": 0.7445,
+  "pair map (residual, lambda 1)": 0.8768,
+  "clap_mp3 (round trip)": 0.8773,
+  "Deezer albums among themselves (new Deezer seeds)": 0.8827
+ },
+ "effnet": {
+  "albums": 6871,
+  "itunes": 250,
+  "rows": {
+   "EffNet (four-clip means)": {
+    "neighbours_flagged": {
+     "the picked iTunes albums": {
+      "seeds": 250,
+      "seeds_with_genre": 237,
+      "share_of_neighbours": 0.0604,
+      "same_genre_share": 0.0574,
+      "seeds_with_genre_decade_cell": 219,
+      "same_genre_decade_share": 0.0617,
+      "ci95": [
+       0.0496,
+       0.072
+      ]
+     },
+     "Deezer seeds": {
+      "seeds": 6621,
+      "seeds_with_genre": 6063,
+      "share_of_neighbours": 0.0301,
+      "same_genre_share": 0.0368,
+      "seeds_with_genre_decade_cell": 5674,
+      "same_genre_decade_share": 0.0362,
+      "ci95": null
+     },
+     "new Deezer seeds": {
+      "seeds": 2869,
+      "seeds_with_genre": 2758,
+      "share_of_neighbours": 0.0327,
+      "same_genre_share": 0.0363,
+      "seeds_with_genre_decade_cell": 2539,
+      "same_genre_decade_share": 0.0379,
+      "ci95": null
+     },
+     "existing Deezer seeds": {
+      "seeds": 3752,
+      "seeds_with_genre": 3305,
+      "share_of_neighbours": 0.0281,
+      "same_genre_share": 0.0373,
+      "seeds_with_genre_decade_cell": 3135,
+      "same_genre_decade_share": 0.0348,
+      "ci95": null
+     }
+    },
+    "n10_flagged": {
+     "albums": 250,
+     "mean": 8.58,
+     "median": 8.0,
+     "in_no_list": 2,
+     "max": 41
+    },
+    "n10_others_mean": 10.05,
+    "flagged_seeds": {
+     "genre_primary": 0.2228,
+     "genre_family": 0.6114,
+     "desc_jaccard": 0.1954
+    },
+    "other_seeds": {
+     "genre_primary": 0.2296,
+     "genre_family": 0.6354,
+     "desc_jaccard": 0.1989
+    },
+    "probes": {
+     "flagged vs new Deezer albums matched 1:1 on first genre x decade": {
+      "n": 366,
+      "n_pos": 183,
+      "n_neg": 183,
+      "auc": 0.4915,
+      "fold_mean": 0.4868,
+      "fold_sd": 0.0685
+     },
+     "flagged vs every new Deezer album": {
+      "n": 3119,
+      "n_pos": 250,
+      "n_neg": 2869,
+      "auc": 0.6524,
+      "fold_mean": 0.6534,
+      "fold_sd": 0.0358
+     },
+     "matched, on the 64-number block": {
+      "n": 366,
+      "n_pos": 183,
+      "n_neg": 183,
+      "auc": 0.4621,
+      "fold_mean": 0.4625,
+      "fold_sd": 0.0199
+     }
+    }
+   },
+   "clap_mp3 on these albums": {
+    "neighbours_flagged": {
+     "the picked iTunes albums": {
+      "seeds": 250,
+      "seeds_with_genre": 237,
+      "share_of_neighbours": 0.0572,
+      "same_genre_share": 0.0574,
+      "seeds_with_genre_decade_cell": 219,
+      "same_genre_decade_share": 0.0617,
+      "ci95": [
+       0.046,
+       0.0684
+      ]
+     },
+     "Deezer seeds": {
+      "seeds": 6621,
+      "seeds_with_genre": 6063,
+      "share_of_neighbours": 0.0291,
+      "same_genre_share": 0.0368,
+      "seeds_with_genre_decade_cell": 5674,
+      "same_genre_decade_share": 0.0362,
+      "ci95": null
+     },
+     "new Deezer seeds": {
+      "seeds": 2869,
+      "seeds_with_genre": 2758,
+      "share_of_neighbours": 0.031,
+      "same_genre_share": 0.0363,
+      "seeds_with_genre_decade_cell": 2539,
+      "same_genre_decade_share": 0.0379,
+      "ci95": null
+     },
+     "existing Deezer seeds": {
+      "seeds": 3752,
+      "seeds_with_genre": 3305,
+      "share_of_neighbours": 0.0277,
+      "same_genre_share": 0.0373,
+      "seeds_with_genre_decade_cell": 3135,
+      "same_genre_decade_share": 0.0348,
+      "ci95": null
+     }
+    },
+    "n10_flagged": {
+     "albums": 250,
+     "mean": 8.29,
+     "median": 7.0,
+     "in_no_list": 8,
+     "max": 46
+    },
+    "n10_others_mean": 10.06,
+    "flagged_seeds": {
+     "genre_primary": 0.1812,
+     "genre_family": 0.5524,
+     "desc_jaccard": 0.1895
+    },
+    "other_seeds": {
+     "genre_primary": 0.187,
+     "genre_family": 0.596,
+     "desc_jaccard": 0.1936
+    },
+    "probes": {
+     "flagged vs new Deezer albums matched 1:1 on first genre x decade": {
+      "n": 366,
+      "n_pos": 183,
+      "n_neg": 183,
+      "auc": 0.6024,
+      "fold_mean": 0.6074,
+      "fold_sd": 0.0648
+     },
+     "flagged vs every new Deezer album": {
+      "n": 3119,
+      "n_pos": 250,
+      "n_neg": 2869,
+      "auc": 0.7765,
+      "fold_mean": 0.7793,
+      "fold_sd": 0.0381
+     },
+     "matched, on the 64-number block": {
+      "n": 366,
+      "n_pos": 183,
+      "n_neg": 183,
+      "auc": 0.5448,
+      "fold_mean": 0.5442,
+      "fold_sd": 0.0467
+     }
+    }
+   }
+  }
+ },
+ "youtube_albums": {
+  "picked": 20,
+  "with_a_clap_mp3_vector": 19,
+  "of_them_over_the_same_windows_as_clap": 19,
+  "left_out": [
+   "Album7576907"
+  ],
+  "windows_behind_the_mean": {
+   "6": 2,
+   "7": 1,
+   "8": 16
+  }
+ },
+ "youtube_pool": {
+  "albums": 6640,
+  "deezer": 6621,
+  "youtube": 19,
+  "share_youtube": 0.00286
+ },
+ "youtube": {
+  "baseline (clap as stored)": {
+   "neighbours_flagged": {
+    "the YouTube albums": {
+     "seeds": 19,
+     "seeds_with_genre": 18,
+     "share_of_neighbours": 0.0263,
+     "same_genre_share": 0.018,
+     "seeds_with_genre_decade_cell": 15,
+     "same_genre_decade_share": 0.0148,
+     "ci95": [
+      0.0105,
+      0.0474
+     ]
+    },
+    "Deezer seeds": {
+     "seeds": 6621,
+     "seeds_with_genre": 6056,
+     "share_of_neighbours": 0.0005,
+     "same_genre_share": 0.0029,
+     "seeds_with_genre_decade_cell": 5655,
+     "same_genre_decade_share": 0.0026,
+     "ci95": null
+    }
+   },
+   "n10_flagged": {
+    "albums": 19,
+    "mean": 2.05,
+    "median": 1.0,
+    "in_no_list": 2,
+    "max": 6
+   },
+   "n10_others_mean": 10.02,
+   "flagged_seeds": {
+    "genre_primary": 0.1699,
+    "genre_family": 0.4484,
+    "desc_jaccard": 0.1534
+   },
+   "other_seeds": {
+    "genre_primary": 0.1852,
+    "genre_family": 0.595,
+    "desc_jaccard": 0.1932
+   }
+  },
+  "clap_mp3 (round trip)": {
+   "neighbours_flagged": {
+    "the YouTube albums": {
+     "seeds": 19,
+     "seeds_with_genre": 18,
+     "share_of_neighbours": 0.0158,
+     "same_genre_share": 0.018,
+     "seeds_with_genre_decade_cell": 15,
+     "same_genre_decade_share": 0.0148,
+     "ci95": [
+      0.0,
+      0.0316
+     ]
+    },
+    "Deezer seeds": {
+     "seeds": 6621,
+     "seeds_with_genre": 6056,
+     "share_of_neighbours": 0.0016,
+     "same_genre_share": 0.0029,
+     "seeds_with_genre_decade_cell": 5655,
+     "same_genre_decade_share": 0.0026,
+     "ci95": null
+    }
+   },
+   "n10_flagged": {
+    "albums": 19,
+    "mean": 5.74,
+    "median": 4.0,
+    "in_no_list": 1,
+    "max": 16
+   },
+   "n10_others_mean": 10.01,
+   "flagged_seeds": {
+    "genre_primary": 0.1121,
+    "genre_family": 0.4453,
+    "desc_jaccard": 0.1584
+   },
+   "other_seeds": {
+    "genre_primary": 0.1853,
+    "genre_family": 0.595,
+    "desc_jaccard": 0.1933
+   }
+  }
+ },
+ "youtube_vectors": {
+  "cosine_clap_mp3_vs_baseline": {
+   "n": 19,
+   "mean": 0.8909,
+   "median": 0.9022,
+   "p10": 0.7726,
+   "p90": 0.9839
+  },
+  "mean_cosine_to_the_ten_nearest_deezer_albums": {
+   "baseline (clap as stored)": 0.757,
+   "clap_mp3 (round trip)": 0.8298
+  },
+  "albums_nearer_their_ten_nearest_deezer_albums_with_clap_mp3": 18,
+  "deezer_reference_new_deezer_seeds": 0.8827
+ },
+ "youtube_window_probe": {
+  "what": "YouTube windows against clips of new Deezer albums of the same first genre x decade (up to five albums per YouTube album), grouped by album",
+  "deezer_control_albums": 41,
+  "rows": {
+   "baseline (clap as stored)": {
+    "n": 313,
+    "n_pos": 152,
+    "n_neg": 161,
+    "auc": 0.9304,
+    "fold_mean": 0.9322,
+    "fold_sd": 0.0329
+   },
+   "clap_mp3 (round trip)": {
+    "n": 313,
+    "n_pos": 152,
+    "n_neg": 161,
+    "auc": 0.732,
+    "fold_mean": 0.7488,
+    "fold_sd": 0.0714
+   }
+  }
+ }
+}
