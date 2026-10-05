@@ -24,7 +24,10 @@
  *   node ../docs/design/trifid-theme/reviews/baseline/hover-measure.mjs \
  *        ../docs/design/trifid-theme/reviews/baseline/perf/hover.json http://127.0.0.1:3500 --start
  *
- * Arguments: <outFile.json> <baseURL> [--start] [--mode gpu|software|both] [--loads 5]
+ * Arguments: <outFile.json> <baseURL> [--start] [--mode gpu|software|both] [--loads 5] [--open whole|app]
+ *   --open  where /map opens: whole (default: the whole cloud, where the baseline hovered, through window.__rmrOpen;
+ *           it means nothing to a build from before part 2's Task 0) or app (the app's own opening view, the
+ *           Overview since Task 0). Either way the sharper gas image (part 1) is let settle before the idle.
  * Desktop only (1440 x 900): a phone has no hover. Browsers run one at a time, one page at a time.
  * Both modes use headless Google Chrome, as `npm run perf` does (software = SwiftShader, gpu = Metal).
  */
@@ -47,12 +50,17 @@ for (let i = 0; i < argv.length; i++) {
   else positional.push(argv[i]);
 }
 if (positional.length < 2) {
-  console.error('usage: node hover-measure.mjs <outFile.json> <baseURL> [--start] [--mode gpu|software|both] [--loads 5]');
+  console.error('usage: node hover-measure.mjs <outFile.json> <baseURL> [--start] [--mode gpu|software|both] [--loads 5] [--open whole|app]');
   process.exit(2);
 }
 const OUT = path.resolve(positional[0]);
 const BASE = positional[1].replace(/\/$/, '');
 const LOADS = Number(flags.loads ?? 5);
+const OPEN = flags.open ?? 'whole';
+if (OPEN !== 'whole' && OPEN !== 'app') {
+  console.error('--open takes whole or app');
+  process.exit(2);
+}
 const MODES = {
   software: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
   gpu: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--enable-features=Metal'],
@@ -151,12 +159,30 @@ async function oneLoad(browser, load) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.addInitScript(INIT);
+  if (OPEN === 'whole') await page.addInitScript(() => { window.__rmrOpen = 'whole'; });
   try {
     await page.mouse.move(4, 4); // parked on the header's corner, off the map
     await page.goto(`${BASE}/map`, { waitUntil: 'load' });
     await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 30000 });
     await page.waitForFunction(() => !window.__rmr.map.isAnimating(), null, { timeout: 15000 });
     await page.evaluate(() => document.fonts.ready);
+    // Part 1's sharper gas image: not 'loading', and neither its flag nor the frame count changed for 2.5 s (longer
+    // than a failed load's retry wait). A build with no gas layer has nothing to wait for.
+    await page.waitForFunction(() => {
+      const g = window.__rmr?.gas;
+      if (g === undefined || g === 'off') return true;
+      const w = window;
+      const s = String(window.__rmr?.gasSharp);
+      const f = window.__rmr?.frames ?? 0;
+      const now = performance.now();
+      if (s === 'loading' || w.__hvSF !== f || w.__hvSS !== s) {
+        w.__hvSF = f;
+        w.__hvSS = s;
+        w.__hvST = now;
+        return false;
+      }
+      return now - (w.__hvST ?? now) >= 2500;
+    }, null, { polling: 50, timeout: 45000 });
     await page.waitForTimeout(2000); // idle: the first hover starts from a quiet page, as a visitor's would
     const targets = await page.evaluate((ids) => {
       const out = [];
@@ -226,7 +252,7 @@ async function main() {
   const { assertNativeChrome } = await import(pathToFileURL(path.join(CWD, 'scripts/check-native.mjs')).href);
   const stop = flags.start ? await startServer() : null;
   if (!stop && !(await answers())) throw new Error(`${BASE} is not answering; start the production server or pass --start`);
-  const result = { date: new Date().toISOString(), base: BASE, nodeArch: process.arch, loads: LOADS, modes: {} };
+  const result = { date: new Date().toISOString(), base: BASE, nodeArch: process.arch, loads: LOADS, open: OPEN, modes: {} };
   try {
     for (const mode of WHICH) {
       const browser = await chromium.launch({ channel: 'chrome', headless: true, args: MODES[mode] });

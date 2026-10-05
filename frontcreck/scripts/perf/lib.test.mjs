@@ -71,10 +71,14 @@ describe('checkPages', () => {
     expect(none).toContain('| Nebula visible (reported only) | n/a |');
     expect(none).toContain('| Deep zoom drag worst frame gap (reported only) | n/a |');
     expect(none).toContain('| Deep zoom, slider between stops, worst frame gap (reported only) | n/a |');
-    const some = formatTable([{ mode: 'gpu', ...ok, gasShownMs: 640, deepDragGapMs: 21, deepMorphGapMs: 33 }]);
+    expect(none).toContain('| Drag worst frame gap at the opening view (reported only) | n/a |');
+    expect(none).toContain('| Zoom worst frame gap at the opening view (reported only) | n/a |');
+    const some = formatTable([{ mode: 'gpu', ...ok, gasShownMs: 640, deepDragGapMs: 21, deepMorphGapMs: 33, openingDragGapMs: 18, openingZoomGapMs: 24 }]);
     expect(some).toContain('| Nebula visible (reported only) | 640 ms |');
     expect(some).toContain('| Deep zoom drag worst frame gap (reported only) | 21 ms |');
     expect(some).toContain('| Deep zoom, slider between stops, worst frame gap (reported only) | 33 ms |');
+    expect(some).toContain('| Drag worst frame gap at the opening view (reported only) | 18 ms |');
+    expect(some).toContain('| Zoom worst frame gap at the opening view (reported only) | 24 ms |');
   });
 
   it('formats a markdown table', () => {

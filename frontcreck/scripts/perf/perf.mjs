@@ -33,6 +33,13 @@ const NO_GAS = args.includes('--no-gas');
 // --gas-lite off|force: measure with the full gas shader on a software renderer too ('off'), or with the lighter
 // one on a GPU too ('force'), to compare the two on one build. Without it the app chooses, as for a visitor.
 const GAS_LITE = opt('--gas-lite');
+// --open whole: skip the fresh /map load at the opening view (the Overview since part 2's Task 0). The budget rows
+// are measured at the whole map in every run, as the baseline measured them.
+const OPEN = opt('--open');
+if (OPEN !== null && OPEN !== 'whole') {
+  console.error('--open takes whole');
+  process.exit(2);
+}
 
 function sh(cmd, cmdArgs) {
   return new Promise((resolve, reject) => {
@@ -122,6 +129,27 @@ const PAGE_HELPERS = () => {
       }
       return Math.round(longest);
     },
+    /** Waits until part 1's sharper gas image has settled: the flag is not 'loading' and neither it nor the frame
+     * count changed for `quietMs` (longer than the 2 s retry wait of a failed load, shaders/gas.ts
+     * GAS_SHARP_RETRY_MS). Phones say 'off', software renderers 'waiting' or 'off', a page with no gas layer has no
+     * flag. Resolves false after `max`. */
+    async sharpSettled(quietMs = 2500, max = 45000) {
+      const t0 = performance.now();
+      let flag = String(window.__rmr?.gasSharp);
+      let frames = window.__rmr?.frames ?? 0;
+      let since = t0;
+      while (performance.now() - t0 < max) {
+        await new Promise((r) => setTimeout(r, 50));
+        const f = String(window.__rmr?.gasSharp);
+        const m = window.__rmr?.frames ?? 0;
+        if (f === 'loading' || f !== flag || m !== frames) {
+          flag = f;
+          frames = m;
+          since = performance.now();
+        } else if (performance.now() - since >= quietMs) return true;
+      }
+      return false;
+    },
   };
   // When the map first draws (after the WebGL warm-up, the probe and the data): reported, not budgeted.
   window.__mapFirstFrame = null;
@@ -181,7 +209,56 @@ async function albumFlow(page, isPhone) {
   }, isPhone);
 }
 
+/** The opening view, reported only: a fresh /map as a visitor opens it (the Overview since part 2's Task 0), its
+ * first drag and first wheel zoom, the same gestures as exploreFlow's. Runs before exploreFlow sets __rmrOpen. */
+async function openingFlow(page, isPhone) {
+  await page.goto(`${BASE}/map`, { waitUntil: 'load' });
+  await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
+  await page.waitForTimeout(1500);
+  return page.evaluate(async (phone) => {
+    const P = window.__perf;
+    const res = { openingSharpSettled: await P.sharpSettled(), openingCamera: window.__rmr.map.getCamera() };
+    const c = document.querySelector('canvas.map-canvas');
+    const r = c.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const type = phone ? 'touch' : 'mouse';
+    const fire = (t, x, y) => c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerType: type, pointerId: 1, isPrimary: true, button: 0, clientX: x, clientY: y }));
+    fire('pointerdown', cx, cy);
+    let longest = 0;
+    let last = performance.now();
+    const t0 = last;
+    while (performance.now() - t0 < 2000) {
+      const k = (performance.now() - t0) / 2000;
+      fire('pointermove', cx + Math.sin(k * 6.28) * 140, cy + Math.cos(k * 6.28) * 100);
+      const now = await P.raf();
+      longest = Math.max(longest, now - last);
+      last = now;
+    }
+    fire('pointerup', cx, cy);
+    res.openingDragGapMs = Math.round(longest);
+    await new Promise((r2) => setTimeout(r2, 500));
+    longest = 0;
+    last = performance.now();
+    const t1 = last;
+    while (performance.now() - t1 < 2000) {
+      const k = (performance.now() - t1) / 2000;
+      c.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: cx + 60, clientY: cy - 40, deltaY: k < 0.5 ? -40 : 40 }));
+      const now = await P.raf();
+      longest = Math.max(longest, now - last);
+      last = now;
+    }
+    res.openingZoomGapMs = Math.round(longest);
+    return res;
+  }, isPhone);
+}
+
 async function exploreFlow(page, isPhone) {
+  // The budget rows are measured where the baseline measured them: a fresh /map at the whole map (the site's
+  // opening view before part 2's Task 0). The init script applies to this load and any later one of this page.
+  await page.addInitScript(() => {
+    window.__rmrOpen = 'whole';
+  });
   await page.goto(`${BASE}/map`, { waitUntil: 'load' });
   await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
   await page.waitForTimeout(1500);
@@ -253,6 +330,11 @@ async function exploreFlow(page, isPhone) {
     // cannot land in the idle window measured below.
     await P.settled();
     await new Promise((r2) => setTimeout(r2, 1500));
+    // Part 1's sharper gas image: the deep zoom and the stop change above make it be fetched (or freed and fetched
+    // again) at rest, and its fade draws up to 14 frames. The idle window starts once it has settled.
+    res.idleSharpSettled = await P.sharpSettled();
+    res.sharpFlag = String(window.__rmr?.gasSharp);
+    res.wholeCamera = window.__rmr.map.getCamera();
     window.__lt.length = 0;
     const f0 = window.__rmr.frames;
     await new Promise((r2) => setTimeout(r2, 3000));
@@ -317,6 +399,7 @@ async function measure(mode, vpName) {
     warmUp: startup.warm,
     startupLongTasks: startup.lt,
     ...(await albumFlow(page, vpName === 'phone')),
+    ...(OPEN ? {} : await openingFlow(page, vpName === 'phone')),
     ...(await exploreFlow(page, vpName === 'phone')),
   };
   // Which gas shader drew the map (reported only): the lighter one on a software renderer, the full one on a GPU.
@@ -354,13 +437,15 @@ async function main() {
     if (rows.some((r) => r.vp === 'desktop2x')) console.log('The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.\n');
     if (NO_GAS) console.log('Run with --no-gas: the script did not wait for a gas layer.\n');
     if (GAS_LITE) console.log(`Run with --gas-lite ${GAS_LITE}: the gas shader was not the app's own choice.\n`);
+    if (OPEN) console.log('Run with --open whole: the opening view rows were not measured (n/a). The budget rows are measured at the whole map in every run.\n');
     for (const r of rows) {
       // settled() gives up after 6 s; the next step then measures a map that is still animating.
       if (r.settled?.includes(false)) console.warn(`WARNING ${r.mode} ${r.vp}: the map did not settle before a step (settled: ${JSON.stringify(r.settled)})`);
+      if (r.openingSharpSettled === false || r.idleSharpSettled === false) console.warn(`WARNING ${r.mode} ${r.vp}: the sharper gas image did not settle before a step (opening ${r.openingSharpSettled}, idle ${r.idleSharpSettled})`);
     }
     const outDir = path.join(ROOT, 'scripts/perf/out');
     fs.mkdirSync(outDir, { recursive: true });
-    fs.writeFileSync(path.join(outDir, `perf-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ js, rows, fails }, null, 1));
+    fs.writeFileSync(path.join(outDir, `perf-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ js, rows, fails, open: OPEN ?? 'app' }, null, 1));
   } finally {
     await server.stop();
   }

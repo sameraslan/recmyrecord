@@ -11,7 +11,7 @@
  *        ../docs/design/trifid-theme/reviews/baseline/shots http://127.0.0.1:3400 --start
  *
  * Arguments: <outDir> <baseURL> [--start] [--viewport desktop|phone|both] [--mode gpu|software] [--only <text>]
- *            [--gas full|lighter]
+ *            [--gas full|lighter] [--open whole|app]
  *   --start      starts `next start` on the base URL's port for the run and stops it afterwards. Without it the
  *                script expects a server that is already answering at <baseURL> (`npx next start --port 3400`).
  *   --viewport   desktop (1440 x 900), phone (390 x 844, dpr 2, mobile, touch) or both (default).
@@ -22,6 +22,10 @@
  *                notes describe; asked for explicitly, because on a software renderer the app would choose its
  *                lighter shader by itself) or lighter (to capture that one on purpose). It sets
  *                window.__rmrGasLite before the app loads and means nothing to a build without the gas.
+ *   --open       where /map opens: whole (default: the whole cloud, as the site opened when the baseline was
+ *                captured, so every baseline-named shot keeps its framing; it sets window.__rmrOpen before the app
+ *                loads and means nothing to a build from before part 2's Task 0) or app (the app's own opening
+ *                view, the Overview since Task 0). The state `map-opening` always uses the app's own opening view.
  *
  * Output: <outDir>/desktop/*.jpg|png, <outDir>/phone/*.jpg|png and <outDir>/capture-log-<viewport>.json (what was
  * captured, what failed, and the camera at each shot). JPEG quality 90; tight crops are PNG.
@@ -59,7 +63,7 @@ for (let i = 0; i < argv.length; i++) {
   else positional.push(argv[i]);
 }
 if (positional.length < 2) {
-  console.error('usage: node capture.mjs <outDir> <baseURL> [--start] [--viewport desktop|phone|both] [--mode gpu|software] [--only text] [--gas full|lighter]');
+  console.error('usage: node capture.mjs <outDir> <baseURL> [--start] [--viewport desktop|phone|both] [--mode gpu|software] [--only text] [--gas full|lighter] [--open whole|app]');
   process.exit(2);
 }
 const OUT = path.resolve(positional[0]);
@@ -70,6 +74,11 @@ const WHICH = flags.viewport ?? 'both';
 const GAS = flags.gas ?? 'full';
 if (GAS !== 'full' && GAS !== 'lighter') {
   console.error('--gas takes full or lighter');
+  process.exit(2);
+}
+const OPEN = flags.open ?? 'whole';
+if (OPEN !== 'whole' && OPEN !== 'app') {
+  console.error('--open takes whole or app');
   process.exit(2);
 }
 
@@ -149,6 +158,30 @@ async function mapQuiet(p, quietMs = 250) {
   );
 }
 
+/** Part 1's sharper gas image has settled: its flag is not 'loading' and neither it nor the frame count changed for
+ * `quietMs` (longer than a failed load's 2 s retry wait). A build with no gas layer (gas absent or 'off') is settled
+ * at once. Mirrors frontcreck/e2e/helpers.ts waitForGasSharpSettled. */
+const sharpSettled = (p, quietMs = 2500) =>
+  p.waitForFunction(
+    (quiet) => {
+      const g = window.__rmr?.gas;
+      if (g === undefined || g === 'off') return true;
+      const w = window;
+      const s = String(window.__rmr?.gasSharp);
+      const f = window.__rmr?.frames ?? 0;
+      const now = performance.now();
+      if (s === 'loading' || w.__capSF !== f || w.__capSS !== s) {
+        w.__capSF = f;
+        w.__capSS = s;
+        w.__capST = now;
+        return false;
+      }
+      return now - (w.__capST ?? now) >= quiet;
+    },
+    quietMs,
+    { polling: 50, timeout: 45000 },
+  );
+
 async function cameraIdle(p) {
   await p.waitForFunction(() => window.__rmr?.map && !window.__rmr.map.isAnimating(), null, { timeout: 20000 });
   await mapQuiet(p, 250);
@@ -185,6 +218,9 @@ async function settle(p, name, { map = true } = {}) {
   await animationsDone(p).catch(warn(name, 'CSS animations still running'));
   await coversSettled(p).catch(warn(name, 'a cover image did not finish loading'));
   if (map) await mapQuiet(p, 300).catch(warn(name, 'map still drawing'));
+  // A shot at rest must not catch the sharper gas image's fade (up to 14 frames about a second after the map
+  // settles; at the Overview it is wanted from the first view on a GPU).
+  if (map) await sharpSettled(p).catch(warn(name, 'sharper gas image still changing'));
 }
 
 /* ---------- small actions ---------- */
@@ -315,6 +351,20 @@ const STATES = [
       await press(p, SEL.zoomIn, 6, s.phone); // to the zoom ceiling
       await settle(p, 'map');
       await s.shot('map-max-zoom');
+    },
+  },
+  {
+    // The map as a visitor opens it since part 2's Task 0: the Overview (compare with options/final-overview.jpg),
+    // then the fit button's Whole map, which must be the framing of the baseline's `map-overview`. Not in the
+    // baseline. Always the app's own opening view, whatever --open says.
+    name: 'map-opening', on: 'both', open: 'app',
+    async run(p, s) {
+      await go(p, '/map');
+      await settle(p, 'map');
+      await s.shot('map-opening');
+      await press(p, SEL.reset, 1, s.phone);
+      await settle(p, 'map');
+      await s.shot('map-opening-fit');
     },
   },
   {
@@ -882,7 +932,7 @@ async function startServer() {
 async function runViewport(vp, assertNativeChrome) {
   const dir = path.join(OUT, vp);
   fs.mkdirSync(dir, { recursive: true });
-  const log = { viewport: vp, mode: MODE, gasShader: GAS, base: BASE, date: new Date().toISOString(), nodeArch: process.arch, browser: null, renderer: null, shots: [], notes: {}, failed: [] };
+  const log = { viewport: vp, mode: MODE, gasShader: GAS, open: OPEN, base: BASE, date: new Date().toISOString(), nodeArch: process.arch, browser: null, renderer: null, shots: [], notes: {}, failed: [] };
   let browser = await chromium.launch(LAUNCH[MODE]);
   let special = false;
   try {
@@ -899,6 +949,7 @@ async function runViewport(vp, assertNativeChrome) {
       }
       const ctx = await browser.newContext({ ...VIEWPORTS[vp], ...(state.context ?? {}) });
       await ctx.addInitScript((v) => { window.__rmrGasLite = v; }, GAS === 'lighter' ? 'force' : 'off');
+      if (OPEN === 'whole' && state.open !== 'app') await ctx.addInitScript(() => { window.__rmrOpen = 'whole'; });
       const page = await ctx.newPage();
       const t0 = Date.now();
       const s = {
