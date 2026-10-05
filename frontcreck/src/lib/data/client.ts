@@ -15,7 +15,7 @@ export class DataLoadError extends Error {
   }
 }
 
-async function fetchJson<T>(url: string, isValid: (v: unknown) => boolean): Promise<T> {
+export async function fetchJson<T>(url: string, isValid: (v: unknown) => boolean): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, { credentials: 'same-origin' });
@@ -51,7 +51,7 @@ export interface DataState {
 
 export const IDLE_DATA_STATE: DataState = { status: 'idle', attempt: 0 };
 
-interface Resource<T> {
+export interface Resource<T> {
   promise: Promise<T> | null;
   value: T | null;
   state: DataState;
@@ -75,7 +75,7 @@ function emit(): void {
   for (const l of [...listeners]) l();
 }
 
-function idle<T>(): Resource<T> {
+export function idle<T>(): Resource<T> {
   return { promise: null, value: null, state: IDLE_DATA_STATE };
 }
 
@@ -83,7 +83,7 @@ let catalog = idle<Catalog>();
 let positions = idle<Positions>();
 
 /** Starts `fetcher` unless a load is in flight or done. A failed load is forgotten so the next call retries. */
-function load<T>(get: () => Resource<T>, fetcher: () => Promise<T>): Promise<T> {
+export function load<T>(get: () => Resource<T>, fetcher: () => Promise<T>): Promise<T> {
   const res = get();
   if (res.promise) return res.promise;
   const p = fetcher();
@@ -166,9 +166,17 @@ export function positionsStatus(): DataStatus {
   return positions.state.status;
 }
 
+const resetters: (() => void)[] = [];
+
+/** A data file kept in another module (the theme) registers how to forget it, so one reset clears every cache. */
+export function registerReset(fn: () => void): void {
+  resetters.push(fn);
+}
+
 /** Tests only. */
 export function resetDataCache(): void {
   catalog = idle();
   positions = idle();
+  for (const fn of resetters) fn();
   emit();
 }

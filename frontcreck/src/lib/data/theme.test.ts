@@ -1,0 +1,104 @@
+import { cleanup, renderHook, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { DataLoadError, resetDataCache } from './client';
+import { THEME_URL, isTheme, loadTheme, peekTheme, themeFor, type ThemeData } from './theme';
+import { useThemeLoad } from './useData';
+
+const LABEL = { id: 'live', name: 'The Live Belt', x: -0.236, y: 0.883, strong: true, n: 174, p: 2.1772, rgb: [255, 236, 224] as [number, number, number], lum: 0.31 };
+const THEME: ThemeData = {
+  v: 1,
+  n: 2,
+  positionsHash: 'a7c1dbd996fd',
+  bakeHalf: 1.6,
+  stars: { lead: [0, -1], bg: [10, 20, 30, 40, 50, 255] },
+  labels: { sonic: [], balanced: [LABEL], mood: [] },
+};
+
+const serve = (body: unknown, status = 200) => vi.fn(async () => new Response(JSON.stringify(body), { status }));
+
+afterEach(() => {
+  cleanup();
+  resetDataCache();
+  vi.unstubAllGlobals();
+});
+
+describe('isTheme', () => {
+  it('accepts the shape the theme build writes', () => {
+    expect(isTheme(THEME)).toBe(true);
+  });
+
+  it.each([
+    ['nothing', null],
+    ['another version', { ...THEME, v: 2 }],
+    ['a lead list of the wrong length', { ...THEME, stars: { ...THEME.stars, lead: [0] } }],
+    ['a lead family out of range', { ...THEME, stars: { ...THEME.stars, lead: [0, 5] } }],
+    ['a luminance list that is not three per album', { ...THEME, stars: { ...THEME.stars, bg: [1, 2, 3] } }],
+    ['a luminance that is not a byte', { ...THEME, stars: { ...THEME.stars, bg: [10, 20, 30, 40, 50, 256] } }],
+    ['a missing stop', { ...THEME, labels: { sonic: [], balanced: [LABEL] } }],
+    ['a label without its ink', { ...THEME, labels: { ...THEME.labels, mood: [{ ...LABEL, rgb: [255, 236] }] } }],
+    ['no bake size', { ...THEME, bakeHalf: 0 }],
+  ])('rejects %s', (_, value) => {
+    expect(isTheme(value)).toBe(false);
+  });
+});
+
+describe('loadTheme', () => {
+  it('fetches theme.json once and memoises it', async () => {
+    const f = serve(THEME);
+    vi.stubGlobal('fetch', f);
+    const [a, b] = await Promise.all([loadTheme(), loadTheme()]);
+    expect(a).toBe(b);
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(f).toHaveBeenCalledWith(THEME_URL, { credentials: 'same-origin' });
+    expect(peekTheme()).toBe(a);
+  });
+
+  it('rejects a missing or wrongly shaped file with DataLoadError and retries on the next call', async () => {
+    vi.stubGlobal('fetch', serve('nope', 404));
+    await expect(loadTheme()).rejects.toBeInstanceOf(DataLoadError);
+    vi.stubGlobal('fetch', serve({ ...THEME, v: 2 }));
+    await expect(loadTheme()).rejects.toBeInstanceOf(DataLoadError);
+    expect(peekTheme()).toBeNull();
+    vi.stubGlobal('fetch', serve(THEME));
+    await expect(loadTheme()).resolves.toEqual(THEME);
+  });
+
+  it('is cleared by resetDataCache', async () => {
+    vi.stubGlobal('fetch', serve(THEME));
+    await loadTheme();
+    resetDataCache();
+    expect(peekTheme()).toBeNull();
+  });
+});
+
+describe('themeFor', () => {
+  it('drops a theme that was built for another album count', () => {
+    expect(themeFor(THEME, 2)).toBe(THEME);
+    expect(themeFor(THEME, 3)).toBeNull();
+    expect(themeFor(null, 2)).toBeNull();
+  });
+});
+
+describe('useThemeLoad', () => {
+  it('gives null until the theme has loaded, then the theme', async () => {
+    vi.stubGlobal('fetch', serve(THEME));
+    const h = renderHook(() => useThemeLoad(true));
+    expect(h.result.current.theme).toBeNull();
+    await waitFor(() => expect(h.result.current).toEqual({ status: 'ready', theme: THEME }));
+  });
+
+  it('does not fetch while disabled', () => {
+    const f = serve(THEME);
+    vi.stubGlobal('fetch', f);
+    const h = renderHook(() => useThemeLoad(false));
+    expect(h.result.current).toEqual({ status: 'idle', theme: null });
+    expect(f).not.toHaveBeenCalled();
+  });
+
+  it('reports an error and keeps null when the file is missing, so the map can go on without a theme', async () => {
+    vi.stubGlobal('fetch', serve('nope', 404));
+    const h = renderHook(() => useThemeLoad(true));
+    await waitFor(() => expect(h.result.current.status).toBe('error'));
+    expect(h.result.current.theme).toBeNull();
+  });
+});

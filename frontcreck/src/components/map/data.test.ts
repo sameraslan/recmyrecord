@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AlbumRecord, Positions } from '@/lib/types';
-import { STOP_T, buildMapData, interpolateInto, interpolated, normalizePositions } from './data';
+import { STOP_T, buildMapData, interpolateInto, interpolated, normalizePositions, positionsTransform, rawToWorld } from './data';
 
 const W: [string, string, string] = ['#222222', '#333333', '#d9a066'];
 const album = (i: number): AlbumRecord => ({ slug: `a-${i}`, t: `A${i}`, a: 'X', s: '', c: '', k: i % 8, d: [], w: W });
@@ -24,6 +24,18 @@ describe('map data', () => {
     expect(Math.max(Math.abs(xs[5]), Math.abs(xs[94]))).toBeCloseTo(0.55, 1);
     expect(Array.from(out.mood)).toEqual(Array.from(out.balanced));
     expect(out.sonic[0]).not.toBe(out.balanced[0]);
+  });
+
+  it('keeps the raw to world transform, so anything stored in raw units lands on the albums', () => {
+    const p: Positions = { sonic: grid(100, 0.02, 0.5), balanced: grid(100, 0.1, 0.3), mood: grid(100, 0.1, 0.3) };
+    const data = buildMapData(Array.from({ length: 100 }, (_, i) => album(i)), p);
+    expect(data.tx).toEqual(positionsTransform(p));
+    expect(data.tx.s).toBeGreaterThan(0);
+    for (const i of [0, 37, 99]) {
+      const [x, y] = rawToWorld(data, p.sonic[2 * i], p.sonic[2 * i + 1]);
+      expect(x).toBeCloseTo(data.pos.sonic[2 * i], 5);
+      expect(y).toBeCloseTo(data.pos.sonic[2 * i + 1], 5);
+    }
   });
 
   it('interpolates piecewise between the three stops', () => {

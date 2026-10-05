@@ -14,7 +14,7 @@ import { FIT_ZOOM_MAX, FIT_ZOOM_MIN } from "./zoomLimits";
 
 function fixtureData(xy: Array<[number, number]>): MapData {
   const flat = new Float32Array(xy.flat());
-  return { n: xy.length, albums: [], pos: { sonic: flat, balanced: flat, mood: flat }, atlasUrls: [] };
+  return { n: xy.length, albums: [], pos: { sonic: flat, balanced: flat, mood: flat }, atlasUrls: [], tx: { cx: 0, cy: 0, s: 1 } };
 }
 
 /** Flat [x0, y0, x1, y1, ...] array, the layout AlbumField's positionsRef uses. */

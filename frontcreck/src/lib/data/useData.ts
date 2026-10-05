@@ -12,6 +12,7 @@ import {
   subscribeData,
   type DataState,
 } from '@/lib/data/client';
+import { loadTheme, peekTheme, themeState, type ThemeData } from '@/lib/data/theme';
 import type { Catalog, Positions } from '@/lib/types';
 
 export type LoadStatus = 'idle' | 'loading' | 'ready' | 'error';
@@ -78,4 +79,10 @@ export function useCatalog(enabled = true): { status: LoadStatus; catalog: Catal
 export function usePositions(enabled = true): { status: LoadStatus; positions: Positions | null; retry: () => void } {
   const { status, value, retry } = useLoaded(loadPositions, peekPositions, positionsState, enabled);
   return { status, positions: value, retry };
+}
+
+/** The map theme and its load state. A failed load is reported, never retried on its own: the map shows plain sky. */
+export function useThemeLoad(enabled: boolean): { status: LoadStatus; theme: ThemeData | null } {
+  const { status, value } = useLoaded(loadTheme, peekTheme, themeState, enabled);
+  return { status, theme: value };
 }

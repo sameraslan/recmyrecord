@@ -11,12 +11,21 @@ const rgb = (hex: string): [number, number, number] => hexToRgb(hex).map((v) => 
 /** Dot colours by cluster k (k % 3: clay, moss, ochre), written straight to the framebuffer as sRGB literals. */
 export const CLUSTER_RGB: [number, number, number][] = Array.from({ length: 8 }, (_, k) => rgb(['#c4886f', '#97a077', '#c8a560'][k % 3]));
 
+/** Raw layout units (positions.json) to world units: world = (raw - centre) * s. */
+export interface MapTransform {
+  cx: number;
+  cy: number;
+  s: number;
+}
+
 export interface MapData {
   n: number;
   albums: AlbumRecord[];
   /** Normalised flat positions per stop, album order. */
   pos: Record<StopId, Float32Array>;
   atlasUrls: string[];
+  /** The transform that made `pos`; theme data stored in raw units goes through rawToWorld. */
+  tx: MapTransform;
 }
 
 function quantile(sorted: Float64Array, q: number): number {
@@ -24,9 +33,8 @@ function quantile(sorted: Float64Array, q: number): number {
 }
 
 /** Centre on the balanced layout's median and scale its 5th..95th percentile extent to 0.55 world units
- * (the camera constants ported from the personal site assume this). The same transform is applied to all
- * three stops so the aligned layouts stay aligned. */
-export function normalizePositions(p: Positions): Record<StopId, Float32Array> {
+ * (the camera constants ported from the personal site assume this). */
+export function positionsTransform(p: Positions): MapTransform {
   const b = p.balanced;
   const n = b.length / 2;
   const xs = new Float64Array(n);
@@ -40,18 +48,27 @@ export function normalizePositions(p: Positions): Record<StopId, Float32Array> {
   const cx = quantile(xs, 0.5);
   const cy = quantile(ys, 0.5);
   const ext = Math.max(quantile(xs, 0.95) - cx, cx - quantile(xs, 0.05), quantile(ys, 0.95) - cy, cy - quantile(ys, 0.05)) || 1;
-  const s = 0.55 / ext;
+  return { cx, cy, s: 0.55 / ext };
+}
+
+/** The same transform is applied to all three stops so the aligned layouts stay aligned. */
+export function normalizePositions(p: Positions, tx: MapTransform = positionsTransform(p)): Record<StopId, Float32Array> {
   const out = {} as Record<StopId, Float32Array>;
   for (const stop of STOP_IDS) {
     const src = p[stop];
     const f = new Float32Array(src.length);
     for (let i = 0; i < src.length; i += 2) {
-      f[i] = (src[i] - cx) * s;
-      f[i + 1] = (src[i + 1] - cy) * s;
+      f[i] = (src[i] - tx.cx) * tx.s;
+      f[i + 1] = (src[i + 1] - tx.cy) * tx.s;
     }
     out[stop] = f;
   }
   return out;
+}
+
+/** A point in raw layout units (region centres, the gas bake square) in the world units of `data.pos`. */
+export function rawToWorld(data: Pick<MapData, 'tx'>, x: number, y: number): [number, number] {
+  return [(x - data.tx.cx) * data.tx.s, (y - data.tx.cy) * data.tx.s];
 }
 
 export function buildMapData(albums: AlbumRecord[], positions: Positions): MapData {
@@ -60,11 +77,13 @@ export function buildMapData(albums: AlbumRecord[], positions: Positions): MapDa
       throw new Error(`positions.${stop} has ${positions[stop].length} numbers for ${albums.length} albums`);
     }
   }
+  const tx = positionsTransform(positions);
   return {
     n: albums.length,
     albums,
-    pos: normalizePositions(positions),
+    pos: normalizePositions(positions, tx),
     atlasUrls: Array.from({ length: atlasCount(albums.length) }, (_, i) => atlasUrl(i)),
+    tx,
   };
 }
 
