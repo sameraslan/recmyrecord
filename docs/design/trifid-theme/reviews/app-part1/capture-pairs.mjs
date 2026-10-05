@@ -76,6 +76,7 @@ const STATES = {
   // closer. So for this state the app's camera is moved to the prototype's own Overview framing.
   overview: {
     approved: 'final-overview.jpg',
+    approvedFile: 'final-overview.jpg',
     proto: '#/map?twinkle=0&seed=1004',
     appFollowsPrototype: true,
     app: async (page) => {
@@ -83,8 +84,36 @@ const STATES = {
       await settleApp(page);
     },
   },
+  // Sonic and Mood at the prototype's Overview framing of that stop. final-mood.jpg is the approved Mood picture;
+  // Sonic has none.
+  'overview-mood': {
+    approved: 'final-mood.jpg',
+    approvedFile: 'final-mood.jpg',
+    proto: '#/map?stop=mood&twinkle=0&seed=1004',
+    appFollowsPrototype: true,
+    app: async (page) => {
+      await page.goto(`http://127.0.0.1:${PORT}/map`);
+      await settleApp(page);
+      await page.evaluate(() => window.__rmr.getState().setStop('mood'));
+      await page.waitForTimeout(900);
+      await settleApp(page);
+    },
+  },
+  'overview-sonic': {
+    approved: 'none (Sonic has no approved picture)',
+    proto: '#/map?stop=sonic&twinkle=0&seed=1004',
+    appFollowsPrototype: true,
+    app: async (page) => {
+      await page.goto(`http://127.0.0.1:${PORT}/map`);
+      await settleApp(page);
+      await page.evaluate(() => window.__rmr.getState().setStop('sonic'));
+      await page.waitForTimeout(900);
+      await settleApp(page);
+    },
+  },
   whole: {
     approved: 'final-whole.jpg',
+    approvedFile: 'final-whole.jpg',
     proto: '#/map?fit=whole&twinkle=0&seed=1004',
     app: async (page) => {
       await page.goto(`http://127.0.0.1:${PORT}/map`);
@@ -93,6 +122,7 @@ const STATES = {
   },
   album: {
     approved: 'final-album.jpg',
+    approvedFile: 'final-album.jpg',
     proto: `#/album/${STONE_ROSES.slug}?twinkle=0&seed=1004`,
     app: async (page) => {
       await page.goto(`http://127.0.0.1:${PORT}/album/${STONE_ROSES.slug}`);
@@ -111,6 +141,7 @@ const STATES = {
   },
   home: {
     approved: 'final-home.jpg',
+    approvedFile: 'final-home.jpg',
     proto: '#/?twinkle=0&seed=1004',
     app: async (page) => {
       await page.goto(`http://127.0.0.1:${PORT}/`);
@@ -119,6 +150,9 @@ const STATES = {
   },
   deep: {
     approved: 'q-deep.jpg (panel C, "Faint")',
+    approvedFile: 'q-deep.jpg',
+    // panel C is the lower right quarter of a contact sheet: this rectangle of the 2472 x 1660 file, by eye
+    approvedCrop: { left: 1248, top: 843, width: 1199, height: 749 },
     proto: `#/map?seed=1004&names=0&twinkle=0&cam=${DEEP_AT.x},${DEEP_AT.y},99999`,
     app: async (page) => {
       await page.goto(`http://127.0.0.1:${PORT}/map`);
@@ -368,6 +402,50 @@ async function compare(appPng, protoPng, geo, coverPx) {
   return { maskRadiusPx: radius, rows };
 }
 
+/** Median luma, median colour and median saturation of the unmasked pixels of a rectangle: robust against
+ * what lies on top of the gas in a full picture (stars, dots, lettering). */
+function medianStats(img, mask, rect) {
+  const L = [], R = [], G = [], B = [], S = [];
+  for (let y = Math.round(rect.y); y < Math.round(rect.y + rect.h); y++) {
+    for (let x = Math.round(rect.x); x < Math.round(rect.x + rect.w); x++) {
+      const i = y * W + x;
+      if (mask[i]) continue;
+      const r = img.d[3 * i], g = img.d[3 * i + 1], b = img.d[3 * i + 2];
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+      L.push(0.2126 * r + 0.7152 * g + 0.0722 * b);
+      R.push(r);
+      G.push(g);
+      B.push(b);
+      S.push(mx > 0 ? (mx - mn) / mx : 0);
+    }
+  }
+  if (L.length < 50) return null;
+  const med = (v) => v.sort((a, b) => a - b)[v.length >> 1];
+  return { luma: Math.round(med(L) * 10) / 10, rgb: [med(R), med(G), med(B)], sat: Math.round(med(S) * 1000) / 1000 };
+}
+
+/** The approved JPEG itself against the app's gas and the prototype's gas, on the same patches (medians). */
+async function compareApproved(file, crop, appPng, protoPng, geo, coverPx) {
+  let a = sharp(path.resolve(HERE, '../../options', file));
+  if (crop) a = a.extract(crop);
+  const approved = await raw(await a.resize(W, H, { fit: 'fill' }).png().toBuffer());
+  const A = await raw(appPng);
+  const P = await raw(protoPng);
+  // stars carry a bloom wider than a dot, so the mask is a little wider here
+  const mask = maskOf(geo, Math.max(9, coverPx * 0.5 + 5));
+  const c = geo.canvas;
+  const area = { x: Math.max(0, c.x) + 8, y: Math.max(0, c.y) + 8, w: Math.min(W, c.x + c.w) - Math.max(0, c.x) - 16, h: Math.min(H, c.y + c.h) - Math.max(0, c.y) - 16 };
+  const rows = [];
+  for (let j = 0; j < 3; j++) {
+    for (let i = 0; i < 4; i++) {
+      const rect = { x: area.x + (area.w * i) / 4, y: area.y + (area.h * j) / 3, w: area.w / 4, h: area.h / 3 };
+      rows.push({ patch: `r${j + 1}c${i + 1}`, app: medianStats(A, mask, rect), approved: medianStats(approved, mask, rect), prototype: medianStats(P, mask, rect) });
+    }
+  }
+  rows.push({ patch: 'whole map area', app: medianStats(A, mask, area), approved: medianStats(approved, mask, area), prototype: medianStats(P, mask, area) });
+  return rows;
+}
+
 const HIDE_APP = 'body *{visibility:hidden!important} canvas.map-canvas{visibility:visible!important} .grain{display:none!important}';
 
 async function main() {
@@ -413,6 +491,7 @@ async function main() {
       await ctx.close();
 
       const cmp = await compare(appGas, protoGas, geo, m.coverPx);
+      if (st.approvedFile) cmp.approvedRows = await compareApproved(st.approvedFile, st.approvedCrop, appGas, protoGas, geo, m.coverPx);
       all[name] = { approved: st.approved, prototypeHash: st.proto, app: { camera: geo.camera, canvas: geo.canvas, gasPool: geo.gasPool, gasDeep: geo.gasDeep, errors }, prototype: { ownCamera: m.own, matchedCamera: m.set, worstAlbumOffsetPx: Math.round(m.worstPx * 100) / 100, coverPx: Math.round(m.coverPx * 10) / 10, poolAmt: m2.poolAmt }, ...cmp };
       console.log(`${name}: framing residual ${m.worstPx.toFixed(2)} px, covers ${m.coverPx.toFixed(1)} px, prototype own ppw ${m.own.ppw.toFixed(0)} against app ${m.set.ppw.toFixed(0)}`);
       for (const r of cmp.rows) console.log(`  ${r.patch.padEnd(15)} app ${JSON.stringify(r.app)}\n  ${''.padEnd(15)} pro ${JSON.stringify(r.prototype)}`);
@@ -431,6 +510,14 @@ async function main() {
       md.push(`| ${r.patch} (${r.rect.x}, ${r.rect.y}, ${r.rect.w}, ${r.rect.h}) | ${a.used} | ${a.luma} / ${p.luma} | ${a.lumaSd} / ${p.lumaSd} | ${a.sat} / ${p.sat} | ${a.hue} / ${p.hue} | ${a.rgb.join(' ')} / ${p.rgb.join(' ')} | ${a.detail} / ${p.detail} |`);
     }
     md.push('');
+    if (s.approvedRows) {
+      md.push(`Against the approved file itself (${s.approved}): medians of the same patches, albums masked. The approved picture also holds stars, region names, glass panels and the header over the map (parts 2 and 3), which the gas-only images do not; r1c1 lies under the similarity panel in the map states.`, '', '| Patch | Median luma app / approved / prototype | Median rgb app | Median rgb approved | Median rgb prototype | Median saturation app / approved / prototype |', '|---|---|---|---|---|---|');
+      for (const r of s.approvedRows) {
+        if (!r.app || !r.approved || !r.prototype) continue;
+        md.push(`| ${r.patch} | ${r.app.luma} / ${r.approved.luma} / ${r.prototype.luma} | ${r.app.rgb.join(' ')} | ${r.approved.rgb.join(' ')} | ${r.prototype.rgb.join(' ')} | ${r.app.sat} / ${r.approved.sat} / ${r.prototype.sat} |`);
+      }
+      md.push('');
+    }
   }
   fs.writeFileSync(path.join(OUT, 'stats.md'), md.join('\n'));
 }

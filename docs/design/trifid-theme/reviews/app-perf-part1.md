@@ -1,27 +1,39 @@
 # Part 1 (data and gas) against the baseline: performance and regression checklist
 
-- Commit measured: `761accb7` on `trifid-build` (tasks 1 to 5, plus Task 6's two changes to `GasField`: decoded gas images are freed after upload, and late gas images are uploaded only when the map is left alone).
-- Date: 2026-10-05, 01:30 to 01:50 local time.
-- Machine: MacBook Pro, Apple M1 Pro, 16 GB, shared with other work. Load average before the three runs: 4.5, 4.8, 6.3. Node v22.23.3 arm64, Google Chrome 154.0.8037.93 headless arm64, production build.
+- Commit measured: `6c225edd` on `trifid-build` (tasks 1 to 5, Task 6's changes to `GasField`, and fix round 1).
+- Date: 2026-10-05, 02:40 to 03:25 local time. **On mains power, with an ordinary launch: plain `npm run perf`, three times, and `baseline/hover-measure.mjs`, exactly as the baseline was taken.** No preload, no changed browser arguments.
+- Machine: MacBook Pro, Apple M1 Pro, 16 GB, shared with other sessions the whole time. Each run waited up to fifteen minutes for the one-minute load to fall under 4; it never did. Load before the runs: 6.5, 5.9, 6.1 (the baseline was taken at 5 to 13). Node v22.23.3 arm64, Google Chrome 154.0.8037.93 headless arm64, production build.
 - Renderers: gpu `ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)`; software `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)`.
 - Baseline: `baseline/BASELINE-PERF.md` and `baseline/perf/` (today's site, commit `1e9ef508`). Budgets: `frontcreck/scripts/perf/budgets.json`, unchanged.
+- Raw: `perf-part1/perf-run1.json` to `perf-run3.json` and `.txt`, `app-hover-part1.json` and `.txt`.
 
-## Read this first: how these runs differ from the baseline's
+## Headline
 
-**The laptop was on battery at 20% or less.** There Chrome's Energy Saver holds every page at 30 frames a second, so every frame gap reads 33 to 36 ms, on today's site exactly as on this build (checked: a drag on the baseline commit and on this one both drew 62 frames in 2 s, median gap 33.3 ms). The first three runs were taken like that before this was noticed; they are kept as `perf-part1/energy-saver-30fps-run1.json` to `run3.json` and their frame gaps are not used. No command-line switch turns Energy Saver off. The three runs reported here (`perf-part1/perf-run1.json` to `perf-run3.json` and `.txt`) were started as
+**Budgets.** Runs 1 and 3 met every budget. Run 2 missed one: software desktop "select to album" 240 ms against 200 (25 and 33 ms in the other two runs, 17 to 35 in the baseline), a single run on a loaded machine; its median is 33 ms. No median is over budget. The startup long task on software renderers, which missed its budget in every earlier run of part 1 on both software columns (268 and 276 ms on desktop, 241 and 261 ms on phone, depending on the launch), is now 155 ms on desktop (120 to 164) and 0 ms on phone, against a budget of 250.
 
-```bash
-node --import ./scripts/perf/no-energy-saver.mjs scripts/perf/perf.mjs
-```
+**Still worse than the baseline** (median above the baseline's worst run), every row, with its cause; details in "What is still worse":
 
-`scripts/perf/no-energy-saver.mjs` (new) makes the script's `chromium.launch()` start the same Chrome with the same arguments on a throwaway profile whose Energy Saver is off, and changes nothing else. With it the same drag draws 122 frames in 2 s (median gap 16.7 ms, worst 20.8). The baseline was measured at 60 frames a second with an ordinary launch, as was its dpr 2 column added in this task (battery was above 20% then).
+| Row | Now | Baseline | Cause |
+|---|---|---|---|
+| software desktop, startup long task | 155 ms (120 to 164) | 57 ms (0 to 122) | Not the gas. It is the same task as in the baseline, the main-thread WebGL probe that starts the moment the warm-up worker gives up (same timestamp as "warm-up end" in all six runs); 33 to 42 ms longer than the baseline's worst run, on a busier machine. Cause of the extra not established |
+| software desktop, search usable | 352 ms (113 to 355) | 121 ms (92 to 137) | Happens 100 to 350 ms after load, seconds before any map code runs. Machine load; see below for the reruns |
+| software desktop, drag and zoom gap | 110 and 231 ms | 95 and 202 ms | The CPU shades the gas in every frame |
+| software phone, morph and zoom gap | 133 and 56 ms | 114 and 53 ms | The same |
+| software hover, longest frame gap | 66.8, 83.4, 83.3 ms | 66.7, 66.7, 66.7 ms | The same: one more frame of 16.7 ms on the second hover; first and third are within 0.1 ms of, or inside, the baseline's range |
+| software hover 3, tip visible | 96.6 ms (94 to 105.2) | 88.1 ms (84.9 to 93.1) | The same (the tip shows from the map's next drawn frame, which is slower) |
+| gpu desktop2x, transition gap | 33 ms (30 to 38) | 27 ms (26 to 28; 21 to 35 in the second set of baseline runs) | Traced: the late frame is the one in which a cover sheet is uploaded (16 to 33 ms each, today's site's own behaviour), now with the gas to shade in the same frame at four times the pixels. No gas upload falls in the window |
+| gpu desktop deep zoom drag, gpu phone deep zoom morph | 19 ms | 18 ms (17 to 18) | One frame plus a millisecond of timer jitter; not a dropped frame |
+| gpu phone, search usable | 80 ms (77 to 88) | 74 ms (72 to 78) | 6 ms, before any map code runs |
 
-What this does and does not affect:
+Everything else is inside or better than the baseline's range, including slider to list (5 to 9 ms in all five columns; it was 5 to 8 ms slower before the fix round) and every other gpu frame gap.
 
-- The gpu columns: comparable with the baseline. Startup, typing, select and frame gaps are in the baseline's range (tables).
-- The software columns started more slowly on the throwaway profile than with an ordinary launch (search usable 241 ms against 109, map first frame 5129 ms against 3726 on software desktop). For the software columns' startup rows the ordinary-launch numbers are therefore given under each table as well; they are the ones to compare with the baseline. Software frame gaps come from the runs reported here.
-- The hover runs used the same preload. There every fresh load is also a fresh browser, where the baseline reused one browser for its five loads. That can only make the first hover slower, not faster.
-- **Not verified: the whole comparison should be run once more on mains power with an ordinary launch** (`npm run perf` three times, then the hover script), which is the baseline's exact method. It takes about fifteen minutes.
+**Nebula visible** (reported only, no baseline): 640, 612 and 644 ms on gpu desktop, gpu phone and dpr 2, which is 58, 50 and 56 ms after the map's first frame. Before the fix round it followed the first frame by 53, 43 and 43 ms (battery runs with the preload). So waiting for the GPU costs the nebula about 5 to 13 ms on a GPU. On software: 315 and 282 ms after the first frame, as before (300 and 288 with an ordinary launch), but now without blocking the main thread.
+
+## What these runs are, and what changed in the script
+
+- **Method per column.** All five part 1 columns: ordinary launch, mains. Baseline, four columns: `baseline/perf/perf-run*.json`, ordinary launch. Baseline at dpr 2: `baseline/perf/perf-dpr2-run*.json`, ordinary launch (taken in this task above 20% battery, at 60 frames a second). Baseline of the two deep zoom rows at dpr 1: `perf-part1/baseline-gpu-deep-run*.json`, today's site with the extended script, ordinary launch; these three runs also hold a second set of all gpu rows of today's site, used above where it helps to judge spread. The software columns have no baseline for the deep zoom rows.
+- **Two budgeted rows are measured after different steps than in the baseline** (the plan's script edits, they loosen nothing): "Long tasks while idle" and "Frames while idle" now follow the deep zoom drag and two stop changes at full zoom; "Startup worst long task" now also waits for the nebula before it reads the long tasks, where the baseline read them 4 s after load. Startup both ways: in these runs every startup long task started before 4 s and ended before the read (software desktop: one task per run, at 3.4 to 3.7 s; all other columns none), so the number is the same by either method.
+- **Battery runs, not used for any number above**: `perf-part1/battery/`. `energy-saver-30fps-run*.json` are ordinary launches under Chrome's Energy Saver (30 frames a second; frame gaps useless); `perf-run*.json` and `hover-no-energy-saver.*` used the preload `scripts/perf/no-energy-saver.mjs`. All of them are commit `761accb7`, before the fix round. They are kept as the "before" of the fix round.
 
 ## Sizes (same in all runs)
 
@@ -33,28 +45,31 @@ What this does and does not affect:
 | Server HTML of `/` | 28.3 KB | 28.3 KB | 150 KB |
 | Server HTML of `/album/in-rainbows-radiohead` | 34 KB | 34 KB | 150 KB |
 
-First-load JS is unchanged by Task 6 (191.1 KB after Task 5 and now); 8.9 KB of the budget are left for parts 2 and 3. Not on the first load: the lazy map chunk (three.js and the map) went from 248.2 KB to 252.7 KB gzip (+4.5 KB: the gas shader, `GasField` and the noise table code), measured on the two builds' `.next/static` files; the second map chunk is 10.8 KB before and 10.9 KB now. New downloads after first paint: `theme.json` 53.9 KB on disk and one gas image (188 KB for Balanced; Sonic 190 KB, Mood 141 KB, fetched only on an interactive map, at idle). The import check of the brief prints the five expected lines and no other (`canvas/GasField.tsx` and `shaders/gas.test.ts` import `shaders/gas`, `canvas/Scene.tsx` imports `GasField`, `shaders/gas.ts` and `shaders/gas.test.ts` import `theme`).
+First-load JS has been 191.1 KB since Task 5; 8.9 KB of the budget are left for parts 2 and 3. Not on the first load: the lazy map chunk (three.js and the map) was 248.2 KB gzip on the baseline build and 252.7 KB before the fix round; the fix round adds about 0.5 KB of scheduling code to it (not measured again to the tenth). New downloads after first paint: `theme.json` 53.9 KB and one gas image (188 KB for Balanced; Sonic 190 KB and Mood 141 KB only on an interactive map, at idle). The import check of the brief prints the five expected lines and no other.
 
-## Summary of medians (three runs)
+## Summary of medians (three runs; now / baseline)
 
 | Median | software desktop | software phone | gpu desktop | gpu phone | gpu desktop2x |
 |---|---|---|---|---|---|
-| Startup worst long task (ms), now / baseline | **268 / 57** | **241 / 0** | 0 / 0 | 0 / 0 | 0 / 0 |
-| Map first frame (ms) | 5129 / 4074 (ordinary launch: 3726) | 2403 / 2903 | 608 / 575 | 579 / 554 | 610 / 617 |
-| Nebula visible (ms), after the map's first frame | 5423, +294 | 2669, +266 | 661, +53 | 622, +43 | 653, +43 |
-| Transition worst frame gap (ms) | 1214 / 1355 | 747 / 784 | 24 / 28 | 24 / 18 | 25 / 27 |
-| Morph worst frame gap (ms) | 105 / 153 | 133 / 114 | 19 / 18 | 19 / 18 | 18 / 18 |
-| Drag worst frame gap (ms) | 116 / 95 | 96 / 79 | 20 / 19 | 21 / 19 | 21 / 18 |
-| Zoom worst frame gap (ms) | 323 / 202 | 60 / 53 | 35 / 38 | 37 / 44 | 33 / 38 |
-| Deep zoom drag worst frame gap (ms) | 70 / none | 56 / none | 19 / 18 | 19 / 19 | 21 / 19 |
-| Deep zoom, slider between stops, worst frame gap (ms) | 71 / none | 56 / none | 18 / 18 | 19 / 18 | 18 / 17 |
-| Long tasks while idle, frames while idle | 0, 0 | 0, 0 | 0, 0 | 0, 0 | 0, 0 |
+| Search usable (ms) | 352 / 121 | 148 / 127 | 85 / 84 | 80 / 74 | 81 / 106 |
+| Startup worst long task (ms) | 155 / 57 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Map first frame (ms) | 4221 / 4074 | 2925 / 2903 | 582 / 575 | 562 / 554 | 588 / 617 |
+| Nebula visible (ms) | 4536 / none | 3207 / none | 640 / none | 612 / none | 644 / none |
+| Typing to suggestions (ms) | 6 / 6 | 4 / 5 | 5 / 7 | 5 / 5 | 5 / 6 |
+| Select to album (ms) | 33 / 24 | 20 / 18 | 18 / 22 | 18 / 19 | 18 / 21 |
+| Transition worst frame gap (ms) | 899 / 1355 | 792 / 784 | 23 / 28 | 18 / 18 | 33 / 27 |
+| Slider to list (ms) | 8 / 8 | 9 / 16 | 5 / 12 | 8 / 13 | 5 / 6 |
+| Morph worst frame gap (ms) | 146 / 153 | 133 / 114 | 18 / 18 | 17 / 18 | 18 / 18 |
+| Drag worst frame gap (ms) | 110 / 95 | 88 / 79 | 18 / 19 | 17 / 19 | 18 / 18 |
+| Zoom worst frame gap (ms) | 231 / 202 | 56 / 53 | 33 / 38 | 36 / 44 | 33 / 38 |
+| Deep zoom drag worst frame gap (ms) | 67 / none | 55 / none | 19 / 18 | 18 / 19 | 18 / 19 |
+| Deep zoom, slider between stops, worst frame gap (ms) | 78 / none | 56 / none | 18 / 18 | 19 / 18 | 18 / 17 |
+| Long tasks while idle | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
+| Frames while idle | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 | 0 / 0 |
 
-On the GPU the gas costs no frame: every frame gap but the zoom row's is one frame (18 to 25 ms; a dropped frame reads 33), at device pixel ratio 1 and 2, at the overview and in the worst case (full zoom with the slider between stops: 18, 19 and 18 ms). The zoom row reads 33 to 37 ms, as it does in the baseline (38 to 44). The two rows closest to their limit in the baseline did not get worse: gpu phone zoom 37 ms (baseline 44, budget 50) and first-load JS 191.1 KB (budget 200). **One budget is missed: the startup long task on a software renderer** (section "What got worse").
+On the GPU the gas costs no frame at dpr 1: every frame gap but the zoom row's is one frame (17 to 23 ms; a dropped frame reads 33), at the overview and in the worst case (full zoom with the slider between stops: 18 and 19 ms). The zoom row reads 33 to 36 ms, as it does in the baseline (38 to 44). At dpr 2 the same holds except for the transition row (33 ms; see below).
 
 ## Every run, per combination
-
-The baseline of the two deep zoom rows in the gpu desktop and gpu phone columns comes from three extra runs of today's site (commit `6f10463e`) with the extended script, `npm run perf -- --mode gpu --no-gas`, kept as `perf-part1/baseline-gpu-deep-run1.json` to `run3.json`; the baseline folder itself has them only for dpr 2. The software columns have no baseline for those rows.
 
 ### software desktop
 
@@ -62,24 +77,23 @@ Renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C
 
 | Metric | Run 1 | Run 2 | Run 3 | Median | Baseline median | Baseline min to max | Budget | Verdict |
 |---|---|---|---|---|---|---|---|---|
-| Search usable (ms) | 250 | 237 | 241 | 241 | 121 | 92 to 137 | 1000 | worse |
-| Startup worst long task (ms) | 262 | 268 | 273 | 268 | 57 | 0 to 122 | 250 | worse, MEDIAN OVER BUDGET |
-| Map first frame (ms) | 5243 | 5129 | 5083 | 5129 | 4074 | 3937 to 4267 | reported only | worse |
-| Nebula visible (ms) | 5533 | 5423 | 5382 | 5423 | none | none | reported only | no baseline; 294 ms after the map's first frame |
-| Typing to suggestions (ms) | 6 | 5 | 5 | 5 | 6 | 5 to 6 | 100 | same |
-| Select to album (ms) | 28 | 21 | 24 | 24 | 24 | 17 to 35 | 200 | same |
-| Transition worst frame gap (ms) | 1214 | 1351 | 850 | 1214 | 1355 | 1296 to 1642 | 50 (GPU only; not checked in software) | better |
-| Slider to list (ms) | 25 | 15 | 16 | 16 | 8 | 7 to 13 | 150 | worse |
-| Morph worst frame gap (ms) | 101 | 184 | 105 | 105 | 153 | 141 to 219 | 50 (GPU only; not checked in software) | better |
-| Drag worst frame gap (ms) | 116 | 106 | 118 | 116 | 95 | 85 to 105 | 50 (GPU only; not checked in software) | worse |
-| Zoom worst frame gap (ms) | 247 | 336 | 323 | 323 | 202 | 189 to 226 | 50 (GPU only; not checked in software) | worse |
-| Deep zoom drag worst frame gap (ms) | 76 | 65 | 70 | 70 | none | none | reported only | no baseline; beside the same column's drag: now 116, baseline 95 |
-| Deep zoom, slider between stops, worst frame gap (ms) | 70 | 71 | 71 | 71 | none | none | reported only | no baseline; beside the same column's morph: now 105, baseline 153 |
+| Search usable (ms) | 113 | 352 | 355 | 352 | 121 | 92 to 137 | 1000 | worse |
+| Startup worst long task (ms) | 155 | 120 | 164 | 155 | 57 | 0 to 122 | 250 | worse |
+| Map first frame (ms) | 4045 | 4290 | 4221 | 4221 | 4074 | 3937 to 4267 | reported only | same |
+| Nebula visible (ms) | 4362 | 4606 | 4536 | 4536 | none | none | reported only | no baseline; 315 ms after the map's first frame |
+| Typing to suggestions (ms) | 6 | 8 | 6 | 6 | 6 | 5 to 6 | 100 | same |
+| Select to album (ms) | 25 | 240 | 33 | 33 | 24 | 17 to 35 | 200 | same |
+| Transition worst frame gap (ms) | 677 | 1591 | 899 | 899 | 1355 | 1296 to 1642 | 50 (GPU only; not checked in software) | better |
+| Slider to list (ms) | 9 | 8 | 8 | 8 | 8 | 7 to 13 | 150 | same |
+| Morph worst frame gap (ms) | 199 | 144 | 146 | 146 | 153 | 141 to 219 | 50 (GPU only; not checked in software) | same |
+| Drag worst frame gap (ms) | 106 | 110 | 110 | 110 | 95 | 85 to 105 | 50 (GPU only; not checked in software) | worse |
+| Zoom worst frame gap (ms) | 193 | 231 | 245 | 231 | 202 | 189 to 226 | 50 (GPU only; not checked in software) | worse |
+| Deep zoom drag worst frame gap (ms) | 67 | 68 | 65 | 67 | none | none | reported only | no baseline; beside the same column's drag: now 110, baseline 95 |
+| Deep zoom, slider between stops, worst frame gap (ms) | 78 | 74 | 84 | 78 | none | none | reported only | no baseline; beside the same column's morph: now 146, baseline 153 |
 | Long tasks while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 0 | same |
 | Frames while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 1 | same |
 
-Map settled before each step: [true], [true], [true]. Console errors per run: 0, 0, 0. Warm-up ended by: done, done, done. thumbs.webp on first load: false, false, false. Startup long tasks [start, ms]: [[5171, 52], [5270, 262]]; [[5154, 268]]; [[5109, 273]].
-The same column in the three runs taken with an ordinary launch while Energy Saver held Chrome at 30 frames a second (frame gaps there are not comparable): search usable 146/80/109, startup worst long task 286/270/276, map first frame 3902/3726/3478, nebula visible 4214/4026/3775, typing 6/5/5, select 30/19/18, slider to list 16/20/14, idle long tasks 0/0/0, idle frames 0/0/0.
+Map settled before each step: [true], [true], [true]. Console errors per run: 0, 0, 0. Warm-up ended by: cap, cap, cap. thumbs.webp on first load: false, false, false. Startup long tasks [start, ms]: [[3447, 155]]; [[3734, 120]]; [[3628, 164]].
 
 ### software phone
 
@@ -87,24 +101,23 @@ Renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C
 
 | Metric | Run 1 | Run 2 | Run 3 | Median | Baseline median | Baseline min to max | Budget | Verdict |
 |---|---|---|---|---|---|---|---|---|
-| Search usable (ms) | 447 | 194 | 71 | 194 | 127 | 80 to 179 | 1000 | worse |
-| Startup worst long task (ms) | 245 | 241 | 238 | 241 | 0 | 0 to 0 | 250 | worse |
-| Map first frame (ms) | 2419 | 2403 | 2132 | 2403 | 2903 | 2811 to 3028 | reported only | better |
-| Nebula visible (ms) | 2690 | 2669 | 2396 | 2669 | none | none | reported only | no baseline; 266 ms after the map's first frame |
+| Search usable (ms) | 853 | 81 | 148 | 148 | 127 | 80 to 179 | 1000 | same |
+| Startup worst long task (ms) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 250 | same |
+| Map first frame (ms) | 3019 | 2819 | 2925 | 2925 | 2903 | 2811 to 3028 | reported only | same |
+| Nebula visible (ms) | 3305 | 3097 | 3207 | 3207 | none | none | reported only | no baseline; 282 ms after the map's first frame |
 | Typing to suggestions (ms) | 5 | 4 | 4 | 4 | 5 | 4 to 5 | 100 | same |
-| Select to album (ms) | 19 | 17 | 69 | 19 | 18 | 17 to 77 | 200 | same |
-| Transition worst frame gap (ms) | 747 | 726 | 751 | 747 | 784 | 738 to 892 | 50 (GPU only; not checked in software) | same |
-| Slider to list (ms) | 27 | 19 | 23 | 23 | 16 | 7 to 181 | 150 | same |
-| Morph worst frame gap (ms) | 133 | 144 | 119 | 133 | 114 | 112 to 119 | 50 (GPU only; not checked in software) | worse |
-| Drag worst frame gap (ms) | 96 | 81 | 104 | 96 | 79 | 74 to 117 | 50 (GPU only; not checked in software) | same |
-| Zoom worst frame gap (ms) | 58 | 60 | 64 | 60 | 53 | 49 to 55 | 50 (GPU only; not checked in software) | worse |
-| Deep zoom drag worst frame gap (ms) | 56 | 57 | 46 | 56 | none | none | reported only | no baseline; beside the same column's drag: now 96, baseline 79 |
-| Deep zoom, slider between stops, worst frame gap (ms) | 56 | 63 | 47 | 56 | none | none | reported only | no baseline; beside the same column's morph: now 133, baseline 114 |
+| Select to album (ms) | 25 | 20 | 18 | 20 | 18 | 17 to 77 | 200 | same |
+| Transition worst frame gap (ms) | 801 | 792 | 788 | 792 | 784 | 738 to 892 | 50 (GPU only; not checked in software) | same |
+| Slider to list (ms) | 9 | 8 | 9 | 9 | 16 | 7 to 181 | 150 | same |
+| Morph worst frame gap (ms) | 133 | 125 | 133 | 133 | 114 | 112 to 119 | 50 (GPU only; not checked in software) | worse |
+| Drag worst frame gap (ms) | 84 | 88 | 88 | 88 | 79 | 74 to 117 | 50 (GPU only; not checked in software) | same |
+| Zoom worst frame gap (ms) | 68 | 54 | 56 | 56 | 53 | 49 to 55 | 50 (GPU only; not checked in software) | worse |
+| Deep zoom drag worst frame gap (ms) | 58 | 54 | 55 | 55 | none | none | reported only | no baseline; beside the same column's drag: now 88, baseline 79 |
+| Deep zoom, slider between stops, worst frame gap (ms) | 52 | 65 | 56 | 56 | none | none | reported only | no baseline; beside the same column's morph: now 133, baseline 114 |
 | Long tasks while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 0 | same |
 | Frames while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 1 | same |
 
-Map settled before each step: [true, true], [true, true], [true, true]. Console errors per run: 0, 0, 0. Warm-up ended by: done, done, done. thumbs.webp on first load: false, false, false. Startup long tasks [start, ms]: [[2444, 245]]; [[2428, 241]]; [[2156, 238]].
-The same column in the three runs taken with an ordinary launch while Energy Saver held Chrome at 30 frames a second (frame gaps there are not comparable): search usable 113/80/143, startup worst long task 261/261/258, map first frame 2815/2767/2870, nebula visible 3100/3065/3158, typing 4/5/5, select 17/21/17, slider to list 16/16/25, idle long tasks 0/0/0, idle frames 0/0/0.
+Map settled before each step: [true, true], [true, true], [true, true]. Console errors per run: 0, 0, 0. Warm-up ended by: done, done, done. thumbs.webp on first load: false, false, false. Startup long tasks [start, ms]: []; []; [].
 
 ### gpu desktop
 
@@ -112,24 +125,23 @@ Renderer: ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)
 
 | Metric | Run 1 | Run 2 | Run 3 | Median | Baseline median | Baseline min to max | Budget | Verdict |
 |---|---|---|---|---|---|---|---|---|
-| Search usable (ms) | 86 | 110 | 84 | 86 | 84 | 83 to 97 | 1000 | same |
+| Search usable (ms) | 85 | 81 | 106 | 85 | 84 | 83 to 97 | 1000 | same |
 | Startup worst long task (ms) | 0 | 0 | 0 | 0 | 0 | 0 to 345 | 250 | same |
-| Map first frame (ms) | 584 | 631 | 608 | 608 | 575 | 574 to 907 | reported only | same |
-| Nebula visible (ms) | 637 | 680 | 661 | 661 | none | none | reported only | no baseline; 53 ms after the map's first frame |
-| Typing to suggestions (ms) | 8 | 5 | 7 | 7 | 7 | 6 to 10 | 100 | same |
-| Select to album (ms) | 30 | 19 | 21 | 21 | 22 | 21 to 24 | 200 | same |
-| Transition worst frame gap (ms) | 24 | 30 | 21 | 24 | 28 | 27 to 28 | 50 | better |
-| Slider to list (ms) | 17 | 16 | 13 | 16 | 12 | 7 to 16 | 150 | same |
-| Morph worst frame gap (ms) | 19 | 19 | 18 | 19 | 18 | 18 to 20 | 50 | same |
-| Drag worst frame gap (ms) | 20 | 19 | 20 | 20 | 19 | 18 to 21 | 50 | same |
-| Zoom worst frame gap (ms) | 38 | 35 | 31 | 35 | 38 | 34 to 43 | 50 | same |
-| Deep zoom drag worst frame gap (ms) | 19 | 20 | 19 | 19 | 18 (today's site, extra runs with the extended script) | 17 to 18 | reported only; 50 as yardstick | worse |
-| Deep zoom, slider between stops, worst frame gap (ms) | 18 | 22 | 18 | 18 | 18 (today's site, extra runs with the extended script) | 17 to 18 | reported only; 50 as yardstick | same |
+| Map first frame (ms) | 582 | 582 | 594 | 582 | 575 | 574 to 907 | reported only | same |
+| Nebula visible (ms) | 629 | 643 | 640 | 640 | none | none | reported only | no baseline; 58 ms after the map's first frame |
+| Typing to suggestions (ms) | 5 | 5 | 5 | 5 | 7 | 6 to 10 | 100 | better |
+| Select to album (ms) | 17 | 18 | 19 | 18 | 22 | 21 to 24 | 200 | better |
+| Transition worst frame gap (ms) | 22 | 28 | 23 | 23 | 28 | 27 to 28 | 50 | better |
+| Slider to list (ms) | 5 | 5 | 5 | 5 | 12 | 7 to 16 | 150 | better |
+| Morph worst frame gap (ms) | 17 | 18 | 18 | 18 | 18 | 18 to 20 | 50 | same |
+| Drag worst frame gap (ms) | 19 | 17 | 18 | 18 | 19 | 18 to 21 | 50 | same |
+| Zoom worst frame gap (ms) | 32 | 35 | 33 | 33 | 38 | 34 to 43 | 50 | better |
+| Deep zoom drag worst frame gap (ms) | 19 | 18 | 19 | 19 | 18 (today's site, extra runs with the extended script) | 17 to 18 | reported only; 50 as yardstick | worse |
+| Deep zoom, slider between stops, worst frame gap (ms) | 18 | 18 | 19 | 18 | 18 (today's site, extra runs with the extended script) | 17 to 18 | reported only; 50 as yardstick | same |
 | Long tasks while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 0 | same |
 | Frames while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 1 | same |
 
 Map settled before each step: [true], [true], [true]. Console errors per run: 0, 0, 0. Warm-up ended by: done, done, done. thumbs.webp on first load: false, false, false. Startup long tasks [start, ms]: []; []; [].
-The same column in the three runs taken with an ordinary launch while Energy Saver held Chrome at 30 frames a second (frame gaps there are not comparable): search usable 104/93/70, startup worst long task 0/0/0, map first frame 682/639/614, nebula visible 717/673/647, typing 6/5/6, select 20/26/21, slider to list 5/5/14, idle long tasks 0/0/0, idle frames 0/0/0.
 
 ### gpu phone
 
@@ -137,24 +149,23 @@ Renderer: ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)
 
 | Metric | Run 1 | Run 2 | Run 3 | Median | Baseline median | Baseline min to max | Budget | Verdict |
 |---|---|---|---|---|---|---|---|---|
-| Search usable (ms) | 76 | 258 | 77 | 77 | 74 | 72 to 78 | 1000 | same |
+| Search usable (ms) | 88 | 77 | 80 | 80 | 74 | 72 to 78 | 1000 | worse |
 | Startup worst long task (ms) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 250 | same |
-| Map first frame (ms) | 579 | 755 | 570 | 579 | 554 | 551 to 562 | reported only | worse |
-| Nebula visible (ms) | 620 | 805 | 622 | 622 | none | none | reported only | no baseline; 43 ms after the map's first frame |
-| Typing to suggestions (ms) | 4 | 4 | 5 | 4 | 5 | 4 to 6 | 100 | same |
-| Select to album (ms) | 18 | 18 | 18 | 18 | 19 | 18 to 19 | 200 | same |
-| Transition worst frame gap (ms) | 270 | 18 | 24 | 24 | 18 | 18 to 18 | 50 | worse |
-| Slider to list (ms) | 18 | 9 | 19 | 18 | 13 | 12 to 15 | 150 | worse |
-| Morph worst frame gap (ms) | 19 | 20 | 18 | 19 | 18 | 17 to 18 | 50 | worse |
-| Drag worst frame gap (ms) | 21 | 22 | 19 | 21 | 19 | 19 to 22 | 50 | same |
-| Zoom worst frame gap (ms) | 35 | 38 | 37 | 37 | 44 | 42 to 53 | 50 | better |
-| Deep zoom drag worst frame gap (ms) | 23 | 19 | 18 | 19 | 19 (today's site, extra runs with the extended script) | 18 to 19 | reported only; 50 as yardstick | same |
-| Deep zoom, slider between stops, worst frame gap (ms) | 19 | 18 | 19 | 19 | 18 (today's site, extra runs with the extended script) | 17 to 18 | reported only; 50 as yardstick | worse |
+| Map first frame (ms) | 576 | 550 | 562 | 562 | 554 | 551 to 562 | reported only | same |
+| Nebula visible (ms) | 640 | 612 | 609 | 612 | none | none | reported only | no baseline; 50 ms after the map's first frame |
+| Typing to suggestions (ms) | 5 | 5 | 5 | 5 | 5 | 4 to 6 | 100 | same |
+| Select to album (ms) | 18 | 18 | 25 | 18 | 19 | 18 to 19 | 200 | same |
+| Transition worst frame gap (ms) | 18 | 19 | 18 | 18 | 18 | 18 to 18 | 50 | same |
+| Slider to list (ms) | 8 | 6 | 17 | 8 | 13 | 12 to 15 | 150 | better |
+| Morph worst frame gap (ms) | 17 | 17 | 18 | 17 | 18 | 17 to 18 | 50 | same |
+| Drag worst frame gap (ms) | 17 | 17 | 18 | 17 | 19 | 19 to 22 | 50 | better |
+| Zoom worst frame gap (ms) | 35 | 37 | 36 | 36 | 44 | 42 to 53 | 50 | better |
+| Deep zoom drag worst frame gap (ms) | 19 | 18 | 18 | 18 | 19 (today's site, extra runs with the extended script) | 18 to 19 | reported only; 50 as yardstick | same |
+| Deep zoom, slider between stops, worst frame gap (ms) | 19 | 17 | 19 | 19 | 18 (today's site, extra runs with the extended script) | 17 to 18 | reported only; 50 as yardstick | worse |
 | Long tasks while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 0 | same |
 | Frames while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | 1 | same |
 
 Map settled before each step: [true, true], [true, true], [true, true]. Console errors per run: 0, 0, 0. Warm-up ended by: done, done, done. thumbs.webp on first load: false, false, false. Startup long tasks [start, ms]: []; []; [].
-The same column in the three runs taken with an ordinary launch while Energy Saver held Chrome at 30 frames a second (frame gaps there are not comparable): search usable 75/71/70, startup worst long task 0/0/0, map first frame 630/593/583, nebula visible 664/626/616, typing 5/4/4, select 20/17/18, slider to list 8/14/14, idle long tasks 0/0/0, idle frames 0/0/0.
 
 ### gpu desktop2x
 
@@ -162,92 +173,92 @@ Renderer: ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)
 
 | Metric | Run 1 | Run 2 | Run 3 | Median | Baseline median | Baseline min to max | Budget | Verdict |
 |---|---|---|---|---|---|---|---|---|
-| Search usable (ms) | 97 | 89 | 79 | 89 | 106 | 88 to 114 | none (reported only) | same |
+| Search usable (ms) | 81 | 80 | 81 | 81 | 106 | 88 to 114 | none (reported only) | better |
 | Startup worst long task (ms) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | none (reported only) | same |
-| Map first frame (ms) | 616 | 610 | 597 | 610 | 617 | 577 to 640 | none (reported only) | same |
-| Nebula visible (ms) | 660 | 649 | 653 | 653 | none | none | none (reported only) | no baseline; 43 ms after the map's first frame |
-| Typing to suggestions (ms) | 5 | 6 | 5 | 5 | 6 | 5 to 6 | none (reported only) | same |
-| Select to album (ms) | 19 | 21 | 19 | 19 | 21 | 19 to 25 | none (reported only) | same |
-| Transition worst frame gap (ms) | 25 | 30 | 21 | 25 | 27 | 26 to 28 | none; 50 as yardstick | better |
-| Slider to list (ms) | 14 | 8 | 12 | 12 | 6 | 5 to 8 | none (reported only) | worse |
-| Morph worst frame gap (ms) | 18 | 18 | 21 | 18 | 18 | 18 to 19 | none; 50 as yardstick | same |
-| Drag worst frame gap (ms) | 27 | 21 | 20 | 21 | 18 | 18 to 18 | none; 50 as yardstick | worse |
-| Zoom worst frame gap (ms) | 33 | 40 | 33 | 33 | 38 | 30 to 39 | none; 50 as yardstick | same |
-| Deep zoom drag worst frame gap (ms) | 21 | 21 | 19 | 21 | 19 | 18 to 19 | none; 50 as yardstick | worse |
-| Deep zoom, slider between stops, worst frame gap (ms) | 21 | 18 | 18 | 18 | 17 | 17 to 18 | none; 50 as yardstick | same |
+| Map first frame (ms) | 588 | 586 | 594 | 588 | 617 | 577 to 640 | none (reported only) | same |
+| Nebula visible (ms) | 640 | 644 | 653 | 644 | none | none | none (reported only) | no baseline; 56 ms after the map's first frame |
+| Typing to suggestions (ms) | 6 | 5 | 5 | 5 | 6 | 5 to 6 | none (reported only) | same |
+| Select to album (ms) | 18 | 20 | 18 | 18 | 21 | 19 to 25 | none (reported only) | better |
+| Transition worst frame gap (ms) | 33 | 30 | 38 | 33 | 27 | 26 to 28 | none; 50 as yardstick | worse |
+| Slider to list (ms) | 6 | 5 | 5 | 5 | 6 | 5 to 8 | none (reported only) | same |
+| Morph worst frame gap (ms) | 18 | 18 | 17 | 18 | 18 | 18 to 19 | none; 50 as yardstick | same |
+| Drag worst frame gap (ms) | 17 | 19 | 18 | 18 | 18 | 18 to 18 | none; 50 as yardstick | same |
+| Zoom worst frame gap (ms) | 33 | 32 | 36 | 33 | 38 | 30 to 39 | none; 50 as yardstick | same |
+| Deep zoom drag worst frame gap (ms) | 18 | 19 | 18 | 18 | 19 | 18 to 19 | none; 50 as yardstick | same |
+| Deep zoom, slider between stops, worst frame gap (ms) | 17 | 18 | 18 | 18 | 17 | 17 to 18 | none; 50 as yardstick | same |
 | Long tasks while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | none (reported only) | same |
 | Frames while idle (3 s) | 0 | 0 | 0 | 0 | 0 | 0 to 0 | none (reported only) | same |
 
 Map settled before each step: [true], [true], [true]. Console errors per run: 0, 0, 0. Warm-up ended by: done, done, done. thumbs.webp on first load: false, false, false. Startup long tasks [start, ms]: []; []; [].
-The same column in the three runs taken with an ordinary launch while Energy Saver held Chrome at 30 frames a second (frame gaps there are not comparable): search usable 75/67/73, startup worst long task 0/0/0, map first frame 630/630/630, nebula visible 663/664/663, typing 5/5/6, select 21/24/20, slider to list 5/9/11, idle long tasks 0/0/0, idle frames 0/0/0.
 
 ## Budget results per run
 
-- Run 1: software desktop: startup long task 262 ms > 250 ms; gpu phone: transition frame gap 270 ms > 50 ms
-- Run 2: software desktop: startup long task 268 ms > 250 ms
-- Run 3: software desktop: startup long task 273 ms > 250 ms
+- Run 1: all budgets met
+- Run 2: software desktop: select to album 240 ms > 200 ms
+- Run 3: all budgets met
 
-The software desktop miss is in every run and its median is over budget: it is real and is explained below. The gpu phone transition gap of 270 ms is a single run (18 and 24 ms in the other two, 35 ms, which is one frame at 30 a second, in each of the three Energy Saver runs); its cause was not found, and the baseline has single outliers of the same kind (a 345 ms startup long task, a 181 ms slider to list). The three Energy Saver runs each missed the two software startup long task budgets (desktop 286, 270, 276 ms; phone 261, 261, 258 ms) and two of them the gpu desktop zoom gap (54 ms, which is two frames at 30 a second and says nothing about the build).
+The one miss is a single run: 25 and 33 ms in the other two (baseline 17 to 35), nothing in the gas runs between a pick in the search list and the album showing, and the load average rose from 5.9 to 8.9 during that run. Not explained further. The gpu phone transition gap of 270 ms seen once in the battery runs did not come back: 18, 18 and 18 ms here, and no gpu frame gap of any row is over 38 ms in any of the three runs.
 
 ## Hover path
 
-`baseline/hover-measure.mjs`, five fresh loads per mode, with the Energy Saver preload (see the top). Raw: `app-hover-part1.json`, `app-hover-part1.txt`. Median (min to max), ms; baseline in brackets.
+`baseline/hover-measure.mjs`, five fresh loads per mode, ordinary launch, mains (load 7.0 before). Raw: `app-hover-part1.json`, `app-hover-part1.txt`. Median (min to max) in ms, the baseline in square brackets, then the verdict.
 
 | | gpu 1st | gpu 2nd | gpu 3rd | software 1st | software 2nd | software 3rd |
 |---|---|---|---|---|---|---|
-| Pointer move to tip visible | 152 (147.1 to 155.7) [150.3 (135.7 to 169.3)] | 101.8 (88.3 to 114.4) [101.2 (90.6 to 106.8)] | 90.8 (84.9 to 101.9) [90.3 (89.7 to 115.7)] | 133.4 (131.7 to 146.7) [135.5 (133 to 149.4)] | 91 (87.9 to 104.6) [91.6 (85.9 to 107.7)] | 92.4 (86.6 to 93.2) [88.1 (84.9 to 93.1)] |
-| Longest long task | 0 (0 to 0) [0 (0 to 55)] | 0 [0] | 0 [0] | 0 [0] | 0 [0] | 0 [0] |
-| Longest frame gap | 33.3 (16.8 to 33.4) [33.3 (16.8 to 50)] | 16.8 (16.7 to 16.8) [16.8 (16.7 to 16.8)] | 16.8 (16.8 to 16.8) [16.8 (16.7 to 16.8)] | 83.3 (66.7 to 83.4) [66.7 (49.9 to 66.7)] | 99.9 (66.7 to 100) [66.7 (66.7 to 83.3)] | 100 (83.4 to 100.1) [66.7 (50.1 to 83.4)] |
+| Pointer move to tip visible | 134.8 (118.7 to 142.2) [150.3 (135.7 to 169.3)] better | 94 (89.1 to 109.9) [101.2 (90.6 to 106.8)] same | 92.7 (91.1 to 94.1) [90.3 (89.7 to 115.7)] same | 125.1 (115.5 to 137.3) [135.5 (133 to 149.4)] better | 93.8 (93.3 to 94.4) [91.6 (85.9 to 107.7)] same | 96.6 (94 to 105.2) [88.1 (84.9 to 93.1)] worse |
+| Longest long task | 0 (0 to 0) [0 (0 to 55)] same | 0 [0] same | 0 [0] same | 0 [0] same | 0 [0] same | 0 [0] same |
+| Longest frame gap | 16.8 (16.8 to 33.3) [33.3 (16.8 to 50)] same | 16.7 (16.7 to 16.8) [16.8 (16.7 to 16.8)] same | 16.8 (16.7 to 16.8) [16.8 (16.7 to 16.8)] same | 66.8 (66.6 to 83.3) [66.7 (49.9 to 66.7)] worse by 0.1 | 83.4 (83.3 to 100) [66.7 (66.7 to 83.3)] worse | 83.3 (83.2 to 100) [66.7 (50.1 to 83.4)] same |
 
-Every hover drew 3 map frames, as in the baseline. On the GPU all nine medians lie inside the baseline's range and no load had a long task (the baseline had one of 55 ms). On the software renderer the time to the tip is unchanged and the longest frame gap grew by one frame (16.7 ms) on the first hover and by two on the later ones: each of the three frames of a hover now shades the gas on the CPU.
+Every hover drew 3 map frames, as in the baseline, and no load had a long task. On the GPU nothing is worse and the first hover is quicker. On the software renderer the later hovers' frames take one frame longer, because each of a hover's three frames now shades the gas on the CPU, and the tip of the third hover, which shows from the map's next frame, is 8 ms later.
 
-## What got worse, and why
+## What is still worse, and why
 
-By the rule of the brief a median above the baseline's worst run is "worse". Every such row:
+**Software desktop startup long task: 155 ms (155, 120, 164) against 57 (0, 57, 122); budget 250.** This is no longer the gas. In each of the three runs the task starts at the millisecond the warm-up worker gives up ("WebGL warm-up end": 3450, 3736, 3629 ms; task starts: 3447, 3734, 3628 ms), 500 to 600 ms before the map's first frame; the baseline's two tasks sit at the same place (3711 against a warm-up end of 3712). It is the site's own first WebGL context on the main thread. It reads 33 to 42 ms longer than the baseline's worst run; whether that is the busier machine or something part 1 adds to that moment (the theme file is parsed around then) was not established. Software phone, where the warm-up finishes by itself, has no startup long task at all (0 in three runs, as the baseline).
 
-**Over budget, not fixed: the startup long task on a software renderer.** Software desktop 268 ms (262 to 273; budget 250; baseline 57, 0 to 122), software phone 241 ms (238 to 245; baseline 0). With an ordinary launch: desktop 276 ms (270 to 286), phone 261 ms (258 to 261), so both columns are over budget there. It is one task, the upload of the first gas image (a 2048 px texture and its mips) to SwiftShader on the main thread; it starts about 25 ms after the map's first frame (`startupLongTasks` in the raw JSON) and the same call was timed directly at 220 to 380 ms for the next image during a drag and 90 to 100 ms at rest (`app-part1/late-gas-before.txt`, `late-gas-after.txt`). On the GPU the same upload takes 6 to 11 ms and the startup long task is 0 in all nine gpu column runs. Both ways of counting, as asked: the baseline's script stopped collecting long tasks 4 s after load; this script also waits for the nebula. On software phone the task lies inside the 4 s either way (it starts at 2.2 to 2.4 s). On software desktop it starts at 5.1 to 5.3 s on the throwaway profile and at 3.5 to 3.9 s with an ordinary launch, so the baseline's window would have caught it in some runs and missed it in others; it is counted here in all. The brief's cheaper version for this row (a longer idle timeout before the other two images) does not touch it: the task is the first image, and the other two are now uploaded only at rest (below). What would: a 1024 px image on slow renderers (a quarter of the upload), or warming the upload path in the existing WebGL warm-up worker. Neither was built: both change what is loaded or how the map starts, and the first also the look. **Stopped here for the owner**: accept it for software renderers (where every map frame already takes 60 to 300 ms), or have one of the two built.
+What the gas's own startup task was, measured (fix round 1): hooking every WebGL call on the software renderer showed the 250 to 290 ms long task after the first frame was not the upload. `texSubImage2D` of the first 2048 px image took 12 to 20 ms. The time went in `gl.getExtension()`, which three calls when it uploads its first mipmapped texture: a call that needs an answer from the renderer and so blocks the main thread until the renderer has finished drawing the map's first frame (236 and 275 ms in two loads). The same upload at rest costs 9 to 16 ms. Fix: an image that is needed on screen waits for a WebGL fence (asked for when the image arrives, polled from timers, which blocks nothing) before it is uploaded. After: no long task after the first frame in any software run, and the nebula shows 282 to 315 ms after the first frame, as before.
 
-**Software frame gaps (reported, not budgeted).** The gas is shaded on the CPU there. Software desktop: drag 116 ms (baseline 95, +21), zoom 323 ms (202, +121); transition and morph are inside or under the baseline's range. Software phone: morph 133 ms (114, +19), zoom 60 ms (53, +7), drag 96 ms (79; the baseline's runs reach 117). Deep zoom rows 56 to 71 ms, lower than the same columns' overview drag. Accepted: this is the cost of shading every pixel without a GPU, and it has no cheaper version that keeps the look.
+**Software desktop search usable: 352 ms (113, 352, 355) against 121 (92 to 137); budget 1000.** It is measured on Home 100 to 350 ms after load, about four seconds before the map's code runs on a software renderer, so the gas cannot be in it. The battery runs of the same code path with an ordinary launch read 146, 80 and 109 ms. Reruns of this column alone are in the report of the fix round. Treated as load on a shared machine; named because the rule asks for it.
 
-**Software desktop search usable 241 ms (baseline 121) and map first frame 5129 ms (4074); software phone search usable 194 ms (127).** An effect of the throwaway profile on the software renderer's start, not of the build: with an ordinary launch the same build gave 146, 80, 109 ms and 3902, 3726, 3478 ms on software desktop (inside or better than the baseline) and 113, 80, 143 ms on software phone.
+**Software frame gaps (reported, not budgeted).** The gas is shaded on the CPU. Software desktop: drag 110 ms (baseline 95, +15), zoom 231 ms (202, +29); transition 899 and morph 146 are under the baseline's. Software phone: morph 133 ms (114, +19), zoom 56 ms (53, +3); drag 88 ms is inside the baseline's range (74 to 117). Deep zoom rows 55 to 78 ms. Accepted: it is the price of shading every pixel without a GPU and has no cheaper version that keeps the look.
 
-**Slider to list, every column: 5 to 8 ms slower** (gpu desktop 16 ms against 12, in range; gpu phone 18 against 13; dpr 2 12 against 6; software desktop 16 against 8; software phone 23 against 16), budget 150. The measure ends at the first animation frame after the list changed, and the frame that starts the morph now also binds the second stop's gas for the first time. That is the likely cause; it was not isolated. Accepted at a ninth of the budget, and named here so parts 2 and 3 can watch it.
+**gpu desktop2x transition gap: 33 ms (33, 30, 38) against 27 (26 to 28).** Traced with a script that logs every frame gap and every WebGL call of 1.5 ms or more during the 600 ms after an album opens, four loads: the late frames are the frames in which a cover sheet is uploaded (`texSubImage2D` 16 to 33 ms, two sheets per transition, at about 320 and 470 ms). That upload is today's site's and is in the baseline's 26 to 28 ms (and in the 21, 27, 35 ms of the second set of baseline runs). No gas image is uploaded inside the window: the two late gas images are fetched and decoded in the first 50 ms and wait. What part 1 adds is the gas to shade in that same frame, at four times the pixels of dpr 1, which pushes a 20 to 30 ms frame over the next refresh more often. Four more runs of this column read 22, 34, 34, 32 ms. Under the 50 ms yardstick; the cheaper versions of the brief are for the drag and zoom rows, which are at the baseline (18 and 33 ms). Left as it is; spreading the cover sheet upload would fix it for today's site too and is not part 1's.
 
-**GPU frame gaps one to three ms over the baseline's worst run** (gpu desktop deep zoom drag 19 against 17 to 18; gpu phone morph 19 against 17 to 18 and deep zoom morph 19 against 17 to 18; dpr 2 drag 21 against 18 and deep zoom drag 21 against 18 to 19). All are one frame at 60 a second plus timer jitter; none is a dropped frame, which reads 33 ms. Not a finding beyond the rule's wording.
-
-**gpu phone transition 24 ms (baseline 18 in all three runs)**, and its single run of 270 ms. 24 ms is one late frame, not a dropped one; gpu desktop reads 24 (baseline 28) and dpr 2 reads 25 (27) for the same step. Accepted; the 270 ms run is unexplained (above).
-
-**gpu phone map first frame 579 ms (baseline 554, 551 to 562).** 25 ms later; gpu desktop (608 against 575, in range) and dpr 2 (610 against 617) do not show it. Not isolated. The nebula follows the first frame by 43 to 53 ms on the GPU.
+**gpu desktop deep zoom drag 19 ms and gpu phone deep zoom morph 19 ms against 18 (17 to 18)**: one frame plus timer jitter. **gpu phone search usable 80 ms against 74 (72 to 78)**: 6 ms, before any map code.
 
 ## What was dropped or made cheaper for speed
 
-Nothing of the look. None of the six cheaper versions of the brief was applied: no gpu median is over 50 ms or above the baseline's worst run by more than jitter, at dpr 1 or 2, including the worst case (deep zoom with the slider between stops: 18, 19, 18 ms). The glow, the detail octaves, the deep zoom blur and the full shader on phones are all in.
+Nothing of the look. None of the six cheaper versions of the brief was applied: no gpu median is over 50 ms, and the drag, zoom and deep zoom rows are at the baseline at dpr 1 and 2, including the worst case (deep zoom with the slider between stops: 18, 19, 18 ms). The glow, the detail octaves, the deep zoom blur and the full shader on phones are all in.
 
-Two things were changed for speed, neither visible:
+Changed for speed, none of it visible:
 
-1. **Decoded gas images are freed after upload** (commit `2b29135a`). Three 2048 px images, 16 MB each decoded, were kept for the life of the map only so a restored WebGL context could upload them again. After a lost context they are now fetched again from the HTTP cache. Browser test: "the gas comes back after the WebGL context is lost and restored".
-2. **Late gas images are uploaded only when the map is left alone** (commit `761accb7`). Measured with `app-part1/late-gas-measure.mjs`, which holds the two late images back and releases them 700 ms into a 3.5 s drag (four loads each; a control drag with all images in):
+1. **Decoded gas images are freed after upload** (`2b29135a`): three 16 MB bitmaps are no longer kept for the life of the map; after a lost context they are fetched again from the HTTP cache. Until the first one is back (fetch and decode, about 50 ms from the cache) the map shows the pane without gas; the stop on screen is fetched first and shown the moment it is uploaded, the others follow at idle. Keeping that gap shorter would mean keeping the bitmaps.
+2. **Late gas images are uploaded only when the map is left alone** (`761accb7`, `6c225edd`): 250 ms after the last input and the last drawn frame, on an idle main thread, 34 ms apart. Measured before the fix round with `app-part1/late-gas-measure.mjs` (images released 700 ms into a 3.5 s drag; at 60 frames a second):
 
-| Worst frame gap of the drag, median (max), ms | Control | Before | After |
+| Worst frame gap of the drag, median (max), ms | Control | Uploads at once | Uploads deferred |
 |---|---|---|---|
 | gpu desktop, drag | 17.8 (18.2) | 26.6 (35) | 17.6 (18.5) |
 | gpu phone, drag | 18.1 (19.5) | 25.7 (37.7) | 18.5 (20.3) |
 | gpu desktop, wheel zoom | 35.6 (37.6) | 33.5 (35.6) | 33.6 (34.9) |
-| software desktop, drag | 96 (414) | 270 (389), two long tasks per load of 221 to 379 and 98 to 115 ms | 98 (107), no long task |
+| software desktop, drag | 96 (414) | 270 (389), two long tasks per load | 98 (107), none inside the drag |
 
-Before, both uploads ran back to back inside the drag (6 to 11 ms each on the GPU): one dropped frame in most loads, under the 50 ms budget but worse than the control, and two long tasks per load on the software renderer. After, no gas upload runs inside the gesture in any mode (0 ms against 12 to 20 ms on the GPU and 325 to 490 ms in software); the images go in one at a time once 250 ms have passed without input or a drawn frame and the main thread is idle. The wheel zoom rows did not change because their worst gap comes from the cover sheets the zoom loads (uploads of 12 to 35 ms each, in the control too; one "after" load had a 52 ms gap outside the arrival window from such a sheet). That is today's site's behaviour and was left alone; it is the reason the zoom row sits near its budget. Browser test: "gas images that arrive during a drag are not uploaded until the map is left alone". Raw: `app-part1/late-gas-before.txt` and `.json` (before; these were taken at 60 frames a second, before the battery fell to 20%), `late-gas-after.txt` and `.json`.
+   On the software renderer the deferred upload itself, at rest after the drag, still took 90 to 100 ms on the main thread for the first image and 7 to 12 ms for the second in those runs: a long task by definition, outside any gesture. The wheel zoom rows do not change because their worst gap is the cover sheets' upload.
+3. **A slider move no longer uploads inside the click** (`6c225edd`). Before, every waiting image was uploaded synchronously in the store update, also a stop the morph never shows; that was the 5 to 8 ms that "slider to list" had gained in every column (the perf script clicks about 300 ms after the map's last frame, when one image was usually still waiting). Now only the stops on the morph's path are taken, after the frame that paints the new list, and the stop on screen stands in until they are in. Slider to list after: 8, 9, 5, 8, 5 ms (baseline 8, 16, 12, 13, 6).
+4. **An image never waits more than 4 s for a quiet map** (`6c225edd`): after that it goes in at the next idle moment, one image at a time, so a visitor who never stops moving still gets all three stops.
+5. **An image needed on screen waits for the GPU, not for a blocking call** (`6c225edd`; see the startup long task above).
+
+Browser tests for 1 to 4 are in `e2e/gas.spec.ts`: "the gas comes back after the WebGL context is lost and restored", "gas images that arrive during a drag are not uploaded until the map is left alone", "a slider move uploads only the waiting images its morph shows, after the click, and never a blank frame", "a visitor who never stops moving still gets the late images, one at a time".
 
 ## Luma read by the gas browser tests (for part 3's thresholds)
 
-Software WebGL, 1440 x 900, with the old brown pane still behind the canvas. Test 1 (overview, 80 px patch on In Rainbows, median): 165.8 (bound 18.6). Test 2: beside the open album 96.1, the same patch with the album closed 195.2. Test 3: bare gas at full zoom 26.5, the same point at 32 px covers 85.4. Test 4 (300 px middle of the window): 143.2 with Balanced standing in for Mood, 124.8 with Mood in (bound 12.4). Context test: 165.8 before the loss and 165.8 after.
+Software WebGL, 1440 x 900, with the old brown pane still behind the canvas. Test 1 (overview, 80 px patch on In Rainbows, median): 165.8 (bound 18.6). Test 2: beside the open album 96.1, the same patch with the album closed 195.2. Test 3: bare gas at full zoom 26.5, the same point at 32 px covers 85.4. Test 4 (300 px middle of the window): 143.2 with Balanced standing in for Mood, 124.8 with Mood in (bound 12.4). Context test: 165.8 before the loss and 165.8 after. (Read before the fix round; the fix round changes when images are uploaded, not what is drawn.)
 
 ## Regression checklist
 
-`baseline/REGRESSION-CHECKLIST.md`, 234 items in 18 sections, against the build of commit `761accb7`. How it was walked, so nobody reads more into it than was done:
+`baseline/REGRESSION-CHECKLIST.md`, 234 items in 18 sections, against the build of commit `6c225edd` (everything below was run again after fix round 1). How it was walked, so nobody reads more into it than was done:
 
-- **Screenshots.** `baseline/capture.mjs` was run on this build (gpu Chrome, as the baseline; two phone states timed out on `page.goto` in the full run and were taken again alone without trouble: `explore-here`, `reduced-motion`). All 186 files have the baseline's names. Every pair was compared pixel by pixel (a pixel counts as different when its three channels differ by more than 36 in sum): 47 pairs are identical, among them every shot that shows no map (the album panel, the search sheet, About, the trail, toasts, the no-WebGL pages, the error state) and the full zoom shots, where the faint gas is within that tolerance of the old pane. In the other 139 the different pixels lie inside the map pane (the boxes start under the 64 px header and right of the album panel, or are crops of the map). Opened by eye, baseline beside part 1: `map-covers-dense-fade-crop`, `map-covers-dense-crop`, `selected-dense-crop`, `hover-map-album-crop` (saved side by side in `app-part1/covers/`), and the overview, album and full zoom states at 1600 x 1000 for the fidelity check. **The other pairs were not opened by eye.**
-- **Browser tests.** The whole suite ran, one worker: desktop 102 passed, 13 skipped (phone only), 2 failed; phone 68 passed, 47 skipped, 2 failed; no-WebGL 2 passed. The failures: the expected one in both projects (below); on desktop the new deep zoom gas test once, because it read a flag before the frame that writes it had been drawn while another job loaded the machine (it now polls the flag; 4 of 4 reruns pass); on phone `"Explore this area" drops the album and leaves the map where it was` once, the camera's y off by 0.00011 world units (4 of 4 reruns pass, desktop 4 of 4). That phone failure was not explained beyond "it did not repeat"; part 1 does not touch the camera.
-- **Unit tests** 325 pass (321 before Task 6), typecheck and lint clean. **Greps**: `grep -rn "blur(\|backdrop-filter\|mix-blend" src` returns only the `.blur()` focus calls of `SearchBox.tsx` and its test. `shaders/album.ts`, `canvas/AlbumField.tsx`, `canvas/AtlasManager.tsx` and every stylesheet are byte for byte the baseline's (`git diff 6f10463e HEAD` is empty for them), so the way covers, dots, hover marks, markers, lines and badges are drawn cannot have changed; only what is behind them has.
+- **Screenshots.** `baseline/capture.mjs` was run on this build (gpu Chrome, as the baseline; no state failed). All 186 files have the baseline's names. Every pair was compared pixel by pixel (a pixel counts as different when its three channels differ by more than 36 in sum): 47 pairs are identical, among them every shot that shows no map (the album panel, the search sheet, About, the trail, toasts, the no-WebGL pages, the error state) and the full zoom shots, where the faint gas is within that tolerance of the old pane. In the other 139 the different pixels lie inside the map pane (the boxes start under the 64 px header and right of the album panel, or are crops of the map). Eighteen pairs were then opened by eye, baseline beside part 1; what was seen is in `app-regression-part1.md`, and the pairs are saved side by side in `app-part1/covers/`. **The other pairs were compared by pixel difference only** (the pixel comparison itself was made on the captures before fix round 1; the fix round changes when images are uploaded, not what is drawn).
+- **Browser tests.** The whole suite, one worker, after the last code change: desktop 105 passed, 13 skipped (phone only), 1 failed; phone 69 passed, 49 skipped, 1 failed; no-WebGL 2 passed. The one failure in each project is the expected one (below). The phone test `"Explore this area" drops the album and leaves the map where it was`, which failed once before the fix round, passed here and in 4 of 4 reruns then; the gas code never writes the camera (it only reads its zoom), so a deferred upload cannot move it.
+- **Unit tests** 327 pass (321 before Task 6), typecheck and lint clean. **Greps**: `grep -rn "blur(\|backdrop-filter\|mix-blend" src` returns only the `.blur()` focus calls of `SearchBox.tsx` and its test. `shaders/album.ts`, `canvas/AlbumField.tsx`, `canvas/AtlasManager.tsx` and every stylesheet are byte for byte the baseline's (`git diff 6f10463e HEAD` is empty for them), so the way covers, dots, hover marks, markers, lines and badges are drawn cannot have changed; only what is behind them has.
 - **Perf budgets**: sections above.
 - **"Manual:" probes** were not done (no browser was started for them): routed to part 3, listed at the end.
 
@@ -270,7 +281,7 @@ Software WebGL, 1440 x 900, with the old brown pane still behind the canvas. Tes
 | 15. Loading and error states | 12 | 10 | 2 routed (one of them also changed on purpose in what follows it) |
 | 16. Phone (under 900 px) | 19 | 17 | 2 routed |
 | 17. Home, About, header, ambient colour, contrast, copy | 19 | 17 | 2 changed on purpose |
-| 18. Performance niceties | 10 | 8 | 2 regressed on software renderers only (both rest on the startup long task budget) |
+| 18. Performance niceties | 10 | 10 | |
 
 "Hold" means the item's own check (its test, grep or unit test) passes, or its screenshot differs from the baseline only in the map background. No item of sections 1 to 6 or 13 was found regressed.
 
@@ -279,13 +290,14 @@ Items that do not simply hold:
 - "Canvas and renderer settings." (section 1): **changed on purpose in part 1.** The canvas settings are the same, but the gas quad is opaque, so the album's colour wash no longer shows through the map under the dots (`album-open`).
 - "Ambient colour wash behind an album." (section 17): **changed on purpose in part 1**, the same thing: the panel half of the wash is unchanged, the map half is now hidden under the gas. Its e2e test passes (it reads the styles, not the pixels). Part 3 decides what becomes of the map half.
 - "Dimmed map behind Home, About and 404: fainter, slightly larger dots" (section 17): **changed on purpose in part 1**: the dots are as before and the gas is behind them at 0.6 of its strength, under the old veil (`home-top`, `about`, `notfound`).
-- "Before the map data loads: a quiet empty pane." (section 15): **changed on purpose in part 1** in what follows it: the pane is the old brown until the first gas image is in (43 to 53 ms after the map's first frame on the GPU, about 280 ms on software), then gas. The brown flash goes when part 3 makes the pane the sky colour. Its manual probe is routed.
+- "Before the map data loads: a quiet empty pane." (section 15): **changed on purpose in part 1** in what follows it: the pane is the old brown until the first gas image is in (50 to 58 ms after the map's first frame on the GPU, about 300 ms on software), then gas. The brown flash goes when part 3 makes the pane the sky colour. Its manual probe is routed.
 - "Material settings: transparent, depth write on, standard alpha blending, no tone mapping.", "Other covers dim to 50% while an album is picked in Explore." (section 1) and "Cover mode: the shader draws the picked cover large with a lamp frame" (section 3): **wait for part 3.** Their shared e2e test, `explore.spec.ts` "in cover mode the picked album is drawn large on top, framed in lamp, with the other covers dimmed", fails as the brief expected: it measures the dimming against the old pane's luma of 19 and there is gas behind the covers now (desktop: dimmed 57.4, limit 45.3; phone: 59.8, limit 46.4). The behaviour itself holds by eye: in `selected-dense-crop` the picked cover is large and framed and the others are at half alpha in the same piles as the baseline. Part 3 rewrites the check (its Task 7). Not touched here.
 - "Dots are 78% opaque and add up where they overlap." (section 1) and "Hover mark on a dot: a paper ring of radius 7 with a paper centre" (section 2): **wait for part 2.** Both are drawn exactly as before, but over the bright cream gas today's warm dots and the thin ring have little contrast (`hover-map-album-crop`: the ring on In Rainbows is hard to find). Part 2 replaces the dots with stars; the ring's contrast over bright gas should be looked at there.
 - "Cross-fade band: covers are tinted and see-through between 16 and 32 px." (section 1): **waits for part 2 or 3**, as a legibility note, not a change: see "Covers over the gas" below.
 - "Grain overlay sits over the map too." (section 1): holds; part 3 removes the grain on purpose.
 - "A lost WebGL context recovers, or gives way to the message after 3 s." (section 15): the recover half is now covered by a browser test (the gas test forces a loss and a restore); the 3 s message half stays a manual probe, routed.
-- "All budgets." and "WebGL is warmed up in a worker." (section 18): **regressed on software renderers only**: `startupLongTaskMs` 250 is missed on software desktop (268 ms) in every run. Not fixed; see "What got worse".
+- "All budgets." and "WebGL is warmed up in a worker." (section 18): hold again. Before fix round 1 the startup long task budget was missed on software renderers; it is met now (155 ms and 0 ms against 250).
+- Seen by eye and worth part 2's attention, neither a change in how things are drawn: the thin lines from the seed to its neighbours and the hint line at the bottom of the map have little contrast where they cross bright gas (`slider-mood`, `album-open`).
 
 ### Covers over the gas (the picked cover and the overlapping covers)
 

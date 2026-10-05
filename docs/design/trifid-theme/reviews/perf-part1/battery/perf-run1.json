@@ -35,7 +35,7 @@
     "nomodule": false
    },
    {
-    "src": "/_next/static/chunks/3kavzs6hzff4x.js",
+    "src": "/_next/static/chunks/41okmr6ael_ud.js",
     "gzKb": 10.9,
     "isThree": false,
     "nomodule": false
@@ -80,33 +80,37 @@
    "errors": [],
    "longTasksSupported": true,
    "thumbsOnFirstLoad": false,
-   "searchUsableMs": 355,
-   "startupLongTaskMs": 164,
-   "mapFirstFrameMs": 4221,
-   "gasShownMs": 4536,
+   "searchUsableMs": 250,
+   "startupLongTaskMs": 262,
+   "mapFirstFrameMs": 5243,
+   "gasShownMs": 5533,
    "warmUp": {
-    "ms": 3629,
-    "why": "cap"
+    "ms": 4781,
+    "why": "done"
    },
    "startupLongTasks": [
     [
-     3628,
-     164
+     5171,
+     52
+    ],
+    [
+     5270,
+     262
     ]
    ],
    "settled": [
     true
    ],
    "typeToSuggestionsMs": 6,
-   "selectToAlbumMs": 33,
-   "transitionGapMs": 899,
-   "sliderToListMs": 8,
-   "morphGapMs": 146,
-   "dragGapMs": 110,
-   "zoomGapMs": 245,
-   "deepDragGapMs": 65,
+   "selectToAlbumMs": 28,
+   "transitionGapMs": 1214,
+   "sliderToListMs": 25,
+   "morphGapMs": 101,
+   "dragGapMs": 116,
+   "zoomGapMs": 247,
+   "deepDragGapMs": 76,
    "deepZoom": 1,
-   "deepMorphGapMs": 84,
+   "deepMorphGapMs": 70,
    "idleLongTasks": 0,
    "idleFrames": 0
   },
@@ -117,27 +121,32 @@
    "errors": [],
    "longTasksSupported": true,
    "thumbsOnFirstLoad": false,
-   "searchUsableMs": 148,
-   "startupLongTaskMs": 0,
-   "mapFirstFrameMs": 2925,
-   "gasShownMs": 3207,
+   "searchUsableMs": 447,
+   "startupLongTaskMs": 245,
+   "mapFirstFrameMs": 2419,
+   "gasShownMs": 2690,
    "warmUp": {
-    "ms": 2477,
+    "ms": 1959,
     "why": "done"
    },
-   "startupLongTasks": [],
+   "startupLongTasks": [
+    [
+     2444,
+     245
+    ]
+   ],
    "settled": [
     true,
     true
    ],
-   "typeToSuggestionsMs": 4,
-   "selectToAlbumMs": 18,
-   "transitionGapMs": 788,
-   "sliderToListMs": 9,
+   "typeToSuggestionsMs": 5,
+   "selectToAlbumMs": 19,
+   "transitionGapMs": 747,
+   "sliderToListMs": 27,
    "morphGapMs": 133,
-   "dragGapMs": 88,
-   "zoomGapMs": 56,
-   "deepDragGapMs": 55,
+   "dragGapMs": 96,
+   "zoomGapMs": 58,
+   "deepDragGapMs": 56,
    "deepZoom": 1,
    "deepMorphGapMs": 56,
    "idleLongTasks": 0,
@@ -150,28 +159,28 @@
    "errors": [],
    "longTasksSupported": true,
    "thumbsOnFirstLoad": false,
-   "searchUsableMs": 106,
+   "searchUsableMs": 86,
    "startupLongTaskMs": 0,
-   "mapFirstFrameMs": 594,
-   "gasShownMs": 640,
+   "mapFirstFrameMs": 584,
+   "gasShownMs": 637,
    "warmUp": {
-    "ms": 145,
+    "ms": 138,
     "why": "done"
    },
    "startupLongTasks": [],
    "settled": [
     true
    ],
-   "typeToSuggestionsMs": 5,
-   "selectToAlbumMs": 19,
-   "transitionGapMs": 23,
-   "sliderToListMs": 5,
-   "morphGapMs": 18,
-   "dragGapMs": 18,
-   "zoomGapMs": 33,
+   "typeToSuggestionsMs": 8,
+   "selectToAlbumMs": 30,
+   "transitionGapMs": 24,
+   "sliderToListMs": 17,
+   "morphGapMs": 19,
+   "dragGapMs": 20,
+   "zoomGapMs": 38,
    "deepDragGapMs": 19,
    "deepZoom": 1,
-   "deepMorphGapMs": 19,
+   "deepMorphGapMs": 18,
    "idleLongTasks": 0,
    "idleFrames": 0
   },
@@ -182,12 +191,12 @@
    "errors": [],
    "longTasksSupported": true,
    "thumbsOnFirstLoad": false,
-   "searchUsableMs": 80,
+   "searchUsableMs": 76,
    "startupLongTaskMs": 0,
-   "mapFirstFrameMs": 562,
-   "gasShownMs": 609,
+   "mapFirstFrameMs": 579,
+   "gasShownMs": 620,
    "warmUp": {
-    "ms": 125,
+    "ms": 119,
     "why": "done"
    },
    "startupLongTasks": [],
@@ -195,14 +204,14 @@
     true,
     true
    ],
-   "typeToSuggestionsMs": 5,
-   "selectToAlbumMs": 25,
-   "transitionGapMs": 18,
-   "sliderToListMs": 17,
-   "morphGapMs": 18,
-   "dragGapMs": 18,
-   "zoomGapMs": 36,
-   "deepDragGapMs": 18,
+   "typeToSuggestionsMs": 4,
+   "selectToAlbumMs": 18,
+   "transitionGapMs": 270,
+   "sliderToListMs": 18,
+   "morphGapMs": 19,
+   "dragGapMs": 21,
+   "zoomGapMs": 35,
+   "deepDragGapMs": 23,
    "deepZoom": 1,
    "deepMorphGapMs": 19,
    "idleLongTasks": 0,
@@ -215,12 +224,12 @@
    "errors": [],
    "longTasksSupported": true,
    "thumbsOnFirstLoad": false,
-   "searchUsableMs": 81,
+   "searchUsableMs": 97,
    "startupLongTaskMs": 0,
-   "mapFirstFrameMs": 594,
-   "gasShownMs": 653,
+   "mapFirstFrameMs": 616,
+   "gasShownMs": 660,
    "warmUp": {
-    "ms": 133,
+    "ms": 149,
     "why": "done"
    },
    "startupLongTasks": [],
@@ -228,18 +237,21 @@
     true
    ],
    "typeToSuggestionsMs": 5,
-   "selectToAlbumMs": 18,
-   "transitionGapMs": 38,
-   "sliderToListMs": 5,
-   "morphGapMs": 17,
-   "dragGapMs": 18,
-   "zoomGapMs": 36,
-   "deepDragGapMs": 18,
+   "selectToAlbumMs": 19,
+   "transitionGapMs": 25,
+   "sliderToListMs": 14,
+   "morphGapMs": 18,
+   "dragGapMs": 27,
+   "zoomGapMs": 33,
+   "deepDragGapMs": 21,
    "deepZoom": 1,
-   "deepMorphGapMs": 18,
+   "deepMorphGapMs": 21,
    "idleLongTasks": 0,
    "idleFrames": 0
   }
  ],
- "fails": []
+ "fails": [
+  "software desktop: startup long task 262 ms > 250 ms",
+  "gpu phone: transition frame gap 270 ms > 50 ms"
+ ]
 }
