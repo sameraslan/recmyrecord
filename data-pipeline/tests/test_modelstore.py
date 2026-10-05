@@ -152,6 +152,29 @@ def test_the_cache_is_only_read_and_the_effnet_store_is_never_the_target(world, 
     assert "5 of the catalog's 8 albums have audio" in capsys.readouterr().out
 
 
+def test_the_variant_store_is_written_from_its_own_rows_where_it_is_told(world, capsys):
+    cache = OnePassCache(world / "onepass.sqlite")
+    assert cache.copy_variant("clap_mp3") == {"ok": 21, "no_preview": 2}  # every Deezer clip: the clap row
+    for rank in (0, 2, 3, 4):  # the iTunes album's clips, embedded for the variant: other vectors than clap's
+        rec = {"key": "Album2", "source": "itunes:jp", "album_id": "i2", "track_id": f"t{rank}"}
+        cache.put_result(rec, "clap_mp3", "ok", emb=_vec(f"mp3/t{rank}").tobytes(), clip_s=30.0)
+    cache.close()
+    _write(world)
+    args = ["write", "--model", "clap_mp3", "--cache", str(world / "onepass.sqlite"), "--catalog", str(world / "albums.csv"),
+            "--matches", str(world / "audio" / "matches.csv"), "--keys-csv", str(world / "audio" / "keys.csv")]
+    assert modelstore.main(args) == 1 and "say where with --audio-dir" in capsys.readouterr().err  # no store of its own
+    assert modelstore.main([*args, "--audio-dir", str(world / "audio" / "clap_mp3")]) == 0
+    clap, mp3 = load_store(world / "audio" / "clap"), load_store(world / "audio" / "clap_mp3")
+    assert mp3.manifest["model"] == MODELS["clap_mp3"].model_id != clap.manifest["model"]
+    assert mp3.keys.tolist() == clap.keys.tolist() and mp3.n_clips.tolist() == clap.n_clips.tolist()
+    assert mp3.source.tolist() == clap.source.tolist()
+    itunes = clap.source == "itunes:jp"
+    assert np.array_equal(mp3.emb[~itunes], clap.emb[~itunes])  # Deezer albums: the same vectors
+    want = np.stack([_vec(f"mp3/t{r}") for r in (0, 2, 3, 4)]).astype(np.float64).mean(axis=0).astype(np.float16)
+    assert np.array_equal(mp3.emb[itunes][0], want) and not np.array_equal(mp3.emb[itunes], clap.emb[itunes])
+    assert modelstore.main(["status", "--model", "clap_mp3", "--catalog", str(world / "albums.csv")]) == 1
+
+
 def _clap_like(n: int, seed: int = 0) -> np.ndarray:
     rng = np.random.default_rng(seed)
     return (rng.normal(size=(n, 12)) @ rng.normal(size=(12, CLAP.dim)) + 0.05 * rng.normal(size=(n, CLAP.dim))) / 40
