@@ -5,6 +5,10 @@ listened and no audio is opened.
     cd experiments/audio_10k
     PYTHONDONTWRITEBYTECODE=1 nice -n 19 <build venv python> source_effect.py
         -> results/source_effect.json, results/source_effect.md
+    ... source_effect.py --model clap_mp3 [--refresh]
+        -> results/source_effect.clap_mp3.{json,md}: the same with the cache's `clap_mp3` rows (the stereo MP3
+           round trip, rmr_audio.mp3trip) read wherever this script reads `clap`. Its tables still say CLAP.
+           Only the albums that have clap_mp3 clips are in it, so run it once the variant covers the catalog.
 
 Reads, all read-only: catalog/albums.csv, audio/matches.csv, audio/keys.csv, the clip cache
 (.cache/audio/onepass.sqlite, `mode=ro`: another job may be writing to it), its static backup
@@ -70,6 +74,7 @@ BACKUP_DB = CACHE_DIR / "onepass.before-rekey.sqlite"
 REKEY = CACHE_DIR / "pending_cache_rekey.csv"
 MEANS = Path(__file__).resolve().parent / "cache" / "source_effect_means.npz"
 MODEL_NAMES = ("clap", "effnet")
+CLAP_MODEL = "clap"  # the cache model read as `clap`: clap, or clap_mp3 (--model)
 C_PROBE = 0.01
 FOLDS = 5
 K = sonic.K
@@ -84,8 +89,9 @@ def store_of(source: str) -> str:
 
 
 def build_means(refresh: bool) -> dict:
-    if MEANS.exists() and not refresh:
-        z = np.load(MEANS, allow_pickle=False)
+    path = MEANS if CLAP_MODEL == "clap" else MEANS.with_name(f"source_effect_means.{CLAP_MODEL}.npz")
+    if path.exists() and not refresh:
+        z = np.load(path, allow_pickle=False)
         return {k: z[k] for k in z.files}
     table = sonic.read_catalog()
     keys = [r["rym_id"] for r in table]
@@ -93,12 +99,13 @@ def build_means(refresh: bool) -> dict:
     cache = OnePassCache(CACHE_DB, readonly=True)
     try:
         for m in MODEL_NAMES:
-            k, X, n, src, _ = album_means(cache, m, keys, AUDIO / "matches.csv", CLIPS, AUDIO / "keys.csv")
+            k, X, n, src, _ = album_means(cache, CLAP_MODEL if m == "clap" else m, keys, AUDIO / "matches.csv", CLIPS,
+                                          AUDIO / "keys.csv")
             out[f"{m}_keys"], out[f"{m}_X"], out[f"{m}_n"], out[f"{m}_source"] = k, X.astype(np.float32), n, src
     finally:
         cache.close()
-    MEANS.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(MEANS, **out)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    np.savez(path, **out)
     return out
 
 
@@ -365,8 +372,8 @@ def pair_groups() -> list[set[str]]:
             continue
         con = read_only(db)
         try:
-            for (key,) in con.execute("SELECT key FROM embeddings WHERE status = 'ok' AND model = 'clap' GROUP BY key "
-                                      "HAVING COUNT(DISTINCT source || '/' || album_id) > 1"):
+            for (key,) in con.execute("SELECT key FROM embeddings WHERE status = 'ok' AND model = ? GROUP BY key "
+                                      "HAVING COUNT(DISTINCT source || '/' || album_id) > 1", (CLAP_MODEL,)):
                 if key not in seen:
                     groups.append({key})
                     seen.add(key)
@@ -385,11 +392,11 @@ def group_listings(cons: list[sqlite3.Connection], keys: set[str]) -> dict[tuple
             for source, album_id, track_id, idx, prio, model, emb, origin in con.execute(
                     "SELECT e.source, e.album_id, e.track_id, c.track_idx, c.prio, e.model, e.emb, e.origin FROM embeddings e JOIN clips c "
                     "USING (key, source, album_id, track_id) WHERE e.key = ? AND e.status = 'ok' AND e.emb IS NOT NULL", (key,)):
-                if idx is None or prio is None or prio >= CLIPS:
+                if idx is None or prio is None or prio >= CLIPS or model not in ("effnet", CLAP_MODEL):
                     continue
                 clip = found.setdefault((source, album_id), {}).setdefault(idx, {"prio": prio})
-                clip[model] = np.frombuffer(emb, MODELS[model].dtype).astype(np.float64)
-                if model == "clap":
+                clip["effnet" if model == "effnet" else "clap"] = np.frombuffer(emb, MODELS[model].dtype).astype(np.float64)
+                if model == CLAP_MODEL:
                     clip["origin"] = origin
         for listing, clips in found.items():
             clips = {i: c for i, c in clips.items() if all(m in c for m in MODEL_NAMES)}
@@ -523,7 +530,7 @@ def clip_section(d: Data) -> dict:
         rows = con.execute(
             "SELECT e.key, e.source, e.album_id, c.track_idx, c.prio, e.clip_s, c.track_s, e.origin, l.n_tracks, l.n_previews "
             "FROM embeddings e JOIN clips c USING (key, source, album_id, track_id) LEFT JOIN listings l USING (key, source, album_id) "
-            "WHERE e.model = 'clap' AND e.status = 'ok'").fetchall()
+            "WHERE e.model = ? AND e.status = 'ok'", (CLAP_MODEL,)).fetchall()
     finally:
         con.close()
     with open(AUDIO / "matches.csv", newline="", encoding="utf-8") as f:
@@ -926,16 +933,28 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--refresh", action="store_true", help="Rebuild the album means from the clip cache.")
     p.add_argument("--out", type=Path, default=RESULTS)
     p.add_argument("--markdown-only", action="store_true", help="Rewrite the .md from the .json already in --out.")
+    p.add_argument("--model", choices=("clap", "clap_mp3"), default="clap",
+                   help="The cache model read as CLAP (clap_mp3: the stereo MP3 round trip variant).")
     args = p.parse_args(argv)
+    global CLAP_MODEL
+    CLAP_MODEL = args.model
+    name = "source_effect" + ("" if args.model == "clap" else f".{args.model}")
+
+    def text(res: dict) -> str:
+        md = markdown(res)
+        return md if args.model == "clap" else md.replace(
+            "\n", f"\n\n**Cache model read as CLAP here: `{args.model}`. Only the albums that have it are in the tables.**\n", 1)
+
     if args.markdown_only:
-        res = json.loads((args.out / "source_effect.json").read_text(encoding="utf-8"))
-        (args.out / "source_effect.md").write_text(markdown(res), encoding="utf-8")
+        res = json.loads((args.out / f"{name}.json").read_text(encoding="utf-8"))
+        (args.out / f"{name}.md").write_text(text(res), encoding="utf-8")
         return 0
     res = run(args.refresh)
+    res["clap_model"] = args.model
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "source_effect.json").write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    (args.out / "source_effect.md").write_text(markdown(res), encoding="utf-8")
-    print(f"wrote {args.out / 'source_effect.json'} and {args.out / 'source_effect.md'}")
+    (args.out / f"{name}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    (args.out / f"{name}.md").write_text(text(res), encoding="utf-8")
+    print(f"wrote {args.out / f'{name}.json'} and {args.out / f'{name}.md'}")
     return 0
 
 

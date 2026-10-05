@@ -2,9 +2,14 @@
 store, data-pipeline/audio/clap/ (embeddings/, manifest.json; its transform.npz is fitted afterwards by
 `python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap`).
 
-  python -m rmr_audio.modelstore write  [--model clap] [--clips 4] [--cache SQLITE] [--catalog CSV]
+  python -m rmr_audio.modelstore write  [--model clap|clap_mp3] [--clips 4] [--cache SQLITE] [--catalog CSV]
                                         [--matches CSV] [--keys-csv CSV] [--audio-dir DIR] [--dry-run]
-  python -m rmr_audio.modelstore status [--model clap] [--audio-dir DIR] [--catalog CSV]
+  python -m rmr_audio.modelstore status [--model clap|clap_mp3] [--audio-dir DIR] [--catalog CSV]
+
+--model clap_mp3 writes the store from the cache's `clap_mp3` rows (the variant of rmr_audio.mp3trip; its
+Deezer clips are the clap vectors, copied by `rmr_audio.onepass copy`). It has no committed store of its
+own, so --audio-dir must say where (audio/clap to put it in the CLAP store's place, or any other folder
+to look at it first); its manifest names the variant as the model.
 
 `write` reads the cache strictly read-only (`mode=ro`; another job may be writing to it), the catalog
 table and matches.csv as they are when it runs, and makes the store exactly the catalog's albums that
@@ -99,7 +104,7 @@ def write(model: str = "clap", clips: int = CLIPS, cache_db: Path = DEFAULT_CACH
           matches: Path | None = DEFAULT_AUDIO / "matches.csv", audio_dir: Path | None = None, dry_run: bool = False,
           out=print, keys_csv: Path | None = DEFAULT_AUDIO / "keys.csv") -> int:
     spec = MODELS[model]
-    audio_dir = Path(audio_dir) if audio_dir is not None else STORES[model]
+    audio_dir = store_dir(model, audio_dir)
     if audio_dir.resolve() == DEFAULT_AUDIO.resolve():
         raise StoreError(f"{audio_dir} is the EffNet store, which `rmr_audio sync` writes; give another --audio-dir")
     cache = OnePassCache(cache_db, readonly=True)
@@ -126,8 +131,16 @@ def write(model: str = "clap", clips: int = CLIPS, cache_db: Path = DEFAULT_CACH
     return 0
 
 
+def store_dir(model: str, audio_dir: Path | None) -> Path:
+    if audio_dir is not None:
+        return Path(audio_dir)
+    if model not in STORES:
+        raise StoreError(f"{model} has no committed store of its own: say where with --audio-dir")
+    return STORES[model]
+
+
 def status(model: str, audio_dir: Path | None, catalog: Path, out=print) -> int:
-    audio_dir = Path(audio_dir) if audio_dir is not None else STORES[model]
+    audio_dir = store_dir(model, audio_dir)
     store = load_store(audio_dir)
     cat = catalog_keys(catalog)
     rows = store.rows(cat)

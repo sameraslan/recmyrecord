@@ -2,6 +2,9 @@
 
     cd experiments/audio_10k
     nice -n 19 <build venv python> measure.py     -> results/sonic_measures.json, results/sonic_measures.md
+    ... measure.py --model clap_mp3 --clap-dir DIR  -> results/sonic_measures.clap_mp3.{json,md}: the same over a store
+        written from the cache's clap_mp3 rows (rmr_audio.modelstore write --model clap_mp3 --audio-dir DIR, then
+        rmr_pipeline.audio fit-catalog --audio-dir DIR). Its rows and columns still read `clap`.
 
 Lists are the ten nearest albums by the 64-number audio block alone (euclidean; sonic.nearest). Everything is
 read-only on the catalog, the CLAP store and the clip cache; see sonic.py for what the two blocks are.
@@ -319,15 +322,24 @@ def markdown(res: dict) -> str:
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--catalog", type=Path, default=sonic.DEFAULT_CATALOG)
-    p.add_argument("--clap-dir", type=Path, default=sonic.STORES["clap"])
+    p.add_argument("--model", choices=("clap", "clap_mp3"), default="clap",
+                   help="Which CLAP store is measured. clap_mp3 has no committed store: give its folder with --clap-dir.")
+    p.add_argument("--clap-dir", type=Path, default=None, help="The store to measure (default for clap: audio/clap).")
     p.add_argument("--cache", type=Path, default=sonic.DEFAULT_CACHE_DB, help="The one-pass clip cache (opened read-only).")
     p.add_argument("--out", type=Path, default=RESULTS)
     args = p.parse_args(argv)
-    res = run(args.catalog, args.clap_dir, args.cache)
+    if args.clap_dir is None and args.model != "clap":
+        p.error(f"--model {args.model} needs --clap-dir: the folder its store was written to")
+    res = run(args.catalog, args.clap_dir or sonic.STORES["clap"], args.cache)
+    res["model"] = args.model
+    name = "sonic_measures" + ("" if args.model == "clap" else f".{args.model}")
     args.out.mkdir(parents=True, exist_ok=True)
-    (args.out / "sonic_measures.json").write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    (args.out / "sonic_measures.md").write_text(markdown(res), encoding="utf-8")
-    print(f"wrote {args.out / 'sonic_measures.json'} and {args.out / 'sonic_measures.md'}")
+    (args.out / f"{name}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    text = markdown(res)
+    if args.model != "clap":
+        text = text.replace("\n", f"\n\n**Store measured: `{args.model}` ({args.clap_dir}). Rows and columns named `clap` are that store.**\n", 1)
+    (args.out / f"{name}.md").write_text(text, encoding="utf-8")
+    print(f"wrote {args.out / f'{name}.json'} and {args.out / f'{name}.md'}")
     return 0
 
 
