@@ -8,11 +8,12 @@
 //    (phone 3278 at Balanced, desktop 2436 at Mood) and a seeded random sample: hover only (nothing moves,
 //    30 frames), a pan (60 frames of 8 px; again at twice the zoom), a zoom (30 frames to 2.5 times), a slider
 //    morph to the next stop (30 frames) and, on the desktop, the album panel sliding in (20 frames). The
-//    current file is timed through its MarkerLayout (one per sequence, as one MarkerDriver keeps one) and each
-//    older file passed with --old through its layoutMarkers on every frame, as MarkerDriver used to call it.
-//    Each sequence runs 3 times and each frame's fastest run is kept. The first frame (the album opening, a
-//    full solve) is not counted. Every MarkerLayout frame is also checked against a fresh layoutMarkers of the
-//    same frame.
+//    current file is timed through its MarkerLayout (one per sequence, as one MarkerDriver keeps one; motion
+//    frames drawn "moving", then one frame at rest that settles), each older file passed with --old through
+//    its layoutMarkers on every frame, as MarkerDriver used to call it. Each sequence runs 3 times and each
+//    frame's fastest run is kept. Also reported: the settle frame's cost, how far covers jump between frames
+//    beyond their own album's (and the seed's) move, now and with a fresh solve every frame, and frames with an
+//    overlap or a cover outside the bounds where a fresh solve has none.
 //
 //   node scripts/perf/layout-cost.mjs [--old path/to/focusLayout.ts ...] [--no-calls] [--sample N]
 //
@@ -135,44 +136,85 @@ function sequences(v, stop, seed) {
   return out;
 }
 
-console.log(`\n## Per drawn frame, an open album (first frame not counted), 3 runs per sequence, fastest kept`);
+console.log(`\n## Per drawn frame, an open album, 3 runs per sequence, fastest kept`);
 console.log(`albums: the worst album of each viewport plus ${SAMPLE} random (album, stop) pairs (seed 2026)`);
+console.log(`frame 0 (the album opening, a fresh solve) is not counted; every motion frame is drawn "moving", and one more`);
+console.log(`frame at the same view, not moving, ends it (the settle: pointerup, or the motion's flags clearing).`);
+/** Overlapping boxes (gap 10, 1 px slack) and boxes outside the bounds (0.01 px slack) in one layout. */
+function faults(items, b) {
+  let bad = 0;
+  for (let i = 0; i < items.length; i++) {
+    const p = items[i];
+    if (p.x - p.size / 2 < b.left - 0.01 || p.x + p.size / 2 > b.right + 0.01 || p.y - p.size / 2 < b.top - 0.01 || p.y + p.size / 2 > b.bottom + 0.01) bad++;
+    for (let j = i + 1; j < items.length; j++) {
+      const q = items[j];
+      const need = (p.size + q.size) / 2 + 10;
+      if (Math.abs(q.x - p.x) < need - 1 && Math.abs(q.y - p.y) < need - 1) bad++;
+    }
+  }
+  return bad;
+}
+/** Largest jump of a cover between two frames beyond its own album's move, and beyond the seed's move. */
+function jumps(prev, cur) {
+  let own = 0;
+  let seed = 0;
+  const ds = [cur[0].ax - prev[0].ax, cur[0].ay - prev[0].ay];
+  cur.forEach((m, i) => {
+    const dx = m.x - prev[i].x;
+    const dy = m.y - prev[i].y;
+    own = Math.max(own, Math.hypot(dx - (m.ax - prev[i].ax), dy - (m.ay - prev[i].ay)));
+    seed = Math.max(seed, Math.hypot(dx - ds[0], dy - ds[1]));
+  });
+  return [own, seed];
+}
+const snap = (items) => items.map((m) => ({ x: m.x, y: m.y, ax: m.ax, ay: m.ay }));
 for (const [name, v] of Object.entries(VIEWS)) {
   const rand = seeded(2026);
   const picks = [v.worst, ...Array.from({ length: SAMPLE }, () => [STOPS[Math.floor(rand() * 3)], Math.floor(rand() * recs.balanced.length)])];
   const rows = {};
+  const settle = { t: [], worst: null, gap: 0, faultsFresh: 0 };
   for (const [pi, [stop, seed]] of picks.entries()) {
     for (const [kind, frames] of Object.entries(sequences(v, stop, seed))) {
-      const row = (rows[`${kind}${pi === 0 ? ' (worst album)' : ''}`] ??= { cur: [], old: older.map(() => []), solves: 0, wallSolves: 0, moves: 0, unchanged: 0, frames: 0, maxDev: 0, devOver: 0 });
-      const best = new Float64Array(frames.length).fill(Infinity);
+      const row = (rows[`${kind}${pi === 0 ? ' (worst album)' : ''}`] ??= { cur: [], old: older.map(() => []), jumpNow: [], jumpFresh: [], faults: 0, faultsFresh: 0, frames: 0 });
+      const motion = kind !== 'hover';
+      const best = new Float64Array(frames.length + 1).fill(Infinity);
       const oldBest = older.map(() => new Float64Array(frames.length).fill(Infinity));
       for (let run = 0; run < 3; run++) {
         const cache = new MarkerLayout();
+        let prevNow = null;
+        let prevFresh = null;
         frames.forEach((fr, f) => {
           const t0 = performance.now();
-          const got = cache.layout(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds });
+          const got = cache.layout(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds, moving: motion && f > 0 });
           best[f] = Math.min(best[f], performance.now() - t0);
-          if (run === 0 && f > 0) {
-            const fresh = layoutMarkers(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds });
-            let dev = 0;
-            got.forEach((m, i) => (dev = Math.max(dev, Math.abs(m.x - fresh[i].x), Math.abs(m.y - fresh[i].y))));
-            row.maxDev = Math.max(row.maxDev, dev);
-            if (dev >= 0.5) row.devOver++;
+          if (run > 0) return;
+          const fresh = layoutMarkers(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds });
+          if (f > 0) {
+            row.frames++;
+            const fFresh = faults(fresh, fr.bounds);
+            if (fFresh) row.faultsFresh++;
+            else if (faults(got, fr.bounds)) row.faults++;
+            row.jumpNow.push(jumps(prevNow, got));
+            row.jumpFresh.push(jumps(prevFresh, fresh));
           }
+          prevNow = snap(got);
+          prevFresh = snap(fresh);
         });
+        // The frame that ends the motion: the same view, not moving.
+        const lastFr = frames[frames.length - 1];
+        const t0 = performance.now();
+        const rest = cache.layout(lastFr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: lastFr.bounds });
+        const t = performance.now() - t0;
+        best[frames.length] = Math.min(best[frames.length], t);
         if (run === 0) {
-          // Not counting the opening solve.
-          row.solves += cache.stats.solves - 1;
-          row.wallSolves += cache.stats.wallSolves;
-          row.moves += cache.stats.moves;
-          row.unchanged += cache.stats.unchanged;
-          row.frames += frames.length - 1;
+          const fresh = layoutMarkers(lastFr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: lastFr.bounds });
+          rest.forEach((m, i) => (settle.gap = Math.max(settle.gap, Math.abs(m.x - fresh[i].x), Math.abs(m.y - fresh[i].y))));
         }
         older.forEach(({ mod }, oi) => {
           frames.forEach((fr, f) => {
-            const t0 = performance.now();
+            const t1 = performance.now();
             mod.layoutMarkers(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds });
-            oldBest[oi][f] = Math.min(oldBest[oi][f], performance.now() - t0);
+            oldBest[oi][f] = Math.min(oldBest[oi][f], performance.now() - t1);
           });
         });
       }
@@ -180,12 +222,24 @@ for (const [name, v] of Object.entries(VIEWS)) {
         row.cur.push(best[f]);
         older.forEach((_, oi) => row.old[oi].push(oldBest[oi][f]));
       }
+      if (motion) {
+        settle.t.push(best[frames.length]);
+        if (!settle.worst || best[frames.length] > settle.worst.t) settle.worst = { t: best[frames.length], stop, seed, kind };
+      }
     }
   }
   console.log(`\n### ${name}`);
+  const q = (xs, p) => Float64Array.from(xs).sort()[Math.min(xs.length - 1, Math.floor(p * (xs.length - 1)))];
   for (const [kind, r] of Object.entries(rows)) {
-    console.log(`${kind}: ${r.frames} frames; current (MarkerLayout) ${summary(r.cur)}`);
+    console.log(`${kind}: ${r.frames} frames; now (MarkerLayout) ${summary(r.cur)}`);
     older.forEach((o, oi) => console.log(`  ${o.name} (layoutMarkers every frame) ${summary(r.old[oi])}`));
-    console.log(`  current: ${r.solves} full solves, ${r.moves} moved, ${r.unchanged} unchanged, ${r.wallSolves} solved again at the walls; largest gap to a fresh solve ${r.maxDev.toExponential(2)} px, frames at 0.5 px or more: ${r.devOver}`);
+    const jn = r.jumpNow;
+    const jf = r.jumpFresh;
+    console.log(
+      `  steadiness, cover jump beyond its album's move p99 / max: now ${q(jn.map((j) => j[0]), 0.99).toFixed(1)} / ${q(jn.map((j) => j[0]), 1).toFixed(1)} px, fresh every frame ${q(jf.map((j) => j[0]), 0.99).toFixed(1)} / ${q(jf.map((j) => j[0]), 1).toFixed(1)} px;` +
+        ` beyond the seed's move: now ${q(jn.map((j) => j[1]), 0.99).toFixed(1)} / ${q(jn.map((j) => j[1]), 1).toFixed(1)} px, fresh ${q(jf.map((j) => j[1]), 0.99).toFixed(1)} / ${q(jf.map((j) => j[1]), 1).toFixed(1)} px`,
+    );
+    console.log(`  frames with an overlap or a cover outside the bounds: now ${r.faults} where a fresh solve has none; fresh solve itself ${r.faultsFresh}`);
   }
+  console.log(`settle frame (the motion's end, a fresh solve): n ${settle.t.length}, ${summary(settle.t)}; worst ${settle.worst.kind} of album ${settle.worst.seed} at ${settle.worst.stop}; largest gap to a fresh solve ${settle.gap.toExponential(2)} px`);
 }

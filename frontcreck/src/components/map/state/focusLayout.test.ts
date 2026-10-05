@@ -229,23 +229,28 @@ describe('layoutMarkers keeps covers off the lines (prototype Focus.check)', () 
   });
 });
 
-describe('MarkerLayout (layoutMarkers for every drawn frame, reusing the last solve)', () => {
+describe('MarkerLayout (layoutMarkers for every drawn frame, steady from frame to frame)', () => {
   const bounds: MarkerBounds = { left: 8, top: 8, right: 382, bottom: 671 };
-  const cluster = (rand: () => number, x: number, y: number, n = 10, spread = 160) =>
+  type A = { id: number; x: number; y: number };
+  const cluster = (rand: () => number, x: number, y: number, n = 10, spread = 160): A[] =>
     Array.from({ length: n + 1 }, (_, i) => ({ id: 100 + i, x: x + (i ? (rand() - 0.5) * spread : 0), y: y + (i ? (rand() - 0.5) * spread : 0) }));
-  const moved = (anchors: { id: number; x: number; y: number }[], dx: number, dy: number) => anchors.map((a) => ({ id: a.id, x: a.x + dx, y: a.y + dy }));
-  const zoomed = (anchors: { id: number; x: number; y: number }[], f: number) => anchors.map((a) => ({ id: a.id, x: anchors[0].x + (a.x - anchors[0].x) * f, y: anchors[0].y + (a.y - anchors[0].y) * f }));
+  const moved = (anchors: A[], dx: number, dy: number) => anchors.map((a) => ({ id: a.id, x: a.x + dx, y: a.y + dy }));
+  /** The albums spread out (f > 1) or drawn in (f < 1) about the seed, as a zoom or a morph moves them. */
+  const zoomed = (anchors: A[], f: number) => anchors.map((a) => ({ id: a.id, x: anchors[0].x + (a.x - anchors[0].x) * f, y: anchors[0].y + (a.y - anchors[0].y) * f }));
   /** Largest distance between two layouts of the same markers, in px, over every field a caller reads. */
   const gapTo = (a: readonly MarkerItem[], b: readonly MarkerItem[]) => {
     expect(a.map((m) => [m.id, m.rank, m.size, m.seed])).toEqual(b.map((m) => [m.id, m.rank, m.size, m.seed]));
     return Math.max(...a.map((m, i) => Math.max(Math.abs(m.x - b[i].x), Math.abs(m.y - b[i].y), Math.abs(m.ax - b[i].ax), Math.abs(m.ay - b[i].ay))));
   };
+  const offsets = (items: readonly MarkerItem[]) => items.map((m) => [m.x - items[0].x, m.y - items[0].y]);
 
-  it('gives what layoutMarkers gives on a first call', () => {
+  it('opens an album exactly as layoutMarkers lays it out, the same every time', () => {
     const rand = lcg(3);
     for (let t = 0; t < 50; t++) {
       const a = cluster(rand, 195, 340);
-      expect(new MarkerLayout().layout(a, 64, 46, { bounds })).toEqual(layoutMarkers(a, 64, 46, { bounds }));
+      const one = new MarkerLayout().layout(a, 64, 46, { bounds, moving: true });
+      expect(one).toEqual(layoutMarkers(a, 64, 46, { bounds }));
+      expect(new MarkerLayout().layout(a, 64, 46, { bounds })).toEqual(one);
     }
   });
 
@@ -253,93 +258,138 @@ describe('MarkerLayout (layoutMarkers for every drawn frame, reusing the last so
     const cache = new MarkerLayout();
     const a = cluster(lcg(4), 195, 340);
     const first = cache.layout(a, 64, 46, { bounds });
+    const objects = [...first];
     const copy = first.map((m) => ({ ...m }));
+    const version = cache.version;
     const again = cache.layout(a.map((p) => ({ ...p })), 64, 46, { bounds: { ...bounds } });
     expect(again).toBe(first);
     expect(again).toEqual(copy);
-    expect(cache.stats).toEqual({ solves: 1, wallSolves: expect.any(Number), moves: 0, unchanged: 1 });
+    expect(again.every((m, i) => m === objects[i])).toBe(true);
+    expect(cache.version).toBe(version);
+    expect(cache.stats).toEqual({ solves: 1, settles: 0, moves: 0, rides: 0, unchanged: 1 });
   });
 
-  it('moves the last layout with a pan instead of solving again, as a fresh solve would place it', () => {
+  it('moves the layout exactly and in place with a pan that meets no wall, and solves the view afresh at rest', () => {
     const rand = lcg(5);
+    let eased = 0;
     for (let t = 0; t < 100; t++) {
       const cache = new MarkerLayout();
       let a = cluster(rand, 600, 400, 10, 60 + rand() * 300);
-      cache.layout(a, 64, 46);
+      let prev = cache.layout(a, 64, 46).map((m) => ({ ...m }));
+      const array = cache.layout(a, 64, 46);
+      const objects = [...array];
       for (let f = 0; f < 20; f++) {
-        a = moved(a, (rand() - 0.5) * 40, (rand() - 0.5) * 40);
-        expect(gapTo(cache.layout(a, 64, 46), layoutMarkers(a, 64, 46))).toBeLessThan(1e-6);
+        const dx = (rand() - 0.5) * 40;
+        const dy = (rand() - 0.5) * 40;
+        a = moved(a, dx, dy);
+        const out = cache.layout(a, 64, 46, { moving: true });
+        // In place: the same array and the same marker objects, nothing new.
+        expect(out).toBe(array);
+        expect(out.every((m, i) => m === objects[i])).toBe(true);
+        out.forEach((m, i) => {
+          expect(m.x - prev[i].x).toBeCloseTo(dx, 9);
+          expect(m.y - prev[i].y).toBeCloseTo(dy, 9);
+        });
+        expect(cache.settledFrom).toBeNull();
+        prev = out.map((m) => ({ ...m }));
       }
-      expect(cache.stats.solves).toBe(1);
-      expect(cache.stats.moves).toBe(20);
+      expect(cache.stats).toMatchObject({ solves: 1, moves: 20, rides: 0, settles: 0 });
+      expect(cache.unsettled).toBe(true);
+      // pointerup: the same view at rest is solved afresh, so a view always rests on the same layout.
+      const rest = cache.layout(a, 64, 46);
+      expect(gapTo(rest, layoutMarkers(a, 64, 46))).toBe(0);
+      expect(cache.unsettled).toBe(false);
+      if (cache.settledFrom) eased++;
     }
+    // A fresh solve can land elsewhere on rounding noise alone; that is rare, and then the covers ease over.
+    expect(eased).toBeLessThan(5);
   });
 
-  it('follows a pan into a wall and away from it exactly as a fresh solve, solving again only when a marker is held', () => {
+  it('carries the group rigidly with the seed through a zoom or a morph, inside the bounds with no overlap', () => {
     const rand = lcg(6);
-    let wallSolves = 0;
     for (let t = 0; t < 100; t++) {
       const cache = new MarkerLayout();
-      let a = cluster(rand, 195, 340, 10, 60 + rand() * 400);
-      cache.layout(a, 64, 46, { bounds });
-      const dx = (rand() - 0.5) * 30;
-      const dy = (rand() - 0.5) * 30;
-      for (let f = 0; f < 30; f++) {
-        a = moved(a, dx, dy);
-        const fresh = layoutMarkers(a, 64, 46, { bounds });
-        expect(gapTo(cache.layout(a, 64, 46, { bounds }), fresh), `round ${t}, frame ${f}`).toBeLessThan(1e-6);
-        expect(outside(fresh, bounds)).toBe(0);
+      const a0 = cluster(rand, 195, 340, 10, 60 + rand() * 300);
+      const opened = offsets(cache.layout(a0, 64, 46, { bounds }));
+      const grow = rand() < 0.5 ? 2.5 : 0.4;
+      for (let f = 1; f <= 30; f++) {
+        const a = moved(zoomed(a0, grow ** (f / 30)), f * 2, -f);
+        const out = cache.layout(a, 64, 46, { bounds, moving: true });
+        expect(outside([...out], bounds), `round ${t}, frame ${f}`).toBe(0);
+        expect(overlaps([...out]), `round ${t}, frame ${f}`).toBe(0);
+        expect(out.map((m) => [m.ax, m.ay])).toEqual(a.map((p) => [p.x, p.y]));
+        expect(cache.settledFrom).toBeNull();
+        // Rigid: where no wall holds a marker, every cover keeps its offset from the seed's cover.
+        if (cache.stats.rides === f && opened.length) {
+          const now = offsets(out);
+          const free = now.every((o, i) => Math.abs(o[0] - opened[i][0]) < 1e-6 && Math.abs(o[1] - opened[i][1]) < 1e-6);
+          const touches = out.some((m) => m.x - m.size / 2 <= bounds.left + 1e-6 || m.x + m.size / 2 >= bounds.right - 1e-6 || m.y - m.size / 2 <= bounds.top + 1e-6 || m.y + m.size / 2 >= bounds.bottom - 1e-6);
+          expect(free || touches, `round ${t}, frame ${f}`).toBe(true);
+        }
       }
       expect(cache.stats.solves).toBe(1);
-      wallSolves += cache.stats.wallSolves;
+      expect(cache.unsettled).toBe(true);
     }
-    // Some of these groups are wider than the bounds: those markers are held at a wall and solved again.
-    expect(wallSolves).toBeGreaterThan(0);
   });
 
-  it('solves again when the bounds change and a marker is held at the new wall', () => {
-    const cache = new MarkerLayout();
-    const pile = Array.from({ length: 11 }, (_, i) => ({ id: i, x: 40 + (i % 3), y: 300 + (i % 2) }));
-    const wide = { left: 0, top: 0, right: 800, bottom: 800 };
-    const narrow = { left: 0, top: 0, right: 200, bottom: 800 };
-    cache.layout(pile, 64, 46, { bounds: wide });
-    const before = cache.stats.wallSolves;
-    expect(gapTo(cache.layout(pile, 64, 46, { bounds: narrow }), layoutMarkers(pile, 64, 46, { bounds: narrow }))).toBeLessThan(1e-6);
-    expect(cache.stats.solves).toBe(1);
-    expect(cache.stats.wallSolves).toBe(before + 1);
-    expect(gapTo(cache.layout(pile, 64, 46, { bounds: wide }), layoutMarkers(pile, 64, 46, { bounds: wide }))).toBeLessThan(1e-6);
-  });
-
-  it('solves again when the shape of the group changes by half a pixel or more (a zoom, a slider morph)', () => {
-    const cache = new MarkerLayout();
-    const a = cluster(lcg(7), 600, 400);
-    cache.layout(a, 64, 46, { bounds: { left: 0, top: 0, right: 1200, bottom: 800 } });
-    for (const f of [1.02, 1.05, 0.9]) {
-      const z = zoomed(a, f);
-      expect(gapTo(cache.layout(z, 64, 46), layoutMarkers(z, 64, 46))).toBeLessThan(1e-6);
+  it('settles on the fresh layout of the view at rest, from where the group was carried, once', () => {
+    const rand = lcg(7);
+    for (let t = 0; t < 100; t++) {
+      const cache = new MarkerLayout();
+      const a0 = cluster(rand, 195, 340, 10, 60 + rand() * 300);
+      cache.layout(a0, 64, 46, { bounds });
+      let a = a0;
+      for (let f = 1; f <= 10; f++) cache.layout((a = zoomed(a0, 1 + f / 10)), 64, 46, { bounds, moving: true });
+      const carried = cache.layout(a, 64, 46, { bounds, moving: true }).map((m) => [m.x, m.y]);
+      // The motion has ended (the flags cleared, or pointerup): the same view, not moving.
+      const rest = cache.layout(a, 64, 46, { bounds });
+      expect(gapTo(rest, layoutMarkers(a, 64, 46, { bounds }))).toBe(0);
+      // The driver eases from where the covers were carried; a settle that moves none 0.5 px needs no ease.
+      if (cache.settledFrom) expect(Array.from(cache.settledFrom)).toEqual(carried.flat());
+      else expect(Math.max(...rest.map((m, i) => Math.max(Math.abs(m.x - carried[i][0]), Math.abs(m.y - carried[i][1]))))).toBeLessThan(0.5);
+      expect(cache.unsettled).toBe(false);
+      expect(cache.stats.settles).toBe(1);
+      expect(cache.layout(a, 64, 46, { bounds })).toBe(rest);
+      expect(cache.settledFrom).toBeNull();
     }
-    expect(cache.stats.solves).toBe(4);
-    const one = a.map((p, i) => (i === 3 ? { ...p, x: p.x + 0.6 } : p));
-    cache.layout(one, 64, 46);
-    expect(cache.stats.solves).toBe(5);
   });
 
-  it('keeps each album on its true position when it reuses a layout under half a pixel of change', () => {
+  it('settles straight away when a frame at rest changes the view (a keyboard pan into a wall)', () => {
     const cache = new MarkerLayout();
-    const a = cluster(lcg(8), 600, 400);
-    cache.layout(a, 64, 46);
-    const nudged = a.map((p, i) => (i === 2 ? { ...p, y: p.y + 0.3 } : p));
-    const out = cache.layout(nudged, 64, 46);
-    expect(cache.stats.solves).toBe(1);
-    expect(out.map((m) => [m.ax, m.ay])).toEqual(nudged.map((p) => [p.x, p.y]));
-    expect(gapTo(out, layoutMarkers(nudged, 64, 46))).toBeLessThan(0.5);
+    const pile = Array.from({ length: 11 }, (_, i) => ({ id: i, x: 200 + (i % 3), y: 300 + (i % 2) }));
+    const narrow = { left: 0, top: 0, right: 220, bottom: 800 };
+    cache.layout(pile, 64, 46, { bounds: narrow });
+    const panned = moved(pile, -150, 0);
+    const out = cache.layout(panned, 64, 46, { bounds: narrow });
+    expect(gapTo(out, layoutMarkers(panned, 64, 46, { bounds: narrow }))).toBe(0);
+    expect(cache.settledFrom).not.toBeNull();
+    expect(cache.stats).toMatchObject({ solves: 1, settles: 1 });
+  });
+
+  it('holds a group larger than the bounds at the walls with a plain box separation while a drag goes on', () => {
+    const rand = lcg(8);
+    for (let t = 0; t < 50; t++) {
+      const cache = new MarkerLayout();
+      let a = cluster(rand, 195, 340, 10, 500);
+      cache.layout(a, 64, 46, { bounds });
+      for (let f = 0; f < 30; f++) {
+        a = moved(a, 6, 3);
+        const out = cache.layout(a, 64, 46, { bounds, moving: true });
+        expect(outside([...out], bounds)).toBe(0);
+        expect(overlaps([...out])).toBe(0);
+      }
+      // Settled, or (when no wall held it) moved exactly: a fresh layout up to the projection's rounding.
+      const rest = cache.layout(a, 64, 46, { bounds });
+      expect(gapTo(rest, layoutMarkers(a, 64, 46, { bounds }))).toBeLessThan(1e-9);
+      expect(cache.unsettled).toBe(false);
+    }
   });
 
   it('solves again for other albums, sizes, gap or minimum line', () => {
     const cache = new MarkerLayout();
     const a = cluster(lcg(9), 300, 300, 5);
     cache.layout(a, 64, 46);
-    cache.layout(a.map((p, i) => (i === 4 ? { ...p, id: 999 } : p)), 64, 46);
+    cache.layout(a.map((p, i) => (i === 4 ? { ...p, id: 999 } : p)), 64, 46, { moving: true });
     cache.layout(a.slice(0, 5), 64, 46);
     cache.layout(a.slice(0, 5), 38, 28);
     cache.layout(a.slice(0, 5), 38, 28, { gap: 6 });
@@ -351,7 +401,7 @@ describe('MarkerLayout (layoutMarkers for every drawn frame, reusing the last so
     const cache = new MarkerLayout();
     expect(cache.layout([], 64, 46)).toEqual([]);
     expect(cache.layout([{ id: 1, x: 5, y: 6 }], 64, 46).map((m) => [m.x, m.y])).toEqual([[5, 6]]);
-    expect(cache.layout([{ id: 1, x: 15, y: 6 }], 64, 46).map((m) => [m.x, m.y, m.ax])).toEqual([[15, 6, 15]]);
+    expect(cache.layout([{ id: 1, x: 15, y: 6 }], 64, 46, { moving: true }).map((m) => [m.x, m.y, m.ax])).toEqual([[15, 6, 15]]);
   });
 });
 

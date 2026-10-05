@@ -13,6 +13,10 @@ declare global {
       map?: MapApi | null;
       /** Frames the map has rendered. */
       frames?: number;
+      /** With an album open on the map (canvas/MarkerDriver.tsx): the covers as last placed, and how far they
+       * are from a fresh layoutMarkers of the same view (0 once settled). Null without a focus or while the
+       * covers ease onto a settled layout. */
+      markerLayout?: () => { placed: { id: number; x: number; y: number; drawn: number }[]; freshGap: number } | null;
       /** The seed of this page load's random star sizes (components/map/state/stars.ts), published once the
        * stars are dealt. A test may set it before the map loads to get a repeatable sky. */
       starSeed?: number;

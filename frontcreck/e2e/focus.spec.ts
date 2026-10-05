@@ -339,3 +339,32 @@ test('with an album open the map draws no frame at rest and its covers stay put'
   expect(f2 - f1, 'frames drawn at rest with an album open').toBe(0);
   expect(await where()).toEqual(before);
 });
+
+test('after a zoom with an album open the covers settle on the fresh layout and the map rests', async ({ page }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(11);
+  const canvas = page.locator('canvas.map-canvas');
+  await canvas.focus();
+  for (const key of ['+', '+', '-']) {
+    await page.keyboard.press(key);
+    await waitForCameraIdle(page);
+  }
+  // The covers ease onto the settled layout in the DOM; then the gas's sharper image may still fade in.
+  await waitForGasSharpSettled(page);
+  const settled = await page.evaluate(() => window.__rmr!.markerLayout!());
+  expect(settled, 'a focus is open and no ease is running').not.toBeNull();
+  expect(settled!.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
+  const box = (await canvas.boundingBox())!;
+  for (const m of settled!.placed) {
+    const r = (await page.locator(`.mk[data-album-id="${m.id}"]`).boundingBox())!;
+    expect(Math.abs(r.x + r.width / 2 - box.x - m.x), `cover ${m.id} x`).toBeLessThan(0.6);
+    expect(Math.abs(r.y + r.height / 2 - box.y - m.y), `cover ${m.id} y`).toBeLessThan(0.6);
+  }
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  expect(f2 - f1, 'frames drawn at rest after the settle').toBe(0);
+});

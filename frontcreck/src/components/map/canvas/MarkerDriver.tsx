@@ -3,8 +3,10 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
-import { MARKER_SIZE, MarkerLayout, type MarkerAnchor, type PlacedMarker } from '../state/focusLayout';
-import { useMapStore } from '../state/mapStore';
+import { easeOutCubic, prefersReducedMotion } from '@/lib/media';
+import { STOP_T } from '../data';
+import { MARKER_SIZE, MarkerLayout, layoutMarkers, type MarkerAnchor, type MarkerBounds, type MarkerItem, type PlacedMarker } from '../state/focusLayout';
+import { useMapStore, type MapStore } from '../state/mapStore';
 import { badgeKey, getOverlayEl, getOverlaySize, getPlacedMarkers, markerKey, setPlacedMarkers } from '../state/overlayEls';
 import { canvasRect, visibleArea, worldToScreen } from '../state/projection';
 import { TIP_EDGE, clamp } from './OverlayDriver';
@@ -16,6 +18,15 @@ const MARKER_EDGE = 8;
 const LEADER_MIN_PX = 6;
 /** Rank badge offset from the cover's top-left corner (mockup: 6 px up and left). */
 const BADGE_OFFSET = 6;
+/** How long the covers take to ease onto the settled layout once a motion ends. */
+export const MARKER_SETTLE_MS = 180;
+
+/** True while the view is still on its way somewhere, so that another drawn frame is coming or the visitor still
+ * holds the map: a camera tween, a fling or wheel easing, a slider morph (also the frame before it starts), a
+ * bounds nudge, the album panel sliding, or a drag. */
+function inMotion(s: MapStore): boolean {
+  return s.animating || s.rigMoving || s.morphing || s.nudging || s.dragging || s.sliderT !== STOP_T[s.input.stop] || s.insetCurrent !== s.input.insetLeft;
+}
 
 function setLine(l: SVGLineElement, x1: number, y1: number, x2: number, y2: number) {
   l.setAttribute('x1', x1.toFixed(1));
@@ -24,22 +35,104 @@ function setLine(l: SVGLineElement, x1: number, y1: number, x2: number, y2: numb
   l.setAttribute('y2', y2.toFixed(1));
 }
 
-/** Every rendered frame in focus mode: places the cover markers, the lines and the label of a hovered marker. */
+/** Writes the covers, badges, lines and leaders at `pos` (x, y per marker in rank order). DOM only. */
+function writeMarkers(placed: readonly MarkerItem[], pos: Float64Array): void {
+  for (let i = 0; i < placed.length; i++) {
+    const it = placed[i];
+    const el = getOverlayEl(markerKey(it.id));
+    if (!el) continue;
+    const s = el.dataset.hot === 'true' ? it.size * HOT_SCALE : it.size;
+    const x0 = pos[2 * i] - s / 2;
+    const y0 = pos[2 * i + 1] - s / 2;
+    el.style.width = `${s}px`;
+    el.style.height = `${s}px`;
+    el.style.transform = `translate3d(${x0.toFixed(1)}px, ${y0.toFixed(1)}px, 0)`;
+    el.style.visibility = '';
+    const badge = getOverlayEl(badgeKey(it.id));
+    if (badge) {
+      badge.style.transform = `translate3d(${(x0 - BADGE_OFFSET).toFixed(1)}px, ${(y0 - BADGE_OFFSET).toFixed(1)}px, 0)`;
+      badge.style.visibility = '';
+    }
+  }
+  const svg = getOverlayEl<SVGSVGElement>('lines');
+  if (!svg || !placed.length) return;
+  const rank = (id: number) => placed.findIndex((p) => p.id === id);
+  svg.querySelectorAll<SVGLineElement>('line[data-to]').forEach((l) => {
+    const i = rank(Number(l.dataset.to));
+    if (i >= 0) setLine(l, pos[0], pos[1], pos[2 * i], pos[2 * i + 1]);
+  });
+  svg.querySelectorAll<SVGLineElement>('line[data-leader]').forEach((l) => {
+    const i = rank(Number(l.dataset.leader));
+    const it = placed[i];
+    const show = !!it && Math.hypot(pos[2 * i] - it.ax, pos[2 * i + 1] - it.ay) > LEADER_MIN_PX;
+    l.style.display = show ? '' : 'none';
+    if (show) setLine(l, it.ax, it.ay, pos[2 * i], pos[2 * i + 1]);
+  });
+}
+
+interface Settle {
+  placed: readonly MarkerItem[];
+  from: Float64Array;
+  to: Float64Array;
+  now: Float64Array;
+  start: number;
+  version: number;
+  raf: number;
+}
+
+interface Work {
+  layout: MarkerLayout;
+  anchors: MarkerAnchor[];
+  bounds: MarkerBounds;
+  pos: Float64Array;
+  settle: Settle | null;
+}
+
+/** Every rendered frame in focus mode: places the cover markers, the lines and the label of a hovered marker. The
+ * layout is a MarkerLayout: steady while the view moves, settled on the fresh layout once it stops, the covers
+ * easing over in the DOM (no canvas frame) unless reduced motion is asked for. */
 export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<Float32Array> }) {
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const get = useThree((s) => s.get);
+  const invalidate = useThree((s) => s.invalidate);
+  const work = useRef<Work | null>(null);
 
-  // One layout per driver: it keeps its last solve and only moves it while the focus keeps its shape (a pan,
-  // the panel sliding) or returns it untouched when nothing moved (a hover redraw, a cover or gas fade).
-  const work = useRef<{ layout: MarkerLayout; anchors: MarkerAnchor[] } | null>(null);
-
-  // A remounted Scene must not hit-test the markers of the previous one.
-  useEffect(() => () => setPlacedMarkers([]), []);
+  useEffect(() => {
+    // A motion that ends after this driver's frame (a bounds nudge, pointerup on a drag) asks for the one frame
+    // that settles the layout. Nothing else: a resting, settled map draws nothing.
+    const unsubscribe = useMapStore.subscribe((s) => {
+      if (s.input.focus && work.current?.layout.unsettled && !inMotion(s)) invalidate();
+    });
+    // Test hook: how far the shown layout is from a fresh solve of the same view.
+    if (window.__rmr) {
+      window.__rmr.markerLayout = () => {
+        const w = work.current;
+        if (!w || !useMapStore.getState().input.focus || w.settle) return null;
+        const fresh = layoutMarkers(w.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: w.bounds });
+        const shown = getPlacedMarkers();
+        let gap = 0;
+        shown.forEach((m, i) => (gap = Math.max(gap, Math.abs(m.x - fresh[i].x), Math.abs(m.y - fresh[i].y))));
+        return { placed: shown.map((m) => ({ id: m.id, x: m.x, y: m.y, drawn: m.drawn })), freshGap: shown.length === fresh.length ? gap : Infinity };
+      };
+    }
+    return () => {
+      unsubscribe();
+      if (work.current?.settle) cancelAnimationFrame(work.current.settle.raf);
+      // A remounted Scene must not hit-test the markers of the previous one.
+      setPlacedMarkers([]);
+    };
+  }, [invalidate]);
 
   useFrame(() => {
-    const { input, hoveredIndex, insetCurrent } = useMapStore.getState();
+    const store = useMapStore.getState();
+    const { input, hoveredIndex, insetCurrent } = store;
     const f = input.focus;
+    const w = (work.current ??= { layout: new MarkerLayout(), anchors: [], bounds: { left: 0, top: 0, right: 0, bottom: 0 }, pos: new Float64Array(0), settle: null });
     if (!f) {
+      if (w.settle) {
+        cancelAnimationFrame(w.settle.raf);
+        w.settle = null;
+      }
       if (getPlacedMarkers().length) setPlacedMarkers([]);
       return;
     }
@@ -50,8 +143,12 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
     const inset = Math.max(0, insetCurrent);
     const area = visibleArea(inset, width, height, MARKER_EDGE);
     // Above a full-width bottom panel (the phone slider), with the same edge as elsewhere.
-    const markerBounds = { ...area, bottom: Math.min(area.bottom, height - input.bottomCover - MARKER_EDGE) };
-    const { layout, anchors } = (work.current ??= { layout: new MarkerLayout(), anchors: [] });
+    const b = w.bounds;
+    b.left = area.left;
+    b.top = area.top;
+    b.right = area.right;
+    b.bottom = Math.min(area.bottom, height - input.bottomCover - MARKER_EDGE);
+    const anchors = w.anchors;
     anchors.length = f.recs.length + 1;
     for (let i = 0; i < anchors.length; i++) {
       const id = i === 0 ? f.seed : f.recs[i - 1];
@@ -65,42 +162,45 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
         anchors[i] = { id, x: p.x, y: p.y };
       }
     }
-    const placed = layout.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: markerBounds });
+    const layout = w.layout;
+    const placed = layout.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: b, moving: inMotion(store) });
+    const n = placed.length;
+    if (w.pos.length !== 2 * n) w.pos = new Float64Array(2 * n);
+    for (let i = 0; i < n; i++) {
+      w.pos[2 * i] = placed[i].x;
+      w.pos[2 * i + 1] = placed[i].y;
+    }
+
+    if (w.settle && w.settle.version !== layout.version) {
+      // The layout changed again (a new motion): drop the ease and follow it.
+      cancelAnimationFrame(w.settle.raf);
+      w.settle = null;
+    }
+    if (layout.settledFrom && layout.settledFrom.length === 2 * n && !prefersReducedMotion()) {
+      const s: Settle = { placed, from: layout.settledFrom, to: Float64Array.from(w.pos), now: new Float64Array(2 * n), start: performance.now(), version: layout.version, raf: 0 };
+      const step = () => {
+        const p = Math.min(1, (performance.now() - s.start) / MARKER_SETTLE_MS);
+        const e = easeOutCubic(p);
+        for (let i = 0; i < s.now.length; i++) s.now[i] = s.from[i] + (s.to[i] - s.from[i]) * e;
+        writeMarkers(s.placed, s.now);
+        if (p < 1) s.raf = requestAnimationFrame(step);
+        else if (w.settle === s) w.settle = null;
+      };
+      s.now.set(s.from);
+      s.raf = requestAnimationFrame(step);
+      w.settle = s;
+    }
+
     const drawn: PlacedMarker[] = [];
     for (const it of placed) {
       const el = getOverlayEl(markerKey(it.id));
-      const s = el?.dataset.hot === 'true' ? it.size * HOT_SCALE : it.size;
-      drawn.push({ ...it, drawn: s });
-      if (!el) continue;
-      const x0 = it.x - s / 2;
-      const y0 = it.y - s / 2;
-      el.style.width = `${s}px`;
-      el.style.height = `${s}px`;
-      el.style.transform = `translate3d(${x0.toFixed(1)}px, ${y0.toFixed(1)}px, 0)`;
-      el.style.visibility = '';
-      const badge = getOverlayEl(badgeKey(it.id));
-      if (badge) {
-        badge.style.transform = `translate3d(${(x0 - BADGE_OFFSET).toFixed(1)}px, ${(y0 - BADGE_OFFSET).toFixed(1)}px, 0)`;
-        badge.style.visibility = '';
-      }
+      drawn.push({ ...it, drawn: el?.dataset.hot === 'true' ? it.size * HOT_SCALE : it.size });
     }
     // Hover and pick hit-test these boxes (CursorTracker, PickController): the markers take no pointer events.
     setPlacedMarkers(drawn);
-    const svg = getOverlayEl<SVGSVGElement>('lines');
-    if (svg && placed.length) {
-      const seed = placed[0];
-      const byId = new Map(placed.map((p) => [p.id, p]));
-      svg.querySelectorAll<SVGLineElement>('line[data-to]').forEach((l) => {
-        const it = byId.get(Number(l.dataset.to));
-        if (it) setLine(l, seed.x, seed.y, it.x, it.y);
-      });
-      svg.querySelectorAll<SVGLineElement>('line[data-leader]').forEach((l) => {
-        const it = byId.get(Number(l.dataset.leader));
-        const show = !!it && Math.hypot(it.x - it.ax, it.y - it.ay) > LEADER_MIN_PX;
-        l.style.display = show ? '' : 'none';
-        if (show && it) setLine(l, it.ax, it.ay, it.x, it.y);
-      });
-    }
+    // While the covers ease onto a settled layout, the frame draws them where the ease has them.
+    writeMarkers(placed, w.settle ? w.settle.now : w.pos);
+
     const tip = getOverlayEl('hover');
     const it = hoveredIndex === null ? undefined : placed.find((p) => p.id === hoveredIndex);
     if (tip && it) {
