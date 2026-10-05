@@ -119,6 +119,8 @@ async function one(browser, base, dpr, kind) {
     const dbg = g.getExtension('WEBGL_debug_renderer_info');
     return {
       override: window.__rmrGasSharp ?? null,
+      finePointer: matchMedia('(pointer: fine)').matches,
+      canHover: matchMedia('(hover: hover)').matches,
       coarsePointer: matchMedia('(pointer: coarse)').matches,
       maxTouchPoints: navigator.maxTouchPoints,
       deviceMemory: navigator.deviceMemory ?? null,

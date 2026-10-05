@@ -1,5 +1,285 @@
 # Part 1 (data and gas) against the baseline: performance and regression checklist
 
+**Read this section first. It is the closing measurement of part 1 (2026-10-05) and replaces every headline below it.** The older sections are kept as history and each says at its top that it is superseded.
+
+## Closing measurement: round 3 and the closing pass
+
+- Builds measured in turn: **current** `37906968`, **previous head** `161d530b` (the build before round 3: no hashed names, no fence fix, no fade, no lighter shader), and for the startup, software frame and A/B runs also the **baseline** `6f10463e` (today's site; app code identical to `1e9ef508`). The closing pass then changed the app once more (`0bf30a31`: the gate, the lighter shader in deep zoom, the pointer safety, the failed first image); what was measured again after it is under "After the closing fixes".
+- Date 2026-10-05, 06:38 to 09:15 local time for the round 3 data. Mains power in every run (each output file records it). Ordinary launch: plain `npm run perf`, three times per build, current and previous head alternating.
+- Machine: MacBook Pro, Apple M1 Pro, 16 GB, shared with other sessions throughout. Each perf run waited for the one minute load to fall under 4 (waits of 281 to 1402 s) and began at 3.4 to 3.9. Node v22.23.3 arm64, Google Chrome headless arm64, production builds.
+- The software columns of the current build draw the gas with the **lighter shader** (the script's row "Gas shader" says so); the gpu columns draw the full one. The previous head draws the full shader everywhere.
+- Baseline numbers: `baseline/BASELINE-PERF.md` (four columns, three runs, 2026-10-04), its dpr 2 section (`baseline/perf/perf-dpr2-run*.json`) and, for the two deep zoom rows at dpr 1 on the gpu, `perf-part1/baseline-gpu-deep-run*.json`. The software columns have no baseline for the deep zoom rows. Budgets: `frontcreck/scripts/perf/budgets.json`, unchanged.
+- Raw: `perf-part1/round3/` (`perf-current-run1..3`, `perf-prev-run1..3`, `hover`, `startup-longtask`, `startup-longtask-plain`, `software-frames`, `fade-measure`, `lite-ab/`, and `LOAD.txt` with the load and the power around every measurement).
+
+### 1. Budgets, per run
+
+All six runs exited 0 with "All budgets met" (the `fails` list of each of the six JSON files is empty, and each `.txt` ends with `# exit 0`).
+
+| Run | Build | Budgets | Load before (1 min) | Load after (1, 5, 15 min) |
+|---|---|---|---|---|
+| current 1 | `37906968` | all met | 3.89 | 8.22, 6.61, 8.04 |
+| previous head 1 | `161d530b` | all met | 3.38 | 15.20, 8.61, 7.68 |
+| current 2 | `37906968` | all met | 3.75 | 5.14, 6.16, 6.86 |
+| previous head 2 | `161d530b` | all met | 3.92 | 13.10, 7.69, 7.04 |
+| current 3 | `37906968` | all met | 3.85 | 10.33, 7.27, 6.75 |
+| previous head 3 | `161d530b` | all met | 3.93 | 5.75, 5.96, 5.99 |
+
+Console errors: 0 in every column of every run. The map had settled before every step in every run.
+
+### 2. Every row, every column
+
+Median of three runs with the range in brackets. "Worse" means only that the current median is higher than the baseline median; it is marked in two grades, as asked: inside the baseline's own three runs, or above the baseline's worst run. Three runs a side is a small sample: a row marked "worse, inside the baseline's range" differs from the baseline by less than the baseline differs from itself.
+
+| Column | Row | Current, median (range of 3) | Previous head, median (range) | Baseline, median (range) | Budget | Current against baseline |
+|---|---|---|---|---|---|---|
+| software desktop | Search usable (ms) | 189 (182 to 189) | 101 (96 to 179) | 121 (92 to 137) | 1000 | **WORSE, above the baseline's worst run** |
+| software desktop | Startup worst long task (ms) | 50 (50 to 208) | 51 (0 to 77) | 57 (0 to 122) | 250 | better |
+| software desktop | WebGL warm-up end (ms) | 3572 (3415 to 3665) | 3283 (3253 to 3433) | 3578 (3493 to 3712) | reported only | better |
+| software desktop | Map first frame (ms) | 4151 (3896 to 4521) | 3732 (3708 to 3939) | 4074 (3937 to 4267) | reported only | **worse**, inside the baseline's range |
+| software desktop | Nebula visible (ms) | 4459 (4204 to 4572) | 4024 (4007 to 4234) | none | reported only | no baseline |
+| software desktop | Typing to suggestions (ms) | 7 (6 to 7) | 6 (5 to 6) | 6 (5 to 6) | 100 | **WORSE, above the baseline's worst run** |
+| software desktop | Select to album (ms) | 27 (27 to 29) | 25 (25 to 26) | 24 (17 to 35) | 200 | **worse**, inside the baseline's range |
+| software desktop | Transition worst frame gap (ms) | 1600 (770 to 1631) | 1184 (670 to 1256) | 1355 (1296 to 1642) | 50, GPU only | **worse**, inside the baseline's range |
+| software desktop | Slider to list (ms) | 9 (7 to 10) | 9 (9 to 19) | 8 (7 to 13) | 150 | **worse**, inside the baseline's range |
+| software desktop | Morph worst frame gap (ms) | 78 (75 to 158) | 165 (108 to 175) | 153 (141 to 219) | 50, GPU only | better |
+| software desktop | Drag worst frame gap (ms) | 100 (93 to 100) | 111 (107 to 116) | 95 (85 to 105) | 50, GPU only | **worse**, inside the baseline's range |
+| software desktop | Zoom worst frame gap (ms) | 255 (205 to 269) | 364 (311 to 370) | 202 (189 to 226) | 50, GPU only | **WORSE, above the baseline's worst run** |
+| software desktop | Deep zoom drag worst frame gap (ms) | 53 (51 to 54) | 76 (67 to 135) | none | reported only | no baseline |
+| software desktop | Deep zoom, slider between stops, worst frame gap (ms) | 49 (48 to 52) | 92 (82 to 141) | none | reported only | no baseline |
+| software desktop | Long tasks while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 0 | same |
+| software desktop | Frames while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 1 | same |
+| software phone | Search usable (ms) | 112 (80 to 117) | 123 (112 to 132) | 127 (80 to 179) | 1000 | better |
+| software phone | Startup worst long task (ms) | 0 (0 to 0) | 0 (0 to 51) | 0 (0 to 0) | 250 | same |
+| software phone | WebGL warm-up end (ms) | 2423 (2367 to 2473) | 2271 (2266 to 2493) | 2455 (2360 to 2578) | reported only | better |
+| software phone | Map first frame (ms) | 2871 (2814 to 2920) | 2730 (2728 to 2951) | 2903 (2811 to 3028) | reported only | better |
+| software phone | Nebula visible (ms) | 3153 (3095 to 3197) | 2996 (2991 to 3229) | none | reported only | no baseline |
+| software phone | Typing to suggestions (ms) | 5 (5 to 6) | 5 (4 to 5) | 5 (4 to 5) | 100 | same |
+| software phone | Select to album (ms) | 18 (18 to 68) | 18 (17 to 18) | 18 (17 to 77) | 200 | same |
+| software phone | Transition worst frame gap (ms) | 773 (752 to 796) | 755 (736 to 769) | 784 (738 to 892) | 50, GPU only | better |
+| software phone | Slider to list (ms) | 9 (8 to 18) | 9 (8 to 9) | 16 (7 to 181) | 150 | better |
+| software phone | Morph worst frame gap (ms) | 121 (117 to 123) | 123 (122 to 129) | 114 (112 to 119) | 50, GPU only | **WORSE, above the baseline's worst run** |
+| software phone | Drag worst frame gap (ms) | 80 (77 to 88) | 93 (84 to 94) | 79 (74 to 117) | 50, GPU only | **worse**, inside the baseline's range |
+| software phone | Zoom worst frame gap (ms) | 55 (46 to 57) | 64 (57 to 64) | 53 (49 to 55) | 50, GPU only | **worse**, inside the baseline's range |
+| software phone | Deep zoom drag worst frame gap (ms) | 39 (39 to 42) | 52 (46 to 73) | none | reported only | no baseline |
+| software phone | Deep zoom, slider between stops, worst frame gap (ms) | 38 (37 to 39) | 58 (52 to 63) | none | reported only | no baseline |
+| software phone | Long tasks while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 0 | same |
+| software phone | Frames while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 1 | same |
+| gpu desktop | Search usable (ms) | 84 (82 to 85) | 84 (75 to 109) | 84 (83 to 97) | 1000 | same |
+| gpu desktop | Startup worst long task (ms) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 345) | 250 | same |
+| gpu desktop | WebGL warm-up end (ms) | 135 (135 to 136) | 136 (117 to 159) | 132 (132 to 145) | reported only | **worse**, inside the baseline's range |
+| gpu desktop | Map first frame (ms) | 596 (565 to 598) | 583 (564 to 610) | 575 (574 to 907) | reported only | **worse**, inside the baseline's range |
+| gpu desktop | Nebula visible (ms) | 641 (612 to 657) | 630 (610 to 667) | none | reported only | no baseline |
+| gpu desktop | Typing to suggestions (ms) | 5 (5 to 10) | 5 (5 to 7) | 7 (6 to 10) | 100 | better |
+| gpu desktop | Select to album (ms) | 18 (17 to 18) | 20 (18 to 21) | 22 (21 to 24) | 200 | better |
+| gpu desktop | Transition worst frame gap (ms) | 27 (24 to 31) | 34 (24 to 34) | 28 (27 to 28) | 50 | better |
+| gpu desktop | Slider to list (ms) | 6 (6 to 10) | 10 (9 to 15) | 12 (7 to 16) | 150 | better |
+| gpu desktop | Morph worst frame gap (ms) | 20 (20 to 37) | 19 (18 to 19) | 18 (18 to 20) | 50 | **worse**, inside the baseline's range |
+| gpu desktop | Drag worst frame gap (ms) | 21 (20 to 36) | 24 (20 to 24) | 19 (18 to 21) | 50 | **worse**, inside the baseline's range |
+| gpu desktop | Zoom worst frame gap (ms) | 37 (33 to 40) | 28 (28 to 29) | 38 (34 to 43) | 50 | better |
+| gpu desktop | Deep zoom drag worst frame gap (ms) | 21 (18 to 21) | 20 (18 to 21) | 18 (17 to 18) | reported only; 50 as yardstick | **WORSE, above the baseline's worst run** |
+| gpu desktop | Deep zoom, slider between stops, worst frame gap (ms) | 18 (18 to 20) | 19 (18 to 19) | 18 (17 to 18) | reported only; 50 as yardstick | same |
+| gpu desktop | Long tasks while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 0 | same |
+| gpu desktop | Frames while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 1 | same |
+| gpu phone | Search usable (ms) | 78 (72 to 79) | 74 (72 to 134) | 74 (72 to 78) | 1000 | **worse**, inside the baseline's range |
+| gpu phone | Startup worst long task (ms) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 250 | same |
+| gpu phone | WebGL warm-up end (ms) | 116 (115 to 120) | 118 (117 to 180) | 116 (113 to 129) | reported only | same |
+| gpu phone | Map first frame (ms) | 551 (551 to 564) | 567 (553 to 629) | 554 (551 to 562) | reported only | better |
+| gpu phone | Nebula visible (ms) | 596 (596 to 612) | 614 (612 to 671) | none | reported only | no baseline |
+| gpu phone | Typing to suggestions (ms) | 5 (4 to 7) | 4 (4 to 8) | 5 (4 to 6) | 100 | same |
+| gpu phone | Select to album (ms) | 18 (18 to 19) | 20 (18 to 23) | 19 (18 to 19) | 200 | better |
+| gpu phone | Transition worst frame gap (ms) | 18 (17 to 18) | 18 (18 to 19) | 18 (18 to 18) | 50 | same |
+| gpu phone | Slider to list (ms) | 8 (7 to 12) | 15 (8 to 17) | 13 (12 to 15) | 150 | better |
+| gpu phone | Morph worst frame gap (ms) | 24 (18 to 26) | 19 (17 to 20) | 18 (17 to 18) | 50 | **WORSE, above the baseline's worst run** |
+| gpu phone | Drag worst frame gap (ms) | 18 (17 to 21) | 19 (18 to 21) | 19 (19 to 22) | 50 | better |
+| gpu phone | Zoom worst frame gap (ms) | 35 (35 to 41) | 41 (34 to 43) | 44 (42 to 53) | 50 | better |
+| gpu phone | Deep zoom drag worst frame gap (ms) | 19 (18 to 20) | 20 (19 to 20) | 19 (18 to 19) | reported only; 50 as yardstick | same |
+| gpu phone | Deep zoom, slider between stops, worst frame gap (ms) | 19 (18 to 19) | 19 (19 to 19) | 18 (17 to 18) | reported only; 50 as yardstick | **WORSE, above the baseline's worst run** |
+| gpu phone | Long tasks while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 0 | same |
+| gpu phone | Frames while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | 1 | same |
+| gpu desktop2x | Search usable (ms) | 84 (76 to 84) | 77 (68 to 94) | 106 (88 to 114) | none (reported only) | better |
+| gpu desktop2x | Startup worst long task (ms) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | none (reported only) | same |
+| gpu desktop2x | WebGL warm-up end (ms) | 127 (116 to 130) | 127 (116 to 132) | 168 (129 to 176) | reported only | better |
+| gpu desktop2x | Map first frame (ms) | 567 (567 to 579) | 570 (552 to 576) | 617 (577 to 640) | reported only | better |
+| gpu desktop2x | Nebula visible (ms) | 627 (620 to 627) | 617 (596 to 625) | none | reported only | no baseline |
+| gpu desktop2x | Typing to suggestions (ms) | 5 (5 to 7) | 5 (5 to 7) | 6 (5 to 6) | none (reported only) | better |
+| gpu desktop2x | Select to album (ms) | 20 (20 to 22) | 21 (19 to 22) | 21 (19 to 25) | none (reported only) | better |
+| gpu desktop2x | Transition worst frame gap (ms) | 22 (21 to 23) | 28 (19 to 33) | 27 (26 to 28) | none; 50 as yardstick | better |
+| gpu desktop2x | Slider to list (ms) | 19 (5 to 19) | 9 (6 to 13) | 6 (5 to 8) | none (reported only) | **WORSE, above the baseline's worst run** |
+| gpu desktop2x | Morph worst frame gap (ms) | 23 (18 to 25) | 18 (18 to 19) | 18 (18 to 19) | none; 50 as yardstick | **WORSE, above the baseline's worst run** |
+| gpu desktop2x | Drag worst frame gap (ms) | 19 (19 to 22) | 20 (19 to 20) | 18 (18 to 18) | none; 50 as yardstick | **WORSE, above the baseline's worst run** |
+| gpu desktop2x | Zoom worst frame gap (ms) | 33 (31 to 42) | 31 (30 to 39) | 38 (30 to 39) | none; 50 as yardstick | better |
+| gpu desktop2x | Deep zoom drag worst frame gap (ms) | 19 (18 to 19) | 19 (18 to 21) | 19 (18 to 19) | none; 50 as yardstick | same |
+| gpu desktop2x | Deep zoom, slider between stops, worst frame gap (ms) | 18 (18 to 19) | 19 (19 to 22) | 17 (17 to 18) | none; 50 as yardstick | **worse**, inside the baseline's range |
+| gpu desktop2x | Long tasks while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | none (reported only) | same |
+| gpu desktop2x | Frames while idle (3 s) | 0 (0 to 0) | 0 (0 to 0) | 0 (0 to 0) | none (reported only) | same |
+
+### 3. Every marked row, and its cause
+
+Rows above the baseline's worst run first, then the rows inside the baseline's range.
+
+**software desktop, search usable: 189 ms (182, 189, 189) against 121 (92 to 137); previous head 101 (101, 96, 179); budget 1000. Not explained.** What the data say: the mark it times (the search index being ready on Home) comes 0.1 to 0.5 s after navigation, three seconds before any map code runs on this renderer, so neither the gas nor its shader can be in it. It is the first page load after the script starts its server, in every build. The row has two modes in every build, about 75 to 135 ms and about 180 ms and up: the previous head hit the upper one once in three (179), and today's site hit it once in three in the same session (182, 74, 73, `lite-ab/software-baseline-b-run*`); the current build read 330, 77, 81 and 111, 79, 89 in that session's runs. The three formal runs of the current build all landed in the upper mode. With three runs I cannot say whether that is chance or whether the current build makes the upper mode more likely; the two first-load script files that differ between the builds are the same size (13.4 and 10.9 KB). The same row on the second column (software phone, a warm server) reads 112 (80 to 117) against 127.
+
+**software desktop, zoom gap: 255 ms (205, 255, 269) against 202 (189 to 226); previous head 364 (311 to 370). Cause: the CPU shades the gas in every frame of the zoom, and the lighter shader takes back most of that cost but not all.** Evidence, same session, three builds in turn (section 7): today's site 208 (181 to 211), full shader 300 (270 to 348), lighter shader 218.5 (159 to 267). The mean frame gap of the zoom is back at the baseline's (48.1 against 47.1 ms); the single worst frame is still longer in about half the runs.
+
+**software desktop, typing to suggestions: 7 ms (6, 7, 7) against 6 (5 to 6); previous head 6. Not explained.** One millisecond, budget 100.
+
+**software phone, morph gap: 121 ms (123, 117, 121) against 114 (112 to 119); previous head 123 (122 to 129). Cause: between two stops the lighter shader reads two images for every pixel on the CPU, where today's site reads none.** This is the lighter shader's short row. Evidence, same session: today's site 116 (114 to 123), full 123 (113 to 133), lighter 125 (120 to 133): no better than the full shader on this row. Mean frame gap of the morph on the phone: baseline 32.7, full 42.2, lighter 37.4 ms.
+
+**gpu desktop, deep zoom drag gap: 21 ms (18, 21, 21) against 18 (17 to 18); previous head 20 (18 to 21). Not explained.** Every run is a single frame (a dropped frame reads 33); the difference is 3 ms.
+
+**gpu phone, morph gap: 24 ms (18, 26, 24) against 18 (17 to 18); previous head 19 (17 to 20). Not explained.** Phones load no sharper image, so that is not in it. 24 and 26 ms are between one frame and two. Budget 50.
+
+**gpu phone, deep zoom with the slider between stops: 19 ms (19, 19, 18) against 18 (17 to 18); previous head 19. Not explained.** One millisecond.
+
+**gpu desktop2x, slider to list: 19 ms (19, 19, 5) against 6 (5 to 8); previous head 9 (6 to 13). Not explained.** The dpr 1 column, which runs the same code, reads 6 (6 to 10) against 12. The column has no budget; the row's budget elsewhere is 150.
+
+**gpu desktop2x, morph gap: 23 ms (23, 18, 25) against 18 (18 to 19); previous head 18 (18 to 19). Not explained.** At this point of the script the stop on screen holds its sharper image, which is one end of the morph, at four times the pixels of dpr 1; that would be the first thing to test. It was not isolated. No budget; 50 as yardstick.
+
+**gpu desktop2x, drag gap 19 ms (22, 19, 19) against 18 (18 to 18), and deep zoom with the slider between stops 18 (18, 19, 18) against 17 (17 to 18). Not explained.** One millisecond each.
+
+Inside the baseline's range (the current median is higher than the baseline's median and no higher than its worst run):
+
+**gpu desktop, morph gap 20 ms (37, 20, 20) against 18 (18 to 20), and drag gap 21 (36, 20, 21) against 19 (18 to 21). The 37 and 36 of run 1 are not explained.** They are one dropped frame each, in two different page loads of the same column of the same run. They are not in run 2 or run 3 (20 and 20; 20 and 21). The previous head has no such spike in its three runs (morph 19, 18, 19; drag 20, 24, 24). The load does not sort it out: after current run 1 the one minute load was 8.22, after current run 3 it was 10.33 with no spike, and after the previous head's runs 1 and 2 it was 15.20 and 13.10 with no spike. So: seen once in three runs of the current build, never in three of the previous head, not tied to the load that was recorded. The medians (20 and 21) are single frames, 2 ms over the baseline's.
+
+**software desktop, drag gap 100 ms (93, 100, 100) against 95 (85 to 105).** Cause as for the zoom row: the gas on the CPU, lighter shader; same session 86 (83 to 97) for today's site against 98.5 (90 to 105).
+
+**software desktop, transition gap 1600 ms (770, 1631, 1600) against 1355 (1296 to 1642). Not explained.** The row reads 670 to 1631 across the six runs of both builds. Not budgeted in software.
+
+**software desktop, map first frame 4151 ms (3896 to 4521) against 4074 (3937 to 4267). Not explained.** Reported only. It follows the warm-up's end, which is a 3 s cap plus load; run 3 (4521) is the run with the 208 ms startup task (section 4).
+
+**software desktop, select to album 27 ms (27, 29, 27) against 24 (17 to 35), and slider to list 9 (7, 9, 10) against 8 (7 to 13). Not explained.** 3 ms and 1 ms.
+
+**software phone, drag gap 80 ms (77, 80, 88) against 79 (74 to 117), and zoom gap 55 (57, 55, 46) against 53 (49 to 55).** The gas on the CPU, lighter shader; 1 and 2 ms.
+
+**gpu desktop, warm-up end 135 ms (135, 135, 136) against 132 (132 to 145), and map first frame 596 (598, 565, 596) against 575 (574 to 907). Not explained.** Reported only. The warm-up ends before any map code runs.
+
+**gpu phone, search usable 78 ms (78, 72, 79) against 74 (72 to 78). Not explained.** 4 ms, before any map code.
+
+### 4. The startup long task on the software desktop column
+
+**Correction.** An earlier version of this file said the task had the "same timestamp as 'warm-up end' in all six runs", and that "the baseline's two tasks sit at the same place". That was wrong. In those runs (commit `6c225edd`) the three part 1 tasks did start at the warm-up's end (3447 against 3450, 3734 against 3736, 3628 against 3629 ms). Of the baseline's three runs one had no long task, one had a task of 57 ms at 3997 ms, which is 419 ms after its warm-up ended (3578) and 77 ms before its first frame, and one had a task of 122 ms at 3711 against a warm-up end of 3712. So one of the baseline's two tasks sat there, not both.
+
+**What the alternating runs show** (software desktop, fresh browser per load; the worst main-thread task of 50 ms or more during startup, 0 when there was none; the Long Tasks API does not report shorter ones):
+
+| Set | Baseline `6f10463e` | Previous head `161d530b` | Current `37906968` |
+|---|---|---|---|
+| `startup-longtask`, 6 rounds in turn, WebGL calls timed, load 4.0 to 7.6 | 0, 0, 0, 0, 0, 0 | 131, 0, 0, 0, 52, 0 | 51, 66, 0, 0, 52, 73 |
+| `startup-longtask-plain`, 5 rounds in turn, nothing timed, load 4.9 to 6.1 | 0, 55, 0, 0, 0 | not run | 0, 0, 50, 0, 162 |
+| the three formal `npm run perf` runs | 0, 57, 122 (the day before) | 0, 51, 77 | 50, 50, 208 |
+| `lite-ab` perf runs, load 8 to 11 | 67, 85, 0 | not run | lighter: 0, 0, 0 and 0, 0, 300 (with a second task of 96); full shader: 79, 0, 50 |
+
+Two different tasks are in these numbers, and both exist in all three builds:
+
+1. A task that starts at the millisecond the warm-up worker gives up, when the warm-up ends by its 3 s cap and not by finishing. Baseline: 55 (plain round 2), 122, 67, 85. Previous head: 131, 77. Current: 51, 66, 73, 50, 50, 208, 162, 79, 96. It does not come with every capped warm-up: the baseline capped in instrumented rounds 1, 2 and 4, the previous head in rounds 3 and 6 and the current build in round 4, each with no task of 50 ms.
+2. A task of 50 to 57 ms that ends about 60 ms before the map's first frame, with the warm-up long over. Baseline: 57. Previous head: 52, 51 (and 51 once on the phone column). Current: 52, 50, 50. In the two instrumented cases it holds seven `texImage2D` calls of under 1 ms together, so the time is not in WebGL.
+
+No timed WebGL call of the gas is inside either: the gas's own upload comes about 300 ms after the first frame, behind the fence (5 ms on the main thread in the round looked at).
+
+**Conclusion.** Part 1 does not add a new startup task, and none of these is the gas upload. Whether part 1 makes the existing tasks longer cannot be told apart from noise with certainty at this load, but the alternating runs lean towards yes, by a little: a task crossed the 50 ms reporting line in 6 of 11 loads of the current build against 1 of 11 of the baseline in turn with it (previous head: 2 of 6), and when it crossed, it read 50 to 79 ms in 9 of the current build's 12 cases, which is what a task of 40 to 50 ms grown by a few ms would look like. Three cases are large (162, 208 and 300 ms; the 300 ended at the map's first frame, in a load that also had a task of 96 at the warm-up's end); the baseline's largest is 122. The cause of the extra was not found (candidates: the larger map chunk to compile, 258 against 249 KB; the theme file parsed near that moment). Every case but one is inside the budget of 250; the 300 was a single `lite-ab` run at load 11 of an earlier commit of the lighter shader (`0fe67fd1`), and no formal run missed the budget. Software phone, where the warm-up finishes by itself: 0, 0, 0 (previous head 0, 0, 51; baseline 0, 0, 0).
+
+### 5. Hover
+
+`baseline/hover-measure.mjs` on the current build, five fresh loads per mode, load 4.0 before. Median (range) in ms, the baseline's in square brackets. Raw: `perf-part1/round3/hover.*`.
+
+| | gpu 1st | gpu 2nd | gpu 3rd | software 1st | software 2nd | software 3rd |
+|---|---|---|---|---|---|---|
+| Pointer move to tip visible | 141.2 (131.7 to 167.9) [150.3 (135.7 to 169.3)] | 93.9 (91.6 to 119.9) [101.2 (90.6 to 106.8)] | 93.9 (92.2 to 120.5) [90.3 (89.7 to 115.7)] **worse**, inside the range | 123.4 (122.3 to 132.6) [135.5 (133 to 149.4)] | 93.9 (86 to 94.7) [91.6 (85.9 to 107.7)] **worse**, inside the range | 94.3 (86.8 to 110.7) [88.1 (84.9 to 93.1)] **WORSE**, above the worst run |
+| Longest long task | 0 (0 to 0) [0 (0 to 55)] | 0 [0] | 0 [0] | 0 [0] | 0 [0] | 0 [0] |
+| Longest frame gap | 33.3 (16.8 to 33.3) [33.3 (16.8 to 50)] | 16.8 (16.7 to 16.8) [16.8 (16.7 to 16.8)] | 16.8 (16.8 to 16.8) [16.8 (16.7 to 16.8)] | 66.6 (49.9 to 100) [66.7 (49.9 to 66.7)] | 83.3 (66.6 to 83.3) [66.7 (66.7 to 83.3)] **worse**, inside the range | 83.3 (83.3 to 100.1) [66.7 (50.1 to 83.4)] **worse**, inside the range |
+
+No hover had a long task in any of the ten loads. On the gpu the first and second hover are quicker than the baseline's and the third is 3.6 ms slower in the median, inside the baseline's range: not explained (load 4 of the 5 loads read 120 ms on both later hovers, the others 92 to 95). On the software renderer, which now draws the lighter shader, the later hovers' longest frame is one refresh longer (83.3 against 66.7 ms) and the third hover's tip is 6.2 ms later. Probable cause: each of a hover's three map frames also shades the gas on the CPU, which pushes a frame of just under four refreshes to five; the tip shows from the map's next frame. Not isolated: the hover script was not run against today's site in the same session, so the baseline here is the day before's.
+
+### 6. The fade to the sharper image
+
+`perf-part1/scripts/fade-measure.mjs`, gpu, no override, **24 loads**: at dpr 1 and at dpr 2 each, five at rest, five with a drag begun at the swap and two with reduced motion. Load 12.8 before.
+
+- The sharper image was fetched once and the flag named the stop in 24 of 24 loads; the swap came 1238 to 1275 ms after the zoom.
+- At rest (10 loads): 13 or 14 frames drawn in the fade (14 in seven loads, 13 in three), then 0 frames. Every frame gap before and during the fade 16.6 to 16.8 ms.
+- A drag begun at the swap (10 loads): worst gap in the fade 16.7 or 16.8 ms, the control drag after it 16.7 or 16.8 ms.
+- Reduced motion (4 loads): 1 frame, then 0.
+- The 16 strips: upload 0.54 to 1.99 ms on average per load, 5.1 ms at most; the cut 0.52 to 1.71 ms on average, 6.9 ms at most. No long task and no error in any load.
+
+### 7. The lighter shader, same session A/B
+
+Three builds or settings in turn in one session, so the machine is the same for all (`lite-ab/`, plain `npm run perf --mode software`, load 8 to 11; "lighter" is two sets of three). Median (range).
+
+| Row (worst frame gap, ms) | Today's site, 3 runs | Full shader, 3 runs | Lighter shader, 6 runs |
+|---|---|---|---|
+| software desktop, morph | 143 (76 to 160; n 3) | 166 (145 to 204; n 3) | 150.5 (70 to 165; n 6) |
+| software desktop, drag | 86 (83 to 97; n 3) | 105 (104 to 108; n 3) | 98.5 (90 to 105; n 6) |
+| software desktop, zoom | 208 (181 to 211; n 3) | 300 (270 to 348; n 3) | 218.5 (159 to 267; n 6) |
+| software desktop, deep zoom drag | none | 66 (66 to 79; n 3) | 57.5 (48 to 67; n 6) |
+| software desktop, deep zoom, slider between stops | none | 77 (74 to 89; n 3) | 56 (50 to 63; n 6) |
+| software phone, morph | 116 (114 to 123; n 3) | 123 (113 to 133; n 3) | 125 (120 to 133; n 6) |
+| software phone, drag | 77 (74 to 83; n 3) | 97 (82 to 117; n 3) | 83 (82 to 96; n 6) |
+| software phone, zoom | 59 (58 to 59; n 3) | 60 (52 to 88; n 3) | 59.5 (55 to 67; n 6) |
+| software phone, deep zoom drag | none | 49 (46 to 59; n 3) | 46.5 (37 to 57; n 6) |
+| software phone, deep zoom, slider between stops | none | 64 (60 to 78; n 3) | 40 (37 to 44; n 6) |
+
+Mean frame gap over a whole gesture (`software-frames`, three rounds in turn, load 4 rising to 20 during the run; median of the rounds, ms):
+
+| Variant | Viewport | Drag mean | Drag worst | Zoom mean | Zoom worst | Morph mean | Morph worst |
+|---|---|---|---|---|---|---|---|
+| today's site | desktop | 80.3 | 400 | 47.1 | 66.7 | 30.7 | 50.1 |
+| full shader | desktop | 93.4 | 416.7 | 60.3 | 83.4 | 57.3 | 83.4 |
+| lighter shader | desktop | 82 | 383.4 | 48.1 | 66.8 | 31.3 | 66.6 |
+| today's site | phone | 62.8 | 83.4 | 41.2 | 66.7 | 32.7 | 50.1 |
+| full shader | phone | 73.4 | 100.1 | 51.7 | 83.4 | 42.2 | 83.4 |
+| lighter shader | phone | 67.4 | 83.4 | 44.1 | 83.4 | 37.4 | 66.7 |
+
+What the lighter shader recovers: on the desktop the mean frame of a drag, a zoom and a morph is within 2 ms of today's site (the full shader costs 13 to 27 ms a frame). What it does not recover: the phone's morph (mean 37.4 against 32.7; worst gap 125 against 116 in the perf rows, no better than the full shader), a few ms of the phone's drag and zoom means (67.4 against 62.8, 44.1 against 41.2), the worst frame of a morph in this script on both viewports (66.6 and 66.7 against 50.1, one refresh), and the worst frame of the desktop zoom in about half the perf runs (section 3). What it gives up to get there is in `app-gas-detail.md` ("Closing pass").
+
+### 8. Load
+
+The one minute load before and after every run is in section 1 and in `perf-part1/round3/LOAD.txt`, which also holds the first and last line of every output file and the measurement script itself. In short: every perf run began at 3.4 to 3.9 and ended at 5.1 to 15.2; hover began at 4.0; the startup rounds ran at 4.0 to 7.6; the software frame rounds began at 4.0 and ran up to 20; the fade ran at 12.8 falling to 8.6. The baseline file was taken at 5 to 13.
+
+### 9. Sizes
+
+From a fresh build of the closing code (`0bf30a31`), measured as the perf script does it (every script of `/`, gzip level 9), and the same on a build of the baseline:
+
+| Measure | Baseline | Now | Budget |
+|---|---|---|---|
+| First-load JS of `/`, gzip, with nomodule scripts | 190.5 KB | 191.2 KB (+0.7) | 200 KB |
+| First-load JS of `/`, gzip, without nomodule scripts | 151.9 KB | 152.6 KB (+0.7) | reported only |
+| three.js in the first-load scripts | 0 KB | 0 KB | must be 0 |
+| Gas shader text in any first-load script | none | none (searched for `u_gasA`, `u_liteLod`, `GAS_LITE` in all 11) | must be none |
+| The lazy map chunk (three.js, the map and the gas), gzip | 249.1 KB | 258.0 KB (+8.9) | none |
+
+8.8 KB of the first-load budget are left for parts 2 and 3. (Earlier sections give the lazy chunk as 248.2 and 252.7 KB; those were not measured the same way and are replaced by this row.)
+
+### 10. After the closing fixes
+
+The closing pass changed the app after the six runs (`0bf30a31`). What that commit can and cannot have moved:
+
+- **gpu columns: the shader and the per-frame code they run are unchanged.** The full shader's text has no change, the lighter shader's level is computed only when the lighter shader is in use, and the other changes are in listeners and in failure paths (two clock reads and a set operation per pointer event). The gate change does not alter what this machine gets (it had a fine, hovering pointer and no touch points).
+- **software columns: one changed input.** The lighter shader's single read now takes a fractional mip level (trilinear, the filter the texture already had) where it took a whole one, and in deep zoom a higher one. Same number of reads.
+
+**Not measured again: this is owed.** The brief asked for one more `npm run perf` on the final build and a rerun of `perf-part1/scripts/software-frames.mjs`. Neither was run: the laptop went from mains to battery during the closing pass (it was on mains at 09:16 and on battery from before 11:00), timing on battery is not comparable (the rule of this file), and a script that waited 25 minutes for mains power (11:02 to 11:27) gave up with nothing measured. So every number in sections 1 to 8 is of `37906968`, and whether the fractional level costs the software columns anything is **not known**. The closing build did pass the whole browser suite (software renderer, both shaders), and its sizes are in section 9.
+
+To close it, on mains, from `frontcreck/` after `npm run build`: `npm run perf` once, and, with today's site (`6f10463e`) served on 3301 and this build on 3302, `node ../docs/design/trifid-theme/reviews/perf-part1/scripts/software-frames.mjs out.json --rounds 3 baseline=http://127.0.0.1:3301 "full=http://127.0.0.1:3302?lite=off" lighter=http://127.0.0.1:3302`; compare the lighter rows with section 7.
+
+### 11. What is still open
+
+**Still worse than today's site** (current median above the baseline's worst run, or a new cost with no baseline):
+
+- Software renderers: the worst frame of a zoom on the desktop (255 against 202 ms), the morph on the phone (121 against 114 ms), and one refresh more in the later hovers' longest frame (83.3 against 66.7 ms) with the third hover's tip 6 ms later. This is with the lighter shader; the full shader was worse.
+- Software desktop startup: a main-thread task of 50 ms or more in more loads than today's site (6 of 11 against 1 of 11 in turn), usually 50 to 73 ms, three times 162 to 300; inside the budget in every formal run.
+- gpu: frame gaps of one frame plus 1 to 6 ms over the baseline's in six rows (gpu desktop deep zoom drag; gpu phone morph and deep zoom morph; dpr 2 morph, drag and deep zoom morph), all under half the budget, and slider to list at dpr 2 (19 against 6 ms).
+- The lazy map chunk is 8.9 KB larger; first-load JS 0.7 KB larger.
+- After the map's first frame the nebula is a further 43 to 61 ms on the gpu and about 280 to 310 ms on software (51 once, in the run whose first frame was itself late) (no baseline: today's site has none).
+
+**Unexplained** (said so above): software desktop search usable (189 against 121 ms); the single 37 and 36 ms frames of gpu desktop in current run 1; the gpu rows that are one frame plus a few ms; slider to list at dpr 2; the gpu's third hover; the extra in the startup task; software desktop transition gap and first frame; the 1 to 4 ms rows.
+
+**Never measured:** the closing build's own perf run and software frames (section 10: the laptop was on battery); Safari and Firefox (the strip upload from a cut `ImageBitmap` and whether they keep its alpha unmultiplied; the fence; the memory rule, which they do not report); a real phone; a weak or integrated GPU (every gpu number here is an M1 Pro); a touch screen laptop or a tablet with a mouse (the gate was tested with a reported touch point count, not on a device); the fade and the lighter shader by eye in motion; the hover path against today's site in the same session.
+
+---
+
+# History: everything below is superseded by the section above
+
+The sections below are the measurements of earlier commits, kept as they were written. Their headlines, their "still worse" tables and their sizes are **superseded**. The regression checklist and the list of manual probes further down are of commit `6c225edd`; they were not walked again in the closing pass (the browser suite was: see the closing report). One sentence in them was wrong and is corrected in section 4 above (the startup long task's timestamp).
+
+## Superseded: first measurement on mains (commit `6c225edd`, 2026-10-05 02:40 to 03:25)
+
 - Commit measured: `6c225edd` on `trifid-build` (tasks 1 to 5, Task 6's changes to `GasField`, and fix round 1).
 - Date: 2026-10-05, 02:40 to 03:25 local time. **On mains power, with an ordinary launch: plain `npm run perf`, three times, and `baseline/hover-measure.mjs`, exactly as the baseline was taken.** No preload, no changed browser arguments.
 - Machine: MacBook Pro, Apple M1 Pro, 16 GB, shared with other sessions the whole time. Each run waited up to fifteen minutes for the one-minute load to fall under 4; it never did. Load before the runs: 6.5, 5.9, 6.1 (the baseline was taken at 5 to 13). Node v22.23.3 arm64, Google Chrome 154.0.8037.93 headless arm64, production build.
@@ -7,7 +287,7 @@
 - Baseline: `baseline/BASELINE-PERF.md` and `baseline/perf/` (today's site, commit `1e9ef508`). Budgets: `frontcreck/scripts/perf/budgets.json`, unchanged.
 - Raw: `perf-part1/perf-run1.json` to `perf-run3.json` and `.txt`, `app-hover-part1.json` and `.txt`.
 
-## Headline
+### Superseded headline
 
 **Budgets.** Runs 1 and 3 met every budget. Run 2 missed one: software desktop "select to album" 240 ms against 200 (25 and 33 ms in the other two runs, 17 to 35 in the baseline), a single run on a loaded machine; its median is 33 ms. No median is over budget. The startup long task on software renderers, which missed its budget in every earlier run of part 1 on both software columns (268 and 276 ms on desktop, 241 and 261 ms on phone, depending on the launch), is now 155 ms on desktop (120 to 164) and 0 ms on phone, against a budget of 250.
 
@@ -15,7 +295,7 @@
 
 | Row | Now | Baseline | Cause |
 |---|---|---|---|
-| software desktop, startup long task | 155 ms (120 to 164) | 57 ms (0 to 122) | Not the gas. It is the same task as in the baseline, the main-thread WebGL probe that starts the moment the warm-up worker gives up (same timestamp as "warm-up end" in all six runs); 33 to 42 ms longer than the baseline's worst run, on a busier machine. Cause of the extra not established |
+| software desktop, startup long task | 155 ms (120 to 164) | 57 ms (0 to 122) | Not the gas. It is the same task as in the baseline, the main-thread WebGL probe that starts the moment the warm-up worker gives up (same timestamp as "warm-up end" in all six runs) [WRONG: true of the three part 1 runs and of one of the baseline's two tasks; corrected in section 4 of the closing measurement]; 33 to 42 ms longer than the baseline's worst run, on a busier machine. Cause of the extra not established |
 | software desktop, search usable | 352 ms (113 to 355) | 121 ms (92 to 137) | Happens 100 to 350 ms after load, seconds before any map code runs. Machine load; see below for the reruns |
 | software desktop, drag and zoom gap | 110 and 231 ms | 95 and 202 ms | The CPU shades the gas in every frame |
 | software phone, morph and zoom gap | 133 and 56 ms | 114 and 53 ms | The same |
@@ -213,7 +493,7 @@ Every hover drew 3 map frames, as in the baseline, and no load had a long task. 
 
 ## What is still worse, and why
 
-**Software desktop startup long task: 155 ms (155, 120, 164) against 57 (0, 57, 122); budget 250.** This is no longer the gas. In each of the three runs the task starts at the millisecond the warm-up worker gives up ("WebGL warm-up end": 3450, 3736, 3629 ms; task starts: 3447, 3734, 3628 ms), 500 to 600 ms before the map's first frame; the baseline's two tasks sit at the same place (3711 against a warm-up end of 3712). It is the site's own first WebGL context on the main thread. It reads 33 to 42 ms longer than the baseline's worst run; whether that is the busier machine or something part 1 adds to that moment (the theme file is parsed around then) was not established. Software phone, where the warm-up finishes by itself, has no startup long task at all (0 in three runs, as the baseline).
+**Software desktop startup long task: 155 ms (155, 120, 164) against 57 (0, 57, 122); budget 250.** This is no longer the gas. In each of the three runs the task starts at the millisecond the warm-up worker gives up ("WebGL warm-up end": 3450, 3736, 3629 ms; task starts: 3447, 3734, 3628 ms), 500 to 600 ms before the map's first frame; the baseline's two tasks sit at the same place (3711 against a warm-up end of 3712) [WRONG: only that one does; the other started 419 ms after its warm-up ended; see section 4 of the closing measurement]. It is the site's own first WebGL context on the main thread. It reads 33 to 42 ms longer than the baseline's worst run; whether that is the busier machine or something part 1 adds to that moment (the theme file is parsed around then) was not established. Software phone, where the warm-up finishes by itself, has no startup long task at all (0 in three runs, as the baseline).
 
 What the gas's own startup task was, measured (fix round 1): hooking every WebGL call on the software renderer showed the 250 to 290 ms long task after the first frame was not the upload. `texSubImage2D` of the first 2048 px image took 12 to 20 ms. The time went in `gl.getExtension()`, which three calls when it uploads its first mipmapped texture: a call that needs an answer from the renderer and so blocks the main thread until the renderer has finished drawing the map's first frame (236 and 275 ms in two loads). The same upload at rest costs 9 to 16 ms. Fix: an image that is needed on screen waits for a WebGL fence (asked for when the image arrives, polled from timers, which blocks nothing) before it is uploaded. After: no long task after the first frame in any software run, and the nebula shows 282 to 315 ms after the first frame, as before.
 
@@ -358,7 +638,7 @@ None of these was done here. Each line gives the section, the item and the probe
 - 16 **The strip loads nothing on desktop.** (manual only): "Manual: network tab on a desktop album page with WebGL off."
 - 16 **The Explore card is a bottom sheet resting on the slider panel.** (manual only): "Manual on a phone viewport: pick an album in Explore."
 
-## M1 follow-up: the sharper gas image and the new first images (2026-10-05, 04:49 to 05:30)
+## Superseded: M1 follow-up, the sharper gas image and the new first images (2026-10-05, 04:49 to 05:30)
 
 - Commits measured: `7fdca313` (three full runs, the interleaved gpu runs and the first software pairs) and the commit after it, which only moves the shader's fade at an image's edge from once per texture read to once per pixel (pixel identical: the Overview and album captures are byte for byte the same; software desktop pairs "after trim").
 - Mains power, ordinary launch, plain `npm run perf`. Load before the three runs: 13.8, 10.1, 8.2 (the mains runs above were taken at 5.9 to 6.5). The machine was busier, so every number here was also compared with the old build measured in the same minutes.
