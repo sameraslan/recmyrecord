@@ -73,6 +73,20 @@ Both need only numpy, load no model and download nothing. `write` opens the cach
 
 `fit-catalog` fits the 64 components on every catalog album the store has, the new ones included, and never writes `audio/transform.npz`. It keeps the EffNet transform's `target_total_variance` (0.3905): `scale` brings any model's block to that total, and the slider stops were tuned against a block of that size.
 
+#### The `clap_mp3` variant (in the clip cache only, beside `clap`)
+
+CLAP hears the store a preview came from: Deezer's previews are 128 kbit/s stereo MP3, Apple's are AAC (`experiments/audio_10k/results/store_effect_fix.md`). `clap_mp3` is a second CLAP vector per clip, kept in the cache's `embeddings` table under its own model name and never in place of `clap`. For a clip that is not from Deezer (`itunes:*`, `youtube`, `bandcamp`, `local`) the decoded audio, with its channels, goes through a 128 kbit/s stereo MP3 round trip (`rmr_audio/mp3trip.py`: ffmpeg `libmp3lame` through pipes, no file) before the channels are averaged and the CLAP recipe runs unchanged; a one-channel signal is duplicated to both sides for the encode. For a Deezer clip the variant is the `clap` vector itself, copied inside the cache. No committed store holds it yet; `results/mp3_variant_check.md` in the same folder has what was measured.
+
+```bash
+cd data-pipeline
+.venv-audio/bin/python -m rmr_audio.onepass copy                                   # Deezer clips: the clap rows, copied; no network, no model
+nice -n 19 .venv-audio/bin/python -m rmr_audio.onepass run --models clap_mp3 --itunes-interval 3.4   # the other preview clips: fetched again, clap_mp3 only
+nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength --models effnet,clap,clap_mp3   # full-length windows: all three from one download; embedded albums are fetched once more for clap_mp3 alone
+.venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir DIR    # a store from the variant's rows, where it is told
+```
+
+`run --models clap_mp3` takes, per album, the clips that are ok for `clap` (the clips its mean is over), downloads each once and embeds it for the variant only: EffNet and `clap` are not computed, the EffNet child is not started, and no `effnet` or `clap` row is written. A `clap` clip whose preview the store no longer lists is recorded as `no_preview` ("gone") and the next track in the usual order stands in; the run prints both counts. `--check-baseline` also embeds each fetched clip for `clap` and prints its cosine with the stored vector, without storing it. A new album is embedded with `--models effnet,clap,clap_mp3`: one download per clip.
+
 ### The block
 
 `block = ((e / |e|) - mean) @ components.T * scale`, where `e` is the album's stored embedding. The transform is a PCA fitted on the catalog (last on the eight-clip means of the 3,980 albums). `scale` gives the block the total variance the 13 Spotify columns had on the fitted albums (`target_total_variance`, 0.3905), so the slider stops keep their meaning.
