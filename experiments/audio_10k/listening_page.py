@@ -153,13 +153,15 @@ def page(catalog: Path, clap_dir: Path, cache_db: Path) -> str:
             f'<p class="sub">{facts(row, new)} · {clips}</p><div class="links">{links(row)}</div>'
             f'<div class="lists">{column("CLAP, 10 nearest", clap_lists[i].tolist())}'
             f'{column("EffNet (4 clips), 10 nearest", eff_lists[eff_row[i]].tolist() if i in eff_row else None)}</div></section>')
+    held = sonic.load_store(clap_dir)  # which CLAP variant the lists are from: the manifest's model id
+    store = f"CLAP store: {held.manifest['model']}, {len(held.keys):,} albums."
     meta = (f"Generated {datetime.date.today().isoformat()}. {len(albums):,} of {albums.catalog_size:,} catalog albums have CLAP "
             f"audio ({int(albums.new.sum()):,} new); {len(pos):,} have both models. Audio block alone, euclidean, seed excluded, "
             "seed's artist kept. Links only.")
     return ("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
             f"<title>Listening lists: CLAP and EffNet</title><style>{CSS}</style></head><body><main>"
-            f"<h1>Listening lists: CLAP and EffNet</h1><p class=\"meta\">{e(meta)}</p>"
+            f"<h1>Listening lists: CLAP and EffNet</h1><p class=\"meta\">{e(store)}</p><p class=\"meta\">{e(meta)}</p>"
             f"<nav>{''.join(toc)}</nav>{''.join(sections)}</main></body></html>\n")
 
 

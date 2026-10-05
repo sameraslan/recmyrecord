@@ -15,6 +15,7 @@ from rmr_pipeline.audio import (BLOCK_DIMS, audio_block, catalog_keys, load_tran
 from rmr_pipeline.audio_store import DEFAULT_AUDIO, MATCH_FIELDS, STORES, StoreError, load_store, write_matches
 
 CLAP = MODELS["clap"]
+COMMITTED = MODELS["clap_mp3"]  # what audio/clap is written from: CLAP on an MP3 128k stereo round trip of non-Deezer audio
 
 
 def _vec(tag: str) -> np.ndarray:
@@ -258,22 +259,25 @@ def test_the_build_can_read_the_clap_store_when_pointed_at_it(clap_store, dedupe
 
 
 def test_committed_clap_store():
-    """The committed CLAP store, once it is there: the catalog's albums only, in catalog order, four clips
-    unless the listing has fewer (or windows of full-length audio), and a transform fitted on all of them."""
+    """The committed CLAP store, once it is there: written from the cache's clap_mp3 rows, the catalog's
+    albums only, in catalog order, four clips unless the listing has fewer (or windows of full-length audio),
+    and a transform fitted on all of them."""
     clap = STORES["clap"]
+    write = "python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir audio/clap"
     if not (clap / "manifest.json").exists():
-        pytest.skip("the CLAP store is not written yet (python -m rmr_audio.modelstore write)")
+        pytest.skip(f"the CLAP store is not written yet ({write})")
     store = load_store(clap)
     catalog = catalog_keys()
     rows = store.rows(catalog)
-    assert store.manifest["model"] == CLAP.model_id and store.dim == CLAP.dim and len(store.manifest["shards"]) == 1
+    assert store.manifest["model"] == COMMITTED.model_id, f"audio/clap is not the clap_mp3 store: write it with `{write}`"
+    assert store.dim == COMMITTED.dim and len(store.manifest["shards"]) == 1
     stale = ("audio/clap is behind the catalog table (a re-pairing, a rebuilt catalog): write it again with "
-             "`python -m rmr_audio.modelstore write`, then `python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap`")
+             f"`{write}`, then `python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap`")
     assert store.keys.tolist() == [k for k, r in zip(catalog, rows) if r >= 0], stale
     windows = np.isin(store.source, ["local", "youtube", "bandcamp"])
     assert store.n_clips.min() >= 1 and store.n_clips[~windows].max() <= store.manifest["clips"]["per_album"] == 4
     if (clap / "transform.npz").exists():
         t = load_transform(clap / "transform.npz", store.dim)
-        assert t.model == CLAP.model_id and t.components.shape == (BLOCK_DIMS, CLAP.dim)
+        assert t.model == COMMITTED.model_id and t.components.shape == (BLOCK_DIMS, COMMITTED.dim)
         assert t.keys.tolist() == store.keys.tolist(), "audio/clap/transform.npz is not fitted on the store's albums: " + stale
         assert t.target_total_variance == load_transform(DEFAULT_AUDIO / "transform.npz").target_total_variance

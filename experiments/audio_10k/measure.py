@@ -39,6 +39,12 @@ twice, embedded once by each run under two keys of one album, and the cosine bet
 the two runs make the same vector from the same preview, and the difference is in the albums.
 Hubness (simbench.hubness): N10 = the number of lists an album is in (mean 10); skew of N10, share of albums
 in no list, the largest N10, and the most-recommended albums.
+By audio source (`by_source`, whole catalog): the albums grouped by where the clips behind their mean came
+from (the store's `source` up to the colon: deezer, itunes, youtube, ...). Per group the albums, mean N10 and
+the share in no list; and, with the group's albums as seeds, the share of their ten neighbours from each
+source next to the share of that source among the other albums with the seed's first primary genre. That is
+source_effect.mixing, called here, so the numbers read as source_effect.md's; the pool and the block differ
+(there: Deezer and iTunes albums with both models, a PCA fitted on the pool).
 
 Comparable with the earlier reports (experiments/preview_features/REPORT*.md)? Only in definition.
 genre_primary / genre_any / genre_family / *_xa and the hubness numbers are computed as there, but on other
@@ -52,12 +58,14 @@ import argparse
 import datetime
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
 import sonic
 from genres import family
 from sonic import K, MIN_DESC, RESULTS
+from source_effect import mixing
 
 TOP_HUBS = 15
 MEASURES = ("genre_primary", "genre_any", "genre_family", "desc_jaccard", "desc_shared")
@@ -161,6 +169,30 @@ def score(X: np.ndarray, albums: sonic.Albums, labels: Labels, name: str) -> dic
             "lists": lists}
 
 
+def by_source(albums: sonic.Albums, lists: np.ndarray) -> dict:
+    """The lists by where each album's audio came from. `groups`: per source (and Deezer split into new and
+    existing) the albums, mean N10 and share in no list. `neighbours`: per seed group and source, the share
+    of the seeds' ten neighbours from that source and what the genre make-up would give (source_effect.mixing)."""
+    store = np.array([s.split(":")[0] for s in albums.source.tolist()])
+    names = [str(s) for s, _ in sorted(zip(*np.unique(store, return_counts=True)), key=lambda x: -x[1])]
+    year = np.array([float(r["year"]) if r["year"].strip().isdigit() else np.nan for r in albums.rows])
+    labels = SimpleNamespace(genre=np.array([g[0] if g else "" for g in albums.genres]),  # what mixing reads of a Data
+                             decade=np.where(np.isnan(year), -1, year // 10 * 10).astype(int))
+    groups = {s: store == s for s in names}
+    if "deezer" in groups:
+        groups |= {"deezer, new": groups["deezer"] & albums.new, "deezer, existing": groups["deezer"] & ~albums.new}
+    groups = {g: m for g, m in groups.items() if m.any()}
+    n10 = np.bincount(lists.ravel(), minlength=len(lists))
+    pos = np.arange(len(albums))
+    mix = {s: mixing(labels, pos, lists, store == s, groups) for s in names}
+    keep = ("share_of_neighbours", "share_of_neighbours_seeds_with_genre", "same_genre_share")
+    return {"sources": names,
+            "groups": {g: {"albums": int(m.sum()), "share_of_pool": round(float(m.mean()), 4),
+                           "mean_n10": round(float(n10[m].mean()), 2), "never_recommended": round(float((n10[m] == 0).mean()), 4),
+                           "seeds_with_genre": mix[names[0]][g]["seeds_with_genre"]} for g, m in groups.items()},
+            "neighbours": {g: {s: {k: mix[s][g][k] for k in keep} for s in names} for g in groups}}
+
+
 def same_track_check(cache_db: Path) -> dict:
     """Tracks the cache holds under two album keys with embeddings of different origin (the earlier run's,
     imported, and the one-pass run's): how many, and the cosine between the two vectors of each. Such pairs
@@ -218,6 +250,8 @@ def run(catalog: Path, clap_dir: Path, cache_db: Path) -> dict:
         if len(res) == 2:
             a, b = (res[k]["lists"] for k in ("clap", "effnet_4clip"))
             entry["overlap_at_10"] = round(float(np.mean([len(set(x) & set(y)) for x, y in zip(a.tolist(), b.tolist())])), 3)
+        if name == "catalog":
+            out["by_source"] = by_source(albums, res["clap"]["lists"])
         for r in res.values():
             del r["lists"]
         out["pools"][name] = entry | {"blocks": res}
@@ -230,6 +264,29 @@ def _f(m: dict | None, digits: int = 3) -> str:
 
 def _table(header: list[str], rows: list[list[str]]) -> list[str]:
     return ["| " + " | ".join(header) + " |", "|" + "---|" * len(header), *("| " + " | ".join(r) + " |" for r in rows), ""]
+
+
+def source_lines(src: dict) -> list[str]:
+    names = src["sources"]
+    rows = []
+    for g, v in src["groups"].items():
+        nb = src["neighbours"][g]
+        rows.append([g, f"{v['albums']:,}", f"{v['mean_n10']:.1f}", f"{v['never_recommended']:.1%}",
+                     *(f"{nb[s]['share_of_neighbours']:.1%} ({nb[s]['same_genre_share']:.1%})" for s in names),
+                     f"{v['seeds_with_genre']:,}"])
+    return ["## By audio source (CLAP, whole catalog)", "",
+            "The source is where the clips behind an album's mean came from (the store's `source`; every iTunes "
+            "storefront counts as itunes; local, youtube and bandcamp are windows of a full-length file). Mean N10 is "
+            "how many lists an album of the source appears in (10 on average over all albums). Each \"from\" column is "
+            "the share of the seeds' ten neighbours whose audio is from that source (all seeds of the row) and, in "
+            "brackets, what the catalog's make-up alone would give: the share of that source among the other albums with "
+            "the seed's first primary genre (the seeds with a genre). Both are `mixing` of `source_effect.py`, as in the "
+            "tables of `source_effect.md`; the JSON also has the neighbour share over the seeds with a genre only. **Like everything here these are "
+            "RYM-catalog proxies on the stored vectors: nobody listened.** They can show that lists lean towards the "
+            "seed's own source beyond what RYM genre gives. They cannot say whether that is the music (which albums each "
+            "store has) or the audio's origin, and a small group's row is noisy.", "",
+            *_table(["Seeds", "Albums", "Mean N10", "Never recommended", *(f"Neighbours from {s} (same-genre share)" for s in names),
+                     "Seeds with a genre"], rows)]
 
 
 def markdown(res: dict) -> str:
@@ -303,6 +360,7 @@ def markdown(res: dict) -> str:
               *_table(ghead, groups(cat, ("4_clips", "under_4_clips", "full_length_windows"))),
               "`under_4_clips`: the listing has fewer than four previews. `full_length_windows`: windows of a full-length "
               "file (local, youtube, bandcamp), where the mean takes every window.", "",
+              *source_lines(res["by_source"]),
               "## Most-recommended albums (CLAP, whole catalog)", "",
               *_table(["N10", "Album", "Year", "Rank", "Primary genres", "New", "Clips"],
                       [[str(a["n10"]), f"{a['artist']}, {a['title']}", a["year"], str(a["rank"] or ""), a["primary_genres"],

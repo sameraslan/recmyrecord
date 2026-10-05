@@ -56,33 +56,33 @@ Every file of the store is written under a temporary name and renamed into place
 
 ### The CLAP store (`data-pipeline/audio/clap/`) and the switch
 
-A store holds one model's embeddings; its manifest names the model and the width (`dim`), and `audio_store.py` checks every shard and the transform against it. `audio/` is the Discogs-EffNet store (1,280 numbers per album). `audio/clap/` is the store of `laion/larger_clap_music_and_speech` (512), with its own `embeddings/`, `manifest.json` and `transform.npz`. It shares `keys.csv`, `matches.csv` and `match_overrides.json` with the store it sits in.
+A store holds one model's embeddings; its manifest names the model and the width (`dim`), and `audio_store.py` checks every shard and the transform against it. `audio/` is the Discogs-EffNet store (1,280 numbers per album). `audio/clap/` is the store of `laion/larger_clap_music_and_speech` (512), with its own `embeddings/`, `manifest.json` and `transform.npz`. It is written from the clip cache's `clap_mp3` rows (the variant below), so its manifest names the model as `laion/larger_clap_music_and_speech+mp3-128k-stereo`. It shares `keys.csv`, `matches.csv` and `match_overrides.json` with the store it sits in.
 
 The site build reads the store named by `SITE_MODEL` in `rmr_pipeline/audio_store.py`. It is `"effnet"`. Setting it to `"clap"` makes `rmr_pipeline.build` and `rmr_pipeline.audio status` read `audio/clap/` when no `--audio-dir` is given; nothing changes on the site until the data is rebuilt and committed, and `tests/fixtures/audio_reference.npz` then has to be recorded again.
 
-The CLAP store is not appended to. It is written whole from the one-pass clip cache, for every album of `catalog/albums.csv` that has an ok CLAP clip, and can be written again at any time:
+The CLAP store is not appended to. It is written whole from the one-pass clip cache, for every album of `catalog/albums.csv` that has an ok `clap_mp3` clip, and can be written again at any time:
 
 ```bash
 cd data-pipeline
-nice -n 19 .venv/bin/python -m rmr_audio.modelstore write                          # audio/clap/embeddings, manifest.json
+nice -n 19 .venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir audio/clap   # audio/clap/embeddings, manifest.json
 nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap   # audio/clap/transform.npz
 .venv/bin/python -m rmr_audio.modelstore status
 ```
 
-Both need only numpy, load no model and download nothing. `write` opens the cache read-only and writes nothing when the store already holds exactly what the cache and the catalog give. An album vector is the mean of the album's first four ok clips in rank order (a failed clip does not use up a place; an album with fewer uses what it has; windows of full-length audio replace the previews and all of them count), from one listing, kept as float16 with `n_clips` and `source`. For the 3,978 albums the earlier CLAP run covered it is `clap_catalog.load(4)`'s vector to 1e-8. A cache key the catalog no longer has is followed through `keys.csv`.
+Both need only numpy, load no model and download nothing. Without `--model` and `--audio-dir`, `write` would put the cache's plain `clap` rows in `audio/clap/`; `tests/test_modelstore.py` fails on such a store. `write` opens the cache read-only and writes nothing when the store already holds exactly what the cache and the catalog give. An album vector is the mean of the album's first four ok clips in rank order (a failed clip does not use up a place; an album with fewer uses what it has; windows of full-length audio replace the previews and all of them count), from one listing, kept as float16 with `n_clips` and `source`. For the Deezer albums the earlier CLAP run covered it is `clap_catalog.load(4)`'s vector to 1e-8 (a Deezer clip's `clap_mp3` vector is its `clap` vector). A cache key the catalog no longer has is followed through `keys.csv`.
 
 `fit-catalog` fits the 64 components on every catalog album the store has, the new ones included, and never writes `audio/transform.npz`. It keeps the EffNet transform's `target_total_variance` (0.3905): `scale` brings any model's block to that total, and the slider stops were tuned against a block of that size.
 
-#### The `clap_mp3` variant (in the clip cache only, beside `clap`)
+#### The `clap_mp3` variant (beside `clap` in the clip cache; what `audio/clap/` is written from)
 
-CLAP hears the store a preview came from: Deezer's previews are 128 kbit/s stereo MP3, Apple's are AAC (`experiments/audio_10k/results/store_effect_fix.md`). `clap_mp3` is a second CLAP vector per clip, kept in the cache's `embeddings` table under its own model name and never in place of `clap`. For a clip that is not from Deezer (`itunes:*`, `youtube`, `bandcamp`, `local`) the decoded audio, with its channels, goes through a 128 kbit/s stereo MP3 round trip (`rmr_audio/mp3trip.py`: ffmpeg `libmp3lame` through pipes, no file) before the channels are averaged and the CLAP recipe runs unchanged; a one-channel signal is duplicated to both sides for the encode. For a Deezer clip the variant is the `clap` vector itself, copied inside the cache. No committed store holds it yet; `results/mp3_variant_check.md` in the same folder has what was measured.
+CLAP hears the store a preview came from: Deezer's previews are 128 kbit/s stereo MP3, Apple's are AAC (`experiments/audio_10k/results/store_effect_fix.md`). `clap_mp3` is a second CLAP vector per clip, kept in the cache's `embeddings` table under its own model name and never in place of `clap`. For a clip that is not from Deezer (`itunes:*`, `youtube`, `bandcamp`, `local`) the decoded audio, with its channels, goes through a 128 kbit/s stereo MP3 round trip (`rmr_audio/mp3trip.py`: ffmpeg `libmp3lame` through pipes, no file) before the channels are averaged and the CLAP recipe runs unchanged; a one-channel signal is duplicated to both sides for the encode. For a Deezer clip the variant is the `clap` vector itself, copied inside the cache. `audio/clap/` is written from it; `results/mp3_variant_check.md` in the same folder has what was measured.
 
 ```bash
 cd data-pipeline
 .venv-audio/bin/python -m rmr_audio.onepass copy                                   # Deezer clips: the clap rows, copied; no network, no model
 nice -n 19 .venv-audio/bin/python -m rmr_audio.onepass run --models clap_mp3 --itunes-interval 3.4   # the other preview clips: fetched again, clap_mp3 only
 nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength --models effnet,clap,clap_mp3   # full-length windows: all three from one download; embedded albums are fetched once more for clap_mp3 alone
-.venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir DIR    # a store from the variant's rows, where it is told
+.venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir audio/clap   # the CLAP store, from the variant's rows (any other folder to look at it first)
 ```
 
 `run --models clap_mp3` takes, per album, the clips that are ok for `clap` (the clips its mean is over), downloads each once and embeds it for the variant only: EffNet and `clap` are not computed, the EffNet child is not started, and no `effnet` or `clap` row is written. A `clap` clip whose preview the store no longer lists is recorded as `no_preview` ("gone") and the next track in the usual order stands in; the run prints both counts. `--check-baseline` also embeds each fetched clip for `clap` and prints its cosine with the stored vector, without storing it. A new album is embedded with `--models effnet,clap,clap_mp3`: one download per clip.
