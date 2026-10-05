@@ -1,9 +1,9 @@
 'use client';
 
 import { useFrame, useThree } from '@react-three/fiber';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
-import { MARKER_SIZE, layoutMarkers, type PlacedMarker } from '../state/focusLayout';
+import { MARKER_SIZE, MarkerLayout, type MarkerAnchor, type PlacedMarker } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
 import { badgeKey, getOverlayEl, getOverlaySize, getPlacedMarkers, markerKey, setPlacedMarkers } from '../state/overlayEls';
 import { canvasRect, visibleArea, worldToScreen } from '../state/projection';
@@ -29,6 +29,10 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const get = useThree((s) => s.get);
 
+  // One layout per driver: it keeps its last solve and only moves it while the focus keeps its shape (a pan,
+  // the panel sliding) or returns it untouched when nothing moved (a hover redraw, a cover or gas fade).
+  const work = useRef<{ layout: MarkerLayout; anchors: MarkerAnchor[] } | null>(null);
+
   // A remounted Scene must not hit-test the markers of the previous one.
   useEffect(() => () => setPlacedMarkers([]), []);
 
@@ -47,12 +51,21 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
     const area = visibleArea(inset, width, height, MARKER_EDGE);
     // Above a full-width bottom panel (the phone slider), with the same edge as elsewhere.
     const markerBounds = { ...area, bottom: Math.min(area.bottom, height - input.bottomCover - MARKER_EDGE) };
-    const placed = layoutMarkers(
-      [f.seed, ...f.recs].map((id) => ({ id, ...worldToScreen(pos[2 * id], pos[2 * id + 1], rect, camera) })),
-      MARKER_SIZE.seed,
-      MARKER_SIZE.rec,
-      { bounds: markerBounds },
-    );
+    const { layout, anchors } = (work.current ??= { layout: new MarkerLayout(), anchors: [] });
+    anchors.length = f.recs.length + 1;
+    for (let i = 0; i < anchors.length; i++) {
+      const id = i === 0 ? f.seed : f.recs[i - 1];
+      const p = worldToScreen(pos[2 * id], pos[2 * id + 1], rect, camera);
+      const a = anchors[i];
+      if (a) {
+        a.id = id;
+        a.x = p.x;
+        a.y = p.y;
+      } else {
+        anchors[i] = { id, x: p.x, y: p.y };
+      }
+    }
+    const placed = layout.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: markerBounds });
     const drawn: PlacedMarker[] = [];
     for (const it of placed) {
       const el = getOverlayEl(markerKey(it.id));

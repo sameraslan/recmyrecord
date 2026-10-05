@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { camera, shot, waitForCameraIdle, waitForMap } from './helpers';
+import { camera, shot, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
 
 async function recsOf(page: Page, id: number, stop: 'sonic' | 'balanced' | 'mood', n = 5): Promise<number[]> {
   return page.evaluate(
@@ -321,4 +321,21 @@ test('on a phone a larger bottom inset still keeps markers and zoom controls abo
   for (const b of bottoms) expect(b).toBeLessThanOrEqual(panelTop);
   const zoom = (await page.locator('.map-zoom').boundingBox())!;
   expect(zoom.y + zoom.height).toBeLessThanOrEqual(panelTop);
+});
+
+test('with an album open the map draws no frame at rest and its covers stay put', async ({ page }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(11);
+  // Part 1's sharper gas image may fade in about a second after the map settles: the one bounded exception.
+  await waitForGasSharpSettled(page);
+  const where = () => page.locator('.mk').evaluateAll((els) => els.map((e) => (e as HTMLElement).style.transform));
+  const before = await where();
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  expect(f2 - f1, 'frames drawn at rest with an album open').toBe(0);
+  expect(await where()).toEqual(before);
 });

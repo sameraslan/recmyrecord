@@ -71,22 +71,208 @@ export function edgePoint(x0: number, y0: number, x1: number, y1: number, half: 
   return [x0 + (dx / d) * k, y0 + (dy / d) * k];
 }
 
-/** anchors[0] is the seed. Recommendations too close to the seed go to a ring around it. Then four rules are
- * relaxed together, for up to 600 rounds (the prototype's Focus.layout): boxes stay `gap` apart, pushed along
- * the axis of least overlap; every line shows at least `minLine` px between the two frames; every cover stays
- * LINE_CLEAR_PX clear of every other cover's line; two lines leave the seed at least MIN_LINE_ANGLE apart.
- * Without `bounds` the seed never moves. With `bounds`, the laid-out group is shifted inside them as a whole
- * (which keeps every rule), and only if a marker is still outside is it held at the wall and the rules relaxed
- * again inside the walls, ending with a plain box separation so that the result has no overlaps. */
-export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, options: LayoutOptions = {}): MarkerItem[] {
-  const gap = options.gap ?? MARKER_GAP;
-  const minLine = options.minLine ?? MIN_LINE_PX;
-  const bounds = options.bounds ?? null;
-  const items: MarkerItem[] = anchors.map((a, n) => ({ id: a.id, rank: n, ax: a.x, ay: a.y, x: a.x, y: a.y, size: n === 0 ? seedSize : recSize, seed: n === 0 }));
-  if (items.length === 0) return items;
+/** Rounds of the four rules (the prototype's Focus.layout), and of the plain box separation that ends a layout
+ * held by the walls. */
+const RULE_ROUNDS = 600;
+const SEPARATE_ROUNDS = 300;
+
+/** The markers' own area, or null for no walls. */
+type Walls = MarkerBounds | null;
+
+/** Moves `it` by `d` along `axis`, held by the walls if there are any; returns how far it actually moved. */
+function moveBy(it: MarkerItem, axis: Axis, d: number, walls: Walls): number {
+  const before = it[axis];
+  if (!walls) {
+    it[axis] = before + d;
+  } else {
+    const h = it.size / 2;
+    const lo = axis === 'x' ? walls.left + h : walls.top + h;
+    const hi = axis === 'x' ? walls.right - h : walls.bottom - h;
+    it[axis] = Math.min(Math.max(before + d, lo), hi);
+  }
+  return it[axis] - before;
+}
+
+function moveTo(it: MarkerItem, x: number, y: number, walls: Walls): void {
+  moveBy(it, 'x', x - it.x, walls);
+  moveBy(it, 'y', y - it.y, walls);
+}
+
+/** One round of box separation. `seedWeight` is the seed's share of a push: 0 keeps it where it is. */
+function separateOnce(items: MarkerItem[], gap: number, walls: Walls, seedWeight: number): boolean {
+  let moved = false;
+  for (let a = 0; a < items.length; a++) {
+    for (let b = a + 1; b < items.length; b++) {
+      const p = items[a];
+      const q = items[b];
+      const need = (p.size + q.size) / 2 + gap;
+      const ox = need - Math.abs(q.x - p.x);
+      const oy = need - Math.abs(q.y - p.y);
+      if (ox <= 0 || oy <= 0) continue;
+      const axis: Axis = ox < oy ? 'x' : 'y';
+      const d = q[axis] - p[axis];
+      const sign = d === 0 ? (b % 2 ? 1 : -1) : Math.sign(d);
+      const total = (axis === 'x' ? ox : oy) + 0.5;
+      const wp = p.seed ? seedWeight : 0.5;
+      const wq = q.seed ? seedWeight : 0.5;
+      const movedP = -sign * moveBy(p, axis, (-sign * total * wp) / (wp + wq), walls);
+      const movedQ = sign * moveBy(q, axis, sign * (total - movedP), walls);
+      if (movedP + movedQ < total) moveBy(p, axis, -sign * (total - movedP - movedQ), walls);
+      moved = true;
+    }
+  }
+  return moved;
+}
+
+/** Each marker's direction from the seed, kept up to date as the line rules move markers so that a round
+ * computes it once per move instead of once per pair: `len` the distance (1 when on the seed) and (`ux`, `uy`)
+ * the unit vector (0, 0 when on the seed). Every value is the same expression the rules would compute in place. */
+interface Directions {
+  len: Float64Array;
+  ux: Float64Array;
+  uy: Float64Array;
+}
+
+function directions(n: number): Directions {
+  return { len: new Float64Array(n), ux: new Float64Array(n), uy: new Float64Array(n) };
+}
+
+function aim(items: MarkerItem[], dir: Directions, i: number): void {
   const s0 = items[0];
+  const lx = items[i].x - s0.x;
+  const ly = items[i].y - s0.y;
+  const len = Math.hypot(lx, ly) || 1;
+  dir.len[i] = len;
+  dir.ux[i] = lx / len;
+  dir.uy[i] = ly / len;
+}
+
+/** Two lines whose unit vectors have a dot product below this are more than MIN_LINE_ANGLE + 0.01 rad apart,
+ * so the angle rule can pass them without measuring their angles. */
+const CLEARLY_APART = Math.cos(MIN_LINE_ANGLE + 0.01);
+
+/** One round of the three line rules; the seed is never moved by them. */
+function linesOnce(items: MarkerItem[], minLine: number, walls: Walls, dir: Directions): boolean {
+  let moved = false;
+  const s0 = items[0];
+  const seedHalf = s0.size / 2 + SEED_FRAME_PX;
+  // The box separation that ran before may have moved any marker, the seed too.
+  for (let i = 1; i < items.length; i++) aim(items, dir, i);
+  for (let a = 1; a < items.length; a++) {
+    const it = items[a];
+    // Enough line between the two frames.
+    const dx = it.x - s0.x;
+    const dy = it.y - s0.y;
+    const d = dir.len[a];
+    const need = (seedHalf + it.size / 2 + REC_FRAME_PX) / (Math.max(Math.abs(dx), Math.abs(dy)) / d || 1) + minLine;
+    if (d < need - 0.5) {
+      moveTo(it, s0.x + (dx / d) * need, s0.y + (dy / d) * need, walls);
+      aim(items, dir, a);
+      moved = true;
+    }
+    // Sideways off every other recommendation's line.
+    for (let b = 1; b < items.length; b++) {
+      if (b === a) continue;
+      const len = dir.len[b];
+      const ux = dir.ux[b];
+      const uy = dir.uy[b];
+      const t = (it.x - s0.x) * ux + (it.y - s0.y) * uy;
+      if (t <= 0 || t >= len) continue;
+      const perp = (it.x - s0.x) * -uy + (it.y - s0.y) * ux;
+      const reach = (it.size / 2 + REC_FRAME_PX) * (Math.abs(ux) + Math.abs(uy)) + LINE_CLEAR_PX;
+      if (Math.abs(perp) >= reach) continue;
+      const push = (reach - Math.abs(perp) + 0.5) * (perp === 0 ? (a % 2 ? 1 : -1) : Math.sign(perp));
+      moveTo(it, it.x - uy * push, it.y + ux * push, walls);
+      aim(items, dir, a);
+      moved = true;
+    }
+  }
+  // Two lines must not leave the seed in nearly the same direction: both turn, half each, about the seed.
+  for (let a = 1; a < items.length; a++) {
+    for (let b = a + 1; b < items.length; b++) {
+      const ua = dir.ux[a];
+      const va = dir.uy[a];
+      const ub = dir.ux[b];
+      const vb = dir.uy[b];
+      if (ua * ub + va * vb < CLEARLY_APART && (ua !== 0 || va !== 0) && (ub !== 0 || vb !== 0)) continue;
+      const p = items[a];
+      const q = items[b];
+      const ap = Math.atan2(p.y - s0.y, p.x - s0.x);
+      const aq = Math.atan2(q.y - s0.y, q.x - s0.x);
+      let d = aq - ap;
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      if (Math.abs(d) >= MIN_LINE_ANGLE) continue;
+      const half = ((MIN_LINE_ANGLE - Math.abs(d) + 0.02) / 2) * (d >= 0 ? 1 : -1);
+      const rp = Math.hypot(p.x - s0.x, p.y - s0.y);
+      moveTo(p, s0.x + Math.cos(ap - half) * rp, s0.y + Math.sin(ap - half) * rp, walls);
+      aim(items, dir, a);
+      const rq = Math.hypot(q.x - s0.x, q.y - s0.y);
+      moveTo(q, s0.x + Math.cos(aq + half) * rq, s0.y + Math.sin(aq + half) * rq, walls);
+      aim(items, dir, b);
+      moved = true;
+    }
+  }
+  return moved;
+}
+
+/** Runs `step` (one round over the markers, true when it moved one) until a round moves nothing, for at most
+ * `rounds` rounds. A round depends on the marker positions alone, so once the positions repeat (markers pushed
+ * into a wall and held there every round, or a few rounds that undo each other) every later round is known:
+ * a round that leaves every marker where it was ends the loop at once, and a longer cycle (Brent's cycle
+ * detection) skips the rounds left down to those that set where the cycle stands when the last round ends.
+ * The result is the same, to the bit, as running every round. */
+function iterate(items: MarkerItem[], rounds: number, step: () => boolean): void {
+  const n = items.length;
+  const saved = new Float64Array(2 * n);
+  const prev = new Float64Array(2 * n);
+  const copy = (to: Float64Array) => {
+    for (let i = 0; i < n; i++) {
+      to[2 * i] = items[i].x;
+      to[2 * i + 1] = items[i].y;
+    }
+  };
+  const repeats = (of: Float64Array) => {
+    for (let i = 0; i < n; i++) if (of[2 * i] !== items[i].x || of[2 * i + 1] !== items[i].y) return false;
+    return true;
+  };
+  copy(saved);
+  copy(prev);
+  let power = 1;
+  let period = 0;
+  for (let round = 0; round < rounds; round++) {
+    if (!step()) return;
+    // Held still by the walls: every round left would do the same.
+    if (repeats(prev)) return;
+    copy(prev);
+    period++;
+    if (repeats(saved)) {
+      for (let left = (rounds - 1 - round) % period; left > 0; left--) if (!step()) return;
+      return;
+    }
+    if (period === power) {
+      copy(saved);
+      power *= 2;
+      period = 0;
+    }
+  }
+}
+
+/** The four rules together, for up to RULE_ROUNDS rounds. */
+function relax(items: MarkerItem[], gap: number, minLine: number, walls: Walls, seedWeight: number): void {
+  const dir = directions(items.length);
+  iterate(items, RULE_ROUNDS, () => {
+    const boxes = separateOnce(items, gap, walls, seedWeight);
+    const lines = linesOnce(items, minLine, walls, dir);
+    return boxes || lines;
+  });
+}
+
+function startItems(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number): MarkerItem[] {
+  const items: MarkerItem[] = anchors.map((a, n) => ({ id: a.id, rank: n, ax: a.x, ay: a.y, x: a.x, y: a.y, size: n === 0 ? seedSize : recSize, seed: n === 0 }));
   const recs = items.length - 1;
   if (recs > 0) {
+    const s0 = items[0];
     const ring = ringRadius(recs, s0.size, recSize);
     items.slice(1).forEach((it, n) => {
       let dx = it.ax - s0.ax;
@@ -103,145 +289,184 @@ export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number
       it.y = s0.ay + (dy / d) * ring;
     });
   }
+  return items;
+}
 
-  const range = (it: MarkerItem, axis: Axis, walls: boolean): [number, number] => {
-    if (!walls || !bounds) return [-Infinity, Infinity];
+/** Shifts the laid-out group inside the bounds as a whole (which keeps every rule) and holds at the wall any
+ * marker still outside. True when one was held: the group is larger than the bounds. Allocates nothing. */
+function shiftInside(items: MarkerItem[], bounds: MarkerBounds): boolean {
+  let x0 = Infinity;
+  let x1 = -Infinity;
+  let y0 = Infinity;
+  let y1 = -Infinity;
+  for (const it of items) {
     const h = it.size / 2;
-    return axis === 'x' ? [bounds.left + h, bounds.right - h] : [bounds.top + h, bounds.bottom - h];
-  };
-  /** Moves `it` by `d` along `axis`, held by the walls when `walls`; returns how far it actually moved. */
-  const moveBy = (it: MarkerItem, axis: Axis, d: number, walls: boolean): number => {
-    const [lo, hi] = range(it, axis, walls);
-    const before = it[axis];
-    it[axis] = Math.min(Math.max(before + d, lo), hi);
-    return it[axis] - before;
-  };
-  const moveTo = (it: MarkerItem, x: number, y: number, walls: boolean): void => {
-    moveBy(it, 'x', x - it.x, walls);
-    moveBy(it, 'y', y - it.y, walls);
-  };
+    x0 = Math.min(x0, it.x - h);
+    x1 = Math.max(x1, it.x + h);
+    y0 = Math.min(y0, it.y - h);
+    y1 = Math.max(y1, it.y + h);
+  }
+  const shift = (lo: number, hi: number, min: number, max: number) => (hi - lo > max - min ? 0 : lo < min ? min - lo : hi > max ? max - hi : 0);
+  const sx = shift(x0, x1, bounds.left, bounds.right);
+  const sy = shift(y0, y1, bounds.top, bounds.bottom);
+  let held = false;
+  for (const it of items) {
+    it.x += sx;
+    it.y += sy;
+    if (moveBy(it, 'x', 0, bounds) !== 0) held = true;
+    if (moveBy(it, 'y', 0, bounds) !== 0) held = true;
+  }
+  return held;
+}
 
-  /** One round of box separation. `seedWeight` is the seed's share of a push: 0 keeps it where it is. */
-  const separateOnce = (walls: boolean, seedWeight: number): boolean => {
-    let moved = false;
-    for (let a = 0; a < items.length; a++) {
-      for (let b = a + 1; b < items.length; b++) {
-        const p = items[a];
-        const q = items[b];
-        const need = (p.size + q.size) / 2 + gap;
-        const ox = need - Math.abs(q.x - p.x);
-        const oy = need - Math.abs(q.y - p.y);
-        if (ox <= 0 || oy <= 0) continue;
-        const axis: Axis = ox < oy ? 'x' : 'y';
-        const d = q[axis] - p[axis];
-        const sign = d === 0 ? (b % 2 ? 1 : -1) : Math.sign(d);
-        const total = (axis === 'x' ? ox : oy) + 0.5;
-        const wp = p.seed ? seedWeight : 0.5;
-        const wq = q.seed ? seedWeight : 0.5;
-        const movedP = -sign * moveBy(p, axis, (-sign * total * wp) / (wp + wq), walls);
-        const movedQ = sign * moveBy(q, axis, sign * (total - movedP), walls);
-        if (movedP + movedQ < total) moveBy(p, axis, -sign * (total - movedP - movedQ), walls);
-        moved = true;
-      }
-    }
-    return moved;
-  };
+/** The group does not fit: relax inside the walls (the seed gives way a little, as before), then make sure no
+ * boxes overlap, whatever the line rules could not reach. */
+function relaxHeld(items: MarkerItem[], gap: number, minLine: number, bounds: MarkerBounds): void {
+  relax(items, gap, minLine, bounds, 0.2);
+  iterate(items, SEPARATE_ROUNDS, () => separateOnce(items, gap, bounds, 0.2));
+}
 
-  /** One round of the three line rules; the seed is never moved by them. */
-  const linesOnce = (walls: boolean): boolean => {
-    let moved = false;
-    const seedHalf = s0.size / 2 + SEED_FRAME_PX;
-    for (let a = 1; a < items.length; a++) {
-      const it = items[a];
-      // Enough line between the two frames.
-      const dx = it.x - s0.x;
-      const dy = it.y - s0.y;
-      const d = Math.hypot(dx, dy) || 1;
-      const need = (seedHalf + it.size / 2 + REC_FRAME_PX) / (Math.max(Math.abs(dx), Math.abs(dy)) / d || 1) + minLine;
-      if (d < need - 0.5) {
-        moveTo(it, s0.x + (dx / d) * need, s0.y + (dy / d) * need, walls);
-        moved = true;
-      }
-      // Sideways off every other recommendation's line.
-      for (let b = 1; b < items.length; b++) {
-        if (b === a) continue;
-        const o = items[b];
-        const lx = o.x - s0.x;
-        const ly = o.y - s0.y;
-        const len = Math.hypot(lx, ly) || 1;
-        const ux = lx / len;
-        const uy = ly / len;
-        const t = (it.x - s0.x) * ux + (it.y - s0.y) * uy;
-        if (t <= 0 || t >= len) continue;
-        const perp = (it.x - s0.x) * -uy + (it.y - s0.y) * ux;
-        const reach = (it.size / 2 + REC_FRAME_PX) * (Math.abs(ux) + Math.abs(uy)) + LINE_CLEAR_PX;
-        if (Math.abs(perp) >= reach) continue;
-        const push = (reach - Math.abs(perp) + 0.5) * (perp === 0 ? (a % 2 ? 1 : -1) : Math.sign(perp));
-        moveTo(it, it.x - uy * push, it.y + ux * push, walls);
-        moved = true;
-      }
-    }
-    // Two lines must not leave the seed in nearly the same direction: both turn, half each, about the seed.
-    for (let a = 1; a < items.length; a++) {
-      for (let b = a + 1; b < items.length; b++) {
-        const p = items[a];
-        const q = items[b];
-        const ap = Math.atan2(p.y - s0.y, p.x - s0.x);
-        const aq = Math.atan2(q.y - s0.y, q.x - s0.x);
-        let d = aq - ap;
-        while (d > Math.PI) d -= 2 * Math.PI;
-        while (d < -Math.PI) d += 2 * Math.PI;
-        if (Math.abs(d) >= MIN_LINE_ANGLE) continue;
-        const half = ((MIN_LINE_ANGLE - Math.abs(d) + 0.02) / 2) * (d >= 0 ? 1 : -1);
-        for (const [it, ang] of [[p, ap - half], [q, aq + half]] as const) {
-          const r = Math.hypot(it.x - s0.x, it.y - s0.y);
-          moveTo(it, s0.x + Math.cos(ang) * r, s0.y + Math.sin(ang) * r, walls);
-        }
-        moved = true;
-      }
-    }
-    return moved;
-  };
+/** anchors[0] is the seed. Recommendations too close to the seed go to a ring around it. Then four rules are
+ * relaxed together, for up to 600 rounds (the prototype's Focus.layout): boxes stay `gap` apart, pushed along
+ * the axis of least overlap; every line shows at least `minLine` px between the two frames; every cover stays
+ * LINE_CLEAR_PX clear of every other cover's line; two lines leave the seed at least MIN_LINE_ANGLE apart.
+ * Without `bounds` the seed never moves. With `bounds`, the laid-out group is shifted inside them as a whole
+ * (which keeps every rule), and only if a marker is still outside is it held at the wall and the rules relaxed
+ * again inside the walls, ending with a plain box separation so that the result has no overlaps. Rounds that
+ * only repeat earlier ones are skipped (`iterate`). For every drawn frame, use a MarkerLayout. */
+export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, options: LayoutOptions = {}): MarkerItem[] {
+  const gap = options.gap ?? MARKER_GAP;
+  const minLine = options.minLine ?? MIN_LINE_PX;
+  const bounds = options.bounds ?? null;
+  const items = startItems(anchors, seedSize, recSize);
+  if (items.length === 0) return items;
+  relax(items, gap, minLine, null, 0);
+  if (bounds && shiftInside(items, bounds)) relaxHeld(items, gap, minLine, bounds);
+  return items;
+}
 
-  const relax = (walls: boolean, seedWeight: number): void => {
-    for (let iter = 0; iter < 600; iter++) {
-      const boxes = separateOnce(walls, seedWeight);
-      const lines = linesOnce(walls);
-      if (!boxes && !lines) return;
-    }
-  };
+/** Below this change of the group's shape (each album's offset from the seed, CSS px) a MarkerLayout keeps its
+ * last solve and only moves it. */
+export const LAYOUT_REUSE_PX = 0.5;
 
-  relax(false, 0);
-  if (bounds) {
-    let x0 = Infinity;
-    let x1 = -Infinity;
-    let y0 = Infinity;
-    let y1 = -Infinity;
-    for (const it of items) {
-      const h = it.size / 2;
-      x0 = Math.min(x0, it.x - h);
-      x1 = Math.max(x1, it.x + h);
-      y0 = Math.min(y0, it.y - h);
-      y1 = Math.max(y1, it.y + h);
+/** What a MarkerLayout did, call by call: solved from scratch, solved again inside the walls, moved its last
+ * solve, or returned it unchanged. */
+export interface MarkerLayoutStats {
+  solves: number;
+  wallSolves: number;
+  moves: number;
+  unchanged: number;
+}
+
+/** layoutMarkers for a driver that lays the same focus out on every drawn frame. The four rules depend only on
+ * where the albums sit relative to the seed, so their solve is kept and reused while that shape changes by less
+ * than LAYOUT_REUSE_PX (a pan, the album panel sliding, or nothing at all: a hover redraw, a cover fading in, the
+ * gas fade): it is moved with the seed, and only the bounds step runs again, which is what a fresh solve would
+ * do after the same rules. Only when that step holds a marker at a wall are the rules relaxed again inside the
+ * walls. A zoom, a slider morph or another focus solves from scratch. The returned array is the layout's own:
+ * the next call rewrites it in place (a reused layout allocates nothing). When nothing changed at all, the
+ * same array comes back untouched. */
+export class MarkerLayout {
+  readonly stats: MarkerLayoutStats = { solves: 0, wallSolves: 0, moves: 0, unchanged: 0 };
+  private items: MarkerItem[] = [];
+  private seedSize = NaN;
+  private recSize = NaN;
+  private gap = NaN;
+  private minLine = NaN;
+  /** Each album's offset from the seed's album at the last solve. */
+  private rel = new Float64Array(0);
+  /** The rules' result at the last solve (before the bounds step), as offsets from the seed's album. */
+  private free = new Float64Array(0);
+  /** The anchors and bounds of the last call. */
+  private last = new Float64Array(0);
+  private lastBounds: MarkerBounds | null = null;
+  private readonly boundsCopy: MarkerBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+
+  layout(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, options: LayoutOptions = {}): readonly MarkerItem[] {
+    const gap = options.gap ?? MARKER_GAP;
+    const minLine = options.minLine ?? MIN_LINE_PX;
+    const bounds = options.bounds ?? null;
+    const items = this.items;
+    const n = anchors.length;
+    let same = n === items.length && seedSize === this.seedSize && recSize === this.recSize && gap === this.gap && minLine === this.minLine;
+    for (let i = 0; same && i < n; i++) same = anchors[i].id === items[i].id;
+    if (!same) return this.solve(anchors, seedSize, recSize, gap, minLine, bounds);
+    if (n === 0) return items;
+    const x0 = anchors[0].x;
+    const y0 = anchors[0].y;
+    const { rel, free, last } = this;
+    let still = true;
+    for (let i = 0; i < n; i++) {
+      const a = anchors[i];
+      if (Math.abs(a.x - x0 - rel[2 * i]) >= LAYOUT_REUSE_PX || Math.abs(a.y - y0 - rel[2 * i + 1]) >= LAYOUT_REUSE_PX) {
+        return this.solve(anchors, seedSize, recSize, gap, minLine, bounds);
+      }
+      if (a.x !== last[2 * i] || a.y !== last[2 * i + 1]) still = false;
     }
-    const shift = (lo: number, hi: number, min: number, max: number) => (hi - lo > max - min ? 0 : lo < min ? min - lo : hi > max ? max - hi : 0);
-    const sx = shift(x0, x1, bounds.left, bounds.right);
-    const sy = shift(y0, y1, bounds.top, bounds.bottom);
-    let held = false;
-    for (const it of items) {
-      it.x += sx;
-      it.y += sy;
-      if (moveBy(it, 'x', 0, true) !== 0) held = true;
-      if (moveBy(it, 'y', 0, true) !== 0) held = true;
+    const lb = this.lastBounds;
+    const sameBounds = bounds && lb ? bounds.left === lb.left && bounds.top === lb.top && bounds.right === lb.right && bounds.bottom === lb.bottom : bounds === lb;
+    if (still && sameBounds) {
+      this.stats.unchanged++;
+      return items;
     }
-    if (held) {
-      // The group does not fit: relax inside the walls (the seed gives way a little, as before), then make
-      // sure no boxes overlap, whatever the line rules could not reach.
-      relax(true, 0.2);
-      for (let iter = 0; iter < 300; iter++) if (!separateOnce(true, 0.2)) break;
+    for (let i = 0; i < n; i++) {
+      const it = items[i];
+      it.ax = anchors[i].x;
+      it.ay = anchors[i].y;
+      it.x = x0 + free[2 * i];
+      it.y = y0 + free[2 * i + 1];
+    }
+    this.stats.moves++;
+    this.finish(bounds);
+    return items;
+  }
+
+  private solve(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, gap: number, minLine: number, bounds: MarkerBounds | null): MarkerItem[] {
+    const items = startItems(anchors, seedSize, recSize);
+    const n = items.length;
+    this.items = items;
+    this.seedSize = seedSize;
+    this.recSize = recSize;
+    this.gap = gap;
+    this.minLine = minLine;
+    if (this.rel.length !== 2 * n) {
+      this.rel = new Float64Array(2 * n);
+      this.free = new Float64Array(2 * n);
+      this.last = new Float64Array(2 * n);
+    }
+    this.stats.solves++;
+    if (n === 0) return items;
+    relax(items, gap, minLine, null, 0);
+    const x0 = items[0].ax;
+    const y0 = items[0].ay;
+    for (let i = 0; i < n; i++) {
+      this.rel[2 * i] = items[i].ax - x0;
+      this.rel[2 * i + 1] = items[i].ay - y0;
+      this.free[2 * i] = items[i].x - x0;
+      this.free[2 * i + 1] = items[i].y - y0;
+    }
+    this.finish(bounds);
+    return items;
+  }
+
+  /** The bounds step of layoutMarkers, and the record of this call's inputs. */
+  private finish(bounds: MarkerBounds | null): void {
+    const items = this.items;
+    for (let i = 0; i < items.length; i++) {
+      this.last[2 * i] = items[i].ax;
+      this.last[2 * i + 1] = items[i].ay;
+    }
+    if (bounds) {
+      Object.assign(this.boundsCopy, bounds);
+      this.lastBounds = this.boundsCopy;
+      if (shiftInside(items, bounds)) {
+        this.stats.wallSolves++;
+        relaxHeld(items, this.gap, this.minLine, bounds);
+      }
+    } else {
+      this.lastBounds = null;
     }
   }
-  return items;
 }
 
 /** A marker as MarkerDriver last drew it: `drawn` is its box edge on screen (1.16x when hot). */
