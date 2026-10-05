@@ -80,6 +80,7 @@ FOLDS = 5
 K = sonic.K
 BLOCK = 64
 MIN_GENRE = 10  # a first primary genre with fewer albums than this is "other" in the covariates
+MIN_PAIRS = 5  # under this many albums held from both stores the store probe on pairs is not run
 
 
 # ------------------------------------------------------------------------------------------- loading
@@ -466,7 +467,12 @@ def pair_section(d: Data) -> dict:
     out = {"groups_examined": len(groups), "listing_pairs": dict(candidates), "listing_pairs_with_the_same_track_positions": dict(used),
            "cosines": {k: {m: {name: describe(v) for name, v in cosines[k][m].items()} for m in MODEL_NAMES} for k in kinds},
            "cross_store_albums": names, "store_probe_on_pairs": {}}
-    if not cross:
+    if len(cross) < MIN_PAIRS:
+        note = f"only {len(cross)} of the albums held from both stores have `{CLAP_MODEL}` clips at the same track positions (under {MIN_PAIRS})"
+        if CLAP_MODEL != "clap":
+            note += f"; the doubles are in the backup from before the rekey, which has no `{CLAP_MODEL}` rows"
+        out["store_probe_on_pairs"] = {m: {"album_pairs": len(cross), "track_pairs": sum(len(p[m][2]) for p in cross), "note": note}
+                                       for m in MODEL_NAMES}
         return out
     held = set().union(*groups)
     train = d.new & ~np.isin(d.keys, sorted(held))
@@ -565,6 +571,9 @@ def clip_section(d: Data) -> dict:
                 if n_all and n_all > 1 and c[1] is not None:
                     rel.append(c[1] / (n_all - 1))
         cs = np.array([x for x in clip_s if x is not None])
+        if not len(cs):
+            out[name] = {"albums": n_alb, "clips": len(clip_s), "note": "no clips of this cache model in the group"}
+            continue
         out[name] = {"albums": n_alb, "clips": len(clip_s),
                      "clip_seconds": {"median": round(float(np.median(cs)), 3), "p1": round(float(np.percentile(cs, 1)), 3),
                                       "under_25_s": round(float((cs < 25).mean()), 4)},
@@ -693,6 +702,8 @@ def markdown(res: dict) -> str:
     it_c = cat["clap"]["neighbours_from_itunes"]
     it_e = cat["effnet"]["neighbours_from_itunes"]
     cs = pa["cosines"]["cross_store"]
+    paired = "share" in sp.get("clap", {})  # False: too few albums from both stores for this cache model
+    no_pairs = sp.get("clap", {}).get("note", "no albums from both stores")
     L = ["# Why CLAP keeps new and existing albums apart: the store the preview came from", "",
          f"Generated {res['generated']} by `source_effect.py`. {res['albums']:,} catalog albums with a Deezer or iTunes preview "
          f"in both models ({res['left_out']['other_source']} albums on full-length windows left out).", "",
@@ -708,15 +719,17 @@ def markdown(res: dict) -> str:
          f"Year, rank and genre alone give {_auc(store['with_metadata']['metadata_only_boosting'])}. On a sample matched on "
          f"genre and decade CLAP still gives {_auc(store['matched_genre_decade']['clap'])}, EffNet "
          f"{_auc(store['matched_genre_decade']['effnet'])}. No difference in the music that RYM's labels describe is that separable.",
-         f"- The same recordings show it directly. {sp['clap']['album_pairs']} albums are in the cache from both stores "
-         f"({sp['clap']['track_pairs']} tracks at the same position). A store probe trained on the other albums scores the "
-         f"iTunes version as more iTunes than the Deezer version of the same album in {sp['clap']['pairs_where_the_itunes_version_scores_more_itunes']} "
-         f"of {sp['clap']['album_pairs']} albums and {sp['clap']['track_pairs_where_the_itunes_clip_scores_more_itunes']} of "
-         f"{sp['clap']['track_pairs']} tracks, and the gap between the two versions is {sp['clap']['share_of_the_population_gap']:.0%} "
-         "of the gap between iTunes and Deezer albums at large. The whole store difference is reproduced by changing the store and "
-         f"keeping the recording. CLAP's cosine between the two stores' clips of one track is {cs['clap']['same_track_across']['mean']:.2f} "
-         f"on average; EffNet's is {cs['effnet']['same_track_across']['mean']:.2f} (median {cs['effnet']['same_track_across']['median']:.2f}), "
-         "so the two previews are probably much the same stretch of music, and CLAP hears them differently.",
+         *([
+             f"- The same recordings show it directly. {sp['clap']['album_pairs']} albums are in the cache from both stores "
+             f"({sp['clap']['track_pairs']} tracks at the same position). A store probe trained on the other albums scores the "
+             f"iTunes version as more iTunes than the Deezer version of the same album in {sp['clap']['pairs_where_the_itunes_version_scores_more_itunes']} "
+             f"of {sp['clap']['album_pairs']} albums and {sp['clap']['track_pairs_where_the_itunes_clip_scores_more_itunes']} of "
+             f"{sp['clap']['track_pairs']} tracks, and the gap between the two versions is {sp['clap']['share_of_the_population_gap']:.0%} "
+             "of the gap between iTunes and Deezer albums at large. The whole store difference is reproduced by changing the store and "
+             f"keeping the recording. CLAP's cosine between the two stores' clips of one track is {cs['clap']['same_track_across']['mean']:.2f} "
+             f"on average; EffNet's is {cs['effnet']['same_track_across']['mean']:.2f} (median {cs['effnet']['same_track_across']['median']:.2f}), "
+             "so the two previews are probably much the same stretch of music, and CLAP hears them differently.",
+         ] if paired else [f"- The same recording from both stores could not be compared here: {no_pairs}."]),
          f"- In the lists: a Deezer seed's ten CLAP neighbours are {_pc(it_c['new Deezer seeds']['share_of_neighbours'])} iTunes albums "
          f"where its genre's make-up would give {_pc(it_c['new Deezer seeds']['same_genre_share'])}; an iTunes seed's are "
          f"{_pc(it_c['new iTunes seeds']['share_of_neighbours'])} against {_pc(it_c['new iTunes seeds']['same_genre_share'])} (new seeds). "
@@ -806,37 +819,40 @@ def markdown(res: dict) -> str:
             rows.append([label, str(pa["listing_pairs_with_the_same_track_positions"].get(kind, 0)), m, f("same_track_across"),
                          f("other_track_across"), f("other_track_within_listing")])
     L += _t(["Pair of listings", "Albums", "Model", "Same track, across the two", "Other track, across the two", "Other track, within one listing"], rows)
-    L += ["For EffNet the same track from the other store is close to identical (0.96, median 0.99) and another track of "
-          "the album is equally far whichever store it comes from. For CLAP the same track from the other store is at 0.77, not far "
-          "above another track from the same store (0.69), and another track from the other store is much further (0.53 against 0.69). "
-          "The two same-store rows are too few to read (2 albums, and those listings are other editions).", "",
-          "A store probe (iTunes vs Deezer) trained on the new albums that are not in these pairs, applied to the two versions of each album:", ""]
-    rows = []
-    for m in MODEL_NAMES:
-        x = sp[m]
-        md = x["mean_difference_direction"]
-        rows.append([m, f"{x['pairs_where_the_itunes_version_scores_more_itunes']} of {x['album_pairs']}",
-                     f"{x['track_pairs_where_the_itunes_clip_scores_more_itunes']} of {x['track_pairs']}",
-                     f"{x['mean_score_gap_between_the_two_versions']:.2f} (t {x['t']})", f"{x['mean_score_gap_between_itunes_and_deezer_albums_out_of_fold']:.2f}",
-                     f"{x['share_of_the_population_gap']:.0%}", f"{md['share_of_the_distance']:.0%} (t {md['t']})", f"{md['cosine_of_mean_pair_difference_with_it']:.2f}",
-                     f"{md['cosine_between_the_mean_differences_of_two_halves_of_the_pairs']:.2f}"])
-    L += _t(["Model", "Albums where the iTunes version scores more iTunes", "Tracks", "Mean score gap between the two versions",
-             "Mean gap between iTunes and Deezer albums (out of fold)", "Share of that gap", "Pair difference along the line between the store means, share of their distance",
-             "Cosine of the mean pair difference with that line", "Cosine between the mean differences of two halves of the pairs"], rows)
-    x = sp["clap"]
-    L += [f"In {x['pairs_where_the_itunes_version_is_the_earlier_runs']} of the {x['album_pairs']} pairs the iTunes version is the one the earlier run "
-          f"embedded and the Deezer one the one-pass run's; the iTunes version scores more iTunes in {x['of_those_the_itunes_version_scores_more_itunes']} "
-          "of them. With the 80 tracks embedded by both runs at cosine 1.0 (`sonic_measures.md`), the run is not what the probe reads. "
-          "EffNet's probe also leans the right way on most pairs, by about half of its (small) population gap: it has a faint trace of "
-          "the store too, which does not show in its lists.", "",
-          "## 5. Clips", ""]
+    if paired:
+        L += ["For EffNet the same track from the other store is close to identical (0.96, median 0.99) and another track of "
+              "the album is equally far whichever store it comes from. For CLAP the same track from the other store is at 0.77, not far "
+              "above another track from the same store (0.69), and another track from the other store is much further (0.53 against 0.69). "
+              "The two same-store rows are too few to read (2 albums, and those listings are other editions).", "",
+              "A store probe (iTunes vs Deezer) trained on the new albums that are not in these pairs, applied to the two versions of each album:", ""]
+        rows = []
+        for m in MODEL_NAMES:
+            x = sp[m]
+            md = x["mean_difference_direction"]
+            rows.append([m, f"{x['pairs_where_the_itunes_version_scores_more_itunes']} of {x['album_pairs']}",
+                         f"{x['track_pairs_where_the_itunes_clip_scores_more_itunes']} of {x['track_pairs']}",
+                         f"{x['mean_score_gap_between_the_two_versions']:.2f} (t {x['t']})", f"{x['mean_score_gap_between_itunes_and_deezer_albums_out_of_fold']:.2f}",
+                         f"{x['share_of_the_population_gap']:.0%}", f"{md['share_of_the_distance']:.0%} (t {md['t']})", f"{md['cosine_of_mean_pair_difference_with_it']:.2f}",
+                         f"{md['cosine_between_the_mean_differences_of_two_halves_of_the_pairs']:.2f}"])
+        L += _t(["Model", "Albums where the iTunes version scores more iTunes", "Tracks", "Mean score gap between the two versions",
+                 "Mean gap between iTunes and Deezer albums (out of fold)", "Share of that gap", "Pair difference along the line between the store means, share of their distance",
+                 "Cosine of the mean pair difference with that line", "Cosine between the mean differences of two halves of the pairs"], rows)
+        x = sp["clap"]
+        L += [f"In {x['pairs_where_the_itunes_version_is_the_earlier_runs']} of the {x['album_pairs']} pairs the iTunes version is the one the earlier run "
+              f"embedded and the Deezer one the one-pass run's; the iTunes version scores more iTunes in {x['of_those_the_itunes_version_scores_more_itunes']} "
+              "of them. With the 80 tracks embedded by both runs at cosine 1.0 (`sonic_measures.md`), the run is not what the probe reads. "
+              "EffNet's probe also leans the right way on most pairs, by about half of its (small) population gap: it has a faint trace of "
+              "the store too, which does not show in its lists.", ""]
+    else:
+        L += [f"The store probe on the two versions of an album was not run: {no_pairs}.", ""]
+    L += ["## 5. Clips", ""]
     L += _t(["Group", "Albums", "Clips", "Median clip (s)", "Most common lengths (s: clips)", "Under 25 s", "Median track (s)",
              "Albums on ranks 0 to 3", "In the planned order", "Mean position in the album (0 first, 1 last)", "Embedded by"],
             [[g, f"{c['albums']:,}", f"{c['clips']:,}", f"{c['clip_seconds']['median']:.2f}",
               ", ".join(f"{a:.2f}: {b:,}" for a, b in c["most_common_clip_seconds"]), _pc(c["clip_seconds"]["under_25_s"]),
               "–" if c["track_seconds_median"] is None else f"{c['track_seconds_median']:.0f}", _pc(c["albums_whose_clips_are_ranks_0_to_3"]),
               _pc(c["of_those_in_the_planned_order"]), "–" if c["mean_relative_position_in_album"] is None else f"{c['mean_relative_position_in_album']:.2f}",
-              ", ".join(c["embedded_by"])] for g, c in res["clips"].items()])
+              ", ".join(c["embedded_by"])] for g, c in res["clips"].items() if "note" not in c])
     L += ["The four groups use the same clips: the first four of the same bit-reversal plan (the existing albums' four CLAP clips are the "
           "first four of their eight), at the same places in the album, all about 30 s. The only thing the cache shows that differs by "
           "store is the decoded length (Deezer 29.99 s, iTunes 29.93 or 29.98 s), which says the files are encoded differently and nothing "
@@ -943,7 +959,8 @@ def main(argv: list[str] | None = None) -> int:
     def text(res: dict) -> str:
         md = markdown(res)
         return md if args.model == "clap" else md.replace(
-            "\n", f"\n\n**Cache model read as CLAP here: `{args.model}`. Only the albums that have it are in the tables.**\n", 1)
+            "\n", f"\n\n**Cache model read as CLAP here: `{args.model}`. Only the albums that have it are in the tables. The sentences of the "
+                  "verdict and under the tables were written for the `clap` run and are not rewritten: here, read the numbers.**\n", 1)
 
     if args.markdown_only:
         res = json.loads((args.out / f"{name}.json").read_text(encoding="utf-8"))

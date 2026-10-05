@@ -1,14 +1,15 @@
 # Audio for the 10k catalog: where it stands
 
-4 October 2026, evening. Branch `feat/audio-10k`, draft PR #31 (stacked on #26, which is stacked on #25). Tracking issue: #37. Nothing here is on the site.
+5 October 2026. Branch `feat/audio-10k`, draft PR #31 (stacked on #26, which is stacked on #25). Tracking issue: #37. Nothing here is on the site.
 
 ## In short
 
-- The catalog, the matcher and the embeddings for the RYM top 10,000 are built. 10,467 albums are keyed by RYM id, and every matched new album has 4 clips embedded by both models (CLAP and EffNet).
-- CLAP is not ready to replace EffNet on the site. CLAP's vectors carry the store a preview came from (Deezer's 128 kbit/s MP3 or Apple's AAC), so its lists almost never cross stores. EffNet is not affected.
-- A fix is being validated: give Apple clips Deezer's encoding (an MP3 round trip) before CLAP hears them. It needs about 11,600 Apple clips downloaded again.
-- Every quality number so far is an RYM-based proxy or store metadata. Nobody has listened.
-- The site data rebuild, the copy and the deploy wait for the owner's sign-off.
+- The catalog, the matcher and the embeddings for the RYM top 10,000 are built. 10,467 albums are keyed by RYM id.
+- The CLAP store is written: 10,235 of the 10,467 albums (Deezer 6,473, Apple 2,893, YouTube 869). The other 232: 228 have no audio, 2 are left out on purpose and 2 have EffNet clips but no usable CLAP clip. 302 albums are `none_available` (the link and the search gave nothing): those 228 and 74 that stay on too few preview clips.
+- CLAP heard the store a preview came from (Deezer's 128 kbit/s MP3 or Apple's AAC), so its lists almost never crossed stores. The fix is in: every clip that is not from Deezer goes through a stereo MP3 round trip before CLAP. In the cache this is the model `clap_mp3`, and the store is written from it.
+- On the final store, Deezer-sourced and Apple-sourced albums mix at about the genre make-up rate, and YouTube-sourced albums are in lists as often as the others. YouTube seeds still lean towards YouTube albums (31.2% against a make-up of 20.9%, n 869).
+- Every quality number is an RYM-based proxy on stored vectors. Nobody has listened. The listening page for the owner is built.
+- The site still runs on EffNet. The `SITE_MODEL` switch, the site data rebuild, the copy and the deploy wait for the owner's go-ahead.
 
 ## Goal
 
@@ -25,8 +26,8 @@ Grow the site from 4,081 albums to the RYM top 10,000 with a sonic block built f
 | Clips per album | 4 is the standard. No top-up to 8 |
 | Albums with no previews | Free full-length sources are allowed. YouTube through yt-dlp is approved |
 | Track-count harvest sessions | Not needed. The sheet's store links are trusted |
-| YouTube search for no-audio albums whose sheet link is missing or dead (4 Oct) | Approved. Built on 5 Oct (`rmr_audio.fulllength --search`), tried on 30 albums; the full run is not started |
-| YouTube full-length audio for albums with too few previews or one very long track, for example Long Season (4 Oct) | Approved. Built on 5 Oct (`--edge-cases`), tried on 20 albums including Long Season; the full run is not started |
+| YouTube search for no-audio albums whose sheet link is missing or dead (4 Oct) | Approved. Built and run over the catalog on 5 Oct (`rmr_audio.fulllength --search`) |
+| YouTube full-length audio for albums with too few previews or one very long track, for example Long Season (4 Oct) | Approved. Built and run over the catalog on 5 Oct (`--edge-cases --search`) |
 
 Still with the owner: the 12 yes/no questions in `docs/audio-10k-pair-questions.md`. Each default is already applied, so only a wrong default needs an answer.
 
@@ -36,39 +37,51 @@ Still with the owner: the 12 yes/no questions in `docs/audio-10k-pair-questions.
 - **Store rekeyed.** The existing albums' numbers are unchanged, checked against a reference recorded before the change.
 - **Same-album pairs.** 43 off-chart albums were paired with their chart row by hand. `catalog/doubtful_pairs.csv` is empty.
 - **Matcher.** Uses the sheet's Deezer and Apple ids directly, with an edition rule, flags and a dry run. All new albums are matched: about 5,640 have previews and about 780 have none (stage 1 counted 5,642 and 787 of 6,429, before the 43 pairs were merged).
-- **One-pass embedder.** One download per clip, embedded by both models. 4 clips are embedded for every matched new album.
-- **Full-length audio.** A YouTube fetch-and-embed command. A 30-album trial embedded 23. The full run is paused at 65 of 537.
-- **CLAP store.** `data-pipeline/audio/clap/` sits beside the EffNet store. The build switch (`SITE_MODEL` in `rmr_pipeline/audio_store.py`) still says EffNet.
-- **Match overrides.** 14 added, 7 of them for existing albums that were found on the wrong listing. Those 7 are not embedded again yet.
+- **One-pass embedder.** One download per clip, embedded by both models. 4 clips are embedded for every matched new album. The `clap_mp3` vectors of the Apple clips came from a second download of each clip.
+- **Full-length audio from YouTube.** All runs are finished. The sheet's links: 620 albums embedded, 61 unavailable, 23 single tracks, 14 mismatches. The search, for albums with no usable link and for the edge cases: 250 found, 302 none, 2 failed. The 2 failures are HTTP 403 on every retry: Nektar "Remember the Future" (`Album19113`) and Skepticism "Aes" (`sp:2rf4I3JAnmvTqtkZVKcxkv`). Both stay on their preview clips.
+- **The search picks.** 249 of the 250 picks matched on title and artist. The other one matched on title alone and is wrong, see the next point. Picks are judged from titles, uploaders and lengths. Nobody has listened.
+- **Two albums left out of the CLAP store.** A Clockwork Orange (`Album999417`) and Barry Lyndon (`Album739618`) sit on unrelated store listings. For Barry Lyndon the search found nothing (the best candidate scored 48, under the 65 needed). For A Clockwork Orange the search took another record, "Rollins Band - A Clockwork Orange Stage (2000) [Full Album]" (score 65.5): a Various Artists album skips the artist check. Both are kept out with `--exclude Album999417,Album739618`, which has to be passed on every store write. The 8 wrong windows of A Clockwork Orange are still in the local cache, and its row in `fulllength.csv` still says `embedded`.
+- **Two albums with EffNet clips and no CLAP clip.** Okkervil River "Black Sheep Boy" (`Album229104`) and Slum Village "Fantastic, Vol. 2" (`Album30723`): Deezer had no preview for their clips when CLAP was embedded (the cache says `no_preview` for all four); the EffNet clips are from the earlier run. `album_status` marks both `embed`. They are not in the CLAP store.
+- **CLAP store.** `data-pipeline/audio/clap/`, beside the EffNet store, written from `clap_mp3` on 5 October with the transform refitted: 10,235 albums. The build switch (`SITE_MODEL` in `rmr_pipeline/audio_store.py`) still says EffNet.
+- **Match overrides.** 14 added, 7 of them for existing albums that were found on the wrong listing. Those 7 are embedded from their right listings. The CLAP store and `album_status` take the listing that `match_overrides.json` forces. `matches.csv` is unchanged, because it records what the EffNet store was embedded from. The EffNet store still has the old listings for those 7 until a `sync`.
+- **Measurements and listening page.** `measure.py` and `source_effect.py` were run on the final store (5 October). The listening page is built on it (`experiments/audio_10k/results/listening.html`, local, not committed).
 
 Details and tables: `docs/audio-10k-stage1.md`. Its counts are from the morning of 4 October, before the pairing (10,510 albums).
 
-## The problem: CLAP hears the store
+## The problem that was found: CLAP hears the store
 
-- A Deezer seed's ten CLAP neighbours are 2.3% Apple-sourced albums, where the make-up of its genre would give about 29% (n 2,869 new Deezer seeds). EffNet gives 27.1% for the same seeds.
-- The existing albums are almost all from Deezer and about half of the new ones are from Apple, so this also keeps new and existing albums apart.
+- As first stored, a Deezer seed's ten CLAP neighbours were 2.3% Apple-sourced albums, where the make-up of its genre would give about 29% (n 2,869 new Deezer seeds). EffNet gave 27.1% for the same seeds.
+- The existing albums are almost all from Deezer and about half of the new ones are from Apple, so this also kept new and existing albums apart.
 - On 349 tracks fetched from both stores (120 albums), the cause is how a 128 kbit/s stereo MP3 codes the 12 to 14 kHz band. It is not the excerpt and not loudness.
-- YouTube audio is mildly separable too (25 albums).
+- YouTube audio was mildly separable too (25 albums).
 
-Fixes measured so far, all on proxies:
+The fix adopted (4 October): a stereo MP3 round trip, 128 kbit/s, on every clip that is not from Deezer, before CLAP (`rmr_audio/mp3trip.py`, cache model `clap_mp3`). About 11,600 Apple clips and the YouTube albums were fetched once more for it. A linear map on the stored vectors was also measured and not adopted: it left about ten points on the Apple side and cannot be applied to YouTube audio.
 
-| Fix | Result | Cost |
-|---|---|---|
-| Stereo MP3 round trip on Apple clips before CLAP | On the 349 paired tracks, neighbours from the other store go from 13.3% to 49.1% (50% is even) | About 11,600 Apple clips downloaded and embedded again. Deezer clips stay |
-| Linear map on the stored Apple vectors, fitted on the pairs | On the catalog, closes about 85% of the gap (Deezer seeds 2.3% to 25.6%, Apple seeds 91.7% to 47.3% against a make-up of 37.7%) | No downloads. Leaves about ten points on the Apple side, and albums on YouTube audio drop out of lists |
+The final store, whole catalog (5 October, `experiments/audio_10k/results/sonic_measures.clap_mp3.md`). All proxies:
 
-In progress: the round trip is in the pipeline as the `clap_mp3` variant (`rmr_audio/mp3trip.py`) and is being validated on 250 catalog albums. Until a fix is in and the vectors are embedded again, CLAP stays off the site.
+| Seeds | n | Apple neighbours | Make-up | Mean N10 | Never recommended |
+|---|---|---|---|---|---|
+| Deezer-sourced | 6,473 | 24.9% | 26.7% | 10.1 | 2.2% |
+| Apple-sourced | 2,893 | 35.0% | 34.8% | 9.8 | 1.9% |
+| YouTube-sourced | 869 | 24.7% | 26.8% | 9.7 | 2.2% |
+
+N10 is how many lists an album is in (10 on average). YouTube seeds get 31.2% YouTube neighbours against a make-up of 20.9%, so a lean towards their own source remains. The YouTube albums are also a different population (albums no store carries), so the numbers cannot say how much of that is the audio.
 
 The record of the investigation is `experiments/audio_10k/REPORT.md`. The result files are listed there.
 
 ## Left to do
 
-1. Finish the encoding fix and embed the affected clips again.
-2. Resume the YouTube run (65 of 537 done).
-3. Run the two things approved on 4 October over the catalog: the YouTube search for missing or dead links (`fulllength --search`) and full-length audio for the edge-case albums (`fulllength --edge-cases --search`). Both are built and tried on a sample (5 October); the commands are in `data-pipeline/README.md`. Picks are judged from titles, uploaders and lengths. Nobody has listened.
-4. Embed the 7 wrong-listing albums again from their corrected listings.
-5. Write the final CLAP store, refit the transform, run the measurements, and build the listening page for the owner.
-6. Only with the owner's sign-off: rebuild the site data (descriptors for the new albums, covers, thumbnails, listen links for albums without Spotify), update the copy, deploy.
+1. The owner listens. The page is `experiments/audio_10k/results/listening.html` (written by `listening_page.py` on the `clap_mp3` store, not committed). CLAP is judged by ear, not by the proxies.
+2. Only with the owner's go-ahead: switch `SITE_MODEL` to CLAP, rebuild the site data (descriptors for the new albums, covers, thumbnails, listen links for albums without Spotify: issue #39), update the copy, deploy.
+
+Open, small:
+
+- The 8 wrong windows of A Clockwork Orange in the local cache, and its `fulllength.csv` row. Deleting them waits for the owner's OK. Until then `--exclude` keeps the album out of the store.
+- Nektar "Remember the Future" and Skepticism "Aes": the YouTube download can be tried again later.
+- Okkervil River "Black Sheep Boy" and Slum Village "Fantastic, Vol. 2" have no CLAP vector.
+- 228 albums have no audio at all.
+- A `sync` of the EffNet store, so that the 7 corrected albums use their right listings there too.
+- The experiment's row in the `CLAUDE.md` index, through a documents-only PR to `main`.
 
 ## How audio is handled
 
@@ -92,22 +105,23 @@ Committed on the branch:
 | `docs/audio-10k-stage1.md` | Stage 1 report: matching, clips, albums with no audio, duplicate listings |
 | `docs/audio-10k-pair-questions.md` | The 12 questions for the owner, with the defaults applied |
 | `experiments/audio_10k/REPORT.md` | The store-effect investigation |
-| `experiments/audio_10k/results/sonic_measures.md` | Proxy measures of the CLAP block over the catalog (provisional) |
+| `experiments/audio_10k/results/sonic_measures.clap_mp3.md`, `source_effect.clap_mp3.md` | Proxy measures of the final CLAP store over the catalog (5 October). The files without `clap_mp3` in the name are the same measures before the fix |
 | `data-pipeline/README.md` | The stores, the matcher, catalog and keys, commands |
 | `data-pipeline/catalog/albums.csv` | The catalog |
 | `data-pipeline/audio/keys.csv`, `matches.csv`, `match_overrides.json` | Keys, one match row per album, hand corrections |
 | `data-pipeline/audio/fulllength.csv` | Outcome of each full-length fetch |
 | `data-pipeline/audio/album_status.csv`, `album_status.md` | One row per album with its state and next step, and the counts |
-| `data-pipeline/audio/clap/` | The CLAP store |
+| `data-pipeline/audio/clap/` | The CLAP store, written from `clap_mp3`: 10,235 albums |
 
 Local only, gitignored, on the laptop that ran the work:
 
 | Path | What |
 |---|---|
-| `data-pipeline/.cache/audio/onepass.sqlite` | The clip cache: per-clip embeddings of both models. 384 MB after stage 1 |
-| `data-pipeline/.cache/audio/onepass.before-rekey.sqlite` | Its backup from before the rekey |
+| `data-pipeline/.cache/audio/onepass.sqlite` | The clip cache: per-clip embeddings (`effnet`, `clap`, `clap_mp3`). The only copy. 630 MB on 5 October |
+| `data-pipeline/.cache/audio/onepass.before-rekey.sqlite` | Its backup from before the rekey. Other backups beside it: `onepass.before-clap_mp3.sqlite`, `onepass.before-search-trial.sqlite` |
 | `data-pipeline/.cache/audio/http.sqlite`, `data-pipeline/.cache/*.log` | Cached store API answers and run logs |
 | `experiments/audio_10k/cache/` | The sheet export (`rym10k_sheet.csv`) and the store-effect caches (embeddings and measurements, no audio) |
+| `experiments/audio_10k/results/listening.html` | The listening page for the owner |
 | `data-pipeline/.venv`, `.venv-audio`, `.venv-fetch`, and the torch environment | Build, audio (Essentia), yt-dlp and CLAP environments |
 
 If the caches are lost, nothing committed is lost, but the clips have to be fetched again. Stage 1 took about 11 hours of matching and 6 hours of embedding.
@@ -122,14 +136,14 @@ nice -n 19 .venv-audio/bin/python -m rmr_audio match-new                    # ma
 nice -n 19 .venv-audio/bin/python -m rmr_audio.onepass run --clips 4        # embed, both models, one download per clip
 .venv-audio/bin/python -m rmr_audio.onepass status --clips 4
 nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength                   # YouTube for albums with no previews; resumes
-nice -n 19 .venv/bin/python -m rmr_audio.modelstore write                   # the CLAP store from the cache
+nice -n 19 .venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir audio/clap --exclude Album999417,Album739618   # the CLAP store from the cache
 nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap
 .venv/bin/python scripts/stage1_report.py                                   # the stage 1 numbers
 .venv/bin/python -m rmr_audio.album_status                                  # audio/album_status.csv and .md: every album's state
 .venv-audio/bin/python -m pytest tests_audio && .venv/bin/python -m pytest  # tests, no network
 ```
 
-Measurements and the listening page are in `experiments/audio_10k/` (`measure.py`, `source_effect.py`, `listening_page.py`).
+Measurements and the listening page are in `experiments/audio_10k/` (`measure.py`, `source_effect.py`, `listening_page.py`); the commands are in section 6 of its `REPORT.md`.
 
 ## Issues
 

@@ -64,10 +64,12 @@ The CLAP store is not appended to. It is written whole from the one-pass clip ca
 
 ```bash
 cd data-pipeline
-nice -n 19 .venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir audio/clap   # audio/clap/embeddings, manifest.json
+nice -n 19 .venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir audio/clap --exclude Album999417,Album739618   # audio/clap/embeddings, manifest.json
 nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap   # audio/clap/transform.npz
-.venv/bin/python -m rmr_audio.modelstore status
+.venv/bin/python -m rmr_audio.modelstore status --exclude Album999417,Album739618
 ```
+
+`--exclude Album999417,Album739618` leaves out A Clockwork Orange and Barry Lyndon: the only audio the cache has for them is of other records (a wrong YouTube pick and an unrelated store listing), and no right source was found. The flag is not remembered anywhere, so pass it on every `write`, or the two albums come back into the store.
 
 Both need only numpy, load no model and download nothing. Without `--model` and `--audio-dir`, `write` would put the cache's plain `clap` rows in `audio/clap/`; `tests/test_modelstore.py` fails on such a store. `write` opens the cache read-only and writes nothing when the store already holds exactly what the cache and the catalog give. An album vector is the mean of the album's first four ok clips in rank order (a failed clip does not use up a place; an album with fewer uses what it has; windows of full-length audio replace the previews and all of them count), from one listing, kept as float16 with `n_clips` and `source`. The listing is the one `match_overrides.json` forces when it has an ok clip for the model, else the one `matches.csv` names, else the one with the most ok clips. `matches.csv` records what the EffNet store was embedded from, so for an album whose listing was corrected by hand it still names the old listing; the override comes first. While the override's listing is not embedded, the album stays on the other listing and `write` (and `--dry-run`) prints how many such albums there are, with their keys. `write --exclude KEY[,KEY...]` leaves albums out of the store (an album whose only audio is of another record) and names them in its first line; `status --exclude` with the same keys says whether they are in the store. For the Deezer albums the earlier CLAP run covered it is `clap_catalog.load(4)`'s vector to 1e-8 (a Deezer clip's `clap_mp3` vector is its `clap` vector). A cache key the catalog no longer has is followed through `keys.csv`.
 
@@ -82,7 +84,7 @@ cd data-pipeline
 .venv-audio/bin/python -m rmr_audio.onepass copy                                   # Deezer clips: the clap rows, copied; no network, no model
 nice -n 19 .venv-audio/bin/python -m rmr_audio.onepass run --models clap_mp3 --itunes-interval 3.4   # the other preview clips: fetched again, clap_mp3 only
 nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength --models effnet,clap,clap_mp3   # full-length windows: all three from one download; embedded albums are fetched once more for clap_mp3 alone
-.venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir audio/clap   # the CLAP store, from the variant's rows (any other folder to look at it first)
+.venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --audio-dir audio/clap --exclude Album999417,Album739618   # the CLAP store, from the variant's rows (any other folder to look at it first)
 ```
 
 `run --models clap_mp3` takes, per album, the clips that are ok for `clap` (the clips its mean is over), downloads each once and embeds it for the variant only: EffNet and `clap` are not computed, the EffNet child is not started, and no `effnet` or `clap` row is written. A `clap` clip whose preview the store no longer lists is recorded as `no_preview` ("gone") and the next track in the usual order stands in; the run prints both counts. `--check-baseline` also embeds each fetched clip for `clap` and prints its cosine with the stored vector, without storing it. A new album is embedded with `--models effnet,clap,clap_mp3`: one download per clip.
