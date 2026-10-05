@@ -1,8 +1,10 @@
 """Signal helpers for store_effect_fix.py: the preprocessing variants (each maps mono 44.1 kHz audio to mono
 44.1 kHz audio, so the CLAP recipe after it is unchanged), the waveform diagnostics and the alignment of
-two excerpts of one track. numpy and scipy only; nothing here reads or writes a file.
+two excerpts of one track. numpy and scipy only (and rmr_audio.mp3trip, which is numpy only); nothing here reads or writes a file.
 """
 import subprocess
+import sys
+from pathlib import Path
 
 import numpy as np
 from scipy import signal
@@ -67,24 +69,11 @@ def mp3_roundtrip(x: np.ndarray, ffmpeg: str, kbps: int = 128) -> np.ndarray:
     return (y[:len(x)] if len(y) >= len(x) else np.pad(y, (0, len(x) - len(y)))).astype(np.float32)
 
 
-def mp3_stereo(channels: np.ndarray, ffmpeg: str, kbps: int = 128) -> np.ndarray:
-    """The decoded preview with its channels, through libmp3lame at 128 kbit/s (joint stereo, LAME's
-    defaults: what a Deezer preview is, as far as ffprobe shows) and back, then (L+R)/2. For an iTunes
-    preview this imitates the Deezer encoding; a Deezer preview gets encoded a second time."""
-    n_ch = channels.shape[1]
-    enc = subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-f", "f32le", "-ar", str(SR), "-ac", str(n_ch), "-i", "pipe:0",
-                          "-c:a", "libmp3lame", "-b:a", f"{kbps}k", "-f", "mp3", "pipe:1"],
-                         input=np.ascontiguousarray(channels, "<f4").tobytes(), capture_output=True, timeout=120)
-    if enc.returncode or not enc.stdout:
-        raise RuntimeError(enc.stderr.decode(errors="replace")[:300] or "mp3 encode failed")
-    dec = subprocess.run([ffmpeg, "-v", "error", "-nostdin", "-f", "mp3", "-i", "pipe:0", "-ar", str(SR),
-                          "-c:a", "pcm_f32le", "-f", "f32le", "pipe:1"], input=enc.stdout, capture_output=True, timeout=120)
-    if dec.returncode or not dec.stdout:
-        raise RuntimeError(dec.stderr.decode(errors="replace")[:300] or "mp3 decode failed")
-    y = np.frombuffer(dec.stdout, "<f4")
-    y = y[:len(y) // n_ch * n_ch].reshape(-1, n_ch).mean(axis=1, dtype=np.float32)
-    n = len(channels)
-    return (y[:n] if len(y) >= n else np.pad(y, (0, n - len(y)))).astype(np.float32)
+# The stereo round trip is the pipeline's now (the `clap_mp3` variant): one copy of it, in rmr_audio.mp3trip.
+# mp3_stereo(channels, ffmpeg, kbps=128): the decoded preview with its channels through libmp3lame at
+# 128 kbit/s (joint stereo, LAME's defaults: what a Deezer preview is) and back, then (L+R)/2.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "data-pipeline"))
+from rmr_audio.mp3trip import mp3_stereo  # noqa: E402,F401
 
 
 VARIANTS = {
