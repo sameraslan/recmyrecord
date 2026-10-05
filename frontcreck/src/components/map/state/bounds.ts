@@ -1,6 +1,7 @@
 import { interpolated, type MapData } from "../data";
+import { NAMES_BAND_PX } from "../theme";
 import type { MapPadding } from "../types";
-import { FIT_ZOOM_MAX, FIT_ZOOM_MIN, pxPerWorld, zoomForPxPerWorld } from "./zoomLimits";
+import { COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, MAX_ZOOM, pxPerWorld, zoomForPxPerWorld } from "./zoomLimits";
 
 export interface Bounds {
   minX: number;
@@ -103,6 +104,68 @@ export function fitView(cloud: Bounds, area: FitArea): { zoom: number; center: {
     zoom,
     center: { x: c.x - ((pad.left - pad.right) / 2) * wpp, y: c.y + ((pad.top - pad.bottom) / 2) * wpp },
   };
+}
+
+/** Overview: CSS px kept clear at each side of the 1st..99th percentile span (prototype camera.js L31, `- 48`). */
+export const OVERVIEW_SIDE_PAD_PX = 24;
+/** Overview: the closest it frames, half a pixel under the covers at which names go (prototype `BAND_B - 0.5`),
+ * so the opening view always shows names and never loads a cover sheet (ATLAS_LOAD_PX is 13). */
+export const OVERVIEW_COVER_MAX_PX = NAMES_BAND_PX - 0.5;
+
+export interface OverviewExtent {
+  /** 1st and 99th percentile of x, and the median of y, of one layout (world units). */
+  x1: number;
+  x99: number;
+  medY: number;
+}
+
+export interface OverviewArea {
+  /** Canvas size in CSS px. */
+  width: number;
+  height: number;
+  /** CSS px covered by the album panel on the left. */
+  insetLeft: number;
+  /** CSS px covered by the phone slider panel at the bottom (MapInput.bottomCover; 0 on desktop). */
+  bottomCover: number;
+}
+
+/** The Overview's percentiles of a flat [x0, y0, ...] layout, with the prototype's quantile rule
+ * (`sorted[floor(q * (n - 1))]`, prototype data.js L7 and L122). Sorts copies, never the caller's array. */
+export function overviewExtent(xy: Float32Array): OverviewExtent {
+  const n = Math.floor(xy.length / 2);
+  if (n === 0) return { x1: 0, x99: 0, medY: 0 };
+  const xs = new Float32Array(n);
+  const ys = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    xs[i] = xy[i * 2];
+    ys[i] = xy[i * 2 + 1];
+  }
+  xs.sort();
+  ys.sort();
+  const at = (arr: Float32Array, q: number) => arr[Math.min(n - 1, Math.max(0, Math.floor(q * (n - 1))))];
+  return { x1: at(xs, 0.01), x99: at(xs, 0.99), medY: at(ys, 0.5) };
+}
+
+/**
+ * The Overview, the framing /map opens at (prototype camera.js L27-34, `Cam.fitOverview`): the 1st..99th
+ * percentile x-span fills the width right of the album panel less 24 px a side, capped at 12.5 px covers, never
+ * wider than the Whole map (`wholeZoom`, fitView's zoom). Centred on the span in x and on the median row in y; on a
+ * phone the median row sits in the middle of the band above the slider panel (the prototype's free rectangle).
+ * Regions above and below run off screen. camera.position is the centre of the visible area (applyFrustum).
+ */
+export function fitOverview(ext: OverviewExtent, wholeZoom: number, area: OverviewArea): { zoom: number; center: { x: number; y: number } } {
+  const { width, height, insetLeft, bottomCover } = area;
+  const whole = pxPerWorld(wholeZoom, height);
+  const across = Math.max(width - insetLeft - 2 * OVERVIEW_SIDE_PAD_PX, 40) / Math.max(ext.x99 - ext.x1, 1e-6);
+  const cap = OVERVIEW_COVER_MAX_PX / COVER_WORLD;
+  const zoom = Math.min(MAX_ZOOM, zoomForPxPerWorld(Math.max(whole, Math.min(across, cap)), height));
+  const ppw = pxPerWorld(zoom, height);
+  return { zoom, center: { x: (ext.x1 + ext.x99) / 2, y: ext.medY - bottomCover / 2 / ppw } };
+}
+
+/** The Overview of the layout at `sliderT` (the positions on screen). */
+export function overviewView(data: MapData, sliderT: number, area: OverviewArea, wholeZoom: number): { zoom: number; center: { x: number; y: number } } {
+  return fitOverview(overviewExtent(interpolatedPositions(data, sliderT)), wholeZoom, area);
 }
 
 export interface ViewportWorldRect {

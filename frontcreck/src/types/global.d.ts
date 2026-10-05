@@ -44,6 +44,10 @@ declare global {
     /** Set before the map loads by review captures, measurements and tests: 'force' draws the gas with the lighter
      * shader on any renderer, 'off' with the full shader on any renderer. */
     __rmrGasLite?: 'force' | 'off';
+    /** Set before the map loads by review captures, measurements and tests: the framing /map opens at on this
+     * page load ('whole': the opening view of the site before the Trifid theme; 'overview': the default). It
+     * changes nothing on Home, About, 404 or an album. */
+    __rmrOpen?: 'whole' | 'overview';
   }
 }
 

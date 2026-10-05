@@ -1,16 +1,25 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import type { MapData } from "../data";
+import { buildMapData, type MapData } from "../data";
+import { NAMES_BAND_PX } from "../theme";
 import {
+  OVERVIEW_COVER_MAX_PX,
+  OVERVIEW_SIDE_PAD_PX,
   cloudCenter,
+  fitOverview,
   fitView,
   getCloudBounds,
+  interpolatedPositions,
   nudgeVector,
+  overviewExtent,
+  overviewView,
   percentileBounds,
   viewportWorldRect,
   visibleFractionThreshold,
 } from "./bounds";
-import { FIT_ZOOM_MAX, FIT_ZOOM_MIN } from "./zoomLimits";
+import { ATLAS_LOAD_PX, COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, pxPerWorld, zoomForPxPerWorld } from "./zoomLimits";
 
 function fixtureData(xy: Array<[number, number]>): MapData {
   const flat = new Float32Array(xy.flat());
@@ -237,5 +246,141 @@ describe("visibleFractionThreshold", () => {
 
   it("tolerates float noise from the release glide landing on fitZoom", () => {
     expect(visibleFractionThreshold(1.0069727591127577, 1.0069727591127575)).toBe(0.6);
+  });
+});
+
+describe("overviewExtent", () => {
+  it("reads the 1st and 99th percentile of x and the median y with the prototype's quantile rule", () => {
+    // 101 points: x = 0..100 (shuffled), y = 100 - x. floor(0.01 * 100) = 1, floor(0.99 * 100) = 99, floor(0.5 * 100) = 50.
+    const pts: [number, number][] = Array.from({ length: 101 }, (_, i) => [(i * 37) % 101, 100 - ((i * 37) % 101)]);
+    expect(overviewExtent(flat(pts))).toEqual({ x1: 1, x99: 99, medY: 50 });
+  });
+
+  it("does not sort or change the caller's array", () => {
+    const xy = flat([[3, 1], [1, 3], [2, 2]]);
+    const copy = Float32Array.from(xy);
+    overviewExtent(xy);
+    expect(xy).toEqual(copy);
+  });
+});
+
+describe("fitOverview (prototype Cam.fitOverview, camera.js L27-34)", () => {
+  const ext = { x1: -0.4, x99: 0.6, medY: 0.1 };
+  const area = { width: 1440, height: 836, insetLeft: 0, bottomCover: 0 };
+
+  it("fills the width less 24 px a side with the 1st..99th percentile span, centred on it and on the median row", () => {
+    const wholeZoom = zoomForPxPerWorld(500, 836);
+    const v = fitOverview(ext, wholeZoom, area);
+    // (1440 - 48) / 1.0 = 1392 px per world unit, under the 12.5 px cover cap (1838.2).
+    expect(pxPerWorld(v.zoom, 836)).toBeCloseTo(1392, 6);
+    expect(v.center.x).toBeCloseTo(0.1, 12);
+    expect(v.center.y).toBeCloseTo(0.1, 12);
+    expect(OVERVIEW_SIDE_PAD_PX).toBe(24);
+  });
+
+  it("is capped at 12.5 px covers, half a pixel under the names band", () => {
+    expect(OVERVIEW_COVER_MAX_PX).toBe(NAMES_BAND_PX - 0.5);
+    expect(OVERVIEW_COVER_MAX_PX).toBe(12.5);
+    const narrow = { x1: -0.1, x99: 0.1, medY: 0 }; // (1440 - 48) / 0.2 = 6960 px per world unit wanted
+    const v = fitOverview(narrow, zoomForPxPerWorld(500, 836), area);
+    expect(pxPerWorld(v.zoom, 836) * COVER_WORLD).toBeCloseTo(12.5, 9);
+    // under the zoom at which cover sheets start to load, so the opening view fetches none
+    expect(12.5).toBeLessThan(ATLAS_LOAD_PX);
+  });
+
+  it("never frames wider than the whole map: a narrow window keeps the whole map's scale", () => {
+    const wide = { x1: -2, x99: 2, medY: 0 }; // (390 - 48) / 4 = 85.5 px per world unit, under the whole map's 200
+    const v = fitOverview(wide, zoomForPxPerWorld(200, 784), { width: 390, height: 784, insetLeft: 0, bottomCover: 165 });
+    expect(pxPerWorld(v.zoom, 784)).toBeCloseTo(200, 6);
+  });
+
+  it("on a phone sets the median row in the middle of the band above the slider panel", () => {
+    const v = fitOverview(ext, zoomForPxPerWorld(100, 784), { width: 390, height: 784, insetLeft: 0, bottomCover: 165 });
+    const ppw = pxPerWorld(v.zoom, 784); // (390 - 48) / 1.0 = 342
+    expect(ppw).toBeCloseTo(342, 6);
+    // camera.position is the canvas centre (y 392 of 784); the median row sits at (784 - 165) / 2 = 309.5, 82.5 px higher.
+    const medianRowScreenY = 784 / 2 - (ext.medY - v.center.y) * ppw;
+    expect(medianRowScreenY).toBeCloseTo((784 - 165) / 2, 6);
+    expect(v.center.x).toBeCloseTo(0.1, 12);
+  });
+
+  it("fits the width right of the album panel", () => {
+    const a = fitOverview(ext, 0.2, area);
+    const b = fitOverview(ext, 0.2, { ...area, insetLeft: 400 });
+    expect(pxPerWorld(b.zoom, 836)).toBeCloseTo(1440 - 400 - 48, 6);
+    expect(pxPerWorld(a.zoom, 836)).toBeCloseTo(1440 - 48, 6);
+  });
+});
+
+/** The committed catalogue and layouts: the scales Task 0 records are those of the real map. */
+function realData(): MapData {
+  const dir = path.resolve(process.cwd(), "public/data");
+  const albums = JSON.parse(fs.readFileSync(path.join(dir, "albums.json"), "utf8"));
+  const positions = JSON.parse(fs.readFileSync(path.join(dir, "positions.json"), "utf8"));
+  return buildMapData(albums, positions);
+}
+const STOP_T = { sonic: 0, balanced: 0.5, mood: 1 } as const;
+const DESKTOP_FIT = { top: 55, right: 40, bottom: 115, left: 40 }; // MapStage DESKTOP_FIT_PADDING
+const PHONE_FIT = { top: 90, right: 40, bottom: 165 + 4, left: 40 }; // MapStage PHONE_FIT_PADDING with the fallback cover
+
+describe("the Overview on the real map (Task 0's recorded scales)", () => {
+  const data = realData();
+  const cases = [
+    { name: "desktop 1440 x 900", width: 1440, height: 836, pad: DESKTOP_FIT, cover: 0, whole: { balanced: 596.653, sonic: 708.479, mood: 618.156 }, overview: { balanced: 1639.476, sonic: 1534.717, mood: 1838.235 } },
+    { name: "phone 390 x 844", width: 390, height: 784, pad: PHONE_FIT, cover: 165, whole: { balanced: 267.847, sonic: 286.498, mood: 487.285 }, overview: { balanced: 402.802, sonic: 377.064, mood: 584.842 } },
+  ] as const;
+
+  for (const c of cases) {
+    for (const stop of ["balanced", "sonic", "mood"] as const) {
+      it(`${c.name}, ${stop}: whole ${c.whole[stop]} and Overview ${c.overview[stop]} px per world unit`, () => {
+        const t = STOP_T[stop];
+        const whole = fitView(getCloudBounds(data, t), { width: c.width, height: c.height, insetLeft: 0, padding: c.pad });
+        expect(pxPerWorld(whole.zoom, c.height)).toBeCloseTo(c.whole[stop], 2);
+        const ov = overviewView(data, t, { width: c.width, height: c.height, insetLeft: 0, bottomCover: c.cover }, whole.zoom);
+        expect(pxPerWorld(ov.zoom, c.height)).toBeCloseTo(c.overview[stop], 2);
+        // Covers stay dots and names show: under 13 px everywhere, at most 12.5.
+        expect(pxPerWorld(ov.zoom, c.height) * COVER_WORLD).toBeLessThanOrEqual(12.5 + 1e-9);
+      });
+    }
+  }
+
+  it("desktop Balanced: the camera the map opens at", () => {
+    const whole = fitView(getCloudBounds(data, 0.5), { width: 1440, height: 836, insetLeft: 0, padding: DESKTOP_FIT });
+    const ov = overviewView(data, 0.5, { width: 1440, height: 836, insetLeft: 0, bottomCover: 0 }, whole.zoom);
+    expect(ov.zoom).toBeCloseTo(2.15721, 4);
+    expect(ov.center.x).toBeCloseTo(0.033325, 5);
+    expect(ov.center.y).toBeCloseTo(0, 6);
+    // the Whole map, unchanged from today (part 2 quotes 0.784 * 836 / 1.1 = 595.8, the zoom rounded)
+    expect(whole.zoom).toBeCloseTo(0.78507, 4);
+  });
+
+  it("is never nudged by CameraBounds: the opening view is inside the padded cloud box at every window checked", () => {
+    const sizes = [
+      [1440, 836, 0], [1920, 1016, 0], [2560, 1376, 0], [1366, 704, 0], [1024, 704, 0], [900, 536, 0],
+      [390, 784, 165], [360, 580, 165], [430, 872, 165], [844, 330, 165], [768, 964, 165],
+    ] as const;
+    for (const [w, h, cover] of sizes) {
+      for (const stop of ["balanced", "sonic", "mood"] as const) {
+        const t = STOP_T[stop];
+        const cloud = getCloudBounds(data, t);
+        const pad = cover ? { ...PHONE_FIT, bottom: cover + 4 } : DESKTOP_FIT;
+        const whole = fitView(cloud, { width: w, height: h, insetLeft: 0, padding: pad });
+        const ov = overviewView(data, t, { width: w, height: h, insetLeft: 0, bottomCover: cover }, whole.zoom);
+        const halfH = 0.55 / ov.zoom; // FRUSTUM_HALF_HEIGHT / zoom
+        const viewport = { halfW: halfH * (w / h), halfH };
+        // CameraBounds' MARGIN (0.04) and its threshold above the fitted zoom
+        expect(nudgeVector(ov.center, viewport, cloud, 0.04, visibleFractionThreshold(ov.zoom, whole.zoom)), `${w} x ${h} ${stop}`).toBeNull();
+      }
+    }
+  });
+
+  it("frames the same stop's own albums: the 1st and 99th percentile sit 24 px inside the sides on desktop", () => {
+    const xy = interpolatedPositions(data, 0.5);
+    const e = overviewExtent(xy);
+    const whole = fitView(getCloudBounds(data, 0.5), { width: 1440, height: 836, insetLeft: 0, padding: DESKTOP_FIT });
+    const ov = overviewView(data, 0.5, { width: 1440, height: 836, insetLeft: 0, bottomCover: 0 }, whole.zoom);
+    const ppw = pxPerWorld(ov.zoom, 836);
+    expect(720 + (e.x1 - ov.center.x) * ppw).toBeCloseTo(24, 6);
+    expect(720 + (e.x99 - ov.center.x) * ppw).toBeCloseTo(1440 - 24, 6);
   });
 });
