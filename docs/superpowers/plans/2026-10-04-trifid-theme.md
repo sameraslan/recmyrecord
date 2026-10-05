@@ -4,6 +4,27 @@
 
 The detail is in three plans next to this file: part 1 (`...-1-data-gas.md`), part 2 (`...-2-stars-lines-names.md`), part 3 (`...-3-chrome-tests.md`). Below, "2.6" means part 2, task 6.
 
+## Decisions made on 2026-10-04 (these win over the three parts and over "Decisions for the owner" below)
+
+The three parts were written before these answers. Fold them into the parts before building. Tracking issue: 45. Pull request: 47.
+
+* **Snappiness is a core requirement.** No effect may cost responsiveness. Measure each one. If it costs speed, drop it or ship the cheaper version without asking again. Add this line to the Global Constraints of every part.
+* **No regressions.** Everything the current site does well stays: speed, the clean look, and details such as the way overlapping covers are handled on the map. Capture the current site first (screenshots of every state and a full performance run) and compare against it at the end of each part.
+* **Replace.** Trifid replaces the current look. No theme switch.
+* **Stars are random.** Size and brightness are drawn at random on each page load, in the mix 1% brightest, 9% bright, 27% medium, the rest small. Album order and rank are not used anywhere for stars. This replaces the class by album index in part 2 tasks 1 and 2. Reference: prototype `src/data.js`, `src/config.js` (`STAR_MIX`).
+* **Twinkle.** Approved after seeing it live. One glint about every 1.2 to 3 seconds, at most 3 alive, a soft white bloom, a thin four point flare on the brighter stars. DOM and CSS only (opacity and transform), on a timer, never redrawing the map canvas, nothing during pan, zoom or slider moves, none once covers show, off under reduced motion and in hidden tabs. Reference: prototype `src/twinkle.js`, the twinkle block in `src/css/pages.css`, the Twinkle section of the prototype README (settings and measured cost). This is new work for part 2. It changes the rule "nothing animates at rest" to "the map canvas does not redraw at rest": the idle frame test and budget stay as they are, since they count canvas frames. If it costs any responsiveness in the app, it is dropped.
+* **Deep zoom goes to space.** Past 32 px covers the gas keeps fading to a faint remnant at full zoom: floor 0.06 at 56 px and over, with desaturation, detail fade and a soft blur following the same ease. Reference: prototype `RMR.gasCurve` in `src/config.js`, `u_deep` in `src/gas.js`, the Deep zoom section of the prototype README. This replaces `gasStrength` and the 0.3 floor in part 1 task 4.
+* **The nebula runs behind the top bar.** The map stage extends under the header and the header is glass over it. New task; it changes camera framing, so check fit padding and every framing test.
+* **No film grain.** Remove the site's grain overlay (part 3 kept it).
+* **No region names while an album is open,** and none once covers show.
+* **Names toggle is option B:** a detached icon button above the zoom buttons, as in the prototype (`namesToggle()` in `src/app.js`).
+* **Phone:** keep the site's slider, at most four names, solid panels at launch. Glass on phone is switched on only if a preview on a real phone and the blur on/off timings show no slowdown.
+* **Region names approved** as listed below. Sonic and Mood show only the names that exist. Nothing is added.
+* **Existing site data does not change.** The theme only adds new files beside it.
+* **Home cover shelf stays as it is** for now, including its order.
+* **Favicon:** update it. **Album accents:** held to 3:1 as a mark, never text.
+* **Still pending:** the toggle's screen reader label. Proposed: one fixed label "Place names" with an on or off state.
+
 ## The approach
 
 * **Gas baked at build time.** `npm run theme` paints the gas of each slider stop once, into three images, and writes a small `theme.json` (star colours, gas brightness under each album, region names and where they go). Both are committed.
