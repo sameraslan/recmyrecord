@@ -313,6 +313,8 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
 
   vec2 g_uvA;
   vec2 g_uvB;
+  float g_skyA; // 0 inside image A, 1 at and beyond its edge
+  float g_skyB;
 
   float sm(float a, float b, float x) {
     float t = clamp((x - a) / (b - a), 0.0, 1.0);
@@ -335,20 +337,24 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
   // Beyond an image's rectangle there is no gas: plain sky, no dust. The outer fiftieth of an image is empty
   // padding (the bake checks it), and whatever a lossy encode left there, a level of 255 at most, is faded out
   // across it, so the gas ends with no step.
-  vec4 inBake(vec4 t, vec2 uv) {
-    float e = sm(0.48, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));
-    return mix(t, vec4(0.0, 0.0, 0.0, 1.0), e);
+  // (Worked out once per pixel and image, not once per read.)
+  float skyAt(vec2 uv) {
+    return sm(0.48, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));
+  }
+
+  vec4 inBake(vec4 t, float sky) {
+    return mix(t, vec4(0.0, 0.0, 0.0, 1.0), sky);
   }
 
   vec4 gas() {
-    vec4 t = inBake(texture2D(u_gasA, clamp(g_uvA, 0.0, 1.0)), g_uvA);
-    if (u_mix > 0.0) t = mix(t, inBake(texture2D(u_gasB, clamp(g_uvB, 0.0, 1.0)), g_uvB), u_mix);
+    vec4 t = inBake(texture2D(u_gasA, clamp(g_uvA, 0.0, 1.0)), g_skyA);
+    if (u_mix > 0.0) t = mix(t, inBake(texture2D(u_gasB, clamp(g_uvB, 0.0, 1.0)), g_skyB), u_mix);
     return t;
   }
 
   vec4 gasLod(float lod) {
-    vec4 t = inBake(textureLod(u_gasA, clamp(g_uvA, 0.0, 1.0), lod), g_uvA);
-    if (u_mix > 0.0) t = mix(t, inBake(textureLod(u_gasB, clamp(g_uvB, 0.0, 1.0), lod), g_uvB), u_mix);
+    vec4 t = inBake(textureLod(u_gasA, clamp(g_uvA, 0.0, 1.0), lod), g_skyA);
+    if (u_mix > 0.0) t = mix(t, inBake(textureLod(u_gasB, clamp(g_uvB, 0.0, 1.0), lod), g_skyB), u_mix);
     return t;
   }
 
@@ -360,7 +366,11 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
 
   void main() {
     g_uvA = uvIn(u_rectA);
-    g_uvB = uvIn(u_rectB);
+    g_skyA = skyAt(g_uvA);
+    if (u_mix > 0.0) {
+      g_uvB = uvIn(u_rectB);
+      g_skyB = skyAt(g_uvB);
+    }
 
     float k = u_strength;
     float des = 0.0;

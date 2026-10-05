@@ -420,7 +420,10 @@ describe("gas shader source", () => {
     expect(GAS_FRAGMENT_SHADER).toContain("g_uvB = uvIn(u_rectB);");
     expect(GAS_FRAGMENT_SHADER).toContain("vec4(0.0, 0.0, 0.0, 1.0)");
     // the fade to sky lies inside the image's empty padding and reaches exactly sky at its edge
-    expect(GAS_FRAGMENT_SHADER).toContain("float e = sm(0.48, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));");
+    expect(GAS_FRAGMENT_SHADER).toContain("return sm(0.48, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));");
+    // worked out once per pixel for image A, and for image B only while two stops are mixed
+    expect(GAS_FRAGMENT_SHADER.match(/skyAt\(g_uv/g)).toHaveLength(2);
+    expect(GAS_FRAGMENT_SHADER).toMatch(/if \(u_mix > 0\.0\) \{\s+g_uvB = uvIn\(u_rectB\);\s+g_skyB = skyAt\(g_uvB\);/);
   });
 
   it("reads no more textures per pixel than before the images had rectangles", () => {
