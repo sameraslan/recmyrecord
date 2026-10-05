@@ -25,8 +25,8 @@ Grow the site from 4,081 albums to the RYM top 10,000 with a sonic block built f
 | Clips per album | 4 is the standard. No top-up to 8 |
 | Albums with no previews | Free full-length sources are allowed. YouTube through yt-dlp is approved |
 | Track-count harvest sessions | Not needed. The sheet's store links are trusted |
-| YouTube search for no-audio albums whose sheet link is missing or dead (4 Oct) | Approved, not built |
-| YouTube full-length audio for albums with too few previews or one very long track, for example Long Season (4 Oct) | Approved, not built |
+| YouTube search for no-audio albums whose sheet link is missing or dead (4 Oct) | Approved. Built on 5 Oct (`rmr_audio.fulllength --search`), tried on 30 albums; the full run is not started |
+| YouTube full-length audio for albums with too few previews or one very long track, for example Long Season (4 Oct) | Approved. Built on 5 Oct (`--edge-cases`), tried on 20 albums including Long Season; the full run is not started |
 
 Still with the owner: the 12 yes/no questions in `docs/audio-10k-pair-questions.md`. Each default is already applied, so only a wrong default needs an answer.
 
@@ -65,7 +65,7 @@ The record of the investigation is `experiments/audio_10k/REPORT.md`. The result
 
 1. Finish the encoding fix and embed the affected clips again.
 2. Resume the YouTube run (65 of 537 done).
-3. Build the two things approved on 4 October: YouTube search for missing or dead links, and full-length audio for edge-case albums.
+3. Run the two things approved on 4 October over the catalog: the YouTube search for missing or dead links (`fulllength --search`) and full-length audio for the edge-case albums (`fulllength --edge-cases --search`). Both are built and tried on a sample (5 October); the commands are in `data-pipeline/README.md`. Picks are judged from titles, uploaders and lengths. Nobody has listened.
 4. Embed the 7 wrong-listing albums again from their corrected listings.
 5. Write the final CLAP store, refit the transform, run the measurements, and build the listening page for the owner.
 6. Only with the owner's sign-off: rebuild the site data (descriptors for the new albums, covers, thumbnails, listen links for albums without Spotify), update the copy, deploy.
@@ -79,7 +79,7 @@ Audio is never stored. A preview clip is downloaded into memory, decoded, embedd
 `data-pipeline/audio/album_status.csv`: one row for each of the 10,467 albums, in catalog order. It says which store listing the album is matched to, how many clips each model has and where they came from (Deezer, Apple, YouTube), whether it is an edge case (under-covered, few long tracks, short previews, wrong listing pending, a listing shared with another album), what happened to its YouTube link, and two derived columns:
 
 - `state`: `done` (4 or more clips, or full-length windows, for both models), `partial`, `no_audio`.
-- `next_step`: `none`, `embed`, `reembed` (wrong listing pending), `youtube_link` (no audio, the sheet's link not tried yet), `youtube_search` (no audio, no usable link), `youtube_full_length` (an edge case on preview audio), `none_available`.
+- `next_step`: `none`, `embed`, `reembed` (wrong listing pending), `youtube_link` (no audio, the sheet's link not tried yet), `youtube_search` (no audio, no usable link, not searched yet), `youtube_full_length` (an edge case on preview audio, not tried yet), `none_available` (the link and the search gave nothing).
 
 The counts are in `data-pipeline/audio/album_status.md`. Both files are written by `python -m rmr_audio.album_status` from the catalog, `matches.csv`, `match_overrides.json`, `fulllength.csv` and the local clip cache, which is the only source for "has embeddings". They are a snapshot: run the command again after any audio job. The rules are one function, `decide`, in `data-pipeline/rmr_audio/album_status.py`.
 
