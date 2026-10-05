@@ -1448,17 +1448,30 @@ test('a software renderer draws the gas with the lighter shader: the same nebula
   const at32 = await page.evaluate(() => window.__rmr!.map!.getCamera());
   expect(await page.evaluate(() => window.__rmr!.gasDeep)).toBe(0);
   expect(await page.evaluate(() => window.__rmr!.gasLiteLod), 'no blur before deep zoom').toBe(0);
-  const lods: number[] = [];
-  for (const k of [1.1, 1.25, 1.5]) {
-    await page.evaluate((c) => window.__rmr!.map!.setCamera(c, false), { ...at32, zoom: at32.zoom * k });
+  /** Sets the camera and waits for the frame that draws it, then for the map to be quiet. The level and gasDeep
+   * are written by that frame, and waitForMapQuiet counts its quiet time from the last frame it saw, which is the
+   * one before the camera moved: on a slow software renderer the new frame can come later than that wait, and
+   * the reading would be the previous view's. So the frame is waited for by its count first. */
+  const cameraDrawn = async (c: typeof at32): Promise<void> => {
+    const before = await page.evaluate((cam) => {
+      const f = window.__rmr!.frames ?? 0;
+      window.__rmr!.map!.setCamera(cam, false);
+      return f;
+    }, c);
+    await expect.poll(() => page.evaluate(() => window.__rmr!.frames ?? 0), 'the frame that draws the new camera').toBeGreaterThan(before);
     await waitForCameraIdle(page);
     await waitForMapQuiet(page, 300);
+  };
+  const lods: number[] = [];
+  for (const k of [1.1, 1.25, 1.5]) {
+    await cameraDrawn({ ...at32, zoom: at32.zoom * k });
+    // 32 px covers times k: how far into deep zoom that is (gasCurve: 1 - (1 - u)^2, u from 32 px to 56 px covers)
+    const u = (32 * k - 32) / (56 - 32);
+    expect(await page.evaluate(() => window.__rmr!.gasDeep), `deep zoom at ${32 * k} px covers`).toBeCloseTo(1 - (1 - u) * (1 - u), 3);
     if (k === 1.25) await shot(page, info, 'gas-lighter-shader-deep');
     lods.push((await page.evaluate(() => window.__rmr!.gasLiteLod))!);
   }
-  await page.evaluate((c) => window.__rmr!.map!.setCamera({ ...c, zoom: c.zoom * 2 }, false), at32);
-  await waitForCameraIdle(page);
-  await waitForMapQuiet(page, 300);
+  await cameraDrawn({ ...at32, zoom: at32.zoom * 2 });
   await expect.poll(() => page.evaluate(() => window.__rmr!.gasDeep)).toBe(1);
   lods.push((await page.evaluate(() => window.__rmr!.gasLiteLod))!);
   expect(lods[0], `levels through deep zoom: ${lods.map((l) => l.toFixed(2)).join(', ')}`).toBeGreaterThan(0.5);
@@ -1471,9 +1484,8 @@ test('a software renderer draws the gas with the lighter shader: the same nebula
   expect(bare, 'a point of bare map at full zoom').not.toBeNull();
   const seed64 = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
   const deep = await lumaAt(page, { x: bare!.x - 8, y: bare!.y - 8, w: 16, h: 16 });
-  await page.evaluate((c) => window.__rmr!.map!.setCamera(c, false), at32);
-  await waitForCameraIdle(page);
-  await waitForMapQuiet(page, 300);
+  await cameraDrawn(at32);
+  expect(await page.evaluate(() => window.__rmr!.gasDeep), 'back at 32 px covers').toBe(0);
   const seed32 = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
   const mid = await lumaAt(page, { x: seed32.x + (bare!.x - seed64.x) / 2 - 8, y: seed32.y + (bare!.y - seed64.y) / 2 - 8, w: 16, h: 16 });
   expect(mid, 'the sampled point must show gas at 32 px covers').toBeGreaterThan(SKY_LUMA + 4);
