@@ -1,0 +1,32 @@
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --mode gpu --no-gas
+
+First-load JS of / (gzip): 190.5 KB with nomodule scripts (budget 200 KB), 151.9 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.3 KB, /album/in-rainbows-radiohead 34 KB (budget 150 KB each)
+
+| Measure | gpu desktop | gpu phone | gpu desktop2x |
+|---|---|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Search usable | 99 ms | 89 ms | 89 ms |
+| Startup worst long task | 0 ms | 0 ms | 0 ms |
+| WebGL warm-up end (reported only) | 214 ms (done) | 129 ms (done) | 135 ms (done) |
+| Map first frame (reported only) | 642 ms | 573 ms | 585 ms |
+| Nebula visible (reported only) | n/a | n/a | n/a |
+| Typing to suggestions | 7 ms | 5 ms | 5 ms |
+| Select to album | 28 ms | 18 ms | 22 ms |
+| Transition worst frame gap | 34 ms | 18 ms | 21 ms |
+| Slider to list | 8 ms | 8 ms | 5 ms |
+| Morph worst frame gap | 18 ms | 18 ms | 20 ms |
+| Drag worst frame gap | 18 ms | 18 ms | 18 ms |
+| Zoom worst frame gap | 40 ms | 47 ms | 38 ms |
+| Deep zoom drag worst frame gap (reported only) | 18 ms | 18 ms | 18 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 18 ms | 17 ms | 19 ms |
+| Long tasks while idle (3 s) | 0 | 0 | 0 |
+| Frames rendered while idle (3 s) | 0 | 0 | 0 |
+
+The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.
+
+Run with --no-gas: the script did not wait for a gas layer.
+
+All budgets met.

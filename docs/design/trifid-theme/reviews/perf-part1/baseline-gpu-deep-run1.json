@@ -1,0 +1,175 @@
+{
+ "js": {
+  "kb": 190.5,
+  "modernKb": 151.9,
+  "threeKb": 0,
+  "files": [
+   {
+    "src": "/_next/static/chunks/2mmpezlrfmbu5.js",
+    "gzKb": 8.5,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/1rj7ns8rte9vc.js",
+    "gzKb": 69.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/3un1mb5bx4x8k.js",
+    "gzKb": 42.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/turbopack-29-tawvx8tojb.js",
+    "gzKb": 3.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/12gesvlsg__x4.js",
+    "gzKb": 12.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/212asseq9kh-o.js",
+    "gzKb": 10.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0_8zpjvu_b1ry.js",
+    "gzKb": 0.2,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/3fgf7ruzmfpg3.js",
+    "gzKb": 0.3,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0em8pai484f8q.js",
+    "gzKb": 1,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+    "gzKb": 38.6,
+    "isThree": false,
+    "nomodule": true
+   },
+   {
+    "src": "/_next/static/chunks/310vm2bl3xxpt.js",
+    "gzKb": 1.9,
+    "isThree": false,
+    "nomodule": false
+   }
+  ]
+ },
+ "rows": [
+  {
+   "mode": "gpu",
+   "vp": "desktop",
+   "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+   "errors": [],
+   "longTasksSupported": true,
+   "thumbsOnFirstLoad": false,
+   "searchUsableMs": 99,
+   "startupLongTaskMs": 0,
+   "mapFirstFrameMs": 642,
+   "gasShownMs": null,
+   "warmUp": {
+    "ms": 214,
+    "why": "done"
+   },
+   "startupLongTasks": [],
+   "settled": [
+    true
+   ],
+   "typeToSuggestionsMs": 7,
+   "selectToAlbumMs": 28,
+   "transitionGapMs": 34,
+   "sliderToListMs": 8,
+   "morphGapMs": 18,
+   "dragGapMs": 18,
+   "zoomGapMs": 40,
+   "deepDragGapMs": 18,
+   "deepZoom": null,
+   "deepMorphGapMs": 18,
+   "idleLongTasks": 0,
+   "idleFrames": 0
+  },
+  {
+   "mode": "gpu",
+   "vp": "phone",
+   "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+   "errors": [],
+   "longTasksSupported": true,
+   "thumbsOnFirstLoad": false,
+   "searchUsableMs": 89,
+   "startupLongTaskMs": 0,
+   "mapFirstFrameMs": 573,
+   "gasShownMs": null,
+   "warmUp": {
+    "ms": 129,
+    "why": "done"
+   },
+   "startupLongTasks": [],
+   "settled": [
+    true,
+    true
+   ],
+   "typeToSuggestionsMs": 5,
+   "selectToAlbumMs": 18,
+   "transitionGapMs": 18,
+   "sliderToListMs": 8,
+   "morphGapMs": 18,
+   "dragGapMs": 18,
+   "zoomGapMs": 47,
+   "deepDragGapMs": 18,
+   "deepZoom": null,
+   "deepMorphGapMs": 17,
+   "idleLongTasks": 0,
+   "idleFrames": 0
+  },
+  {
+   "mode": "gpu",
+   "vp": "desktop2x",
+   "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+   "errors": [],
+   "longTasksSupported": true,
+   "thumbsOnFirstLoad": false,
+   "searchUsableMs": 89,
+   "startupLongTaskMs": 0,
+   "mapFirstFrameMs": 585,
+   "gasShownMs": null,
+   "warmUp": {
+    "ms": 135,
+    "why": "done"
+   },
+   "startupLongTasks": [],
+   "settled": [
+    true
+   ],
+   "typeToSuggestionsMs": 5,
+   "selectToAlbumMs": 22,
+   "transitionGapMs": 21,
+   "sliderToListMs": 5,
+   "morphGapMs": 20,
+   "dragGapMs": 18,
+   "zoomGapMs": 38,
+   "deepDragGapMs": 18,
+   "deepZoom": null,
+   "deepMorphGapMs": 19,
+   "idleLongTasks": 0,
+   "idleFrames": 0
+  }
+ ],
+ "fails": []
+}

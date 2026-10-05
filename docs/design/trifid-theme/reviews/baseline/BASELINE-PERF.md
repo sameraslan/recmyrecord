@@ -245,3 +245,28 @@ Renderer: ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C
 | 3rd | Map frames drawn | 3 | 3 | 3 | 3 | 3 | 3 | 3 to 3 |
 
 Startup worst long task before the first hover, per load: 0, 0, 0, 0, 0 ms. Album hovered (tip title): 11 "In Rainbows", 42 "Vespertine", 300 "Construção".
+
+## gpu desktop at dpr 2, added later with the same script
+
+The three runs above have no column at device pixel ratio 2. This one was added on 2026-10-05 from commit `6f10463e` (app code identical to `1e9ef508`), built in a temporary worktree. The script was the extended `scripts/perf/perf.mjs` and `lib.mjs` of the Trifid plan (part 1, Task 6 Step 6), run as `npm run perf -- --mode gpu --viewport desktop2x --no-gas`, three times, one after another (load average before each run: 5.4, 5.2, 5.7). Viewport 1440 x 900 at device pixel ratio 2, gpu mode. The column has no budget; the 50 ms frame gap of the other gpu columns is the yardstick. Raw output: `perf/perf-dpr2-run1.json` to `perf-dpr2-run3.json` and `.txt`.
+
+Renderer: ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)
+
+| Metric | Run 1 | Run 2 | Run 3 | Median | Min to max | Budget |
+|---|---|---|---|---|---|---|
+| Search usable (ms) | 88 | 106 | 114 | 106 | 88 to 114 | none (reported only) |
+| Startup worst long task (ms) | 0 | 0 | 0 | 0 | 0 to 0 | none (reported only) |
+| Map first frame (ms) | 577 | 640 | 617 | 617 | 577 to 640 | none (reported only) |
+| Typing to suggestions (ms) | 6 | 6 | 5 | 6 | 5 to 6 | none (reported only) |
+| Select to album (ms) | 21 | 25 | 19 | 21 | 19 to 25 | none (reported only) |
+| Transition worst frame gap (ms) | 27 | 26 | 28 | 27 | 26 to 28 | none; 50 as yardstick |
+| Slider to list (ms) | 6 | 8 | 5 | 6 | 5 to 8 | none (reported only) |
+| Morph worst frame gap (ms) | 19 | 18 | 18 | 18 | 18 to 19 | none; 50 as yardstick |
+| Drag worst frame gap (ms) | 18 | 18 | 18 | 18 | 18 to 18 | none; 50 as yardstick |
+| Zoom worst frame gap (ms) | 39 | 30 | 38 | 38 | 30 to 39 | none; 50 as yardstick |
+| Deep zoom drag worst frame gap (ms) | 19 | 19 | 18 | 19 | 18 to 19 | none; 50 as yardstick |
+| Deep zoom, slider between stops, worst frame gap (ms) | 17 | 17 | 18 | 17 | 17 to 18 | none; 50 as yardstick |
+| Long tasks while idle (3 s) | 0 | 0 | 0 | 0 | 0 to 0 | none (reported only) |
+| Frames while idle (3 s) | 0 | 0 | 0 | 0 | 0 to 0 | none (reported only) |
+
+Nebula visible: n/a (this commit has no gas).
