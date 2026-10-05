@@ -13,6 +13,9 @@ declare global {
       map?: MapApi | null;
       /** Frames the map has rendered. */
       frames?: number;
+      /** The seed of this page load's random star sizes (components/map/state/stars.ts), published once the
+       * stars are dealt. A test may set it before the map loads to get a repeatable sky. */
+      starSeed?: number;
       /** The gas layer. A stop is started from the moment it is scheduled: the stop on screen always, the other
        * two as soon as the map is interactive (also while their fetch waits for an idle slot). 'loading' while any
        * started stop is unsettled, 'ready' once every started stop is uploaded or has failed, 'off' when there is
