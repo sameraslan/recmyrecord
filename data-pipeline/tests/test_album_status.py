@@ -229,6 +229,37 @@ def test_the_listing_and_count_are_the_album_means(world):
         cache.close()
 
 
+def test_an_overrides_listing_is_the_one_used_once_it_is_embedded(world):
+    """A_wrong: matches.csv names d8-old, the override forces d8. It is `reembed` until d8 has an ok clip for
+    both required models; then its columns are d8's, as the album mean's are (rmr_audio.modelstore)."""
+    pick = lambda *cols: tuple(_build(world)[1]["A_wrong"][c] for c in cols)  # noqa: E731
+    ok = lambda n: [(r, "ok") for r in range(n)]  # noqa: E731
+    assert pick("effnet_ok", "clap_ok", "wrong_listing_pending", "state", "next_step") == ("4", "4", "1", "done", "reembed")
+    cache = OnePassCache(world / "onepass.sqlite")
+    _put(cache, "A_wrong", "itunes:gb", "d8", ok(5), models=("effnet",))  # the override's listing, one model so far
+    cache.close()
+    (world / "audio" / "match_overrides.json").write_text(json.dumps({
+        "A_wrong": {"source": "itunes:gb", "album_id": "d8", "note": "the other edition"},
+        "A_skip": {"skip": True, "note": "covers only"}}), encoding="utf-8")
+    assert pick("effnet_ok", "effnet_source", "clap_ok", "clap_source", "audio_source", "wrong_listing_pending", "next_step") == (
+        "5", "itunes:gb", "4", "deezer", "itunes:gb/deezer", "1", "reembed")
+    cache = OnePassCache(world / "onepass.sqlite")
+    _put(cache, "A_wrong", "itunes:gb", "d8", ok(3), models=("clap", "clap_mp3"))
+    cache.close()
+    assert pick("effnet_used", "clap_ok", "clap_used", "clap_mp3_source", "audio_source", "wrong_listing_pending", "state",
+                "next_step", "listing_id") == ("4", "3", "3", "itunes:gb", "itunes:gb", "0", "partial", "embed", "d8-old")
+    cache = OnePassCache(world / "onepass.sqlite", readonly=True)
+    try:
+        rows = _build(world)[2]
+        for model in ("effnet", "clap", "clap_mp3"):
+            keys, _, n, source = cache.means(model, album_status.CLIPS, "rank", {"A_wrong": ("itunes:gb", "d8")})
+            at = keys.tolist().index("A_wrong")
+            assert pick(f"{model}_used", f"{model}_source") == (str(n[at]), source[at])
+            assert sum(r[f"{model}_used"] != "0" for r in rows) == len(keys)
+    finally:
+        cache.close()
+
+
 def test_writes_the_same_bytes_again(world, capsys):
     args = ["--cache", str(world / "onepass.sqlite"), "--catalog", str(world / "albums.csv"), "--audio-dir", str(world / "audio")]
     assert main(args + ["--dry-run"]) == 0

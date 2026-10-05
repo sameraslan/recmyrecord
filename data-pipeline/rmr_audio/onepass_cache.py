@@ -306,7 +306,8 @@ class OnePassCache:
 
         One listing per album, never a mix: its windows of full-length audio when it has any that worked
         (WINDOW_SOURCES: local files before youtube before bandcamp; they replace the store previews, and
-        then the mean takes the album's own window count, `listings.n_windows`, not `clips`); else the listing `listing_of` names for its key (matches.csv); else, for a key it does
+        then the mean takes the album's own window count, `listings.n_windows`, not `clips`); else the listing `listing_of` names for its key (rmr_audio.modelstore.listing_of:
+        the one match_overrides.json forces, then the one matches.csv names); else, for a key it does
         not name, the listing with the most ok clips (clap_catalog.load's rule)."""
         ok: dict[str, Counter] = {}
         for key, source, album_id, n in self.con.execute(

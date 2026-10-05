@@ -10,7 +10,7 @@ listened and no audio is opened.
            round trip, rmr_audio.mp3trip) read wherever this script reads `clap`. Its tables still say CLAP.
            Only the albums that have clap_mp3 clips are in it, so run it once the variant covers the catalog.
 
-Reads, all read-only: catalog/albums.csv, audio/matches.csv, audio/keys.csv, the clip cache
+Reads, all read-only: catalog/albums.csv, audio/matches.csv, audio/match_overrides.json, audio/keys.csv, the clip cache
 (.cache/audio/onepass.sqlite, `mode=ro`: another job may be writing to it), its static backup
 (onepass.before-rekey.sqlite) and pending_cache_rekey.csv for the albums that were in the cache twice. It
 does not read or write data-pipeline/audio/clap/. The album means are kept in cache/source_effect_means.npz
@@ -100,7 +100,7 @@ def build_means(refresh: bool) -> dict:
     try:
         for m in MODEL_NAMES:
             k, X, n, src, _ = album_means(cache, CLAP_MODEL if m == "clap" else m, keys, AUDIO / "matches.csv", CLIPS,
-                                          AUDIO / "keys.csv")
+                                          AUDIO / "keys.csv", AUDIO / "match_overrides.json")
             out[f"{m}_keys"], out[f"{m}_X"], out[f"{m}_n"], out[f"{m}_source"] = k, X.astype(np.float32), n, src
     finally:
         cache.close()

@@ -3,6 +3,7 @@ catalog (rmr_pipeline.audio fit-catalog), and never in the way of the EffNet sto
 only numpy and the standard library."""
 import csv
 import hashlib
+import json
 import shutil
 
 import numpy as np
@@ -71,9 +72,10 @@ def world(tmp_path):
 
 def _write(world, **kw):
     lines = []
+    kw = {"overrides": world / "audio" / "match_overrides.json", "audio_dir": world / "audio" / "clap"} | kw
     code = modelstore.write(cache_db=world / "onepass.sqlite", catalog=world / "albums.csv",
-                            matches=world / "audio" / "matches.csv", audio_dir=world / "audio" / "clap",
-                            out=lines.append, keys_csv=world / "audio" / "keys.csv", **kw)
+                            matches=world / "audio" / "matches.csv", out=lines.append,
+                            keys_csv=world / "audio" / "keys.csv", **kw)
     return code, lines
 
 
@@ -174,6 +176,107 @@ def test_the_variant_store_is_written_from_its_own_rows_where_it_is_told(world, 
     want = np.stack([_vec(f"mp3/t{r}") for r in (0, 2, 3, 4)]).astype(np.float64).mean(axis=0).astype(np.float16)
     assert np.array_equal(mp3.emb[itunes][0], want) and not np.array_equal(mp3.emb[itunes], clap.emb[itunes])
     assert modelstore.main(["status", "--model", "clap_mp3", "--catalog", str(world / "albums.csv")]) == 1
+
+
+def _override(world, entries: dict):
+    path = world / "audio" / "match_overrides.json"
+    path.write_text(json.dumps({k: e | {"note": "by hand"} for k, e in entries.items()}), encoding="utf-8")
+    return path
+
+
+def test_a_listing_match_overrides_forces_is_the_one_the_mean_is_taken_from(world):
+    """matches.csv keeps naming the listing the EffNet store was embedded from. The override's listing is
+    used as soon as it has an ok clip for the model being written, and not before."""
+    cache = OnePassCache(world / "onepass.sqlite")
+    _put(cache, "Album1", "itunes:us", "i1", [(r, "ok") for r in range(3)])  # the right listing: fewer clips than d1
+    cache.copy_variant("clap_mp3")  # the Deezer clips only: the right listing has no clap_mp3 clip yet
+    cache.close()
+    _override(world, {"Album1": {"source": "itunes:us", "album_id": "i1"}, "Album5": {"source": "deezer", "album_id": "d5-other"}})
+    matches = (world / "audio" / "matches.csv").read_bytes()
+    code, lines = _write(world)
+    store = load_store(world / "audio" / "clap")
+    assert code == 0 and store.keys.tolist() == ["Album3", "Album1", "Album2", "Album5", "Album6"]
+    assert store.source.tolist()[1] == "itunes:us" and store.n_clips.tolist() == [2, 3, 4, 1, 4]
+    assert np.array_equal(store.emb[1], _mean("Album1", "itunes:us", "i1", range(3)).astype(np.float16))
+    assert np.array_equal(store.emb[3], _mean("Album5", "deezer", "d5-other", [0]).astype(np.float16))
+    assert not any("match_overrides.json" in x for x in lines) and (world / "audio" / "matches.csv").read_bytes() == matches
+    code, lines = _write(world, model="clap_mp3", audio_dir=world / "audio" / "clap_mp3")
+    mp3 = load_store(world / "audio" / "clap_mp3")
+    assert code == 0 and mp3.keys.tolist() == ["Album3", "Album1", "Album5", "Album6"]
+    assert mp3.source.tolist()[1] == "deezer" and mp3.n_clips.tolist() == [2, 4, 1, 4]  # Album1: back on d1, and said so
+    assert [x for x in lines if "match_overrides.json" in x] == [
+        "1 album(s) are on a listing other than the one match_overrides.json forces, which has no ok clap_mp3 clip "
+        "(embed it, then write again): Album1"]
+
+
+def test_an_override_whose_listing_is_not_embedded_changes_nothing_and_is_reported(world):
+    _write(world, overrides=None)
+    plain = load_store(world / "audio" / "clap")
+    cache = OnePassCache(world / "onepass.sqlite")
+    _put(cache, "Album8", "local", "", [(r, "ok") for r in range(6)])  # windows of full-length audio: no store listing
+    cache.set_listing("Album8", "local", "", 1, 6, n_windows=6)
+    cache.close()
+    path = _override(world, {
+        "Album1": {"source": "itunes:us", "album_id": "i1"},  # not in the cache at all
+        "Album6": {"source": "deezer", "album_id": "d6"},  # in the cache, no ok clip
+        "Album4": {"source": "deezer", "album_id": "d4-right"},  # an album without audio: not in the store, not reported
+        "Album8": {"source": "deezer", "album_id": "d8"},  # on full-length audio, which replaces any store listing
+        "Album3": {"skip": True}, "Album99": {"skip": True},  # a skip is no listing; a key the catalog does not have
+        "Album98": {"source": "deezer", "album_id": "d98"}})
+    code, lines = _write(world, dry_run=True)
+    report = ("2 album(s) are on a listing other than the one match_overrides.json forces, which has no ok clap clip "
+              "(embed it, then write again): Album1, Album6")
+    assert code == 0 and report in lines and lines[-1] == "dry run: nothing written"
+    code, lines = _write(world)
+    store = load_store(world / "audio" / "clap")
+    assert code == 0 and report in lines and store.keys.tolist() == plain.keys.tolist() + ["Album8"]
+    assert np.array_equal(store.emb[:-1], plain.emb) and store.source.tolist() == plain.source.tolist() + ["local"]
+    path.write_text("[]", encoding="utf-8")
+    with pytest.raises(StoreError, match="must be an object"):
+        _write(world)
+
+
+def test_an_override_reaches_clips_cached_under_an_older_key(world):
+    from rmr_pipeline.keys import write_keys
+
+    old = "sp:" + "b" * 22
+    cache = OnePassCache(world / "onepass.sqlite")
+    _put(cache, old, "deezer", "old-b", [(r, "ok") for r in range(3)])  # became Album8; the listing matched then
+    _put(cache, old, "deezer", "right-b", [(r, "ok") for r in range(2)])
+    cache.close()
+    write_keys(world / "audio" / "keys.csv", [
+        {"rym_id": "Album8", "legacy_uri": "spotify:album:" + "b" * 22, "matched_by": "manual", "doubt": ""}])
+    _override(world, {"Album8": {"source": "deezer", "album_id": "right-b"}})
+    code, lines = _write(world)
+    store = load_store(world / "audio" / "clap")
+    assert store.keys.tolist()[-1] == "Album8" and store.n_clips.tolist()[-1] == 2
+    assert np.array_equal(store.emb[-1], _mean(old, "deezer", "right-b", range(2)).astype(np.float16))
+    assert not any("match_overrides.json" in x for x in lines)
+
+
+def test_exclude_leaves_albums_out_of_the_store(world, capsys):
+    args = ["--cache", str(world / "onepass.sqlite"), "--catalog", str(world / "albums.csv"),
+            "--matches", str(world / "audio" / "matches.csv"), "--keys-csv", str(world / "audio" / "keys.csv"),
+            "--overrides", str(world / "audio" / "match_overrides.json"), "--audio-dir", str(world / "audio" / "clap")]
+    assert modelstore.main(["write", *args, "--exclude", "Album3,Album5,Album7", "--dry-run"]) == 0
+    out = capsys.readouterr().out  # Album7 has no CLAP audio: there is nothing of it to leave out
+    assert "3 of the catalog's 8 albums have audio" in out and "; 2 left out by --exclude (Album3, Album5)" in out
+    assert "clips per album: 4: 3" in out and not (world / "audio" / "clap").exists()
+    assert modelstore.main(["write", *args, "--exclude", "Album3,Album5,Album7"]) == 0
+    store = load_store(world / "audio" / "clap")
+    assert store.keys.tolist() == ["Album1", "Album2", "Album6"] and store.n_clips.tolist() == [4, 4, 4]
+    assert np.array_equal(store.emb[0], _mean("Album1", "deezer", "d1", range(4)).astype(np.float16))
+    capsys.readouterr()
+    assert modelstore.main(["write", *args, "--exclude", "Album5, Album3"]) == 0  # the same store: not written again
+    assert "nothing written" in capsys.readouterr().out
+    status = ["status", "--audio-dir", str(world / "audio" / "clap"), "--catalog", str(world / "albums.csv")]
+    assert modelstore.main([*status, "--exclude", "Album3,Album5"]) == 0
+    out = capsys.readouterr().out
+    assert "3 of the catalog's 8 albums have audio" in out and "--exclude: none of the 2 album(s) is in the store" in out
+    assert modelstore.main([*status, "--exclude", "Album3,Album1"]) == 0
+    assert "--exclude: 1 of the 2 album(s) is in the store: Album1" in capsys.readouterr().out
+    assert modelstore.main(["write", *args]) == 0 and "left out by --exclude" not in capsys.readouterr().out
+    assert load_store(world / "audio" / "clap").keys.tolist() == ["Album3", "Album1", "Album2", "Album5", "Album6"]
 
 
 def _clap_like(n: int, seed: int = 0) -> np.ndarray:

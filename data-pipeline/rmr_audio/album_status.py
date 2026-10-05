@@ -29,8 +29,8 @@ Columns
   <model>_ok, <model>_source, <model>_used      for effnet, clap, and any other model the cache has
       The listing is the one the album mean is taken from (OnePassCache.means, as rmr_audio.modelstore
       calls it): the album's windows of full-length audio when it has any (local, then youtube, then
-      bandcamp), else the listing matches.csv names when it has an ok clip, else the listing with the most
-      ok clips. `ok`: the model's ok clips (or windows) on that listing. `source`: deezer, itunes:xx,
+      bandcamp), else the listing match_overrides.json forces when it has an ok clip for the model, else
+      the listing matches.csv names when it has an ok clip, else the listing with the most ok clips. `ok`: the model's ok clips (or windows) on that listing. `source`: deezer, itunes:xx,
       youtube, bandcamp, local or none. `used`: how many go into the mean, the first 4 ok clips, or the
       album's window count.
   audio_source    the source of the two required models (effnet, clap); `a/b` when they differ; none
@@ -42,7 +42,8 @@ Columns
   short_preview   matches.csv's flag, or a clip of the listing used that the cache flags (under 25 s from a
                   track over 60 s). Empty when neither knows.
   wrong_listing_pending   match_overrides.json forces a listing, and a required model's mean is taken
-                  from another store listing: the album has to be embedded again
+                  from another store listing, because the forced one has no ok clip for that model yet:
+                  the album has to be embedded again. It clears once both required models have one.
   duplicate_listing       another catalog album is matched to the same store listing
   has_youtube_url the sheet has a YouTube link for the album
   edge_case       `edge_case`, below: on 1 to 3 previews of a listing of 15 minutes or more, or of unknown
@@ -207,17 +208,20 @@ def read_cache(path: Path) -> dict:
     return {"ok": ok, "windowed": windowed, "listings": listings, "short": short}
 
 
-def used_listing(cache: dict, model: str, key: str, named: tuple[str, str] | None) -> tuple[tuple[str, str] | None, int, int]:
+def used_listing(cache: dict, model: str, key: str, named: tuple[str, str] | None,
+                 forced: tuple[str, str] | None = None) -> tuple[tuple[str, str] | None, int, int]:
     """(listing, ok clips on it, clips in the mean) for one model and album, by OnePassCache.means's rule
-    with the `rank` pool; (None, 0, 0) when the model has no audio for the album."""
+    with the `rank` pool, the listing preferred as rmr_audio.modelstore.listing_of prefers it: the one
+    match_overrides.json forces (`forced`) before the one matches.csv names (`named`). (None, 0, 0) when
+    the model has no audio for the album."""
     mine = cache["ok"].get(model, {}).get(key)
     if not mine:
         return None, 0, 0
     if key in cache["windowed"]:
         listing = cache["windowed"][key]
         limit = cache["listings"].get((key, *listing), {}).get("n_windows") or None
-    elif named in mine:
-        listing, limit = named, CLIPS
+    elif forced in mine or named in mine:
+        listing, limit = forced if forced in mine else named, CLIPS
     else:
         listing, limit = max(mine, key=lambda l: mine[l]), CLIPS
     n = mine.get(listing, 0)
@@ -282,7 +286,7 @@ def build(cache_db: Path = DEFAULT_CACHE_DB, catalog: Path = DEFAULT_CATALOG, au
                "previews_available": "" if previews is None else previews, "runtime_s": "" if runtime is None else runtime}
         used, listing = {}, {}
         for model in models:
-            listing[model], n_ok, used[model] = used_listing(cache, model, key, named)
+            listing[model], n_ok, used[model] = used_listing(cache, model, key, named, forced.get(key))
             row[f"{model}_ok"], row[f"{model}_used"] = n_ok, used[model]
             row[f"{model}_source"] = listing[model][0] if listing[model] else "none"
         mine = [listing[mo] for mo in REQUIRED if listing[mo]]

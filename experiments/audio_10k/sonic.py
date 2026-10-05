@@ -83,12 +83,13 @@ def load_albums(catalog: Path = DEFAULT_CATALOG, clap_dir: Path = STORES["clap"]
 
 
 def effnet_block(albums: Albums, cache_db: Path = DEFAULT_CACHE_DB, matches: Path = DEFAULT_AUDIO / "matches.csv",
-                 target_from: Path = DEFAULT_AUDIO) -> tuple[np.ndarray, np.ndarray]:
+                 target_from: Path = DEFAULT_AUDIO,
+                 overrides: Path = DEFAULT_AUDIO / "match_overrides.json") -> tuple[np.ndarray, np.ndarray]:
     """(positions in `albums` of the albums that also have EffNet clips, their EffNet block). See the
     module docstring: four-clip means from the cache, PCA(64) fitted on these albums."""
     cache = OnePassCache(cache_db, readonly=True)
     try:
-        keys, X, _, _, _ = album_means(cache, "effnet", albums.keys.tolist(), matches, CLIPS)
+        keys, X, _, _, _ = album_means(cache, "effnet", albums.keys.tolist(), matches, CLIPS, overrides=overrides)
     finally:
         cache.close()
     at = {k: i for i, k in enumerate(albums.keys.tolist())}
