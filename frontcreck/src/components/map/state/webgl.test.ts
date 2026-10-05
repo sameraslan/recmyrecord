@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { WARM_UP_SOURCE, warmUpDone, warmUpWebGL } from './webgl';
+import { isWebGLAvailable, WARM_UP_SOURCE, warmUpDone, warmUpWebGL } from './webgl';
 
 type Handler = ((e: unknown) => void) | null;
 
@@ -176,5 +176,38 @@ describe('warmUpWebGL', () => {
     ac.abort();
     await warmUpWebGL({ signal: ac.signal });
     expect(FakeWorker.last).toBeNull();
+  });
+});
+
+describe('isWebGLAvailable', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  /** Stubs canvas.getContext to return a context only for the given types. */
+  function stubContexts(types: string[]) {
+    const lose = vi.fn();
+    const gl = { getExtension: (name: string) => (name === 'WEBGL_lose_context' ? { loseContext: lose } : null) };
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(((type: string) =>
+      types.includes(type) ? gl : null) as unknown as HTMLCanvasElement['getContext']);
+    return lose;
+  }
+
+  it('is true with WebGL2, and releases the probe context', () => {
+    const lose = stubContexts(['webgl2', 'webgl']);
+    expect(isWebGLAvailable()).toBe(true);
+    expect(lose).toHaveBeenCalledOnce();
+  });
+
+  it('is false with only WebGL1, which three.js cannot render with', () => {
+    stubContexts(['webgl']);
+    expect(isWebGLAvailable()).toBe(false);
+  });
+
+  it('is false with no WebGL, or when getContext throws', () => {
+    stubContexts([]);
+    expect(isWebGLAvailable()).toBe(false);
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(isWebGLAvailable()).toBe(false);
   });
 });
