@@ -4,9 +4,11 @@
 #   board.sh list [status]          cards, optionally only one column
 #   board.sh add <number> [status]  put an issue or PR on the board (default: Backlog)
 #   board.sh move <number> <status> move a card, adding it first if it is missing
+#   board.sh remove <number>        take a card off the board (the issue or PR itself is untouched)
 #
 # <number> is the issue or PR number in sameraslan/recmyrecord.
-# <status> is a column name, case-insensitive: Backlog, Todo, "In progress", "In review", Done.
+# <status> is a column name, case-insensitive:
+#   Backlog, Todo, "In progress", "Needs answer", "Final review", Done.
 # Needs the gh token to have the `project` scope: gh auth refresh -s project
 set -euo pipefail
 
@@ -87,7 +89,15 @@ case "$cmd" in
     set_status "$id"
     echo "#$2 -> $3"
     ;;
+  remove)
+    [ $# -ge 2 ] || die "usage: board.sh remove <number>"
+    load_project
+    id="$(item_id "$2")"
+    [ -n "$id" ] || die "#$2 is not on the board"
+    gh project item-delete "$NUM" --owner "$OWNER" --id "$id" >/dev/null
+    echo "#$2 removed from the board"
+    ;;
   *)
-    die "usage: board.sh list [status] | add <number> [status] | move <number> <status>"
+    die "usage: board.sh list [status] | add <number> [status] | move <number> <status> | remove <number>"
     ;;
 esac
