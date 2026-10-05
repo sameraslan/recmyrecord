@@ -351,6 +351,14 @@ export const SHAPE_SAME_PX = 1e-3;
 /** A settle that moves no marker this far needs no ease. */
 export const SETTLE_EASE_PX = 0.5;
 
+/** MarkerLayout.layout's options: `moving` while the view is on its way somewhere; `target`, on the first frame of
+ * a camera tween with a known end (an album opening, the focus framing), the anchors and bounds of the view it
+ * will land on. */
+export interface MarkerLayoutOptions extends LayoutOptions {
+  moving?: boolean;
+  target?: { anchors: readonly MarkerAnchor[]; bounds: MarkerBounds | null };
+}
+
 /** What a MarkerLayout did, call by call: solved from scratch (an album opened or another input set), settled a
  * layout that had ridden with the seed, moved its last solve exactly (a pan), carried the group with the seed
  * through a motion, or returned the last layout untouched. */
@@ -372,7 +380,9 @@ function separateAtWalls(items: MarkerItem[], gap: number, bounds: MarkerBounds)
 /** layoutMarkers for a driver that lays the same focus out on every drawn frame, steady from frame to frame.
  *
  * - Opening an album, or any other change of albums, sizes, gap or minimum line: a fresh solve, the same as
- *   layoutMarkers, so the same album in the same view always gets the same layout.
+ *   layoutMarkers, so the same album in the same view always gets the same layout. When a camera tween is
+ *   taking the view somewhere known (`target`), the solve is of that view and the group rides there with the
+ *   seed, so it lands on its settled layout with nothing to ease.
  * - Nothing moved (a hover redraw, a cover or gas fade): the same array, untouched, no work.
  * - The group kept its shape (a pan, the album panel sliding) and no marker meets a wall: the last solve moved
  *   exactly with the seed, which is what a fresh solve gives up to the projection's rounding.
@@ -408,6 +418,11 @@ export class MarkerLayout {
   private last = new Float64Array(0);
   private lastBounds: MarkerBounds | null = null;
   private readonly boundsCopy: MarkerBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+  /** The last solve's result, the seed's album it was solved at, and its bounds. */
+  private solved = new Float64Array(0);
+  private readonly solvedAt = [NaN, NaN];
+  private solvedBounds: MarkerBounds | null = null;
+  private readonly solvedBoundsCopy: MarkerBounds = { left: 0, top: 0, right: 0, bottom: 0 };
 
   /** True when the layout has been carried with the seed since its last solve and waits for a call that is
    * not moving to settle it on a fresh solve of the view. */
@@ -415,12 +430,19 @@ export class MarkerLayout {
     return this.pending;
   }
 
-  layout(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, options: LayoutOptions & { moving?: boolean } = {}): readonly MarkerItem[] {
+  layout(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, options: MarkerLayoutOptions = {}): readonly MarkerItem[] {
     const gap = options.gap ?? MARKER_GAP;
     const minLine = options.minLine ?? MIN_LINE_PX;
     const bounds = options.bounds ?? null;
     const moving = options.moving ?? false;
     this.settledFrom = null;
+    const target = options.target;
+    if (target && target.anchors.length === anchors.length && target.anchors.every((a, i) => a.id === anchors[i].id)) {
+      // A camera tween is under way to a known view: lay out that view, and carry it there with the seed.
+      this.stats.solves++;
+      this.solve(target.anchors, seedSize, recSize, gap, minLine, target.bounds);
+      return this.layout(anchors, seedSize, recSize, { gap, minLine, bounds: bounds ?? undefined, moving: true });
+    }
     const items = this.items;
     const n = anchors.length;
     let same = n === items.length && seedSize === this.seedSize && recSize === this.recSize && gap === this.gap && minLine === this.minLine;
@@ -444,6 +466,26 @@ export class MarkerLayout {
     let shapeSame = true;
     for (let i = 0; shapeSame && i < n; i++) {
       shapeSame = Math.abs(anchors[i].x - x0 - rel[2 * i]) < SHAPE_SAME_PX && Math.abs(anchors[i].y - y0 - rel[2 * i + 1]) < SHAPE_SAME_PX;
+    }
+    // Back at the view of the last solve (a tween landing on its target): its layout, exactly.
+    const sb = this.solvedBounds;
+    const atSolved =
+      shapeSame &&
+      Math.abs(x0 - this.solvedAt[0]) < SHAPE_SAME_PX &&
+      Math.abs(y0 - this.solvedAt[1]) < SHAPE_SAME_PX &&
+      (bounds && sb ? bounds.left === sb.left && bounds.top === sb.top && bounds.right === sb.right && bounds.bottom === sb.bottom : !bounds && !sb);
+    if (atSolved) {
+      for (let i = 0; i < n; i++) {
+        const it = items[i];
+        it.ax = anchors[i].x;
+        it.ay = anchors[i].y;
+        it.x = this.solved[2 * i] + (x0 - this.solvedAt[0]);
+        it.y = this.solved[2 * i + 1] + (y0 - this.solvedAt[1]);
+      }
+      this.record(bounds);
+      this.pending = false;
+      this.stats.moves++;
+      return items;
     }
     if (!still) {
       const carry = () => {
@@ -498,6 +540,7 @@ export class MarkerLayout {
       this.rel = new Float64Array(2 * n);
       this.free = new Float64Array(2 * n);
       this.last = new Float64Array(2 * n);
+      this.solved = new Float64Array(2 * n);
     }
     if (n > 0) {
       relax(items, gap, minLine, null, 0);
@@ -510,6 +553,18 @@ export class MarkerLayout {
         this.free[2 * i + 1] = items[i].y - y0;
       }
       if (bounds && shiftInside(items, bounds)) relaxHeld(items, gap, minLine, bounds);
+      this.solvedAt[0] = x0;
+      this.solvedAt[1] = y0;
+      for (let i = 0; i < n; i++) {
+        this.solved[2 * i] = items[i].x;
+        this.solved[2 * i + 1] = items[i].y;
+      }
+    }
+    if (bounds) {
+      Object.assign(this.solvedBoundsCopy, bounds);
+      this.solvedBounds = this.solvedBoundsCopy;
+    } else {
+      this.solvedBounds = null;
     }
     this.record(bounds);
     return items;

@@ -4,11 +4,13 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import { easeOutCubic, prefersReducedMotion } from '@/lib/media';
-import { STOP_T } from '../data';
+import { STOP_T, interpolated } from '../data';
 import { MARKER_SIZE, MarkerLayout, layoutMarkers, type MarkerAnchor, type MarkerBounds, type MarkerItem, type PlacedMarker } from '../state/focusLayout';
 import { useMapStore, type MapStore } from '../state/mapStore';
 import { badgeKey, getOverlayEl, getOverlaySize, getPlacedMarkers, markerKey, setPlacedMarkers } from '../state/overlayEls';
 import { canvasRect, visibleArea, worldToScreen } from '../state/projection';
+import { getCameraControl } from './CameraTween';
+import { frustumCamera } from './InitialFrame';
 import { TIP_EDGE, clamp } from './OverlayDriver';
 
 const HOT_SCALE = 1.16;
@@ -86,6 +88,46 @@ interface Work {
   bounds: MarkerBounds;
   pos: Float64Array;
   settle: Settle | null;
+  /** Eases run so far (a test reads it: an album opening should need none). */
+  eases: number;
+  /** The focus and the tween target (x, y, zoom, inset, stop, width, height, bottom cover) last laid out for. */
+  focus: unknown;
+  focusAt: number;
+  target: (number | string)[];
+}
+
+/** A tween that is sent elsewhere this soon after the focus changed (the album panel's inset arriving a frame
+ * later, say) is still part of the opening: the layout follows it to the new view. Later reframings settle. */
+const RETARGET_MS = 300;
+
+/** The anchors and bounds of the view a running camera tween lands on, on the frames where the layout should be
+ * solved for it: the focus has just changed (an album opens, a recommendation is picked), or the opening tween
+ * was just sent elsewhere. Null otherwise. Allocates only then. */
+function tweenTarget(w: Work, store: MapStore, width: number, height: number): { anchors: MarkerAnchor[]; bounds: MarkerBounds } | null {
+  const { input, data } = store;
+  const f = input.focus;
+  const to = getCameraControl()?.getTarget() ?? null;
+  const now = performance.now();
+  const newFocus = w.focus !== f;
+  if (newFocus) {
+    w.focus = f;
+    w.focusAt = now;
+  }
+  if (!to || !f || !data) {
+    w.target.length = 0;
+    return null;
+  }
+  const key = w.target;
+  const fresh = [to.x, to.y, to.zoom, input.insetLeft, input.stop, width, height, input.bottomCover];
+  const moved = fresh.length !== key.length || fresh.some((v, i) => v !== key[i]);
+  if (moved) w.target = fresh;
+  if (!newFocus && !(moved && now - w.focusAt < RETARGET_MS)) return null;
+  const cam = frustumCamera(to, width, height, input.insetLeft);
+  const pos = interpolated(data, STOP_T[input.stop]);
+  const rect = canvasRect(width, height);
+  const anchors = [f.seed, ...f.recs].map((id) => ({ id, ...worldToScreen(pos[2 * id], pos[2 * id + 1], rect, cam) }));
+  const area = visibleArea(input.insetLeft, width, height, MARKER_EDGE);
+  return { anchors, bounds: { ...area, bottom: Math.min(area.bottom, height - input.bottomCover - MARKER_EDGE) } };
 }
 
 /** Every rendered frame in focus mode: places the cover markers, the lines and the label of a hovered marker. The
@@ -112,7 +154,12 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
         const shown = getPlacedMarkers();
         let gap = 0;
         shown.forEach((m, i) => (gap = Math.max(gap, Math.abs(m.x - fresh[i].x), Math.abs(m.y - fresh[i].y))));
-        return { placed: shown.map((m) => ({ id: m.id, x: m.x, y: m.y, drawn: m.drawn })), freshGap: shown.length === fresh.length ? gap : Infinity };
+        return {
+          placed: shown.map((m) => ({ id: m.id, x: m.x, y: m.y, drawn: m.drawn })),
+          freshGap: shown.length === fresh.length ? gap : Infinity,
+          settles: w.layout.stats.settles,
+          eases: w.eases,
+        };
       };
     }
     return () => {
@@ -127,8 +174,9 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
     const store = useMapStore.getState();
     const { input, hoveredIndex, insetCurrent } = store;
     const f = input.focus;
-    const w = (work.current ??= { layout: new MarkerLayout(), anchors: [], bounds: { left: 0, top: 0, right: 0, bottom: 0 }, pos: new Float64Array(0), settle: null });
+    const w = (work.current ??= { layout: new MarkerLayout(), anchors: [], bounds: { left: 0, top: 0, right: 0, bottom: 0 }, pos: new Float64Array(0), settle: null, eases: 0, focus: null, focusAt: 0, target: [] });
     if (!f) {
+      w.focus = null;
       if (w.settle) {
         cancelAnimationFrame(w.settle.raf);
         w.settle = null;
@@ -163,7 +211,9 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
       }
     }
     const layout = w.layout;
-    const placed = layout.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: b, moving: inMotion(store) });
+    // An album opening (or the focus reframed) with a camera tween under way: lay out the view it lands on.
+    const target = tweenTarget(w, store, width, height);
+    const placed = layout.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: b, moving: inMotion(store), target: target ?? undefined });
     const n = placed.length;
     if (w.pos.length !== 2 * n) w.pos = new Float64Array(2 * n);
     for (let i = 0; i < n; i++) {
@@ -189,6 +239,7 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
       s.now.set(s.from);
       s.raf = requestAnimationFrame(step);
       w.settle = s;
+      w.eases++;
     }
 
     const drawn: PlacedMarker[] = [];

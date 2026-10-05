@@ -153,6 +153,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
         if (t) start(t, animate ? DURATION.camera : 0);
       },
       getCamera: current,
+      getTarget: () => (tween.current ? tween.current.to : null),
       setCamera: (c, animate = false) => start(c, animate ? DURATION.camera : 0),
       screenPoint: (id) => {
         const p = positionsRef.current;

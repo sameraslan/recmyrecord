@@ -368,3 +368,19 @@ test('after a zoom with an album open the covers settle on the fresh layout and 
   const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
   expect(f2 - f1, 'frames drawn at rest after the settle').toBe(0);
 });
+
+test('an album opens with its covers laid out for the framed view: nothing eases when the framing lands', async ({ page }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  // The framing tween runs; its first frame lays out the view it lands on.
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(11);
+  await page.waitForTimeout(400); // longer than an ease, had one run
+  const open = await page.evaluate(() => window.__rmr!.markerLayout!());
+  expect(open, 'a focus is open and no ease is running').not.toBeNull();
+  expect(open!.eases, 'eases run since the album opened').toBe(0);
+  expect(open!.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
+});

@@ -4,10 +4,12 @@ import { useLayoutEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 
+import type { MapCamera } from "@/lib/types";
 import type { MapData } from "../data";
 import { fitView, getCloudBounds, overviewView } from "../state/bounds";
 import { useMapStore } from "../state/mapStore";
 import { setFitKind, setFramed, setOverviewFraming, snapKind } from "../state/view";
+import type { OrthoCameraLike } from "../state/projection";
 import { FRUSTUM_HALF_HEIGHT } from "../state/zoomLimits";
 
 /**
@@ -20,6 +22,22 @@ export { FRUSTUM_HALF_HEIGHT };
  * Symmetric frustum for a `width` x `height` CSS px canvas, with the drawing shifted so `camera.position`
  * lands at the centre of the area right of `insetPx` (the album panel). state/projection.ts mirrors this.
  */
+/** The camera as applyFrustum would set it for `view` and a panel inset, for projecting a view the camera is not
+ * at yet (the end of a tween). */
+export function frustumCamera(view: MapCamera, width: number, height: number, insetPx: number): OrthoCameraLike {
+  const halfW = FRUSTUM_HALF_HEIGHT * (width / height);
+  const inset = Math.min(Math.max(insetPx, 0), width * 0.9);
+  return {
+    position: { x: view.x, y: view.y },
+    zoom: view.zoom,
+    left: -halfW,
+    right: halfW,
+    top: FRUSTUM_HALF_HEIGHT,
+    bottom: -FRUSTUM_HALF_HEIGHT,
+    view: inset > 0 ? { enabled: true, fullWidth: width, fullHeight: height, offsetX: -inset / 2, offsetY: 0, width, height } : null,
+  };
+}
+
 export function applyFrustum(camera: THREE.OrthographicCamera, width: number, height: number, insetPx: number): void {
   const halfW = FRUSTUM_HALF_HEIGHT * (width / height);
   camera.left = -halfW;

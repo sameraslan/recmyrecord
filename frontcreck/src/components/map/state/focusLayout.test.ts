@@ -385,6 +385,49 @@ describe('MarkerLayout (layoutMarkers for every drawn frame, steady from frame t
     }
   });
 
+  it('opens on the layout of the camera tween\'s target view and carries it there, so the settle moves nothing', () => {
+    const rand = lcg(10);
+    let eased = 0;
+    for (let t = 0; t < 100; t++) {
+      const cache = new MarkerLayout();
+      // The view the framing tween lands on, and the view it starts from (zoomed out 2.5 times, elsewhere).
+      const target = cluster(rand, 195, 340, 10, 120 + rand() * 300);
+      const start = moved(zoomed(target, 0.4), -60, 40);
+      const first = cache.layout(start, 64, 46, { bounds, moving: true, target: { anchors: target, bounds } });
+      expect(first.map((m) => [m.ax, m.ay])).toEqual(start.map((p) => [p.x, p.y]));
+      expect(cache.stats.solves).toBe(1);
+      for (let f = 1; f <= 20; f++) {
+        const k = f / 20;
+        const a = start.map((p, i) => ({ id: p.id, x: p.x + (target[i].x - p.x) * k, y: p.y + (target[i].y - p.y) * k }));
+        const out = cache.layout(a, 64, 46, { bounds, moving: true });
+        expect(outside([...out], bounds)).toBe(0);
+        expect(overlaps([...out])).toBe(0);
+      }
+      // Landed: carried onto the target, it is already the target view's fresh layout.
+      const landed = cache.layout(target, 64, 46, { bounds, moving: true }).map((m) => ({ ...m }));
+      expect(gapTo(landed, layoutMarkers(target, 64, 46, { bounds }))).toBeLessThan(1e-9);
+      const rest = cache.layout(target, 64, 46, { bounds });
+      expect(gapTo(rest, landed)).toBeLessThan(1e-9);
+      if (cache.settledFrom) eased++;
+    }
+    expect(eased).toBe(0);
+  });
+
+  it('solves for a new target when the tween is sent elsewhere, and still lands with nothing to settle', () => {
+    const cache = new MarkerLayout();
+    const rand = lcg(11);
+    const t1 = cluster(rand, 195, 340, 10, 200);
+    const t2 = moved(zoomed(t1, 1.4), 30, -20);
+    const start = zoomed(t1, 0.5);
+    cache.layout(start, 64, 46, { bounds, moving: true, target: { anchors: t1, bounds } });
+    cache.layout(zoomed(t1, 0.7), 64, 46, { bounds, moving: true, target: { anchors: t2, bounds } });
+    expect(cache.stats.solves).toBe(2);
+    cache.layout(t2, 64, 46, { bounds, moving: true });
+    const rest = cache.layout(t2, 64, 46, { bounds });
+    expect(gapTo(rest, layoutMarkers(t2, 64, 46, { bounds }))).toBeLessThan(1e-9);
+    expect(cache.settledFrom).toBeNull();
+  });
+
   it('solves again for other albums, sizes, gap or minimum line', () => {
     const cache = new MarkerLayout();
     const a = cluster(lcg(9), 300, 300, 5);

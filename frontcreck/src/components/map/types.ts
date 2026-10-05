@@ -61,6 +61,8 @@ export interface MapApi {
   /** Fit the focus (seed and visible recs, at the target stop) inside the padded visible area. */
   frameFocus: (animate?: boolean) => void;
   getCamera: () => MapCamera;
+  /** Where the camera tween under way will land, or null when none is running. */
+  getTarget: () => MapCamera | null;
   setCamera: (camera: MapCamera, animate?: boolean) => void;
   /** Client (viewport) coordinates of an album at the current positions, or null. */
   screenPoint: (id: AlbumId) => { x: number; y: number } | null;

@@ -1,6 +1,6 @@
 import { OrthographicCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { applyFrustum } from '../canvas/InitialFrame';
+import { applyFrustum, frustumCamera } from '../canvas/InitialFrame';
 import { screenToWorld, worldToScreen } from './projection';
 
 const rect = { left: 10, top: 20, width: 800, height: 500 };
@@ -49,5 +49,20 @@ describe('screen and world conversions match three.js', () => {
     const b = camera(300, 2, 0, 0);
     const span = (cam: OrthographicCamera) => drawnAt(cam, 0.2, 0).x - drawnAt(cam, 0, 0).x;
     expect(span(b)).toBeCloseTo(span(a), 6);
+  });
+});
+
+describe('frustumCamera', () => {
+  it('projects as the camera does once applyFrustum and the view are applied', () => {
+    for (const [inset, zoom, x, y] of [[0, 1, 0, 0], [0, 2.5, 0.1, -0.2], [300, 3.2, -0.3, 0.05], [540, 0.8, 0.2, 0.2], [1000, 1.5, 0, 0]] as const) {
+      const cam = camera(inset, zoom, x, y);
+      const like = frustumCamera({ x, y, zoom }, rect.width, rect.height, inset);
+      for (const [wx, wy] of [[0, 0], [0.31, -0.12], [-0.4, 0.27]]) {
+        const a = worldToScreen(wx, wy, rect, cam);
+        const b = worldToScreen(wx, wy, rect, like);
+        expect(b.x).toBeCloseTo(a.x, 9);
+        expect(b.y).toBeCloseTo(a.y, 9);
+      }
+    }
   });
 });

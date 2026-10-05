@@ -243,3 +243,56 @@ for (const [name, v] of Object.entries(VIEWS)) {
   }
   console.log(`settle frame (the motion's end, a fresh solve): n ${settle.t.length}, ${summary(settle.t)}; worst ${settle.worst.kind} of album ${settle.worst.seed} at ${settle.worst.stop}; largest gap to a fresh solve ${settle.gap.toExponential(2)} px`);
 }
+
+console.log(`\n## Album open: a 26-frame framing tween (ease-out, from 2.5 times further out and off to one side), then rest`);
+console.log(`"no target": the opening frame solves the view it starts from and the group rides, settling at rest;`);
+console.log(`"target": the opening frame solves the view the tween lands on (MarkerDriver passes it), so the rest frame has nothing to move.`);
+for (const [name, v] of Object.entries(VIEWS)) {
+  const rand = seeded(7);
+  const picks = [v.worst, ...Array.from({ length: SAMPLE }, () => [STOPS[Math.floor(rand() * 3)], Math.floor(rand() * recs.balanced.length)])];
+  const out = { target: { open: [], frame: [], rest: [], ease: [] }, 'no target': { open: [], frame: [], rest: [], ease: [] } };
+  for (const [stop, seed] of picks) {
+    const ids = [seed, ...recs[stop][seed].slice(0, RECS_SHOWN)];
+    const pos = positions[stop];
+    const to = focusCamera(ids, pos, v.width, v.height, v.inset, v.pad, clampZoom);
+    const from = { x: to.x + 0.2, y: to.y - 0.1, zoom: to.zoom / 2.5 };
+    const bounds = boundsFor(v, v.inset);
+    const view = (c) => {
+      const k = (v.height * c.zoom) / (2 * FRUSTUM_HALF_HEIGHT);
+      const cx = v.inset + (v.width - v.inset) / 2;
+      return ids.map((id) => ({ id, x: cx + (pos[2 * id] - c.x) * k, y: v.height / 2 - (pos[2 * id + 1] - c.y) * k }));
+    };
+    const frames = Array.from({ length: 26 }, (_, f) => {
+      const e = 1 - (1 - f / 25) ** 3;
+      return view({ x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, zoom: Math.exp(Math.log(from.zoom) + (Math.log(to.zoom) - Math.log(from.zoom)) * e) });
+    });
+    for (const mode of ['target', 'no target']) {
+      const r = out[mode];
+      let best = null;
+      for (let run = 0; run < 3; run++) {
+        const cache = new MarkerLayout();
+        const t = [];
+        frames.forEach((a, f) => {
+          const t0 = performance.now();
+          cache.layout(a, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true, target: f === 0 && mode === 'target' ? { anchors: view(to), bounds } : undefined });
+          t.push(performance.now() - t0);
+        });
+        const before = cache.layout(frames[25], MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true }).map((m) => [m.x, m.y]);
+        const t0 = performance.now();
+        const rest = cache.layout(frames[25], MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+        t.push(performance.now() - t0);
+        const ease = Math.max(...rest.map((m, i) => Math.hypot(m.x - before[i][0], m.y - before[i][1])));
+        best = best ? best.map((x, i) => Math.min(x, t[i])) : t;
+        if (run === 0) r.ease.push(ease);
+      }
+      r.open.push(best[0]);
+      r.frame.push(...best.slice(1, 26));
+      r.rest.push(best[26]);
+    }
+  }
+  console.log(`\n### ${name} (${picks.length} albums)`);
+  for (const [mode, r] of Object.entries(out)) {
+    const eased = r.ease.filter((d) => d >= 0.5).length;
+    console.log(`${mode}: opening frame ${summary(r.open)}; tween frames ${summary(r.frame)}; rest frame ${summary(r.rest)}; covers eased at rest in ${eased} of ${r.ease.length} opens, largest move ${Math.max(...r.ease).toFixed(1)} px`);
+  }
+}
