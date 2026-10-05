@@ -8,6 +8,8 @@ This is the new first task of part 2 (`2026-10-04-trifid-theme-2-stars-lines-nam
 
 **Goal:** the first view of `/map` is the prototype's Overview; the fit button, the `0` key, the zoom-out floor, the idle nudge and every album route keep today's behaviour; the tests, the perf script and the capture scripts say which framing they measure, and every comparison with the baseline stays like for like.
 
+**As built (2026-10-05).** This plan has been brought in line with the code after the implementation and the code review (`reviews/task0-code-review.md`, fix round 1). Where a step shows code, it is the code as committed. The changes from the first version: `snapKind` in Step 7 (plan-review point D); `opening()` waits for `isFramed()`, `homeBackdrop(to)` counts a running opening glide as untouched and covers any arrival at a page, and the opening glide shares MapStage's album-return effect (Steps 8 and 9, review findings 1, 4, 5 and 7); three more browser tests and the gas-fill test hides the grain (Step 12, finding 3); the fail-first list (Step 15); `perf.mjs` runs the budget rows first and the opening rows last in a fresh browser context, and records `wholeCamera` before the first gesture (Step 16, finding 2); `capture.mjs --only` writes `capture-log-<viewport>.only.json` (Step 17, finding 8); MapStage's 20,000-byte source threshold (Step 19).
+
 **Tracking issue:** 45. **Pull request:** 47. Before every push: `git fetch origin && git rebase origin/feat/trifid-theme` (two sessions push to this branch, handoff update of 2026-10-05); never force push.
 
 All commands start from the worktree root and set the PATH themselves:
@@ -116,12 +118,13 @@ Line numbers are those of `feat/trifid-theme` at `71683264`. Part 1's closing se
   export function setFitKind(kind: OpeningKind, camera?: CameraView | null): void;  // the framing a resize re-fits, and where it put the camera
   export function getFitKind(): OpeningKind;
   export function getFitCamera(): CameraView | null;
+  export function snapKind(newData: boolean, input: { explore: boolean; focus: unknown }, override?: unknown): OpeningKind;  // which framing an InitialFrame snap applies
   export function untouchedOverview(kind: OpeningKind, fitCamera: CameraView | null, camera: CameraView): boolean;
 
   // frontcreck/src/components/map/types.ts
   MapInput.explore: boolean;                           // the route is /map (Explore)
   MapApi.opening: (animate?: boolean) => void;         // glide to the framing /map opens at
-  MapApi.homeBackdrop: () => boolean;                  // leaving /map for Home: the Whole map if the Overview is untouched
+  MapApi.homeBackdrop: (to: View) => boolean;          // on every route change: arriving at a page with the Overview untouched (or its glide running) keeps no Explore camera; on Home it glides to the Whole map
 
   // window (frontcreck/src/types/global.d.ts)
   __rmrOpen?: 'whole' | 'overview';                    // test and capture switch, read when the map frames itself
@@ -137,10 +140,10 @@ Line numbers are those of `feat/trifid-theme` at `71683264`. Part 1's closing se
 **What decides the opening framing.**
 - First framing of a page load (`InitialFrame`, new data): `openingKind(input, window.__rmrOpen)`. The Overview only when the route is `/map` (`input.explore`) and no album is in focus; Home, About, 404 and every `/album/...` link (desktop and phone, list and map mode) frame the Whole map first, exactly as today, and an album then frames itself as today (`FocusFramer`). The switch `__rmrOpen` overrides `MAP_OPENS_AT` only on `/map`.
 - Home, About or 404 to `/map` in the same page (Step 9): when the visitor has no saved Explore camera, the map glides to the opening framing, as the prototype does (`app.js` L118). When there is one (they explored before), the camera stays where they left it, as today (`explore.spec.ts` "the hint stays hidden over covers after a trip to About and back" pins that).
-- `/map` to Home with the camera untouched since the map opened at the Overview (no drag, wheel, key, button or pick has moved it; the camera still equals the one the opening framing set): the map glides back to the Whole map behind the hero (420 ms), as the prototype does (`app.js` L114) and as a fresh load of Home frames it (`final-home.jpg`), and no Explore camera is saved, so the Map link opens at the Overview again. A resize on Home then fits the Whole map. With a touched camera, Home keeps the camera as today (and it is saved for the way back). About and 404 keep the camera in every case, as today and as the prototype (its pages other than Home are a still backdrop).
+- Arriving at Home with the camera untouched since the map opened at the Overview (no drag, wheel, key, button or pick has moved it; the camera, or the end of the opening glide still running, equals the one the opening framing set): the map glides to the Whole map behind the hero (420 ms, from wherever the camera is), as the prototype does (`app.js` L114) and as a fresh load of Home frames it (`final-home.jpg`). This holds from `/map` and also from About or 404 visited after an untouched `/map` (ruling of 2026-10-05, review finding 7). Arriving at Home, About or 404 with the Overview untouched saves no Explore camera, so the Map link opens at the Overview again; leaving `/map` while the opening glide still runs counts as untouched (finding 5). A resize on Home then fits the Whole map. With a touched camera, Home keeps the camera as today (and it is saved for the way back). About and 404 keep the camera in every case, as today and as the prototype (its pages other than Home are a still backdrop). An album keeps the saved camera even when it is the untouched Overview, so closing the album restores it.
 - An album closed back to `/map` with no saved camera still gets `reset()`, the Whole map (today's behaviour, `MapStage.tsx` L246-252, pinned by `explore.spec.ts` "leaving an album by the header nav ... frames the whole map"). "Explore this area" still leaves the camera where it is.
 - The fit button and the `0` key (`reset()`): unchanged. Focus framing beside an album, else the picked album, else the Whole map.
-- A resize before the visitor has touched the map (today's rule, `InitialFrame.tsx` L102-104) re-fits whichever of the two framings was last applied: the opening one, or the Whole map once the fit button gave it.
+- A resize before the visitor has touched the map (today's rule, `InitialFrame.tsx` L102-104) re-fits, on `/map`, whichever of the two framings was last applied: the opening one, or the Whole map once the fit button gave it. On every other route it re-fits the Whole map (`snapKind`; a pick's fly is no camera grab, so without this a resize on Home after a pick would re-fit the Overview, plan-review point D).
 - The URL carries no camera (`src/lib/url-state.ts` has none); there is nothing else to restore.
 
 ### Steps
@@ -572,9 +575,10 @@ In `MapApi`, after the `flyTo` line (L50) insert:
   /** Glide (or jump, with `animate` false) to the framing /map opens at: the Overview, or the Whole map where
    * state/view.ts openingKind says so. */
   opening: (animate?: boolean) => void;
-  /** Leaving /map for Home: when the camera is still the untouched Overview, glide to the Whole map (Home's own
-   * framing) and return true; otherwise leave the camera and return false. */
-  homeBackdrop: () => boolean;
+  /** On a route change to `to`. Arriving at a page (Home, About, 404) while the camera is still the Overview the map
+   * opened at (or the glide to it is running) and nothing the visitor did moved it: true, keep no Explore camera; on
+   * Home it also glides to the Whole map (Home's own framing). Otherwise false and the camera stays. */
+  homeBackdrop: (to: View) => boolean;
 ```
 
 `frontcreck/src/components/map/state/mapStore.ts`, `DEFAULT_INPUT` L12, before: `  interactive: false,` after:
@@ -613,7 +617,7 @@ after:
 ```ts
 import { fitView, getCloudBounds, overviewView } from "../state/bounds";
 import { useMapStore } from "../state/mapStore";
-import { getFitKind, openingKind, setFitKind, setFramed, setOverviewFraming } from "../state/view";
+import { setFitKind, setFramed, setOverviewFraming, snapKind } from "../state/view";
 ```
 
 In the doc comment, replace the "Snap" bullet (L47-50):
@@ -657,9 +661,9 @@ after:
 ```ts
     if (newData || (sizeChanged && untouched)) {
       framedData.current = data;
-      // A page load opens at the route's framing; a resize re-fits the framing on screen (the fit button may have
-      // turned the Overview into the whole map).
-      const kind = newData ? openingKind(input, window.__rmrOpen) : getFitKind();
+      // A page load opens at the route's framing; a resize on /map re-fits the framing on screen (the fit button
+      // may have turned the Overview into the whole map), and on any other route the whole map.
+      const kind = snapKind(newData, input, window.__rmrOpen);
       const view =
         kind === "overview"
           ? overviewView(data, currentSliderT, { width, height, insetLeft: useMapStore.getState().insetCurrent, bottomCover: input.bottomCover }, zoom)
@@ -675,6 +679,15 @@ after:
     }
 ```
 
+`snapKind` (in `state/view.ts`, after `untouchedOverview`; unit-tested in `view.test.ts` "snapKind"):
+
+```ts
+export function snapKind(newData: boolean, input: { explore: boolean; focus: unknown }, override?: unknown): OpeningKind {
+  if (newData) return openingKind(input, override);
+  return input.explore ? fitKind : "whole";
+}
+```
+
 `input` is the route's input of this commit: `MusicMap` writes `data` and `input` to the store in its layout effects (`MusicMap.tsx` L26-34) before `InitialFrame` re-renders with the data.
 
 - [ ] **Step 8: The fit button records the Whole map; `opening()` (`CameraTween`)**
@@ -683,7 +696,7 @@ after:
 
 ```ts
 import { overviewView } from '../state/bounds';
-import { getFitCamera, getFitKind, getOverviewFraming, openingKind, setFitKind, untouchedOverview } from '../state/view';
+import { getFitCamera, getFitKind, getOverviewFraming, isFramed, openingKind, setFitKind, untouchedOverview } from '../state/view';
 ```
 
 `reset` (L107-112), before:
@@ -713,19 +726,32 @@ after:
       flyTo: (id) => start(flyTarget(id), FLY_MS),
       opening: (animate = true) => {
         const { input, data, sliderT, insetCurrent } = useMapStore.getState();
-        if (!data) return;
+        // Before InitialFrame has framed this data there is no whole fit to start from; its snap opens the map at
+        // the same framing (openingKind).
+        if (!data || !isFramed()) return;
         const kind = openingKind(input, window.__rmrOpen);
         const { width, height } = get().size;
         const whole = overview();
         const to = kind === 'overview' ? overviewView(data, sliderT, { width, height, insetLeft: insetCurrent, bottomCover: input.bottomCover }, whole.zoom) : null;
         const target = to ? { x: to.center.x, y: to.center.y, zoom: to.zoom } : whole;
         setFitKind(kind, target);
+        // Already there (About and back with the Overview untouched): no glide, no frames.
+        if (!tween.current && untouchedOverview(kind, target, current())) return;
         start(target, animate ? DURATION.camera : 0);
       },
-      homeBackdrop: () => {
-        // Still the Overview the map opened at (no tween running, nothing moved it): Home's Whole map, as on a fresh
-        // load of Home (prototype app.js L114). A moved camera stays, as today.
-        if (tween.current || !untouchedOverview(getFitKind(), getFitCamera(), current())) return false;
+      homeBackdrop: (to) => {
+        // Called by MapStage on every route change (its logic lives here: MapStage.tsx sits just under the source size
+        // at which Turbopack splits its first-load chunk). Untouched: the camera, or the end of the tween running now
+        // (the glide to the opening view) with no grab cutting it short, is still the Overview the map opened at.
+        // Arriving at a page then keeps no Explore camera (true), so the Map link opens at the Overview again; on Home
+        // it also glides from where the camera is to the Whole map, as a fresh load of Home frames it (prototype
+        // app.js L114, final-home.jpg), also after About or 404. /map and albums never: an album's close restores
+        // the saved camera. A moved camera stays, as today.
+        if (to !== 'home' && to !== 'about' && to !== 'other') return false;
+        const t = tween.current;
+        if (t && useMapStore.getState().lastCameraGrab > t.startWall) return false;
+        if (!untouchedOverview(getFitKind(), getFitCamera(), t ? t.to : current())) return false;
+        if (to !== 'home') return true;
         const whole = overview();
         setFitKind('whole', whole);
         start(whole, DURATION.camera);
@@ -748,20 +774,17 @@ In the first view-change layout effect (L231-242), first the save on leaving Exp
     }
 ```
 
-after:
+after (the block itself is unchanged; one line follows it, and its explanation lives in `CameraTween.homeBackdrop`, see Step 19 on why MapStage stays short):
 
 ```ts
     if (prev === 'explore') {
-      // To Home with the Overview untouched: Home shows the Whole map, as on a fresh load (prototype app.js L114,
-      // final-home.jpg), and nothing is kept, so the Map link opens at the Overview again (Task 0).
-      const toHome = view === 'home' && apiRef.current?.homeBackdrop() === true;
-      if (toHome) s.saveExploreCamera(null);
-      else if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
+      if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
       s.setSelected(null);
     }
+    if (apiRef.current?.homeBackdrop(view)) s.saveExploreCamera(null);
 ```
 
-(`MusicMap` applies Home's input in its own layout effect before this one, so the glide reads Home's whole fit. A pick flies the camera, so with a card open the Overview is not untouched and nothing changes for that path.) Then, before:
+(`types.ts` imports `View` from `@/lib/url-state` for `homeBackdrop(to: View)`. `MusicMap` applies Home's input in its own layout effect before this one, so the glide reads Home's whole fit. A pick flies the camera, so with a card open the Overview is not untouched and nothing changes for that path.) Then, before:
 
 ```ts
     pendingReturn.current = view === 'explore' && prev === 'album' && !exploreHere.current;
@@ -786,16 +809,27 @@ and declare the ref beside the others (after `const exploreHere = useRef(false);
   const pendingOpening = useRef(false);
 ```
 
-After the second layout effect (after L252, `}, [view, input]);`), insert:
+The opening glide shares the second layout effect (the album return) rather than adding a third (review finding 1: a third effect took MapStage.tsx past the source size at which its first-load chunk splits, Step 19). `pendingReturn` (from an album) and `pendingOpening` (from a page) never hold together. The second layout effect, before:
 
 ```ts
-  // Runs in the commit whose input says Explore (MusicMap applied it in its own layout effect). Without a map yet
-  // there is nothing to move: when the map mounts, InitialFrame opens it at the same framing.
   useLayoutEffect(() => {
-    if (!pendingOpening.current || view !== 'explore' || input.focus !== null) return;
-    pendingOpening.current = false;
-    apiRef.current?.opening(true);
-  }, [view, input]);
+    if (!pendingReturn.current || view !== 'explore' || input.focus !== null || !apiRef.current) return;
+```
+
+after (its comment gains four lines; the rest of the effect is unchanged):
+
+```ts
+  // The opening glide (Home, About or 404 to the map) runs in the same commit. Without a map yet there is nothing to
+  // move: when the map mounts, InitialFrame opens it at the same framing. pendingReturn (from an album) and
+  // pendingOpening (from a page) never hold together. Keep this file under 20,000 bytes: past that Turbopack splits
+  // its first-load chunk in two (+0.6 KB, measured in Task 0).
+  useLayoutEffect(() => {
+    if (view !== 'explore' || input.focus !== null) return;
+    if (pendingOpening.current) {
+      pendingOpening.current = false;
+      apiRef.current?.opening(true);
+    }
+    if (!pendingReturn.current || !apiRef.current) return;
 ```
 
 Update the comment above the explore camera memory (L224-226), before:
@@ -1205,6 +1239,13 @@ What each test proves:
 - "the sharper gas image at the Overview": the one new GPU behaviour of the opening view (part 1's rule, now met without a zoom) asks for one image, ends its fade, and then draws nothing at rest.
 - "the gas fills the screen": the approved picture's defining trait, with the Whole map as the control, and nothing drawn at rest once the sharper image (if any) has settled. Its thresholds come from Balanced's first gas image read with `sharp` (every grid point on gas at the Overview, 6 of 12 bare at the Whole map); the browser reading itself was not run while this plan was written. If a patch fails, print the 12 numbers and look at the screenshot; do not lower the threshold. On the first green run, copy the 12 Overview and the 12 Whole map numbers the test prints (add a `console.log` of both arrays for that run, or read them from the assertion messages with `--reporter=list`) into the PR description, so a later change to the gas curve has a screen reference and nobody retunes the thresholds silently.
 
+As built, `opening.spec.ts` has three more tests and two changes (13 tests, 8 on the phone):
+- "after a pick's fly on /map, a resize on Home fits the Whole map, as a fresh load of Home at that size" (desktop): plan-review point D. The fly is called through the map API (`flyTo(11)`), the call a pick makes; a click on the canvas would itself be a camera grab.
+- "/map (untouched) to About and then Home shows Home's Whole map, and the Map link opens at the Overview again" (both projects): review finding 7. About keeps the camera; Home equals a fresh load's framing; nothing was saved.
+- "Home clicked while the glide to the Overview is still running counts as untouched: Home's Whole map, nothing saved" (both projects): review finding 5. The wordmark is clicked inside the page in the same frame that sees Explore with the glide running, so no round trip can let the glide end first; the test asserts the glide was running.
+- The forced sharper-image test sets `test.setTimeout(90_000)` (plan-review point A).
+- The gas-fill test hides the page's `.grain` overlay (`.grain { display: none !important; }`) after `openMap` (review finding 3). The grain lifts bare sky from the shader's rgb(6, 6, 9) to rgb(10, 10, 12), luma 10.14, which left `SKY_LUMA + 4` (10.2) under one 8-bit step of margin. With it hidden, bare sky reads 6.22 and the threshold keeps its intended 4 levels. This removes a confound the thresholds did not model; it loosens nothing.
+
 - [ ] **Step 13: Rewrite the two `map.spec.ts` tests that assumed reset returns to the opening view**
 
 `frontcreck/e2e/map.spec.ts`, L3, before:
@@ -1329,7 +1370,7 @@ Then run:
 
 `(export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; cd frontcreck && nice -n 10 npx playwright test e2e/opening.spec.ts --project=desktop --workers=1)`
 
-Expected: FAIL on "opens at the Overview" (`overviewMiss` lists the 1st percentile about 200 px right of 24, and "every album is on screen"), "from Home", "/map to Home ..." (the Map link does not reach the Overview), "a resize", "the gas fills the screen" (the Overview patches at the far left and right read sky) and "the sharper gas image" (no request at the Whole map). "a resize on Home" passes already (today Home never leaves the Whole map). "the fit button" and "the opening switch" and "an album link" pass already: today the opening view is the Whole map. Restore (`git stash pop`), then:
+Expected: FAIL on "opens at the Overview" (`overviewMiss` lists the 1st percentile about 200 px right of 24, and "every album is on screen"), "from Home", "/map to Home ..." (the Map link does not reach the Overview), "a resize", "the gas fills the screen" (the Overview patches at the far left and right read sky) and "the sharper gas image" (no request at the Whole map). "the fit button gives the Whole map" also fails, legitimately: its `whole.zoom < opened.zoom` is false when the map opens at the Whole map. "a resize on Home" and "after a pick's fly ... a resize on Home" pass already (today Home never leaves the Whole map). "/map (untouched) to About and then Home" fails at its last step (the Map link does not reach the Overview), and "Home clicked while the glide ... is still running" fails at once (there is no glide to the Overview). "the opening switch" and "an album link" pass already: today the opening view is the Whole map. As built, every new rule also has a mutation check: reverting `snapKind`'s off-/map branch fails "after a pick's fly"; reverting the running-glide rule fails "Home clicked while the glide ... is still running"; calling `homeBackdrop` only when leaving `/map` fails "/map (untouched) to About and then Home". Restore (`git stash pop`), then:
 
 ```bash
 (export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; cd frontcreck && nice -n 10 npx playwright test e2e/opening.spec.ts e2e/map.spec.ts e2e/explore.spec.ts --project=desktop --workers=1)
@@ -1350,8 +1391,8 @@ Expected: everything passes as after part 1 (that one red test aside). A test ou
 
 The baseline measured drag, zoom, deep zoom and the idle window on a fresh `/map`, which opened on the whole cloud: first gesture of the page, cold atlas, no sharper gas image. After this task a fresh `/map` opens at the Overview, so the script measures the two kinds of row on two fresh loads:
 
-1. **Opening view, reported only.** A fresh `/map` with no switch, as a visitor opens it (the Overview). The script waits for the sharper image to settle, then runs the same 2 s drag and 2 s wheel: `openingDragGapMs`, `openingZoomGapMs`.
-2. **Budget rows, unchanged.** `window.__rmrOpen = 'whole'` is set by an init script, then `/map` is loaded fresh and today's `exploreFlow` body runs as it is (drag, wheel, deep zoom drag, deep morph, idle window). So the budgeted drag and zoom rows again meet a fresh page at the Whole map with a cold atlas and no sharper image, as in the baseline. The one change in that body is a wait for the sharper image before the 3 s idle window.
+1. **Budget rows first, unchanged** (as built, review finding 2: the opening rows' wheel zoom fetches cover sheets, and on a GPU desktop the sharper gas image, so running them first warmed the HTTP cache for the budget rows). `window.__rmrOpen = 'whole'` is set by an init script, then `/map` is loaded fresh and today's `exploreFlow` body runs as it is (drag, wheel, deep zoom drag, deep morph, idle window). So the budgeted drag and zoom rows again meet a fresh page at the Whole map with a cold atlas and no sharper image, as in the baseline. The changes in that body are a wait for the sharper image before the 3 s idle window, and `wholeCamera` recorded before the first gesture (the camera the budget rows start from; the camera at the idle window is wherever the budgeted drag and wheel left it, zoom 5.16 on desktop in a software run).
+2. **Opening view last, reported only.** A fresh `/map` with no switch, as a visitor opens it (the Overview), in a new browser context (cold HTTP cache) with the perf helpers installed there. The script waits for the sharper image to settle, then runs the same 2 s drag and 2 s wheel: `openingDragGapMs`, `openingZoomGapMs`.
 
 Why the idle wait (an independent check of the script): the idle window (L256-260) begins 1.5 s after `setCamera(home)` and `settled()`, without waiting for part 1's sharper image. On a GPU desktop the sharper image starts about 250 ms after a quiet moment plus an idle callback when it is wanted (the deep zoom and the stop change before the window make it be fetched or freed and fetched again), and its fade draws up to 14 frames. The window must start only once the image has settled.
 
@@ -1399,8 +1440,26 @@ Before `exploreFlow` (before L184) insert a new flow:
 
 ```js
 /** The opening view, reported only: a fresh /map as a visitor opens it (the Overview since part 2's Task 0), its
- * first drag and first wheel zoom, the same gestures as exploreFlow's. Runs before exploreFlow sets __rmrOpen. */
-async function openingFlow(page, isPhone) {
+ * first drag and first wheel zoom, the same gestures as exploreFlow's. Runs last, in its own browser context (cold
+ * HTTP cache, no __rmrOpen), so the budget rows before it meet the network exactly as in the baseline; its wheel
+ * zoom fetches cover sheets and, on a GPU desktop, the sharper gas image, which must not warm their cache. */
+async function openingFlow(browser, vpName, errors) {
+  const ctx = await browser.newContext(VIEWPORTS[vpName]);
+  try {
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => {
+      if (m.type() === 'error') errors.push(m.text());
+    });
+    await page.addInitScript(PAGE_HELPERS);
+    if (GAS_LITE) await page.addInitScript((v) => (window.__rmrGasLite = v), GAS_LITE);
+    return await openingSteps(page, vpName === 'phone');
+  } finally {
+    await ctx.close();
+  }
+}
+
+async function openingSteps(page, isPhone) {
   await page.goto(`${BASE}/map`, { waitUntil: 'load' });
   await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
   await page.waitForTimeout(1500);
@@ -1462,7 +1521,13 @@ Before L256 (`    window.__lt.length = 0;`), after the `await new Promise((r2) =
     // again) at rest, and its fade draws up to 14 frames. The idle window starts once it has settled.
     res.idleSharpSettled = await P.sharpSettled();
     res.sharpFlag = String(window.__rmr?.gasSharp);
-    res.wholeCamera = window.__rmr.map.getCamera();
+```
+
+and at the start of its in-page step, `const res = {};` becomes:
+
+```js
+    // The camera the budget rows start from: the whole map (__rmrOpen above), as in the baseline.
+    const res = { wholeCamera: window.__rmr.map.getCamera() };
 ```
 
 `measure()`, L319-320, before:
@@ -1476,8 +1541,9 @@ after:
 
 ```js
     ...(await albumFlow(page, vpName === 'phone')),
-    ...(OPEN ? {} : await openingFlow(page, vpName === 'phone')),
     ...(await exploreFlow(page, vpName === 'phone')),
+    // The opening rows last, in a fresh context: the budget rows above are measured exactly as in the baseline.
+    ...(OPEN ? {} : await openingFlow(browser, vpName, errors)),
 ```
 
 The new keys (`openingSharpSettled`, `openingCamera`, `openingDragGapMs`, `openingZoomGapMs`, `idleSharpSettled`, `sharpFlag`, `wholeCamera`) collide with nothing `albumFlow` returns.
@@ -1532,7 +1598,7 @@ Run, test first: before the `lib.mjs` edit `npm run test -- scripts/perf/lib.tes
 (export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; cd frontcreck && npm run build && nice -n 10 node scripts/perf/perf.mjs --mode software --viewport desktop)
 ```
 
-Expected: the table has both opening rows; in the JSON under `scripts/perf/out/`, `openingCamera.zoom` is 2.157 (desktop) and `wholeCamera.zoom` 0.785 (the whole map, put back before the idle window); no WARNING line. A run with `--open whole` shows n/a in the two opening rows and the same budget rows. Judging speed follows the handoff (median of three, old and new builds in turn, mains power) and is part 2 Task 9's job; on a cloud machine with no GPU the gpu rows cannot be measured and nothing here is compared with the baseline (handoff update of 2026-10-05).
+Expected: the table has both opening rows; in the JSON under `scripts/perf/out/`, `openingCamera.zoom` is 2.157 (desktop) and `wholeCamera.zoom` 0.785 (the whole map, where the budget rows start); no WARNING line. A run with `--open whole` shows n/a in the two opening rows and the same budget rows. Judging speed follows the handoff (median of three, old and new builds in turn, mains power) and is part 2 Task 9's job; on a cloud machine with no GPU the gpu rows cannot be measured and nothing here is compared with the baseline (handoff update of 2026-10-05).
 
 - [ ] **Step 17: `capture.mjs`: keep every baseline-named shot at the baseline's framing; add the opening view; settle the sharper image**
 
@@ -1633,7 +1699,7 @@ Runner: the log object (L889) gains `open: OPEN` after `gasShader: GAS,`. After 
       if (OPEN === 'whole' && state.open !== 'app') await ctx.addInitScript(() => { window.__rmrOpen = 'whole'; });
 ```
 
-Check (no browser needed): `node --check ../docs/design/trifid-theme/reviews/baseline/capture.mjs` from `frontcreck/`. A run of one state on the built app proves the rest: `(export PATH=...; cd frontcreck && node ../docs/design/trifid-theme/reviews/baseline/capture.mjs test-results/task0-capture http://127.0.0.1:3400 --start --mode software --only map-) ` and then, in `test-results/task0-capture/capture-log-desktop.json`, the camera of `map-opening-fit` equals the camera of `map-overview` (to 1e-6) and `map-opening` has zoom 2.157 on desktop, 0.565 on the phone.
+Check (no browser needed): `node --check ../docs/design/trifid-theme/reviews/baseline/capture.mjs` from `frontcreck/`. A run of one state on the built app proves the rest: `(export PATH=...; cd frontcreck && node ../docs/design/trifid-theme/reviews/baseline/capture.mjs test-results/task0-capture http://127.0.0.1:3400 --start --mode software --only map-) ` and then, in `test-results/task0-capture/capture-log-desktop.only.json` (an `--only` run writes `capture-log-<viewport>.only.json`, so it never overwrites a full run's log; review finding 8), the camera of `map-opening-fit` equals the camera of `map-overview` (to 1e-6) and `map-opening` has zoom 2.157 on desktop, 0.565 on the phone.
 
 - [ ] **Step 18: `hover-measure.mjs`: hover at the baseline's framing by default; settle the sharper image before the idle**
 
@@ -1702,7 +1768,9 @@ with:
 Run: `(export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; cd frontcreck && npm run typecheck && npm run lint && npm run test)`
 Expected: all pass.
 
-Hand the diff to a fresh reviewer with this file. The reviewer checks in particular: the opening snap still lands before the first frame (it is inside the same layout effect); `getOverviewFraming()` is still the Whole map in every consumer (`CameraRig` floor, `CameraBounds` box, `CameraTween` `reset`, `releaseView`); no album route ever starts from the Overview; `homeBackdrop` moves the camera only when it is the untouched Overview and saves no Explore camera then; nothing draws at rest; no string in `copy.ts` changed; the first-load change is the `explore` flag and the `MapStage` glide only (`npm run build` route table: `/` first-load JS within 0.2 KB of 191.2 KB).
+Hand the diff to a fresh reviewer with this file. The reviewer checks in particular: the opening snap still lands before the first frame (it is inside the same layout effect); `getOverviewFraming()` is still the Whole map in every consumer (`CameraRig` floor, `CameraBounds` box, `CameraTween` `reset`, `releaseView`); no album route ever starts from the Overview; `homeBackdrop` moves the camera only when it is the untouched Overview and saves no Explore camera then; nothing draws at rest; no string in `copy.ts` changed; the first-load change is the `explore` flag and the `MapStage` glide only (`/` first-load JS within 0.2 KB of 191.2 KB, measured as `perf.mjs` measures it: Next 16's build table prints no sizes).
+
+**MapStage's source size.** As built, first-load JS is 191.3 KB in the same 11 scripts as before. Turbopack splits the first-load chunk that holds `MapStage` (with Next's router internals) in two once `MapStage.tsx`'s source passes about 20,000 bytes, comments included: a comment-only edit from 19,938 to 20,033 bytes took `/` from 191.3 to 191.8 KB (one more script, its own gzip overhead). As built the file is 19,936 bytes. Every later edit to `MapStage.tsx` (part 2 and part 3) must re-measure first-load JS and keep the file under that size (move logic into the lazy chunk, as `homeBackdrop` does, or move a helper hook such as `useSliderCover` into its own module).
 
 - [ ] **Step 20: Commit and push (after the review has passed)**
 
@@ -1758,9 +1826,10 @@ Move issue 45's board card only if the orchestrator asks (it is already In progr
 | `bounds.test.ts` existing (`fitView`, `nudgeVector`, ...) | none | unchanged: the whole-map fit and the nudge keep their numbers |
 | `view.test.ts` "openingKind" (4, new) and "the Whole map stays the published fit" (1, new) | new | the constant says Overview; only `/map` with no focus opens there; album links and pages open at the Whole map; the switch works on `/map` only and ignores junk; the fit-kind record does not touch the published whole-map framing |
 | `view.test.ts` "untouchedOverview" (3, new) | new | `/map` to Home shows the Whole map only while the camera is still the Overview the map opened at: not after a pan, a zoom or a pick's fly, not at the Whole map, not when nothing was recorded |
+| `view.test.ts` "snapKind" (3, new) | new | a page load opens at the route's framing; a resize on `/map` re-fits the framing last applied; a resize off `/map` always re-fits the Whole map |
 | `view.test.ts` `releaseView` (3) | none | unchanged |
 | `scripts/perf/lib.test.mjs` "prints n/a for a reported-only value ..." | 4 assertions added | the two opening rows print, and print n/a for older results |
-| `e2e/opening.spec.ts` (10, new; 6 on the phone) | new | see Step 12 |
+| `e2e/opening.spec.ts` (13, new; 8 on the phone) | new | see Step 12 and its "As built" list |
 | `e2e/map.spec.ts` "keyboard pans and zooms, 0 resets" -> "..., 0 gives the whole map" | rewritten | arrows and `+` move the camera; `0` gives the whole map (geometry) and is a fixed point (camera equal to 1e-6 after another move): stricter than "the start zoom" |
 | `e2e/map.spec.ts` "zoom buttons work" | rewritten | Zoom in zooms; Reset gives the whole map and is a fixed point |
 | `e2e/explore.spec.ts` "... returns at the overview" -> "... returns at the whole map" | title only | the hint shows at the opening view, hides over covers, shows again after the fit button |
@@ -1780,6 +1849,10 @@ The part 2 items below have been written into `2026-10-04-trifid-theme-2-stars-l
 - **Part 3 Task 9 (perf) and `compare.mjs`.** Two new reported rows with no baseline value (show "n/a" for the baseline column); the budget rows are like for like. The JSON gains `openingSharpSettled`, `openingCamera`, `openingDragGapMs`, `openingZoomGapMs`, `idleSharpSettled`, `sharpFlag`, `wholeCamera` and the top-level `open`; `settled` is still `albumFlow`'s alone.
 - **Part 3 Task 10 (review shots and regression brief).** `review-shots.mjs`'s `c1-explore` is now the Overview (matches `final-overview.jpg`); a whole-map state must press the fit button (`c4-explore-whole`). Add "the map opens at the Overview", "from the untouched Overview, Home glides back to the Whole map" and "on a desktop with a GPU the opening view fetches the stop's sharper gas image (about 0.8 MB)" to the "changed on purpose" list and to "Changed from today's site, for the owner to see". The regression checklist's "In Explore a stop change never moves the camera" still compares `map-overview`, `-sonic` and `-mood` (all at the whole map with the default `--open whole`).
 - **Part 3 Task 6 (Home).** Home still opens at the Whole map, and a visitor who opens `/map` and goes Home without moving the map now glides back to it (420 ms; prototype `app.js` L114), so Home's backdrop is `final-home.jpg`'s framing on both paths. A visitor who moved the map sees their own view dimmed behind the hero, as today: the Home contrast table is computed for the Whole map and must also hold over any dimmed view (it already must today). Home review shots should be taken on a fresh load of `/`.
+
+- **Known gap, not fixed (review finding 6).** A resize during a camera tween (the Home -> `/map` opening glide, or `reset()`'s glide, which has the same issue at base) re-fits at the new size and records it, then the running tween overwrites the camera and ends at the old size's target. The camera is then not the Overview for the window, and Home will treat it as touched. Part 3 Task 3 (map under the header), which reworks the frustum and the fits, could retarget a running tween on resize.
+- **Part 2 and part 3, any edit to `MapStage.tsx`.** It sits 64 bytes under the source size at which its first-load chunk splits (Step 19). Re-measure first-load JS after every edit to it.
+- **Part 3 Task 9 (perf).** The opening rows now run last in a fresh browser context, after the budget rows; their cache is cold (a software run measured the opening zoom gap at 1177 ms on desktop with a cold cache).
 
 ## Open questions
 
