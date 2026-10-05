@@ -19,10 +19,13 @@ import {
   gasDust,
   gasNoise,
   gasPair,
+  GAS_UPLOAD_QUIET_MS,
   gasStopsToStart,
+  gasUploadWait,
   gasTextureFits,
   gasUrl,
   stopMix,
+  stopsShown,
 } from "./gas";
 
 const ALL = { sonic: true, balanced: true, mood: true };
@@ -101,6 +104,14 @@ describe("stopMix and gasPair (which baked stops the slider shows)", () => {
     expect(stopMix(1)).toEqual({ a: "balanced", b: "mood", k: 1 });
   });
 
+  it("shows one stop at a stop and two between stops", () => {
+    expect(stopsShown(0)).toEqual(["sonic"]);
+    expect(stopsShown(0.5)).toEqual(["balanced"]);
+    expect(stopsShown(1)).toEqual(["mood"]);
+    expect(stopsShown(0.25)).toEqual(["sonic", "balanced"]);
+    expect(stopsShown(0.9)).toEqual(["balanced", "mood"]);
+  });
+
   it("binds one texture at a stop and two between stops", () => {
     expect(gasPair(0, ALL)).toEqual({ a: "sonic", b: "sonic", k: 0 });
     expect(gasPair(0.5, ALL)).toEqual({ a: "balanced", b: "balanced", k: 0 });
@@ -127,6 +138,28 @@ describe("gasStopsToStart (which baked stops a map loads)", () => {
   it("starts all three on an interactive map, the stop on screen first", () => {
     expect(gasStopsToStart("balanced", true)).toEqual(["balanced", "sonic", "mood"]);
     expect(gasStopsToStart("mood", true)).toEqual(["mood", "sonic", "balanced"]);
+  });
+});
+
+describe("gasUploadWait (when a gas image that is not on screen may be uploaded)", () => {
+  it("waits for a quiet moment after the last input and the last drawn frame", () => {
+    expect(GAS_UPLOAD_QUIET_MS).toBe(250);
+    // nothing has happened for a long time: now
+    expect(gasUploadWait(5000, 1000, 1200)).toBe(0);
+    expect(gasUploadWait(5000, -Infinity, -Infinity)).toBe(0);
+    // input 100 ms ago: 150 ms more
+    expect(gasUploadWait(5000, 4900, 1200)).toBe(150);
+    // a frame 10 ms ago (a fling or a camera move, with no input): 240 ms more
+    expect(gasUploadWait(5000, 1000, 4990)).toBe(240);
+    // the later of the two counts
+    expect(gasUploadWait(5000, 4990, 4900)).toBe(240);
+    // exactly at the end of the quiet time
+    expect(gasUploadWait(5000, 4750, 4750)).toBe(0);
+  });
+
+  it("never lets an upload through while input keeps coming", () => {
+    // a drag: an input event every 16 ms
+    for (let now = 0; now < 3000; now += 16) expect(gasUploadWait(now + 8, now, now)).toBeGreaterThan(200);
   });
 });
 

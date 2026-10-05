@@ -221,6 +221,96 @@ test('moving the slider to a stop whose gas has not arrived keeps gas on screen,
   expect(errors).toEqual([]);
 });
 
+test('gas images that arrive during a drag are not uploaded until the map is left alone', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  let release = (): void => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const late = /\/data\/theme\/gas-(sonic|mood)\.webp$/;
+  await page.route(late, async (route) => {
+    await held;
+    await route.continue();
+  });
+  let arrived = 0;
+  page.on('requestfinished', (r) => {
+    if (late.test(r.url())) arrived += 1;
+  });
+  // Counts the uploads of baked gas images (the only 2048 px ImageBitmaps the page hands to WebGL).
+  await page.addInitScript(() => {
+    const w = window as unknown as { __gasUploads: number };
+    w.__gasUploads = 0;
+    const P = WebGL2RenderingContext.prototype as unknown as Record<string, (...a: unknown[]) => unknown>;
+    for (const fn of ['texImage2D', 'texSubImage2D']) {
+      const orig = P[fn];
+      P[fn] = function (this: unknown, ...a: unknown[]) {
+        const src = a[a.length - 1];
+        if (src instanceof ImageBitmap && src.width === 2048) w.__gasUploads += 1;
+        return orig.apply(this, a);
+      };
+    }
+  });
+  const uploads = () => page.evaluate(() => (window as unknown as { __gasUploads: number }).__gasUploads);
+  await page.goto('/map');
+  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+  await waitForMapQuiet(page, 300);
+  expect(await uploads(), 'only the stop on screen is uploaded so far').toBe(1);
+  // A drag that goes on until told to stop: one pointer move per frame, as a hand on the map makes.
+  await page.evaluate(() => {
+    const w = window as unknown as { __drag: { stop: boolean; flagAtEnd: string | undefined; uploadsAtEnd: number; done: Promise<void> }; __gasUploads: number };
+    const c = document.querySelector<HTMLCanvasElement>('canvas.map-canvas')!;
+    const r = c.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const fire = (t: string, x: number, y: number) =>
+      c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0, clientX: x, clientY: y }));
+    const state = { stop: false, flagAtEnd: undefined as string | undefined, uploadsAtEnd: -1, done: Promise.resolve() };
+    w.__drag = state;
+    state.done = (async () => {
+      fire('pointerdown', cx, cy);
+      const t0 = performance.now();
+      while (!state.stop) {
+        const k = (performance.now() - t0) / 2000;
+        fire('pointermove', cx + Math.sin(k * 6.28) * 140, cy + Math.cos(k * 6.28) * 100);
+        await new Promise((res) => requestAnimationFrame(res));
+      }
+      state.flagAtEnd = window.__rmr!.gas;
+      state.uploadsAtEnd = w.__gasUploads;
+      fire('pointerup', cx, cy);
+    })();
+  });
+  release();
+  await expect.poll(() => arrived).toBe(2);
+  // Both images are in and decoded well within this second, and the drag is still going: they must wait.
+  await page.waitForTimeout(1000);
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('loading');
+  const atEnd = await page.evaluate(async () => {
+    const d = (window as unknown as { __drag: { stop: boolean; flagAtEnd: string | undefined; uploadsAtEnd: number; done: Promise<void> } }).__drag;
+    d.stop = true;
+    await d.done;
+    return { flag: d.flagAtEnd, uploads: d.uploadsAtEnd };
+  });
+  // in the last frame of the drag: still waiting, and neither image has been uploaded
+  expect(atEnd).toEqual({ flag: 'loading', uploads: 1 });
+  // Left alone, the map takes them in, one per quiet moment, and then draws nothing.
+  await waitForMap(page);
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+  expect(await uploads()).toBe(3);
+  await waitForMapQuiet(page, 300);
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBeLessThanOrEqual(1);
+  // and the stops they belong to draw: the slider reaches Mood with gas on screen
+  await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForMapQuiet(page, 300);
+  const vp = page.viewportSize()!;
+  expect(await lumaAt(page, { x: vp.width / 2 - 150, y: vp.height / 2 - 150, w: 300, h: 300 })).toBeGreaterThan(SKY_LUMA * 2);
+  expect(errors).toEqual([]);
+});
+
 test('the gas comes back after the WebGL context is lost and restored', async ({ page }, info) => {
   test.skip(isPhone(info), 'the gas checks use the desktop framing');
   const gasRequests: string[] = [];

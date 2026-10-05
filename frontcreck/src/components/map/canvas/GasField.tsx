@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { useFrame, useThree } from "@react-three/fiber";
+import { addAfterEffect, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 import type { ThemeData } from "@/lib/data/theme";
@@ -13,6 +13,7 @@ import {
   GAS_FRAGMENT_SHADER,
   GAS_QUAD_SCALE,
   GAS_TEXTURE_PX,
+  GAS_UPLOAD_QUIET_MS,
   GAS_VERTEX_SHADER,
   POOL_MIN_PX,
   POOL_MS,
@@ -23,8 +24,9 @@ import {
   gasPair,
   gasStopsToStart,
   gasTextureFits,
+  gasUploadWait,
   gasUrl,
-  stopMix,
+  stopsShown,
 } from "../shaders/gas";
 import { useMapStore } from "../state/mapStore";
 import { coverCssPx, pxPerWorld } from "../state/zoomLimits";
@@ -83,6 +85,8 @@ function setGasFlag(value: "loading" | "ready" | "off"): void {
  * The nebula gas: one quad in world space under the album points, textured with the stop baked at build time.
  * The current stop's texture loads first. The other two load only on an interactive map, in an idle slot after
  * the first is on screen (or at once when the slider asks); the dimmed backdrop loads only the stop it shows.
+ * An image that is not needed on screen is uploaded to the GPU only in a quiet moment, never during a pan, a
+ * zoom, a hover or a camera move, and one at a time.
  * Nothing here draws at rest: the dim and the pool ask for another frame only while they are easing, and a
  * texture that arrives asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
  * they change only in frames the camera has already asked for.
@@ -99,6 +103,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   const pool = useRef({ value: -1, from: 0, to: 0, start: 0 });
   // World centre and radius of the pool; kept after the album closes so the pool fades out in place.
   const poolAt = useRef<[number, number, number]>([0, 0, 1]);
+  // When the map last drew a frame (page clock): late gas images are not uploaded while it is drawing.
+  const frameAt = useRef(-Infinity);
 
   const { mesh, material, noise } = useMemo(() => {
     const noiseTex = new THREE.DataTexture(gasNoise(), 256, 256, THREE.RedFormat, THREE.UnsignedByteType);
@@ -159,6 +165,13 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     // Goes up when the WebGL context is lost: a fetch started before that belongs to the old context and is dropped.
     let gen = 0;
     let lost = false;
+    // Decoded images of stops that are not on screen, waiting for a quiet moment to be uploaded.
+    const waiting = new Map<StopId, LoadedGas>();
+    let quiet: { cancel: () => void } | null = null;
+    let lastInput = -Infinity;
+    const onInput = () => {
+      lastInput = performance.now();
+    };
     // 'loading' while any started stop is unsettled, 'ready' once every started stop is in or has failed.
     function flag(): void {
       if (alive) setGasFlag(settled === started.size ? "ready" : "loading");
@@ -178,26 +191,93 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
             disposeGas(g);
             return;
           }
-          // Upload now, outside a frame, so the first frame that shows this stop does not stall on it.
-          uploadGas(gl, g);
-          store[stop] = g.texture;
-          // frameloop="demand": a texture arriving is not an input event. Draw one frame if this stop is on
-          // screen now, or if nothing is (it may stand in until the wanted stop arrives).
-          const m = stopMix(useMapStore.getState().sliderT);
-          if (stop === m.a || stop === m.b || !mesh.visible) invalidate();
+          // The stop on screen (or the first to arrive, which stands in for it) is uploaded at once. Any other
+          // waits for a quiet moment: its upload and mip build take main-thread time that a pan, a zoom or a
+          // hover would feel.
+          if (onScreen(stop)) take(stop, g);
+          else {
+            waiting.set(stop, g);
+            pump();
+          }
         })
         .catch((err) => {
-          if (alive && mine === gen) console.error("gas texture failed", gasUrl(stop), err);
-        })
-        .finally(() => {
-          if (mine !== gen) return;
-          settled += 1;
-          flag();
-          if (!firstIn) {
-            firstIn = true;
-            queueRest();
-          }
+          if (!alive || mine !== gen) return;
+          console.error("gas texture failed", gasUrl(stop), err);
+          settle();
         });
+    }
+    /** True when this stop is, or is about to be, what the quad shows (or nothing is shown yet). */
+    function onScreen(stop: StopId): boolean {
+      const s = useMapStore.getState();
+      return stop === s.input.stop || stopsShown(s.sliderT).includes(stop) || !STOP_IDS.some((id) => store[id]);
+    }
+    function settle(): void {
+      settled += 1;
+      flag();
+      if (!firstIn) {
+        firstIn = true;
+        queueRest();
+      }
+    }
+    /** Uploads a decoded stop, outside a frame, so the first frame that shows it does not stall on it. */
+    function take(stop: StopId, g: LoadedGas): void {
+      uploadGas(gl, g);
+      store[stop] = g.texture;
+      // frameloop="demand": a texture arriving is not an input event. Draw one frame if this stop is on
+      // screen now, or if nothing is (it may stand in until the wanted stop arrives).
+      if (stopsShown(useMapStore.getState().sliderT).includes(stop) || !mesh.visible) invalidate();
+      settle();
+    }
+    function later(fn: () => void, ms: number): { cancel: () => void } {
+      const handle = window.setTimeout(() => {
+        quiet = null;
+        fn();
+      }, ms);
+      return { cancel: () => window.clearTimeout(handle) };
+    }
+    /** Runs fn when the main thread has nothing else to do. A timer alone is not proof of a quiet map: after
+     * a slow frame an overdue timer can run before the input that queued up behind that frame. */
+    function whenIdle(fn: () => void): { cancel: () => void } {
+      if (typeof window.requestIdleCallback !== "function") return later(fn, 50);
+      const handle = window.requestIdleCallback(() => {
+        quiet = null;
+        fn();
+      });
+      return { cancel: () => window.cancelIdleCallback(handle) };
+    }
+    const quietFor = () => gasUploadWait(performance.now(), lastInput, frameAt.current);
+    /** Uploads one waiting stop once the map is quiet, else looks again when it may be. One upload per quiet
+     * moment, so two images that arrive together never share a frame. */
+    function pump(): void {
+      if (!alive || quiet !== null || waiting.size === 0) return;
+      const wait = quietFor();
+      if (wait > 0) {
+        quiet = later(pump, wait);
+        return;
+      }
+      quiet = whenIdle(() => {
+        if (!alive) return;
+        if (quietFor() > 0) {
+          pump();
+          return;
+        }
+        const next = waiting.entries().next().value;
+        if (!next) return;
+        waiting.delete(next[0]);
+        take(next[0], next[1]);
+        if (waiting.size > 0) quiet = later(pump, GAS_UPLOAD_QUIET_MS);
+      });
+    }
+    /** The slider asked for another stop: whatever waits is uploaded now, as the morph will show it. */
+    function flush(): void {
+      for (const [stop, g] of waiting) take(stop, g);
+      waiting.clear();
+    }
+    function dropWaiting(): void {
+      quiet?.cancel();
+      quiet = null;
+      for (const g of waiting.values()) disposeGas(g);
+      waiting.clear();
     }
     function rest(): void {
       idle = null;
@@ -227,7 +307,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     schedule(gasStopsToStart(first.stop, first.interactive));
     const unsubscribe = useMapStore.subscribe((s, prev) => {
       // The slider asked for a stop: fetch it at once, whether or not it was waiting for an idle slot.
-      if (s.input.stop !== prev.input.stop) fetchStop(s.input.stop);
+      if (s.input.stop !== prev.input.stop) {
+        flush();
+        fetchStop(s.input.stop);
+      }
       // The backdrop became the map (same page, no reload): the other stops are started now, so the flag goes
       // back to 'loading' until they are in.
       if (s.input.interactive && !prev.input.interactive) schedule(gasStopsToStart(s.input.stop, true));
@@ -242,6 +325,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       gen += 1;
       idle?.cancel();
       idle = null;
+      dropWaiting();
       for (const stop of STOP_IDS) {
         store[stop]?.dispose();
         delete store[stop];
@@ -259,9 +343,19 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     };
     canvas.addEventListener("webglcontextlost", onLost);
     canvas.addEventListener("webglcontextrestored", onRestored);
+    // Input anywhere on the page counts: a hover over the map, a wheel zoom, a drag, the keyboard.
+    const INPUTS = ["pointerdown", "pointermove", "wheel", "keydown", "touchmove"] as const;
+    for (const type of INPUTS) window.addEventListener(type, onInput, { capture: true, passive: true });
+    // The end of every drawn frame counts too (useFrame below stamps its start): a slow frame is not a quiet map.
+    const offFrame = addAfterEffect(() => {
+      frameAt.current = performance.now();
+    });
     return () => {
       alive = false;
+      offFrame();
       idle?.cancel();
+      dropWaiting();
+      for (const type of INPUTS) window.removeEventListener(type, onInput, { capture: true });
       unsubscribe();
       canvas.removeEventListener("webglcontextlost", onLost);
       canvas.removeEventListener("webglcontextrestored", onRestored);
@@ -272,6 +366,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
 
   // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
   useFrame((state, delta) => {
+    frameAt.current = performance.now();
     const { input, sliderT } = useMapStore.getState();
     const got = loaded.current;
     const pair = enabled ? gasPair(sliderT, { sonic: !!got.sonic, balanced: !!got.balanced, mood: !!got.mood }) : null;

@@ -67,6 +67,12 @@ export function stopMix(t: number): { a: StopId; b: StopId; k: number } {
   return t <= 0.5 ? { a: "sonic", b: "balanced", k: t * 2 } : { a: "balanced", b: "mood", k: (t - 0.5) * 2 };
 }
 
+/** The stops whose gas shows at slider position t: one at a stop, two between stops. */
+export function stopsShown(t: number): StopId[] {
+  const m = stopMix(t);
+  return m.k <= 0 ? [m.a] : m.k >= 1 ? [m.b] : [m.a, m.b];
+}
+
 /**
  * The textures to bind at slider position t. At a stop it is one texture twice with k 0. When a needed stop has
  * not loaded yet, the nearer loaded stop of the pair stands in (then any loaded stop), so the gas never drops
@@ -112,6 +118,19 @@ export function focusPool(pos: Float32Array, ids: readonly number[], minRadius: 
  */
 export function gasStopsToStart(current: StopId, interactive: boolean): StopId[] {
   return interactive ? [current, ...STOP_IDS.filter((s) => s !== current)] : [current];
+}
+
+/** A gas image that is not needed on screen is uploaded only once the map has been left alone this long. */
+export const GAS_UPLOAD_QUIET_MS = 250;
+
+/**
+ * How long (ms) the upload of a gas image that is not on screen must still wait: until GAS_UPLOAD_QUIET_MS have
+ * passed since the last pointer, wheel or key input and since the last frame the map drew. 0 means now. The
+ * upload and its mip build run on the main thread (about 10 ms on a GPU, a few hundred on a software renderer),
+ * so they must not land inside a pan, a zoom, a hover or a camera move.
+ */
+export function gasUploadWait(now: number, lastInput: number, lastFrame: number): number {
+  return Math.max(0, Math.max(lastInput, lastFrame) + GAS_UPLOAD_QUIET_MS - now);
 }
 
 /** A smaller limit would make three resize the bake through a 2D canvas, which multiplies the dust channel into
