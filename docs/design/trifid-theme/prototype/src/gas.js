@@ -121,14 +121,16 @@
   /* The last step of both paths. c: the toned gas (display values, no sky base); A: what the dust lets through.
    * The tone map is 1 - exp(-EX * light), so scaling the light by k before it is 1 - (1 - c)^k after it: dust (which
    * fades out with zoom, u_dust), the zoom-band strength and the pool around an open album's group are all applied
-   * that way, exactly as the mockup dims the light itself. Then the sky base and a little grain. */
+   * that way, exactly as the mockup dims the light itself. In deep zoom (u_deep, 0..1) the gas also loses part of its
+   * colour, so what is left at full-size covers is a faint, quiet tint. Then the sky base and a little grain. */
   const FINISH = `
-  uniform float u_strength, u_dust, u_poolAmt; uniform vec3 u_pool;
+  uniform float u_strength, u_dust, u_poolAmt, u_deep; uniform vec3 u_pool;
   const vec3 SKY=vec3(.024,.022,.034);
   vec3 finish(vec3 c,float A,vec2 raw){
     float k=u_strength*mix(1.,A,u_dust), des=0.;
     if(u_poolAmt>0.){ vec2 dd=(raw-u_pool.xy)/u_pool.z; float e=exp(-dot(dd,dd)*.5); k*=mix(1.,mix(.6,.25,e),u_poolAmt); des=.5*e*u_poolAmt; }
     c=1.-pow(max(1.-c,vec3(.002)),vec3(k));
+    des=1.-(1.-des)*(1.-${f(C.DEEP.desat)}*u_deep);
     c=mix(c,vec3((c.r+c.g+c.b)/3.),des);
     float n=(texelFetch(u_noise,ivec2(gl_FragCoord.xy)&255,0).r-.5)*.012;
     return SKY+c+n;
@@ -226,13 +228,18 @@
   ${FINISH}
   // beyond the bake there is no gas: the same plain sky the live shader ends in
   vec4 samp(sampler2D t,vec2 uv){ float e=step(.5,max(abs(uv.x-.5),abs(uv.y-.5))); return mix(texture(t,clamp(uv,0.,1.)),vec4(0.,0.,0.,1.),e); }
+  // a blurred copy (two mip levels), for deep zoom
+  vec4 soft(sampler2D t,vec2 uv){ float e=step(.5,max(abs(uv.x-.5),abs(uv.y-.5))); vec2 q=clamp(uv,0.,1.); return mix(.5*(textureLod(t,q,${f(C.DEEP.lod[0])})+textureLod(t,q,${f(C.DEEP.lod[1])})),vec4(0.,0.,0.,1.),e); }
   void main(){
     vec2 uv=(v_raw+u_half)/(2.*u_half);
     vec4 t=samp(u_a0,uv); if(u_mix>0.) t=mix(t,samp(u_b0,uv),u_mix);
-    // past the bake's resolution, world-anchored noise octaves (the ones the bake could not hold) keep the gas textured
+    // past the bake's resolution, world-anchored noise octaves (the ones the bake could not hold) keep the gas textured;
+    // they fade out in deep zoom, where the faint gas that is left must be smooth
     if(u_ppr>u_bakePpr){ vec2 p=vec2(v_raw.x*5.+20.,-v_raw.y*5.+20.)*1.25; float d=0., a=.0778, f=38.;
       for(int i=5;i<9;i++){ float have=sm(1.5,4.,u_bakePpr/(6.25*f)), want=sm(1.5,4.,u_ppr/(6.25*f)); if(want>have) d+=a*(want-have)*(vn(p*f+vec2(17.3,9.1)*float(i))-.5); a*=.6; f*=2.07; }
-      t.rgb*=1.+1.6*d; }
+      t.rgb*=1.+1.6*d*(1.-u_deep); }
+    // deep zoom: the gas goes out of focus as it fades (no blotches, no detail behind full-size covers)
+    if(u_deep>0.){ vec4 tb=soft(u_a0,uv); if(u_mix>0.) tb=mix(tb,soft(u_b0,uv),u_mix); t=mix(t,tb,u_deep); }
     o=vec4(finish(t.rgb,t.a,v_raw),1.);
   }`;
 
@@ -240,7 +247,10 @@
   const FS_BLIT = () => `#version 300 es
   precision highp float;
   in vec2 v_uv; out vec4 o; uniform sampler2D u_tex;
-  void main(){ vec3 c=texture(u_tex,v_uv).rgb; vec3 g=textureLod(u_tex,v_uv,3.5).rgb*.6+textureLod(u_tex,v_uv,5.).rgb*.4; o=vec4(c+max(g-vec3(.024,.022,.034),0.)*${f(L.GLOW)},1.); }`;
+  void main(){ vec3 c=texture(u_tex,v_uv).rgb; vec3 g=textureLod(u_tex,v_uv,3.5).rgb*.6+textureLod(u_tex,v_uv,5.).rgb*.4;
+    // the glow is a smooth sum on top of 8-bit gas: half a level of dither keeps very dark gradients free of bands
+    float h=fract(sin(dot(gl_FragCoord.xy,vec2(12.9898,78.233)))*43758.5453);
+    o=vec4(c+max(g-vec3(.024,.022,.034),0.)*${f(L.GLOW)}+(h-.5)/255.,1.); }`;
 
   function program(vs, fs) {
     const p = gl.createProgram();
@@ -304,7 +314,7 @@
   function stopsAt(t) { return t <= 0.5 ? ['sonic', 'balanced', t * 2] : ['balanced', 'mood', (t - 0.5) * 2]; }
   /** The uniforms of finish(), shared by both paths. */
   function setFinish(u, o) {
-    gl.uniform1f(u.u_strength, o.strength); gl.uniform1f(u.u_dust, o.dust); gl.uniform1f(u.u_poolAmt, o.poolAmt || 0);
+    gl.uniform1f(u.u_strength, o.strength); gl.uniform1f(u.u_dust, o.dust); gl.uniform1f(u.u_poolAmt, o.poolAmt || 0); gl.uniform1f(u.u_deep, o.deep || 0);
     gl.uniform3f(u.u_pool, o.pool ? o.pool[0] : 0, o.pool ? o.pool[1] : 0, o.pool ? o.pool[2] : 1);
   }
 
@@ -369,7 +379,7 @@
     gl.disable(gl.BLEND); gl.drawArrays(gl.TRIANGLES, 0, 3);
   }
 
-  /** Draw the gas for state `st`: {t, strength, dust, pool:[wx,wy,wr], poolAmt, baked, moving}. */
+  /** Draw the gas for state `st`: {t, strength, deep, dust, pool:[wx,wy,wr], poolAmt, baked, moving}. */
   Gas.draw = function (st) {
     if (!Gas.ok) return;
     const cam = RMR.cam, view = RMR.view, tx = RMR.D.tx, dpr = canvas.width / view.W;
@@ -377,13 +387,13 @@
     const scale = (1 / dpr) * (st.moving && Gas.slow ? 0.5 : 1);
     const tw = Math.max(2, Math.round(canvas.width * scale)), th = Math.max(2, Math.round(canvas.height * scale));
     if (!target || target.w !== tw || target.h !== th) { if (target) { gl.deleteFramebuffer(target.fbo); gl.deleteTexture(target.tex); } target = makeTarget(tw, th, true); lastKey = ''; }
-    const key = [cam.x, cam.y, cam.ppw, cam.inset, st.t, st.strength, st.dust, st.poolAmt, st.pool && st.pool.join(), st.baked, tw, th].join('|');
+    const key = [cam.x, cam.y, cam.ppw, cam.inset, st.t, st.strength, st.deep, st.dust, st.poolAmt, st.pool && st.pool.join(), st.baked, tw, th].join('|');
     if (key !== lastKey) {
       lastKey = key;
       const t0 = performance.now();
       const a = RMR.Cam.toWorld(0, view.H), b = RMR.Cam.toWorld(view.W, 0);
       const rect = [a[0] / tx.s + tx.cx, a[1] / tx.s + tx.cy, b[0] / tx.s + tx.cx, b[1] / tx.s + tx.cy];
-      const o = { strength: st.strength, dust: st.dust, poolAmt: st.poolAmt, pool: st.pool ? [st.pool[0] / tx.s + tx.cx, st.pool[1] / tx.s + tx.cy, st.pool[2] / tx.s] : null, fbo: target.fbo, w: tw, h: th };
+      const o = { strength: st.strength, deep: st.deep, dust: st.dust, poolAmt: st.poolAmt, pool: st.pool ? [st.pool[0] / tx.s + tx.cx, st.pool[1] / tx.s + tx.cy, st.pool[2] / tx.s] : null, fbo: target.fbo, w: tw, h: th };
       gl.bindFramebuffer(gl.FRAMEBUFFER, target.fbo); gl.viewport(0, 0, tw, th);
       if (st.baked) runBaked(rect, cam.ppw * tx.s, st.t, o); else runLive(rect, cam.ppw * tx.s, st.t, o);
       gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.bindTexture(gl.TEXTURE_2D, target.tex); gl.generateMipmap(gl.TEXTURE_2D);

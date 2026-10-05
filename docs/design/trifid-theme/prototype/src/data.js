@@ -57,14 +57,23 @@
     }
     D.stops = S ? ['balanced'] : C.STOPS;
 
-    // family weights (0..1), leading family and star class per point
+    // family weights (0..1) and leading family per point
     D.w = new Float32Array(6 * n); D.lead = new Int8Array(n); D.cls = new Uint8Array(n);
     for (let i = 0; i < n; i++) {
       const r = D.real(i); let m = 0, mj = -1;
       for (let j = 0; j < 6; j++) { const v = R.weights[6 * r + j] / 100; D.w[6 * i + j] = v; if (j < 5 && v > m) { m = v; mj = j; } }
       D.lead[i] = m > 0.3 && m > D.w[6 * i + 5] ? mj : -1;
-      const k = C.STAR_CLASS;
-      D.cls[i] = r < k[0] ? 0 : r < k[1] ? 1 : r < k[2] ? 2 : 3;   // by the source album's chart rank; the unranked tail is faintest
+    }
+    // star class (size, glow, alpha): a random draw on each load, in the fixed mix of cfg.STAR_MIX. Album order plays no
+    // part. seed=<int> in the hash repeats a draw (for screenshots).
+    {
+      const sp = RMR.param('seed'), seed = /^-?\d+$/.test(sp || '') ? Number(sp) : Math.floor(Math.random() * 4294967296);
+      const rnd = RMR.rng(seed), order = new Uint32Array(n), mix = C.STAR_MIX;
+      for (let i = 0; i < n; i++) order[i] = i;
+      for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)), t = order[i]; order[i] = order[j]; order[j] = t; }   // Fisher-Yates
+      const c0 = Math.round(n * mix[0]), c1 = c0 + Math.round(n * mix[1]), c2 = c1 + Math.round(n * mix[2]);
+      for (let k = 0; k < n; k++) D.cls[order[k]] = k < c0 ? 0 : k < c1 ? 1 : k < c2 ? 2 : 3;
+      D.starSeed = seed;
     }
 
     // cover size: at 10k the layout is denser, so covers shrink with the nearest-neighbour gap

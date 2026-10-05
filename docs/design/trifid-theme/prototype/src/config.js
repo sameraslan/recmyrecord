@@ -22,6 +22,11 @@
     ATLAS_LOAD_PX: 13,
     // zoom bands by cover px (UX.md section 2)
     BAND_A: 6, BAND_B: 13, BAND_C: 22, BAND_D: 32,
+    // deep zoom (RMR.gasCurve below): past BAND_D the gas goes on fading, from 0.3 to `floor` at `end` px covers, eased
+    // out, so full-size covers sit in near-black space. Over the same stretch the gas loses `desat` of its colour, its
+    // fine detail fades out and it is read from a blurred copy of the bake (the mean of mip levels `lod`), so the faint
+    // colour that remains is smooth. deep=<0..1> in the hash overrides `floor`; deep=old is the earlier floor of 0.3.
+    DEEP: { end: 56, floor: 0.025, desat: 0.35, lod: [4.5, 6] },
     // focus
     MARKER: { seed: 64, rec: 46, gap: 10, hot: 1.16 },
     FOCUS_PAD: { top: 262, right: 96, bottom: 90, left: 96 },
@@ -43,8 +48,10 @@
     // takes its hues from its palette (src/gas.js); these colour the debug hulls.
     FAM: [[236, 72, 96], [246, 172, 60], [46, 186, 164], [60, 116, 244], [196, 92, 232]],
     NEU: [150, 140, 138],
-    // star magnitude classes by album index: first 40, to 400, to 1,500, the rest; the tail from 3,824 is not chart rank
-    STAR_CLASS: [40, 400, 1500, 3824],
+    // star magnitude classes: the share of albums in the three brighter classes (about 1%, 9%, 27%; the rest are small).
+    // Which album gets which class is a random draw on each load (src/data.js; seed=<int> in the hash repeats a draw).
+    // Album order plays no part.
+    STAR_MIX: [0.01, 0.09, 0.27],
     STAR_RADIUS: [2.8, 1.9, 1.4, 1.1],
     STAR_GLOW: [1, 0.55, 0.16, 0.12],   // bloom around the core, per class (the first two fade out with their halos when zoomed far out)
     STAR_UNDER: [0.5, 0.26],             // dark under-disc: the gas luminance it holds the star's surround to, and its greatest alpha
@@ -54,7 +61,30 @@
     NAME_FONT: 'tenor',   // lettering of the region names (src/labels.js FONTS); font=<id> in the hash overrides it
     NAMES_MAX: 17, NAMES_MAX_PHONE: 4, NAMES_MAX_ALBUM: 8, NAMES_ALL_CAP: 14,
     DPR_MAX: 2,
+    // twinkle (src/twinkle.js): per level, the wait between glints in ms [min, max], peak opacity, size factor, most alive at once
+    TWINKLE: { 1: { wait: [2000, 5000], peak: 0.85, size: 1, max: 2 }, 2: { wait: [700, 2000], peak: 1, size: 1.2, max: 3 } },
+    TWINKLE_DUR: [1200, 1800],        // one glint, in and out, ms
+    TWINKLE_WEIGHT: [8, 5, 2.5, 1],   // how much likelier a star of each magnitude class is to glint (brighter stars more often)
+    TWINKLE_BLOOM: [4, 3],            // bloom radius in px = [0] * the star's radius + [1]
+    TWINKLE_FLARE: 9,                 // the two brightest classes also get a thin four-point flare, this many star radii long each way
   };
+  /** Gas strength for a cover size in px, and how far into deep zoom the view is (0..1).
+   * strength: 1 under BAND_B; a straight line to 0.6 at BAND_C; a straight line to 0.3 at BAND_D; then
+   * 0.3 + (floor - 0.3) * e with u = (cp - BAND_D) / (DEEP.end - BAND_D) clamped to 0..1 and e = 1 - (1 - u)^2.
+   * deep: e (0 for deep=old, which also holds the strength at 0.3). The shader applies strength as 1 - (1 - c)^strength. */
+  RMR.gasCurve = function (cp, floor) {
+    const C = RMR.cfg, U = RMR.util, old = floor === 'old';
+    if (cp < C.BAND_B) return { strength: 1, deep: 0 };
+    if (cp < C.BAND_C) return { strength: U.lerp(1, 0.6, (cp - C.BAND_B) / (C.BAND_C - C.BAND_B)), deep: 0 };
+    if (cp < C.BAND_D) return { strength: U.lerp(0.6, 0.3, (cp - C.BAND_C) / (C.BAND_D - C.BAND_C)), deep: 0 };
+    if (old) return { strength: 0.3, deep: 0 };
+    const u = U.clamp((cp - C.BAND_D) / (C.DEEP.end - C.BAND_D), 0, 1), e = 1 - (1 - u) * (1 - u);
+    return { strength: U.lerp(0.3, floor == null ? C.DEEP.floor : floor, e), deep: e };
+  };
+  /** One hash parameter, read straight from the URL (for modules that read a switch once at load). */
+  RMR.param = (k) => { const m = new RegExp('[?&]' + k + '=([^&]*)').exec(location.hash); return m ? decodeURIComponent(m[1]) : null; };
+  /** A small seeded generator (mulberry32): the same seed gives the same draw. */
+  RMR.rng = function (seed) { let a = seed >>> 0; return function () { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
 
   const U = (RMR.util = {});
   U.clamp = (x, a, b) => Math.min(b, Math.max(a, x));

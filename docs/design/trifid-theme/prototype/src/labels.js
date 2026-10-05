@@ -101,14 +101,14 @@
   }
   const hits = (a, list) => list.some((k) => a[0] < k[2] && a[2] > k[0] && a[1] < k[3] && a[3] > k[1]);
 
-  /** st: {cp, album, blockers, lines, only, morph:{from,to,k}|null, stop, gasK, ppwOverview, phone, names}
+  /** st: {cp, album, quietAlbum, blockers, lines, only, morph:{from,to,k}|null, stop, gasK, ppwOverview, phone, names}
    * names: null (cfg.NAMES_MAX, strong regions, approved place names only on Sonic and Mood), a number (that many), or
    * 'all' (every region that fits, strong and fair, data words included). */
   Labels.update = function (st) {
     const Cam = RMR.Cam, D = RMR.D, vis = Cam.vis(), cp = st.cp, all = st.names === 'all';
     // No partial fades: names are at full strength through the whole-map and Overview bands, then gone.
     // Beside an album only the seed's region and its neighbours show, whatever the zoom.
-    const on = st.album || cp < C.BAND_B;
+    const on = st.quietAlbum ? !st.album && cp < C.BAND_B : st.album || cp < C.BAND_B;   // albumname=0: no names at all beside an open album
     const zoomK = U.clamp(Math.pow(RMR.cam.ppw / st.ppwOverview, 0.3), 0.85, 1.35);
 
     // candidates: this stop's regions, or both sets while the slider moves (a shared id travels with its centroid)

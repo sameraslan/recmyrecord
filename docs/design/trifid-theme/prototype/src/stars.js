@@ -1,5 +1,5 @@
 /* Stars: one additive gl.POINTS draw. Each album carries its three stop positions, so the slider morph is a
- * uniform. Four magnitude classes. A star is a crisp core with a bloom that falls off smoothly to nothing (wide on
+ * uniform. Four magnitude classes, dealt at random on each load (src/data.js). A star is a crisp core with a bloom that falls off smoothly to nothing (wide on
  * the first two classes), so the brightest read as bright stars. No spikes (they read as ornament).
  * Under each star a soft dark disc keeps it legible on bright gas; it is drawn only as strongly as the gas behind
  * the star needs (looked up once at load, per stop), so on dim gas and dark sky there is no disc and no ring. */
@@ -68,7 +68,7 @@
       for (let k = 0; k < 3; k++) col[4 * i + k] = Math.round(white[k] * 0.75 + f[k] * 0.25);
       col[4 * i + 3] = Math.round((D.cls[i] / 3) * 255);
     }
-    attr(3, col, 4, gl.UNSIGNED_BYTE, true);
+    attr(3, col, 4, gl.UNSIGNED_BYTE, true); Stars.col = col; Stars.ok = true;
     // gas luminance behind each star at each stop (decides how much under-disc it gets)
     const bg = new Uint8Array(3 * n), Gas = RMR.Gas;
     if (Gas.ok) ['sonic', 'balanced', 'mood'].forEach((stop, k) => { const P = D.pos[stop]; for (let i = 0; i < n; i++) bg[3 * i + k] = Math.min(255, Math.round(Gas.lumAt(stop, P[2 * i], P[2 * i + 1]) / LMAX * 255)); });

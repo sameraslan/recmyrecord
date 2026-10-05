@@ -43,16 +43,22 @@ The similarity stop (`stop=` or `by=`) rides along on every route, Home, About a
 
 A `region=` parameter in an old link is ignored.
 
-Prototype switches, on any route (the first seven persist while you navigate):
+Prototype switches, on any route (those down to `phoneglass` persist while you navigate):
 
 | Parameter | Meaning |
 |---|---|
-| `chrome=site\|trifid` | Chrome variant (default trifid) |
+| `chrome=glass\|plum\|trifid\|ink\|starlight\|site` | Chrome variant (default `glass`: see-through blurred panels) |
 | `gas=baked\|live` | One pre-rendered texture per stop over the data bounds (4096 px, or the GPU's limit; default, the path that would ship), or the live shader |
 | `data=10k` | Synthetic 10,000 points (Balanced only) |
 | `regions=default` | With `data=10k`: the default region set instead of the finer one |
-| `names=<number>\|all` | How many region names show at once. Default `NAMES_MAX` in `src/config.js` (9). `all` is the earlier behaviour: every region that fits, strong and fair, data words included. `0` shows none |
-| `toggle=a\|b\|c` | A names on/off control (default none): `a` a fourth button on the zoom stack, `b` the same button 8 px above it, `c` the word NAMES left of the stack. A click flips `names=0`; options in `../options/toggle-*.jpg` |
+| `names=<number>\|all` | How many region names show at once. Default `NAMES_MAX` in `src/config.js` (17, which is every Balanced name that finds room). `all` is the earlier behaviour: every region that fits, strong and fair, data words included. `0` shows none. Without `names=` in the hash, the visitor's last choice on the names button applies (`localStorage` key `rmr-names`) |
+| `toggle=a\|c\|0` | The names on/off button. Default (no parameter, option B): an icon button 8 px above the zoom stack. `a` a fourth button on the zoom stack, `c` the word NAMES left of the stack, `0` no button. A click flips `names=0` and is remembered in `localStorage` (`rmr-names`); earlier option pictures in `../options/toggle-*.jpg` |
+| `twinkle=0\|1\|2` | Star glints (`src/twinkle.js`, a DOM layer; the WebGL canvas is not redrawn). `0` off, `1` one glint every 2 to 5 s, at most 2 alive (default), `2` one every 0.7 to 2 s, at most 3 alive, a little brighter and larger (for comparison only). Only at rest and zoomed out, never while covers show, off under reduced motion and in a hidden tab. See "Twinkle" below. Use `twinkle=0` for screenshots that must match |
+| `deep=<0..1>\|old` | Gas strength left at full zoom (see "Deep zoom" below). Default `0.025` (`cfg.DEEP.floor`). `0` is pure black sky, `0.06` a faint tint, `old` the earlier behaviour (strength stays at 0.3, no blur, no loss of colour) |
+| `header=under\|below` | `under` (default): the map runs behind the see-through top bar. `below`: as the site is today, the map starts under the header, which has nothing behind it. The camera already frames the area under the header in both |
+| `grain=0\|1` | `1` adds the site's film grain over everything (opacity .035, neutral tint). Default `0` |
+| `albumname=1\|0` | Beside an open album: `1` (default) the seed's region name and up to two neighbours can show, `0` no region names at all |
+| `phoneglass=1\|0` | Phone layout only: `1` (default) glass, `0` near-solid `rgba(10,9,14,.92)` header, slider row, zoom buttons and map pill with no blur |
 | `hud=1` | Frame-time readout |
 | `hulls=1` | Region hulls (debug) |
 | `cam=x,y,ppw` | Explicit camera: world centre and CSS px per world unit |
@@ -67,6 +73,8 @@ Prototype switches, on any route (the first seven persist while you navigate):
 | `bench=1` | Programmatic pan, timed; result in `<html data-bench>` |
 | `idle=1` | Frame counter at 3 s and 8 s in `<html data-idle3 data-idle8>`; `data-gl` and `data-gl3` say whether WebGL has been started (0 on the phone's album list until the strip is scrolled into view or Map is tapped) |
 | `check=1` | Focus layout self-check over 40 albums at 5 and 10 closest; result in `<html data-check>` |
+| `glints=<n>` | Freeze n glints at their peak for a screenshot: even ones as glints, odd ones as magenta debug rings that must sit centred on a star. `rings=0` makes them all glints. The still shows n at once; live there are never more than 2 (3 at `twinkle=2`) |
+| `twlog=1` | The twinkle timer's counters in `<html data-twlog>`: ticks, ticks skipped because the view was not at rest, ticks skipped at the cap, glints made, glints ended, times the layer was cleared, and the longest star pick in ms (real time only; it reads 0 under the screenshot tool's virtual time) |
 | `stats=1` | Names per zoom band, cover spacing, star crowding, the names' computed contrasts; result in `<html data-stats>` |
 
 Look switches, read once at load and carried along on every link (changing one reloads the page):
@@ -76,7 +84,8 @@ Look switches, read once at load and carried along on every link (changing one r
 | `look=mockup\|swirl\|photo\|marble` | Gas treatment (`LOOKS` at the top of `src/gas.js`; default `cfg.GAS.LOOK`, `swirl`) |
 | `palette=mockup\|emission\|dusty\|hubble\|ember` | Hues for the default five families (`PALETTES` in `src/gas.js`); with `scheme=`, one of that scheme's palettes |
 | `scheme=<id>` | A colour scheme from `data/schemes.js` (up to six channels plus neutral per album); the file is fetched only when this is set |
-| `font=<id>` | Lettering of the region names (`FONTS` in `src/labels.js`; default `cfg.NAME_FONT`, `marcellus`) |
+| `font=<id>` | Lettering of the region names (`FONTS` in `src/labels.js`; default `cfg.NAME_FONT`, `tenor`) |
+| `seed=<int>` | Star sizes and brightness are dealt at random on each load, in a fixed mix (`cfg.STAR_MIX`: about 1% brightest, 9% bright, 27% medium, the rest small). Album order plays no part. `seed=` repeats a draw; without it every load is a fresh draw |
 
 `data/schemes.js` is written by `build_data.py` from `../colour-options/schemes.json` when that file exists.
 
@@ -92,13 +101,56 @@ Keys: `/` focuses search (also after using the slider, and on Home), `1` `2` `3`
 
 Focus: an album's title takes focus when it opens. When the album panel or the Explore card closes, focus returns to what opened it (the search field, the map); if that is gone, to the map.
 
+## Deep zoom
+
+The gas fades as covers grow, and at full-size covers the view is near-black sky with a very faint trace of the local colour. The real app should copy this exactly. It is `RMR.gasCurve` in `src/config.js`, with `cp` the cover size in px (`min(64, coverWorld * ppw)`):
+
+| Cover size `cp` | Strength `s` |
+|---|---|
+| under 13 (`BAND_B`) | 1 |
+| 13 to 22 (`BAND_C`) | straight line from 1 to 0.6 |
+| 22 to 32 (`BAND_D`) | straight line from 0.6 to 0.3 |
+| 32 to 56 (`DEEP.end`) | `0.3 + (floor - 0.3) * e`, with `u = (cp - 32) / (56 - 32)` and `e = 1 - (1 - u)^2` |
+| 56 and over | `floor` = 0.025 (`DEEP.floor`; `deep=` in the hash) |
+
+The first three rows are unchanged. The fourth is new: before, the strength stayed at 0.3. Its slope at 32 px is close to the slope before it, so there is no step.
+
+The shader (`finish()` in `src/gas.js`) applies the strength to each colour channel as `c = 1 - (1 - c)^k`, with `k = s * dust * pool` (the same as scaling the light before the tone map), then adds the sky colour `rgb(6, 6, 9)` and the grain. Three more things follow `e` (the uniform `u_deep`), so that what is left is smooth and quiet:
+
+- Colour: the gas is mixed toward its own grey by `0.35 * e` (`DEEP.desat`). With an album open this combines with the pool's own loss of colour as `1 - (1 - pool) * (1 - 0.35 * e)`.
+- Detail: the extra noise octaves drawn past the bake's resolution are multiplied by `1 - e`. At strength 0.3 they showed as blotches on bright gas.
+- Focus: the baked texture is mixed by `e` toward a blurred copy of itself, the mean of mip levels 4.5 and 6 (`DEEP.lod`; the bake is 4096 px). `gas=live` has no mips and skips this step.
+
+The grain in `finish()` stays (it is the dither of the gas). The final pass adds half an 8-bit level of noise, because the glow it adds is a smooth sum that would otherwise band in very dark gradients.
+
+Measured on the brightest cream gas at full zoom (1600 x 1000, software WebGL), the background is about `rgb(6, 6, 9)` at `deep=0`, `rgb(18, 17, 18)` at the default, `rgb(35, 31, 30)` at `deep=0.06` and `rgb(135, 116, 94)` before. On dimmer gas the default is closer to black.
+
+With an album open the pool multiplies the strength by 0.6 far from the group down to 0.25 at its centre, as before, so an open album at deep zoom is darker still and never brighter. The default album framing sits under 32 px covers and is unchanged. The phone map strip, the label halos and the stars' under-discs read the gas at strength 1 and are unchanged.
+
+## Twinkle
+
+Now and then one star catches the light: a soft near-white bloom of radius `4 * r + 3` px (`r` the star's drawn radius; `TWINKLE_BLOOM`) and, on the two brightest star classes only, a thin four-point flare `9 * r` long each way (`TWINKLE_FLARE`). It eases in and out over 1.2 to 1.8 s (`TWINKLE_DUR`): opacity 0 to the peak at 45%, held to 58%, back to 0, with the scale going .5, 1, .7. The peak opacity is 0.85 (1 at `twinkle=2`). Brighter classes are likelier to be picked, by weights 8, 5, 2.5, 1 (`TWINKLE_WEIGHT`), so about three glints in ten have a flare. The glint is plain near-white with alpha, which on any background equals a screen blend of white, so it shows on dark sky and on cream gas without `mix-blend-mode`.
+
+What it costs:
+
+- DOM: two nodes per glint (a positioned `<i>` and an animated `<b>`, the flare is its two pseudo-elements). At most 2 glints alive (3 at `twinkle=2`), so at most 4 nodes (6).
+- Animation: one CSS keyframe animation per glint, on `opacity` and `transform` only, both run by the compositor.
+- Timers: one `setTimeout` between glints, and one per glint as a fallback removal. No `requestAnimationFrame`, no frame loop.
+- Layout: no reads. No `getBoundingClientRect`, no `getComputedStyle`. The position comes from the star positions the map already holds. The writes are one `appendChild` with inline styles and one `remove()`.
+- Script per glint: one pass over the star positions to pick a star on screen (4,000 albums, 10,000 in the stress data). Nothing runs between glints.
+- WebGL: never redrawn for a glint.
+- While the view moves: nothing. Any camera or slider change clears the layer in the same draw, and no glint is made during a pan, a zoom, a fling, a slider morph or for 500 ms after. None is made once covers begin to show (16 px), under reduced motion, in a hidden tab, or on About.
+
+The one place it could touch input: a tick that lands in the same frame as the first event of a gesture runs its star pass before that event is handled. That pass is a few thousand multiply-adds and should be far under a millisecond, but it was not timed in a real browser (`twlog=1` reports the longest one as `worstSpawnMs`).
+
+
 ## Region names
 
-Region names are plain lettering on the map: not buttons, no hover, no focus, no click, hidden from screen readers (`src/labels.js`). They show at Whole map and Overview and are gone once covers reach 13 px (`BAND_B`). Beside an open album only the seed's region and its two nearest neighbours can show.
+Region names are plain lettering on the map: not buttons, no hover, no focus, no click, hidden from screen readers (`src/labels.js`). They show at Whole map and Overview and are gone once covers reach 13 px (`BAND_B`). Beside an open album only the seed's region and its two nearest neighbours can show (`albumname=0` hides those too).
 
-- At most `NAMES_MAX` (9) at once on desktop, 4 on a phone, 8 beside an album; `names=` overrides the first.
+- At most `NAMES_MAX` (17) at once on desktop, 4 on a phone, 8 beside an album; `names=` overrides the first.
 - Only strong regions are candidates. On Sonic and Mood, only regions with an approved place name (a non-null `name` in the data); a region with only a data word shows nothing. `names=all` lifts both rules.
-- Chosen by the data's priority order; a name is skipped when its centre is off screen or it would sit on chrome, a cover, a line or another name. At Overview on Balanced that leaves six.
+- Chosen by the data's priority order; a name is skipped when its centre is off screen or it would sit on chrome, a cover, a line or another name. At Overview on Balanced at 1600 x 1000 that leaves nine.
 - While the slider moves, a name travels only when its id and word match at both stops; the others fade out, then the new ones fade in.
 
 ## Phone layout (under 900 px wide)
@@ -119,6 +171,7 @@ The chrome, gas, data, hulls and frame-time switches are also in the "Prototype"
 
 - `screens.html`: a labelled gallery of the key states, each with a link that opens it live. The pictures in `shots/` were taken before the simplification and the gas rework and have not been regenerated; the links are current.
 - `phone.html`: three live 390 x 844 frames of the phone layout, loaded one after another.
+- `decide.html`: the open design questions, one section each, with a comparison picture (`../options/q-*.jpg`) and links to the live states.
 
 ## Files
 
@@ -132,6 +185,7 @@ The chrome, gas, data, hulls and frame-time switches are also in the "Prototype"
 | `src/camera.js` | Camera, framings, tweens, wheel and drag |
 | `src/gas.js` | Field grids, gas shader, baked path, luminance map |
 | `src/stars.js` | One additive points draw |
+| `src/twinkle.js` | Star glints as a DOM layer, on a timer |
 | `src/focus.js` | Cover layout and framing beside an album |
 | `src/overlay.js` | 2D canvas: covers, lines, markers, rings |
 | `src/regions.js` | Which regions sit near an album |

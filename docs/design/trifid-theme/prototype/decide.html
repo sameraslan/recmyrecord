@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trifid theme: open questions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Schibsted+Grotesk:wght@400;500&family=Tenor+Sans&display=swap">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 48px 32px 96px; background: #07060a; color: #f3eee7; font: 16px/1.55 "Schibsted Grotesk", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  main { max-width: 1180px; margin: 0 auto; }
+  h1 { font: 500 44px/1.05 "Cormorant Garamond", Georgia, serif; margin: 0 0 10px; letter-spacing: -.01em; }
+  .lede { color: #c4beb6; max-width: 44em; margin: 0; }
+  section { margin-top: 64px; padding-top: 28px; border-top: 1px solid rgba(241, 236, 228, .14); }
+  .n { font: 400 11.5px/1 "Tenor Sans", sans-serif; letter-spacing: .26em; text-transform: uppercase; color: #aaa49d; }
+  h2 { font: 500 32px/1.1 "Cormorant Garamond", Georgia, serif; margin: 8px 0 10px; }
+  p { margin: 0 0 10px; max-width: 44em; color: #c4beb6; }
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 20px; padding: 0; list-style: none; }
+  .links a, .links button { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; font: inherit; font-size: 14.5px; color: #f3eee7; text-decoration: none; background: rgba(241, 236, 228, .04); border: 1px solid rgba(241, 236, 228, .26); border-radius: 2px; cursor: pointer; }
+  .links a:hover, .links button:hover { border-color: rgba(241, 236, 228, .5); background: rgba(241, 236, 228, .08); }
+  a:focus-visible, button:focus-visible { outline: 2px solid #f1ece4; outline-offset: 3px; }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid rgba(241, 236, 228, .14); border-radius: 2px; background: #07060a; }
+  figure.narrow img { max-width: 760px; }
+  figcaption { margin-top: 8px; font-size: 13.5px; color: #aaa49d; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .phone { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; margin-top: 24px; }
+  .device { width: 392px; height: 846px; flex: none; border: 1px solid rgba(241, 236, 228, .26); border-radius: 2px; overflow: hidden; display: grid; place-items: center; color: #aaa49d; font-size: 14px; text-align: center; padding: 0; }
+  .device iframe { width: 390px; height: 844px; border: 0; display: block; }
+  .device span { padding: 0 40px; }
+  @media (max-width: 760px) { body { padding: 28px 16px 64px; } .pair { grid-template-columns: 1fr; } h1 { font-size: 36px; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Open questions</h1>
+  <p class="lede">Eight things to look at. Each has a picture where a picture helps, and links that open the live prototype in a new tab. Open one live tab at a time to keep the laptop cool.</p>
+
+  <section id="deep">
+    <div class="n">One</div>
+    <h2>Deep zoom</h2>
+    <p>The gas now keeps fading as the covers grow. At full zoom the covers sit in near black space, with a very faint trace of the colour that was there.</p>
+    <p>The first picture shows full zoom on the brightest part of the map, before and with three strengths. The second shows five steps of one zoom with the recommended strength.</p>
+    <ul class="links">
+      <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999&amp;deep=old" target="_blank" rel="noopener">Before</a></li>
+      <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999&amp;deep=0" target="_blank" rel="noopener">A. Pure black</a></li>
+      <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999" target="_blank" rel="noopener">B. Barely there</a></li>
+      <li><a href="index.html#/map?seed=1004&amp;names=0&amp;twinkle=0&amp;cam=0.1837,-0.0562,99999&amp;deep=0.06" target="_blank" rel="noopener">C. Faint</a></li>
+    </ul>
+    <figure><img src="../options/q-deep.jpg" alt="Full zoom on bright gas: before, pure black, barely there and faint" loading="lazy"><figcaption>The links open at full zoom. Zoom out and back in to see the fade.</figcaption></figure>
+    <figure style="margin-top: 20px;"><img src="../options/q-deepseq.jpg" alt="Five steps of a zoom from Overview to full zoom" loading="lazy"><figcaption>One zoom in five steps, with B.</figcaption></figure>
+  </section>
+
+  <section id="twinkle">
+    <div class="n">Two</div>
+    <h2>Twinkle</h2>
+    <p>The glints were there before but far too faint to see. Now a star swells into a soft glow for a second or so, and the brighter stars also show a thin cross of light.</p>
+    <p>The map must be still and zoomed out. Glints stop while you pan, zoom or move the slider, and once covers show. They are also off if the Mac has Reduce motion turned on.</p>
+    <ul class="links">
+      <li><a href="index.html#/map?twinkle=0" target="_blank" rel="noopener">Off</a></li>
+      <li><a href="index.html#/map" target="_blank" rel="noopener">Subtle, one every 2 to 5 seconds</a></li>
+      <li><a href="index.html#/map?twinkle=2" target="_blank" rel="noopener">More, one every 0.7 to 2 seconds</a></li>
+    </ul>
+    <figure><img src="../options/q-twinkle.jpg" alt="The same patch of stars with no glint and with glints at their peak at both levels, at actual size and enlarged" loading="lazy"><figcaption>What to look for. The picture freezes many glints at once. Live there are one or two at a time, and each fades in and out.</figcaption></figure>
+  </section>
+
+  <section id="stars">
+    <div class="n">Three</div>
+    <h2>Random stars</h2>
+    <p>Star size and brightness no longer follow album order. Each visit deals them at random, with the same share of bright and small stars as before. The question is whether the sky still looks as rich.</p>
+    <ul class="links">
+      <li><a href="index.html#/map" target="_blank" rel="noopener">Live, a new draw on every reload</a></li>
+      <li><a href="index.html#/map?seed=1004&amp;twinkle=0" target="_blank" rel="noopener">Live, the draw in the picture</a></li>
+    </ul>
+    <div class="pair">
+      <figure><img src="../options/q-stars-random.jpg" alt="The map at Overview with star sizes dealt at random" loading="lazy"><figcaption>Now: dealt at random</figcaption></figure>
+      <figure><img src="../options/final-overview.jpg" alt="The map at Overview with star sizes by album order" loading="lazy"><figcaption>Before: by album order</figcaption></figure>
+    </div>
+  </section>
+
+  <section id="header">
+    <div class="n">Four</div>
+    <h2>Header</h2>
+    <p>The map can run behind the see-through top bar, or start below it. Below is what the site does today, so the bar has nothing behind it and reads as solid.</p>
+    <ul class="links">
+      <li><a href="index.html#/album/the-stone-roses-the-stone-roses" target="_blank" rel="noopener">Map under the header</a></li>
+      <li><a href="index.html#/album/the-stone-roses-the-stone-roses?header=below" target="_blank" rel="noopener">Map below the header</a></li>
+    </ul>
+    <figure><img src="../options/q-header.jpg" alt="Two album views side by side, with the map under and below the header" loading="lazy"></figure>
+  </section>
+
+  <section id="grain">
+    <div class="n">Five</div>
+    <h2>Grain</h2>
+    <p>The site today lays a very faint film grain over everything. The question is whether to keep it over the nebula. It is hard to see at normal size, so the lower row is enlarged.</p>
+    <ul class="links">
+      <li><a href="index.html#/map" target="_blank" rel="noopener">Grain off</a></li>
+      <li><a href="index.html#/map?grain=1" target="_blank" rel="noopener">Grain on</a></li>
+    </ul>
+    <figure><img src="../options/q-grain.jpg" alt="The map with grain off and on, and an enlarged crop of each" loading="lazy"></figure>
+  </section>
+
+  <section id="albumname">
+    <div class="n">Six</div>
+    <h2>Name beside an open album</h2>
+    <p>With an album open, the name of its region can stay on the map, or all names can go so only the covers and lines show.</p>
+    <ul class="links">
+      <li><a href="index.html#/album/the-stone-roses-the-stone-roses?names=17" target="_blank" rel="noopener">Name stays</a></li>
+      <li><a href="index.html#/album/the-stone-roses-the-stone-roses?albumname=0" target="_blank" rel="noopener">No names with an album open</a></li>
+    </ul>
+    <figure><img src="../options/q-albumname.jpg" alt="An open album with and without the region name on the map" loading="lazy"></figure>
+  </section>
+
+  <section id="phoneglass">
+    <div class="n">Seven</div>
+    <h2>Glass on phone</h2>
+    <p>On a phone the header, the slider row, the zoom buttons and the List button can be glass, or near solid with no blur. Blur costs more on a phone. This has not been tried on a real phone, and the picture comes from a software renderer.</p>
+    <ul class="links">
+      <li><button type="button" data-frame="index.html#/album/the-stone-roses-the-stone-roses?view=map">Show glass in the frame</button></li>
+      <li><button type="button" data-frame="index.html#/album/the-stone-roses-the-stone-roses?view=map&amp;phoneglass=0">Show near solid in the frame</button></li>
+    </ul>
+    <div class="phone">
+      <div class="device" id="device"><span>A live phone frame, 390 by 844. It loads when you press one of the two buttons.</span></div>
+      <figure class="narrow" style="flex: 1; min-width: 320px;"><img src="../options/q-phoneglass.jpg" alt="The phone map view with glass and with near solid panels" loading="lazy"></figure>
+    </div>
+  </section>
+
+  <section id="names">
+    <div class="n">Eight</div>
+    <h2>Names on Sonic and Mood</h2>
+    <p>Balanced shows nine names at this size. Sonic shows four and Mood shows five, because fewer regions there have a name. The question is whether that is enough, or whether those two stops need more names.</p>
+    <ul class="links">
+      <li><a href="index.html#/map?stop=sonic&amp;names=17" target="_blank" rel="noopener">Sonic</a></li>
+      <li><a href="index.html#/map?names=17" target="_blank" rel="noopener">Balanced</a></li>
+      <li><a href="index.html#/map?stop=mood&amp;names=17" target="_blank" rel="noopener">Mood</a></li>
+    </ul>
+    <figure><img src="../options/q-names-stops.jpg" alt="The map at the Sonic, Balanced and Mood stops" loading="lazy"></figure>
+  </section>
+</main>
+<script>
+  // One live frame at most, and only after a press.
+  var device = document.getElementById('device'), frame = null;
+  document.querySelectorAll('[data-frame]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (!frame) { frame = document.createElement('iframe'); frame.title = 'Phone layout, live'; device.textContent = ''; device.appendChild(frame); }
+      frame.src = 'about:blank';
+      var src = b.getAttribute('data-frame'); setTimeout(function () { frame.src = src; }, 50);
+    });
+  });
+</script>
+</body>
+</html>

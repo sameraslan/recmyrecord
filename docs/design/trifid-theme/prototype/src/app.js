@@ -8,7 +8,7 @@
     route: { name: 'map' }, stop: 'balanced', t: 0.5, morph: null,
     focus: null, pool: null, hot: null, hover: null, pick: null,
     trail: [], framing: null, started: false, instant: false,
-    proto: { chrome: 'glass', gas: 'baked', data: 'real', hud: false, hulls: false, names: null }, force: {},
+    proto: { chrome: 'glass', gas: 'baked', data: 'real', hud: false, hulls: false, names: null, toggle: 'b', twinkle: 1, header: 'under', grain: false, albumname: true, phoneglass: true }, force: {},
     amt: { pool: 0 },   // animated 0..1 amounts
   });
   const stats = (window.__rmr = { frames: 0, lastFrameMs: 0, worstFrameMs: 0, gasMs: 0 });
@@ -16,7 +16,10 @@
   let raf = 0, lastFrameEnd = 0, chained = false, ppwOverview = 1000, tipTimer = 0, cardBox = null;
 
   // look=, scheme=, palette=, font=: read once at load by gas.js and labels.js; carried along on every link
-  const LOOK_KEYS = ['look', 'scheme', 'palette', 'font'];
+  // seed= (the random star draw, src/data.js) is read once at load too
+  const LOOK_KEYS = ['look', 'scheme', 'palette', 'font', 'seed'];
+  // the visitor's names on/off choice is remembered; names= in the hash wins over it
+  let namesOff = false; try { namesOff = localStorage.getItem('rmr-names') === '0'; } catch (e) { /* storage blocked: not remembered */ }
 
   // ---------- routing ----------
   function parse(hash) {
@@ -25,11 +28,12 @@
     const route = seg[0] === 'album' && seg[1] ? { name: 'album', slug: decodeURIComponent(seg[1]), more: q.get('more') === '1', view: q.get('view') === 'map' ? 'map' : null }
       : seg[0] === 'map' ? { name: 'map', pick: q.get('pick') || null }
       : !seg.length ? { name: 'home' } : seg[0] === 'about' ? { name: 'about' } : { name: 'notfound' };
-    const nm = q.get('names'), names = nm === 'all' ? 'all' : /^\d+$/.test(nm || '') ? Number(nm) : null;   // names=<number>|all: how many region names show (default cfg.NAMES_MAX)
+    const nm = q.get('names'), names = nm === 'all' ? 'all' : /^\d+$/.test(nm || '') ? Number(nm) : namesOff ? 0 : null;   // names=<number>|all: how many region names show (default cfg.NAMES_MAX)
     return {
       route, stop: stopOf(route.name === 'album' ? q.get('by') : q.get('stop')),
-      proto: { chrome: ['site', 'ink', 'starlight', 'trifid', 'plum'].includes(q.get('chrome')) ? q.get('chrome') : 'glass', gas: q.get('gas') === 'live' ? 'live' : 'baked', data: q.get('data') === '10k' ? '10k' : 'real', hud: q.get('hud') === '1', hulls: q.get('hulls') === '1', regions: q.get('regions') === 'default' ? 'default' : 'fine', names, toggle: ['a', 'b', 'c'].includes(q.get('toggle')) ? q.get('toggle') : null, look: q.get('look'), scheme: q.get('scheme'), palette: q.get('palette'), font: q.get('font') },
-      force: { hover: q.get('hover'), cam: q.get('cam'), fit: q.get('fit'), q: q.get('q'), bench: q.get('bench'), check: q.get('check'), idle: q.get('idle'), then: q.get('then'), morph: q.get('morph'), from: q.get('from'), scroll: q.get('scroll'), stats: q.get('stats'), plate: q.get('plate'), sheet: q.get('sheet') },
+      proto: { chrome: ['site', 'ink', 'starlight', 'trifid', 'plum'].includes(q.get('chrome')) ? q.get('chrome') : 'glass', gas: q.get('gas') === 'live' ? 'live' : 'baked', data: q.get('data') === '10k' ? '10k' : 'real', hud: q.get('hud') === '1', hulls: q.get('hulls') === '1', regions: q.get('regions') === 'default' ? 'default' : 'fine', names, toggle: ['a', 'c'].includes(q.get('toggle')) ? q.get('toggle') : q.get('toggle') === '0' ? null : 'b', look: q.get('look'), scheme: q.get('scheme'), palette: q.get('palette'), font: q.get('font'), seed: q.get('seed'),
+        twinkle: ['0', '2'].includes(q.get('twinkle')) ? Number(q.get('twinkle')) : 1, deep: q.get('deep') === 'old' ? 'old' : /^(0|1|0?\.\d+)$/.test(q.get('deep') || '') ? Number(q.get('deep')) : null, header: q.get('header') === 'below' ? 'below' : 'under', grain: q.get('grain') === '1', albumname: q.get('albumname') !== '0', phoneglass: q.get('phoneglass') !== '0' },
+      force: { hover: q.get('hover'), cam: q.get('cam'), fit: q.get('fit'), q: q.get('q'), bench: q.get('bench'), check: q.get('check'), idle: q.get('idle'), then: q.get('then'), morph: q.get('morph'), from: q.get('from'), scroll: q.get('scroll'), stats: q.get('stats'), plate: q.get('plate'), sheet: q.get('sheet'), glints: q.get('glints'), rings: q.get('rings'), twlog: q.get('twlog') },
     };
   }
   /** Hash for a route; the stop and the prototype switches ride along. */
@@ -39,7 +43,8 @@
     else if (r.name !== 'map') { path = r.name === 'home' ? '/' : r.name === 'about' ? '/about' : '/404'; if (stop !== 'balanced') q.set('stop', stop); }   // pages keep the stop too
     else { if (r.pick) q.set('pick', r.pick); if (stop !== 'balanced') q.set('stop', stop); }
     if (r.name === 'map' && S.camHash && !r.pick && S.route.name === 'map' && S.framing == null) q.set('cam', S.camHash);
-    const p = S.proto; if (p.chrome !== 'glass') q.set('chrome', p.chrome); if (p.gas === 'live') q.set('gas', 'live'); if (p.data === '10k') q.set('data', '10k'); if (p.hud) q.set('hud', '1'); if (p.hulls) q.set('hulls', '1'); if (p.regions === 'default') q.set('regions', 'default'); if (p.names != null) q.set('names', String(p.names)); if (p.toggle) q.set('toggle', p.toggle);
+    const p = S.proto; if (p.chrome !== 'glass') q.set('chrome', p.chrome); if (p.gas === 'live') q.set('gas', 'live'); if (p.data === '10k') q.set('data', '10k'); if (p.hud) q.set('hud', '1'); if (p.hulls) q.set('hulls', '1'); if (p.regions === 'default') q.set('regions', 'default'); if (p.names != null) q.set('names', String(p.names)); if (p.toggle !== 'b') q.set('toggle', p.toggle || '0');
+    if (p.twinkle !== 1) q.set('twinkle', String(p.twinkle)); if (p.deep != null) q.set('deep', String(p.deep)); if (p.header === 'below') q.set('header', 'below'); if (p.grain) q.set('grain', '1'); if (p.albumname === false) q.set('albumname', '0'); if (p.phoneglass === false) q.set('phoneglass', '0');
     for (const k of LOOK_KEYS) if (p[k]) q.set(k, p[k]);
     const s = q.toString(); return '#' + path + (s ? '?' + s.replace(/%2C/g, ',') : '');
   };
@@ -64,7 +69,7 @@
     const moves = [], fly = (to, d, e) => moves.push([to, d, e]);
     if (S.started && (p.proto.data !== S.proto.data || p.proto.regions !== S.proto.regions || LOOK_KEYS.some((k) => p.proto[k] !== S.proto[k]))) { location.reload(); return; }
     S.narrow = RMR.view.W < 900;
-    S.proto = p.proto; S.force = p.force; document.documentElement.dataset.chrome = p.proto.chrome;
+    S.proto = p.proto; S.force = p.force; document.documentElement.dataset.chrome = p.proto.chrome; switches();
     S.instant = first;
 
     // the similarity stop: positions, gas and labels morph together
@@ -280,8 +285,9 @@
     const D = RMR.D, view = RMR.view, cam = RMR.cam;
     if (S.t !== lastT) { lastT = S.t; const P = RMR.P, o = [0, 0]; for (let i = 0; i < D.n; i++) { RMR.posAt(i, S.t, o); P[2 * i] = o[0]; P[2 * i + 1] = o[1]; } }
     const cp = Cam.coverPx(), fade = Cam.coverFade();
-    // zoom bands (UX.md section 2): the gas yields as covers approach; dust is gone before covers show
-    const strength = cp < C.BAND_B ? 1 : cp < C.BAND_C ? U.lerp(1, 0.6, (cp - C.BAND_B) / (C.BAND_C - C.BAND_B)) : cp < C.BAND_D ? U.lerp(0.6, 0.3, (cp - C.BAND_C) / (C.BAND_D - C.BAND_C)) : 0.3;
+    // zoom bands (UX.md section 2): the gas yields as covers approach and is all but gone at full-size covers (RMR.gasCurve,
+    // src/config.js); dust is gone before covers show
+    const curve = RMR.gasCurve(cp, S.proto.deep), strength = curve.strength;
     const dust = 1 - U.smooth(C.BAND_B, C.BAND_C, cp);
 
     let items = null;
@@ -289,7 +295,7 @@
     const hot = S.hot != null ? S.hot : S.focus && S.focus.recs.includes(S.hover) ? S.hover : null;
     S.items = items;
 
-    RMR.Gas.draw({ t: S.t, strength, dust, pool: S.pool, poolAmt: S.amt.pool, baked: S.proto.gas === 'baked', moving });
+    RMR.Gas.draw({ t: S.t, strength, deep: curve.deep, dust, pool: S.pool, poolAmt: S.amt.pool, baked: S.proto.gas === 'baked', moving });
     const sizeK = RMR.Stars.sizeK(cp);
     RMR.Stars.draw({ t: S.t, alpha: (1 - fade) * U.lerp(1, 0.45, S.amt.pool) * U.clamp(sizeK * sizeK, 0.45, 1), sizeK, halo: U.smooth(5, 7, cp) });   // small and dim when zoomed out, no halos under 6 px covers
     RMR.Ov.draw({ items, hot, focus: !!S.focus, focusSet: S.focus ? S.focus.set : null, pick: S.pick, hover: S.hover });
@@ -315,8 +321,9 @@
       { const r = RMR.D.regionOf(S.stop, S.focus.seed), near = r ? [r].concat(RMR.Regions.neighbours(r, 2)) : RMR.Regions.between(S.focus.seed); only = new Set(near.map((q) => q.id)); }
       lines = items.slice(1).map((it) => [[s.x, s.y], [it.x, it.y]]);
     }
-    RMR.Labels.update({ cp, album: !!S.focus, blockers: B, lines, only, morph: S.morph, stop: S.stop, gasK: Math.pow(strength * U.lerp(1, 0.6, S.amt.pool), 1.4), ppwOverview, phone: S.narrow, names: S.proto.names });
+    RMR.Labels.update({ cp, album: !!S.focus, blockers: B, lines, only, morph: S.morph, stop: S.stop, gasK: Math.pow(strength * U.lerp(1, 0.6, S.amt.pool), 1.4), ppwOverview, phone: S.narrow, names: S.proto.names, quietAlbum: !S.proto.albumname });
     RMR.UI.hint(fade, page); RMR.Pages.strip();
+    RMR.Twinkle.camera();
     if (!moving && !page) nearList();
     if (S.tipFor != null && S.tipFor === S.hover) {
       const it = items && items.find((q) => q.id === S.hover);
@@ -444,21 +451,39 @@
     document.querySelectorAll('#proto input').forEach((i) => { if (i.type === 'radio') i.checked = (i.name === 'data' ? (p.data === '10k' ? '10k' : 'real') : p[i.name]) === i.value; else i.checked = !!p[i.name]; });
     $('hud').hidden = !p.hud; $('proto-note').textContent = S.synthMissing ? T.stressMissing : '';
   }
-  /** toggle=a|b|c: a quiet control that turns the region names off and on (names=0 in the hash is off). a: a fourth button
-   * on the zoom stack; b: the same button set 8 px above it; c: the word NAMES, in the names' lettering, left of the stack. */
+  /** header=, grain=, phoneglass=: looks that are one attribute on <html> (the rules are at the end of pages.css). */
+  function switches() {
+    const p = S.proto, de = document.documentElement;
+    de.dataset.header = p.header; de.dataset.phoneglass = p.phoneglass ? '1' : '0';
+    let g = $('grain');
+    if (p.grain && !g) { g = document.createElement('div'); g.id = 'grain'; g.className = 'grain'; g.setAttribute('aria-hidden', 'true'); document.body.appendChild(g); }
+    else if (!p.grain && g) g.remove();
+    if (RMR.Twinkle) RMR.Twinkle.sync();
+  }
+  /** The names on/off button. Default (toggle=b): an icon button set 8 px above the zoom stack. toggle=a: a fourth button
+   * on the stack; toggle=c: the word NAMES, in the names' lettering, left of the stack; toggle=0: no button.
+   * The choice is kept in localStorage (rmr-names); names= in the hash wins over it. */
+  const AA = '<path d="M2.5 18 7.5 6l5 12M4.4 13.6h6.2"/><circle cx="17.6" cy="14.6" r="3.2"/><path d="M20.8 11.2V18"/>';
   function namesToggle() {
     const kind = S.proto.toggle, on = S.proto.names !== 0; let b = $('names-toggle');
     if (kind) document.documentElement.dataset.toggle = kind; else delete document.documentElement.dataset.toggle;
     if (!kind) { if (b) b.remove(); return; }
     if (!b) {
       b = document.createElement('button'); b.type = 'button'; b.id = 'names-toggle'; b.setAttribute('aria-label', 'Region names');
-      b.addEventListener('click', () => { S.proto.names = S.proto.names === 0 ? null : 0; RMR.go(S.route, true); });
+      b.addEventListener('click', () => {
+        namesOff = S.proto.names !== 0; S.proto.names = namesOff ? 0 : null;
+        try { localStorage.setItem('rmr-names', namesOff ? '0' : '1'); } catch (e) { /* storage blocked: the choice lasts for this visit */ }
+        RMR.go(S.route, true);
+      });
       document.querySelector('.map-zoom').prepend(b);
     }
     if (b.dataset.kind !== kind) {
       b.dataset.kind = kind;
+      // off: the letters at 42%, cut by a mask along the slash, and a thin slash drawn in the gap (crisp at 16 px)
       b.innerHTML = kind === 'c' ? '<span>Names</span>'
-        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 18 7.5 6l5 12M4.4 13.6h6.2"/><circle cx="17.6" cy="14.6" r="3.2"/><path d="M20.8 11.2V18"/><path class="tg-slash" d="M3.5 21 20.5 3"/></svg>';
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+        + '<defs><mask id="tg-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24"><rect width="24" height="24" fill="#fff" stroke="none"/><path d="M1.5 22.5 22.5 1.5" stroke="#000" stroke-width="4.4" stroke-linecap="butt"/></mask></defs>'
+        + '<g class="tg-on">' + AA + '</g><g class="tg-off"><g class="tg-dim" mask="url(#tg-cut)">' + AA + '</g><path class="tg-slash" d="M4 20 20 4"/></g></svg>';
     }
     b.setAttribute('aria-pressed', String(on));
   }
@@ -483,6 +508,7 @@
     RMR.UI.init(); RMR.Search.init(); RMR.Pages.init(); bindInput(); bindProto();
     $('skip').addEventListener('click', (e) => { e.preventDefault(); const n = S.route.name, t = n === 'home' ? $('home-h') : n === 'about' ? $('about-h') : n === 'notfound' ? $('nf-h') : n === 'album' && !S.mapMode ? $('seed-title') : $('ov'); if (t) t.focus(); });
     apply(); S.started = true; RMR.requestRender();
+    RMR.Twinkle.init($('twinkle'));
     document.documentElement.dataset.gl = S.gl ? '1' : '0';   // for the lazy-start check: 0 on the phone's album list until the strip shows
     if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => RMR.relayout());   // the chrome is measured again once the real fonts are in
     const f = S.force;
