@@ -32,6 +32,7 @@ This part was written before part 1 was built. It has been checked against the c
 - 9, step 11: reviewer told which pictures use the lighter gas shader, given two more crops, and asked to recheck the inherited weak marks on the brightest cream gas.
 - Independent check (2026-10-05) folded in: precondition (ledger "Task 6: complete"); sharper image wait default 1.5 s -> 2.5 s (longer than `GAS_SHARP_RETRY_MS` 2000) in the helper, `twinkle-cost.mjs` and `capture.mjs`; the flag's wording on the test browser ('waiting' or 'off'); Task 7 `nameWidths.test.ts` added; `setStageTop` needs a `requestRender()` from part 3 (four frame request cases); Task 9 step 7 note on `perf.mjs` idle window vs the sharper image fade (Task 0's fix); Task 9 step 3 label count wording; Task 2 part 1 evidence crops named; Task 8 step 11 wording on the twinkle switch's listener.
 - Self-review: test edit list and type consistency updated for the above.
+- 1, as built (2026-10-05): review follow-up folded into Task 1's code blocks (client-only `pageStarClasses`, `StarClass`, four more tests, 28 in all); Task 8's driver casts its class to `StarClass`.
 - Task 0 (2026-10-05, `2026-10-05-trifid-theme-2-task0-overview-framing.md`): Task 0 owns `waitForGasSharpSettled`, the perf idle wait and the capture/hover sharper-image waits; Task 8 and Task 9 reuse them. Task 5's halo numbers, the `names.spec.ts` zoom comment, Task 9 steps 7, 8, 9 and 11 updated to Task 0's framing (the map opens at the Overview; `map-opening.jpg` is the Overview picture, `map-overview.jpg` stays the whole-cloud fit).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
@@ -158,15 +159,16 @@ Produced by this part for part 3:
   export const STAR_UNDER_HOLD = 0.5;
   export const STAR_UNDER_MAX = 0.26;
   export const DOT_AT_OVERVIEW: number;            // 1.8 + 12.5 / 3.15
+  export type StarClass = 0 | 1 | 2 | 3;
   export type StarRandom = () => number;           // 0 (included) to 1 (not included)
   export function seededRandom(seed: number): StarRandom;
   export function starCounts(n: number): [number, number, number, number];
   export function drawStarClasses(n: number, random: StarRandom): Uint8Array;   // one class 0..3 per album
-  export function pageStarClasses(n: number): Uint8Array;                       // this page load's one deal
+  export function pageStarClasses(n: number): Uint8Array;                       // this page load's one deal (client only; a throwaway deal on the server)
   export function resetPageStars(): void;                                       // unit tests only
   export function starTint(lead: number): [number, number, number];
   export function starUnder(gasLum: number): number;
-  export function starCoreCssPx(cls: number, zoom: number, canvasHeightCssPx: number): number;
+  export function starCoreCssPx(cls: StarClass, zoom: number, canvasHeightCssPx: number): number;
   export interface StarAttributes { star: Float32Array; tint: Uint8Array; bg: Uint8Array }
   export function buildStarAttributes(classes: Uint8Array, theme: ThemeData | null): StarAttributes;
   // window.__rmr.starSeed?: number
@@ -183,6 +185,8 @@ Produced by this part for part 3:
 - *No code path reads album index or rank:* proven three ways. By construction: `drawStarClasses` has exactly two parameters, the album count and the random source (asserted), so no album record can reach it. By behaviour: over 400 seeds, the first 41 albums (the chart's top 1%) land in the brightest class 170 times of 16,400, where a fair deal expects 165 and any rule that followed album order gives 16,400; the first 408 albums land in the two brightest classes 16,187 times of 163,200 (fair: 16,316); and the brightest stars' mean index is 2,050 (the middle of the list is 2,040). By use: `buildStarAttributes` takes the dealt classes and a test shows the same albums with another deal get other sizes and the same tints.
 
 These numbers were computed with plain `node` on the code below while the plan was written; the deal matches the prototype's for the same seed, album for album.
+
+**As built (2026-10-05, review follow-up after `23d93e4a`, review `docs/superpowers/plans/reviews/part2-task1-review.md` findings 1 to 6).** The two code blocks below are the files as committed. Changes from the first version: `pageStarClasses` is client only and on the server returns a throwaway deal without keeping it (test "on the server deals afresh..."); a test that classes 1 and 2 do not follow album order (first 1,510 albums in classes 0 to 2 over seeds 1 to 400 within 6 sd of 223,484, and the mean index of class 1 within 20 and of class 2 within 10 of 2,040); the arity check's comment says what `length` does and does not prove, and the self-equality check is replaced by "two different constant sources give different deals"; a golden test pins seed 20261004 to the prototype's deal (class counts, the first 24 classes, FNV-1a of the first 200 and of all 4,081, computed from a verbatim copy of `src/data.js` L70-75 and `RMR.rng`); `StarClass = 0 | 1 | 2 | 3` types `starCoreCssPx`'s class (checked by `expectTypeOf`); the seed choice is an if/else chain instead of a nested ternary. Task 8's driver casts `classes[pick.index] as StarClass`.
 
 - [ ] **Step 1: Add the test hook's type**
 
@@ -210,7 +214,7 @@ Create `frontcreck/src/components/map/state/stars.test.ts`:
 ```ts
 import fs from 'node:fs';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import type { ThemeData } from '@/lib/data/theme';
 import { EMBER_RGB, STAR_WHITE } from '../theme';
 import { hitRadiusCssPx } from './hitTest';
@@ -245,6 +249,12 @@ function theme(n: number, lead: number[], bg: number[]): ThemeData {
 const histogram = (classes: Uint8Array): number[] => {
   const h = [0, 0, 0, 0];
   for (const c of classes) h[c]++;
+  return h;
+};
+/** FNV-1a, 32 bit, over the class bytes: a compact fingerprint of a whole deal. */
+const fnv1a = (bytes: Uint8Array): number => {
+  let h = 0x811c9dc5;
+  for (const v of bytes) h = Math.imul(h ^ v, 0x01000193) >>> 0;
   return h;
 };
 
@@ -329,12 +339,53 @@ describe('drawStarClasses (the random deal)', () => {
     expect(Math.abs(indexSum / brightest - 2040)).toBeLessThan(60);
   });
 
-  it('takes the number of albums and the random source, and nothing else', () => {
-    // No album record, index list or rank can be passed in: the function has exactly these two parameters.
+  it('does not follow album order in the bright and medium classes either', () => {
+    // The same 400 seeds. The first 1,510 albums (the chart's top 37%) land in the three brighter classes
+    // 400 * 1,510 * 1,510 / 4,081 = 223,484 times in a fair deal (sd 298); a rule that followed album order for any
+    // of classes 0 to 2 pushes this towards 604,000. Bounds are 6 sd each side (seeds 1 to 400 give 223,568; 49
+    // other windows of 400 seeds gave 222,901 to 224,349).
+    // And each class on its own sits, on average, in the middle of the album list (index 2,040): a fair deal's mean
+    // index has sd 2.9 for class 1 (367 albums a deal) and 1.5 for class 2 (1,102), so 20 and 10 are about 6.7 sd
+    // (seeds 1 to 400 give 2,041.2 and 2,038.4; the 49 other windows stayed within 6.6 and 4.7).
+    let top37 = 0;
+    const sum = [0, 0, 0, 0];
+    const count = [0, 0, 0, 0];
+    for (let seed = 1; seed <= 400; seed++) {
+      const c = drawStarClasses(4081, seededRandom(seed));
+      for (let i = 0; i < 4081; i++) {
+        sum[c[i]] += i;
+        count[c[i]]++;
+        if (i < 1510 && c[i] <= 2) top37++;
+      }
+    }
+    expect(top37).toBeGreaterThan(221700);
+    expect(top37).toBeLessThan(225300);
+    expect(Math.abs(sum[1] / count[1] - 2040)).toBeLessThan(20);
+    expect(Math.abs(sum[2] / count[2] - 2040)).toBeLessThan(10);
+  });
+
+  it('takes the number of albums and the random source, and the order comes from the source', () => {
+    // Two required parameters, the count and the source; no album record, index list or rank is among them.
+    // (`length` does not see a parameter with a default or a variable the function closes over: Task 2's source
+    // test on AlbumField guards what the callers pass.)
     expect(drawStarClasses.length).toBe(2);
-    // And every number it uses comes from the source: a source that always answers 0 gives one fixed deal.
-    expect(drawStarClasses(50, () => 0)).toEqual(drawStarClasses(50, () => 0));
-    expect(histogram(drawStarClasses(50, () => 0.999999))).toEqual(starCounts(50));
+    // The deal follows the source: two different constant sources give two different deals, where a function that
+    // ignored `random` (or dealt by index) would give the same one. Each is still exactly the mix.
+    const zero = drawStarClasses(50, () => 0);
+    const half = drawStarClasses(50, () => 0.5);
+    expect(zero).not.toEqual(half);
+    for (const c of [zero, half, drawStarClasses(50, () => 0.999999)]) expect(histogram(c)).toEqual(starCounts(50));
+  });
+
+  it('deals seed 20261004 (the still screenshots\' seed) album for album as the prototype does', () => {
+    // Expected values come from a verbatim copy of the prototype's deal (src/data.js L70-75, RMR.rng from
+    // src/config.js) for 4,081 albums: the class counts, the first 24 classes, and FNV-1a fingerprints of the first
+    // 200 classes and of the whole deal. A changed shuffle direction or cut-off keeps the mix but fails here.
+    const c = drawStarClasses(4081, seededRandom(20261004));
+    expect(histogram(c)).toEqual([41, 367, 1102, 2571]);
+    expect(Array.from(c.subarray(0, 24)).join('')).toBe('333333232232332233123322');
+    expect(fnv1a(c.subarray(0, 200))).toBe(3530857145);
+    expect(fnv1a(c)).toBe(4280700235);
   });
 
   it('copes with no albums and with one', () => {
@@ -386,6 +437,24 @@ describe('pageStarClasses (one deal per page load)', () => {
     window.__rmr!.starSeed = 7;
     expect(pageStarClasses(N)).toEqual(drawStarClasses(N, seededRandom(7)));
     expect(window.__rmr!.starSeed).toBe(7);
+  });
+
+  it('on the server deals afresh on every call and keeps nothing for the page', () => {
+    // Client only: a module on the server lives across requests, so a kept deal there would be shared by every
+    // visitor and could differ from the client's. Server calls get a throwaway deal, and the page's own deal is
+    // still made on the client's first call.
+    vi.stubGlobal('window', undefined);
+    try {
+      const a = pageStarClasses(N);
+      const b = pageStarClasses(N);
+      expect(a).not.toBe(b);
+      expect(histogram(a)).toEqual(starCounts(N));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    window.__rmr!.starSeed = 7;
+    expect(pageStarClasses(N)).toEqual(drawStarClasses(N, seededRandom(7)));
+    expect(pageStarClasses(N)).toBe(pageStarClasses(N));
   });
 
   it('keeps the page seed if the number of albums changes', () => {
@@ -461,9 +530,13 @@ describe('star size against the dot size the hit test uses', () => {
     expect(starCoreCssPx(0, zoomForCoverPx(12.5, H), H)).toBeCloseTo(2 * STAR_RADIUS[0], 6);
   });
 
+  it('takes one of the four classes, so a class outside them does not compile', () => {
+    expectTypeOf(starCoreCssPx).parameter(0).toEqualTypeOf<0 | 1 | 2 | 3>();
+  });
+
   it('never draws a star core wider than the dot, so the 14 px and 24 px hit radii still cover it', () => {
     for (const cover of [1, 4, 8, 12.5, 16, 24, 32, 64]) {
-      for (const cls of [0, 1, 2, 3]) {
+      for (const cls of [0, 1, 2, 3] as const) {
         const core = starCoreCssPx(cls, zoomForCoverPx(cover, H), H);
         expect(core).toBeLessThanOrEqual(DOT_MAX_PX);
         expect(core / 2).toBeLessThan(hitRadiusCssPx('mouse'));
@@ -510,6 +583,9 @@ export const STAR_UNDER_MAX = 0.26;
 /** The dot diameter (state/zoomLimits.ts) when covers would be 12.5 px: star sizes are relative to it. */
 export const DOT_AT_OVERVIEW = DOT_BASE_PX + 12.5 / DOT_SCALE_PX;
 
+/** A star class: 0 brightest, 1 bright, 2 medium, 3 small. */
+export type StarClass = 0 | 1 | 2 | 3;
+
 /** A source of random numbers in 0 (included) to 1 (not included). */
 export type StarRandom = () => number;
 
@@ -552,15 +628,22 @@ export function drawStarClasses(n: number, random: StarRandom): Uint8Array {
 
 let page: { seed: number; classes: Uint8Array } | null = null;
 
-/** This page load's star classes for `n` albums. Drawn on first use from a fresh random seed and kept for the
- * life of the page: every later call returns the same array, so an album keeps its class through slider
- * moves, pans, zooms, a remounted map and a reloaded catalogue. The seed is published as window.__rmr.starSeed;
- * a test that needs a repeatable picture sets that value before the map loads. */
+const freshSeed = (): number => Math.floor(Math.random() * 4294967296);
+
+/** This page load's star classes for `n` albums. Client only. Drawn on first use from a fresh random seed and
+ * kept for the life of the page: every later call returns the same array, so an album keeps its class through
+ * slider moves, pans, zooms, a remounted map and a reloaded catalogue of the same size. The seed is published as
+ * window.__rmr.starSeed; a test that needs a repeatable picture sets that value before the map loads. On the
+ * server (no window) it returns a throwaway deal and keeps nothing, since a server module outlives one page. */
 export function pageStarClasses(n: number): Uint8Array {
+  if (typeof window === 'undefined') return drawStarClasses(n, seededRandom(freshSeed()));
   if (page && page.classes.length === n) return page.classes;
-  const hooks = typeof window === 'undefined' ? undefined : window.__rmr;
+  const hooks = window.__rmr;
   const given = hooks?.starSeed;
-  const seed = page ? page.seed : typeof given === 'number' && Number.isFinite(given) ? given >>> 0 : Math.floor(Math.random() * 4294967296);
+  let seed: number;
+  if (page) seed = page.seed;
+  else if (typeof given === 'number' && Number.isFinite(given)) seed = given >>> 0;
+  else seed = freshSeed();
   page = { seed, classes: drawStarClasses(n, seededRandom(seed)) };
   if (hooks) hooks.starSeed = seed;
   return page.classes;
@@ -583,7 +666,7 @@ export function starUnder(gasLum: number): number {
 }
 
 /** Diameter of a star's core in CSS px (JS mirror of the vertex shader, before the dimmed map's enlargement). */
-export function starCoreCssPx(cls: number, zoom: number, canvasHeightCssPx: number): number {
+export function starCoreCssPx(cls: StarClass, zoom: number, canvasHeightCssPx: number): number {
   return 2 * Math.max(0.8, (STAR_RADIUS[cls] * dotCssPx(zoom, canvasHeightCssPx)) / DOT_AT_OVERVIEW);
 }
 
@@ -628,7 +711,7 @@ export function buildStarAttributes(classes: Uint8Array, theme: ThemeData | null
 - [ ] **Step 5: Run the test to verify it passes**
 
 Run: `(export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; cd frontcreck && npm run test -- src/components/map/state/stars.test.ts)`
-Expected: PASS, 24 tests.
+Expected: PASS, 28 tests (24 as first planned, 4 added by the review follow-up).
 
 If "is the prototype generator (mulberry32)" fails, the generator was changed: the three expected numbers are what the prototype's `RMR.rng(7)` returns. If "does not follow album order" fails, do not widen its bounds: print the three counts and look for a use of the album index in `drawStarClasses`.
 
@@ -4974,7 +5057,7 @@ import { MUTED_DOT_SCALE } from '../shaders/album';
 import { useMapStore } from '../state/mapStore';
 import { getOverlayEl, getPlacedMarkers } from '../state/overlayEls';
 import { getStageTop } from '../state/stageTop';
-import { pageStarClasses, starCoreCssPx, starTint } from '../state/stars';
+import { pageStarClasses, starCoreCssPx, starTint, type StarClass } from '../state/stars';
 import { TWINKLE_COVER_CLEAR_PX, TWINKLE_EDGE_PX, createTwinkle, glintFor, pickStar, worldToScreenMap, type Twinkle, type TwinkleHost } from '../state/twinkle';
 import { coverFade } from '../state/zoomLimits';
 import { STAR_WHITE } from '../theme';
@@ -5037,7 +5120,7 @@ export function TwinkleDriver({ positionsRef }: { positionsRef: React.RefObject<
         const covers = s.input.focus ? getPlacedMarkers().map((m) => ({ x: m.x, y: m.y, half: m.drawn / 2 + TWINKLE_COVER_CLEAR_PX })) : [];
         const pick = pickStar(positionsRef.current, classes, worldToScreenMap(camera, width, height), area, covers, Math.random);
         if (!pick) return null;
-        const cls = classes[pick.index];
+        const cls = classes[pick.index] as StarClass;
         // The star's own radius as the shader draws it (larger on the dimmed Home map), and its own tint.
         const radius = (starCoreCssPx(cls, camera.zoom, height) / 2) * (s.input.dimmed ? MUTED_DOT_SCALE : 1);
         const tint = s.theme ? starTint(s.theme.stars.lead[pick.index]) : STAR_WHITE;

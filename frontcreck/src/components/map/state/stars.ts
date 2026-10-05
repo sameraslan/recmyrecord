@@ -24,6 +24,9 @@ export const STAR_UNDER_MAX = 0.26;
 /** The dot diameter (state/zoomLimits.ts) when covers would be 12.5 px: star sizes are relative to it. */
 export const DOT_AT_OVERVIEW = DOT_BASE_PX + 12.5 / DOT_SCALE_PX;
 
+/** A star class: 0 brightest, 1 bright, 2 medium, 3 small. */
+export type StarClass = 0 | 1 | 2 | 3;
+
 /** A source of random numbers in 0 (included) to 1 (not included). */
 export type StarRandom = () => number;
 
@@ -66,15 +69,22 @@ export function drawStarClasses(n: number, random: StarRandom): Uint8Array {
 
 let page: { seed: number; classes: Uint8Array } | null = null;
 
-/** This page load's star classes for `n` albums. Drawn on first use from a fresh random seed and kept for the
- * life of the page: every later call returns the same array, so an album keeps its class through slider
- * moves, pans, zooms, a remounted map and a reloaded catalogue. The seed is published as window.__rmr.starSeed;
- * a test that needs a repeatable picture sets that value before the map loads. */
+const freshSeed = (): number => Math.floor(Math.random() * 4294967296);
+
+/** This page load's star classes for `n` albums. Client only. Drawn on first use from a fresh random seed and
+ * kept for the life of the page: every later call returns the same array, so an album keeps its class through
+ * slider moves, pans, zooms, a remounted map and a reloaded catalogue of the same size. The seed is published as
+ * window.__rmr.starSeed; a test that needs a repeatable picture sets that value before the map loads. On the
+ * server (no window) it returns a throwaway deal and keeps nothing, since a server module outlives one page. */
 export function pageStarClasses(n: number): Uint8Array {
+  if (typeof window === 'undefined') return drawStarClasses(n, seededRandom(freshSeed()));
   if (page && page.classes.length === n) return page.classes;
-  const hooks = typeof window === 'undefined' ? undefined : window.__rmr;
+  const hooks = window.__rmr;
   const given = hooks?.starSeed;
-  const seed = page ? page.seed : typeof given === 'number' && Number.isFinite(given) ? given >>> 0 : Math.floor(Math.random() * 4294967296);
+  let seed: number;
+  if (page) seed = page.seed;
+  else if (typeof given === 'number' && Number.isFinite(given)) seed = given >>> 0;
+  else seed = freshSeed();
   page = { seed, classes: drawStarClasses(n, seededRandom(seed)) };
   if (hooks) hooks.starSeed = seed;
   return page.classes;
@@ -97,7 +107,7 @@ export function starUnder(gasLum: number): number {
 }
 
 /** Diameter of a star's core in CSS px (JS mirror of the vertex shader, before the dimmed map's enlargement). */
-export function starCoreCssPx(cls: number, zoom: number, canvasHeightCssPx: number): number {
+export function starCoreCssPx(cls: StarClass, zoom: number, canvasHeightCssPx: number): number {
   return 2 * Math.max(0.8, (STAR_RADIUS[cls] * dotCssPx(zoom, canvasHeightCssPx)) / DOT_AT_OVERVIEW);
 }
 

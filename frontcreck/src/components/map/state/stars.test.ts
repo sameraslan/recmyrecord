@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import type { ThemeData } from '@/lib/data/theme';
 import { EMBER_RGB, STAR_WHITE } from '../theme';
 import { hitRadiusCssPx } from './hitTest';
@@ -35,6 +35,12 @@ function theme(n: number, lead: number[], bg: number[]): ThemeData {
 const histogram = (classes: Uint8Array): number[] => {
   const h = [0, 0, 0, 0];
   for (const c of classes) h[c]++;
+  return h;
+};
+/** FNV-1a, 32 bit, over the class bytes: a compact fingerprint of a whole deal. */
+const fnv1a = (bytes: Uint8Array): number => {
+  let h = 0x811c9dc5;
+  for (const v of bytes) h = Math.imul(h ^ v, 0x01000193) >>> 0;
   return h;
 };
 
@@ -119,12 +125,53 @@ describe('drawStarClasses (the random deal)', () => {
     expect(Math.abs(indexSum / brightest - 2040)).toBeLessThan(60);
   });
 
-  it('takes the number of albums and the random source, and nothing else', () => {
-    // No album record, index list or rank can be passed in: the function has exactly these two parameters.
+  it('does not follow album order in the bright and medium classes either', () => {
+    // The same 400 seeds. The first 1,510 albums (the chart's top 37%) land in the three brighter classes
+    // 400 * 1,510 * 1,510 / 4,081 = 223,484 times in a fair deal (sd 298); a rule that followed album order for any
+    // of classes 0 to 2 pushes this towards 604,000. Bounds are 6 sd each side (seeds 1 to 400 give 223,568; 49
+    // other windows of 400 seeds gave 222,901 to 224,349).
+    // And each class on its own sits, on average, in the middle of the album list (index 2,040): a fair deal's mean
+    // index has sd 2.9 for class 1 (367 albums a deal) and 1.5 for class 2 (1,102), so 20 and 10 are about 6.7 sd
+    // (seeds 1 to 400 give 2,041.2 and 2,038.4; the 49 other windows stayed within 6.6 and 4.7).
+    let top37 = 0;
+    const sum = [0, 0, 0, 0];
+    const count = [0, 0, 0, 0];
+    for (let seed = 1; seed <= 400; seed++) {
+      const c = drawStarClasses(4081, seededRandom(seed));
+      for (let i = 0; i < 4081; i++) {
+        sum[c[i]] += i;
+        count[c[i]]++;
+        if (i < 1510 && c[i] <= 2) top37++;
+      }
+    }
+    expect(top37).toBeGreaterThan(221700);
+    expect(top37).toBeLessThan(225300);
+    expect(Math.abs(sum[1] / count[1] - 2040)).toBeLessThan(20);
+    expect(Math.abs(sum[2] / count[2] - 2040)).toBeLessThan(10);
+  });
+
+  it('takes the number of albums and the random source, and the order comes from the source', () => {
+    // Two required parameters, the count and the source; no album record, index list or rank is among them.
+    // (`length` does not see a parameter with a default or a variable the function closes over: Task 2's source
+    // test on AlbumField guards what the callers pass.)
     expect(drawStarClasses.length).toBe(2);
-    // And every number it uses comes from the source: a source that always answers 0 gives one fixed deal.
-    expect(drawStarClasses(50, () => 0)).toEqual(drawStarClasses(50, () => 0));
-    expect(histogram(drawStarClasses(50, () => 0.999999))).toEqual(starCounts(50));
+    // The deal follows the source: two different constant sources give two different deals, where a function that
+    // ignored `random` (or dealt by index) would give the same one. Each is still exactly the mix.
+    const zero = drawStarClasses(50, () => 0);
+    const half = drawStarClasses(50, () => 0.5);
+    expect(zero).not.toEqual(half);
+    for (const c of [zero, half, drawStarClasses(50, () => 0.999999)]) expect(histogram(c)).toEqual(starCounts(50));
+  });
+
+  it('deals seed 20261004 (the still screenshots\' seed) album for album as the prototype does', () => {
+    // Expected values come from a verbatim copy of the prototype's deal (src/data.js L70-75, RMR.rng from
+    // src/config.js) for 4,081 albums: the class counts, the first 24 classes, and FNV-1a fingerprints of the first
+    // 200 classes and of the whole deal. A changed shuffle direction or cut-off keeps the mix but fails here.
+    const c = drawStarClasses(4081, seededRandom(20261004));
+    expect(histogram(c)).toEqual([41, 367, 1102, 2571]);
+    expect(Array.from(c.subarray(0, 24)).join('')).toBe('333333232232332233123322');
+    expect(fnv1a(c.subarray(0, 200))).toBe(3530857145);
+    expect(fnv1a(c)).toBe(4280700235);
   });
 
   it('copes with no albums and with one', () => {
@@ -176,6 +223,24 @@ describe('pageStarClasses (one deal per page load)', () => {
     window.__rmr!.starSeed = 7;
     expect(pageStarClasses(N)).toEqual(drawStarClasses(N, seededRandom(7)));
     expect(window.__rmr!.starSeed).toBe(7);
+  });
+
+  it('on the server deals afresh on every call and keeps nothing for the page', () => {
+    // Client only: a module on the server lives across requests, so a kept deal there would be shared by every
+    // visitor and could differ from the client's. Server calls get a throwaway deal, and the page's own deal is
+    // still made on the client's first call.
+    vi.stubGlobal('window', undefined);
+    try {
+      const a = pageStarClasses(N);
+      const b = pageStarClasses(N);
+      expect(a).not.toBe(b);
+      expect(histogram(a)).toEqual(starCounts(N));
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    window.__rmr!.starSeed = 7;
+    expect(pageStarClasses(N)).toEqual(drawStarClasses(N, seededRandom(7)));
+    expect(pageStarClasses(N)).toBe(pageStarClasses(N));
   });
 
   it('keeps the page seed if the number of albums changes', () => {
@@ -251,9 +316,13 @@ describe('star size against the dot size the hit test uses', () => {
     expect(starCoreCssPx(0, zoomForCoverPx(12.5, H), H)).toBeCloseTo(2 * STAR_RADIUS[0], 6);
   });
 
+  it('takes one of the four classes, so a class outside them does not compile', () => {
+    expectTypeOf(starCoreCssPx).parameter(0).toEqualTypeOf<0 | 1 | 2 | 3>();
+  });
+
   it('never draws a star core wider than the dot, so the 14 px and 24 px hit radii still cover it', () => {
     for (const cover of [1, 4, 8, 12.5, 16, 24, 32, 64]) {
-      for (const cls of [0, 1, 2, 3]) {
+      for (const cls of [0, 1, 2, 3] as const) {
         const core = starCoreCssPx(cls, zoomForCoverPx(cover, H), H);
         expect(core).toBeLessThanOrEqual(DOT_MAX_PX);
         expect(core / 2).toBeLessThan(hitRadiusCssPx('mouse'));
