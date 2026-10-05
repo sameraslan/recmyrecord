@@ -10,7 +10,7 @@ When you start a piece of work, pause on a question for Samer, or open its final
 
 ## Writing for visitors
 
-Any text a visitor reads on the site (messages, errors, empty states, labels) is friendly and plain. It says what still works and suggests a next step, for example "To enjoy the full exploratory map, open this page in an up-to-date Chrome, Firefox, Safari or Edge." It avoids technical terms (not "WebGL", "context", "fetch") and does not blame the visitor or their device. The strings live in `frontcreck/src/lib/copy.ts`, whose header lists the other copy rules (no dashes, no hype, no emoji), and Samer signs copy off on the PR.
+Any text a visitor reads on the site (messages, errors, empty states, labels) is friendly, plain and has some character. It says what still works and suggests a next step, for example "To enjoy the full exploration capabilities, open this page in an up-to-date Chrome, Firefox, Safari or Edge. :)" It avoids technical terms (not "WebGL", "context", "fetch") and does not blame the visitor. A typed `:)` is welcome (joined to the sentence with a non-breaking space so it never wraps alone); emoji are not. The strings live in `frontcreck/src/lib/copy.ts`, whose header lists the other copy rules (no dashes, no hype), and Samer signs copy off on the PR.
 
 ## Experiments
 
