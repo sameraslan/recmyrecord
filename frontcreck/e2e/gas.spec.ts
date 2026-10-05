@@ -89,8 +89,9 @@ async function barePoint(page: Page, clearance: number): Promise<{ x: number; y:
   }, clearance);
 }
 
-/** Counts the uploads of baked gas images (the only 2048 px ImageBitmaps the page hands to WebGL) and when
- * each happened. Call before page.goto. */
+/** Counts the uploads of the stops' first gas images (the only ImageBitmaps with a longer side of 2048 px that
+ * the page hands to WebGL; a stop's image covers its own rectangle, so the shorter side differs) and when each
+ * happened. Call before page.goto. */
 async function countGasUploads(page: Page): Promise<void> {
   await page.addInitScript(() => {
     const w = window as unknown as { __gasUploads: number; __gasUploadAt: number[] };
@@ -101,7 +102,7 @@ async function countGasUploads(page: Page): Promise<void> {
       const orig = P[fn];
       P[fn] = function (this: unknown, ...a: unknown[]) {
         const src = a[a.length - 1];
-        if (src instanceof ImageBitmap && src.width === 2048) {
+        if (src instanceof ImageBitmap && Math.max(src.width, src.height) === 2048) {
           w.__gasUploads += 1;
           w.__gasUploadAt.push(performance.now());
         }
@@ -525,4 +526,88 @@ test('Home loads only the gas of the stop it shows, and the other two wait for t
   await expect.poll(() => [...requested].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp', '/data/theme/theme.json']);
   await waitForMap(page);
   expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+});
+
+test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at a time, with one frame and nothing at rest', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the sharper image is for desktops');
+  // The test browser renders in software, where the app would not load the sharper image by itself.
+  await page.addInitScript(() => {
+    window.__rmrGasSharp = 'force';
+    // every 16 ms: frames drawn and the sharper image's state
+    const log: [number, string][] = [];
+    (window as unknown as { __sharpLog: [number, string][] }).__sharpLog = log;
+    setInterval(() => log.push([window.__rmr?.frames ?? 0, String(window.__rmr?.gasSharp)]), 16);
+  });
+  const sharpRequests: string[] = [];
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('request', (r) => {
+    if (/\/data\/theme\/gas-\w+-sharp\.webp$/.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
+  });
+  const sharp = () => page.evaluate(() => window.__rmr!.gasSharp);
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+  // As the map opens, the whole cloud fits the pane: the first image has more texels than the screen has px,
+  // so no sharper image is fetched however long the map rests.
+  await page.waitForTimeout(1200);
+  expect(sharpRequests).toEqual([]);
+  expect(await sharp()).toBe('waiting');
+
+  // Zoomed in three times the first image is magnified: the sharper image of the stop on screen comes in.
+  await page.evaluate(() => {
+    const api = window.__rmr!.map!;
+    const cam = api.getCamera();
+    api.setCamera({ ...cam, zoom: cam.zoom * 3 }, false);
+  });
+  await expect.poll(sharp, { timeout: 30000 }).toBe('balanced');
+  expect(sharpRequests).toEqual(['/data/theme/gas-balanced-sharp.webp']);
+  await page.waitForTimeout(700);
+  const log = await page.evaluate(() => (window as unknown as { __sharpLog: [number, string][] }).__sharpLog);
+  const firstLoading = log.findIndex(([, s]) => s === 'loading');
+  expect(firstLoading).toBeGreaterThan(-1);
+  // From the moment it began to load (the map was at rest by then) to 700 ms after it is in: one frame, the swap.
+  expect(log[log.length - 1][0] - log[firstLoading][0]).toBeLessThanOrEqual(1);
+  expect(await lumaAt(page, await patchAt(page, IN_RAINBOWS, [0, 0], 80))).toBeGreaterThan(SKY_LUMA * 3);
+
+  // The slider goes to Mood: once it rests there Balanced's sharper image is freed and Mood's is fetched.
+  await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
+  await expect.poll(sharp, { timeout: 30000 }).toBe('mood');
+  expect(sharpRequests).toEqual(['/data/theme/gas-balanced-sharp.webp', '/data/theme/gas-mood-sharp.webp']);
+  await waitForMapQuiet(page, 400);
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
+  expect(await lumaAt(page, await patchAt(page, IN_RAINBOWS, [0, 0], 80))).toBeGreaterThan(SKY_LUMA * 3);
+  expect(errors).toEqual([]);
+});
+
+test('Home never fetches a sharper image, and a software renderer does not either', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the sharper image is for desktops');
+  const sharpRequests: string[] = [];
+  page.on('request', (r) => {
+    if (/-sharp\.webp$/.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
+  });
+  // Home, with the software renderer's rule lifted: the backdrop is not an interactive map.
+  await page.addInitScript(() => {
+    if (location.pathname === '/') window.__rmrGasSharp = 'force';
+  });
+  await page.goto('/');
+  await waitForMap(page);
+  await page.waitForTimeout(1500);
+  expect(sharpRequests).toEqual([]);
+  // The map, zoomed in, on the test browser's software renderer with no override.
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+  await page.evaluate(() => {
+    const api = window.__rmr!.map!;
+    const cam = api.getCamera();
+    api.setCamera({ ...cam, zoom: cam.zoom * 3 }, false);
+  });
+  await expect.poll(() => page.evaluate(() => window.__rmr!.gasSharp), { timeout: 15000 }).toBe('off');
+  await page.waitForTimeout(800);
+  expect(sharpRequests).toEqual([]);
 });

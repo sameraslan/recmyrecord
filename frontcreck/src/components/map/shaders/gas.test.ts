@@ -11,6 +11,9 @@ import {
   GAS_DIMMED_STRENGTH,
   GAS_FRAGMENT_SHADER,
   GAS_GLOW,
+  GAS_REFERENCE_PX,
+  GAS_SHARP_STRIPS,
+  GAS_SHARP_TEXTURE_PX,
   GAS_SKY,
   GAS_TEXTURE_PX,
   GAS_VERTEX_SHADER,
@@ -24,7 +27,15 @@ import {
   GAS_UPLOAD_GAP_MS,
   GAS_UPLOAD_MAX_WAIT_MS,
   GAS_UPLOAD_QUIET_MS,
+  gasLodBias,
+  gasRectUniform,
+  gasRestingStop,
+  gasSharpBlocked,
+  gasSharpPlan,
+  gasSharpStrips,
+  gasSharpWanted,
   gasStopsToStart,
+  gasTexelsPerRaw,
   gasUploadOverdue,
   gasUploadWait,
   gasTextureFits,
@@ -58,9 +69,19 @@ describe("gasCurve and gasDust (zoom bands by cover size)", () => {
     expect([NAMES_BAND_PX, GAS_BAND_MID_PX, GAS_BAND_COVERS_PX, GAS_DEEP_END_PX]).toEqual([13, 22, 32, 56]);
     expect(GAS_DEEP_FLOOR).toBe(0.06);
     expect(GAS_DEEP_DESAT).toBe(0.35);
-    // the prototype's mip levels 4.5 and 6 on its 4096 px bake are one level lower on a 2048 px bake
-    expect(GAS_DEEP_LOD).toEqual([4.5 - Math.log2(4096 / GAS_TEXTURE_PX), 6 - Math.log2(4096 / GAS_TEXTURE_PX)]);
-    expect(GAS_DEEP_LOD).toEqual([3.5, 5]);
+    // the prototype's mip levels 4.5 and 6 of its 4096 px bake of the whole square
+    expect(GAS_DEEP_LOD).toEqual([4.5, 6]);
+    expect(GAS_REFERENCE_PX).toBe(4096);
+  });
+
+  it("reads the deep zoom blur and the glow as wide on screen from any image (gasLodBias)", () => {
+    // the sharper image has the prototype's texels per raw unit: no shift
+    expect(gasLodBias(4096 / 3.2, 1.6)).toBeCloseTo(0, 12);
+    // a 2048 px image of the whole square is one level lower: 3.5 and 5, the numbers before images had rectangles
+    expect(GAS_DEEP_LOD.map((l) => l + gasLodBias(2048 / 3.2, 1.6))).toEqual([3.5, 5]);
+    // more texels per raw unit, higher levels
+    expect(gasLodBias(700, 1.6)).toBeGreaterThan(gasLodBias(640, 1.6));
+    expect(gasLodBias(700, 1.6)).toBeCloseTo(Math.log2(700 / 1280), 12);
   });
 
   it("keeps the gas at full strength while names show, then yields to the covers", () => {
@@ -211,6 +232,20 @@ describe("focusPool (the dim area around an open album's group)", () => {
 });
 
 describe("texture and noise", () => {
+  it("maps a stop's raw rectangle to its upright image", () => {
+    const rect = [-1.4, -1.2, 1.1, 1.3] as const;
+    expect(gasTexelsPerRaw(rect, 2048)).toBeCloseTo(2048 / 2.5, 9);
+    const [west, north, perW, perH] = gasRectUniform(rect);
+    expect([west, north]).toEqual([-1.4, 1.3]);
+    // the shader's uv = ((x - west) * perW, (north - y) * perH): the north west corner is (0, 0), the south east (1, 1)
+    const uv = (x: number, y: number) => [(x - west) * perW, (north - y) * perH];
+    expect(uv(-1.4, 1.3)).toEqual([0, 0]);
+    expect(uv(1.1, -1.2)[0]).toBeCloseTo(1, 12);
+    expect(uv(1.1, -1.2)[1]).toBeCloseTo(1, 12);
+    expect(uv(-0.15, 0.05)[0]).toBeCloseTo(0.5, 12);
+    expect(uv(-0.15, 0.05)[1]).toBeCloseTo(0.5, 12);
+  });
+
   it("needs textures of the baked size", () => {
     expect(GAS_TEXTURE_PX).toBe(2048);
     expect(gasTextureFits(2048)).toBe(true);
@@ -228,12 +263,111 @@ describe("texture and noise", () => {
 
   it("names the baked files", () => {
     expect(gasUrl("mood")).toBe("/data/theme/gas-mood.webp");
+    expect(gasUrl("mood", true)).toBe("/data/theme/gas-mood-sharp.webp");
+  });
+});
+
+describe("the sharper image (one stop at a time, desktops with a real GPU)", () => {
+  const DESKTOP = { maxTextureSize: 16384, coarsePointer: false, renderer: "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)" };
+
+  it("is for desktops with a real GPU only", () => {
+    expect(GAS_SHARP_TEXTURE_PX).toBe(4096);
+    expect(gasSharpBlocked(DESKTOP)).toBeNull();
+    expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 8, saveData: false })).toBeNull();
+    expect(gasSharpBlocked({ ...DESKTOP, maxTextureSize: 4096 })).toBeNull();
+    expect(gasSharpBlocked({ ...DESKTOP, maxTextureSize: 2048 })).toBe("textures too small");
+    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: true })).toBe("touch device");
+    expect(gasSharpBlocked({ ...DESKTOP, renderer: "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)" })).toBe("software renderer");
+    expect(gasSharpBlocked({ ...DESKTOP, renderer: "llvmpipe (LLVM 15.0.7, 256 bits)" })).toBe("software renderer");
+    expect(gasSharpBlocked({ ...DESKTOP, renderer: "Microsoft Basic Render Driver" })).toBe("software renderer");
+    expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 2 })).toBe("little memory");
+    expect(gasSharpBlocked({ ...DESKTOP, saveData: true })).toBe("save data");
+  });
+
+  const AT = { allowed: true, interactive: true, stop: "balanced" as const, sliderT: 0.5, ppr: 1005, texelsPerRaw: 700, deep: 0 };
+
+  it("is wanted only where the first image is magnified, at rest at a stop, on an interactive map", () => {
+    expect(gasSharpWanted(AT)).toBe("balanced");
+    expect(gasSharpWanted({ ...AT, stop: "mood", sliderT: 1 })).toBe("mood");
+    expect(gasSharpWanted({ ...AT, allowed: false })).toBeNull();
+    // Home, About, 404 and the phone's album list: one image, never a second
+    expect(gasSharpWanted({ ...AT, interactive: false })).toBeNull();
+    // the slider is on its way to Mood
+    expect(gasSharpWanted({ ...AT, stop: "mood", sliderT: 0.7 })).toBeNull();
+    // zoomed out: the screen shows no more than the first image holds
+    expect(gasSharpWanted({ ...AT, ppr: 700 })).toBeNull();
+    expect(gasSharpWanted({ ...AT, ppr: 377 })).toBeNull();
+    // full deep zoom reads a blurred copy
+    expect(gasSharpWanted({ ...AT, ppr: 9000, deep: 1 })).toBeNull();
+    expect(gasSharpWanted({ ...AT, ppr: 9000, deep: 0.5 })).toBe("balanced");
+  });
+
+  it("knows where the slider rests", () => {
+    expect(gasRestingStop("sonic", 0)).toBe("sonic");
+    expect(gasRestingStop("balanced", 0.5)).toBe("balanced");
+    expect(gasRestingStop("mood", 1)).toBe("mood");
+    expect(gasRestingStop("mood", 0.5)).toBeNull(); // asked for, not there yet
+    expect(gasRestingStop("balanced", 0.62)).toBeNull();
+  });
+
+  it("starts a stop's sharper image when nothing is held or loading", () => {
+    expect(gasSharpPlan(null, null, "balanced", "balanced", true)).toEqual({ release: false, cancel: false, start: "balanced" });
+    expect(gasSharpPlan(null, null, null, "balanced", true)).toEqual({ release: false, cancel: false, start: null });
+  });
+
+  it("does nothing while it holds or loads the wanted one", () => {
+    expect(gasSharpPlan("balanced", null, "balanced", "balanced", true)).toEqual({ release: false, cancel: false, start: null });
+    expect(gasSharpPlan(null, "balanced", "balanced", "balanced", true)).toEqual({ release: false, cancel: false, start: null });
+  });
+
+  it("keeps the held one through a morph and through zooming out", () => {
+    // the slider is moving (rests nowhere): the fade starts from the sharper image
+    expect(gasSharpPlan("balanced", null, null, null, true)).toEqual({ release: false, cancel: false, start: null });
+    expect(gasSharpPlan(null, "balanced", null, null, true)).toEqual({ release: false, cancel: false, start: null });
+    // at rest at its stop but zoomed out (not wanted): kept, so zooming back in needs no second download
+    expect(gasSharpPlan("balanced", null, null, "balanced", true)).toEqual({ release: false, cancel: false, start: null });
+  });
+
+  it("frees the held one once the slider rests elsewhere, and starts the new stop's in the same step", () => {
+    expect(gasSharpPlan("balanced", null, "mood", "mood", true)).toEqual({ release: true, cancel: false, start: "mood" });
+    // at rest at Mood but zoomed out: the old one still goes
+    expect(gasSharpPlan("balanced", null, null, "mood", true)).toEqual({ release: true, cancel: false, start: null });
+    expect(gasSharpPlan(null, "balanced", "mood", "mood", true)).toEqual({ release: false, cancel: true, start: "mood" });
+  });
+
+  it("never plans a second sharper image beside one that stays", () => {
+    const stops = ["sonic", "balanced", "mood", null] as const;
+    for (const have of stops) for (const loading of stops) for (const wanted of stops) for (const resting of stops) for (const interactive of [true, false]) {
+      const plan = gasSharpPlan(have, loading, wanted, resting, interactive);
+      const kept = [plan.release ? null : have, plan.cancel ? null : loading, plan.start].filter((s) => s !== null);
+      expect(kept.length, JSON.stringify({ have, loading, wanted, resting, interactive })).toBeLessThanOrEqual(have !== null && loading !== null && !plan.release && !plan.cancel ? 2 : 1);
+      if (plan.start) expect(kept).toEqual([plan.start]);
+    }
+  });
+
+  it("frees and cancels everything when the map stops being interactive", () => {
+    expect(gasSharpPlan("balanced", null, null, "balanced", false)).toEqual({ release: true, cancel: false, start: null });
+    expect(gasSharpPlan(null, "mood", null, null, false)).toEqual({ release: false, cancel: true, start: null });
+  });
+
+  it("uploads in strips that cover every row once, in order", () => {
+    expect(GAS_SHARP_STRIPS).toBe(16);
+    for (const h of [3747, 3242, 3594, 16, 5]) {
+      const strips = gasSharpStrips(h);
+      expect(strips.length).toBe(Math.min(16, h));
+      expect(strips[0][0]).toBe(0);
+      expect(strips[strips.length - 1][1]).toBe(h);
+      for (let i = 1; i < strips.length; i++) expect(strips[i][0]).toBe(strips[i - 1][1]);
+      for (const [a, b] of strips) expect(b).toBeGreaterThan(a);
+    }
+    // no strip of the tallest image is more than a sixteenth of it, rounded up
+    expect(Math.max(...gasSharpStrips(3747).map(([a, b]) => b - a))).toBeLessThanOrEqual(Math.ceil(3747 / 16));
   });
 });
 
 describe("gas shader source", () => {
   it("declares every uniform GasField sets", () => {
-    for (const name of ["u_gasA", "u_gasB", "u_noise", "u_mix", "u_ppr", "u_bakePpr", "u_bakeHalf", "u_strength", "u_deep", "u_dust", "u_poolAmt", "u_pool"]) {
+    for (const name of ["u_gasA", "u_gasB", "u_noise", "u_mix", "u_ppr", "u_bakePpr", "u_octPpr", "u_lodBias", "u_rectA", "u_rectB", "u_strength", "u_deep", "u_dust", "u_poolAmt", "u_pool"]) {
       expect(GAS_FRAGMENT_SHADER, name).toMatch(new RegExp(`uniform \\w+ ${name};`));
     }
     for (const name of ["u_tx", "u_quadHalf"]) expect(GAS_VERTEX_SHADER, name).toMatch(new RegExp(`uniform \\w+ ${name};`));
@@ -245,15 +379,34 @@ describe("gas shader source", () => {
 
   it("in deep zoom loses colour, detail and focus on one uniform, as the prototype does", () => {
     expect(GAS_FRAGMENT_SHADER).toContain("const float DEEP_DESAT = 0.3500;");
-    expect(GAS_FRAGMENT_SHADER).toContain("const float DEEP_LOD_A = 3.5000;");
-    expect(GAS_FRAGMENT_SHADER).toContain("const float DEEP_LOD_B = 5.0000;");
+    expect(GAS_FRAGMENT_SHADER).toContain("const float DEEP_LOD_A = 4.5000;");
+    expect(GAS_FRAGMENT_SHADER).toContain("const float DEEP_LOD_B = 6.0000;");
+    // counted from the prototype's bake and shifted to the image on screen
+    expect(GAS_FRAGMENT_SHADER).toContain("float deepA = DEEP_LOD_A + u_lodBias;");
+    expect(GAS_FRAGMENT_SHADER).toContain("float deepB = DEEP_LOD_B + u_lodBias;");
     expect(GAS_FRAGMENT_SHADER).toContain("t.rgb *= 1.0 + 1.6 * d * (1.0 - u_deep);");
     // at full deep zoom that factor is 0, so the four noise reads are skipped
-    expect(GAS_FRAGMENT_SHADER).toContain("if (u_ppr > u_bakePpr && u_deep < 1.0) {");
-    expect(GAS_FRAGMENT_SHADER).toContain("if (u_deep > 0.0) t = mix(t, 0.5 * (gasLod(uv, DEEP_LOD_A) + gasLod(uv, DEEP_LOD_B)), u_deep);");
+    expect(GAS_FRAGMENT_SHADER).toContain("if (u_ppr > u_octPpr && u_deep < 1.0) {");
+    expect(GAS_FRAGMENT_SHADER).toContain("if (u_deep > 0.0) t = mix(t, 0.5 * (gasLod(deepA) + gasLod(deepB)), u_deep);");
     expect(GAS_FRAGMENT_SHADER).toContain("des = 1.0 - (1.0 - des) * (1.0 - DEEP_DESAT * u_deep);");
-    expect(GAS_FRAGMENT_SHADER).toContain("max(lod + 3.5, DEEP_LOD_A * u_deep)");
-    expect(GAS_FRAGMENT_SHADER).toContain("max(lod + 5.0, DEEP_LOD_B * u_deep)");
+    expect(GAS_FRAGMENT_SHADER).toContain("max(lod + 3.5, deepA * u_deep)");
+    expect(GAS_FRAGMENT_SHADER).toContain("max(lod + 5.0, deepB * u_deep)");
+  });
+
+  it("adds noise octaves only past the resolution the bake was shaded for, never past the first image's own", () => {
+    // The octaves the images hold are those of the sharper bake (the first image is that bake resampled), so the
+    // test for adding more reads u_octPpr. Reading the first image's texel count there made blotches of plain
+    // value noise stand in for swirl beside an open album (review item M1).
+    expect(GAS_FRAGMENT_SHADER).toContain("float have = sm(1.5, 4.0, u_octPpr / (6.25 * fq));");
+    expect(GAS_FRAGMENT_SHADER).toContain("float want = sm(1.5, 4.0, u_ppr / (6.25 * fq));");
+    expect(GAS_FRAGMENT_SHADER).not.toMatch(/u_bakePpr \/ \(6\.25/);
+    // the same rule in numbers: at the prototype's 1280 texels per raw unit nothing is added at Overview
+    // (1005 px per raw unit) and the first octave that is added beside an album (1609) is the 78.7 one
+    const sm = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    const added = (ppr: number, fq: number) => Math.max(0, sm(1.5, 4, ppr / (6.25 * fq)) - sm(1.5, 4, 1280 / (6.25 * fq)));
+    expect(1005 > 1280).toBe(false);
+    expect(added(1609, 38)).toBe(0);
+    expect(added(1609, 38 * 2.07)).toBeGreaterThan(0.3);
   });
 
   it("applies strength, dust and the pool to the light, not to the colour", () => {
@@ -261,15 +414,30 @@ describe("gas shader source", () => {
     expect(GAS_FRAGMENT_SHADER).toContain("k *= mix(1.0, mix(0.6, 0.25, e), u_poolAmt);");
   });
 
-  it("reads the upright bake (north at the top of the image) and ends in sky beyond it", () => {
-    expect(GAS_FRAGMENT_SHADER).toContain("vec2(v_raw.x + u_bakeHalf, u_bakeHalf - v_raw.y) / (2.0 * u_bakeHalf)");
+  it("reads each upright image over its own rectangle (north at the top) and ends in sky beyond it", () => {
+    expect(GAS_FRAGMENT_SHADER).toContain("return vec2((v_raw.x - r.x) * r.z, (r.y - v_raw.y) * r.w);");
+    expect(GAS_FRAGMENT_SHADER).toContain("g_uvA = uvIn(u_rectA);");
+    expect(GAS_FRAGMENT_SHADER).toContain("g_uvB = uvIn(u_rectB);");
     expect(GAS_FRAGMENT_SHADER).toContain("vec4(0.0, 0.0, 0.0, 1.0)");
+    // the fade to sky lies inside the image's empty padding and reaches exactly sky at its edge
+    expect(GAS_FRAGMENT_SHADER).toContain("float e = sm(0.48, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));");
+  });
+
+  it("reads no more textures per pixel than before the images had rectangles", () => {
+    // one read of each bound image for the gas, two mip reads for the glow (and two for the deep zoom blur, only
+    // in deep zoom), the grain, and at most four octaves of noise
+    const main = GAS_FRAGMENT_SHADER.slice(GAS_FRAGMENT_SHADER.indexOf("void main()"));
+    expect(main.match(/gas\(\)/g)).toHaveLength(1);
+    expect(main.match(/gasLod\(/g)).toHaveLength(4);
+    expect(main.match(/vn\(/g)).toHaveLength(1);
+    expect(main.match(/texelFetch\(/g)).toHaveLength(1);
+    expect(GAS_FRAGMENT_SHADER.match(/texture2D\(|textureLod\(|texelFetch\(/g)).toHaveLength(6);
   });
 
   it("takes its glow from the bake's own mips", () => {
     expect(GAS_GLOW).toBe(0.18);
     expect(GAS_FRAGMENT_SHADER).toContain("const float GLOW = 0.1800;");
-    expect(GAS_FRAGMENT_SHADER).toMatch(/textureLod\(u_gasA, c, lod\)/);
+    expect(GAS_FRAGMENT_SHADER).toMatch(/textureLod\(u_gasA, clamp\(g_uvA, 0\.0, 1\.0\), lod\)/);
   });
 
   it("draws the quad behind the album points", () => {

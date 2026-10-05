@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-/** npm run theme: bakes the map theme into public/data/theme/ (three gas textures and theme.json).
+/** npm run theme: bakes the map theme into public/data/theme/ (two gas images per slider stop and theme.json).
  * One headless Chromium on software WebGL does the shading, so the output is the same on every machine.
  * Inputs: data-pipeline/theme/{weights,regions}.json and public/data/{albums,positions}.json. It refuses to run
  * when the inputs were made for other albums or layouts. Previews for a human go to test-results/theme/. */
@@ -22,6 +22,10 @@ const PREVIEW = path.join(ROOT, 'test-results/theme');
 const WEBGL_ARGS = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 const SKY = { r: 6, g: 6, b: 9 };
 const STRIP_ROWS = 256;
+// Colour quality of the gas images. At 84 the flow lines one or two texels wide were smeared and dark gas showed
+// blocks. At 95 every band of fine detail reads as in the lossless bake; 93 loses about one part in a hundred of
+// the finest two bands and keeps the image every visitor downloads first near 300 KB (reviews/app-gas-detail.md).
+const WEBP_QUALITY = { first: 93, sharp: 95 };
 
 const shortHash = (buf) => crypto.createHash('sha256').update(buf).digest('hex').slice(0, 12);
 const readJson = (file) => JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -51,23 +55,77 @@ function loadInput() {
   return { n, positions, positionsHash, weights: weights.weights, regions };
 }
 
-/** Checks one baked stop, writes it as WebP (lossy colour, lossless dust channel) and a flattened preview. */
-async function writeGas(stop, rgba, size) {
+/** What is asked of every gas image before it is written: it holds gas, the dust channel is sane, and its outer
+ * `ring` px are plain sky: no dust and no light over `trace` levels of 255 (0 in the bake; a lossy encode may put
+ * a level into flat black, which the map's shader fades out over the outer fiftieth of the image). So the map
+ * can end the gas at the image's edge with no step. */
+function checkGas(name, rgba, w, h, ring, trace) {
   let light = 0;
   let minA = 255;
   for (let i = 0; i < rgba.length; i += 4) {
     light += rgba[i] + rgba[i + 1] + rgba[i + 2];
     if (rgba[i + 3] < minA) minA = rgba[i + 3];
   }
-  const mean = light / (3 * size * size);
+  const mean = light / (3 * w * h);
   // dust lets through at least 1 - 0.8 = 0.2 (51 of 255); a blank or fully see-through bake means the shader broke
-  if (mean < 2 || minA < 45) throw new Error(`gas-${stop}: the bake looks wrong (mean colour ${mean.toFixed(1)}, lowest dust ${minA})`);
-  const raw = { raw: { width: size, height: size, channels: 4 } };
-  const webp = await sharp(rgba, raw).webp({ quality: 84, alphaQuality: 100, effort: 5 }).toBuffer();
+  if (mean < 2 || minA < 45) throw new Error(`${name}: the bake looks wrong (mean colour ${mean.toFixed(1)}, lowest dust ${minA})`);
+  for (let y = 0; y < h; y++) {
+    const inner = y >= ring && y < h - ring;
+    for (let x = 0; x < w; x += inner && x === ring - 1 ? w - 2 * ring + 1 : 1) {
+      const o = 4 * (y * w + x);
+      if (Math.max(rgba[o], rgba[o + 1], rgba[o + 2]) > trace || rgba[o + 3] !== 255) throw new Error(`${name}: gas or dust at the edge of its rectangle (px ${x}, ${y}). Raise GAS.RECT_PAD in bake-core.js.`);
+    }
+  }
+}
+
+/** Makes the outer `m` px of a bake plain sky. The rectangle was found on a coarse bake, so the last trace of
+ * gas (one or two levels of 255) can reach a little further than it showed there; left in, a lossy encode would
+ * smear it to the very edge. Refuses when there is more than a trace: then the rectangle is too tight. */
+function clearEdge(name, rgba, w, h, m) {
+  let most = 0;
+  for (let y = 0; y < h; y++) {
+    const inner = y >= m && y < h - m;
+    for (let x = 0; x < w; x++) {
+      if (inner && x === m) x = w - m;
+      const o = 4 * (y * w + x);
+      most = Math.max(most, rgba[o], rgba[o + 1], rgba[o + 2], 255 - rgba[o + 3]);
+      rgba[o] = rgba[o + 1] = rgba[o + 2] = 0;
+      rgba[o + 3] = 255;
+    }
+  }
+  if (most > 2) throw new Error(`${name}: gas or dust (${most} of 255) in the outer ${m} px of its rectangle. Raise GAS.RECT_PAD in bake-core.js.`);
+}
+
+/** The smaller image of a stop: the sharp bake resampled (Lanczos), which keeps more of the fine swirl than
+ * shading at the smaller size does. Colour and dust are resampled apart: the dust channel is data, not opacity,
+ * and must not be multiplied into the colour. */
+async function downsample(rgba, w, h, w2, h2) {
+  const src = () => sharp(rgba, { raw: { width: w, height: h, channels: 4 } });
+  const rgb = await src().removeAlpha().resize(w2, h2, { kernel: 'lanczos3', fit: 'fill' }).raw().toBuffer();
+  const a = await src().extractChannel(3).resize(w2, h2, { kernel: 'lanczos3', fit: 'fill' }).raw().toBuffer();
+  // The kernel overshoots beside a sharp dust lane; the dust never gets denser than the bake made it.
+  let minA = 255;
+  for (let i = 3; i < rgba.length; i += 4) if (rgba[i] < minA) minA = rgba[i];
+  const out = Buffer.alloc(4 * w2 * h2);
+  for (let i = 0; i < w2 * h2; i++) {
+    out[4 * i] = rgb[3 * i];
+    out[4 * i + 1] = rgb[3 * i + 1];
+    out[4 * i + 2] = rgb[3 * i + 2];
+    out[4 * i + 3] = Math.max(minA, a[i]);
+  }
+  return out;
+}
+
+/** Writes one image as WebP (lossy colour at a quality that keeps lines one texel wide, lossless dust channel)
+ * after checking it, and checks the file once more as a browser will decode it. */
+async function writeGas(name, rgba, w, h, quality) {
+  checkGas(name, rgba, w, h, 16, 0);
+  const raw = { raw: { width: w, height: h, channels: 4 } };
+  const webp = await sharp(rgba, raw).webp({ quality, alphaQuality: 100, effort: 5 }).toBuffer();
   // Decode it again: the colour must stay close everywhere, also under dust (a premultiplied encode would darken
-  // exactly those pixels), and the dust channel must come back as written.
+  // exactly those pixels), the dust channel must come back as written, and the edge must still be plain sky.
   const back = await sharp(webp).raw().toBuffer({ resolveWithObject: true });
-  if (back.info.width !== size || back.info.height !== size || back.info.channels !== 4) throw new Error(`gas-${stop}: decoded as ${back.info.width}x${back.info.height}x${back.info.channels}`);
+  if (back.info.width !== w || back.info.height !== h || back.info.channels !== 4) throw new Error(`${name}: decoded as ${back.info.width}x${back.info.height}x${back.info.channels}`);
   let err = 0;
   let dustErr = 0;
   let dustPx = 0;
@@ -81,21 +139,21 @@ async function writeGas(stop, rgba, size) {
     }
     alphaErr = Math.max(alphaErr, Math.abs(rgba[i + 3] - back.data[i + 3]));
   }
-  const meanErr = err / (3 * size * size);
+  const meanErr = err / (3 * w * h);
   const meanDustErr = dustPx ? dustErr / (3 * dustPx) : 0;
-  if (meanErr > 4 || meanDustErr > 8 || alphaErr > 2) throw new Error(`gas-${stop}: the WebP differs from the bake (colour ${meanErr.toFixed(2)}, colour under dust ${meanDustErr.toFixed(2)}, dust ${alphaErr})`);
-  writeAtomic(path.join(OUT, `gas-${stop}.webp`), webp);
-  await sharp(rgba, raw).flatten({ background: SKY }).resize(768, 768).png().toFile(path.join(PREVIEW, `gas-${stop}.png`));
+  if (meanErr > 2 || meanDustErr > 4 || alphaErr > 2) throw new Error(`${name}: the WebP differs from the bake (colour ${meanErr.toFixed(2)}, colour under dust ${meanDustErr.toFixed(2)}, dust ${alphaErr})`);
+  checkGas(name, back.data, w, h, 16, 2);
+  writeAtomic(path.join(OUT, name), webp);
   return webp.length;
 }
 
 async function main() {
   const input = loadInput();
   const { bakeHalf, rawHalf } = T.halves(input.positions);
-  const size = T.GAS.BAKE;
   fs.mkdirSync(OUT, { recursive: true });
   fs.mkdirSync(PREVIEW, { recursive: true });
   const lumPx = {};
+  const gas = {};
   const browser = await chromium.launch({ args: WEBGL_ARGS });
   try {
     await assertNativeChrome(browser);
@@ -107,23 +165,35 @@ async function main() {
     await page.addScriptTag({ path: path.join(HERE, 'bake-page.js') });
     const info = await page.evaluate((i) => globalThis.RMR_THEME.start(i), { n: input.n, positions: input.positions, weights: input.weights });
     console.log(`baking ${input.n} albums, raw square of half ${info.bakeHalf.toFixed(2)}, on ${info.renderer}`);
+    const bytes = (b64) => new Uint8Array(Buffer.from(b64, 'base64'));
     for (const stop of T.STOPS) {
       const t0 = Date.now();
-      lumPx[stop] = new Uint8Array(Buffer.from(await page.evaluate((s) => globalThis.RMR_THEME.renderStop(s), stop), 'base64'));
-      const rgba = Buffer.alloc(4 * size * size);
-      for (let y0 = 0; y0 < size; y0 += STRIP_ROWS) {
-        const strip = Buffer.from(await page.evaluate(([y, rows]) => globalThis.RMR_THEME.readRows(y, rows), [y0, STRIP_ROWS]), 'base64');
+      lumPx[stop] = bytes(await page.evaluate((s) => globalThis.RMR_THEME.renderLum(s), stop));
+      // Where this stop's gas is, then that rectangle alone at the prototype's resolution.
+      const rect = T.gasRect(bytes(await page.evaluate((s) => globalThis.RMR_THEME.probe(s), stop)), T.GAS.PROBE, bakeHalf);
+      const { px, sharp: big } = T.gasSizes(rect, bakeHalf);
+      const [w, h] = big;
+      await page.evaluate(([s, r, ww, hh]) => globalThis.RMR_THEME.renderStop(s, r, ww, hh), [stop, rect, w, h]);
+      const rgba = Buffer.alloc(4 * w * h);
+      for (let y0 = 0; y0 < h; y0 += STRIP_ROWS) {
+        const rows = Math.min(STRIP_ROWS, h - y0);
+        const strip = Buffer.from(await page.evaluate(([y, n]) => globalThis.RMR_THEME.readRows(y, n), [y0, rows]), 'base64');
         // GL rows run from the south edge up; the file is stored upright, row 0 at the north edge.
-        for (let r = 0; r < STRIP_ROWS; r++) strip.copy(rgba, 4 * size * (size - 1 - (y0 + r)), 4 * size * r, 4 * size * (r + 1));
+        for (let r = 0; r < rows; r++) strip.copy(rgba, 4 * w * (h - 1 - (y0 + r)), 4 * w * r, 4 * w * (r + 1));
       }
-      const bytes = await writeGas(stop, rgba, size);
-      console.log(`gas-${stop}.webp ${Math.round(bytes / 1024)} KB (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
+      // half of the padding becomes exact sky: over 16 px (a codec block) in the smaller image too
+      clearEdge(`gas-${stop}`, rgba, w, h, Math.floor((T.GAS.RECT_PAD * w) / (rect[2] - rect[0]) / 2));
+      const small = await downsample(rgba, w, h, px[0], px[1]);
+      const kb = [await writeGas(`gas-${stop}.webp`, small, px[0], px[1], WEBP_QUALITY.first), await writeGas(`gas-${stop}-sharp.webp`, rgba, w, h, WEBP_QUALITY.sharp)].map((b) => Math.round(b / 1024));
+      await sharp(small, { raw: { width: px[0], height: px[1], channels: 4 } }).flatten({ background: SKY }).resize(768, 768, { fit: 'contain', background: SKY }).png().toFile(path.join(PREVIEW, `gas-${stop}.png`));
+      gas[stop] = { rect, px, sharp: big };
+      console.log(`gas-${stop}.webp ${px.join(' x ')}, ${kb[0]} KB; gas-${stop}-sharp.webp ${big.join(' x ')}, ${kb[1]} KB; raw x ${rect[0]} to ${rect[2]}, y ${rect[1]} to ${rect[3]} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
     }
     if (errors.length) throw new Error(`the bake page reported: ${errors.join('; ')}`);
   } finally {
     await browser.close();
   }
-  const theme = T.assemble(input, lumPx, bakeHalf, rawHalf);
+  const theme = T.assemble(input, lumPx, bakeHalf, rawHalf, gas);
   writeAtomic(path.join(OUT, 'theme.json'), `${JSON.stringify(theme)}\n`);
   const names = T.STOPS.map((s) => `${s} ${theme.labels[s].length}`).join(', ');
   console.log(`theme.json ${Math.round(fs.statSync(path.join(OUT, 'theme.json')).size / 1024)} KB (names: ${names}; positions ${theme.positionsHash})`);

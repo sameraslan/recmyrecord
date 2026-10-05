@@ -10,7 +10,12 @@
     GRID: 512,
     // Gaussian widths in raw layout units: fine, local colour, big, wide colour, huge, far, very far
     BLUR: { fine: 0.016, col: 0.034, big: 0.05, wide: 0.13, huge: 0.14, far: 0.3, vfar: 0.62 },
-    BAKE: 2048, // px of a baked stop; WebGL2 guarantees textures this large
+    BAKE: 2048, // px of the longer side of a baked stop; WebGL2 guarantees textures this large
+    // The sharper image of a stop holds what a square bake of this many px over the whole square holds, which is
+    // the prototype's bake. It covers only the stop's rectangle, so it is smaller than this.
+    SHARP: 4096,
+    PROBE: 512, // px of the coarse bake of the whole square that finds where a stop's gas is
+    RECT_PAD: 0.06, // raw units of empty sky kept around the gas inside a stop's rectangle
     LUM: 512, // px of the luminance copy that stars and names read
     LUM_PPR: 1000, // px per raw unit the luminance copy is shaded for
     BAKE_MARGIN: 0.6, // the bake reaches this far past the outermost album, where the gas has already ended
@@ -53,6 +58,29 @@
     let ext = 0;
     for (const stop of STOPS) for (const v of positions[stop]) ext = Math.max(ext, Math.abs(v));
     return { bakeHalf: ext + GAS.BAKE_MARGIN, rawHalf: ext + GAS.RAW_MARGIN };
+  }
+
+  /** The raw rectangle [x0, y0, x1, y1] that holds all the gas of a stop: the box of every lit cell of a coarse
+   * bake of the whole square (px: RGBA, n x n, rows from the south edge), plus RECT_PAD of empty sky, rounded
+   * outwards to a thousandth and kept inside the square. Outside it the stop is plain sky. */
+  function gasRect(px, n, bakeHalf) {
+    let c0 = n, r0 = n, c1 = -1, r1 = -1;
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+      const o = 4 * (r * n + c);
+      if (px[o] | px[o + 1] | px[o + 2]) { if (c < c0) c0 = c; if (c > c1) c1 = c; if (r < r0) r0 = r; if (r > r1) r1 = r; }
+    }
+    if (c1 < 0) throw new Error('the coarse bake holds no gas');
+    const cell = (2 * bakeHalf) / n, P = GAS.RECT_PAD;
+    const lo = (i) => Math.max(-bakeHalf, Math.floor((-bakeHalf + i * cell - P) * 1000) / 1000);
+    const hi = (i) => Math.min(bakeHalf, Math.ceil((-bakeHalf + (i + 1) * cell + P) * 1000) / 1000);
+    return [lo(c0), lo(r0), hi(c1), hi(r1)];
+  }
+  /** Sizes in px of the two images of a stop's rectangle: `px`, whose longer side is BAKE, and `sharp`, which has
+   * SHARP / (2 bakeHalf) texels per raw unit (never a side over SHARP). */
+  function gasSizes(rect, bakeHalf) {
+    const w = rect[2] - rect[0], h = rect[3] - rect[1], long = Math.max(w, h);
+    const d = Math.min(GAS.SHARP / (2 * bakeHalf), GAS.SHARP / long);
+    return { px: [Math.round((w / long) * GAS.BAKE), Math.round((h / long) * GAS.BAKE)], sharp: [Math.round(w * d), Math.round(h * d)] };
   }
 
   /** Album density at five blurs and the seven colour weights at two, for one stop, normalised by percentiles taken
@@ -151,8 +179,8 @@
   }
 
   /** theme.json. input: { n, positionsHash, positions, weights, regions }; lumPx: per stop, the RGBA bytes of the
-   * luminance copy (rows from the south edge). */
-  function assemble(input, lumPx, bakeHalf, rawHalf) {
+   * luminance copy (rows from the south edge); gas: per stop, { rect, px, sharp } of its images. */
+  function assemble(input, lumPx, bakeHalf, rawHalf, gas) {
     const { n, positions, weights, regions } = input;
     const tx = positionsTransform(positions.balanced), bg = new Array(3 * n).fill(0), labels = {};
     STOPS.forEach((stop, k) => {
@@ -167,11 +195,11 @@
         };
       });
     });
-    return { v: 1, n, positionsHash: input.positionsHash, bakeHalf: Math.round(bakeHalf * 1e4) / 1e4, stars: { lead: Array.from(leadFamilies(weights, n)), bg }, labels };
+    return { v: 2, n, positionsHash: input.positionsHash, bakeHalf: Math.round(bakeHalf * 1e4) / 1e4, gas, stars: { lead: Array.from(leadFamilies(weights, n)), bg }, labels };
   }
 
   globalThis.RMR_THEME = Object.assign(globalThis.RMR_THEME || {}, {
-    GAS, EMBER, STOPS, noiseTable, blur, at, halves, fieldData, leadFamilies, positionsTransform,
+    GAS, EMBER, STOPS, noiseTable, blur, at, halves, gasRect, gasSizes, fieldData, leadFamilies, positionsTransform,
     luminance, lumCell, lumGrid, lumIn, labelFontPx, labelBox, labelInk, assemble,
   });
 })();

@@ -43,14 +43,65 @@ describe('committed theme data (public/data/theme)', () => {
     expect(lit).toBeGreaterThan(t.stars.bg.length * 0.8);
   });
 
-  it.each(STOP_IDS)('has a 2048 px WebP with a dust channel for %s', (stop) => {
-    const b = read(`theme/gas-${stop}.webp`);
+  /** Width, height and alpha flag of a WebP in the extended format (the one with an alpha channel). */
+  const webp = (b: Buffer) => {
     expect(b.toString('latin1', 0, 4)).toBe('RIFF');
     expect(b.toString('latin1', 8, 16)).toBe('WEBPVP8X');
-    expect(b[20] & 0x10, 'alpha flag').toBe(0x10);
-    expect(1 + b.readUIntLE(24, 3)).toBe(2048);
-    expect(1 + b.readUIntLE(27, 3)).toBe(2048);
-    expect(b.length).toBeLessThan(1_500_000);
+    return { alpha: (b[20] & 0x10) === 0x10, size: [1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3)] };
+  };
+
+  it.each(STOP_IDS)('has the first image of %s: WebP with a dust channel, 2048 px on its longer side, under 400 KB', (stop) => {
+    const g = theme().gas[stop];
+    const b = read(`theme/gas-${stop}.webp`);
+    const w = webp(b);
+    expect(w.alpha, 'alpha flag').toBe(true);
+    expect(w.size).toEqual(g.px);
+    expect(Math.max(...g.px)).toBe(2048);
+    // Every map visit downloads one of these before the nebula shows (188 KB at the old quality of 84, which
+    // smeared the fine swirl). 400 KB is the agreed ceiling; over it, lower the quality or the size on purpose.
+    expect(b.length).toBeLessThan(400_000);
+    // and not so small that the quality was turned down again without anyone looking (0.5 bits a pixel)
+    expect(b.length).toBeGreaterThan((g.px[0] * g.px[1]) / 16);
+  });
+
+  it.each(STOP_IDS)('has the sharper image of %s: the prototype\'s texels per raw unit over the same rectangle, under 1 MB', (stop) => {
+    const t = theme();
+    const g = t.gas[stop];
+    const b = read(`theme/gas-${stop}-sharp.webp`);
+    const w = webp(b);
+    expect(w.alpha, 'alpha flag').toBe(true);
+    expect(w.size).toEqual(g.sharp);
+    expect(Math.max(...g.sharp)).toBeLessThanOrEqual(4096);
+    const perRaw = 4096 / (2 * t.bakeHalf);
+    expect(g.sharp[0] / (g.rect[2] - g.rect[0])).toBeCloseTo(perRaw, 0);
+    expect(g.sharp[1] / (g.rect[3] - g.rect[1])).toBeCloseTo(perRaw, 0);
+    // fetched at idle by desktops only; the agreed ceiling is 1.5 MB
+    expect(b.length).toBeLessThan(1_000_000);
+    expect(b.length).toBeGreaterThan((g.sharp[0] * g.sharp[1]) / 16);
+  });
+
+  it('keeps every album and every name inside its stop\'s gas rectangle, with the padding to spare', () => {
+    const t = theme();
+    const positions = JSON.parse(read('positions.json').toString('utf8')) as Record<string, number[]>;
+    for (const s of STOP_IDS) {
+      const [x0, y0, x1, y1] = t.gas[s].rect;
+      const p = positions[s];
+      for (let i = 0; i < p.length; i += 2) {
+        if (p[i] < x0 + 0.06 || p[i] > x1 - 0.06 || p[i + 1] < y0 + 0.06 || p[i + 1] > y1 - 0.06) throw new Error(`${s}: album ${i / 2} at ${p[i]}, ${p[i + 1]} is outside the gas rectangle`);
+      }
+      for (const l of t.labels[s]) expect(l.x > x0 && l.x < x1 && l.y > y0 && l.y < y1, l.id).toBe(true);
+    }
+  });
+
+  it('stays inside the GPU memory budgets (RGBA with mips: 4 bytes a px, times 4/3)', () => {
+    const t = theme();
+    const mb = ([w, h]: number[]) => (w * h * 4 * (4 / 3)) / 2 ** 20;
+    const first = STOP_IDS.reduce((sum, s) => sum + mb(t.gas[s].px), 0);
+    const sharpest = Math.max(...STOP_IDS.map((s) => mb(t.gas[s].sharp)));
+    // phones and every other device that keeps to the first images: no more than three 2048 px squares (64 MB)
+    expect(first).toBeLessThanOrEqual(3 * mb([2048, 2048]));
+    // desktops: the three first images and one sharper image at a time
+    expect(first + sharpest).toBeLessThanOrEqual(135);
   });
 
   it('keeps theme.json under 80 KB on disk, since every map visit loads it', () => {

@@ -1,13 +1,14 @@
-/* The browser half of the theme build: builds the field textures of each stop and runs the gas shader once per
- * stop into a 2048 px target (rgb = toned gas with no sky and no dust, a = what the dust lets through), and once
- * more at 512 px with sky and grain for the luminance that stars and names read. Loaded after bake-core.js by
+/* The browser half of the theme build: builds the field textures of each stop and runs the gas shader over any
+ * raw rectangle at any size (rgb = toned gas with no sky and no dust, a = what the dust lets through): a coarse
+ * probe of the whole square, then the stop's own rectangle twice (the image every visitor gets and the sharper
+ * one), and once more at 512 px with sky and grain for the luminance that stars and names read. Loaded after bake-core.js by
  * build-theme.mjs. Ported from docs/design/trifid-theme/prototype/src/gas.js with the `swirl` numbers written in:
  * WARP 3.4, W2 1.6, TEX .3 + 2 b^2, FIL .5, CW .42 and .16, DW .14, DUST .8, DSOFT .7, DFINE .7, EX 1.18, P 2.6,
  * SAT 1.05, FAR 1, CORE .07, HI .25. */
 (function () {
   'use strict';
   const T = globalThis.RMR_THEME, G = T.GAS;
-  let gl, prog, vao, noiseTex, bakeHalf = 0, rawHalf = 0, baked = null;
+  let gl, prog, vao, noiseTex, bakeHalf = 0, rawHalf = 0, baked = null, bakedW = 0;
   const fields = {};
 
   const VS = `#version 300 es
@@ -125,7 +126,7 @@
     gl = document.getElementById('gl').getContext('webgl2', { alpha: false, antialias: false, depth: false, stencil: false });
     if (!gl) throw new Error('this browser has no WebGL2');
     const max = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-    if (max < G.BAKE) throw new Error('MAX_TEXTURE_SIZE is ' + max + ', the bake needs ' + G.BAKE);
+    if (max < G.SHARP) throw new Error('MAX_TEXTURE_SIZE is ' + max + ', the bake needs ' + G.SHARP);
     ({ bakeHalf, rawHalf } = T.halves(input.positions));
     prog = program(VS, FS);
     vao = gl.createVertexArray(); gl.bindVertexArray(vao);
@@ -141,14 +142,15 @@
     return { bakeHalf, rawHalf, renderer: String(gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER)) };
   };
 
-  /** Run the shader for one stop over a raw rectangle into an n x n target and read it back (rows from the south edge). */
-  function run(stop, rect, ppr, bake, n) {
+  /** Run the shader for one stop over a raw rectangle into a w x h target and read it back (rows from the south
+   * edge). ppr: px per raw unit the octaves are faded for. */
+  function run(stop, rect, ppr, bake, w, h) {
     const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, n, n, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     const fbo = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
-    gl.viewport(0, 0, n, n);
+    gl.viewport(0, 0, w, h);
     const u = prog.u;
     gl.useProgram(prog.p); gl.bindVertexArray(vao);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, noiseTex); gl.uniform1i(u.u_noise, 0);
@@ -159,17 +161,25 @@
     gl.uniform4f(u.u_rect, rect[0], rect[1], rect[2], rect[3]);
     gl.uniform1f(u.u_ppr, ppr); gl.uniform1f(u.u_bake, bake ? 1 : 0); gl.uniform1f(u.u_rawHalf, rawHalf);
     gl.disable(gl.BLEND); gl.drawArrays(gl.TRIANGLES, 0, 3);
-    const px = new Uint8Array(4 * n * n); gl.readPixels(0, 0, n, n, gl.RGBA, gl.UNSIGNED_BYTE, px);
+    const px = new Uint8Array(4 * w * h); gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, px);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.deleteFramebuffer(fbo); gl.deleteTexture(tex);
     return px;
   }
 
-  /** Bake one stop (kept in the page for readRows) and return the luminance copy as base64 RGBA. */
-  T.renderStop = function (stop) {
-    const H = bakeHalf, R = rawHalf;
-    baked = run(stop, [-H, -H, H, H], G.BAKE / (2 * H), true, G.BAKE);
-    return base64(run(stop, [-R, -R, R, R], G.LUM_PPR, false, G.LUM));
+  /** A coarse bake of the whole square, as base64 RGBA: T.gasRect finds the stop's rectangle in it. */
+  T.probe = function (stop) {
+    const H = bakeHalf, n = G.PROBE;
+    return base64(run(stop, [-H, -H, H, H], n / (2 * H), true, n, n));
+  };
+  /** The luminance copy of a stop as base64 RGBA. */
+  T.renderLum = function (stop) {
+    const R = rawHalf;
+    return base64(run(stop, [-R, -R, R, R], G.LUM_PPR, false, G.LUM, G.LUM));
+  };
+  /** Bake a stop's rectangle [x0, y0, x1, y1] at w x h px (kept in the page for readRows). */
+  T.renderStop = function (stop, rect, w, h) {
+    baked = run(stop, rect, w / (rect[2] - rect[0]), true, w, h); bakedW = w;
   };
   /** Rows y0 to y0 + rows of the last bake as base64 RGBA (a whole stop is too large for one message). */
-  T.readRows = function (y0, rows) { return base64(baked.subarray(4 * G.BAKE * y0, 4 * G.BAKE * (y0 + rows))); };
+  T.readRows = function (y0, rows) { return base64(baked.subarray(4 * bakedW * y0, 4 * bakedW * (y0 + rows))); };
 })();

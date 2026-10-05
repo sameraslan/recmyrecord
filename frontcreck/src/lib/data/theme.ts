@@ -19,15 +19,27 @@ export interface ThemeLabel {
   lum: number;
 }
 
+/** The baked gas of one stop. */
+export interface ThemeGas {
+  /** The raw rectangle both images cover: west, south, east, north. Outside it the stop is plain sky. */
+  rect: [number, number, number, number];
+  /** Width and height in px of gas-<stop>.webp (the longer side is 2048). */
+  px: [number, number];
+  /** Width and height in px of gas-<stop>-sharp.webp (no side over 4096). */
+  sharp: [number, number];
+}
+
 /** public/data/theme/theme.json, written by `npm run theme` (scripts/theme/build-theme.mjs). */
 export interface ThemeData {
-  v: 1;
+  v: 2;
   /** Album count the theme was built for. */
   n: number;
   /** First 12 hex characters of the SHA-256 of the positions.json it was built for. */
   positionsHash: string;
-  /** The gas textures cover the raw square from -bakeHalf to bakeHalf on both axes. */
+  /** All gas lies inside the raw square from -bakeHalf to bakeHalf on both axes. */
   bakeHalf: number;
+  /** Per stop, its two gas images (components/map/shaders/gas.ts gasUrl). */
+  gas: Record<StopId, ThemeGas>;
   stars: {
     /** Per album: leading colour family 0..4 (fierce, warm, quiet, dark, urban) or -1. */
     lead: number[];
@@ -60,11 +72,22 @@ function isLabel(v: unknown): v is ThemeLabel {
   );
 }
 
+function isGas(v: unknown, half: number): v is ThemeGas {
+  if (!v || typeof v !== 'object') return false;
+  const g = v as Record<string, unknown>;
+  const size = (s: unknown, max: number): boolean => Array.isArray(s) && s.length === 2 && s.every((n) => isInt(n, 1, max));
+  if (!Array.isArray(g.rect) || g.rect.length !== 4 || !g.rect.every((n) => isNum(n) && Math.abs(n) <= half)) return false;
+  const [x0, y0, x1, y1] = g.rect as number[];
+  return x0 < x1 && y0 < y1 && size(g.px, 2048) && size(g.sharp, 4096);
+}
+
 export function isTheme(x: unknown): x is ThemeData {
   if (!x || typeof x !== 'object') return false;
   const t = x as Record<string, unknown>;
-  if (t.v !== 1 || !isInt(t.n, 1, 1e6) || typeof t.positionsHash !== 'string' || !isNum(t.bakeHalf) || t.bakeHalf <= 0) return false;
+  if (t.v !== 2 || !isInt(t.n, 1, 1e6) || typeof t.positionsHash !== 'string' || !isNum(t.bakeHalf) || t.bakeHalf <= 0) return false;
   const n = t.n as number;
+  const gas = t.gas as Record<string, unknown> | null | undefined;
+  if (!gas || !STOP_IDS.every((s) => isGas(gas[s], t.bakeHalf as number))) return false;
   const stars = t.stars as { lead?: unknown; bg?: unknown } | null | undefined;
   if (!stars || !Array.isArray(stars.lead) || !Array.isArray(stars.bg)) return false;
   if (stars.lead.length !== n || stars.bg.length !== 3 * n) return false;

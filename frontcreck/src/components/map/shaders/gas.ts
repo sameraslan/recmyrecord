@@ -5,14 +5,21 @@ import { NAMES_BAND_PX } from "../theme";
 /**
  * The nebula gas behind the album points. Each slider stop's gas is baked at build time (npm run theme:
  * scripts/theme/) into public/data/theme/gas-<stop>.webp, where rgb is the toned gas with no sky and no dust and
- * a is what the dust lets through. This shader draws one quad in world space: it cross-fades two stops, applies
- * the zoom band strength, the dust and the pool around an open album, adds the fine octaves the bake could not
- * hold, a soft glow from the bake's mips, the sky and a little grain. In deep zoom (covers past 32 px) what is
- * left of the gas is fainter, greyer, smooth and out of focus. It has no clock.
+ * a is what the dust lets through. An image covers only the raw rectangle that holds the stop's gas (theme.json
+ * `gas`); beyond it there is plain sky. A second, sharper image of the same rectangle (gas-<stop>-sharp.webp, the
+ * prototype's resolution) replaces the first on capable desktops, for the stop on screen only (gasSharpPlan).
+ * This shader draws one quad in world space: it cross-fades two stops, applies the zoom band strength, the dust
+ * and the pool around an open album, adds the fine octaves the bake could not hold, a soft glow from the bake's
+ * mips, the sky and a little grain. In deep zoom (covers past 32 px) what is left of the gas is fainter, greyer,
+ * smooth and out of focus. It has no clock.
  */
 
-/** Edge of a baked stop in px. WebGL2 guarantees textures this large. */
+/** Longer side of a baked stop in px. WebGL2 guarantees textures this large. */
 export const GAS_TEXTURE_PX = 2048;
+/** No side of a sharper image is longer than this; a GPU with a smaller limit keeps the first image. */
+export const GAS_SHARP_TEXTURE_PX = 4096;
+/** The prototype bakes the whole square (2 bakeHalf raw units) at this many px. Mip levels are counted from it. */
+export const GAS_REFERENCE_PX = 4096;
 /** Cover sizes (CSS px) where the gas has yielded to 0.6 and to 0.3 of its strength; dust is gone by the first. */
 export const GAS_BAND_MID_PX = 22;
 export const GAS_BAND_COVERS_PX = 32;
@@ -23,8 +30,9 @@ export const GAS_DEEP_FLOOR = 0.06;
 /** Share of its colour the gas loses over the same stretch. */
 export const GAS_DEEP_DESAT = 0.35;
 /** Over the same stretch the gas is read more and more from a blurred copy of the bake: the mean of these two
- * mip levels. The prototype uses 4.5 and 6 on a 4096 px bake of the same square; a 2048 px bake is one level lower. */
-export const GAS_DEEP_LOD: [number, number] = [3.5, 5];
+ * mip levels of the prototype's bake (GAS_REFERENCE_PX over the whole square). An image with fewer texels per
+ * raw unit reads lower levels by gasLodBias, so the blur is as wide on screen whichever image is bound. */
+export const GAS_DEEP_LOD: [number, number] = [4.5, 6];
 /** The quad is this many times the baked square, so sky and grain run on past anything the camera can show. */
 export const GAS_QUAD_SCALE = 5;
 /** Share of the blurred gas added back as glow. */
@@ -37,7 +45,27 @@ export const POOL_MIN_PX = 170;
 /** The empty sky as the shader writes it; rounds to SKY_RGB (../theme). */
 export const GAS_SKY: [number, number, number] = [0.024, 0.022, 0.034];
 
-export const gasUrl = (stop: StopId): string => `/data/theme/gas-${stop}.webp`;
+export const gasUrl = (stop: StopId, sharp = false): string => `/data/theme/gas-${stop}${sharp ? "-sharp" : ""}.webp`;
+
+/** A raw rectangle [west, south, east, north] (theme.json `gas`). */
+export type GasRect = readonly [number, number, number, number];
+
+/** Texels per raw unit of an image `widthPx` wide over `rect`. */
+export function gasTexelsPerRaw(rect: GasRect, widthPx: number): number {
+  return widthPx / (rect[2] - rect[0]);
+}
+
+/** The shader's form of a rectangle: west edge, north edge, 1 / width, 1 / height (the image is stored upright,
+ * so u runs east from the west edge and v runs south from the north edge). */
+export function gasRectUniform(rect: GasRect): [number, number, number, number] {
+  return [rect[0], rect[3], 1 / (rect[2] - rect[0]), 1 / (rect[3] - rect[1])];
+}
+
+/** Mip levels between an image with `texelsPerRaw` and the prototype's bake: 0 for the sharper image, about -0.8
+ * for the first one. Added to GAS_DEEP_LOD. */
+export function gasLodBias(texelsPerRaw: number, bakeHalf: number): number {
+  return Math.log2((texelsPerRaw * 2 * bakeHalf) / GAS_REFERENCE_PX);
+}
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
@@ -160,6 +188,65 @@ export function gasUploadWait(now: number, lastInput: number, lastFrame: number)
   return Math.max(0, Math.max(lastInput, lastFrame) + GAS_UPLOAD_QUIET_MS - now);
 }
 
+/** Why the sharper image may not be used on this device, or null when it may. It is for desktops with a real
+ * GPU: a phone or tablet keeps the first image (fewer CSS px per texel there, and less memory), and so does a
+ * software renderer (it would pay for the upload and show no more), a GPU whose textures are too small, a
+ * visitor who asked to save data and a device that reports little memory. */
+export function gasSharpBlocked(d: { maxTextureSize: number; coarsePointer: boolean; renderer: string; deviceMemory?: number; saveData?: boolean }): string | null {
+  if (d.maxTextureSize < GAS_SHARP_TEXTURE_PX) return "textures too small";
+  if (d.coarsePointer) return "touch device";
+  if (/swiftshader|llvmpipe|software|basic render/i.test(d.renderer)) return "software renderer";
+  if (d.deviceMemory !== undefined && d.deviceMemory < 4) return "little memory";
+  if (d.saveData) return "save data";
+  return null;
+}
+
+/**
+ * The stop whose sharper image the view could use right now, or null: only on an interactive map, only while
+ * the slider rests at a stop, only when the screen shows more px per raw unit than the first image has texels
+ * (else the first image is already as sharp as the screen), and not at full deep zoom, where the gas is read
+ * from a blurred copy.
+ */
+export function gasSharpWanted(v: { allowed: boolean; interactive: boolean; stop: StopId; sliderT: number; ppr: number; texelsPerRaw: number; deep: number }): StopId | null {
+  if (!v.allowed || !v.interactive || v.sliderT !== STOP_AT[v.stop]) return null;
+  return v.ppr > v.texelsPerRaw && v.deep < 1 ? v.stop : null;
+}
+
+/** The stop the slider rests at, or null while it is between stops or on its way to another. */
+export function gasRestingStop(stop: StopId, sliderT: number): StopId | null {
+  return sliderT === STOP_AT[stop] ? stop : null;
+}
+
+/**
+ * What to do about the sharper image. At most one exists at a time (it is as large as the three first images
+ * together): `have` is the stop whose sharper image is on the GPU, `loading` the stop whose is on its way.
+ * release: free `have`. It is kept through a morph (the fade starts from it) and through any zoom, and freed
+ * once the slider rests at another stop or the map stops being interactive.
+ * cancel: drop `loading`, by the same rule.
+ * start: begin loading this stop's. Never while another is held or loading, unless that one goes in this step,
+ * so two never share the GPU.
+ */
+export function gasSharpPlan(have: StopId | null, loading: StopId | null, wanted: StopId | null, resting: StopId | null, interactive: boolean): { release: boolean; cancel: boolean; start: StopId | null } {
+  const gone = (s: StopId | null): boolean => s !== null && (!interactive || (resting !== null && resting !== s));
+  const release = gone(have);
+  const cancel = gone(loading);
+  const free = (have === null || release) && (loading === null || cancel);
+  const start = wanted !== null && wanted !== have && wanted !== loading && free ? wanted : null;
+  return { release, cancel, start };
+}
+
+/** The sharper image goes to the GPU in this many horizontal strips, one per quiet moment, so no single upload
+ * is long enough to be felt if the visitor moves the map the same instant. */
+export const GAS_SHARP_STRIPS = 16;
+
+/** Row ranges [from, to) of the strips of an image `height` px tall. */
+export function gasSharpStrips(height: number, strips = GAS_SHARP_STRIPS): [number, number][] {
+  const n = Math.max(1, Math.min(strips, height));
+  const out: [number, number][] = [];
+  for (let i = 0; i < n; i++) out.push([Math.floor((i * height) / n), Math.floor(((i + 1) * height) / n)]);
+  return out;
+}
+
 /** A smaller limit would make three resize the bake through a 2D canvas, which multiplies the dust channel into
  * the colour. Then there is no gas (plain sky). */
 export function gasTextureFits(maxTextureSize: number): boolean {
@@ -205,8 +292,11 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
   uniform sampler2D u_noise;  // 256 px random table (gasNoise)
   uniform float u_mix;        // 0 = only A
   uniform float u_ppr;        // CSS px per raw unit on screen
-  uniform float u_bakePpr;    // texels per raw unit in the bake
-  uniform float u_bakeHalf;   // the bake covers raw -half to half on both axes
+  uniform float u_bakePpr;    // texels per raw unit of the image on screen
+  uniform float u_octPpr;     // texels per raw unit the bake's noise octaves were faded for (the sharper image's)
+  uniform float u_lodBias;    // mip levels from the prototype's bake to the image on screen (gasLodBias)
+  uniform vec4 u_rectA;       // raw rectangle of image A: west edge, north edge, 1 / width, 1 / height
+  uniform vec4 u_rectB;       // the same for image B
   uniform float u_strength;   // zoom band times the dim of Home and About
   uniform float u_deep;       // 0 to 1: how far into deep zoom the view is (gasCurve)
   uniform float u_dust;       // 1 at the overview, 0 once covers approach
@@ -221,6 +311,9 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
   const float DEEP_LOD_A = ${f(GAS_DEEP_LOD[0])};
   const float DEEP_LOD_B = ${f(GAS_DEEP_LOD[1])};
 
+  vec2 g_uvA;
+  vec2 g_uvB;
+
   float sm(float a, float b, float x) {
     float t = clamp((x - a) / (b - a), 0.0, 1.0);
     return t * t * (3.0 - 2.0 * t);
@@ -234,24 +327,29 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
     return texture2D(u_noise, (i + fr + 0.5) / 256.0).r;
   }
 
-  // Beyond the bake there is no gas: plain sky, no dust.
+  // The image is stored upright: row 0 is the north edge of its rectangle.
+  vec2 uvIn(vec4 r) {
+    return vec2((v_raw.x - r.x) * r.z, (r.y - v_raw.y) * r.w);
+  }
+
+  // Beyond an image's rectangle there is no gas: plain sky, no dust. The outer fiftieth of an image is empty
+  // padding (the bake checks it), and whatever a lossy encode left there, a level of 255 at most, is faded out
+  // across it, so the gas ends with no step.
   vec4 inBake(vec4 t, vec2 uv) {
-    float e = step(0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));
+    float e = sm(0.48, 0.5, max(abs(uv.x - 0.5), abs(uv.y - 0.5)));
     return mix(t, vec4(0.0, 0.0, 0.0, 1.0), e);
   }
 
-  vec4 gas(vec2 uv) {
-    vec2 c = clamp(uv, 0.0, 1.0);
-    vec4 t = texture2D(u_gasA, c);
-    if (u_mix > 0.0) t = mix(t, texture2D(u_gasB, c), u_mix);
-    return inBake(t, uv);
+  vec4 gas() {
+    vec4 t = inBake(texture2D(u_gasA, clamp(g_uvA, 0.0, 1.0)), g_uvA);
+    if (u_mix > 0.0) t = mix(t, inBake(texture2D(u_gasB, clamp(g_uvB, 0.0, 1.0)), g_uvB), u_mix);
+    return t;
   }
 
-  vec4 gasLod(vec2 uv, float lod) {
-    vec2 c = clamp(uv, 0.0, 1.0);
-    vec4 t = textureLod(u_gasA, c, lod);
-    if (u_mix > 0.0) t = mix(t, textureLod(u_gasB, c, lod), u_mix);
-    return inBake(t, uv);
+  vec4 gasLod(float lod) {
+    vec4 t = inBake(textureLod(u_gasA, clamp(g_uvA, 0.0, 1.0), lod), g_uvA);
+    if (u_mix > 0.0) t = mix(t, inBake(textureLod(u_gasB, clamp(g_uvB, 0.0, 1.0), lod), g_uvB), u_mix);
+    return t;
   }
 
   // The bake's tone map is 1 - exp(-EX * light), so scaling the light by k afterwards is 1 - (1 - c)^k. The zoom
@@ -261,8 +359,8 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
   }
 
   void main() {
-    // The image is stored upright: row 0 is the north edge.
-    vec2 uv = vec2(v_raw.x + u_bakeHalf, u_bakeHalf - v_raw.y) / (2.0 * u_bakeHalf);
+    g_uvA = uvIn(u_rectA);
+    g_uvB = uvIn(u_rectB);
 
     float k = u_strength;
     float des = 0.0;
@@ -273,17 +371,21 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
       des = 0.5 * e * u_poolAmt;
     }
 
-    vec4 t = gas(uv);
-    // Past the bake's resolution, world-anchored noise octaves (the ones the bake could not hold) keep the gas
-    // textured. They fade out in deep zoom, where the faint gas that is left must be smooth, and are not read
-    // at all once deep zoom is complete (their weight is 0 there).
-    if (u_ppr > u_bakePpr && u_deep < 1.0) {
+    vec4 t = gas();
+    // Past the resolution the bake was shaded for, world-anchored noise octaves (the ones the bake left out) keep
+    // the gas textured, exactly as the prototype adds them past its own bake. Both images of a stop hold the same
+    // octaves (the first is the sharper one resampled), so this starts at the same zoom for both: nothing at
+    // Overview, a trace beside an open album. They are plain value noise, not shaped by the flow, so they must
+    // never stand in for swirl the image is too small to carry; where the first image is magnified the gas is
+    // softer instead. They fade out in deep zoom, where the faint gas that is left must be smooth, and are not
+    // read at all once deep zoom is complete (their weight is 0 there).
+    if (u_ppr > u_octPpr && u_deep < 1.0) {
       vec2 p = vec2(v_raw.x * 5.0 + 20.0, -v_raw.y * 5.0 + 20.0) * 1.25;
       float d = 0.0;
       float a = 0.0778;
       float fq = 38.0;
       for (int i = 5; i < 9; i++) {
-        float have = sm(1.5, 4.0, u_bakePpr / (6.25 * fq));
+        float have = sm(1.5, 4.0, u_octPpr / (6.25 * fq));
         float want = sm(1.5, 4.0, u_ppr / (6.25 * fq));
         if (want > have) d += a * (want - have) * (vn(p * fq + vec2(17.3, 9.1) * float(i)) - 0.5);
         a *= 0.6;
@@ -293,14 +395,16 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
     }
     // Deep zoom: the gas goes out of focus as it fades (a blurred copy, the mean of two mip levels), so there are
     // no blotches and no detail behind full-size covers.
-    if (u_deep > 0.0) t = mix(t, 0.5 * (gasLod(uv, DEEP_LOD_A) + gasLod(uv, DEEP_LOD_B)), u_deep);
+    float deepA = DEEP_LOD_A + u_lodBias;
+    float deepB = DEEP_LOD_B + u_lodBias;
+    if (u_deep > 0.0) t = mix(t, 0.5 * (gasLod(deepA) + gasLod(deepB)), u_deep);
     vec3 c = lit(t, k);
 
     // Glow: the same gas about 11 and 32 CSS px wide, read from the bake's mips (level 0 is one texel per
     // 1 / u_bakePpr raw units, the screen shows u_ppr px per raw unit). In deep zoom it is never sharper than
     // the blurred copy above.
     float lod = log2(max(u_bakePpr / max(u_ppr, 1.0), 0.0001));
-    vec3 g = lit(gasLod(uv, max(lod + 3.5, DEEP_LOD_A * u_deep)), k) * 0.6 + lit(gasLod(uv, max(lod + 5.0, DEEP_LOD_B * u_deep)), k) * 0.4;
+    vec3 g = lit(gasLod(max(lod + 3.5, deepA * u_deep)), k) * 0.6 + lit(gasLod(max(lod + 5.0, deepB * u_deep)), k) * 0.4;
     c += g * GLOW;
 
     // The pool takes half the colour at its centre and deep zoom takes DEEP_DESAT of it; the two combine.

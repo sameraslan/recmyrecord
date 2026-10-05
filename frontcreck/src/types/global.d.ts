@@ -21,11 +21,17 @@ declare global {
       gas?: 'loading' | 'ready' | 'off';
       /** performance.now() of the first drawn frame with a gas texture on screen. Written once per page load. */
       gasShownMs?: number;
+      /** The sharper gas image (desktops with a real GPU): 'off' when this device does not use it, 'waiting' while
+       * none is held or wanted, 'loading' while one is on its way, else the stop whose sharper image is on the GPU. */
+      gasSharp?: 'off' | 'waiting' | 'loading' | 'sonic' | 'balanced' | 'mood';
       /** Eased pool amount of the last drawn frame: 0 with no album open, 1 fully dimmed around the open one. */
       gasPool?: number;
       /** Deep zoom amount of the last drawn frame: 0 up to 32 px covers, 1 once covers are 56 px or larger. */
       gasDeep?: number;
     };
+    /** Set before the map loads by review captures and tests: 'force' loads the sharper gas image on a software
+     * renderer too, 'off' never loads it. */
+    __rmrGasSharp?: 'force' | 'off';
   }
 }
 

@@ -12,20 +12,28 @@ import {
   GAS_DIMMED_STRENGTH,
   GAS_FRAGMENT_SHADER,
   GAS_QUAD_SCALE,
-  GAS_TEXTURE_PX,
   GAS_BUSY_UPLOAD_CAP_MS,
   GAS_FIRST_UPLOAD_CAP_MS,
   GAS_UPLOAD_GAP_MS,
   GAS_UPLOAD_MAX_WAIT_MS,
+  GAS_UPLOAD_QUIET_MS,
   GAS_VERTEX_SHADER,
   POOL_MIN_PX,
   POOL_MS,
   focusPool,
   gasCurve,
   gasDust,
+  gasLodBias,
   gasNoise,
   gasPair,
+  gasRectUniform,
+  gasRestingStop,
+  gasSharpBlocked,
+  gasSharpPlan,
+  gasSharpStrips,
+  gasSharpWanted,
   gasStopsToStart,
+  gasTexelsPerRaw,
   gasTextureFits,
   gasUploadOverdue,
   gasUploadWait,
@@ -35,6 +43,8 @@ import {
 } from "../shaders/gas";
 import { useMapStore } from "../state/mapStore";
 import { coverCssPx, pxPerWorld } from "../state/zoomLimits";
+
+const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 // Decoded off the main thread. The alpha channel is data (what the dust lets through), so it must not be
 // multiplied into the colour: premultiplyAlpha "none", and never a 2D canvas.
@@ -86,6 +96,28 @@ function setGasFlag(value: "loading" | "ready" | "off"): void {
   if (window.__rmr) window.__rmr.gas = value;
 }
 
+function setSharpFlag(value: "off" | "waiting" | "loading" | StopId): void {
+  if (window.__rmr) window.__rmr.gasSharp = value;
+}
+
+/** The sharper image of one stop on the GPU. */
+interface SharpGas {
+  stop: StopId;
+  texture: THREE.Texture;
+}
+
+/** The sharper image as a texture with all its mip levels allocated and nothing uploaded yet (the strips and
+ * the mips follow, GasField startSharp). */
+function emptySharpTexture(width: number, height: number): THREE.Texture {
+  const texture = new THREE.FramebufferTexture(width, height);
+  texture.flipY = false;
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = false; // switched on for the last strip, which builds the mips once
+  return texture;
+}
+
 /**
  * The nebula gas: one quad in world space under the album points, textured with the stop baked at build time.
  * The current stop's texture loads first. The other two load only on an interactive map, in an idle slot after
@@ -93,6 +125,10 @@ function setGasFlag(value: "loading" | "ready" | "off"): void {
  * An image that is needed on screen is uploaded once the GPU has finished the frames already asked of it. One
  * that is not is uploaded only in a quiet moment, never during a pan, a zoom, a hover or a camera move, and one
  * at a time; if no quiet moment comes for four seconds it goes in at the next idle moment.
+ * On a desktop with a real GPU the stop the slider rests at then gets its sharper image (the prototype's
+ * resolution), once all three first images are in: fetched at a quiet moment, decoded off the main thread, sent
+ * to the GPU in strips, each in its own quiet moment, and swapped in with one frame. Only one sharper image is
+ * held at a time; it is freed when the slider comes to rest at another stop (gasSharpPlan).
  * Nothing here draws at rest: the dim and the pool ask for another frame only while they are easing, and a
  * texture that arrives asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
  * they change only in frames the camera has already asked for.
@@ -111,6 +147,18 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   const poolAt = useRef<[number, number, number]>([0, 0, 1]);
   // When the map last drew a frame (page clock): late gas images are not uploaded while it is drawing.
   const frameAt = useRef(-Infinity);
+  // The sharper image of one stop, when it is in.
+  const sharp = useRef<SharpGas | null>(null);
+  // Zoom of the last drawn frame, as the sharper image's rule reads it.
+  const view = useRef({ ppr: 0, deep: 0 });
+  // Per stop: the shader's rectangle, and texels per raw unit of the first and of the sharper image.
+  const images = useMemo(() => {
+    const of = (stop: StopId) => {
+      const g = theme.gas[stop];
+      return { rect: gasRectUniform(g.rect), first: gasTexelsPerRaw(g.rect, g.px[0]), sharp: gasTexelsPerRaw(g.rect, g.sharp[0]) };
+    };
+    return { sonic: of("sonic"), balanced: of("balanced"), mood: of("mood") };
+  }, [theme]);
 
   const { mesh, material, noise } = useMemo(() => {
     const noiseTex = new THREE.DataTexture(gasNoise(), 256, 256, THREE.RedFormat, THREE.UnsignedByteType);
@@ -137,8 +185,11 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         u_noise: { value: noiseTex },
         u_mix: { value: 0 },
         u_ppr: { value: 1 },
-        u_bakePpr: { value: GAS_TEXTURE_PX / (2 * theme.bakeHalf) },
-        u_bakeHalf: { value: theme.bakeHalf },
+        u_bakePpr: { value: 1 },
+        u_octPpr: { value: 1 },
+        u_lodBias: { value: 0 },
+        u_rectA: { value: new THREE.Vector4(0, 0, 1, 1) },
+        u_rectB: { value: new THREE.Vector4(0, 0, 1, 1) },
         u_strength: { value: 1 },
         u_deep: { value: 0 },
         u_dust: { value: 1 },
@@ -230,6 +281,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         firstIn = true;
         queueRest();
       }
+      sharpPoke();
     }
     /** Uploads a decoded stop, outside a frame, so the first frame that shows it does not stall on it. */
     function take(stop: StopId, g: LoadedGas): void {
@@ -371,6 +423,182 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         },
       };
     }
+    /* ---- the sharper image of the stop the slider rests at ---- */
+    let sharpLoading: { stop: StopId; cancel: () => void } | null = null;
+    let sharpAllowed: boolean | null = null;
+    let sharpTimer: number | null = null;
+    /** Runs fn in a quiet moment: nothing drawn and no input for GAS_UPLOAD_QUIET_MS, and the main thread idle. */
+    function whenQuiet(fn: () => void): { cancel: () => void } {
+      let timer = 0;
+      let idleHandle = 0;
+      let cancelled = false;
+      const look = () => {
+        if (cancelled) return;
+        const wait = quietFor();
+        if (wait > 0) {
+          timer = window.setTimeout(look, wait);
+          return;
+        }
+        const run = () => {
+          if (cancelled) return;
+          if (quietFor() > 0) look();
+          else fn();
+        };
+        if (typeof window.requestIdleCallback === "function") idleHandle = window.requestIdleCallback(run);
+        else timer = window.setTimeout(run, 50);
+      };
+      look();
+      return {
+        cancel: () => {
+          cancelled = true;
+          window.clearTimeout(timer);
+          if (idleHandle && typeof window.cancelIdleCallback === "function") window.cancelIdleCallback(idleHandle);
+        },
+      };
+    }
+    /** Decided once, at the first quiet look: asking the renderer its name needs an answer from the GPU process. */
+    function sharpIsAllowed(): boolean {
+      if (sharpAllowed === null) {
+        const override = window.__rmrGasSharp;
+        const ctx = gl.getContext();
+        const dbg = ctx.getExtension("WEBGL_debug_renderer_info");
+        const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
+        const blocked = gasSharpBlocked({
+          maxTextureSize: gl.capabilities.maxTextureSize,
+          coarsePointer: typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches,
+          // "force" (review captures and tests on a software renderer) skips only the renderer's name
+          renderer: override === "force" ? "" : String(ctx.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : ctx.RENDERER)),
+          deviceMemory: nav.deviceMemory,
+          saveData: nav.connection?.saveData,
+        });
+        sharpAllowed = override !== "off" && blocked === null;
+      }
+      return sharpAllowed;
+    }
+    function sharpFlag(): void {
+      if (!alive) return;
+      setSharpFlag(sharpAllowed === false ? "off" : sharpLoading ? "loading" : (sharp.current?.stop ?? "waiting"));
+    }
+    function releaseSharp(): void {
+      sharp.current?.texture.dispose();
+      sharp.current = null;
+    }
+    function cancelSharp(): void {
+      sharpLoading?.cancel();
+      sharpLoading = null;
+    }
+    /** Fetches, decodes and uploads the sharper image of a stop, every step in a quiet moment. Nothing of it is
+     * bound until all of it is in, so a visitor who starts to move the map only delays it. */
+    function startSharp(stop: StopId): void {
+      let dead = false;
+      let step: { cancel: () => void } | null = null;
+      let bitmap: ImageBitmap | null = null;
+      let target: THREE.Texture | null = null;
+      const mine = gen;
+      const end = () => {
+        dead = true;
+        step?.cancel();
+        bitmap?.close();
+        target?.dispose();
+      };
+      const fail = (why: unknown) => {
+        if (dead) return;
+        console.error("sharper gas image failed", gasUrl(stop, true), why);
+        end();
+        sharpLoading = null;
+        sharpAllowed = false; // not tried again on this map
+        sharpFlag();
+      };
+      sharpLoading = { stop, cancel: end };
+      step = whenQuiet(() => {
+        step = null;
+        loader.load(
+          gasUrl(stop, true),
+          (result) => {
+            const image = result as unknown as ImageBitmap;
+            if (dead || !alive || mine !== gen) return image.close();
+            bitmap = image;
+            const [w, h] = theme.gas[stop].sharp;
+            if (image.width !== w || image.height !== h) return fail(`is ${image.width} x ${image.height}, theme.json says ${w} x ${h}`);
+            // Only a carrier for the strips: this texture itself is never uploaded.
+            const source = new THREE.Texture(image as unknown as HTMLImageElement);
+            const texture = emptySharpTexture(w, h);
+            target = texture;
+            const strips = gasSharpStrips(h);
+            const box = new THREE.Box2();
+            const at = new THREE.Vector2();
+            let i = -1; // -1 allocates the texture; 0 and up send strip i
+            const next = () => {
+              step = whenQuiet(() => {
+                // ...and once the GPU has finished the strip before, never two in one frame
+                step = whenGpuDone(
+                  () => {
+                    step = null;
+                    if (dead) return;
+                    if (gl.getContext().isContextLost()) return; // the lost-context handler cancels this load
+                    if (i < 0) gl.initTexture(texture);
+                    else {
+                      const [y0, y1] = strips[i];
+                      if (i === strips.length - 1) texture.generateMipmaps = true;
+                      gl.copyTextureToTexture(source, texture, box.set(at.set(0, y0), new THREE.Vector2(w, y1)), at);
+                    }
+                    i += 1;
+                    if (i < strips.length) return next();
+                    // All of it is on the GPU: free the decoded copy, swap it in, draw one frame.
+                    image.close();
+                    bitmap = null;
+                    target = null;
+                    sharpLoading = null;
+                    sharp.current = { stop, texture };
+                    if (stopsShown(useMapStore.getState().sliderT).includes(stop)) invalidate();
+                    sharpFlag();
+                  },
+                  GAS_BUSY_UPLOAD_CAP_MS,
+                  GAS_UPLOAD_GAP_MS,
+                );
+              });
+            };
+            next();
+          },
+          undefined,
+          fail,
+        );
+      });
+    }
+    /** Looks, in a quiet moment, at what the sharper image should be doing now, and does it. */
+    function sharpLook(): void {
+      sharpTimer = null;
+      if (!alive || lost || sharpAllowed === false) return;
+      const wait = quietFor();
+      if (wait > 0) {
+        sharpTimer = window.setTimeout(sharpLook, wait);
+        return;
+      }
+      const s = useMapStore.getState();
+      // Not before every first image this map loads is in: the sharper one never competes with them.
+      const firstIn3 = settled === started.size && STOP_IDS.every((id) => store[id]);
+      const could = firstIn3
+        ? gasSharpWanted({ allowed: true, interactive: s.input.interactive, stop: s.input.stop, sliderT: s.sliderT, ppr: view.current.ppr, texelsPerRaw: images[s.input.stop].first, deep: view.current.deep })
+        : null;
+      const wanted = could !== null && sharpIsAllowed() ? could : null;
+      const plan = gasSharpPlan(sharp.current?.stop ?? null, sharpLoading?.stop ?? null, wanted, gasRestingStop(s.input.stop, s.sliderT), s.input.interactive);
+      if (plan.release) releaseSharp();
+      if (plan.cancel) cancelSharp();
+      if (plan.start) startSharp(plan.start);
+      sharpFlag();
+    }
+    /** Asks for a look once the map has been quiet for a moment. Called after every frame and every change of
+     * stop: one pending timer at most, and no frame is drawn by it. */
+    function sharpPoke(): void {
+      if (!alive || sharpTimer !== null || sharpAllowed === false) return;
+      sharpTimer = window.setTimeout(sharpLook, GAS_UPLOAD_QUIET_MS);
+    }
+    function dropSharp(): void {
+      if (sharpTimer !== null) window.clearTimeout(sharpTimer);
+      sharpTimer = null;
+      cancelSharp();
+      releaseSharp();
+    }
     function dropWaiting(): void {
       quiet?.cancel();
       quiet = null;
@@ -420,6 +648,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       // The backdrop became the map (same page, no reload): the other stops are started now, so the flag goes
       // back to 'loading' until they are in.
       if (s.input.interactive && !prev.input.interactive) schedule(gasStopsToStart(s.input.stop, true));
+      if (s.input.stop !== prev.input.stop || s.sliderT !== prev.sliderT || s.input.interactive !== prev.input.interactive) sharpPoke();
     });
     // A lost WebGL context takes the uploaded gas with it, and the decoded images were freed after upload. So
     // when the context is lost every stop is forgotten (the quad hides and the flag says 'loading'), and when it
@@ -432,6 +661,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       idle?.cancel();
       idle = null;
       dropWaiting();
+      dropSharp();
+      sharpFlag();
       for (const stop of STOP_IDS) {
         store[stop]?.dispose();
         delete store[stop];
@@ -455,12 +686,15 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     // The end of every drawn frame counts too (useFrame below stamps its start): a slow frame is not a quiet map.
     const offFrame = addAfterEffect(() => {
       frameAt.current = performance.now();
+      sharpPoke();
     });
+    setSharpFlag("waiting");
     return () => {
       alive = false;
       offFrame();
       idle?.cancel();
       dropWaiting();
+      dropSharp();
       for (const type of INPUTS) window.removeEventListener(type, onInput, { capture: true });
       unsubscribe();
       canvas.removeEventListener("webglcontextlost", onLost);
@@ -468,7 +702,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       for (const stop of STOP_IDS) store[stop]?.dispose();
       loaded.current = {};
     };
-  }, [enabled, gl, invalidate, mesh, noise]);
+  }, [enabled, gl, invalidate, mesh, noise, theme, images]);
 
   // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
   useFrame((state, delta) => {
@@ -482,10 +716,23 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     // When the nebula first showed, on the page clock. Written once; the perf script reports it.
     if (window.__rmr && window.__rmr.gasShownMs === undefined) window.__rmr.gasShownMs = performance.now();
     const u = material.uniforms;
+    // The sharper image stands in for its stop's first image wherever that stop is bound, also as one end of a
+    // morph, so nothing changes on screen when the slider starts to move.
+    const sharper = sharp.current;
+    const a = images[pair.a];
+    const b = images[pair.b];
+    const sharpA = sharper?.stop === pair.a;
+    const sharpB = sharper?.stop === pair.b;
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-    u.u_gasA.value = got[pair.a]!;
-    u.u_gasB.value = got[pair.b]!;
+    u.u_gasA.value = sharpA ? sharper!.texture : got[pair.a]!;
+    u.u_gasB.value = sharpB ? sharper!.texture : got[pair.b]!;
     u.u_mix.value = pair.k;
+    (u.u_rectA.value as THREE.Vector4).fromArray(a.rect);
+    (u.u_rectB.value as THREE.Vector4).fromArray(b.rect);
+    const texels = lerp(sharpA ? a.sharp : a.first, sharpB ? b.sharp : b.first, pair.k);
+    u.u_bakePpr.value = texels;
+    u.u_lodBias.value = gasLodBias(texels, theme.bakeHalf);
+    u.u_octPpr.value = lerp(a.sharp, b.sharp, pair.k);
 
     const zoom = (camera as THREE.OrthographicCamera).zoom;
     const height = state.size.height;
@@ -507,6 +754,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     const curve = gasCurve(cover);
     u.u_strength.value = curve.strength * dim.current;
     u.u_deep.value = curve.deep;
+    view.current.ppr = u.u_ppr.value as number;
+    view.current.deep = curve.deep;
 
     // The pool: a soft dim, half desaturated area around the open album's group, at the target stop's positions.
     const focus = input.focus;

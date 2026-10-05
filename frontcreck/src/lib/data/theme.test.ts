@@ -5,11 +5,13 @@ import { THEME_URL, isTheme, loadTheme, peekTheme, themeFor, type ThemeData } fr
 import { useThemeLoad } from './useData';
 
 const LABEL = { id: 'live', name: 'The Live Belt', x: -0.236, y: 0.883, strong: true, n: 174, p: 2.1772, rgb: [255, 236, 224] as [number, number, number], lum: 0.31 };
+const STOP_GAS = { rect: [-1.4, -1.4, 1.1, 1.4] as [number, number, number, number], px: [1829, 2048] as [number, number], sharp: [3200, 3584] as [number, number] };
 const THEME: ThemeData = {
-  v: 1,
+  v: 2,
   n: 2,
   positionsHash: 'a7c1dbd996fd',
   bakeHalf: 1.6,
+  gas: { sonic: STOP_GAS, balanced: STOP_GAS, mood: STOP_GAS },
   stars: { lead: [0, -1], bg: [10, 20, 30, 40, 50, 255] },
   labels: { sonic: [], balanced: [LABEL], mood: [] },
 };
@@ -29,7 +31,15 @@ describe('isTheme', () => {
 
   it.each([
     ['nothing', null],
-    ['another version', { ...THEME, v: 2 }],
+    ['another version', { ...THEME, v: 3 }],
+    ['the version before the gas had rectangles', { ...THEME, v: 1 }],
+    ['no gas images', { ...THEME, gas: undefined }],
+    ['a stop without gas images', { ...THEME, gas: { sonic: STOP_GAS, balanced: STOP_GAS } }],
+    ['a gas rectangle that is inside out', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, rect: [1.1, -1.4, -1.4, 1.4] } } }],
+    ['a gas rectangle that leaves the baked square', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, rect: [-1.7, -1.4, 1.1, 1.4] } } }],
+    ['a first gas image over 2048 px', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, px: [2049, 2048] } } }],
+    ['a sharper gas image over 4096 px', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, sharp: [3200, 4097] } } }],
+    ['a gas image with no size', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, sharp: [3200] } } }],
     ['a lead list of the wrong length', { ...THEME, stars: { ...THEME.stars, lead: [0] } }],
     ['a lead family out of range', { ...THEME, stars: { ...THEME.stars, lead: [0, 5] } }],
     ['a luminance list that is not three per album', { ...THEME, stars: { ...THEME.stars, bg: [1, 2, 3] } }],
@@ -56,7 +66,7 @@ describe('loadTheme', () => {
   it('rejects a missing or wrongly shaped file with DataLoadError and retries on the next call', async () => {
     vi.stubGlobal('fetch', serve('nope', 404));
     await expect(loadTheme()).rejects.toBeInstanceOf(DataLoadError);
-    vi.stubGlobal('fetch', serve({ ...THEME, v: 2 }));
+    vi.stubGlobal('fetch', serve({ ...THEME, v: 3 }));
     await expect(loadTheme()).rejects.toBeInstanceOf(DataLoadError);
     expect(peekTheme()).toBeNull();
     vi.stubGlobal('fetch', serve(THEME));

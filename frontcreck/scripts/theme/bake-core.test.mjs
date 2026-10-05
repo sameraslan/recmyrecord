@@ -35,6 +35,44 @@ describe('bake-core (the DOM-free half of the theme build)', () => {
     expect(h.rawHalf).toBeCloseTo(1.75, 10);
   });
 
+  it('finds the rectangle that holds a stop\'s gas, padded and rounded outwards, inside the square', () => {
+    const n = 64;
+    const px = new Uint8Array(4 * n * n);
+    // lit cells: columns 20 to 40, rows 10 to 50 (rows run from the south edge); blue alone counts, alpha does not
+    for (let r = 10; r <= 50; r++) for (let c = 20; c <= 40; c++) px[4 * (r * n + c) + 2] = 1;
+    px[4 * (60 * n + 60) + 3] = 255;
+    const cell = 3.2 / n;
+    const [x0, y0, x1, y1] = T.gasRect(px, n, 1.6);
+    expect(T.GAS.RECT_PAD).toBe(0.06);
+    expect(x0).toBeCloseTo(Math.floor((-1.6 + 20 * cell - 0.06) * 1000) / 1000, 9);
+    expect(y0).toBeCloseTo(Math.floor((-1.6 + 10 * cell - 0.06) * 1000) / 1000, 9);
+    expect(x1).toBeCloseTo(Math.ceil((-1.6 + 41 * cell + 0.06) * 1000) / 1000, 9);
+    expect(y1).toBeCloseTo(Math.ceil((-1.6 + 51 * cell + 0.06) * 1000) / 1000, 9);
+    // every lit cell lies inside with the padding to spare
+    expect(x0).toBeLessThanOrEqual(-1.6 + 20 * cell - 0.06);
+    expect(y1).toBeGreaterThanOrEqual(-1.6 + 51 * cell + 0.06);
+    // gas up to the edge of the square: the rectangle stops at the square
+    px[0] = 9;
+    px[4 * (n * n - 1)] = 9;
+    expect(T.gasRect(px, n, 1.6)).toEqual([-1.6, -1.6, 1.6, 1.6]);
+    expect(() => T.gasRect(new Uint8Array(4 * n * n), n, 1.6)).toThrow(/no gas/);
+  });
+
+  it('sizes the two images of a rectangle: 2048 px on the longer side, and the prototype\'s texels per raw unit', () => {
+    expect([T.GAS.BAKE, T.GAS.SHARP]).toEqual([2048, 4096]);
+    const tall = T.gasSizes([-1.4, -1.5, 1.1, 1.5], 1.6);
+    expect(tall.px).toEqual([Math.round((2.5 / 3) * 2048), 2048]);
+    // 4096 px over the 3.2 raw units of the square is 1280 a unit
+    expect(tall.sharp).toEqual([3200, 3840]);
+    const wide = T.gasSizes([-1.5, -1, 1.5, 1], 1.6);
+    expect(wide.px).toEqual([2048, Math.round((2 / 3) * 2048)]);
+    expect(wide.sharp).toEqual([3840, 2560]);
+    // the whole square is the prototype's own bake
+    expect(T.gasSizes([-1.6, -1.6, 1.6, 1.6], 1.6)).toEqual({ px: [2048, 2048], sharp: [4096, 4096] });
+    // texels stay square to within a px
+    expect(tall.sharp[0] / 2.5).toBeCloseTo(tall.sharp[1] / 3, 6);
+  });
+
   it('packs density and colour weights into five float fields', () => {
     const fields = T.fieldData(new Float32Array([0, 0]), [0, 100, 0, 0, 0, 0], 1, 1.75);
     const n = T.GAS.GRID;
@@ -93,13 +131,15 @@ describe('bake-core (the DOM-free half of the theme build)', () => {
       weights: [50, 20, 10, 10, 0, 10, 10, 10, 10, 10, 20, 40],
       regions: { sonic: [], balanced: [region, { ...region, id: 'area', level: 0 }, { ...region, id: 'bare', name: null }], mood: [] },
     };
-    const theme = T.assemble(input, { sonic: px, balanced: px, mood: px }, 1.6, 1.75);
+    const gas = { sonic: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560] }, balanced: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560] }, mood: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560] } };
+    const theme = T.assemble(input, { sonic: px, balanced: px, mood: px }, 1.6, 1.75, gas);
     const byte = Math.min(255, Math.round((T.luminance([60, 30, 15]) / 0.6) * 255));
     expect(theme).toEqual({
-      v: 1,
+      v: 2,
       n: 2,
       positionsHash: 'a7c1dbd996fd',
       bakeHalf: 1.6,
+      gas,
       stars: { lead: [0, -1], bg: [byte, byte, byte, byte, byte, byte] },
       labels: {
         sonic: [],

@@ -29,7 +29,7 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
 | `npm run test:e2e` | Playwright end-to-end and accessibility tests at desktop and phone sizes, plus a run with WebGL turned off. Builds and serves the site on port 3100 first. `E2E_DEV=1 npm run test:e2e` runs them against a dev server instead. |
 | `npm run perf` | Measures the performance budgets of the design spec (section 7) at 1440 x 900 and 390 x 844, in software and GPU rendering, and fails when a budget is missed. Needs a build. |
 | `npm run shots` | Screenshots of every reviewed state at 1440 x 900, 1280 x 800 and 390 x 844, written to `test-results/review/`. Needs a build. Pass part of a name to shoot only some, for example `npm run shots -- d1440-d1`. |
-| `npm run theme` | Bakes the map theme into `public/data/theme/`: the gas of each slider stop as three images, plus `theme.json`. Uses Playwright's own Chromium on software rendering. Run it after `albums.json` or `positions.json` change (see "Map theme data"). |
+| `npm run theme` | Bakes the map theme into `public/data/theme/`: the gas of each slider stop as two images, plus `theme.json`. Uses Playwright's own Chromium on software rendering. Run it after `albums.json` or `positions.json` change (see "Map theme data"). |
 
 ## How it works
 
@@ -48,10 +48,13 @@ App state (current stop, focus, hover, selection and the trail of visited albums
 
 ## Map theme data
 
-The gas behind the albums is painted once, at build time, not in the visitor's browser. `npm run theme` starts one headless Chromium on software WebGL and writes four files to `public/data/theme/`, which are committed:
+The gas behind the albums is painted once, at build time, not in the visitor's browser. `npm run theme` starts one headless Chromium on software WebGL and writes seven files to `public/data/theme/`, which are committed:
 
-- `gas-sonic.webp`, `gas-balanced.webp`, `gas-mood.webp`: the gas of each slider stop, 2048 px square.
-- `theme.json`: for every album its colour family and the gas brightness under it at each stop, plus the region names and where they sit.
+- `gas-sonic.webp`, `gas-balanced.webp`, `gas-mood.webp`: the gas of each slider stop, 2048 px on its longer side. This is the image every map visit loads first (250 to 370 KB), and the only one Home, About, the 404 page, phones and tablets ever load.
+- `gas-sonic-sharp.webp`, `gas-balanced-sharp.webp`, `gas-mood-sharp.webp`: the same gas at the resolution of the approved design (about 3300 by 3700 px, 600 to 820 KB). A desktop with a real GPU fetches the one for the stop on screen once the map is idle and frees it when the slider comes to rest at another stop.
+- `theme.json`: for every album its colour family and the gas brightness under it at each stop, the region names and where they sit, and for each stop the rectangle its two gas images cover and their sizes.
+
+An image covers only the rectangle that holds its stop's gas, with a little empty sky around it, not the whole layout square. The build finds that rectangle itself and refuses to write an image whose edge is not plain sky. The smaller image is the sharper one scaled down, so the two always show the same gas.
 
 It reads `public/data/albums.json`, `public/data/positions.json` and two input files in `../data-pipeline/theme/` (`weights.json` and `regions.json`, described in that folder's README). It changes none of them.
 
@@ -63,7 +66,7 @@ To bake again:
 
 1. Refresh the inputs, following `../data-pipeline/theme/README.md`. Its last step is `cd ../data-pipeline && .venv/bin/python -m rmr_pipeline.theme`.
 2. `npm run theme`, on arm64 Node with nothing else heavy running.
-3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit the four files in `public/data/theme/`.
+3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit the seven files in `public/data/theme/`. `src/lib/data/theme.data.test.ts` also checks the file sizes (under 400 KB for a first image, under 1 MB for a sharper one) and the GPU memory the images need, so a bake that outgrows those limits fails there.
 
 A stale or missing theme never breaks the map for a visitor: the map checks the album count, and without a matching theme it shows plain sky.
 
