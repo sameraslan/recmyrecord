@@ -30,6 +30,7 @@ The full cycle (starting, running, writing up, merging, referencing) is in `expe
 | Descriptor model | Can we predict an album's RYM descriptors for new albums without scraping? | `experiments/descriptor_model/REPORT.md` | on `main` |
 | Preview features | Can preview-clip embeddings replace Spotify audio features? | `experiments/preview_features/REPORT.md` | on `main` |
 | Genre crossing | Can the sonic slider stop cross genres? | `experiments/preview_features/REPORT-genre-crossing.md` | scripts on `main`; the newer report and the `common.py` change are on branch `experiment/genre-crossing` (open PR #26, stacked on #25), see `experiments/preview_features/NOTE-genre-crossing-code.md` |
+| Audio 10k | Why does CLAP keep Deezer-sourced and Apple-sourced albums apart, and what removes it? | `experiments/audio_10k/REPORT.md` | report and code on branch `feat/audio-10k` (open PR #31, which also changes pipeline code and waits for approval) |
 
 To read code or newer notes that are only on a branch:
 
@@ -43,3 +44,7 @@ Open PR #25 (`feat/preview-audio`) is not an experiment. It changes the data pip
 ### Descriptor model in one paragraph
 
 Single held-out test run, 2026-10-01: a language model listing descriptors from artist, title and year scores 0.79 capped precision@10; audio embeddings with a linear probe 0.66; audio plus MusicBrainz tags 0.69; always guessing the most common descriptors 0.44. The test split is spent. Ideas not yet run are in section 9 of the report.
+
+### Audio 10k in one paragraph
+
+CLAP read the encoding of a preview (Deezer's 128 kbit/s MP3 against Apple's AAC), so its lists did not cross stores. A stereo MP3 round trip before CLAP for every clip that is not from Deezer (`clap_mp3`) brings Deezer-sourced and Apple-sourced albums to about the genre make-up rate on the 10,235-album store (Deezer seeds 24.9% Apple neighbours against 26.7%, Apple seeds 35.0% against 34.8%; before, 2.3% and 91.7% for new seeds). YouTube-sourced albums are in lists as often as the others, though YouTube seeds still lean towards YouTube albums (31.2% against 20.9%), and a probe still reads the store at 0.893. Whole-catalog RYM-based proxies on stored vectors, 5 October 2026; no held-out split and nobody has listened.
