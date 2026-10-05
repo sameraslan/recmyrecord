@@ -210,8 +210,26 @@ async function albumFlow(page, isPhone) {
 }
 
 /** The opening view, reported only: a fresh /map as a visitor opens it (the Overview since part 2's Task 0), its
- * first drag and first wheel zoom, the same gestures as exploreFlow's. Runs before exploreFlow sets __rmrOpen. */
-async function openingFlow(page, isPhone) {
+ * first drag and first wheel zoom, the same gestures as exploreFlow's. Runs last, in its own browser context (cold
+ * HTTP cache, no __rmrOpen), so the budget rows before it meet the network exactly as in the baseline; its wheel
+ * zoom fetches cover sheets and, on a GPU desktop, the sharper gas image, which must not warm their cache. */
+async function openingFlow(browser, vpName, errors) {
+  const ctx = await browser.newContext(VIEWPORTS[vpName]);
+  try {
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => {
+      if (m.type() === 'error') errors.push(m.text());
+    });
+    await page.addInitScript(PAGE_HELPERS);
+    if (GAS_LITE) await page.addInitScript((v) => (window.__rmrGasLite = v), GAS_LITE);
+    return await openingSteps(page, vpName === 'phone');
+  } finally {
+    await ctx.close();
+  }
+}
+
+async function openingSteps(page, isPhone) {
   await page.goto(`${BASE}/map`, { waitUntil: 'load' });
   await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
   await page.waitForTimeout(1500);
@@ -399,8 +417,9 @@ async function measure(mode, vpName) {
     warmUp: startup.warm,
     startupLongTasks: startup.lt,
     ...(await albumFlow(page, vpName === 'phone')),
-    ...(OPEN ? {} : await openingFlow(page, vpName === 'phone')),
     ...(await exploreFlow(page, vpName === 'phone')),
+    // The opening rows last, in a fresh context: the budget rows above are measured exactly as in the baseline.
+    ...(OPEN ? {} : await openingFlow(browser, vpName, errors)),
   };
   // Which gas shader drew the map (reported only): the lighter one on a software renderer, the full one on a GPU.
   result.gasLite = await page.evaluate(() => window.__rmr?.gasLite ?? null);
