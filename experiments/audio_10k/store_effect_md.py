@@ -3,8 +3,8 @@ quote the numbers of the JSON; the reading around them was written against the r
 be read again if the numbers move."""
 import datetime
 
-CLIPS_IN_CATALOG = 52000  # about: the catalog's CLAP clips (source_effect.md, section 5)
-ITUNES_CLIPS = 11600  # of them from iTunes (872 + 10,764)
+CLIPS_IN_CATALOG = 52000  # about: what a full re-embed would download
+ITUNES_CLIPS, STORE_CLIPS = 11636, 37751  # source_effect.md section 5: iTunes clips (872 + 10,764) of all store-preview clips
 
 
 def t(header: list[str], rows: list[list]) -> list[str]:
@@ -72,12 +72,13 @@ def markdown(res: dict) -> str:
     ab, ub = al["variants"]["base"], al["unaligned_same_pairs"]["base"]
     out += [
         f"- **The cause is how the two stores encode, and it sits at the top of what CLAP hears.** The same track from the other store is "
-        f"at cosine {f(b['cosine']['same_track_cross_store'])}, no closer than another track of the album from the same store "
+        f"at cosine {f(b['cosine']['same_track_cross_store'])}, barely closer than another track of the album from the same store "
         f"({f(b['cosine']['other_track_same_album_same_store'])}); a probe tells the stores apart with AUC {f(b['probe']['auc'])} and scores the iTunes "
         f"clip as more iTunes in {pc(b['probe']['pairs_itunes_scored_higher'])} of the pairs; a clip's ten nearest clips from other albums are "
         f"{pc(b['neighbours']['other_albums']['share'])} from the other store where {pc(exp)} would be even. This is the catalog's store split, on recordings that are the same.",
-        f"- **Not the excerpt.** The two previews are the same stretch of the track shifted by a few seconds (median offset "
-        f"{an['offset_s_q5_25_50_75_95'][2]:g} s; {an['overlap_15s_or_more']} of {an['n']} pairs share 15 s or more). Cut to exactly the shared stretch, "
+        f"- **Not the excerpt.** The two previews are usually the same stretch of the track shifted by a few seconds (median offset "
+        f"{an['offset_s_q5_25_50_75_95'][2]:g} s; {an['overlap_15s_or_more']} of {an['n']} pairs share 15 s or more, {an['no_common_stretch']} share nothing "
+        f"that was found). Cut to exactly the shared stretch, "
         f"the same-track cosine is {f(ab['cosine']['same_track_cross_store'])} against {f(ub['same_track'])} uncut, and the probe still reads {f(ab['probe']['auc'])}.",
         f"- **Not loudness.** iTunes previews are louder by a median {df['lufs']['q10_50_90'][1]:g} dB. Bringing every clip to one level leaves the "
         f"cosine at {f(V['loud']['cosine']['same_track_cross_store'])} and the probe at {f(V['loud']['probe']['auc'])}.",
@@ -86,17 +87,18 @@ def markdown(res: dict) -> str:
         f"14 kHz, and cutting both at 16, 15 or 14 kHz changes nothing (cosine {f(V['rs32']['cosine']['same_track_cross_store'])}, "
         f"{f(V['lp15']['cosine']['same_track_cross_store'])}, {f(V['lp14']['cosine']['same_track_cross_store'])}). Cutting at 13 kHz starts to help "
         f"({f(V['lp13']['cosine']['same_track_cross_store'])}), at 12 kHz most of it is gone ({f(lp12['cosine']['same_track_cross_store'])}). "
-        "The long-term level between 12 and 14 kHz is the same in both stores to a quarter of a dB; what differs is the frame-by-frame pattern "
-        "there, which is where a 128 kbit/s stereo MP3 is short of bits. So: the MP3 encoder's handling of the 12 to 14 kHz band, seen by "
-        "CLAP's top mel bands.",
+        "The long-term level between 12 and 14 kHz is the same in both stores to a quarter of a dB; what differs is the frame-by-frame pattern, "
+        "and it differs most in CLAP's top bands (section 3). The likely reading: a 128 kbit/s stereo MP3 is short of bits up there and codes "
+        "that band unevenly from frame to frame. So: the MP3 encoding of the 12 to 14 kHz band, seen by CLAP's top mel bands.",
     ]
     if m3 and st:
         out += [
             f"- **What removes it: giving the iTunes clip Deezer's encoding.** The decoded iTunes preview, stereo, through MP3 128 kbit/s "
             f"and back (`mp3st`), then the recipe as it is, against Deezer clips left alone: same-track cosine {f(st['same_track'])}, probe "
             f"{f(st['auc'])}, neighbours from the other store {pc(st['share_other_albums'])} ({pc(st['deezer_seeds'])} for Deezer seeds, "
-            f"{pc(st['itunes_seeds'])} for iTunes seeds). Only the iTunes clips change. The same round trip on a mono signal (`mp3`) does not "
-            f"work ({f(V['mp3']['cosine']['same_track_cross_store'])}): it is the stereo encode at this bitrate that leaves the mark.",
+            f"{pc(st['itunes_seeds'])} for iTunes seeds). Only the iTunes clips change. A probe still finds something (EffNet's reads "
+            f"{f(res['effnet']['base']['probe']['auc']) if res.get('effnet') else '–'} on the same clips), but the neighbourhoods mix. The same round trip "
+            f"on a mono signal (`mp3`) does not work ({f(V['mp3']['cosine']['same_track_cross_store'])}): it is the stereo encode at this bitrate that leaves the mark.",
             f"- **A low-pass on every clip also works, less cleanly.** At 12 kHz: cosine {f(lp12['cosine']['same_track_cross_store'])}, probe "
             f"{f(lp12['probe']['auc'])}, other-store neighbours {pc(lp12['neighbours']['other_albums']['share'])}. Via 16 kHz (content to 8 kHz): "
             f"{f(rs16['cosine']['same_track_cross_store'])}, {f(rs16['probe']['auc'])}, {pc(rs16['neighbours']['other_albums']['share'])}. It has to be "
@@ -106,16 +108,28 @@ def markdown(res: dict) -> str:
             f"{rs16['music']['overlap10_with_base']:.1f} and {f(rs16['music']['same_album_auc'])}. The MP3 round trip moves an iTunes clip to cosine "
             f"{f(res['moved']['mp3st']['itunes'])} with its own baseline vector and a Deezer clip (encoded a second time) to "
             f"{f(res['moved']['mp3st']['deezer'])}; same-album AUC {f(m3['music']['same_album_auc'])}. A small cost on these proxies for all three; "
-            "the one-store fix leaves the Deezer three quarters of the catalog exactly as they are.",
+            "the one-store fix leaves the Deezer clips (about two thirds of the catalog's) exactly as they are.",
         ]
+    vm = res["vector_corrections"].get("base: iTunes vectors ridge map, lambda 1 (fitted on other albums' pairs)")
+    if vm:
+        out += [f"- **Without fetching anything: a linear map on the stored iTunes vectors.** A ridge map from the iTunes vector to its Deezer version, fitted "
+                f"on the pairs of other albums, gives same-track cosine {f(vm['same_track'])} and {pc(vm['share_other_albums'])} other-store neighbours on "
+                "held-out pairs. That is close to the round trip and costs no download. It was not applied to the catalog; the corrections that failed there "
+                "(`source_effect.md`, section 6) were fitted on the two populations, not on pairs, so this one is worth trying first: the vectors are already stored."]
     if yt.get("variants"):
         yb = yt["variants"]["base"]
+        ys = yt["variants"].get("rs16", yb)
         out += [f"- **YouTube audio ({'/'.join(yt['audio']['codec'])}, {yt['albums']} albums).** As it is, a probe separates YouTube windows from Deezer "
                 f"clips of the same albums with AUC {f(yb['youtube_vs_deezer_auc'])} and from iTunes clips with {f(yb['youtube_vs_itunes_auc'])} "
                 f"(windows from other parts of the album, so part of that is the music: two random halves of the YouTube windows give "
                 f"{f(yb['floor_random_split_of_youtube_auc'])}). The album's YouTube mean finds its own album among the {yb['album_retrieval_deezer']['candidates']} "
                 f"Deezer means first in {pc(yb['album_retrieval_deezer']['top1'])} and among the iTunes means in {pc(yb['album_retrieval_itunes']['top1'])}. "
-                "See the YouTube table for the variants and for what one store clip does against the album's other clips."]
+                f"YouTube windows' ten nearest clips of other albums are {pc(yb['neighbours']['youtube_seeds_youtube_share'])} YouTube where "
+                f"{pc(yb['neighbours']['expected'])} would be even. So YouTube audio is a third accent, milder than the Deezer/iTunes split "
+                f"(iTunes vs Deezer on the same albums: {f(yb['itunes_vs_deezer_auc_same_albums'])}), and it finds the right album about as often as a store clip finds "
+                f"its album's other tracks. Low-passing every source brings it closer (via 16 kHz: {f(ys['youtube_vs_deezer_auc'])} / {f(ys['youtube_vs_itunes_auc'])}, "
+                f"{pc(ys['neighbours']['youtube_seeds_youtube_share'])} YouTube neighbours). The stereo MP3 round trip was not run on YouTube audio (the windows reach "
+                "the model process as mono), so whether it does for YouTube what it does for iTunes is open. 25 albums: rough numbers."]
     else:
         out += ["- **YouTube audio: not measured.** " + (yt.get("note") or "The run stopped before the YouTube part.")]
     out += [""]
@@ -152,7 +166,8 @@ def markdown(res: dict) -> str:
                pc(an["offset_within_5s"]), q3(an["overlap_s_q10_50_90"]), an["overlap_15s_or_more"], an["no_common_stretch"],
                f"{an['same_offset_within_album']['within_0.05s']} of {an['same_offset_within_album']['albums']}"]])
     out += ["Offsets, pairs per range (s): " + ", ".join(f"{k}: {v}" for k, v in an["offset_histogram_s"].items() if v) + ".", "",
-            "A waveform correlation near 1 after the shift says the two stores were encoded from the same master. The offset is one number per album.", ""]
+            f"A waveform correlation near 1 after the shift says the two stores were encoded from the same master. In "
+            f"{an['same_offset_within_album']['within_0.05s']} of the {an['same_offset_within_album']['albums']} albums with two or more aligned pairs the offset is the same for every track.", ""]
 
     bd = res["bands"]
     fe = bd["feature_extractor"]
@@ -209,8 +224,8 @@ def markdown(res: dict) -> str:
     out += t(["Correction", "Same-track cosine", "Probe AUC", "Top 1", "Other-store neighbours (Deezer / iTunes seeds)"],
              [[k, f(x["same_track"]), f(x["auc"]), pc(x["top1"]), f"{pc(x['share_other_albums'])} ({pc(x['deezer_seeds'])} / {pc(x['itunes_seeds'])})"]
               for k, x in res["vector_corrections"].items()])
-    out += ["On pairs, where both versions of every track are present, centring looks sufficient. Over the catalog it was not (`source_effect.md`, section 6: "
-            "Deezer seeds still got a quarter of the iTunes neighbours they should), so this table does not overturn that.", ""]
+    out += ["Centring each store helps less than the audio fixes, as over the catalog (`source_effect.md`, section 6). The ridge map is the new one: it is fitted on "
+            "pairs, which the catalog-level corrections could not be, and on held-out pairs it does about as well as the stereo round trip. Not tried on the catalog.", ""]
 
     if res.get("effnet"):
         e, c = res["effnet"]["base"], res["effnet"]["clap_base_same_pairs"]
@@ -244,15 +259,16 @@ def markdown(res: dict) -> str:
         out += [yt.get("note") or "Not run: the job was stopped before the YouTube part. `store_effect_fix.py run` does it after the previews.", ""]
 
     out += ["## What this means in practice", "",
-            f"- The recommended change touches only the iTunes-sourced clips (about {ITUNES_CLIPS:,} of the catalog's {CLIPS_IN_CATALOG:,}). Audio is never stored, so "
-            "those previews are downloaded again and embedded again; the Deezer clips and their vectors stay. In the recipe (`experiments/preview_features/clap_catalog.py`, "
+            f"- A fix on the audio means embedding again, and since audio is never stored, downloading again. The stereo round trip touches only the iTunes-sourced "
+            f"clips: {ITUNES_CLIPS:,} of the {STORE_CLIPS:,} store-preview clips `source_effect.md` counts (31%), so about a third of the roughly {CLIPS_IN_CATALOG:,} "
+            "clips a full re-embed would fetch. The Deezer clips and their vectors stay. In the recipe (`experiments/preview_features/clap_catalog.py`, "
             "and the one-pass worker that calls it): when the clip's source is iTunes, after ffmpeg has decoded the preview and before the channels are averaged, "
             "pass the decoded stereo signal through `ffmpeg -c:a libmp3lame -b:a 128k` and decode it again (pipes, no file: `store_effect_dsp.mp3_stereo`), "
             "then (L+R)/2 and everything else as now. Deezer clips: no change.",
             "- The low-pass alternative is one line for every clip (`store_effect_dsp.lowpass(x, 12000)` on the 44.1 kHz mono signal before `embed`), but it has to be "
             f"applied to both stores, which means all {CLIPS_IN_CATALOG:,} previews downloaded and embedded again, and it leaves more of the store in the vectors.",
-            "- Full-length sources (YouTube, Bandcamp, local files) are a third encoding. Whatever is chosen for iTunes should be decided for them at the same time; "
-            "see the YouTube table.",
+            "- Before either: the ridge map of section 8 can be tried on the stored vectors at no cost in downloads. If it holds on the catalog, no audio is needed.",
+            "- Full-length sources (YouTube, Bandcamp, local files) are a third encoding, milder. The round trip was not tested on them; the low-pass was, and helps.",
             "- Whichever is chosen: the PCA block is refitted afterwards, and `source_effect.py`'s neighbour table (share of iTunes neighbours for Deezer seeds against "
             "the genre's make-up) is the check on the catalog itself.", ""]
 
