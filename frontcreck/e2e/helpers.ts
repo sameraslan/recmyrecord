@@ -40,27 +40,66 @@ export async function waitForMap(page: Page): Promise<void> {
   );
 }
 
-/** Waits until no camera animation is running and the map has stopped drawing. */
-export async function waitForCameraIdle(page: Page): Promise<void> {
+/** Waits until no camera animation is running and the map has stopped drawing. `since` as in waitForMapQuiet. */
+export async function waitForCameraIdle(page: Page, opts: { since?: number } = {}): Promise<void> {
   await page.waitForFunction(() => window.__rmr?.map && !window.__rmr.map.isAnimating(), null, { timeout: 10_000 });
-  await waitForMapQuiet(page, 120);
+  await waitForMapQuiet(page, 120, opts);
 }
 
-/** Waits until the map has drawn no frame for `quietMs` (cover fades and other redraws have finished). */
-export async function waitForMapQuiet(page: Page, quietMs = 200): Promise<void> {
+/** Frames the map has drawn so far (`window.__rmr.frames`). Read it before an action to pass as `since`. */
+export async function mapFrames(page: Page): Promise<number> {
+  return page.evaluate(() => window.__rmr?.frames ?? 0);
+}
+
+let waitCalls = 0;
+/** A token unique to one helper call: in-page wait state keyed by it is never read by a later call. */
+const callToken = (): string => `${Date.now()}-${++waitCalls}-${Math.random()}`;
+
+/**
+ * Waits until the map has drawn no frame for `quietMs` (cover fades and other redraws have finished).
+ *
+ * Each call measures its own quiet window. It keeps no "last frame seen" from an earlier call: that stamp made a
+ * call after a camera move measure from the frame before the move, so it passed at once when the new frame came
+ * late (slow renderer) and the test read the previous view. The window starts only after a barrier: two animation
+ * frame ticks asked for at the call's start. A frame the map has already asked for (an `invalidate()` before the
+ * call) runs in the same tick as the barrier or earlier, however late that tick comes, so it is drawn and counted
+ * before the clock starts. When nothing draws, the call returns after the barrier plus `quietMs`.
+ *
+ * `since`: a frame count read before the action (mapFrames). The wait then also needs a frame after that count.
+ * Pass it whenever the action must draw (a camera move, a stop change): only it rules out a frame that is asked
+ * for late (after a React render or a timer) and lands after the quiet window. Never pass it when the action may
+ * draw nothing, or the wait times out.
+ */
+export async function waitForMapQuiet(page: Page, quietMs = 200, opts: { since?: number } = {}): Promise<void> {
   await page.waitForFunction(
-    (quiet) => {
-      const w = window as unknown as { __quietF?: number; __quietT?: number };
+    ({ quiet, token, since }) => {
+      type Q = { token: string; ready: boolean; f: number; t: number };
+      const w = window as unknown as { __quiet?: Q };
       const f = window.__rmr?.frames ?? 0;
       const now = performance.now();
-      if (w.__quietF !== f) {
-        w.__quietF = f;
-        w.__quietT = now;
+      const q = w.__quiet;
+      if (!q || q.token !== token) {
+        const fresh: Q = { token, ready: false, f, t: now };
+        w.__quiet = fresh;
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            fresh.ready = true;
+            fresh.f = window.__rmr?.frames ?? 0;
+            fresh.t = performance.now();
+          }),
+        );
         return false;
       }
-      return now - (w.__quietT ?? now) >= quiet;
+      if (!q.ready) return false;
+      if (q.f !== f) {
+        q.f = f;
+        q.t = now;
+        return false;
+      }
+      if (since !== null && f <= since) return false;
+      return now - q.t >= quiet;
     },
-    quietMs,
+    { quiet: quietMs, token: callToken(), since: opts.since ?? null },
     { polling: 40, timeout: 15_000 },
   );
 }
@@ -116,21 +155,29 @@ export async function tabTo<A = undefined>(page: Page, predicate: (el: Element, 
  * Phones say 'off'; the software test browser 'waiting' or 'off'; a desktop GPU the stop once it is in. Call it
  * before counting frames at rest. Defined in part 2 Task 0; Task 8 reuses it. */
 export async function waitForGasSharpSettled(page: Page, quietMs = 2500): Promise<void> {
+  // Its own window per call (a token, as in waitForMapQuiet): a stamp left by an earlier call would let this one
+  // pass at once, before a stop change has even turned the flag to 'loading'.
   await page.waitForFunction(
-    (quiet) => {
-      const w = window as unknown as { __gsF?: number; __gsS?: string; __gsT?: number };
+    ({ quiet, token }) => {
+      type G = { token: string; f: number; s: string; t: number };
+      const w = window as unknown as { __gs?: G };
       const s = String(window.__rmr?.gasSharp);
       const f = window.__rmr?.frames ?? 0;
       const now = performance.now();
-      if (s === 'loading' || w.__gsF !== f || w.__gsS !== s) {
-        w.__gsF = f;
-        w.__gsS = s;
-        w.__gsT = now;
+      const g = w.__gs;
+      if (!g || g.token !== token) {
+        w.__gs = { token, f, s, t: now };
         return false;
       }
-      return now - (w.__gsT ?? now) >= quiet;
+      if (s === 'loading' || g.f !== f || g.s !== s) {
+        g.f = f;
+        g.s = s;
+        g.t = now;
+        return false;
+      }
+      return now - g.t >= quiet;
     },
-    quietMs,
+    { quiet: quietMs, token: callToken() },
     { polling: 50, timeout: 45_000 },
   );
 }
