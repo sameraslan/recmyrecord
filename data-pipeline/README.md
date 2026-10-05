@@ -87,9 +87,27 @@ nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength --models effnet,clap,c
 
 `run --models clap_mp3` takes, per album, the clips that are ok for `clap` (the clips its mean is over), downloads each once and embeds it for the variant only: EffNet and `clap` are not computed, the EffNet child is not started, and no `effnet` or `clap` row is written. A `clap` clip whose preview the store no longer lists is recorded as `no_preview` ("gone") and the next track in the usual order stands in; the run prints both counts. `--check-baseline` also embeds each fetched clip for `clap` and prints its cosine with the stored vector, without storing it. A new album is embedded with `--models effnet,clap,clap_mp3`: one download per clip.
 
+#### Full-length audio: the sheet's link, a search, the edge cases
+
+`rmr_audio.fulllength` is the one command for audio that does not come from store previews. It fetches a whole album with yt-dlp, embeds 30-second windows of it (8 laid out, 4 to 8 in the mean by runtime) and deletes the file; the outcome of every album is a row of `audio/fulllength.csv`. The rules are in the module's docstring.
+
+```bash
+cd data-pipeline
+M="--models effnet,clap,clap_mp3"
+nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength $M                          # albums without previews: the sheet's YouTube link
+nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength $M --retry-failed           # only the rows that failed (a download refused)
+nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength $M --search                 # and a YouTube search where the link is missing or not the album
+nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength $M --edge-cases --search    # albums on 1 to 3 previews: full-length windows replace them
+.venv/bin/python -m rmr_audio.album_status                                            # the table, after any of them
+```
+
+- **Search** (`--search`). For an album whose sheet link is missing, unavailable, a single track or another video, yt-dlp's `ytsearch10:` is asked in up to three forms (titles, uploaders and lengths only; no API key, no account, no cookies). A video is taken only when its title has the album's title, its title or uploader has the artist, its length fits (within 15% of the store listing's runtime when the album has one; else 25 minutes or more, 8 when the title says "full album"), its title does not say live, cover, review, remix and the like, and something more speaks for it: "full album" in the title, the artist's own channel, the listing's runtime, or several uploads of the same length. When two videos of different lengths score alike, nothing is taken. The row records `matched_by = search`, the query, the score and the runner-up's; when nothing is taken, `status = search_none` with the video that came closest and why it was refused, and the album is not searched again unless `--retry-search`. Everything is judged from metadata: nobody listens.
+- **Edge cases** (`--edge-cases`). The albums that have previews and are under-covered by them: 1 to 3 previews of a listing that runs 15 minutes or more, or whose runtime is unknown (`album_status.edge_case`; Long Season is one track with one preview). The sheet's link is used when it is the album, else the search. The windows replace the previews in the album's mean; the preview clips stay in the cache, and an album nothing is found for keeps them. The row has `reason = edge_case`.
+- Not done: official playlists of per-track videos are not used as an album, and when the video a search took is unavailable the next best one is not tried.
+
 #### Where each album stands
 
-`audio/album_status.csv` has one row per catalog album: its listing, its ok clips per model and the source its mean is taken from, its flags, and a `state` (`done`, `partial`, `no_audio`) and a `next_step`. `audio/album_status.md` has the counts. `.venv/bin/python -m rmr_audio.album_status` writes both from the catalog, `matches.csv`, `match_overrides.json`, `fulllength.csv` and the clip cache (read-only; it fails without it), and gives the same bytes for the same inputs, so run it again after any audio job. The columns and the rules are in the module's docstring.
+`audio/album_status.csv` has one row per catalog album: its listing, its ok clips per model and the source its mean is taken from, its flags, and a `state` (`done`, `partial`, `no_audio`) and a `next_step` (`youtube_search` and `youtube_full_length` until the search or the edge-case run has been through the album; `none_available` when they found nothing). `audio/album_status.md` has the counts. `.venv/bin/python -m rmr_audio.album_status` writes both from the catalog, `matches.csv`, `match_overrides.json`, `fulllength.csv` and the clip cache (read-only; it fails without it), and gives the same bytes for the same inputs, so run it again after any audio job. The columns and the rules are in the module's docstring.
 
 ### The block
 

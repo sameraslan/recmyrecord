@@ -1,16 +1,45 @@
-"""Full-length audio for the albums no store has a preview of: the catalog's YouTube link (one video chosen
-by the RateYourMusic community), or its Bandcamp album page, fetched with yt-dlp, sampled in 30-second
-windows, embedded by both models, and deleted. The audio is never kept.
+"""Full-length audio for the albums the store previews do not cover: the catalog's YouTube link (one video
+chosen by the RateYourMusic community), its Bandcamp album page, or a video found by searching YouTube,
+fetched with yt-dlp, sampled in 30-second windows, embedded by the models, and deleted. The audio is never kept.
 
   cd data-pipeline
-  nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength [--bandcamp] [--sample N --seed S] [--limit N]
-        [--keys K,...] [--pause 5] [--format F] [--models effnet,clap[,clap_mp3]] [--no-refetch]
-        [--check-baseline] [--fetch-python PY] [--torch-python PY] [--dry-run]
+  nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength [--search] [--edge-cases] [--bandcamp]
+        [--retry-failed] [--retry-search] [--sample N --seed S] [--limit N] [--keys K,...] [--pause 5]
+        [--format F] [--models effnet,clap[,clap_mp3]] [--no-refetch] [--check-baseline] [--fetch-python PY]
+        [--torch-python PY] [--dry-run]
 
-Which albums: the new ones (in catalog/albums.csv, not in audio/keys.csv) whose row in audio/matches.csv has no
-preview (n_clips_available empty or 0), and that have a link. YouTube first. Bandcamp only with --bandcamp,
-and only for an album without a usable YouTube link: it has none, or its video was recorded here as
-unavailable, a mismatch or a single track.
+Which albums. One of two sets, by the same steps:
+
+  without audio   (the default) every catalog album no store has a preview of: its row of audio/matches.csv
+                  has no listing, or a listing without previews (no_audio_albums).
+  --edge-cases    the albums that have previews and are under-covered by them: 1 to 3 previews of a listing
+                  of 15 minutes or more, or of unknown runtime (rmr_audio.album_status.edge_case, the one
+                  rule: Long Season is one track with one preview). Their full-length windows replace the
+                  previews in the album's mean (the cache's rule: windows win); the preview clips stay in
+                  the cache. An album nothing is found for keeps its previews.
+
+Where the audio comes from, in this order, the next only when the one before is not the album:
+
+  the sheet's YouTube link   always
+  its Bandcamp page          with --bandcamp, when the album has no usable video (none, or recorded here
+                             as unavailable, a mismatch or a single track)
+  a YouTube search           with --search, when the album has no usable link at all. yt-dlp's `ytsearch10:`
+                             (titles, uploaders and lengths of the first ten videos: one request, no API key,
+                             no account, no cookies) in up to three forms: "artist title full album", the same
+                             with the catalog's Latin names, "artist title". Every video listed is judged
+                             (judge) and one is taken or none (choose). A missed album is better than a
+                             wrong one. Refused: a title without the album's title; an artist in neither title
+                             nor uploader; a title that says live, cover, reaction, review, 8D, slowed,
+                             nightcore, sped up, karaoke, instrumental, tribute, remix, demo, interview, "part
+                             1" or "side A" when none of the album's own names does; a length more than 15%
+                             from the store listing's runtime when the album has one, else under 25 minutes
+                             (8 when the title says "full album") or over six hours; a self-titled album whose
+                             title names the artist once. What passes is scored (full album in the title, the
+                             artist in the title, the artist's own channel, nearness to the listing's runtime,
+                             few other words, several uploads of one length) and the best is taken when it
+                             reaches 65 and no video of another length comes within 5 points of it.
+                             Not done: playlists of per-track videos (an official album playlist) are not
+                             used; when the video taken turns out unavailable the next best is not tried.
 
 Per album, one at a time:
 
@@ -22,15 +51,25 @@ Per album, one at a time:
        single_track  shorter, and resembles them: one track of the album. Recorded, not embedded.
        mismatch      resembles neither, or is over six hours
        unavailable   removed, private, blocked in this country, age-restricted, live
+     A video a search took goes through the same step.
   2. full_album only: the audio-only stream goes to a folder under .cache/audio/fulllength-tmp/ (gitignored),
      its windows are laid out by rmr_audio.windows (8 embedded, n = clamp(round(runtime / 5 min), 4, 8) of
      them in the album mean; on Bandcamp the windows are shared among the tracks by duration), ffmpeg decodes
      only each window, both model children embed it (rmr_audio.onepass's), and the per-window embeddings go
      to the one-pass cache under the source `youtube` (album_id: the video id) or `bandcamp` (album_id: the
      page's host and path). The folder is deleted in a `finally`, whatever happened.
-  3. The outcome is a row of audio/fulllength.csv (key, source, url, class, duration_s, title, uploader,
-     n_windows, status), written after every album. status: embedded | skipped (not a full album: final) |
-     failed | blocked (both tried again by the next run). A run skips the albums that are embedded or skipped.
+  3. The outcome is a row of audio/fulllength.csv, written after every album. An album has at most one row
+     for its video link, one for its Bandcamp page and one for its search (matched_by `search`):
+       key, source, url, class, duration_s, title, uploader, n_windows, status
+       matched_by    link | search
+       reason        no_audio | edge_case: which set the album was in
+       query, score, runner_up   a search: the query that listed the video, its score, and the score of the
+                     best video of another length (empty when there was none)
+       note          what the classification or the refusal rests on, or the error
+     status: embedded | skipped (not a full album: final) | search_none (the search took nothing; url, title,
+     uploader, duration_s and note are the video that came closest and why it was refused; final unless
+     --retry-search) | failed | blocked (both tried again by the next run; a video a search took is fetched
+     again without a second search). A run skips what is final. --retry-failed: only the failed rows.
 
 The variant clap_mp3 (--models effnet,clap,clap_mp3; rmr_audio.mp3trip): each window is decoded once WITH
 its channels; EffNet and clap get the channel average (the numbers the mono decode gives) and clap_mp3 the
@@ -46,8 +85,9 @@ stored clap vector (is it the same audio?); nothing of clap is written.
 Polite and easy to stop: no cookies, no account, no login, yt-dlp's own config files ignored
 (--ignore-config), a pause after every album, the lowest priority, the one-pass cache's lock held (so no
 other model job runs beside it). The run stops itself, without retrying harder, at the first sign of
-blocking (HTTP 429, "sign in to confirm you're not a bot", "try again later"), after --max-failures
-failures in a row, or after five albums in a row reported unavailable (which may be a block in disguise).
+blocking (HTTP 429, "sign in to confirm you're not a bot", "try again later"; a search can raise it too),
+after --max-failures failures in a row, or after five albums in a row reported unavailable (which may be a
+block in disguise).
 Ctrl-C once: finish the album in hand.
 
 yt-dlp lives in its own environment (data-pipeline/.venv-fetch, gitignored: `python -m venv .venv-fetch &&
