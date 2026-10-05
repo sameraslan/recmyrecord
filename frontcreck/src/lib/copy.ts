@@ -73,7 +73,7 @@ export const COPY = {
     cardSpotify: 'Spotify',
     cardClose: 'Close',
     /** Shown where the map can't draw (no WebGL2, or WebGL turned off); `noWebglHint` under it says what to try. */
-    noWebgl: 'This browser is not up-to-date enough to display the map. You can still search albums and get recommendations.',
+    noWebgl: 'This browser can’t display the map. You can still search albums and get recommendations.',
     noWebglHint: 'To enjoy the full exploration capabilities, open this page in an up-to-date Chrome, Firefox, Safari or Edge.\u00a0:)',
     preview: 'Map preview of the album and its closest albums',
     openMap: 'Open map',
