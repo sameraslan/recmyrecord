@@ -6,6 +6,17 @@ import { FRUSTUM_HALF_HEIGHT } from './zoomLimits';
 
 export const MARKER_SIZE = { seed: 64, rec: 46 } as const;
 export const MARKER_GAP = 10;
+/** How far a marker's drawn frame reaches past its cover (styles/map.css): the seed's dark gap and ring, a
+ * recommendation's hairline, a hot recommendation's ring and casing. Lines end on the frame's edge. */
+export const SEED_FRAME_PX = 4;
+export const REC_FRAME_PX = 1;
+export const HOT_FRAME_PX = 3;
+/** Least length of a line that shows between the seed's frame and its recommendation's frame. */
+export const MIN_LINE_PX = 24;
+/** Least gap between a cover and any other cover's line. */
+export const LINE_CLEAR_PX = 6;
+/** Least angle, in radians, between two lines leaving the seed. */
+export const MIN_LINE_ANGLE = 0.2;
 
 export interface MarkerAnchor {
   id: number;
@@ -39,6 +50,8 @@ export interface LayoutOptions {
   bounds?: MarkerBounds;
   /** Minimum space between two marker boxes; defaults to MARKER_GAP (the preview strip uses a smaller one). */
   gap?: number;
+  /** Least visible length of a line; defaults to MIN_LINE_PX (the preview strip uses a shorter one). */
+  minLine?: number;
 }
 
 type Axis = 'x' | 'y';
@@ -49,18 +62,31 @@ export function ringRadius(recs: number, seedSize: number, recSize: number): num
   return Math.max(seedSize / 2 + recSize / 2 + 22, (recs * (recSize + 16)) / (2 * Math.PI));
 }
 
-/** anchors[0] is the seed. Recommendations too close to the seed go to a ring around it; overlapping boxes are
- * then separated along the axis of least overlap (the seed moves less than the others). With `bounds`, the
- * separated group is first shifted inside them as a whole (which keeps it overlap free), then any marker still
- * outside is held at the wall and separation runs again, a marker that is held passing its share of each push
- * to the other one. */
+/** Where the line from (x0, y0) towards (x1, y1) leaves a square of half size `half` centred on (x0, y0). */
+export function edgePoint(x0: number, y0: number, x1: number, y1: number, half: number): [number, number] {
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+  const d = Math.hypot(dx, dy) || 1;
+  const k = half / (Math.max(Math.abs(dx), Math.abs(dy)) / d || 1);
+  return [x0 + (dx / d) * k, y0 + (dy / d) * k];
+}
+
+/** anchors[0] is the seed. Recommendations too close to the seed go to a ring around it. Then four rules are
+ * relaxed together, for up to 600 rounds (the prototype's Focus.layout): boxes stay `gap` apart, pushed along
+ * the axis of least overlap; every line shows at least `minLine` px between the two frames; every cover stays
+ * LINE_CLEAR_PX clear of every other cover's line; two lines leave the seed at least MIN_LINE_ANGLE apart.
+ * Without `bounds` the seed never moves. With `bounds`, the laid-out group is shifted inside them as a whole
+ * (which keeps every rule), and only if a marker is still outside is it held at the wall and the rules relaxed
+ * again inside the walls, ending with a plain box separation so that the result has no overlaps. */
 export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, options: LayoutOptions = {}): MarkerItem[] {
   const gap = options.gap ?? MARKER_GAP;
+  const minLine = options.minLine ?? MIN_LINE_PX;
   const bounds = options.bounds ?? null;
   const items: MarkerItem[] = anchors.map((a, n) => ({ id: a.id, rank: n, ax: a.x, ay: a.y, x: a.x, y: a.y, size: n === 0 ? seedSize : recSize, seed: n === 0 }));
-  if (items.length > 1) {
-    const s0 = items[0];
-    const recs = items.length - 1;
+  if (items.length === 0) return items;
+  const s0 = items[0];
+  const recs = items.length - 1;
+  if (recs > 0) {
     const ring = ringRadius(recs, s0.size, recSize);
     items.slice(1).forEach((it, n) => {
       let dx = it.ax - s0.ax;
@@ -90,34 +116,102 @@ export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number
     it[axis] = Math.min(Math.max(before + d, lo), hi);
     return it[axis] - before;
   };
-  const separate = (walls: boolean) => {
-    for (let iter = 0; iter < 300; iter++) {
-      let moved = false;
-      for (let a = 0; a < items.length; a++) {
-        for (let b = a + 1; b < items.length; b++) {
-          const p = items[a];
-          const q = items[b];
-          const need = (p.size + q.size) / 2 + gap;
-          const ox = need - Math.abs(q.x - p.x);
-          const oy = need - Math.abs(q.y - p.y);
-          if (ox <= 0 || oy <= 0) continue;
-          const axis: Axis = ox < oy ? 'x' : 'y';
-          const d = q[axis] - p[axis];
-          const sign = d === 0 ? (b % 2 ? 1 : -1) : Math.sign(d);
-          const total = (axis === 'x' ? ox : oy) + 0.5;
-          const wp = p.seed ? 0.2 : 0.5;
-          const wq = q.seed ? 0.2 : 0.5;
-          const movedP = -sign * moveBy(p, axis, (-sign * total * wp) / (wp + wq), walls);
-          const movedQ = sign * moveBy(q, axis, sign * (total - movedP), walls);
-          if (movedP + movedQ < total) moveBy(p, axis, -sign * (total - movedP - movedQ), walls);
-          moved = true;
-        }
+  const moveTo = (it: MarkerItem, x: number, y: number, walls: boolean): void => {
+    moveBy(it, 'x', x - it.x, walls);
+    moveBy(it, 'y', y - it.y, walls);
+  };
+
+  /** One round of box separation. `seedWeight` is the seed's share of a push: 0 keeps it where it is. */
+  const separateOnce = (walls: boolean, seedWeight: number): boolean => {
+    let moved = false;
+    for (let a = 0; a < items.length; a++) {
+      for (let b = a + 1; b < items.length; b++) {
+        const p = items[a];
+        const q = items[b];
+        const need = (p.size + q.size) / 2 + gap;
+        const ox = need - Math.abs(q.x - p.x);
+        const oy = need - Math.abs(q.y - p.y);
+        if (ox <= 0 || oy <= 0) continue;
+        const axis: Axis = ox < oy ? 'x' : 'y';
+        const d = q[axis] - p[axis];
+        const sign = d === 0 ? (b % 2 ? 1 : -1) : Math.sign(d);
+        const total = (axis === 'x' ? ox : oy) + 0.5;
+        const wp = p.seed ? seedWeight : 0.5;
+        const wq = q.seed ? seedWeight : 0.5;
+        const movedP = -sign * moveBy(p, axis, (-sign * total * wp) / (wp + wq), walls);
+        const movedQ = sign * moveBy(q, axis, sign * (total - movedP), walls);
+        if (movedP + movedQ < total) moveBy(p, axis, -sign * (total - movedP - movedQ), walls);
+        moved = true;
       }
-      if (!moved) return;
+    }
+    return moved;
+  };
+
+  /** One round of the three line rules; the seed is never moved by them. */
+  const linesOnce = (walls: boolean): boolean => {
+    let moved = false;
+    const seedHalf = s0.size / 2 + SEED_FRAME_PX;
+    for (let a = 1; a < items.length; a++) {
+      const it = items[a];
+      // Enough line between the two frames.
+      const dx = it.x - s0.x;
+      const dy = it.y - s0.y;
+      const d = Math.hypot(dx, dy) || 1;
+      const need = (seedHalf + it.size / 2 + REC_FRAME_PX) / (Math.max(Math.abs(dx), Math.abs(dy)) / d || 1) + minLine;
+      if (d < need - 0.5) {
+        moveTo(it, s0.x + (dx / d) * need, s0.y + (dy / d) * need, walls);
+        moved = true;
+      }
+      // Sideways off every other recommendation's line.
+      for (let b = 1; b < items.length; b++) {
+        if (b === a) continue;
+        const o = items[b];
+        const lx = o.x - s0.x;
+        const ly = o.y - s0.y;
+        const len = Math.hypot(lx, ly) || 1;
+        const ux = lx / len;
+        const uy = ly / len;
+        const t = (it.x - s0.x) * ux + (it.y - s0.y) * uy;
+        if (t <= 0 || t >= len) continue;
+        const perp = (it.x - s0.x) * -uy + (it.y - s0.y) * ux;
+        const reach = (it.size / 2 + REC_FRAME_PX) * (Math.abs(ux) + Math.abs(uy)) + LINE_CLEAR_PX;
+        if (Math.abs(perp) >= reach) continue;
+        const push = (reach - Math.abs(perp) + 0.5) * (perp === 0 ? (a % 2 ? 1 : -1) : Math.sign(perp));
+        moveTo(it, it.x - uy * push, it.y + ux * push, walls);
+        moved = true;
+      }
+    }
+    // Two lines must not leave the seed in nearly the same direction: both turn, half each, about the seed.
+    for (let a = 1; a < items.length; a++) {
+      for (let b = a + 1; b < items.length; b++) {
+        const p = items[a];
+        const q = items[b];
+        const ap = Math.atan2(p.y - s0.y, p.x - s0.x);
+        const aq = Math.atan2(q.y - s0.y, q.x - s0.x);
+        let d = aq - ap;
+        while (d > Math.PI) d -= 2 * Math.PI;
+        while (d < -Math.PI) d += 2 * Math.PI;
+        if (Math.abs(d) >= MIN_LINE_ANGLE) continue;
+        const half = ((MIN_LINE_ANGLE - Math.abs(d) + 0.02) / 2) * (d >= 0 ? 1 : -1);
+        for (const [it, ang] of [[p, ap - half], [q, aq + half]] as const) {
+          const r = Math.hypot(it.x - s0.x, it.y - s0.y);
+          moveTo(it, s0.x + Math.cos(ang) * r, s0.y + Math.sin(ang) * r, walls);
+        }
+        moved = true;
+      }
+    }
+    return moved;
+  };
+
+  const relax = (walls: boolean, seedWeight: number): void => {
+    for (let iter = 0; iter < 600; iter++) {
+      const boxes = separateOnce(walls, seedWeight);
+      const lines = linesOnce(walls);
+      if (!boxes && !lines) return;
     }
   };
 
-  separate(false);
+  relax(false, 0);
   if (bounds) {
     let x0 = Infinity;
     let x1 = -Infinity;
@@ -133,13 +227,19 @@ export function layoutMarkers(anchors: readonly MarkerAnchor[], seedSize: number
     const shift = (lo: number, hi: number, min: number, max: number) => (hi - lo > max - min ? 0 : lo < min ? min - lo : hi > max ? max - hi : 0);
     const sx = shift(x0, x1, bounds.left, bounds.right);
     const sy = shift(y0, y1, bounds.top, bounds.bottom);
+    let held = false;
     for (const it of items) {
       it.x += sx;
       it.y += sy;
-      moveBy(it, 'x', 0, true);
-      moveBy(it, 'y', 0, true);
+      if (moveBy(it, 'x', 0, true) !== 0) held = true;
+      if (moveBy(it, 'y', 0, true) !== 0) held = true;
     }
-    separate(true);
+    if (held) {
+      // The group does not fit: relax inside the walls (the seed gives way a little, as before), then make
+      // sure no boxes overlap, whatever the line rules could not reach.
+      relax(true, 0.2);
+      for (let iter = 0; iter < 300; iter++) if (!separateOnce(true, 0.2)) break;
+    }
   }
   return items;
 }

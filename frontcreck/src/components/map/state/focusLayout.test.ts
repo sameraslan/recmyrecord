@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { MARKER_GAP, MARKER_SIZE, focusCamera, layoutMarkers, markerAt, ringRadius, type MarkerBounds, type MarkerItem } from './focusLayout';
+import {
+  LINE_CLEAR_PX,
+  MARKER_GAP,
+  MARKER_SIZE,
+  MIN_LINE_ANGLE,
+  MIN_LINE_PX,
+  REC_FRAME_PX,
+  SEED_FRAME_PX,
+  edgePoint,
+  focusCamera,
+  layoutMarkers,
+  markerAt,
+  ringRadius,
+  type MarkerBounds,
+  type MarkerItem,
+} from './focusLayout';
 import { FRUSTUM_HALF_HEIGHT } from './zoomLimits';
 
 function overlaps(items: MarkerItem[], gap = MARKER_GAP): number {
@@ -15,6 +30,70 @@ function overlaps(items: MarkerItem[], gap = MARKER_GAP): number {
 
 function outside(items: MarkerItem[], b: MarkerBounds): number {
   return items.filter((it) => it.x - it.size / 2 < b.left - 0.01 || it.x + it.size / 2 > b.right + 0.01 || it.y - it.size / 2 < b.top - 0.01 || it.y + it.size / 2 > b.bottom + 0.01).length;
+}
+
+type Pt = [number, number];
+
+/** Exact distance from segment ab to a square of half size h centred on (cx, cy). */
+function segRect(a: Pt, b: Pt, cx: number, cy: number, h: number): number {
+  const inside = (p: Pt) => Math.abs(p[0] - cx) <= h && Math.abs(p[1] - cy) <= h;
+  if (inside(a) || inside(b)) return 0;
+  const ptSeg = (px: number, py: number) => {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const l = dx * dx + dy * dy || 1;
+    const t = Math.max(0, Math.min(1, ((px - a[0]) * dx + (py - a[1]) * dy) / l));
+    return Math.hypot(px - a[0] - t * dx, py - a[1] - t * dy);
+  };
+  const ptRect = (p: Pt) => Math.hypot(Math.max(Math.abs(p[0] - cx) - h, 0), Math.max(Math.abs(p[1] - cy) - h, 0));
+  const cross = (p1: Pt, p2: Pt, p3: Pt, p4: Pt) => {
+    const d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]);
+    if (!d) return false;
+    const t = ((p3[0] - p1[0]) * (p4[1] - p3[1]) - (p3[1] - p1[1]) * (p4[0] - p3[0])) / d;
+    const u = ((p3[0] - p1[0]) * (p2[1] - p1[1]) - (p3[1] - p1[1]) * (p2[0] - p1[0])) / d;
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+  };
+  const c: Pt[] = [[cx - h, cy - h], [cx + h, cy - h], [cx + h, cy + h], [cx - h, cy + h]];
+  for (let i = 0; i < 4; i++) if (cross(a, b, c[i], c[(i + 1) % 4])) return 0;
+  return Math.min(ptRect(a), ptRect(b), ...c.map((p) => ptSeg(p[0], p[1])));
+}
+
+/** The prototype's Focus.check: a finding for every line shorter than 24 px, cover within 6 px of another
+ * cover's line, pair of lines closer than 0.2 rad, and pair of overlapping covers. Empty when the layout is clean. */
+function findings(items: MarkerItem[]): string[] {
+  const out: string[] = [];
+  if (items.length < 2) return out;
+  const s = items[0];
+  const recs = items.slice(1);
+  const seg = new Map<number, [Pt, Pt]>();
+  for (const it of recs) seg.set(it.rank, [edgePoint(s.x, s.y, it.x, it.y, s.size / 2 + SEED_FRAME_PX), edgePoint(it.x, it.y, s.x, s.y, it.size / 2 + REC_FRAME_PX)]);
+  for (const it of recs) {
+    const [a, b] = seg.get(it.rank)!;
+    const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (len < MIN_LINE_PX - 0.6) out.push(`short ${it.rank}: ${len.toFixed(1)} px`);
+    for (const o of recs) {
+      if (o === it) continue;
+      const [oa, ob] = seg.get(o.rank)!;
+      const d = segRect(oa, ob, it.x, it.y, it.size / 2 + REC_FRAME_PX);
+      if (d < LINE_CLEAR_PX - 0.6) out.push(`near ${it.rank} to line ${o.rank}: ${d.toFixed(1)} px`);
+      if (o.rank > it.rank) {
+        let g = Math.atan2(o.y - s.y, o.x - s.x) - Math.atan2(it.y - s.y, it.x - s.x);
+        while (g > Math.PI) g -= 2 * Math.PI;
+        while (g < -Math.PI) g += 2 * Math.PI;
+        if (Math.abs(g) < MIN_LINE_ANGLE - 0.02) out.push(`angle ${it.rank} and ${o.rank}: ${Math.abs(g).toFixed(3)} rad`);
+      }
+    }
+    for (const o of items) {
+      if (o !== it && Math.abs(o.x - it.x) < (o.size + it.size) / 2 + 2 && Math.abs(o.y - it.y) < (o.size + it.size) / 2 + 2) out.push(`overlap ${it.rank} with ${o.rank}`);
+    }
+  }
+  return out;
+}
+
+/** Deterministic random numbers in 0..1. */
+function lcg(seed: number): () => number {
+  let s = seed;
+  return () => (s = (s * 16807) % 2147483647) / 2147483647;
 }
 
 describe('layoutMarkers', () => {
@@ -78,6 +157,74 @@ describe('layoutMarkers', () => {
     const out = layoutMarkers(pile, 32, 22, { bounds, gap: 6 });
     expect(outside(out, bounds)).toBe(0);
     expect(overlaps(out, 6)).toBe(0);
+  });
+});
+
+describe('edgePoint', () => {
+  it('is where the line towards a point leaves a square', () => {
+    expect(edgePoint(0, 0, 100, 0, 36)).toEqual([36, 0]);
+    expect(edgePoint(0, 0, 0, -50, 24)).toEqual([0, -24]);
+    const [x, y] = edgePoint(10, 10, 110, 60, 20);
+    expect(x).toBeCloseTo(30, 6);
+    expect(y).toBeCloseTo(20, 6);
+  });
+
+  it('does not divide by zero for two points on the same spot', () => {
+    for (const v of edgePoint(5, 5, 5, 5, 20)) expect(Number.isFinite(v)).toBe(true);
+  });
+});
+
+describe('layoutMarkers keeps covers off the lines (prototype Focus.check)', () => {
+  it('leaves no finding in random clusters of one, two, five and ten recommendations', () => {
+    for (const n of [1, 2, 5, 10]) {
+      const rand = lcg(11 + n);
+      for (let t = 0; t < 300; t++) {
+        const spread = 40 + rand() * 500;
+        const anchors = Array.from({ length: n + 1 }, (_, i) => ({ id: i, x: 600 + (i ? (rand() - 0.5) * spread : 0), y: 400 + (i ? (rand() - 0.5) * spread : 0) }));
+        expect(findings(layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec)), `${n} recs, round ${t}`).toEqual([]);
+      }
+    }
+  });
+
+  it('leaves no finding in a pile of eleven on one spot', () => {
+    const pile = Array.from({ length: 11 }, (_, i) => ({ id: i, x: 300, y: 300 }));
+    expect(findings(layoutMarkers(pile, MARKER_SIZE.seed, MARKER_SIZE.rec))).toEqual([]);
+  });
+
+  it('never moves the seed when there are no bounds', () => {
+    const rand = lcg(5);
+    for (let t = 0; t < 100; t++) {
+      const anchors = Array.from({ length: 11 }, (_, i) => ({ id: i, x: 300 + rand() * 80, y: 300 + rand() * 80 }));
+      const out = layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec);
+      expect([out[0].x, out[0].y]).toEqual([anchors[0].x, anchors[0].y]);
+    }
+  });
+
+  it('lays out a seed alone and a seed with one recommendation', () => {
+    expect(layoutMarkers([{ id: 4, x: 50, y: 60 }], 64, 46).map((m) => [m.x, m.y])).toEqual([[50, 60]]);
+    const two = layoutMarkers([{ id: 0, x: 100, y: 100 }, { id: 1, x: 104, y: 100 }], 64, 46);
+    expect(two.every((m) => Number.isFinite(m.x) && Number.isFinite(m.y))).toBe(true);
+    expect(findings(two)).toEqual([]);
+  });
+
+  it('fans out recommendations that all sit on one side of the seed', () => {
+    for (const n of [5, 10]) {
+      const rand = lcg(99 + n);
+      for (let t = 0; t < 200; t++) {
+        const anchors = [{ id: 0, x: 300, y: 300 }, ...Array.from({ length: n }, (_, i) => ({ id: i + 1, x: 420 + rand() * 300, y: 300 + (rand() - 0.5) * 30 }))];
+        expect(findings(layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec)), `${n} recs, round ${t}`).toEqual([]);
+      }
+    }
+    const row = [{ id: 0, x: 300, y: 300 }, ...Array.from({ length: 5 }, (_, i) => ({ id: i + 1, x: 420 + 40 * i, y: 300 }))];
+    expect(findings(layoutMarkers(row, MARKER_SIZE.seed, MARKER_SIZE.rec))).toEqual([]);
+  });
+
+  it('takes a shorter minimum line for small markers', () => {
+    const pile = Array.from({ length: 6 }, (_, i) => ({ id: i, x: 195, y: 86 }));
+    const loose = layoutMarkers(pile, 38, 28, { gap: 8 });
+    const tight = layoutMarkers(pile, 38, 28, { gap: 8, minLine: 10 });
+    const reach = (items: MarkerItem[]) => Math.max(...items.map((m) => Math.hypot(m.x - items[0].x, m.y - items[0].y)));
+    expect(reach(tight)).toBeLessThan(reach(loose));
   });
 });
 
