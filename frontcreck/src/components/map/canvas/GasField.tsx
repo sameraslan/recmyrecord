@@ -24,6 +24,7 @@ import {
   gasDust,
   gasFenceStale,
   gasGestureActive,
+  gasHeldLapsed,
   gasImageFits,
   gasLiteLod,
   gasLodBias,
@@ -173,6 +174,9 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   const invalidate = useThree((s) => s.invalidate);
   const enabled = gasTextureFits(gl.capabilities.maxTextureSize);
   const loaded = useRef<Partial<Record<StopId, THREE.Texture>>>({});
+  // The stops whose image could not be used and that show plain sky (emptyGas): bound like a loaded stop, but
+  // not a nebula on screen and not a first image the sharper one may follow.
+  const empty = useRef(new Set<StopId>());
   // Strength factor of the dimmed pages, eased like AlbumField's dot alpha; -1 until the first frame.
   const dim = useRef(-1);
   // Pool amount (0 to 1) and its easing; value -1 until the first frame.
@@ -252,6 +256,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     let alive = true;
     const store: Partial<Record<StopId, THREE.Texture>> = {};
     loaded.current = store;
+    const noImage = new Set<StopId>();
+    empty.current = noImage;
     // A stop is "started" from the moment it is scheduled, also while its fetch still waits for an idle slot.
     const started = new Set<StopId>();
     const fetching = new Set<StopId>();
@@ -265,8 +271,9 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     // each began to wait.
     const waiting = new Map<StopId, { g: LoadedGas; since: number }>();
     let quiet: { cancel: () => void } | null = null;
-    // Decoded images that are needed on screen: uploaded one at a time, each once the GPU has caught up.
-    const urgent: [StopId, LoadedGas][] = [];
+    // Decoded images that are needed on screen: uploaded one at a time, each once the GPU has caught up. null
+    // stands for a stop whose image cannot be used (noGas), when that is the first thing this map settles.
+    const urgent: [StopId, LoadedGas | null][] = [];
     let urgentBusy: { cancel: () => void } | null = null;
     let lastUpload = -Infinity;
     let afterPaint: { cancel: () => void } | null = null;
@@ -276,26 +283,48 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     const down = new Set<number>();
     let lastWheel = -Infinity;
     let gestureEnd = -Infinity;
+    // When the last pointer event of any kind was seen (gasHeldLapsed).
+    let lastPointer = -Infinity;
     const onInput = (e: Event) => {
       const now = performance.now();
       lastInput = now;
       if (e.type === "wheel") lastWheel = now;
-      else if (e.type === "pointerdown") down.add((e as PointerEvent).pointerId);
-      else if (e.type === "pointermove") {
+      else if (e.type === "pointerdown") {
+        lastPointer = now;
+        down.add((e as PointerEvent).pointerId);
+      } else if (e.type === "pointermove") {
+        lastPointer = now;
         // A mouse that moves with no button held is not down, whatever became of its pointerup (a button let go
         // outside the window sends none).
         const p = e as PointerEvent;
-        if (p.pointerType === "mouse" && p.buttons === 0 && down.delete(p.pointerId)) gestureEnd = now;
+        if (p.pointerType === "mouse" && p.buttons === 0) {
+          if (down.delete(p.pointerId)) gestureEnd = now;
+        }
+        // A pointer that moves with a button or a finger down is held, also one whose hold had lapsed
+        // (gasHeldLapsed) because it had rested without a single event.
+        else if (p.buttons !== 0) down.add(p.pointerId);
       }
     };
     const onPointerEnd = (e: Event) => {
-      if (down.delete((e as PointerEvent).pointerId)) gestureEnd = performance.now();
+      const now = performance.now();
+      lastPointer = now;
+      if (down.delete((e as PointerEvent).pointerId)) gestureEnd = now;
     };
     const onBlur = () => {
       if (down.size > 0) gestureEnd = performance.now();
       down.clear();
     };
-    const gestureActive = () => gasGestureActive(performance.now(), down.size, lastWheel);
+    const gestureActive = () => {
+      const now = performance.now();
+      // A finger or a pen whose pointerup and pointercancel were both lost would be "held" for good, and the late
+      // images would never go in. Every wait below asks again at least every GAS_UPLOAD_QUIET_MS, so the lapse is
+      // seen within that of its time.
+      if (down.size > 0 && gasHeldLapsed(now, lastPointer)) {
+        down.clear();
+        gestureEnd = now;
+      }
+      return gasGestureActive(now, down.size, lastWheel);
+    };
     /** When the last gesture ended; now, while one is running. */
     const lastGesture = () => (gestureActive() ? performance.now() : Math.max(gestureEnd, lastWheel));
     // 'loading' while any started stop is unsettled, 'ready' once every started stop is in or has failed.
@@ -341,7 +370,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         });
     }
     // The renderer's name, asked once: the call needs an answer from the GPU process, so it is made only when the
-    // GPU has caught up (before the first upload) or the map is quiet (the sharper image's look).
+    // GPU has caught up (behind the fence: before the first upload, or before the first stop is given up as
+    // having no image) or the map is quiet (the sharper image's look).
     let rendererName: string | null = null;
     function renderer(): string {
       if (rendererName === null) {
@@ -365,10 +395,19 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       }
       if (window.__rmr) window.__rmr.gasLite = lite.current;
     }
-    /** The stop's image cannot be used: the stop shows plain sky (emptyGas), and the load is settled. */
+    /** The stop's image cannot be used: the stop shows plain sky (emptyGas), and the load is settled. When the
+     * shader is not chosen yet (this is the first stop the map settles), choosing it asks for the renderer's
+     * name, a call that blocks until the GPU has drawn what is queued; so it waits behind the fence like an
+     * upload, in the same queue. */
     function noGas(stop: StopId): void {
+      if (shaderChosen) takeEmpty(stop);
+      else pushUrgent(stop, null);
+    }
+    function takeEmpty(stop: StopId): void {
+      if (gl.getContext().isContextLost()) return; // the lost-context handler runs next and starts over
       chooseShader();
       store[stop] = emptyGas();
+      noImage.add(stop);
       if (stopsShown(useMapStore.getState().sliderT).includes(stop) || !mesh.visible) invalidate();
       settle();
     }
@@ -472,7 +511,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         },
       };
     }
-    function pushUrgent(stop: StopId, g: LoadedGas): void {
+    function pushUrgent(stop: StopId, g: LoadedGas | null): void {
       urgent.push([stop, g]);
       runUrgent();
     }
@@ -483,8 +522,9 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         () => {
           urgentBusy = null;
           const next = urgent.shift();
-          if (next) take(next[0], next[1]);
-          lastUpload = performance.now();
+          if (next?.[1]) take(next[0], next[1]);
+          else if (next) takeEmpty(next[0]);
+          if (next?.[1]) lastUpload = performance.now();
           runUrgent();
         },
         first ? GAS_FIRST_UPLOAD_CAP_MS : GAS_BUSY_UPLOAD_CAP_MS,
@@ -569,8 +609,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       const nav = navigator as Navigator & { deviceMemory?: number; connection?: { saveData?: boolean } };
       return {
         maxTextureSize: gl.capabilities.maxTextureSize,
-        coarsePointer: typeof window.matchMedia === "function" && window.matchMedia("(pointer: coarse)").matches,
-        maxTouchPoints: navigator.maxTouchPoints ?? 0,
+        finePointer: typeof window.matchMedia === "function" && window.matchMedia("(pointer: fine)").matches,
+        canHover: typeof window.matchMedia === "function" && window.matchMedia("(hover: hover)").matches,
         renderer,
         deviceMemory: nav.deviceMemory,
         saveData: nav.connection?.saveData,
@@ -739,8 +779,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       sharpWait = null;
       if (!alive || lost || sharpAllowed === false) return;
       const s = useMapStore.getState();
-      // Not before every first image this map loads is in: the sharper one never competes with them.
-      const firstIn3 = settled === started.size && STOP_IDS.every((id) => store[id]);
+      // Not before every first image this map loads is in: the sharper one never competes with them. A stop that
+      // shows plain sky because its image failed or was refused is not in: on such a map no sharper image is
+      // loaded (it would put gas on screen only while zoomed in, and plain sky again on release).
+      const firstIn3 = settled === started.size && STOP_IDS.every((id) => store[id] && !noImage.has(id));
       const could = firstIn3
         ? gasSharpWanted({ allowed: true, interactive: s.input.interactive, stop: s.input.stop, sliderT: s.sliderT, ppr: view.current.ppr, texelsPerRaw: images[s.input.stop].first, deep: view.current.deep })
         : null;
@@ -777,7 +819,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       afterPaint = null;
       for (const entry of waiting.values()) disposeGas(entry.g);
       waiting.clear();
-      for (const [, g] of urgent) disposeGas(g);
+      for (const [, g] of urgent) if (g) disposeGas(g);
       urgent.length = 0;
     }
     function rest(): void {
@@ -836,6 +878,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         store[stop]?.dispose();
         delete store[stop];
       }
+      noImage.clear();
       fetching.clear();
       settled = 0;
       firstIn = false;
@@ -864,7 +907,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     return () => {
       alive = false;
       setSharpFlag(undefined);
-      if (window.__rmr) delete window.__rmr.gasLite;
+      if (window.__rmr) {
+        delete window.__rmr.gasLite;
+        delete window.__rmr.gasLiteLod;
+      }
       offFrame();
       idle?.cancel();
       dropWaiting();
@@ -877,6 +923,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       canvas.removeEventListener("webglcontextrestored", onRestored);
       for (const stop of STOP_IDS) store[stop]?.dispose();
       loaded.current = {};
+      empty.current = new Set();
     };
   }, [enabled, gl, invalidate, mesh, material, noise, theme, images]);
 
@@ -889,8 +936,9 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
     mesh.visible = pair !== null;
     if (!pair) return;
-    // When the nebula first showed, on the page clock. Written once; the perf script reports it.
-    if (window.__rmr && window.__rmr.gasShownMs === undefined) window.__rmr.gasShownMs = performance.now();
+    // When the nebula first showed, on the page clock. Written once; the perf script reports it. A stop that
+    // shows plain sky for want of an image is not the nebula.
+    if (window.__rmr && window.__rmr.gasShownMs === undefined && !(empty.current.has(pair.a) && empty.current.has(pair.b))) window.__rmr.gasShownMs = performance.now();
     const u = material.uniforms;
     // The sharper image stands in for its stop's first image wherever that stop is bound, also as one end of a
     // morph, so nothing changes on screen when the slider starts to move.
@@ -943,7 +991,6 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     const ppw = pxPerWorld(zoom, height);
     const cover = coverCssPx(zoom, height);
     u.u_ppr.value = ppw * data.tx.s;
-    if (lite.current) u.u_liteLod.value = gasLiteLod(u.u_bakePpr.value as number, u.u_ppr.value as number, state.viewport.dpr);
     u.u_dust.value = gasDust(cover);
 
     // The dimmed backdrop (Home, About, 404) eases with the dots (AlbumField). With frameloop="demand" the first
@@ -958,6 +1005,11 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     const curve = gasCurve(cover);
     u.u_strength.value = curve.strength * dim.current;
     u.u_deep.value = curve.deep;
+    // The lighter shader's one read: at the screen's resolution, and blurrier as deep zoom takes the detail away.
+    if (lite.current) {
+      u.u_liteLod.value = gasLiteLod(u.u_bakePpr.value as number, u.u_ppr.value as number, state.viewport.dpr, curve.deep, u.u_lodBias.value as number);
+      if (window.__rmr) window.__rmr.gasLiteLod = u.u_liteLod.value as number;
+    }
     view.current.ppr = u.u_ppr.value as number;
     view.current.deep = curve.deep;
 

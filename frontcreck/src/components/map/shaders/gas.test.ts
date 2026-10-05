@@ -33,6 +33,8 @@ import {
   GAS_UPLOAD_GAP_MS,
   GAS_UPLOAD_MAX_WAIT_MS,
   GAS_UPLOAD_QUIET_MS,
+  GAS_HELD_LAPSE_MS,
+  gasHeldLapsed,
   gasLodBias,
   gasRectUniform,
   gasRestingStop,
@@ -329,9 +331,34 @@ describe("texture and noise", () => {
   });
 });
 
+describe("a pointer whose release was never seen", () => {
+  it("stops counting as held once no pointer event of any kind has come for five seconds", () => {
+    expect(GAS_HELD_LAPSE_MS).toBe(5000);
+    // well past a deliberate press and hold, and past the longest wait for a quiet map
+    expect(GAS_HELD_LAPSE_MS).toBeGreaterThanOrEqual(10 * 500);
+    expect(GAS_HELD_LAPSE_MS).toBeGreaterThan(GAS_UPLOAD_MAX_WAIT_MS);
+    expect(gasHeldLapsed(1000, 1000)).toBe(false);
+    expect(gasHeldLapsed(1000 + GAS_HELD_LAPSE_MS - 1, 1000)).toBe(false);
+    expect(gasHeldLapsed(1000 + GAS_HELD_LAPSE_MS, 1000)).toBe(true);
+    // a drag keeps sending moves, so it never lapses however long it lasts
+    for (let now = 0; now <= 60000; now += 16) expect(gasHeldLapsed(now, now - 16)).toBe(false);
+    // no pointer event seen at all
+    expect(gasHeldLapsed(0, -Infinity)).toBe(true);
+  });
+
+  it("then uploads are no longer starved: one pointer down is a gesture, none is not", () => {
+    // what GasField does with it: the set of held pointers is emptied, and with none down and no wheel there is
+    // no gesture, so a quiet map is quiet again
+    expect(gasGestureActive(20000, 1, -Infinity)).toBe(true);
+    expect(gasUploadWait(20000, 0, 0, true)).toBe(GAS_UPLOAD_QUIET_MS);
+    expect(gasGestureActive(20000, 0, -Infinity)).toBe(false);
+    expect(gasUploadWait(20000, 0, 0, false)).toBe(0);
+  });
+});
+
 describe("the sharper image (one stop at a time, desktops with a real GPU)", () => {
   const M1 = "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)";
-  const DESKTOP: GasSharpDevice = { maxTextureSize: 16384, coarsePointer: false, maxTouchPoints: 0, renderer: M1 };
+  const DESKTOP: GasSharpDevice = { maxTextureSize: 16384, finePointer: true, canHover: true, renderer: M1 };
 
   it("reaches ordinary desktops and laptops", () => {
     expect(GAS_SHARP_TEXTURE_PX).toBe(4096);
@@ -344,17 +371,22 @@ describe("the sharper image (one stop at a time, desktops with a real GPU)", () 
     expect(gasSharpBlocked({ ...DESKTOP, renderer: "ANGLE (Intel, Intel(R) UHD Graphics 620 Direct3D11 vs_5_0 ps_5_0, D3D11)", deviceMemory: 8 })).toBeNull();
     // the renderer's name not yet asked for (it needs an answer from the GPU process): judged on the rest
     expect(gasSharpBlocked({ ...DESKTOP, renderer: "" })).toBeNull();
+    // a laptop with a touch screen: its primary pointer is the trackpad (fine, and it hovers). Whether the device
+    // also has a touch screen is not part of the rule: the device carries no field for it.
+    expect(gasSharpBlocked({ ...DESKTOP, finePointer: true, canHover: true, deviceMemory: 8 })).toBeNull();
+    expect(Object.keys(DESKTOP).sort()).toEqual(["canHover", "finePointer", "maxTextureSize", "renderer"]);
   });
 
   it("and nothing else", () => {
     expect(gasSharpBlocked({ ...DESKTOP, maxTextureSize: 2048 })).toBe("textures too small");
-    // a phone or a tablet
-    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: true, maxTouchPoints: 5 })).toBe("touch device");
-    // a phone or a tablet with a mouse or a keyboard cover: the primary pointer reads fine, the touch screen is still there
-    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: false, maxTouchPoints: 5 })).toBe("touch device");
-    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: false, maxTouchPoints: 1 })).toBe("touch device");
-    // a laptop with a touch screen cannot be told from those, and is left out with them
-    expect(gasSharpBlocked({ ...DESKTOP, coarsePointer: false, maxTouchPoints: 10, deviceMemory: 8 })).toBe("touch device");
+    // a phone or a tablet: the primary pointer is a finger, which cannot hover
+    expect(gasSharpBlocked({ ...DESKTOP, finePointer: false, canHover: false })).toBe("touch device");
+    // both halves of the rule are needed: a fine pointer that cannot hover (a stylus on a tablet), and a coarse one
+    // that can (a television remote, a game console)
+    expect(gasSharpBlocked({ ...DESKTOP, finePointer: true, canHover: false })).toBe("touch device");
+    expect(gasSharpBlocked({ ...DESKTOP, finePointer: false, canHover: true })).toBe("touch device");
+    // a tablet with a mouse attached may answer like a laptop; where the browser reports its memory, that decides
+    expect(gasSharpBlocked({ ...DESKTOP, finePointer: true, canHover: true, deviceMemory: 4 })).toBe("little memory");
     expect(gasSharpBlocked({ ...DESKTOP, renderer: "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)" })).toBe("software renderer");
     expect(gasSharpBlocked({ ...DESKTOP, renderer: "llvmpipe (LLVM 15.0.7, 256 bits)" })).toBe("software renderer");
     expect(gasSharpBlocked({ ...DESKTOP, renderer: "Microsoft Basic Render Driver" })).toBe("software renderer");
@@ -619,18 +651,67 @@ describe("the lighter gas for software renderers", () => {
     for (const [open, close] of [["{", "}"], ["(", ")"]]) expect(GAS_FRAGMENT_SHADER_LITE.split(open).length, open).toBe(GAS_FRAGMENT_SHADER_LITE.split(close).length);
   });
 
-  it("reads the mip level nearest the screen's resolution", () => {
-    // the desktop overview: 700 texels against 377 px per raw unit, nearly two texels a px: level 1
-    expect(gasLiteLod(700, 377, 1)).toBe(1);
+  it("reads the mip level of the screen's resolution, as a fraction with no step in it", () => {
+    // the desktop overview: 700 texels against 377 px per raw unit, nearly two texels a px: just under level 1
+    expect(gasLiteLod(700, 377, 1)).toBeCloseTo(Math.log2(700 / 377), 12);
+    expect(Math.round(gasLiteLod(700, 377, 1))).toBe(1);
     // magnified (beside an album, or any zoom past the image's own resolution): level 0, never below
     expect(gasLiteLod(700, 700, 1)).toBe(0);
     expect(gasLiteLod(700, 1609, 1)).toBe(0);
     expect(gasLiteLod(700, 9000, 2)).toBe(0);
     // a phone's opening view at device pixel ratio 2: 700 texels against 2 x 110 px
-    expect(gasLiteLod(700, 110, 2)).toBe(2);
-    expect(gasLiteLod(700, 110, 1)).toBe(3);
+    expect(gasLiteLod(700, 110, 2)).toBeCloseTo(Math.log2(700 / 220), 12);
+    expect(Math.round(gasLiteLod(700, 110, 2))).toBe(2);
+    expect(Math.round(gasLiteLod(700, 110, 1))).toBe(3);
     expect(gasLiteLod(700, 0, 1)).toBeGreaterThanOrEqual(0);
     expect(Number.isFinite(gasLiteLod(700, 0, 1))).toBe(true);
     expect(gasLiteLod(NaN, 100, 1)).toBe(0);
+    // No step while the map zooms: over a zoom from the overview to past the image's resolution in steps of 1%,
+    // the level never moves by more than the 1% is worth (log2 1.01), where a rounded level jumps by a whole one.
+    let last = gasLiteLod(700, 100, 1);
+    for (let ppr = 100; ppr <= 1600; ppr *= 1.01) {
+      const lod = gasLiteLod(700, ppr, 1);
+      expect(Math.abs(lod - last), `at ${ppr.toFixed(0)} px per raw unit`).toBeLessThanOrEqual(Math.log2(1.01) + 1e-9);
+      expect(lod).toBeLessThanOrEqual(last);
+      last = lod;
+    }
+    // The lighter shader reads its image with this level in one textureLod, and the image's filter is trilinear
+    // (GasField loadGas: LinearMipmapLinearFilter with mips), which is what makes a fraction a blend of two levels.
+    expect(GAS_FRAGMENT_SHADER_LITE.match(/u_liteLod/g)).toHaveLength(2);
+  });
+
+  it("in deep zoom reads a blurrier level, rising with the same ease as the fade, at no extra read", () => {
+    const bias = gasLodBias(700, 1.6); // a first image: about -0.87
+    const blurred = (GAS_DEEP_LOD[0] + GAS_DEEP_LOD[1]) / 2 + bias;
+    // 32 px covers and closer: the image is magnified, so out of deep zoom the level is 0
+    expect(gasLiteLod(700, 3000, 1, 0, bias)).toBe(0);
+    // full deep zoom: the middle of the two levels the full shader's blurred copy is the mean of
+    expect(gasLiteLod(700, 5000, 1, 1, bias)).toBeCloseTo(blurred, 12);
+    expect(blurred).toBeGreaterThan(4);
+    // the sharper image and the first image blur as wide on screen: their levels differ by their resolutions
+    expect(gasLiteLod(1280, 5000, 1, 1, gasLodBias(1280, 1.6)) - gasLiteLod(700, 5000, 1, 1, bias)).toBeCloseTo(Math.log2(1280 / 700), 12);
+    // it rises with deep, strictly and without a step, all the way through deep zoom (gasCurve's own ease)
+    let last = -1;
+    for (let cover = GAS_BAND_COVERS_PX; cover <= GAS_DEEP_END_PX; cover += 0.25) {
+      const deep = gasCurve(cover).deep;
+      const lod = gasLiteLod(700, 3000 * (cover / 32), 1, deep, bias);
+      if (cover > GAS_BAND_COVERS_PX) {
+        expect(lod, `at ${cover} px covers`).toBeGreaterThan(last);
+        expect(lod - last, `at ${cover} px covers`).toBeLessThan(0.2);
+      }
+      last = lod;
+    }
+    expect(last).toBeCloseTo(blurred, 12);
+    expect(gasLiteLod(700, 3000, 1, 0.5, bias)).toBeCloseTo(blurred / 2, 12);
+    // never sharper for being deeper, also where the screen's own level is already past the blurred one
+    expect(gasLiteLod(700, 10, 1, 1, bias)).toBe(gasLiteLod(700, 10, 1, 0, bias));
+    expect(gasLiteLod(700, 10, 1, 0, bias)).toBeGreaterThan(blurred);
+    // deep outside 0 to 1 or not a number: clamped, never a level that is not a number
+    expect(gasLiteLod(700, 3000, 1, 2, bias)).toBeCloseTo(blurred, 12);
+    expect(gasLiteLod(700, 3000, 1, -1, bias)).toBe(0);
+    expect(gasLiteLod(700, 3000, 1, NaN, bias)).toBe(0);
+    expect(Number.isFinite(gasLiteLod(700, 3000, 1, 1, NaN))).toBe(true);
+    // still one read per image: the shader's text has the single textureLod it had
+    expect(GAS_FRAGMENT_SHADER_LITE.match(/texture2D\(|textureLod\(|texelFetch\(|texture\(/g)).toEqual(["textureLod("]);
   });
 });

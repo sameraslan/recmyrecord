@@ -199,6 +199,22 @@ export function gasGestureActive(now: number, pointersDown: number, lastWheel: n
   return pointersDown > 0 || now - lastWheel < GAS_UPLOAD_QUIET_MS;
 }
 
+/** When no pointer event of any kind (down, move, up, cancel, from any pointer) has been seen for this long, the
+ * pointers that went down are no longer taken to be held. The browser owes a pointerup or a pointercancel for
+ * every pointerdown, but if both are ever lost for a finger or a pen (a mouse heals itself: GasField drops it on
+ * a move with no button), "held" would last until the window lost focus and the late images would never be
+ * uploaded. Five seconds is ten times a long press (recognised after about half a second) and longer than anyone
+ * rests a pointer dead still on purpose in the middle of a drag. A pointer that really is held still for longer
+ * gets at most the waiting uploads, while nothing on the map moves, and counts as held again with its next move
+ * (GasField: a move with a button or a finger down). */
+export const GAS_HELD_LAPSE_MS = 5000;
+
+/** True when the pointers that are down may no longer be taken to be held: `lastPointerEvent` is when the last
+ * pointer event of any kind was seen. */
+export function gasHeldLapsed(now: number, lastPointerEvent: number): boolean {
+  return now - lastPointerEvent >= GAS_HELD_LAPSE_MS;
+}
+
 /** True when an image has waited for a quiet map since `since` for as long as it may. `lastGesture` is when the
  * last gesture ended, or `now` while one is running (gasGestureActive): the wait starts again from there, so the
  * cap never puts an upload inside a drag or a zoom, nor into the moment one ends. */
@@ -226,10 +242,10 @@ export const GAS_SHARP_MIN_MEMORY_GB = 8;
 export interface GasSharpDevice {
   /** The GPU's largest texture side. */
   maxTextureSize: number;
-  /** `(pointer: coarse)`: the primary pointer is a finger. */
-  coarsePointer: boolean;
-  /** navigator.maxTouchPoints: 0 on a device with no touch screen. */
-  maxTouchPoints: number;
+  /** `(pointer: fine)`: the primary pointer is a mouse or a trackpad, not a finger. */
+  finePointer: boolean;
+  /** `(hover: hover)`: the primary pointer can rest over things without pressing them. */
+  canHover: boolean;
   /** The renderer's name (WEBGL_debug_renderer_info), or "" when it is not known or not to be judged. */
   renderer: string;
   /** navigator.deviceMemory in GB, where the browser reports it (Chrome does; Safari and Firefox do not). */
@@ -242,10 +258,12 @@ export interface GasSharpDevice {
  * Why the sharper image may not be used on this device, or null when it may. It is for ordinary desktops and
  * laptops and nothing else. The rule, all of it:
  *   1. the GPU takes textures of GAS_SHARP_TEXTURE_PX (4096) px;
- *   2. the primary pointer is fine (a mouse or a trackpad, not a finger) AND the device has no touch screen at
- *      all (maxTouchPoints is 0), so a phone or a tablet with a mouse or a keyboard cover attached, which reports
- *      a fine pointer, is still left out. A laptop with a touch screen is left out with them: it cannot be told
- *      from a tablet with a keyboard, and the cost of guessing wrong is a phone's memory budget;
+ *   2. the primary pointer is fine (a mouse or a trackpad, not a finger) AND it can hover: `(pointer: fine)` and
+ *      `(hover: hover)`. A phone or a tablet answers coarse and no hover and is left out. A laptop with a touch
+ *      screen answers fine and hover (its primary pointer is the trackpad) and gets the sharper image; whether the
+ *      device also has a touch screen is not asked. A tablet used with a mouse or a trackpad cover may answer the
+ *      same as that laptop; rule 4 is what then stands between it and the sharper image, where the browser
+ *      reports memory;
  *   3. the renderer is a real GPU, not a software one (which would pay for the upload and show no more);
  *   4. where the browser reports the device's memory, it is at least GAS_SHARP_MIN_MEMORY_GB (8). A browser that
  *      does not report it passes this test;
@@ -254,7 +272,7 @@ export interface GasSharpDevice {
  */
 export function gasSharpBlocked(d: GasSharpDevice): string | null {
   if (d.maxTextureSize < GAS_SHARP_TEXTURE_PX) return "textures too small";
-  if (d.coarsePointer || d.maxTouchPoints > 0) return "touch device";
+  if (!d.finePointer || !d.canHover) return "touch device";
   if (gasSoftwareRenderer(d.renderer)) return "software renderer";
   if (d.deviceMemory !== undefined && d.deviceMemory < GAS_SHARP_MIN_MEMORY_GB) return "little memory";
   if (d.saveData) return "save data";
@@ -522,10 +540,12 @@ export const GAS_FRAGMENT_SHADER = /* glsl */ `
 /**
  * The lighter gas for software renderers only (gasSoftwareRenderer), where the CPU shades every pixel of every
  * frame and the full shader made frame gaps longer than the site had before the gas. It keeps what shows the
- * nebula and drops what costs reads: one read of the image at a stop and two between stops (from the one mip
- * level nearest the screen's resolution, u_liteLod, worked out once per frame), no glow reads (the glow's light is
- * added from the same read), no noise octaves, no blurred copy in deep zoom and no grain. The zoom bands, the
- * dust, the pool, the deep zoom fade and its loss of colour are the full shader's.
+ * nebula and drops what costs reads: one read of the image at a stop and two between stops (at the mip level of
+ * the screen's resolution, u_liteLod, a fraction worked out once per frame and read with the texture's own
+ * trilinear filter), no glow reads (the glow's light is added from the same read), no noise octaves and no grain.
+ * The zoom bands, the dust, the pool, the deep zoom fade and its loss of colour are the full shader's. In deep
+ * zoom the gas also loses its detail and goes out of focus as in the full shader, by the same one read: its mip
+ * level rises with u_deep to the full shader's blurred copy (gasLiteLod), so there is no second read for it.
  */
 export const GAS_FRAGMENT_SHADER_LITE = /* glsl */ `
   precision highp float;
@@ -533,7 +553,7 @@ export const GAS_FRAGMENT_SHADER_LITE = /* glsl */ `
   uniform sampler2D u_gasA;
   uniform sampler2D u_gasB;
   uniform float u_mix;
-  uniform float u_liteLod;    // the mip level nearest one texel per screen px (gasLiteLod)
+  uniform float u_liteLod;    // the mip level to read: the screen's resolution, rising in deep zoom (gasLiteLod)
   uniform vec4 u_rectA;
   uniform vec4 u_rectB;
   uniform float u_strength;
@@ -583,9 +603,19 @@ export const GAS_FRAGMENT_SHADER_LITE = /* glsl */ `
  * text is GAS_FRAGMENT_SHADER unchanged, so a GPU compiles exactly what it did before the lighter one existed. */
 export const GAS_FRAGMENT_SOURCE = `#ifdef GAS_LITE\n${GAS_FRAGMENT_SHADER_LITE}\n#else\n${GAS_FRAGMENT_SHADER}\n#endif\n`;
 
-/** The mip level the lighter shader reads: the one nearest one texel per device px, never under 0. `texelsPerRaw`
- * is the image's, `pxPerRaw` the screen's in CSS px. */
-export function gasLiteLod(texelsPerRaw: number, pxPerRaw: number, dpr: number): number {
-  const lod = Math.round(Math.log2(texelsPerRaw / Math.max(pxPerRaw * dpr, 1e-6)));
-  return Number.isFinite(lod) ? Math.max(0, lod) : 0;
+/**
+ * The mip level the lighter shader reads, as a fraction (the image's filter is trilinear, so the one read blends
+ * the two levels around it and the sharpness never changes in a step while the map zooms).
+ * Out of deep zoom it is the level with one texel per device px, never under 0: `texelsPerRaw` is the image's,
+ * `pxPerRaw` the screen's in CSS px. In deep zoom it rises with `deep` (gasCurve, 0 to 1) to the middle of the two
+ * levels the full shader blurs to (GAS_DEEP_LOD, moved by `lodBias`, gasLodBias of the image), so the gas loses
+ * its detail and its focus on the same ease as its strength and colour, at no extra read. Never lower for a
+ * larger `deep`.
+ */
+export function gasLiteLod(texelsPerRaw: number, pxPerRaw: number, dpr: number, deep = 0, lodBias = 0): number {
+  const screen = Math.log2(texelsPerRaw / Math.max(pxPerRaw * dpr, 1e-6));
+  const base = Number.isFinite(screen) ? Math.max(0, screen) : 0;
+  const blurred = Math.max(base, (GAS_DEEP_LOD[0] + GAS_DEEP_LOD[1]) / 2 + (Number.isFinite(lodBias) ? lodBias : 0));
+  const k = Number.isFinite(deep) ? Math.min(1, Math.max(0, deep)) : 0;
+  return base + (blurred - base) * k;
 }

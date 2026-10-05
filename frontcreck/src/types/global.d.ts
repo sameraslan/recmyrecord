@@ -30,6 +30,9 @@ declare global {
       /** True when the gas is drawn with the lighter shader (a software renderer), false with the full one. Set
        * when the first image of a map goes in; absent before that and when no gas layer is mounted. */
       gasLite?: boolean;
+      /** The mip level the lighter shader read in the last drawn frame (a fraction; it rises in deep zoom). Absent
+       * with the full shader. */
+      gasLiteLod?: number;
       /** Eased pool amount of the last drawn frame: 0 with no album open, 1 fully dimmed around the open one. */
       gasPool?: number;
       /** Deep zoom amount of the last drawn frame: 0 up to 32 px covers, 1 once covers are 56 px or larger. */

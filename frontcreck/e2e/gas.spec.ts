@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import sharp from 'sharp';
 import { COPY } from '../src/lib/copy';
 import { isPhone, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet } from './helpers';
@@ -210,8 +210,9 @@ interface Gesture {
   uploadsAtEnd: number;
   /** Every gap between two animation frames while the gesture ran, ms. */
   gaps: number[];
-  /** When the gesture began, and every texture upload of any kind (the map's own cover sheets among them) and
-   * every long task inside it, for the message of a failed check. */
+  /** When the gesture began and ended, and every texture upload of any kind (the map's own cover sheets among
+   * them) and every long task that began inside it or ran into it, for the message of a failed check and for the
+   * test's attachments. */
   other: string[];
 }
 
@@ -231,7 +232,9 @@ async function installGestures(page: Page): Promise<void> {
       stripLog: StripUpload[];
       onFence: (() => void) | null;
       onStrip: (() => void) | null;
-      run: { stop: boolean; done: Promise<void>; uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[] } | null;
+      /** Every texture upload and long task of the page, with when it began and how long it took. */
+      seen: { at: number; ms: number; what: string }[];
+      run: { stop: boolean; done: Promise<void>; uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[]; from: number; to: number } | null;
       start: (kind: 'drag' | 'wheel') => void;
       stop: () => Promise<{ uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[] }>;
     }
@@ -239,6 +242,7 @@ async function installGestures(page: Page): Promise<void> {
       uploads: 0,
       strips: 0,
       stripLog: [],
+      seen: [],
       onFence: null,
       onStrip: null,
       run: null,
@@ -249,7 +253,7 @@ async function installGestures(page: Page): Promise<void> {
         const cy = r.top + r.height / 2;
         const fire = (t: string, x: number, y: number) =>
           c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0, buttons: t === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
-        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[], other: [`began at ${Math.round(performance.now())} ms`] };
+        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[], other: [] as string[], from: performance.now(), to: Infinity };
         g.run = run;
         if (kind === 'drag') fire('pointerdown', cx, cy);
         run.done = (async () => {
@@ -264,6 +268,7 @@ async function installGestures(page: Page): Promise<void> {
             last = now;
           }
           run.uploadsAtEnd = g.uploads + g.strips;
+          run.to = performance.now();
           if (kind === 'drag') fire('pointerup', cx, cy);
         })();
       },
@@ -271,6 +276,15 @@ async function installGestures(page: Page): Promise<void> {
         const run = g.run!;
         run.stop = true;
         await run.done;
+        // A long task is reported after it ends, in a task of its own: give the last one time to be reported.
+        // (The gesture is over and its counts are taken; nothing that is measured waits on this.)
+        await new Promise((res) => setTimeout(res, 50));
+        const inside = g.seen.filter((e) => e.at + e.ms >= run.from && e.at <= run.to);
+        run.other = [
+          `gesture from ${Math.round(run.from)} to ${Math.round(run.to)} ms`,
+          ...inside.map((e) => `${e.what} at ${Math.round(e.at)} ms, ${Math.round(e.ms)} ms`),
+          ...(inside.length === 0 ? ['no texture upload and no long task'] : []),
+        ];
         return { uploadsAtStart: run.uploadsAtStart, uploadsAtEnd: run.uploadsAtEnd, gaps: run.gaps, other: run.other };
       },
     };
@@ -283,7 +297,7 @@ async function installGestures(page: Page): Promise<void> {
         const t0 = performance.now();
         const out = orig.apply(this, a);
         const sized = src as { width?: number; height?: number } | null;
-        if (g.run && !g.run.stop) g.run.other.push(`${fn} ${sized?.width ?? '?'} x ${sized?.height ?? '?'} at ${Math.round(t0)} ms, ${Math.round(performance.now() - t0)} ms`);
+        g.seen.push({ at: t0, ms: performance.now() - t0, what: `${fn} ${sized?.width ?? '?'} x ${sized?.height ?? '?'}` });
         if (src instanceof ImageBitmap) {
           if (Math.max(src.width, src.height) === 2048) g.uploads += 1;
           else if (widths.includes(src.width)) {
@@ -301,7 +315,7 @@ async function installGestures(page: Page): Promise<void> {
     // long tasks on the main thread, for the message of a failed frame gap check
     if (PerformanceObserver.supportedEntryTypes?.includes('longtask')) {
       new PerformanceObserver((list) => {
-        for (const e of list.getEntries()) if (g.run && !g.run.stop) g.run.other.push(`long task at ${Math.round(e.startTime)} ms, ${Math.round(e.duration)} ms`);
+        for (const e of list.getEntries()) g.seen.push({ at: e.startTime, ms: e.duration, what: 'long task' });
       }).observe({ type: 'longtask' });
     }
     const fence = P.fenceSync;
@@ -320,13 +334,26 @@ const gestureCounts = (page: Page): Promise<{ uploads: number; strips: number }>
     const g = (window as unknown as GestureWindow).__gesture;
     return { uploads: g.uploads, strips: g.strips };
   });
-const stopGesture = (page: Page): Promise<Gesture> => page.evaluate(() => (window as unknown as GestureWindow).__gesture.stop());
+/** What a gesture saw, for a failure message: its frame gaps, and every texture upload and long task inside it. */
+const told = (g: Gesture): string => `gaps ${g.gaps.map(Math.round).join(' ')}; ${g.other.join('; ')}`;
+/** Ends the running gesture and writes what it saw to a file in the test's output folder
+ * (test-results/playwright/<test>/gesture-<n>-<label>.json), attached to the test, whether or not a check then
+ * fails, so that a failure that does not come back can still be read. */
+async function stopGesture(page: Page, info: TestInfo, label: string): Promise<Gesture> {
+  const g = await page.evaluate(() => (window as unknown as GestureWindow).__gesture.stop());
+  const n = info.attachments.filter((a) => a.name.startsWith('gesture-')).length + 1;
+  const name = `gesture-${n}-${label.replace(/[^a-z0-9]+/gi, '-')}.json`;
+  const file = info.outputPath(name);
+  fs.writeFileSync(file, JSON.stringify({ label, uploadsInside: g.uploadsAtEnd - g.uploadsAtStart, worstGapMs: Math.max(...g.gaps.slice(1)), ...g }, null, 1));
+  await info.attach(name, { path: file, contentType: 'application/json' });
+  return g;
+}
 /** The same gesture with nothing waiting to be uploaded, for `ms`: the frame gaps a gesture has by itself. */
-async function controlGesture(page: Page, kind: 'drag' | 'wheel', ms: number): Promise<Gesture> {
+async function controlGesture(page: Page, info: TestInfo, kind: 'drag' | 'wheel', ms: number): Promise<Gesture> {
   await waitForMapQuiet(page, 400);
   await page.evaluate((k) => (window as unknown as GestureWindow).__gesture.start(k), kind);
   await page.waitForTimeout(ms);
-  return stopGesture(page);
+  return stopGesture(page, info, `control ${kind}`);
 }
 /** The longest frame gap of a gesture, leaving out its first frame (which starts at a random point of a vsync). */
 const worstGap = (g: Gesture): number => Math.max(...g.gaps.slice(1));
@@ -335,7 +362,7 @@ const worstGap = (g: Gesture): number => Math.max(...g.gaps.slice(1));
  * take what two runs of the same drag differ by on this renderer. */
 function expectGapsOfControl(got: Gesture, control: Gesture): void {
   expect(got.gaps.length, 'frames in the gesture').toBeGreaterThan(3);
-  expect(worstGap(got), `longest frame gap with an image waiting (control ${Math.round(worstGap(control))} ms; gaps ${got.gaps.map(Math.round).join(' ')}; inside the gesture: ${got.other.join('; ')})`).toBeLessThanOrEqual(worstGap(control) * 1.25 + 17);
+  expect(worstGap(got), `longest frame gap with an image waiting. THE GESTURE: ${told(got)}. THE CONTROL: ${told(control)}`).toBeLessThanOrEqual(worstGap(control) * 1.25 + 17);
 }
 
 test('the gas is drawn behind the albums at the overview, and nothing draws at rest', async ({ page }, info) => {
@@ -888,13 +915,13 @@ test('a drag that begins while a late image waits behind the GPU fence gets no u
   late.release();
   await expect.poll(() => page.evaluate(() => (window as unknown as { __gesture: { run: unknown } }).__gesture.run !== null), { timeout: 15_000 }).toBe(true);
   await page.waitForTimeout(1200);
-  const drag = await stopGesture(page);
-  expect(drag.uploadsAtEnd - drag.uploadsAtStart, 'gas uploads inside the drag').toBe(0);
+  const drag = await stopGesture(page, info, 'drag begun at the fence');
+  expect(drag.uploadsAtEnd - drag.uploadsAtStart, `gas uploads inside the drag. ${told(drag)}`).toBe(0);
   expect(drag.uploadsAtStart).toBe(1);
   // Left alone, both go in.
   await waitForMap(page);
   expect((await gestureCounts(page)).uploads).toBe(3);
-  expectGapsOfControl(drag, await controlGesture(page, 'drag', 1200));
+  expectGapsOfControl(drag, await controlGesture(page, info, 'drag', 1200));
   expect(errors).toEqual([]);
 });
 
@@ -916,11 +943,11 @@ test('a drag or a wheel zoom held longer than the longest wait gets no upload un
     // well past it.
     await page.waitForTimeout(5500);
     expect(await page.evaluate(() => window.__rmr!.gas)).toBe('loading');
-    const held = await stopGesture(page);
-    expect(held.uploadsAtEnd - held.uploadsAtStart, `gas uploads inside the ${kind}`).toBe(0);
+    const held = await stopGesture(page, info, `${kind} held 5.5 s`);
+    expect(held.uploadsAtEnd - held.uploadsAtStart, `gas uploads inside the ${kind}. ${told(held)}`).toBe(0);
     await waitForMap(page);
     expect((await gestureCounts(page)).uploads).toBe(3);
-    expectGapsOfControl(held, await controlGesture(page, kind, 5500));
+    expectGapsOfControl(held, await controlGesture(page, info, kind, 5500));
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   }
   expect(errors).toEqual([]);
@@ -954,7 +981,7 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
       const cam = api.getCamera();
       api.setCamera({ ...cam, zoom: cam.zoom * 3 }, false);
     });
-    await controlGesture(page, 'drag', 2100);
+    await controlGesture(page, info, 'drag', 2100);
     await waitForMapQuiet(page, 800);
     expect((await gestureCounts(page)).strips).toBe(0);
     // After the third strip: 'fence' begins the drag in the task that asks for the next strip's fence (the map
@@ -971,14 +998,14 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
     release();
     await expect.poll(() => page.evaluate(() => (window as unknown as { __gesture: { run: unknown } }).__gesture.run !== null), { timeout: 30_000 }).toBe(true);
     await page.waitForTimeout(1200);
-    const drag = await stopGesture(page);
-    expect(drag.uploadsAtEnd - drag.uploadsAtStart, `strips inside the drag (begun at a ${when})`).toBe(0);
+    const drag = await stopGesture(page, info, `drag begun at a ${when}`);
+    expect(drag.uploadsAtEnd - drag.uploadsAtStart, `strips inside the drag (begun at a ${when}). ${told(drag)}`).toBe(0);
     expect(await page.evaluate(() => window.__rmr!.gasSharp), 'the image is still on its way').toBe('loading');
     // Left alone, the rest goes in and the image is used.
     await expect.poll(() => page.evaluate(() => window.__rmr!.gasSharp), { timeout: 30_000 }).toBe('balanced');
     expect((await gestureCounts(page)).strips).toBe(16);
     await waitForMapQuiet(page, 400);
-    expectGapsOfControl(drag, await controlGesture(page, 'drag', 1200));
+    expectGapsOfControl(drag, await controlGesture(page, info, 'drag', 1200));
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   }
   expect(errors).toEqual([]);
@@ -1356,8 +1383,24 @@ test('a software renderer draws the gas with the lighter shader: the same nebula
   await waitForCameraIdle(page);
   await waitForMapQuiet(page, 400);
   expect(await page.evaluate(() => window.__rmr!.gasLite)).toBe(false);
+  expect(await page.evaluate(() => window.__rmr!.gasLiteLod), 'the full shader has no such level').toBeUndefined();
   const full = await picture();
   await shot(page, info, 'gas-full-shader');
+  /** In Rainbows at 32 px covers times `k`: 1.25 is 40 px covers, a little over half way into deep zoom. */
+  const deepView = async (k: number): Promise<void> => {
+    await page.evaluate((id) => window.__rmr!.map!.flyTo(id), IN_RAINBOWS);
+    await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+    await waitForCameraIdle(page);
+    await page.evaluate((f) => {
+      const api = window.__rmr!.map!;
+      const cam = api.getCamera();
+      api.setCamera({ ...cam, zoom: cam.zoom * f }, false);
+    }, k);
+    await waitForCameraIdle(page);
+    await waitForMapQuiet(page, 300);
+  };
+  await deepView(1.25);
+  await shot(page, info, 'gas-full-shader-deep');
 
   // Then as the app chooses for this renderer.
   await page.addInitScript(() => {
@@ -1371,6 +1414,12 @@ test('a software renderer draws the gas with the lighter shader: the same nebula
   expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
   const light = await picture();
   await shot(page, info, 'gas-lighter-shader');
+  // Its one read is at the screen's resolution: a fraction of a level at the overview (1440 x 900: the first
+  // image has more texels than the screen has px), not a whole number.
+  const lodOverview = (await page.evaluate(() => window.__rmr!.gasLiteLod))!;
+  expect(lodOverview).toBeGreaterThan(0.3);
+  expect(lodOverview).toBeLessThan(2);
+  expect(Math.abs(lodOverview - Math.round(lodOverview)), 'not rounded to a level').toBeGreaterThan(0.01);
   // The same nebula: every patch within a few levels of the full shader's (which adds a blurred glow and grain).
   expect(Math.max(...full), 'the patches show gas').toBeGreaterThan(SKY_LUMA * 3);
   light.forEach((v, i) => expect(Math.abs(v - full[i]), `patch ${i}: ${full[i].toFixed(1)} full, ${v.toFixed(1)} lighter`).toBeLessThan(Math.max(4, full[i] * 0.12)));
@@ -1378,15 +1427,33 @@ test('a software renderer draws the gas with the lighter shader: the same nebula
   await page.waitForTimeout(1200);
   expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
 
-  // Deep zoom: the gas still fades to a faint remnant at full-size covers.
+  // Deep zoom: the gas still fades to a faint remnant at full-size covers, and loses its detail on the way: the
+  // one read moves to a blurrier level as deep zoom goes on (magnified, so level 0 until deep zoom begins).
   await page.evaluate((id) => window.__rmr!.map!.flyTo(id), IN_RAINBOWS);
   await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
   await waitForCameraIdle(page);
   const at32 = await page.evaluate(() => window.__rmr!.map!.getCamera());
+  expect(await page.evaluate(() => window.__rmr!.gasDeep)).toBe(0);
+  expect(await page.evaluate(() => window.__rmr!.gasLiteLod), 'no blur before deep zoom').toBe(0);
+  const lods: number[] = [];
+  for (const k of [1.1, 1.25, 1.5]) {
+    await page.evaluate((c) => window.__rmr!.map!.setCamera(c, false), { ...at32, zoom: at32.zoom * k });
+    await waitForCameraIdle(page);
+    await waitForMapQuiet(page, 300);
+    if (k === 1.25) await shot(page, info, 'gas-lighter-shader-deep');
+    lods.push((await page.evaluate(() => window.__rmr!.gasLiteLod))!);
+  }
   await page.evaluate((c) => window.__rmr!.map!.setCamera({ ...c, zoom: c.zoom * 2 }, false), at32);
   await waitForCameraIdle(page);
   await waitForMapQuiet(page, 300);
   await expect.poll(() => page.evaluate(() => window.__rmr!.gasDeep)).toBe(1);
+  lods.push((await page.evaluate(() => window.__rmr!.gasLiteLod))!);
+  expect(lods[0], `levels through deep zoom: ${lods.map((l) => l.toFixed(2)).join(', ')}`).toBeGreaterThan(0.5);
+  for (let i = 1; i < lods.length; i++) expect(lods[i], `levels through deep zoom: ${lods.map((l) => l.toFixed(2)).join(', ')}`).toBeGreaterThan(lods[i - 1] + 0.3);
+  // at full deep zoom: the middle of the full shader's two blurred levels (4.5 and 6) for a first image, whose
+  // levels sit 0.8 to 0.9 lower than the prototype's bake
+  expect(lods[lods.length - 1]).toBeGreaterThan(4);
+  expect(lods[lods.length - 1]).toBeLessThan(4.7);
   const bare = await barePoint(page, 60);
   expect(bare, 'a point of bare map at full zoom').not.toBeNull();
   const seed64 = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
@@ -1440,6 +1507,133 @@ test('a software renderer draws the gas with the lighter shader: the same nebula
   f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
   await page.waitForTimeout(1200);
   expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('a laptop with a touch screen gets the sharper image: the rule asks for a fine pointer that hovers, not for a device without touch', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the phone project is a touch device with a coarse pointer');
+  test.setTimeout(90_000);
+  await forceSharp(page); // lifts only the software renderer's rule
+  await page.addInitScript(() => {
+    // what a laptop with a touch screen reports: ten touch points beside a trackpad
+    Object.defineProperty(Navigator.prototype, 'maxTouchPoints', { get: () => 10 });
+  });
+  await page.goto('/map');
+  await page.waitForFunction(() => window.__rmr?.gasSharp !== undefined, null, { timeout: 20_000 });
+  expect(await page.evaluate(() => [navigator.maxTouchPoints, matchMedia('(pointer: fine)').matches, matchMedia('(hover: hover)').matches])).toEqual([10, true, true]);
+  expect(await sharpFlag(page), 'not ruled out when the gas layer mounts').toBe('waiting');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await zoomIn(page);
+  await expect.poll(() => sharpFlag(page), { timeout: 45_000 }).toBe('balanced');
+});
+
+test('a finger whose release is never seen does not hold the late images back for good: they go in once no pointer event has come for five seconds', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  test.setTimeout(60_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const late = await holdLateGas(page);
+  await countGasUploads(page);
+  await page.goto('/map');
+  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+  await waitForMapQuiet(page, 300);
+  expect(await gasUploads(page)).toBe(1);
+  // A finger goes down and neither its pointerup nor its pointercancel ever arrives. Sent to the page, not to the
+  // map's canvas: the gas listens on the window, and the map itself must not begin a drag it would never end.
+  const downAt = await page.evaluate(() => {
+    document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'touch', pointerId: 7, isPrimary: true, button: 0, buttons: 1, clientX: 400, clientY: 20 }));
+    return performance.now();
+  });
+  late.release();
+  await expect.poll(() => late.arrived()).toBe(2);
+  // Held: three seconds on, both images are decoded and neither is uploaded (without the hold they go in within
+  // half a second of arriving on a quiet map).
+  await page.waitForFunction((t) => performance.now() - t >= 3000, downAt);
+  expect(await gasUploads(page), 'while the finger still counts as held').toBe(1);
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('loading');
+  // Five seconds after the last pointer event the hold lapses and both go in, one at a time.
+  await expect.poll(() => page.evaluate(() => window.__rmr!.gas), { timeout: 10_000 }).toBe('ready');
+  const at = await page.evaluate(() => (window as unknown as { __gasUploadAt: number[] }).__gasUploadAt);
+  expect(at).toHaveLength(3);
+  expect(at[1] - downAt, 'not before the five seconds are over').toBeGreaterThanOrEqual(5000);
+  expect(at[1] - downAt, 'and soon after').toBeLessThan(8000);
+  expect(at[2] - at[1], 'never two uploads in one frame').toBeGreaterThanOrEqual(30);
+  expect(errors).toEqual([]);
+});
+
+test('a first image that fails before anything is uploaded does not ask the GPU for its name ahead of the fence, is not the nebula, and gets no sharper image', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  test.setTimeout(60_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const sharpRequests: string[] = [];
+  page.on('request', (r) => {
+    if (SHARP_IMAGE.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
+  });
+  await forceSharp(page);
+  await page.addInitScript(() => {
+    // As the app chooses for this renderer (this file's beforeEach asks for the full shader, which needs no name).
+    delete window.__rmrGasLite;
+    // How many fences had been asked for, and how many textures uploaded, each time the renderer's name was asked.
+    const w = window as unknown as { __nameAsked: { fences: number; uploads: number }[] };
+    w.__nameAsked = [];
+    let fences = 0;
+    let uploads = 0;
+    const P = WebGL2RenderingContext.prototype as unknown as Record<string, (...a: unknown[]) => unknown>;
+    const fence = P.fenceSync;
+    P.fenceSync = function (this: unknown, ...a: unknown[]) {
+      fences += 1;
+      return fence.apply(this, a);
+    };
+    for (const fn of ['texImage2D', 'texSubImage2D']) {
+      const orig = P[fn];
+      P[fn] = function (this: unknown, ...a: unknown[]) {
+        const src = a[a.length - 1];
+        if (src instanceof ImageBitmap && Math.max(src.width, src.height) === 2048) uploads += 1; // a gas image
+        return orig.apply(this, a);
+      };
+    }
+    const ext = P.getExtension;
+    P.getExtension = function (this: unknown, ...a: unknown[]) {
+      if (a[0] === 'WEBGL_debug_renderer_info') w.__nameAsked.push({ fences, uploads });
+      return ext.apply(this, a);
+    };
+  });
+  // The stop the map opens on has no image: the first thing the gas settles is a failure.
+  await page.route(`**${gasPath('balanced')}`, (route) => route.fulfill({ status: 404, body: 'gone' }));
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 400);
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+  expect(await page.evaluate(() => window.__rmr!.gasLite), 'the shader was still chosen for this renderer').toBe(true);
+  // The name was asked once, behind a fence (the call blocks until the GPU has drawn what is queued, which on
+  // this renderer is the map's whole first frame), and before any gas image was uploaded.
+  const asked = await page.evaluate(() => (window as unknown as { __nameAsked: { fences: number; uploads: number }[] }).__nameAsked);
+  expect(asked).toHaveLength(1);
+  expect(asked[0].fences, 'fences asked for before the name was').toBeGreaterThanOrEqual(1);
+  expect(asked[0].uploads).toBe(0);
+  // Balanced shows plain sky, which is not the nebula: its first frame is not stamped.
+  const vp = page.viewportSize()!;
+  const middle = { x: vp.width / 2 - 150, y: vp.height / 2 - 150, w: 300, h: 300 };
+  expect(await lumaAt(page, middle, 0.5)).toBeLessThan(SKY_LUMA * 2);
+  expect(await page.evaluate(() => window.__rmr!.gasShownMs)).toBeUndefined();
+  // Zoomed in and left alone, where a sharper image would be wanted: none is asked for, for this stop or any.
+  await zoomIn(page);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 400);
+  await page.waitForTimeout(2500);
+  expect(sharpRequests).toEqual([]);
+  expect(await sharpFlag(page)).toBe('waiting');
+  expect(await lumaAt(page, middle, 0.5), 'still plain sky, zoomed in').toBeLessThan(SKY_LUMA * 2);
+  // A stop whose image is right shows its gas, and that frame is the nebula's first.
+  await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForMapQuiet(page, 400);
+  expect(typeof (await page.evaluate(() => window.__rmr!.gasShownMs))).toBe('number');
+  await page.waitForTimeout(2500);
+  expect(sharpRequests, 'no sharper image on a map with a stop that has no first image').toEqual([]);
   expect(errors).toEqual([]);
 });
 
