@@ -74,6 +74,15 @@ The record of the investigation is `experiments/audio_10k/REPORT.md`. The result
 
 Audio is never stored. A preview clip is downloaded into memory, decoded, embedded and dropped. Full-length audio from YouTube goes to a temporary folder, its 30-second windows are embedded, and the file is deleted whatever happens. Only embeddings are kept, in a local cache that is gitignored. Nothing fetches rateyourmusic.com.
 
+## Where each album's status is tracked
+
+`data-pipeline/audio/album_status.csv`: one row for each of the 10,467 albums, in catalog order. It says which store listing the album is matched to, how many clips each model has and where they came from (Deezer, Apple, YouTube), whether it is an edge case (under-covered, few long tracks, short previews, wrong listing pending, a listing shared with another album), what happened to its YouTube link, and two derived columns:
+
+- `state`: `done` (4 or more clips, or full-length windows, for both models), `partial`, `no_audio`.
+- `next_step`: `none`, `embed`, `reembed` (wrong listing pending), `youtube_link` (no audio, the sheet's link not tried yet), `youtube_search` (no audio, no usable link), `youtube_full_length` (an edge case on preview audio), `none_available`.
+
+The counts are in `data-pipeline/audio/album_status.md`. Both files are written by `python -m rmr_audio.album_status` from the catalog, `matches.csv`, `match_overrides.json`, `fulllength.csv` and the local clip cache, which is the only source for "has embeddings". They are a snapshot: run the command again after any audio job. The rules are one function, `decide`, in `data-pipeline/rmr_audio/album_status.py`.
+
 ## Where things are
 
 Committed on the branch:
@@ -88,6 +97,7 @@ Committed on the branch:
 | `data-pipeline/catalog/albums.csv` | The catalog |
 | `data-pipeline/audio/keys.csv`, `matches.csv`, `match_overrides.json` | Keys, one match row per album, hand corrections |
 | `data-pipeline/audio/fulllength.csv` | Outcome of each full-length fetch |
+| `data-pipeline/audio/album_status.csv`, `album_status.md` | One row per album with its state and next step, and the counts |
 | `data-pipeline/audio/clap/` | The CLAP store |
 
 Local only, gitignored, on the laptop that ran the work:
@@ -115,6 +125,7 @@ nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength                   # Yo
 nice -n 19 .venv/bin/python -m rmr_audio.modelstore write                   # the CLAP store from the cache
 nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap
 .venv/bin/python scripts/stage1_report.py                                   # the stage 1 numbers
+.venv/bin/python -m rmr_audio.album_status                                  # audio/album_status.csv and .md: every album's state
 .venv-audio/bin/python -m pytest tests_audio && .venv/bin/python -m pytest  # tests, no network
 ```
 

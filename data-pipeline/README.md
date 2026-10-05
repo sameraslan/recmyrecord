@@ -87,6 +87,10 @@ nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength --models effnet,clap,c
 
 `run --models clap_mp3` takes, per album, the clips that are ok for `clap` (the clips its mean is over), downloads each once and embeds it for the variant only: EffNet and `clap` are not computed, the EffNet child is not started, and no `effnet` or `clap` row is written. A `clap` clip whose preview the store no longer lists is recorded as `no_preview` ("gone") and the next track in the usual order stands in; the run prints both counts. `--check-baseline` also embeds each fetched clip for `clap` and prints its cosine with the stored vector, without storing it. A new album is embedded with `--models effnet,clap,clap_mp3`: one download per clip.
 
+#### Where each album stands
+
+`audio/album_status.csv` has one row per catalog album: its listing, its ok clips per model and the source its mean is taken from, its flags, and a `state` (`done`, `partial`, `no_audio`) and a `next_step`. `audio/album_status.md` has the counts. `.venv/bin/python -m rmr_audio.album_status` writes both from the catalog, `matches.csv`, `match_overrides.json`, `fulllength.csv` and the clip cache (read-only; it fails without it), and gives the same bytes for the same inputs, so run it again after any audio job. The columns and the rules are in the module's docstring.
+
 ### The block
 
 `block = ((e / |e|) - mean) @ components.T * scale`, where `e` is the album's stored embedding. The transform is a PCA fitted on the catalog (last on the eight-clip means of the 3,980 albums). `scale` gives the block the total variance the 13 Spotify columns had on the fitted albums (`target_total_variance`, 0.3905), so the slider stops keep their meaning.
