@@ -29,6 +29,7 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
 | `npm run test:e2e` | Playwright end-to-end and accessibility tests at desktop and phone sizes, plus a run with WebGL turned off. Builds and serves the site on port 3100 first. `E2E_DEV=1 npm run test:e2e` runs them against a dev server instead. |
 | `npm run perf` | Measures the performance budgets of the design spec (section 7) at 1440 x 900 and 390 x 844, in software and GPU rendering, and fails when a budget is missed. Needs a build. |
 | `npm run shots` | Screenshots of every reviewed state at 1440 x 900, 1280 x 800 and 390 x 844, written to `test-results/review/`. Needs a build. Pass part of a name to shoot only some, for example `npm run shots -- d1440-d1`. |
+| `npm run theme` | Bakes the map theme into `public/data/theme/`: the gas of each slider stop as three images, plus `theme.json`. Uses Playwright's own Chromium on software rendering. Run it after `albums.json` or `positions.json` change (see "Map theme data"). |
 
 ## How it works
 
@@ -44,6 +45,27 @@ Routes:
 One map stays mounted in the root layout for every route (`src/components/map/`). It is a WebGL point-sprite map ported from an earlier map of the same catalog. three.js loads on the client after first paint, cover sheets load only when zoom reaches the point where covers show, and the canvas draws only when something changes. Without WebGL the map shows a short message while search, lists and links keep working.
 
 App state (current stop, focus, hover, selection and the trail of visited albums) lives in one Zustand store, `src/lib/store.ts`. Every visible string, including labels read by screen readers, is in `src/lib/copy.ts`.
+
+## Map theme data
+
+The gas behind the albums is painted once, at build time, not in the visitor's browser. `npm run theme` starts one headless Chromium on software WebGL and writes four files to `public/data/theme/`, which are committed:
+
+- `gas-sonic.webp`, `gas-balanced.webp`, `gas-mood.webp`: the gas of each slider stop, 2048 px square.
+- `theme.json`: for every album its colour family and the gas brightness under it at each stop, plus the region names and where they sit.
+
+It reads `public/data/albums.json`, `public/data/positions.json` and two input files in `../data-pipeline/theme/` (`weights.json` and `regions.json`, described in that folder's README). It changes none of them.
+
+### When the theme goes stale
+
+The baked files describe one album list and one set of layouts. `theme.json` records which: `n` is the album count and `positionsHash` is the first 12 hex characters of the SHA-256 of `positions.json`. When the album count or `positions.json` changes, the committed theme no longer matches the data and `npm test` fails in `src/lib/data/theme.data.test.ts`, in the test named "was built for the committed albums and layouts (run npm run theme after either changes)". The inputs have their own guard: in `../data-pipeline`, `.venv/bin/python -m rmr_pipeline.theme --check` and `tests/test_theme.py` fail when the albums were added, removed or reordered, or when the layouts moved, and `npm run theme` refuses to run until they pass.
+
+To bake again:
+
+1. Refresh the inputs, following `../data-pipeline/theme/README.md`. Its last step is `cd ../data-pipeline && .venv/bin/python -m rmr_pipeline.theme`.
+2. `npm run theme`, on arm64 Node with nothing else heavy running.
+3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit the four files in `public/data/theme/`.
+
+A stale or missing theme never breaks the map for a visitor: the map checks the album count, and without a matching theme it shows plain sky.
 
 ## Deployment
 

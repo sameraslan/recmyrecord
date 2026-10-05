@@ -16,7 +16,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "perf": "node scripts/perf/perf.mjs",
-    "shots": "node scripts/review-shots.mjs"
+    "shots": "node scripts/review-shots.mjs",
+    "theme": "node scripts/theme/build-theme.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.1",
@@ -43,6 +44,7 @@
     "eslint-config-next": "16.3.8",
     "jsdom": "29.1.1",
     "postcss": "8.5.28",
+    "sharp": "0.35.5",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
     "vitest": "4.1.11"
