@@ -16,6 +16,14 @@ Branch `feat/trifid-theme` (draft PR 47, stacked on draft PR 32). Tracking issue
 
 ### Part 1 closing
 
+**Closed on 2026-10-05.** The ledger says "Task 6: complete" with three parked items, each owed before the owner's final review:
+
+* The final `npm run perf` and the software frames rerun on the closing build were not taken (the laptop was on battery). The two commands are in section 10 of `docs/design/trifid-theme/reviews/app-perf-part1.md`. Every timing in that file is of commit `37906968`, one small fix before the closing head.
+* One gas browser test, "a drag that begins between two strips of a sharper image", fails its frame gap bound in about 4 of 10 runs on the software test renderer, and a cloud run saw the sharper image never finish in that test. No upload was ever seen inside the gesture, and on the real GPU the same case measured one frame in 10 of 10. It is not a path a visitor takes (software renderers never load the sharper image), but the test is unreliable: make it deterministic or measure the gap on a real GPU only.
+* Rows still worse than today's site and not explained, all inside budget: software desktop search usable (189 ms against 121), slider to list at dpr 2 (19 against 6), gpu phone morph gap (24 against 18), and a startup task of 50 ms or more in 6 of 11 loads against 1 of 11. Part 3 task 9 must explain or fix them in an old against new comparison on the laptop.
+
+What follows describes the state before closing, kept for the record.
+
 **Update, 2026-10-05: the original session on the owner's laptop is finishing this. Other sessions must not redo it.** Parts 2 and 3 were started as cloud sessions before the closing pass ended. They proceed with their own steps and leave part 1's open list alone. Two sessions push to this branch, so fetch and rebase before every push and never force push. The original session only touches `docs/design/trifid-theme/reviews/`, this note, the part 1 ledger, and at most a last small gas fix in `GasField.tsx`, `shaders/gas.ts` or `e2e/gas.spec.ts`.
 
 **Cloud sessions and speed.** The baseline and every part 1 timing were taken on the owner's M1 Pro with headless Chrome on the real GPU. A cloud machine very likely has no GPU and a different CPU, so its numbers cannot be compared with the baseline and the GPU rows may not be measurable there. In the cloud, compare old and new builds in turn for relative cost and say so. The comparison against the baseline, the hover measure and real GPU captures for parts 2 and 3 still have to be run on the laptop before the owner is shown a final result.
