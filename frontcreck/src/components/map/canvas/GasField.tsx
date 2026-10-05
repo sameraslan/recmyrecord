@@ -23,6 +23,7 @@ import {
   focusPool,
   gasCurve,
   gasDust,
+  gasGestureActive,
   gasImageFits,
   gasLodBias,
   gasNoise,
@@ -137,7 +138,8 @@ function emptySharpTexture(width: number, height: number): THREE.Texture {
  * the first is on screen (or at once when the slider asks); the dimmed backdrop loads only the stop it shows.
  * An image that is needed on screen is uploaded once the GPU has finished the frames already asked of it. One
  * that is not is uploaded only in a quiet moment, never during a pan, a zoom, a hover or a camera move, and one
- * at a time; if no quiet moment comes for four seconds it goes in at the next idle moment.
+ * at a time; if no quiet moment comes for four seconds it goes in at the next idle moment, but never while a
+ * pointer is down or a wheel or pinch zoom is running.
  * On a desktop with a real GPU the stop the slider rests at then gets its sharper image (the prototype's
  * resolution), once all three first images are in: fetched at a quiet moment, decoded off the main thread, sent
  * to the GPU in strips, each in its own quiet moment, and swapped in with one frame. Only one sharper image is
@@ -245,9 +247,33 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     let lastUpload = -Infinity;
     let afterPaint: { cancel: () => void } | null = null;
     let lastInput = -Infinity;
-    const onInput = () => {
-      lastInput = performance.now();
+    // Gestures: the pointers that are down (a drag, a pinch), the last wheel event (a wheel zoom, a trackpad
+    // pinch), and when the last gesture ended.
+    const down = new Set<number>();
+    let lastWheel = -Infinity;
+    let gestureEnd = -Infinity;
+    const onInput = (e: Event) => {
+      const now = performance.now();
+      lastInput = now;
+      if (e.type === "wheel") lastWheel = now;
+      else if (e.type === "pointerdown") down.add((e as PointerEvent).pointerId);
+      else if (e.type === "pointermove") {
+        // A mouse that moves with no button held is not down, whatever became of its pointerup (a button let go
+        // outside the window sends none).
+        const p = e as PointerEvent;
+        if (p.pointerType === "mouse" && p.buttons === 0 && down.delete(p.pointerId)) gestureEnd = now;
+      }
     };
+    const onPointerEnd = (e: Event) => {
+      if (down.delete((e as PointerEvent).pointerId)) gestureEnd = performance.now();
+    };
+    const onBlur = () => {
+      if (down.size > 0) gestureEnd = performance.now();
+      down.clear();
+    };
+    const gestureActive = () => gasGestureActive(performance.now(), down.size, lastWheel);
+    /** When the last gesture ended; now, while one is running. */
+    const lastGesture = () => (gestureActive() ? performance.now() : Math.max(gestureEnd, lastWheel));
     // 'loading' while any started stop is unsettled, 'ready' once every started stop is in or has failed.
     function flag(): void {
       if (alive) setGasFlag(settled === started.size ? "ready" : "loading");
@@ -399,30 +425,42 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         Math.max(0, lastUpload + GAS_UPLOAD_GAP_MS - performance.now()),
       );
     }
-    const quietFor = () => gasUploadWait(performance.now(), lastInput, frameAt.current);
+    const quietFor = () => gasUploadWait(performance.now(), lastInput, frameAt.current, gestureActive());
     /** Uploads one waiting stop once the map is quiet, else looks again when it may be. One upload per quiet
      * moment, so two images that arrive together never share a frame. An image that has waited too long (the
-     * visitor never stops moving) goes in at the next idle moment instead, and the others' clocks restart. */
+     * visitor's pointer never rests) goes in at the next idle moment instead, and the others' clocks restart;
+     * never inside a drag, a wheel zoom or a pinch (gasUploadOverdue). The upload sits behind the GPU fence like
+     * every other, and whether it may go in is asked again as the first thing after that wait. */
     function pump(): void {
       if (!alive || quiet !== null || waiting.size === 0) return;
       const [stop, entry] = waiting.entries().next().value!;
-      const overdue = gasUploadOverdue(performance.now(), entry.since);
-      const wait = quietFor();
-      if (wait > 0 && !overdue) {
-        quiet = later(pump, Math.min(wait, Math.max(0, entry.since + GAS_UPLOAD_MAX_WAIT_MS - performance.now())));
+      const may = () => quietFor() === 0 || gasUploadOverdue(performance.now(), entry.since, lastGesture());
+      if (!may()) {
+        const capIn = Math.max(entry.since, lastGesture()) + GAS_UPLOAD_MAX_WAIT_MS - performance.now();
+        quiet = later(pump, Math.max(1, Math.min(quietFor(), capIn)));
         return;
       }
       quiet = whenIdle(
         () => {
-          if (!alive || waiting.get(stop) !== entry) return pump();
-          if (quietFor() > 0 && !gasUploadOverdue(performance.now(), entry.since)) return pump();
-          waiting.delete(stop);
-          if (overdue) for (const other of waiting.values()) other.since = performance.now();
-          pushUrgent(stop, entry.g);
-          if (waiting.size > 0) quiet = later(pump, GAS_UPLOAD_GAP_MS);
+          if (!alive || waiting.get(stop) !== entry || !may()) return pump();
+          quiet = whenGpuDone(
+            () => {
+              quiet = null;
+              // The wait behind the fence was 34 to 100 ms: a drag, a zoom or a hover can have begun in it.
+              if (!alive || waiting.get(stop) !== entry || urgentBusy || !may()) return pump();
+              waiting.delete(stop);
+              if (quietFor() > 0) for (const other of waiting.values()) other.since = performance.now();
+              take(stop, entry.g);
+              lastUpload = performance.now();
+              if (waiting.size > 0) quiet = later(pump, GAS_UPLOAD_GAP_MS);
+            },
+            GAS_BUSY_UPLOAD_CAP_MS,
+            // never two uploads in one frame
+            Math.max(0, lastUpload + GAS_UPLOAD_GAP_MS - performance.now()),
+          );
         },
-        // Idle time may never come while the visitor keeps the map moving on a slow renderer.
-        overdue ? 200 : undefined,
+        // Idle time may never come while the pointer keeps moving on a slow renderer.
+        quietFor() > 0 ? 200 : undefined,
       );
     }
     /** The slider asked for another stop. Of the images that wait, those the morph will show are uploaded
@@ -562,6 +600,9 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
                   () => {
                     step = null;
                     if (dead) return;
+                    // The wait behind the fence was 34 to 100 ms: a drag, a zoom or a hover can have begun in
+                    // it. Then this strip (and with the last one the mip build) waits for the next quiet moment.
+                    if (quietFor() > 0) return next();
                     if (gl.getContext().isContextLost()) return; // the lost-context handler cancels this load
                     if (i < 0) gl.initTexture(texture);
                     else {
@@ -709,7 +750,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     canvas.addEventListener("webglcontextrestored", onRestored);
     // Input anywhere on the page counts: a hover over the map, a wheel zoom, a drag, the keyboard.
     const INPUTS = ["pointerdown", "pointermove", "wheel", "keydown", "touchmove"] as const;
+    const ENDS = ["pointerup", "pointercancel"] as const;
     for (const type of INPUTS) window.addEventListener(type, onInput, { capture: true, passive: true });
+    for (const type of ENDS) window.addEventListener(type, onPointerEnd, { capture: true, passive: true });
+    window.addEventListener("blur", onBlur);
     // The end of every drawn frame counts too (useFrame below stamps its start): a slow frame is not a quiet map.
     const offFrame = addAfterEffect(() => {
       frameAt.current = performance.now();
@@ -723,6 +767,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       dropWaiting();
       dropSharp();
       for (const type of INPUTS) window.removeEventListener(type, onInput, { capture: true });
+      for (const type of ENDS) window.removeEventListener(type, onPointerEnd, { capture: true });
+      window.removeEventListener("blur", onBlur);
       unsubscribe();
       canvas.removeEventListener("webglcontextlost", onLost);
       canvas.removeEventListener("webglcontextrestored", onRestored);

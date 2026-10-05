@@ -39,6 +39,7 @@ import {
   gasUploadOverdue,
   gasUploadWait,
   gasTextureFits,
+  gasGestureActive,
   gasImageFits,
   gasUrl,
   stopMix,
@@ -209,6 +210,35 @@ describe("gasUploadWait (when a gas image that is not on screen may be uploaded)
   it("never lets an upload through while input keeps coming", () => {
     // a drag: an input event every 16 ms
     for (let now = 0; now < 3000; now += 16) expect(gasUploadWait(now + 8, now, now)).toBeGreaterThan(200);
+  });
+});
+
+describe("gestures (nothing is uploaded while the visitor has hold of the map)", () => {
+  it("is a gesture while a pointer is down, and for a quiet period after each wheel event", () => {
+    expect(gasGestureActive(5000, 0, -Infinity)).toBe(false);
+    expect(gasGestureActive(5000, 1, -Infinity)).toBe(true);
+    expect(gasGestureActive(5000, 2, -Infinity)).toBe(true); // a pinch
+    expect(gasGestureActive(5000, 0, 4990)).toBe(true);
+    expect(gasGestureActive(5000, 0, 5000 - GAS_UPLOAD_QUIET_MS + 1)).toBe(true);
+    expect(gasGestureActive(5000, 0, 5000 - GAS_UPLOAD_QUIET_MS)).toBe(false);
+  });
+
+  it("is never quiet during a gesture, even with no input and no frame (a button held still)", () => {
+    expect(gasUploadWait(5000, 1000, 1200, true)).toBeGreaterThan(0);
+    expect(gasUploadWait(5000, -Infinity, -Infinity, true)).toBe(GAS_UPLOAD_QUIET_MS);
+    expect(gasUploadWait(5000, 1000, 1200, false)).toBe(0);
+  });
+
+  it("never lets the longest wait put an upload inside a gesture, and starts the wait again when one ends", () => {
+    // a drag that has lasted ten seconds: `lastGesture` is now, so nothing is ever overdue
+    for (let now = 0; now <= 10000; now += 250) expect(gasUploadOverdue(now, 0, now)).toBe(false);
+    // the drag ended at 10 s: not at once, but GAS_UPLOAD_MAX_WAIT_MS later if the map is still never quiet
+    expect(gasUploadOverdue(10001, 0, 10000)).toBe(false);
+    expect(gasUploadOverdue(10000 + GAS_UPLOAD_MAX_WAIT_MS - 1, 0, 10000)).toBe(false);
+    expect(gasUploadOverdue(10000 + GAS_UPLOAD_MAX_WAIT_MS, 0, 10000)).toBe(true);
+    // a gesture that ended before the image began to wait changes nothing
+    expect(gasUploadOverdue(9000, 5000, 1000)).toBe(true);
+    expect(gasUploadOverdue(8999, 5000, 1000)).toBe(false);
   });
 });
 

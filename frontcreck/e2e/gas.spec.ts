@@ -183,6 +183,124 @@ const stopBusy = (page: Page): Promise<void> =>
     await b.done;
   });
 
+interface Gesture {
+  /** Gas uploads (first images and strips of a sharper one) counted when the gesture began and in its last frame. */
+  uploadsAtStart: number;
+  uploadsAtEnd: number;
+  /** Every gap between two animation frames while the gesture ran, ms. */
+  gaps: number[];
+}
+
+/**
+ * Installs, before the page loads: a count of every gas upload (first images by their longer side of 2048 px,
+ * strips of a sharper image by its width, whichever way the strip is cut), `__gesture.start(kind)` which begins a
+ * gesture in the very task it is called in (a drag with the button down, or a run of wheel events, one event per
+ * frame until `__gesture.stop()`), and two one-shot hooks: `__onFence`, called the next time the map asks the GPU
+ * for a fence (the wait every upload sits behind), and `__onStrip`, called inside the next strip upload.
+ */
+async function installGestures(page: Page): Promise<void> {
+  const sharpWidths = (Object.keys(THEME.gas) as Stop[]).map((s) => THEME.gas[s].sharp[0]);
+  await page.addInitScript((widths) => {
+    interface G {
+      uploads: number;
+      strips: number;
+      onFence: (() => void) | null;
+      onStrip: (() => void) | null;
+      run: { stop: boolean; done: Promise<void>; uploadsAtStart: number; uploadsAtEnd: number; gaps: number[] } | null;
+      start: (kind: 'drag' | 'wheel') => void;
+      stop: () => Promise<{ uploadsAtStart: number; uploadsAtEnd: number; gaps: number[] }>;
+    }
+    const g: G = {
+      uploads: 0,
+      strips: 0,
+      onFence: null,
+      onStrip: null,
+      run: null,
+      start(kind) {
+        const c = document.querySelector<HTMLCanvasElement>('canvas.map-canvas')!;
+        const r = c.getBoundingClientRect();
+        const cx = r.left + r.width / 2;
+        const cy = r.top + r.height / 2;
+        const fire = (t: string, x: number, y: number) =>
+          c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0, buttons: t === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
+        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[] };
+        g.run = run;
+        if (kind === 'drag') fire('pointerdown', cx, cy);
+        run.done = (async () => {
+          const t0 = performance.now();
+          let last = t0;
+          while (!run.stop) {
+            const k = (performance.now() - t0) / 2000;
+            if (kind === 'drag') fire('pointermove', cx + Math.sin(k * 6.28) * 140, cy + Math.cos(k * 6.28) * 100);
+            else c.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: cx + 60, clientY: cy - 40, deltaY: Math.floor(k) % 2 === 0 ? -12 : 12 }));
+            const now = await new Promise<number>((res) => requestAnimationFrame(() => res(performance.now())));
+            run.gaps.push(now - last);
+            last = now;
+          }
+          run.uploadsAtEnd = g.uploads + g.strips;
+          if (kind === 'drag') fire('pointerup', cx, cy);
+        })();
+      },
+      async stop() {
+        const run = g.run!;
+        run.stop = true;
+        await run.done;
+        return { uploadsAtStart: run.uploadsAtStart, uploadsAtEnd: run.uploadsAtEnd, gaps: run.gaps };
+      },
+    };
+    (window as unknown as { __gesture: G }).__gesture = g;
+    const P = WebGL2RenderingContext.prototype as unknown as Record<string, (...a: unknown[]) => unknown>;
+    for (const fn of ['texImage2D', 'texSubImage2D']) {
+      const orig = P[fn];
+      P[fn] = function (this: unknown, ...a: unknown[]) {
+        const src = a[a.length - 1];
+        const out = orig.apply(this, a);
+        if (src instanceof ImageBitmap) {
+          if (Math.max(src.width, src.height) === 2048) g.uploads += 1;
+          else if (widths.includes(src.width)) {
+            g.strips += 1;
+            const hook = g.onStrip;
+            g.onStrip = null;
+            hook?.();
+          }
+        }
+        return out;
+      };
+    }
+    const fence = P.fenceSync;
+    P.fenceSync = function (this: unknown, ...a: unknown[]) {
+      const out = fence.apply(this, a);
+      const hook = g.onFence;
+      g.onFence = null;
+      hook?.();
+      return out;
+    };
+  }, sharpWidths);
+}
+type GestureWindow = { __gesture: { uploads: number; strips: number; onFence: (() => void) | null; onStrip: (() => void) | null; start: (kind: 'drag' | 'wheel') => void; stop: () => Promise<Gesture> } };
+const gestureCounts = (page: Page): Promise<{ uploads: number; strips: number }> =>
+  page.evaluate(() => {
+    const g = (window as unknown as GestureWindow).__gesture;
+    return { uploads: g.uploads, strips: g.strips };
+  });
+const stopGesture = (page: Page): Promise<Gesture> => page.evaluate(() => (window as unknown as GestureWindow).__gesture.stop());
+/** The same gesture with nothing waiting to be uploaded, for `ms`: the frame gaps a gesture has by itself. */
+async function controlGesture(page: Page, kind: 'drag' | 'wheel', ms: number): Promise<Gesture> {
+  await waitForMapQuiet(page, 400);
+  await page.evaluate((k) => (window as unknown as GestureWindow).__gesture.start(k), kind);
+  await page.waitForTimeout(ms);
+  return stopGesture(page);
+}
+/** The longest frame gap of a gesture, leaving out its first frame (which starts at a random point of a vsync). */
+const worstGap = (g: Gesture): number => Math.max(...g.gaps.slice(1));
+/** An upload inside a gesture would add its whole main-thread time to one frame: on the test browser's software
+ * renderer 60 ms and more for a first image. A gesture with no upload in it has the control's frame gaps, give or
+ * take what two runs of the same drag differ by on this renderer. */
+function expectGapsOfControl(got: Gesture, control: Gesture): void {
+  expect(got.gaps.length, 'frames in the gesture').toBeGreaterThan(3);
+  expect(worstGap(got), `longest frame gap with an image waiting (control ${Math.round(worstGap(control))} ms)`).toBeLessThanOrEqual(worstGap(control) * 1.25 + 17);
+}
+
 test('the gas is drawn behind the albums at the overview, and nothing draws at rest', async ({ page }, info) => {
   test.skip(isPhone(info), 'the gas checks use the desktop framing');
   const requested: string[] = [];
@@ -665,4 +783,105 @@ test('an image of another bake is refused: that stop shows plain sky, never gas 
   const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
   await page.waitForTimeout(1200);
   expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBeLessThanOrEqual(1);
+});
+
+test('a drag that begins while a late image waits behind the GPU fence gets no upload, and has the frame gaps of a drag with nothing waiting', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  test.setTimeout(60_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const late = await holdLateGas(page);
+  await installGestures(page);
+  await page.goto('/map');
+  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+  await waitForMapQuiet(page, 400);
+  expect((await gestureCounts(page)).uploads, 'only the stop on screen is uploaded so far').toBe(1);
+  // The map is quiet, so a late image that arrives now is cleared for upload and waits only for the GPU fence
+  // (34 to 100 ms). The drag begins in the very task that asks for that fence.
+  await page.evaluate(() => {
+    const g = (window as unknown as GestureWindow).__gesture;
+    g.onFence = () => g.start('drag');
+  });
+  late.release();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __gesture: { run: unknown } }).__gesture.run !== null), { timeout: 15_000 }).toBe(true);
+  await page.waitForTimeout(1200);
+  const drag = await stopGesture(page);
+  expect(drag.uploadsAtEnd - drag.uploadsAtStart, 'gas uploads inside the drag').toBe(0);
+  expect(drag.uploadsAtStart).toBe(1);
+  // Left alone, both go in.
+  await waitForMap(page);
+  expect((await gestureCounts(page)).uploads).toBe(3);
+  expectGapsOfControl(drag, await controlGesture(page, 'drag', 1200));
+  expect(errors).toEqual([]);
+});
+
+test('a drag or a wheel zoom held longer than the longest wait gets no upload until it ends', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  for (const kind of ['drag', 'wheel'] as const) {
+    const late = await holdLateGas(page);
+    await installGestures(page);
+    await page.goto('/map');
+    await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+    await waitForMapQuiet(page, 400);
+    await page.evaluate((k) => (window as unknown as GestureWindow).__gesture.start(k), kind);
+    late.release();
+    await expect.poll(() => late.arrived()).toBe(2);
+    // Both images are decoded and waiting. 4 s is the longest an image waits for a quiet map; the gesture goes on
+    // well past it.
+    await page.waitForTimeout(5500);
+    expect(await page.evaluate(() => window.__rmr!.gas)).toBe('loading');
+    const held = await stopGesture(page);
+    expect(held.uploadsAtEnd - held.uploadsAtStart, `gas uploads inside the ${kind}`).toBe(0);
+    await waitForMap(page);
+    expect((await gestureCounts(page)).uploads).toBe(3);
+    expectGapsOfControl(held, await controlGesture(page, kind, 5500));
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  }
+  expect(errors).toEqual([]);
+});
+
+test('a drag that begins between two strips of a sharper image, or inside one, gets no further strip', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the sharper image is for desktops');
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.addInitScript(() => {
+    window.__rmrGasSharp = 'force';
+  });
+  await installGestures(page);
+  for (const when of ['fence', 'strip'] as const) {
+    await page.goto('/map');
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    await page.evaluate(() => {
+      const api = window.__rmr!.map!;
+      const cam = api.getCamera();
+      api.setCamera({ ...cam, zoom: cam.zoom * 3 }, false);
+    });
+    // After the third strip: 'fence' begins the drag in the task that asks for the next strip's fence (the map
+    // was found quiet a moment before), 'strip' begins it inside the fourth strip's upload call.
+    await page.evaluate((w) => {
+      const g = (window as unknown as GestureWindow).__gesture;
+      const arm = () => {
+        if (g.strips < 3) return void (g.onStrip = arm);
+        if (w === 'fence') g.onFence = () => g.start('drag');
+        else g.onStrip = () => g.start('drag');
+      };
+      g.onStrip = arm;
+    }, when);
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __gesture: { run: unknown } }).__gesture.run !== null), { timeout: 30_000 }).toBe(true);
+    await page.waitForTimeout(1200);
+    const drag = await stopGesture(page);
+    expect(drag.uploadsAtEnd - drag.uploadsAtStart, `strips inside the drag (begun at a ${when})`).toBe(0);
+    expect(await page.evaluate(() => window.__rmr!.gasSharp), 'the image is still on its way').toBe('loading');
+    // Left alone, the rest goes in and the image is used.
+    await expect.poll(() => page.evaluate(() => window.__rmr!.gasSharp), { timeout: 30_000 }).toBe('balanced');
+    expect((await gestureCounts(page)).strips).toBe(16);
+    await waitForMapQuiet(page, 400);
+    expectGapsOfControl(drag, await controlGesture(page, 'drag', 1200));
+  }
+  expect(errors).toEqual([]);
 });

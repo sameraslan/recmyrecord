@@ -174,8 +174,10 @@ export function gasStopsToStart(current: StopId, interactive: boolean): StopId[]
 export const GAS_UPLOAD_QUIET_MS = 250;
 /** Two uploads are at least this far apart (two frames at 60 a second), so they never share a frame. */
 export const GAS_UPLOAD_GAP_MS = 34;
-/** A visitor who never stops moving would never get the late images. After this long an image stops waiting
- * for a quiet map and goes in at the next idle moment between input events (one image, then the clock restarts). */
+/** A visitor whose pointer never rests would never get the late images. After this long an image stops waiting
+ * for a quiet map and goes in at the next idle moment between input events (one image, then the clock restarts).
+ * Never inside a gesture: while a pointer is down or a wheel or pinch zoom is running nothing is uploaded, however
+ * long it lasts, and the clock starts again when the gesture ends (gasUploadOverdue). */
 export const GAS_UPLOAD_MAX_WAIT_MS = 4000;
 /** How long an image that is needed on screen waits for the GPU to finish the frames already asked of it: the
  * first image of a map (nothing is on screen yet, and a software renderer needs a few hundred ms for the map's
@@ -183,18 +185,30 @@ export const GAS_UPLOAD_MAX_WAIT_MS = 4000;
 export const GAS_FIRST_UPLOAD_CAP_MS = 1500;
 export const GAS_BUSY_UPLOAD_CAP_MS = 100;
 
-/** True when an image has waited for a quiet map since `since` for as long as it may. */
-export function gasUploadOverdue(now: number, since: number): boolean {
-  return now - since >= GAS_UPLOAD_MAX_WAIT_MS;
+/** True while the visitor has hold of the map: a pointer is down (a drag, or a pinch with two fingers), or a
+ * wheel event (a wheel zoom, or a pinch on a trackpad, which arrives as wheel events) came within the last
+ * GAS_UPLOAD_QUIET_MS. */
+export function gasGestureActive(now: number, pointersDown: number, lastWheel: number): boolean {
+  return pointersDown > 0 || now - lastWheel < GAS_UPLOAD_QUIET_MS;
+}
+
+/** True when an image has waited for a quiet map since `since` for as long as it may. `lastGesture` is when the
+ * last gesture ended, or `now` while one is running (gasGestureActive): the wait starts again from there, so the
+ * cap never puts an upload inside a drag or a zoom, nor into the moment one ends. */
+export function gasUploadOverdue(now: number, since: number, lastGesture = -Infinity): boolean {
+  return now - Math.max(since, lastGesture) >= GAS_UPLOAD_MAX_WAIT_MS;
 }
 
 /**
  * How long (ms) the upload of a gas image that is not on screen must still wait: until GAS_UPLOAD_QUIET_MS have
- * passed since the last pointer, wheel or key input and since the last frame the map drew. 0 means now. The
- * upload and its mip build run on the main thread (about 10 ms on a GPU, a few hundred on a software renderer),
- * so they must not land inside a pan, a zoom, a hover or a camera move.
+ * passed since the last pointer, wheel or key input and since the last frame the map drew, and never while a
+ * gesture is running (`gesture`, gasGestureActive: a finger or a button held still on the map draws nothing and
+ * sends nothing, and is still not a quiet map). 0 means now. The upload and its mip build run on the main thread
+ * (about 10 ms on a GPU, a few hundred on a software renderer), so they must not land inside a pan, a zoom, a
+ * hover or a camera move.
  */
-export function gasUploadWait(now: number, lastInput: number, lastFrame: number): number {
+export function gasUploadWait(now: number, lastInput: number, lastFrame: number, gesture = false): number {
+  if (gesture) return GAS_UPLOAD_QUIET_MS;
   return Math.max(0, Math.max(lastInput, lastFrame) + GAS_UPLOAD_QUIET_MS - now);
 }
 
