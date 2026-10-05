@@ -4,6 +4,10 @@
  *
  *   node ../docs/design/trifid-theme/reviews/app-gas-detail/registration.mjs [<captures dir>]
  *
+ * Part 1 now also runs in `npm test` (src/lib/data/theme.data.test.ts, "holds the gas of each stop under that
+ * stop's albums") and the map itself is checked on screen in e2e/gas.spec.ts ("on screen the gas lies under the
+ * albums it was baked for"). This script stays for its printed table and for part 2.
+ *
  * 1. Files. Every album's raw position is mapped into both images of its stop with the map shader's own rule
  *    (gas.ts: u = (x - west) / width, v = (north - y) / height of theme.json's rectangle) and the gas luma there
  *    is compared with theme.json's stars.bg for that album, which the bake takes from a separate render of the
@@ -31,7 +35,7 @@ console.log('1. Files: gas luma under each album against theme.json stars.bg (n 
 console.log('stop      image   mean luma  r true   r mirrored EW  NS     both   shifted +x     -x     +y     -y');
 for (const [k, stop] of STOPS.entries()) {
   const g = theme.gas[stop], P = positions[stop], bg = Array.from({ length: theme.n }, (_, i) => theme.stars.bg[3 * i + k]);
-  for (const [kind, file] of [['first', `gas-${stop}.webp`], ['sharp', `gas-${stop}-sharp.webp`]]) {
+  for (const [kind, file] of [['first', `gas-${stop}.${g.hash[0]}.webp`], ['sharp', `gas-${stop}-sharp.${g.hash[1]}.webp`]]) {
     const { data, info } = await sharp(path.join('public/data/theme', file)).raw().toBuffer({ resolveWithObject: true });
     const [x0, y0, x1, y1] = g.rect;
     const sample = (fx, fy, dx, dy) => Array.from({ length: theme.n }, (_, i) => {

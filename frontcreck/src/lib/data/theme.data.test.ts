@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { STOP_IDS } from '@/lib/types';
 import { isTheme, type ThemeData } from './theme';
@@ -106,16 +107,71 @@ describe('committed theme data (public/data/theme)', () => {
     }
   });
 
-  it('stays inside the GPU memory budgets (RGBA with mips: 4 bytes a px, times 4/3)', () => {
+  it('stays inside the GPU memory budgets (RGBA with mips: 4 bytes a px, times 4/3; MB of a million bytes)', () => {
     const t = theme();
-    const mb = ([w, h]: number[]) => (w * h * 4 * (4 / 3)) / 2 ** 20;
+    const mb = ([w, h]: number[]) => (w * h * 4 * (4 / 3)) / 1e6;
     const first = STOP_IDS.reduce((sum, s) => sum + mb(t.gas[s].px), 0);
     const sharpest = Math.max(...STOP_IDS.map((s) => mb(t.gas[s].sharp)));
-    // phones and every other device that keeps to the first images: no more than three 2048 px squares (64 MB)
-    expect(first).toBeLessThanOrEqual(3 * mb([2048, 2048]));
-    // desktops: the three first images and one sharper image at a time
-    expect(first + sharpest).toBeLessThanOrEqual(135);
+    // Phones and every other device that keeps to the first images: 58 MB. The committed bake needs 57.98, and
+    // three whole 2048 px squares would need 67.1, so a bake whose rectangles grow fails here.
+    expect(first).toBeLessThanOrEqual(58);
+    expect(first).toBeGreaterThan(40); // the sum is of real images
+    // Desktops: the three first images and one sharper image at a time, 124 MB (the committed bake: 123.9)
+    expect(first + sharpest).toBeLessThanOrEqual(124);
   });
+
+  it('holds the gas of each stop under that stop\'s albums, in both images (not mirrored, not shifted)', async () => {
+    // Every album's raw position is mapped into the image with the map shader's own rule (shaders/gas.ts uvIn:
+    // u = (x - west) / width, v = (north - y) / height of theme.json's rectangle), and the gas luma found there is
+    // compared with stars.bg, which the bake takes from a separate render of the whole square. With the image in
+    // place the two agree; mirrored, upside down or moved by a hundredth of a raw unit (10 px at the overview)
+    // they agree less.
+    const t = theme();
+    const positions = JSON.parse(read('positions.json').toString('utf8')) as Record<string, number[]>;
+    const corr = (a: number[], b: number[]): number => {
+      const n = a.length;
+      const ma = a.reduce((s, v) => s + v, 0) / n;
+      const mb2 = b.reduce((s, v) => s + v, 0) / n;
+      let sab = 0;
+      let saa = 0;
+      let sbb = 0;
+      for (let i = 0; i < n; i++) {
+        sab += (a[i] - ma) * (b[i] - mb2);
+        saa += (a[i] - ma) ** 2;
+        sbb += (b[i] - mb2) ** 2;
+      }
+      return sab / Math.sqrt(saa * sbb);
+    };
+    for (const [k, stop] of STOP_IDS.entries()) {
+      const g = t.gas[stop];
+      const P = positions[stop];
+      const bg = Array.from({ length: t.n }, (_, i) => t.stars.bg[3 * i + k]);
+      const [x0, y0, x1, y1] = g.rect;
+      for (const [kind, file, size] of [['first', `gas-${stop}.${g.hash[0]}.webp`, g.px], ['sharper', `gas-${stop}-sharp.${g.hash[1]}.webp`, g.sharp]] as const) {
+        const { data, info } = await sharp(read(`theme/${file}`)).raw().toBuffer({ resolveWithObject: true });
+        expect([info.width, info.height], file).toEqual(size);
+        const under = (mirrorX: boolean, mirrorY: boolean, dx: number, dy: number): number[] =>
+          Array.from({ length: t.n }, (_, i) => {
+            let x = P[2 * i] + dx;
+            let y = P[2 * i + 1] + dy;
+            if (mirrorX) x = x0 + x1 - x;
+            if (mirrorY) y = y0 + y1 - y;
+            const u = (x - x0) / (x1 - x0);
+            const v = (y1 - y) / (y1 - y0);
+            if (u < 0 || u >= 1 || v < 0 || v >= 1) return 0;
+            const o = info.channels * (Math.floor(v * info.height) * info.width + Math.floor(u * info.width));
+            return 0.2126 * data[o] + 0.7152 * data[o + 1] + 0.0722 * data[o + 2];
+          });
+        const inPlace = corr(under(false, false, 0, 0), bg);
+        const where = `${stop} ${kind}`;
+        expect(inPlace, where).toBeGreaterThan(0.95);
+        expect(corr(under(true, false, 0, 0), bg), `${where} mirrored east to west`).toBeLessThan(inPlace - 0.3);
+        expect(corr(under(false, true, 0, 0), bg), `${where} mirrored north to south`).toBeLessThan(inPlace - 0.3);
+        expect(corr(under(true, true, 0, 0), bg), `${where} turned round`).toBeLessThan(inPlace - 0.3);
+        for (const [dx, dy] of [[0.01, 0], [-0.01, 0], [0, 0.01], [0, -0.01]]) expect(corr(under(false, false, dx, dy), bg), `${where} moved by ${dx}, ${dy}`).toBeLessThan(inPlace);
+      }
+    }
+  }, 60_000);
 
   it('keeps theme.json under 80 KB on disk, since every map visit loads it', () => {
     expect(read('theme/theme.json').length).toBeLessThan(80_000);

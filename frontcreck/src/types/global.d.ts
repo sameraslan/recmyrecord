@@ -21,8 +21,11 @@ declare global {
       gas?: 'loading' | 'ready' | 'off';
       /** performance.now() of the first drawn frame with a gas texture on screen. Written once per page load. */
       gasShownMs?: number;
-      /** The sharper gas image (desktops with a real GPU): 'off' when this device does not use it, 'waiting' while
-       * none is held or wanted, 'loading' while one is on its way, else the stop whose sharper image is on the GPU. */
+      /** The sharper gas image (ordinary desktops and laptops with a real GPU): 'off' when this map does not use
+       * it (the device is not one of those, which is known when the map mounts except for a software renderer,
+       * known a moment later; or its image failed to load twice), 'waiting' while none is held or wanted,
+       * 'loading' while one is on its way, else the stop whose sharper image is on the GPU. Absent when no gas
+       * layer is mounted. */
       gasSharp?: 'off' | 'waiting' | 'loading' | 'sonic' | 'balanced' | 'mood';
       /** Eased pool amount of the last drawn frame: 0 with no album open, 1 fully dimmed around the open one. */
       gasPool?: number;

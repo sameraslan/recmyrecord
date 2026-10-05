@@ -293,6 +293,17 @@ export function gasSharpPlan(have: StopId | null, loading: StopId | null, wanted
   return { release, cancel, start };
 }
 
+/** A sharper image that fails to load (the network dropped it, or it is not the image theme.json describes) is
+ * asked for once more, at a quiet moment at least GAS_SHARP_RETRY_MS later. After the second failure it is not
+ * asked for again on this map, and the first image stays. */
+export const GAS_SHARP_TRIES = 2;
+export const GAS_SHARP_RETRY_MS = 2000;
+
+/** How long to wait before asking again after `fails` failed loads, or null to give up. */
+export function gasSharpRetry(fails: number): number | null {
+  return fails < GAS_SHARP_TRIES ? GAS_SHARP_RETRY_MS : null;
+}
+
 /** The sharper image goes to the GPU in this many horizontal strips, one per quiet moment, so no single upload
  * is long enough to be felt if the visitor moves the map the same instant. */
 export const GAS_SHARP_STRIPS = 16;

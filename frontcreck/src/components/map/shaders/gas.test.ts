@@ -14,6 +14,8 @@ import {
   GAS_REFERENCE_PX,
   GAS_SHARP_STRIPS,
   GAS_SHARP_MIN_MEMORY_GB,
+  GAS_SHARP_RETRY_MS,
+  GAS_SHARP_TRIES,
   GAS_SHARP_TEXTURE_PX,
   GAS_SKY,
   GAS_TEXTURE_PX,
@@ -34,6 +36,7 @@ import {
   gasSharpBlocked,
   gasSoftwareRenderer,
   gasSharpPlan,
+  gasSharpRetry,
   gasSharpStrips,
   gasSharpWanted,
   gasStopsToStart,
@@ -345,6 +348,14 @@ describe("the sharper image (one stop at a time, desktops with a real GPU)", () 
     expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 2 })).toBe("little memory");
     expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 0.5 })).toBe("little memory");
     expect(gasSharpBlocked({ ...DESKTOP, saveData: true })).toBe("save data");
+  });
+
+  it("is asked for once more after a failed load, then given up", () => {
+    expect(GAS_SHARP_TRIES).toBe(2);
+    expect(gasSharpRetry(1)).toBe(GAS_SHARP_RETRY_MS);
+    expect(GAS_SHARP_RETRY_MS).toBeGreaterThanOrEqual(1000);
+    expect(gasSharpRetry(2)).toBeNull();
+    expect(gasSharpRetry(3)).toBeNull();
   });
 
   it("knows a software renderer by its name", () => {

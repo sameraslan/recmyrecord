@@ -149,7 +149,7 @@ The size guards in `src/lib/data/theme.data.test.ts` now hold a first image unde
 
 ## Registration
 
-`app-gas-detail/registration.mjs`; output in `measurements/registration-sharp.txt` and `registration-first-screen.txt`.
+`app-gas-detail/registration.mjs`; output in `measurements/registration-sharp.txt` and `registration-first-screen.txt`. Since round 3 the check of the files runs in `npm test` (`src/lib/data/theme.data.test.ts`) and the map is checked on screen by a browser test (`e2e/gas.spec.ts`, "on screen the gas lies under the albums it was baked for": r 0.995 in place, 0.954 to 0.963 moved by 0.03 raw units, 0.66 and 0.74 mirrored).
 
 - Files: gas luma under each of the 4,081 albums, mapped with the shader's own rule, against `theme.json`'s brightness under that album (from a separate render). Correlation 0.962 to 0.964 for both images of every stop; mirrored east to west 0.13 to 0.32, north to south 0.20 to 0.54, both 0.05 to 0.18; shifted by 0.01 raw units (10 px at Overview) 0.896 to 0.913 in each of the four directions. Mean luma under the albums 114.6 to 117.0.
 - Screen: the app's gas against the prototype's at the same framing, correlation at shifts of minus 2 to 2 px. The peak is at no shift in all sixteen captures (0.998 to 0.9998).

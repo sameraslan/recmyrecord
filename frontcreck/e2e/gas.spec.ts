@@ -186,6 +186,8 @@ const stopBusy = (page: Page): Promise<void> =>
 /** One strip of a sharper image as it was handed to WebGL: where it went, how many rows, how many rows the source
  * image has, and the row and pixel offsets into the source that were set at that moment. */
 interface StripUpload {
+  /** Width of the source image: tells the stops' sharper images apart. */
+  width: number;
   y: number;
   rows: number;
   sourceRows: number;
@@ -278,7 +280,7 @@ async function installGestures(page: Page): Promise<void> {
           else if (widths.includes(src.width)) {
             g.strips += 1;
             const gl = this as WebGL2RenderingContext;
-            g.stripLog.push({ y: a[3] as number, rows: a[5] as number, sourceRows: src.height, skipRows: gl.getParameter(gl.UNPACK_SKIP_ROWS) as number, skipPixels: gl.getParameter(gl.UNPACK_SKIP_PIXELS) as number });
+            g.stripLog.push({ width: src.width, y: a[3] as number, rows: a[5] as number, sourceRows: src.height, skipRows: gl.getParameter(gl.UNPACK_SKIP_ROWS) as number, skipPixels: gl.getParameter(gl.UNPACK_SKIP_PIXELS) as number });
             const hook = g.onStrip;
             g.onStrip = null;
             hook?.();
@@ -747,7 +749,7 @@ test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at
   expect(strips).toHaveLength(16);
   let row = 0;
   for (const st of strips) {
-    expect(st, `strip at row ${st.y}`).toEqual({ y: row, rows: st.rows, sourceRows: st.rows, skipRows: 0, skipPixels: 0 });
+    expect(st, `strip at row ${st.y}`).toEqual({ width: THEME.gas.balanced.sharp[0], y: row, rows: st.rows, sourceRows: st.rows, skipRows: 0, skipPixels: 0 });
     row += st.rows;
   }
   expect(row).toBe(THEME.gas.balanced.sharp[1]);
@@ -956,4 +958,333 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   }
   expect(errors).toEqual([]);
+});
+
+/** Zooms the map in three times, where the first image is magnified and the sharper one is wanted. */
+const zoomIn = (page: Page): Promise<void> =>
+  page.evaluate(() => {
+    const api = window.__rmr!.map!;
+    const cam = api.getCamera();
+    api.setCamera({ ...cam, zoom: cam.zoom * 3 }, false);
+  });
+const sharpFlag = (page: Page) => page.evaluate(() => window.__rmr!.gasSharp);
+async function forceSharp(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    window.__rmrGasSharp = 'force';
+  });
+}
+
+test('a sharper image that fails to load is asked for once more, and after a second failure the first image stays and nothing draws', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the sharper image is for desktops');
+  test.setTimeout(90_000);
+  const pageErrors: string[] = [];
+  page.on('pageerror', (e) => pageErrors.push(e.message));
+  await forceSharp(page);
+  for (const failures of [1, 2] as const) {
+    const said: string[] = [];
+    const onConsole = (m: { type: () => string; text: () => string }) => {
+      if (m.type() === 'error' && m.text().includes('sharper gas image failed')) said.push(m.text());
+    };
+    page.on('console', onConsole);
+    let asked = 0;
+    await page.route(SHARP_IMAGE, async (route) => {
+      asked += 1;
+      if (asked <= failures) await route.abort('failed');
+      else await route.continue();
+    });
+    await page.goto('/map');
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    await zoomIn(page);
+    if (failures === 1) {
+      // dropped once: asked for again, and it comes in
+      await expect.poll(() => sharpFlag(page), { timeout: 30_000 }).toBe('balanced');
+      expect(asked).toBe(2);
+      expect(said).toHaveLength(1);
+    } else {
+      // dropped twice: given up for this map, with the first image still on screen
+      await expect.poll(() => sharpFlag(page), { timeout: 30_000 }).toBe('off');
+      expect(asked).toBe(2);
+      expect(said).toHaveLength(2);
+      await waitForMapQuiet(page, 400);
+      const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+      await page.waitForTimeout(3500); // well past another retry, had there been one
+      expect(asked, 'not asked for a third time').toBe(2);
+      expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
+      expect(await sharpFlag(page)).toBe('off');
+      expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+      expect(await lumaAt(page, await patchAt(page, IN_RAINBOWS, [0, 0], 80))).toBeGreaterThan(SKY_LUMA * 3);
+    }
+    page.off('console', onConsole);
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
+  }
+  expect(pageErrors).toEqual([]);
+});
+
+test('a sharper image that is cancelled drops its download, and one cancelled between strips sends no more of them', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the sharper image is for desktops');
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const aborted: string[] = [];
+  page.on('requestfailed', (r) => {
+    if (SHARP_IMAGE.test(r.url())) aborted.push(`${new URL(r.url()).pathname} ${r.failure()?.errorText}`);
+  });
+  await forceSharp(page);
+  await installGestures(page);
+
+  // 1. Cancelled while it downloads: Balanced's sharper image never arrives; the slider goes to rest at Mood.
+  let release = (): void => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(`**${gasPath('balanced', true)}`, async (route) => {
+    await held;
+    await route.abort('aborted').catch(() => {});
+  });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await zoomIn(page);
+  await expect.poll(() => sharpFlag(page), { timeout: 30_000 }).toBe('loading');
+  await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
+  // the page itself gives the download up, as soon as the slider rests at Mood (the route is still holding it)
+  await expect.poll(() => aborted, { timeout: 30_000 }).toEqual([`${gasPath('balanced', true)} net::ERR_ABORTED`]);
+  await expect.poll(() => sharpFlag(page), { timeout: 30_000 }).toBe('mood');
+  expect((await gestureCounts(page)).strips, "only Mood's strips were sent").toBe(16);
+  release();
+  await page.unrouteAll({ behavior: 'ignoreErrors' });
+
+  // 2. Cancelled between strips: after Balanced's fourth strip the slider goes to Mood.
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await zoomIn(page);
+  await page.evaluate(() => {
+    const g = (window as unknown as GestureWindow).__gesture;
+    const arm = () => {
+      if (g.strips < 4) return void (g.onStrip = arm);
+      window.__rmr!.getState().setStop('mood');
+    };
+    g.onStrip = arm;
+  });
+  await expect.poll(() => sharpFlag(page), { timeout: 30_000 }).toBe('mood');
+  await waitForMapQuiet(page, 400);
+  const log = await page.evaluate(() => (window as unknown as GestureWindow).__gesture.stripLog);
+  const of = (stop: Stop) => log.filter((st) => st.width === THEME.gas[stop].sharp[0]).length;
+  // Balanced stopped where it was cancelled (the half sent image is thrown away, never drawn) and Mood is whole
+  expect(of('balanced')).toBe(4);
+  expect(of('mood')).toBe(16);
+  expect(await lumaAt(page, await patchAt(page, IN_RAINBOWS, [0, 0], 80))).toBeGreaterThan(SKY_LUMA * 2);
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('a sharper image lost with the WebGL context comes back after the first images, and one released on screen is replaced in one frame', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the sharper image is for desktops');
+  test.setTimeout(90_000);
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const sharpRequests: string[] = [];
+  page.on('request', (r) => {
+    if (SHARP_IMAGE.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
+  });
+  await forceSharp(page);
+  // every change of the sharper image's flag, with the frames drawn by then
+  await page.addInitScript(() => {
+    const log: [string, number][] = [];
+    (window as unknown as { __flagLog: [string, number][] }).__flagLog = log;
+    const watch = () => {
+      const r = window.__rmr as (Record<string, unknown> & { frames?: number }) | undefined;
+      if (!r) return void setTimeout(watch, 5);
+      let value = r.gasSharp;
+      Object.defineProperty(r, 'gasSharp', {
+        configurable: true,
+        get: () => value,
+        set: (v) => {
+          value = v;
+          log.push([String(v), r.frames ?? 0]);
+        },
+      });
+    };
+    watch();
+  });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await zoomIn(page);
+  await expect.poll(() => sharpFlag(page), { timeout: 30_000 }).toBe('balanced');
+  await waitForMapQuiet(page, 400);
+  const patch = await patchAt(page, IN_RAINBOWS, [0, 0], 80);
+  const before = await lumaAt(page, patch);
+  expect(before).toBeGreaterThan(SKY_LUMA * 3);
+
+  // The context goes: the sharper image goes with it, and says so.
+  const flags = await page.evaluate(async () => {
+    const canvas = document.querySelector<HTMLCanvasElement>('canvas.map-canvas')!;
+    const lose = canvas.getContext('webgl2')!.getExtension('WEBGL_lose_context')!;
+    const lostEvent = new Promise((resolve) => canvas.addEventListener('webglcontextlost', resolve, { once: true }));
+    const restored = new Promise((resolve) => canvas.addEventListener('webglcontextrestored', resolve, { once: true }));
+    lose.loseContext();
+    await lostEvent;
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    const whileLost = window.__rmr!.gasSharp;
+    lose.restoreContext();
+    await restored;
+    return { whileLost, onRestore: window.__rmr!.gasSharp };
+  });
+  expect(flags).toEqual({ whileLost: 'waiting', onRestore: 'waiting' });
+  // Back: the first images, then the sharper one again (a second request, from the HTTP cache), the same picture.
+  await waitForMap(page);
+  await expect.poll(() => sharpFlag(page), { timeout: 30_000 }).toBe('balanced');
+  expect(sharpRequests).toEqual([gasPath('balanced', true), gasPath('balanced', true)]);
+  await waitForMapQuiet(page, 400);
+  expect(Math.abs((await lumaAt(page, patch)) - before), 'the same gas as before the loss').toBeLessThan(2);
+  let f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
+
+  // About: the same canvas becomes a backdrop, which never holds a sharper image. A pointer that keeps moving
+  // over the header holds the release back until the page change has finished drawing, so the release stands
+  // alone: it happens while the image is on screen, and exactly one frame follows it (the first image drawn in
+  // its place), then nothing.
+  await keepBusy(page, 'move');
+  await page.getByRole('navigation', { name: COPY.nav.label }).getByRole('link', { name: COPY.nav.about, exact: true }).click();
+  await expect(page).toHaveURL(/\/about$/);
+  await waitForMapQuiet(page, 800);
+  expect(await sharpFlag(page), 'still held while the pointer moves').toBe('balanced');
+  await stopBusy(page);
+  await expect.poll(() => sharpFlag(page), { timeout: 15_000 }).toBe('waiting');
+  await waitForMapQuiet(page, 400);
+  f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  const flagLog = await page.evaluate(() => (window as unknown as { __flagLog: [string, number][] }).__flagLog);
+  // (the flag is written again at every later look; the release is the first 'waiting' after the last 'balanced')
+  const released = flagLog[flagLog.map(([v]) => v).lastIndexOf('balanced') + 1];
+  expect(released[0]).toBe('waiting');
+  expect(f1 - released[1], 'frames drawn after the sharper image was released').toBe(1);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
+  expect(errors).toEqual([]);
+});
+
+test('a touch device never fetches a sharper image and says so from the start, even with the software rule lifted', async ({ page }, info) => {
+  test.skip(!isPhone(info), 'the phone project is the touch device');
+  const sharpRequests: string[] = [];
+  page.on('request', (r) => {
+    if (/-sharp\./.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
+  });
+  await forceSharp(page);
+  await page.goto('/map');
+  await page.waitForFunction(() => window.__rmr?.gasSharp !== undefined, null, { timeout: 20_000 });
+  // decided when the gas layer mounts: no 'waiting' first
+  expect(await sharpFlag(page)).toBe('off');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await zoomIn(page);
+  await waitForMapQuiet(page, 400);
+  await page.waitForTimeout(1500);
+  expect(await sharpFlag(page)).toBe('off');
+  expect(sharpRequests).toEqual([]);
+});
+
+test('on screen the gas lies under the albums it was baked for: the picture matches the image mapped through the albums\' own positions', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 400);
+  // Where every album is on screen, and which points of a 16 px grid show bare map.
+  const seen = await page.evaluate(() => {
+    const api = window.__rmr!.map!;
+    const pts: ({ x: number; y: number } | null)[] = [];
+    for (let id = 0; ; id++) {
+      const p = api.screenPoint(id);
+      if (!p) break;
+      pts.push(p.x > 0 && p.y > 0 && p.x < innerWidth && p.y < innerHeight ? p : null);
+    }
+    const grid: [number, number][] = [];
+    for (let y = 100; y <= innerHeight - 100; y += 16) {
+      for (let x = 40; x <= innerWidth - 40; x += 16) {
+        if (document.elementFromPoint(x, y)?.classList.contains('map-canvas') && pts.every((p) => !p || Math.max(Math.abs(p.x - x), Math.abs(p.y - y)) > 7)) grid.push([x, y]);
+      }
+    }
+    return { pts, grid };
+  });
+  // The map's own transform from raw positions (positions.json) to the screen, fitted to the albums on screen:
+  // screen x = ax + s * raw x, screen y = ay - s * raw y.
+  const raw = (JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'public/data/positions.json'), 'utf8')) as Record<Stop, number[]>).balanced;
+  const on = seen.pts.map((p, i) => (p ? { sx: p.x, sy: p.y, x: raw[2 * i], y: raw[2 * i + 1] } : null)).filter((p) => p !== null);
+  expect(on.length).toBeGreaterThan(1000);
+  const mean = (f: (p: (typeof on)[number]) => number) => on.reduce((sum, p) => sum + f(p), 0) / on.length;
+  const mx = mean((p) => p.x);
+  const my = mean((p) => p.y);
+  const msx = mean((p) => p.sx);
+  const msy = mean((p) => p.sy);
+  const scale = on.reduce((sum, p) => sum + (p.x - mx) * (p.sx - msx) - (p.y - my) * (p.sy - msy), 0) / on.reduce((sum, p) => sum + (p.x - mx) ** 2 + (p.y - my) ** 2, 0);
+  const toRaw = (sx: number, sy: number): [number, number] => [mx + (sx - msx) / scale, my - (sy - msy) / scale];
+  // the fit is exact to a fraction of a px, or the comparison below would prove nothing
+  for (const p of on.slice(0, 50)) {
+    const [x, y] = toRaw(p.sx, p.sy);
+    expect(Math.hypot(x - p.x, y - p.y) * scale).toBeLessThan(0.5);
+  }
+  expect(seen.grid.length).toBeGreaterThan(400);
+  // The baked image, as theme.json places it, against the screenshot.
+  const g = THEME.gas.balanced;
+  const image = await sharp(path.resolve(process.cwd(), `public${gasPath('balanced')}`)).raw().toBuffer({ resolveWithObject: true });
+  const shotPng = await sharp(await page.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const k = shotPng.info.width / page.viewportSize()!.width;
+  const screenLuma = seen.grid.map(([x, y]) => {
+    // the median of a 5 px square: gas, not a stray dot
+    const v: number[] = [];
+    for (let dy = -2; dy <= 2; dy++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        const o = 3 * (Math.round((y + dy) * k) * shotPng.info.width + Math.round((x + dx) * k));
+        v.push(0.2126 * shotPng.data[o] + 0.7152 * shotPng.data[o + 1] + 0.0722 * shotPng.data[o + 2]);
+      }
+    }
+    return v.sort((a, b) => a - b)[12];
+  });
+  const [x0, y0, x1, y1] = g.rect;
+  const imageLuma = (mirrorX: boolean, mirrorY: boolean, dx: number, dy: number): number[] =>
+    seen.grid.map(([sx, sy]) => {
+      let [x, y] = toRaw(sx, sy);
+      x += dx;
+      y += dy;
+      if (mirrorX) x = x0 + x1 - x;
+      if (mirrorY) y = y0 + y1 - y;
+      const u = (x - x0) / (x1 - x0);
+      const v = (y1 - y) / (y1 - y0);
+      if (u < 0 || u >= 1 || v < 0 || v >= 1) return 0;
+      const o = 4 * (Math.floor(v * image.info.height) * image.info.width + Math.floor(u * image.info.width));
+      // the light the dust lets through, as the shader draws it at the overview
+      return (0.2126 * image.data[o] + 0.7152 * image.data[o + 1] + 0.0722 * image.data[o + 2]) * (image.data[o + 3] / 255);
+    });
+  const corr = (a: number[], b: number[]): number => {
+    const ma = a.reduce((sum, v) => sum + v, 0) / a.length;
+    const mb = b.reduce((sum, v) => sum + v, 0) / b.length;
+    let sab = 0;
+    let saa = 0;
+    let sbb = 0;
+    for (let i = 0; i < a.length; i++) {
+      sab += (a[i] - ma) * (b[i] - mb);
+      saa += (a[i] - ma) ** 2;
+      sbb += (b[i] - mb) ** 2;
+    }
+    return sab / Math.sqrt(saa * sbb);
+  };
+  const inPlace = corr(screenLuma, imageLuma(false, false, 0, 0));
+  const others = {
+    'mirrored east to west': corr(screenLuma, imageLuma(true, false, 0, 0)),
+    'mirrored north to south': corr(screenLuma, imageLuma(false, true, 0, 0)),
+    // 0.03 raw units is about 11 px at this framing
+    'moved east': corr(screenLuma, imageLuma(false, false, 0.03, 0)),
+    'moved west': corr(screenLuma, imageLuma(false, false, -0.03, 0)),
+    'moved north': corr(screenLuma, imageLuma(false, false, 0, 0.03)),
+    'moved south': corr(screenLuma, imageLuma(false, false, 0, -0.03)),
+  };
+  console.log(`registration on screen: r ${inPlace.toFixed(4)} over ${seen.grid.length} points; ${Object.entries(others).map(([name, r]) => `${name} ${r.toFixed(4)}`).join(', ')}`);
+  expect(inPlace).toBeGreaterThan(0.9);
+  for (const [name, r] of Object.entries(others)) expect(r, name).toBeLessThan(inPlace - 0.01);
 });
