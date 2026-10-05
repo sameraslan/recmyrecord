@@ -1442,3 +1442,76 @@ test('a software renderer draws the gas with the lighter shader: the same nebula
   expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBe(0);
   expect(errors).toEqual([]);
 });
+
+test('a gas image is never uploaded behind a fence older than the map\'s last frame (an image decoded just before a frame would block on it)', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  // Every fence, every frame the map draws (three clears the canvas once per frame) and every upload of a first
+  // image, on the page clock. The first time the map waits behind a fence with its API up, the camera is nudged:
+  // a frame is issued while that fence is waited for, as happens when an image is decoded just before a frame
+  // (seen once in fourteen loads on a software renderer, as a 300 ms long task before the map's first frame).
+  await page.addInitScript(() => {
+    const w = window as unknown as { __fence: { fenceAt: number; frameAt: number; nudged: boolean; uploads: { fenceAt: number; frameAt: number; at: number }[] } };
+    const f = (w.__fence = { fenceAt: -1, frameAt: -1, nudged: false as boolean, uploads: [] as { fenceAt: number; frameAt: number; at: number }[] });
+    const P = WebGL2RenderingContext.prototype as unknown as Record<string, (...a: unknown[]) => unknown>;
+    const isMap = (gl: unknown) => (gl as WebGL2RenderingContext).canvas instanceof HTMLCanvasElement && ((gl as WebGL2RenderingContext).canvas as HTMLCanvasElement).classList.contains('map-canvas');
+    const fence = P.fenceSync;
+    P.fenceSync = function (this: unknown, ...a: unknown[]) {
+      const out = fence.apply(this, a);
+      f.fenceAt = performance.now();
+      const api = window.__rmr?.map;
+      if (!f.nudged && api && f.uploads.length === 0) {
+        f.nudged = true;
+        const cam = api.getCamera();
+        api.setCamera({ ...cam, x: cam.x + 0.002 }, false);
+        delayNext = true;
+      }
+      return out;
+    };
+    // The map looks at a fence from a timer. Which comes first, that timer or the frame, is the browser's choice;
+    // here the first look at the nudged fence is put after the frame (80 ms), the order that used to go wrong.
+    let delayNext = false;
+    const timer = window.setTimeout.bind(window) as (h: TimerHandler, ms?: number, ...a: unknown[]) => number;
+    (window as unknown as { setTimeout: unknown }).setTimeout = (h: TimerHandler, ms?: number, ...a: unknown[]) => {
+      if (delayNext) {
+        delayNext = false;
+        return timer(h, Math.max(ms ?? 0, 80), ...a);
+      }
+      return timer(h, ms, ...a);
+    };
+    const clear = P.clear;
+    P.clear = function (this: unknown, ...a: unknown[]) {
+      if (isMap(this)) f.frameAt = performance.now();
+      return clear.apply(this, a);
+    };
+    for (const fn of ['texImage2D', 'texSubImage2D']) {
+      const orig = P[fn];
+      P[fn] = function (this: unknown, ...a: unknown[]) {
+        const src = a[a.length - 1];
+        if (src instanceof ImageBitmap && Math.max(src.width, src.height) === 2048) f.uploads.push({ fenceAt: f.fenceAt, frameAt: f.frameAt, at: performance.now() });
+        return orig.apply(this, a);
+      };
+    }
+  });
+  // The first image is held until the map has drawn and its API is up, so the nudge can be made.
+  let release = (): void => {};
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route(`**${gasPath('balanced')}`, async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto('/map');
+  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 20_000 });
+  await waitForMapQuiet(page, 300);
+  release();
+  await waitForMap(page);
+  const log = await page.evaluate(() => (window as unknown as { __fence: { nudged: boolean; uploads: { fenceAt: number; frameAt: number; at: number }[] } }).__fence);
+  expect(log.nudged, 'a frame was issued while the first image waited behind its fence').toBe(true);
+  expect(log.uploads).toHaveLength(3);
+  // Each upload came after a fence that was asked for after the last frame the map had issued by then.
+  for (const [i, u] of log.uploads.entries()) expect(u.fenceAt, `upload ${i + 1} at ${Math.round(u.at)} ms: last frame at ${Math.round(u.frameAt)} ms, fence at ${Math.round(u.fenceAt)} ms`).toBeGreaterThan(u.frameAt);
+  expect(errors).toEqual([]);
+});

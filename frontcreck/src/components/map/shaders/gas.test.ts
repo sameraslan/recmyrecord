@@ -48,6 +48,7 @@ import {
   gasUploadOverdue,
   gasUploadWait,
   gasTextureFits,
+  gasFenceStale,
   gasGestureActive,
   gasImageFits,
   gasLiteLod,
@@ -221,6 +222,15 @@ describe("gasUploadWait (when a gas image that is not on screen may be uploaded)
   it("never lets an upload through while input keeps coming", () => {
     // a drag: an input event every 16 ms
     for (let now = 0; now < 3000; now += 16) expect(gasUploadWait(now + 8, now, now)).toBeGreaterThan(200);
+  });
+});
+
+describe("gasFenceStale (a GPU fence covers only the frames issued before it)", () => {
+  it("is stale once the map has issued a frame after it", () => {
+    expect(gasFenceStale(1000, -Infinity)).toBe(false); // no frame yet
+    expect(gasFenceStale(1000, 900)).toBe(false); // the last frame was before the fence: the fence covers it
+    expect(gasFenceStale(1000, 1004)).toBe(true); // a frame went out after it
+    expect(gasFenceStale(1000, 1000)).toBe(true);
   });
 });
 

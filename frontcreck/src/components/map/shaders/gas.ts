@@ -185,6 +185,13 @@ export const GAS_UPLOAD_MAX_WAIT_MS = 4000;
 export const GAS_FIRST_UPLOAD_CAP_MS = 1500;
 export const GAS_BUSY_UPLOAD_CAP_MS = 100;
 
+/** True when the map has issued a frame since a GPU fence was asked for at `fenceAt`: the fence then says nothing
+ * about that frame, and an upload behind it would block the main thread until the frame is drawn (the map's whole
+ * first frame on a software renderer, 300 ms measured). A new fence is asked for instead. */
+export function gasFenceStale(fenceAt: number, lastFrame: number): boolean {
+  return lastFrame >= fenceAt;
+}
+
 /** True while the visitor has hold of the map: a pointer is down (a drag, or a pinch with two fingers), or a
  * wheel event (a wheel zoom, or a pinch on a trackpad, which arrives as wheel events) came within the last
  * GAS_UPLOAD_QUIET_MS. */

@@ -22,6 +22,7 @@ import {
   focusPool,
   gasCurve,
   gasDust,
+  gasFenceStale,
   gasGestureActive,
   gasImageFits,
   gasLiteLod,
@@ -426,12 +427,20 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
      * texture) blocks the main thread until the renderer has drawn what is queued; on a software renderer that
      * is the map's whole first frame, 250 ms and more (measured). A fence is asked for and polled from timers
      * instead, which blocks nothing. On a GPU it is signalled within a few ms.
+     * A fence covers only what was issued before it. If the map issues a frame while one is waited for (an image
+     * that is decoded just before the map's first frame), that fence would be found signalled with the frame
+     * still to draw, so a new one is asked for, behind the frame.
      */
     function whenGpuDone(fn: () => void, capMs: number, firstLookMs = 0): { cancel: () => void } {
       const ctx = gl.getContext() as WebGL2RenderingContext;
-      const sync = typeof ctx.fenceSync === "function" ? ctx.fenceSync(ctx.SYNC_GPU_COMMANDS_COMPLETE, 0) : null;
-      if (sync) ctx.flush();
-      const t0 = performance.now();
+      const ask = () => {
+        const s = typeof ctx.fenceSync === "function" ? ctx.fenceSync(ctx.SYNC_GPU_COMMANDS_COMPLETE, 0) : null;
+        if (s) ctx.flush();
+        return s;
+      };
+      let sync = ask();
+      let fenceAt = performance.now();
+      const t0 = fenceAt;
       let handle = 0;
       let done = false;
       const finish = () => {
@@ -440,9 +449,17 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       };
       const poll = () => {
         if (done) return;
+        const capped = performance.now() - t0 >= capMs;
+        if (sync && !capped && !ctx.isContextLost() && gasFenceStale(fenceAt, frameAt.current)) {
+          ctx.deleteSync(sync);
+          sync = ask();
+          fenceAt = performance.now();
+          handle = window.setTimeout(poll, 8);
+          return;
+        }
         // (the status of a fence only changes between tasks, so the first look is in a later task too)
         const ready = !sync || ctx.isContextLost() || ctx.getSyncParameter(sync, ctx.SYNC_STATUS) === ctx.SIGNALED;
-        if (ready || performance.now() - t0 >= capMs) {
+        if (ready || capped) {
           finish();
           fn();
         } else handle = window.setTimeout(poll, 8);
