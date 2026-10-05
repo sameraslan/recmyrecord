@@ -46,6 +46,16 @@ Area: `site`, `pipeline`, `experiment`. Kind: `bug`, `idea`. `needs-decision` ma
 
 The script needs the `project` scope on the `gh` token. If it reports the scope is missing, ask Samer to run `gh auth refresh -s project`; do not try to work around it.
 
+### From a cloud session
+
+A cloud session can only reach this repository, not the Project, so `board.sh` and `gh project` fail there. Run the same commands through the `board` workflow (`.github/workflows/board.yml`) instead, with the GitHub tools:
+
+- Start it: `actions_run_trigger` with `method: run_workflow`, `workflow_id: board.yml`, `ref: main` and `inputs` `{"command": "move", "number": "41", "status": "In progress"}`. `command` is `list`, `add`, `move` or `remove`; `status` is a column name exactly as above (for `list` it filters, and may be empty).
+- Read the result: `actions_list` with `list_workflow_runs` for `board.yml` gives the run, `list_workflow_jobs` its job, and `get_job_logs` with `return_content: true` the output (for `list`, the cards).
+- Check the run succeeded before telling Samer a card moved. If it fails because `BOARD_TOKEN` is not set, say so; do not ask Samer to move cards by hand as a habit.
+
+The workflow also moves cards by itself: when a PR whose description says `Closes #<n>` opens as a draft (or is converted to one), issue `<n>` goes to In progress; when it opens ready or is marked ready for review, to Final review. You still move cards for anything else (Todo, Needs answer, a ticket with no PR yet).
+
 ## Creating a ticket
 
 1. Search for a duplicate: `gh issue list --state all --search "<keywords>"`. Also check what other sessions and open PRs are already doing (`gh pr list`); do not file a ticket for work that is already under way under another ticket.
