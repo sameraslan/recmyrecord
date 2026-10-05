@@ -155,13 +155,14 @@ test('past 32 px covers the gas fades on to a faint remnant at full-size covers'
   await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
   await waitForCameraIdle(page);
   const at32 = await page.evaluate(() => window.__rmr!.map!.getCamera());
-  // (rounding may leave the cover a hair past 32 px, so this is "about 0", not exactly 0)
-  expect(await page.evaluate(() => window.__rmr!.gasDeep)).toBeLessThan(0.001);
+  // (rounding may leave the cover a hair past 32 px, so this is "about 0", not exactly 0; gasDeep is written in
+  // the frame a camera change asks for, so it is polled: waitForMapQuiet can return before that frame is drawn)
+  await expect.poll(() => page.evaluate(() => window.__rmr!.gasDeep)).toBeLessThan(0.001);
   // Twice the zoom: 64 px covers, past the 56 px where the fade ends.
   await page.evaluate((c) => window.__rmr!.map!.setCamera({ ...c, zoom: c.zoom * 2 }, false), at32);
   await waitForCameraIdle(page);
   await waitForMapQuiet(page, 300);
-  expect(await page.evaluate(() => window.__rmr!.gasDeep)).toBe(1);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.gasDeep)).toBe(1);
   await shot(page, info, 'gas-deep');
   // A point of bare gas: 60 px clear of every album here, so 30 px clear at half the zoom, where covers are 32 px.
   const bare = await barePoint(page, 60);
@@ -172,7 +173,7 @@ test('past 32 px covers the gas fades on to a faint remnant at full-size covers'
   await page.evaluate((c) => window.__rmr!.map!.setCamera(c, false), at32);
   await waitForCameraIdle(page);
   await waitForMapQuiet(page, 300);
-  expect(await page.evaluate(() => window.__rmr!.gasDeep)).toBeLessThan(0.001);
+  await expect.poll(() => page.evaluate(() => window.__rmr!.gasDeep)).toBeLessThan(0.001);
   const seed32 = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
   const same = { x: seed32.x + (bare!.x - seed64.x) / 2 - 8, y: seed32.y + (bare!.y - seed64.y) / 2 - 8, w: 16, h: 16 };
   expect(await onCanvas(page, same), 'the same point is on the map at 32 px covers').toBe(true);
