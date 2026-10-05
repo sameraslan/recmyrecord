@@ -42,7 +42,11 @@ const INIT = () => {
     P[fn] = function (...a) {
       const t0 = performance.now();
       const r = orig.apply(this, a);
-      window.__up.push([fn, Math.round(t0), Math.round((performance.now() - t0) * 100) / 100]);
+      // the sharper image is the only ImageBitmap the page hands to WebGL a strip at a time (fewer rows than it has)
+      const src = a[a.length - 1];
+      const sharp = fn === 'texSubImage2D' && a.length === 9 && src instanceof ImageBitmap && a[5] < src.height;
+      const size = src && typeof src === 'object' && 'width' in src ? `${src.width} x ${src.height}` : '';
+      window.__up.push([fn, Math.round(t0), Math.round((performance.now() - t0) * 100) / 100, sharp, size]);
       return r;
     };
   }
@@ -96,7 +100,7 @@ async function oneLoad(browser, kind) {
     if (drag) {
       // wait until the first strip has gone in, then start dragging at once
       const until = performance.now() + 15000;
-      while (!window.__up.some((u) => u[0] === 'texSubImage2D') && performance.now() < until) await sleep(1);
+      while (!window.__up.some((u) => u[3]) && performance.now() < until) await sleep(1);
       during = await dragFor(2500);
     }
     const until = performance.now() + 20000;
@@ -112,7 +116,8 @@ async function oneLoad(browser, kind) {
   }, kind === 'drag');
   await ctx.close();
   const calls = res.up.filter((u) => u[1] >= res.zoomedAt);
-  const strips = calls.filter((u) => u[0] === 'texSubImage2D');
+  const strips = calls.filter((u) => u[3]);
+  const others = calls.filter((u) => !u[3] && u[2] >= 1);
   const loading = res.sharp.find((s) => s[0] === 'loading');
   const arrived = res.sharp.find((s) => s[0] === 'balanced');
   const worst = (g) => (g ? Math.max(...g.gaps.slice(1)) : null);
@@ -125,7 +130,9 @@ async function oneLoad(browser, kind) {
     framesIn800msAfter: res.framesAfter - res.framesAtIn,
     strips: strips.length,
     stripMs: { max: Math.max(0, ...strips.map((u) => u[2])), mean: strips.length ? Math.round((strips.reduce((s, u) => s + u[2], 0) / strips.length) * 100) / 100 : 0 },
-    otherCalls: calls.filter((u) => u[0] !== 'texSubImage2D').map((u) => [u[0], u[2]]),
+    // every other WebGL upload call of 1 ms or more after the zoom (cover sheets, which today's site uploads the same way)
+    otherCallsOver1Ms: others.map((u) => [u[0], u[2], u[4]]),
+    mipBuildMs: Math.max(0, ...calls.filter((u) => u[0] === 'generateMipmap').map((u) => u[2])),
     longTasks: res.lt.filter((l) => l[0] >= res.zoomedAt),
     stripsDuringDrag: res.during ? strips.filter((u) => u[1] > res.during.t0 + 50 && u[1] < res.during.t1).length : null,
     dragWorstGapMs: worst(res.during),

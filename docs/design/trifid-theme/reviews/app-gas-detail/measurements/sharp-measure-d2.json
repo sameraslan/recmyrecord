@@ -1,0 +1,172 @@
+{
+ "date": "2026-10-05T08:48:02.650Z",
+ "dpr": 2,
+ "loads": [
+  {
+   "kind": "rest",
+   "state": "balanced",
+   "zoomToInMs": 991,
+   "loadingToInMs": 733,
+   "framesFromLoadingToIn": 1,
+   "framesIn800msAfter": 0,
+   "strips": 16,
+   "stripMs": {
+    "max": 0.9,
+    "mean": 0.73
+   },
+   "otherCallsOver1Ms": [],
+   "mipBuildMs": 0,
+   "longTasks": [],
+   "stripsDuringDrag": null,
+   "dragWorstGapMs": null,
+   "controlDragWorstGapMs": 18.2
+  },
+  {
+   "kind": "drag",
+   "state": "balanced",
+   "zoomToInMs": 4755,
+   "loadingToInMs": 4497,
+   "framesFromLoadingToIn": 184,
+   "framesIn800msAfter": 0,
+   "strips": 16,
+   "stripMs": {
+    "max": 3.3,
+    "mean": 1.98
+   },
+   "otherCallsOver1Ms": [
+    [
+     "texSubImage2D",
+     17.9
+    ],
+    [
+     "texSubImage2D",
+     20
+    ],
+    [
+     "texSubImage2D",
+     15.1
+    ],
+    [
+     "texSubImage2D",
+     14.9
+    ]
+   ],
+   "mipBuildMs": 0,
+   "longTasks": [],
+   "stripsDuringDrag": 0,
+   "dragWorstGapMs": 20.4,
+   "controlDragWorstGapMs": 22.2
+  },
+  {
+   "kind": "rest",
+   "state": "balanced",
+   "zoomToInMs": 1097,
+   "loadingToInMs": 840,
+   "framesFromLoadingToIn": 0,
+   "framesIn800msAfter": 1,
+   "strips": 16,
+   "stripMs": {
+    "max": 3.6,
+    "mean": 1.66
+   },
+   "otherCallsOver1Ms": [],
+   "mipBuildMs": 0,
+   "longTasks": [],
+   "stripsDuringDrag": null,
+   "dragWorstGapMs": null,
+   "controlDragWorstGapMs": 20.4
+  },
+  {
+   "kind": "drag",
+   "state": "balanced",
+   "zoomToInMs": 4705,
+   "loadingToInMs": 4445,
+   "framesFromLoadingToIn": 186,
+   "framesIn800msAfter": 0,
+   "strips": 16,
+   "stripMs": {
+    "max": 1.1,
+    "mean": 0.97
+   },
+   "otherCallsOver1Ms": [
+    [
+     "texSubImage2D",
+     20.9
+    ],
+    [
+     "texSubImage2D",
+     20.4
+    ],
+    [
+     "texSubImage2D",
+     18.9
+    ],
+    [
+     "texSubImage2D",
+     18.7
+    ]
+   ],
+   "mipBuildMs": 0,
+   "longTasks": [],
+   "stripsDuringDrag": 0,
+   "dragWorstGapMs": 19.2,
+   "controlDragWorstGapMs": 18.9
+  },
+  {
+   "kind": "rest",
+   "state": "balanced",
+   "zoomToInMs": 1099,
+   "loadingToInMs": 844,
+   "framesFromLoadingToIn": 1,
+   "framesIn800msAfter": 0,
+   "strips": 16,
+   "stripMs": {
+    "max": 3,
+    "mean": 1.72
+   },
+   "otherCallsOver1Ms": [],
+   "mipBuildMs": 0,
+   "longTasks": [],
+   "stripsDuringDrag": null,
+   "dragWorstGapMs": null,
+   "controlDragWorstGapMs": 33.9
+  },
+  {
+   "kind": "drag",
+   "state": "balanced",
+   "zoomToInMs": 4678,
+   "loadingToInMs": 4416,
+   "framesFromLoadingToIn": 186,
+   "framesIn800msAfter": 0,
+   "strips": 16,
+   "stripMs": {
+    "max": 2.9,
+    "mean": 1.27
+   },
+   "otherCallsOver1Ms": [
+    [
+     "texSubImage2D",
+     19.6
+    ],
+    [
+     "texSubImage2D",
+     15
+    ],
+    [
+     "texSubImage2D",
+     17.8
+    ],
+    [
+     "texSubImage2D",
+     14.2
+    ]
+   ],
+   "mipBuildMs": 0,
+   "longTasks": [],
+   "stripsDuringDrag": 0,
+   "dragWorstGapMs": 21.2,
+   "controlDragWorstGapMs": 18.2
+  }
+ ],
+ "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+}

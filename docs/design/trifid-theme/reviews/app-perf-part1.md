@@ -357,3 +357,67 @@ None of these was done here. Each line gives the section, the item and the probe
 - 15 **A lost WebGL context recovers, or gives way to the message after 3 s.** (manual only): "Manual: `document.querySelector('canvas.map-canvas').getContext('webgl2').getExtension('WEBGL_lose_context').loseContext()` and wait 3 s."
 - 16 **The strip loads nothing on desktop.** (manual only): "Manual: network tab on a desktop album page with WebGL off."
 - 16 **The Explore card is a bottom sheet resting on the slider panel.** (manual only): "Manual on a phone viewport: pick an album in Explore."
+
+## M1 follow-up: the sharper gas image and the new first images (2026-10-05, 04:49 to 05:30)
+
+- Commits measured: `7fdca313` (three full runs, the interleaved gpu runs and the first software pairs) and the commit after it, which only moves the shader's fade at an image's edge from once per texture read to once per pixel (pixel identical: the Overview and album captures are byte for byte the same; software desktop pairs "after trim").
+- Mains power, ordinary launch, plain `npm run perf`. Load before the three runs: 13.8, 10.1, 8.2 (the mains runs above were taken at 5.9 to 6.5). The machine was busier, so every number here was also compared with the old build measured in the same minutes.
+- Raw: `perf-part1/m1/run1.txt` to `run3.txt` (full runs), `gpu4.txt` to `gpu6.txt` (three more gpu runs), `perf-part1/m1/ab/` (old and new build in turn: five pairs on gpu phone, four on gpu desktop, three on each software column, four more on software desktop after the trim). The old build is commit `3dacd965` built in a scratch copy.
+- What changed that could cost time: the first images are smaller in px (3.1 to 4.0 Mpx against 4.2) and larger in bytes (251 to 371 KB against 141 to 190); the shader reads each image over its own rectangle and reads two fewer noise octaves at Overview, one fewer beside an album; on gpu desktop columns the sharper image is fetched and uploaded in strips at quiet moments once the map is zoomed in (in this script: after an album opens).
+
+### Budgets
+
+Runs 1 and 2 met every budget. Run 3 missed one: **gpu phone zoom frame gap 53 ms against 50** (36 and 45 in runs 1 and 2). Phones do not load the sharper image. In five interleaved pairs on that column the old build read 33, 35, 36, 33, 46 ms (median 35) and the new 37, 43, 34, 40, 32 (median 37); over all eleven runs of the new build the row reads 32 to 53, median 40. I cannot show a difference between the builds and cannot rule out one of a few ms; the row sits between two and three frames in both, as in the baseline (38 to 44).
+
+### Three full runs: median (run 1, run 2, run 3), and the mains median of this file above
+
+| Row | software desktop | software phone | gpu desktop | gpu phone | gpu desktop2x |
+|---|---|---|---|---|---|
+| Search usable (ms) | 79 (72, 79, 118); was 352 | 80 (80, 74, 147); was 148 | 87 (87, 91, 76); was 85 | 75 (92, 71, 75); was 80 | 81 (87, 81, 81); was 81 |
+| Startup worst long task (ms) | 0 (0, 0, 60); was 155 | 0 (0, 0, 0); was 0 | 0; was 0 | 0; was 0 | 0; was 0 |
+| Map first frame (ms) | 3772 (3772, 3729, 3908); was 4221 | 2776 (2724, 2776, 2865); was 2925 | 576 (576, 576, 572); was 582 | 566 (590, 547, 566); was 562 | 600 (603, 600, 588); was 588 |
+| Nebula visible (ms) | 4061 (4061, 4021, 4212); was 4536 | 3047 (2994, 3047, 3143); was 3207 | 627 (637, 627, 617); was 640 | 610 (637, 593, 610); was 612 | 647 (661, 642, 647); was 644 |
+| Nebula after the map's first frame (ms) | 292 (289, 292, 304); was 315 | 271 (270, 271, 278); was 282 | 51 (61, 51, 45); was 58 | 46 (47, 46, 44); was 50 | 58 (58, 42, 59); was 56 |
+| Typing to suggestions (ms) | 5; was 6 | 4; was 4 | 6; was 5 | 5; was 5 | 5; was 5 |
+| Select to album (ms) | 26 (26, 19, 26); was 33 | 18 (19, 17, 18); was 20 | 22 (22, 22, 22); was 18 | 18 (22, 18, 18); was 18 | 19 (23, 17, 19); was 18 |
+| Transition worst frame gap (ms) | 1241 (1241, 1488, 684); was 899 | 770 (770, 789, 758); was 792 | 25 (27, 25, 23); was 23 | 18 (18, 18, 19); was 18 | 24 (21, 24, 24); was 33 |
+| Slider to list (ms) | 8 (8, 9, 5); was 8 | 7 (8, 7, 7); was 9 | 9 (9, 6, 10); was 5 | 8 (8, 7, 16); was 8 | 10 (10, 6, 10); was 5 |
+| Morph worst frame gap (ms) | 173 (173, 183, 112); was 146 | 131 (131, 135, 121); was 133 | 18 (17, 18, 18); was 18 | 18 (20, 17, 18); was 17 | 20 (17, 20, 24); was 18 |
+| Drag worst frame gap (ms) | 107 (111, 107, 99); was 110 | 94 (94, 98, 84); was 88 | 19 (18, 19, 19); was 18 | 19 (23, 18, 19); was 17 | 20 (21, 19, 20); was 18 |
+| Zoom worst frame gap (ms) | 270 (194, 308, 270); was 231 | 64 (60, 136, 64); was 56 | 34 (33, 34, 44); was 33 | 45 (36, 45, 53); was 36 | 38 (29, 38, 40); was 33 |
+| Deep zoom drag worst frame gap (ms) | 75 (71, 75, 77); was 67 | 54 (50, 63, 54); was 55 | 20 (22, 20, 19); was 19 | 20 (20, 18, 22); was 18 | 22 (23, 22, 18); was 18 |
+| Deep zoom, slider between stops (ms) | 69 (77, 69, 69); was 78 | 49 (49, 44, 65); was 56 | 18 (17, 22, 18); was 18 | 18 (19, 18, 17); was 19 | 19 (18, 19, 19); was 18 |
+| Long tasks while idle | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 |
+| Frames while idle | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 | 0, 0, 0 |
+
+First-load JS of `/`: 191.2 KB with nomodule scripts (191.1 before; budget 200), 152.6 KB without (152.5). three.js chunk on first load 0 KB. The gas code is in the lazy map chunk.
+
+### Rows that read higher than the mains medians above, each against the old build in the same minutes
+
+The old build was measured in turn with the new one because the mains medians above were taken on a quieter machine. "Old" and "new" are the single runs in order.
+
+| Row | Full runs now; mains median above | Old build, same minutes | New build, same minutes | Reading |
+|---|---|---|---|---|
+| gpu desktop, slider to list | 9 (9, 6, 10); 5 | 10, 10, 22, 7 | 5, 15, 6, 10 | The old build reads 7 to 22 today. No difference shown |
+| gpu desktop, select to album | 22; 18 | 25, 22, 26, 21 | 22, 19, 19, 21 | The same |
+| gpu desktop, zoom gap | 34 (33, 34, 44); 33 | 32, 45, 38, 42 | 35, 33, 29, 37 | No difference shown |
+| gpu desktop, drag gap | 19; 18 | 19, 22, 22, 33 | 18, 18, 21, 21 | No difference shown |
+| gpu desktop, transition gap | 25; 23 | 32, 23, 36, 20 | 21, 34, 29, 23 | No difference shown |
+| gpu phone, zoom gap | 45 (36, 45, 53); 36 | 33, 35, 36, 33, 46 | 37, 43, 34, 40, 32 | See "Budgets". No difference shown; a few ms not ruled out |
+| gpu phone, drag gap | 19 (23, 18, 19); 17 | 22, 24, 19, 20, 25 | 19, 19, 21, 19, 19 | No difference shown |
+| gpu desktop2x, slider to list, morph, drag, zoom, deep zoom drag | 10, 20, 20, 38, 22; 5, 18, 18, 33, 18 | not measured in turn | not measured in turn | One frame or less in every row; three more gpu runs (`gpu4.txt` to `gpu6.txt`) read zoom 28, 31, 28, drag 20, 19, 35, morph 18, 18, 19. Not compared with the old build at dpr 2: owed |
+| software desktop, zoom gap | 270 (194, 308, 270); 231 | 282, 195, 261; after the trim 202, 299, 312, 267 | 365, 294, 259; after the trim 315, 299, 185, 305 | The row jumps between about 190 and 310 in both builds. No difference shown |
+| software desktop, drag gap | 107; 110 | 109, 103, 104; after the trim 111, 118, 107, 99 | 139, 103, 119; after the trim 118, 108, 100, 101 | Before the trim two of three runs read higher than the old build; after it, level. This is why the trim was made |
+| software desktop, transition and morph gap | 1241 and 173; 899 and 146 | after the trim: transition 1610, 896, 914, 741; morph 157, 141, 175, 354 | after the trim: transition 1654, 583, 929, 1343; morph 167, 148, 156, 170 | Not budgeted in software; no difference shown |
+| software phone, zoom and drag gap | 64 and 94; 56 and 88 | zoom 58, 60, 62; drag 80, 92, 86 | zoom 62, 58, 82; drag 90, 82, 82 | No difference shown |
+
+Nebula visible in the same pairs: gpu phone old 717, 648, 641, 630, 613 ms, new 643, 607, 622, 623, 611; gpu desktop old 642, 610, 611, 593, new 596, 593, 610, 592; software desktop old 4218, 4241, 4060, new 3944, 3916, 3979. The larger file does not delay the nebula.
+
+### The sharper image itself (gpu, not part of `npm run perf`)
+
+`app-gas-detail/sharp-measure.mjs`, three loads per case at dpr 1 and 2, mains, load 6 to 9. The image is on screen 1.0 to 1.17 s after the map is zoomed in and left alone. Its 16 strip uploads hold the main thread 0.7 to 2.1 ms each on average, 4.3 ms at most; allocation and the mip build read 0 to 0.1 ms; no long task; one frame is drawn (the swap). A drag started the moment the first strip went in: no strip was sent during the drag, and its worst frame gap was 19.0 to 21.2 ms against 18.2 to 22.2 ms for a control drag afterwards. In `npm run perf` the sharper image loads on the gpu desktop columns after the album opens; the idle window of that script read 0 frames and 0 long tasks in every run.
+
+### Not measured
+
+The hover path (`baseline/hover-measure.mjs`) was not run again. The dpr 2 column was not compared with the old build in turn. The three full runs are of `7fdca313`; after the trim only the software desktop column was measured again.
+
