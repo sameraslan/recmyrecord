@@ -1,9 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
 
-test('without WebGL the map shows a message and search still works', async ({ page }) => {
+test('without WebGL the map shows a message, asks for no theme file, and search still works', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  const themeRequests: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/data/theme/')) themeRequests.push(r.url());
+  });
   await page.goto('/map');
   await expect(page.getByText(COPY.map.noWebgl)).toBeVisible();
   await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
@@ -12,6 +16,7 @@ test('without WebGL the map shows a message and search still works', async ({ pa
   await input.click();
   await input.pressSequentially('loveless');
   await expect(page.getByRole('option').first()).toContainText('Loveless');
+  expect(themeRequests).toEqual([]);
   expect(errors).toEqual([]);
 });
 

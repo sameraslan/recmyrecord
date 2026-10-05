@@ -66,6 +66,17 @@ describe('checkPages', () => {
     expect(fails.join('\n')).toMatch(/zz-album-zz-artist/);
   });
 
+  it('prints n/a for a reported-only value a run does not have, and the value when it does', () => {
+    const none = formatTable([{ mode: 'gpu', ...ok }]);
+    expect(none).toContain('| Nebula visible (reported only) | n/a |');
+    expect(none).toContain('| Deep zoom drag worst frame gap (reported only) | n/a |');
+    expect(none).toContain('| Deep zoom, slider between stops, worst frame gap (reported only) | n/a |');
+    const some = formatTable([{ mode: 'gpu', ...ok, gasShownMs: 640, deepDragGapMs: 21, deepMorphGapMs: 33 }]);
+    expect(some).toContain('| Nebula visible (reported only) | 640 ms |');
+    expect(some).toContain('| Deep zoom drag worst frame gap (reported only) | 21 ms |');
+    expect(some).toContain('| Deep zoom, slider between stops, worst frame gap (reported only) | 33 ms |');
+  });
+
   it('formats a markdown table', () => {
     const t = formatTable([{ mode: 'gpu', ...ok }]);
     expect(t.split('\n')[0]).toBe('| Measure | gpu desktop |');

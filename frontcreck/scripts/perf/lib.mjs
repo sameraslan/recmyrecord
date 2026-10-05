@@ -46,12 +46,16 @@ export function checkPages(pages, budgets) {
   return fails;
 }
 
+/** A reported-only value that an older build or a run with --no-gas may not have: never throws. */
+const ms = (v) => (typeof v === 'number' && Number.isFinite(v) ? `${v} ms` : 'n/a');
+
 const ROWS = [
   ['Renderer', (r) => r.renderer],
   ['Search usable', (r) => `${r.searchUsableMs} ms`],
   ['Startup worst long task', (r) => `${r.startupLongTaskMs} ms`],
   ['WebGL warm-up end (reported only)', (r) => (r.warmUp ? `${r.warmUp.ms} ms (${r.warmUp.why})` : 'none')],
   ['Map first frame (reported only)', (r) => `${r.mapFirstFrameMs} ms`],
+  ['Nebula visible (reported only)', (r) => ms(r.gasShownMs)],
   ['Typing to suggestions', (r) => `${r.typeToSuggestionsMs} ms`],
   ['Select to album', (r) => `${r.selectToAlbumMs} ms`],
   ['Transition worst frame gap', (r) => `${r.transitionGapMs} ms`],
@@ -59,6 +63,8 @@ const ROWS = [
   ['Morph worst frame gap', (r) => `${r.morphGapMs} ms`],
   ['Drag worst frame gap', (r) => `${r.dragGapMs} ms`],
   ['Zoom worst frame gap', (r) => `${r.zoomGapMs} ms`],
+  ['Deep zoom drag worst frame gap (reported only)', (r) => ms(r.deepDragGapMs)],
+  ['Deep zoom, slider between stops, worst frame gap (reported only)', (r) => ms(r.deepMorphGapMs)],
   ['Long tasks while idle (3 s)', (r) => String(r.idleLongTasks)],
   ['Frames rendered while idle (3 s)', (r) => String(r.idleFrames)],
 ];

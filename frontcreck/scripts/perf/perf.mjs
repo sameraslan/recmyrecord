@@ -25,7 +25,11 @@ const MODES = {
 const VIEWPORTS = {
   desktop: { viewport: { width: 1440, height: 900 } },
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  // Reported only and gpu only: a desktop screen at device pixel ratio 2, where the map shades four times the pixels.
+  desktop2x: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 },
 };
+// --no-gas: do not wait for window.__rmr.gas, so a build without the gas layer can be measured with this script.
+const NO_GAS = args.includes('--no-gas');
 
 function sh(cmd, cmdArgs) {
   return new Promise((resolve, reject) => {
@@ -176,7 +180,7 @@ async function albumFlow(page, isPhone) {
 
 async function exploreFlow(page, isPhone) {
   await page.goto(`${BASE}/map`, { waitUntil: 'load' });
-  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), null, { timeout: 20000 });
+  await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
   await page.waitForTimeout(1500);
   return page.evaluate(async (phone) => {
     const P = window.__perf;
@@ -212,6 +216,39 @@ async function exploreFlow(page, isPhone) {
       last = now;
     }
     res.zoomGapMs = Math.round(longest);
+    // Deep zoom, reported only: the same drag with covers at full size, where the gas is read from a blurred
+    // copy. setCamera clamps the zoom to its maximum. The camera is put back before the idle window is measured.
+    const api = window.__rmr.map;
+    const home = api.getCamera();
+    api.setCamera({ ...home, zoom: 1000 }, false);
+    await P.settled();
+    fire('pointerdown', cx, cy);
+    longest = 0;
+    last = performance.now();
+    const t2 = last;
+    while (performance.now() - t2 < 2000) {
+      const k = (performance.now() - t2) / 2000;
+      fire('pointermove', cx + Math.sin(k * 6.28) * 140, cy + Math.cos(k * 6.28) * 100);
+      const now = await P.raf();
+      longest = Math.max(longest, now - last);
+      last = now;
+    }
+    fire('pointerup', cx, cy);
+    res.deepDragGapMs = Math.round(longest);
+    res.deepZoom = window.__rmr.gasDeep ?? null;
+    // The worst case for the gas, reported only: still at full zoom, another stop is chosen, so both stops are
+    // bound and the blurred copy is read from both while the albums morph. Then the stop is put back.
+    await P.settled();
+    const stop0 = window.__rmr.getState().stop;
+    window.__rmr.getState().setStop(stop0 === 'sonic' ? 'mood' : 'sonic');
+    res.deepMorphGapMs = await P.gaps(700);
+    await P.settled();
+    window.__rmr.getState().setStop(stop0);
+    await P.settled();
+    api.setCamera(home, false);
+    // Full zoom makes the atlas fetch cover sheets; wait until the map has stopped drawing so a late sheet
+    // cannot land in the idle window measured below.
+    await P.settled();
     await new Promise((r2) => setTimeout(r2, 1500));
     window.__lt.length = 0;
     const f0 = window.__rmr.frames;
@@ -251,7 +288,11 @@ async function measure(mode, vpName) {
   });
   // A slow start (a cold software renderer) can draw the map after the 4 s window; wait for it so it is reported.
   await page.waitForFunction(() => window.__mapFirstFrame !== null, null, { timeout: 20000 }).catch(() => {});
+  // The gas of the stop Home shows arrives after the first frame; wait for it so its upload is inside the startup
+  // long tasks and its time can be reported. A page with no gas (or --no-gas) is not waited for.
+  if (!NO_GAS) await page.waitForFunction(() => typeof window.__rmr?.gasShownMs === 'number' || window.__rmr?.gas === 'off', null, { timeout: 20000 }).catch(() => {});
   const startup = await page.evaluate(() => ({
+    gasShown: window.__rmr?.gasShownMs ?? null,
     lt: window.__lt.slice(),
     supported: window.__ltSupported,
     ready: performance.getEntriesByName('rmr-search-ready')[0]?.startTime ?? null,
@@ -268,6 +309,7 @@ async function measure(mode, vpName) {
     searchUsableMs: startup.ready === null ? null : Math.round(startup.ready),
     startupLongTaskMs: Math.max(0, ...startup.lt.map((x) => x[1])),
     mapFirstFrameMs: startup.mapFirstFrame,
+    gasShownMs: typeof startup.gasShown === 'number' ? Math.round(startup.gasShown) : null,
     warmUp: startup.warm,
     startupLongTasks: startup.lt,
     ...(await albumFlow(page, vpName === 'phone')),
@@ -295,12 +337,16 @@ async function main() {
     fails.push(...checkPages(pages, BUDGETS));
     for (const mode of opt('--mode') ? [opt('--mode')] : Object.keys(MODES)) {
       for (const vp of opt('--viewport') ? [opt('--viewport')] : Object.keys(VIEWPORTS)) {
+        if (vp === 'desktop2x' && mode !== 'gpu') continue; // dpr 2 is measured on the GPU only
         const r = await measure(mode, vp);
         rows.push(r);
-        fails.push(...checkBudgets(r, mode, BUDGETS, { allowSoftwareGpu: args.includes('--allow-software-gpu') }));
+        // The dpr 2 column is reported only: it has no budget and is never checked.
+        if (vp !== 'desktop2x') fails.push(...checkBudgets(r, mode, BUDGETS, { allowSoftwareGpu: args.includes('--allow-software-gpu') }));
       }
     }
     console.log(`\n${formatTable(rows)}\n`);
+    if (rows.some((r) => r.vp === 'desktop2x')) console.log('The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.\n');
+    if (NO_GAS) console.log('Run with --no-gas: the script did not wait for a gas layer.\n');
     for (const r of rows) {
       // settled() gives up after 6 s; the next step then measures a map that is still animating.
       if (r.settled?.includes(false)) console.warn(`WARNING ${r.mode} ${r.vp}: the map did not settle before a step (settled: ${JSON.stringify(r.settled)})`);
