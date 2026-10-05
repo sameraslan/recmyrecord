@@ -196,3 +196,83 @@ These are not code problems. Bring the plan in line so downstream readers are no
 - The budget rows keep the same keys and the same framing (`__rmrOpen='whole'`, wholeCamera 0.78507). Finding 2 is about the cache only.
 - The `sharpSettled` waits are bounded.
 - `capture.mjs` and `hover-measure.mjs` default to `--open whole`.
+
+---
+
+# Re-check after fix round 1 (2026-10-05)
+
+Commits checked: 83ce0553, 1468aaf5, 0a010802 and d3ac3f43, on top of origin 0563a218. The gas.spec change in this range is the owner's own commit 0563a218, not Task 0's.
+
+**Verdict: APPROVED.**
+- Findings 1-5, 7, 8 and 9 are addressed.
+- Finding 6 is recorded as a known gap in the plan's Downstream section, as ruled.
+- One new Minor point is below. It needs no change.
+
+## Status of each finding
+
+1. **ADDRESSED.**
+   - `/` first-load JS is 191.3 KB (191.27) in one chunk; I measured it myself.
+   - The opening glide now shares the album-return effect.
+   - The untouched logic lives in `CameraTween`, so `MapStage` gained one line.
+   - **The threshold claim is confirmed.** I padded MapStage.tsx with comments only, which changes no runtime code:
+
+     | MapStage.tsx size | `/` first-load | Chunks |
+     |---|---|---|
+     | 19,936 B (head) | 191.3 KB | one |
+     | 19,999 B | 191.3 KB | one |
+     | 20,001 B | 191.3 KB | one |
+     | 20,033 B | 191.8 KB | two |
+     | 20,480 B | 191.8 KB | two |
+     | 21,000 B | 191.8 KB | two |
+
+   - So the split is triggered by the module's source size, comments included, at a threshold between 20,002 and 20,033 bytes. It is not triggered by the runtime code. That also explains my round-1 bisection: every variant that stayed one chunk was under 20 KB, and the committed file was 20,090 B.
+   - The in-file warning ("Keep this file under 20,000 bytes") is right.
+   - **For parts 2 and 3:** any edit that takes MapStage.tsx past about 20,000 bytes, comments included, costs +0.6 KB of first-load JS. Moving logic into lazy modules, as was done here, avoids it. Re-measure first-load JS after every MapStage edit.
+2. **ADDRESSED.**
+   - `measure()` now runs `albumFlow` and then `exploreFlow` on the main page exactly as the baseline did.
+   - The opening rows run last in a new browser context with a cold HTTP cache, the same `PAGE_HELPERS`, `__rmrGasLite` and error listeners, and no `__rmrOpen`; the context is closed afterwards.
+   - The budget rows' keys and framing are unchanged.
+   - I checked this by reading the code. I did not run perf.
+3. **ADDRESSED.**
+   - The gas-fill test hides `.grain` for that test only, with a comment explaining why. The thresholds are unchanged and nothing is loosened.
+   - The test passed in all 4 desktop runs (2 in round 1, 2 now).
+   - I did not print the sky readings myself. The implementer's 6.22 matches the shader's rgb(6, 6, 9) = 6.2.
+4. **ADDRESSED.** `opening()` returns early unless `data && isFramed()`.
+   - It also skips a glide when it is not needed: no tween is running and the camera already equals the opening target. This happens on About -> /map with the Overview untouched.
+   - The skip is correct: for kind `'whole'`, `untouchedOverview` is false, so the Whole-map path still behaves as before.
+5. **ADDRESSED, as ruled.** `homeBackdrop(to)` counts the camera as untouched when both of these hold:
+   - the running tween has had no grab since it started (`lastCameraGrab > startWall` rejects it);
+   - its endpoint `t.to` equals `getFitCamera()`.
+
+   Only the opening glide meets both: it sets `setFitKind(kind, target)` and then calls `start(target)`. Every other tween fails one of them: reset gives kind `'whole'`, a fly has an album target, and a zoom button registers a grab. `start()`'s zoom clamp leaves the Overview target unchanged, since it is far under `MAX_ZOOM`. Album routes are excluded (`to` must be home, about or other).
+6. **NOT FIXED, as ruled.** It is recorded in the plan (Downstream, "Known gap, not fixed (review finding 6)").
+7. **ADDRESSED, as ruled.** Every arrival at Home, About or 404 with the Overview untouched keeps no Explore camera, and Home also glides to the Whole map.
+   - /map -> About -> /map is now a no-op: the camera is already at the Overview, so `opening()` skips the glide.
+   - A fresh load of Home sets the kind to `'whole'`, so later arrivals at About or 404 never return true.
+8. **ADDRESSED.** An `--only` run writes `capture-log-<vp>.only.json`. A full run writes exactly what it did before.
+9. **ADDRESSED.**
+   - The plan now has an "As built" note.
+   - Steps 7, 15, 16, 17 and 19 match the code, including the corrected fail-first list and the `wholeCamera` placement.
+
+## Runs
+
+| Check | Result |
+|---|---|
+| `opening.spec.ts`, desktop, twice | 13 passed; 13 passed |
+| `opening.spec.ts`, phone, twice | 8 passed, 5 skipped; 8 passed, 5 skipped |
+| The two new tests | deterministic in all 4 runs. The "glide is still running" test clicks from inside the page in the same frame that sees `isAnimating()` on Explore; the glide starts in the layout effect of the commit that sets `data-view`, so the click cannot miss it. |
+| Mutation for 5 (any running tween counts as touched) | "Home clicked while the glide ... is still running" fails (camera off by 1.372) |
+| Mutation for 7 (`homeBackdrop` only on /map -> Home) | "/map (untouched) to About and then Home" fails |
+| Frames at rest, desktop and phone (ad-hoc spec, deleted after the run; 2 s windows after `waitForGasSharpSettled`) | 0 after each of: the /map opening, the /map -> Home glide, /map -> About, About -> /map, and /map -> About -> Home |
+
+The working tree was clean after every experiment, and each mutation was restored.
+
+I did not re-run the SearchBox.test wall-clock flake or phone flows.spec:86. Both are outside Task 0's code (`git diff --stat` shows no change to SearchBox or flows.spec in this range).
+
+## New point (Minor, no change needed)
+
+**A. /map (untouched) -> About -> (search) album -> close now ends at the Whole map, not the Overview.**
+- Arriving at About with the Overview untouched now saves no Explore camera (ruling 7's "keeps nothing").
+- An album then closed back to /map has no saved camera, so it gets `reset()`, the Whole map, as for an album opened from a link (decided question 4).
+- Before round 1 it restored the Overview.
+- This is consistent with the rulings, and the path is rare. Note it in Downstream if the owner reviews album-close behaviour.
