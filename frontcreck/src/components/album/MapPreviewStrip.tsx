@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { Icon } from '@/components/Icon';
 import { TILE } from '@/components/Cover';
-import { CLUSTER_RGB } from '@/components/map/data';
+import { STAR_WHITE } from '@/components/map/theme';
 import { MARKER_GAP, layoutMarkers } from '@/components/map/state/focusLayout';
 import { COPY } from '@/lib/copy';
 import { coverUrl } from '@/lib/data/catalog';
@@ -11,8 +11,8 @@ import { useCatalog, usePositions } from '@/lib/data/useData';
 import { useIsNarrow } from '@/lib/media';
 import type { AlbumRecord, Focus, StopId } from '@/lib/types';
 
-/** The map's three dot colours (CLUSTER_RGB, by cluster % 3) at the strip's lower opacity. */
-const DOT = CLUSTER_RGB.slice(0, 3).map(([r, g, b]) => `rgba(${Math.round(r * 255)},${Math.round(g * 255)},${Math.round(b * 255)},.42)`);
+/** Stand-in until the strip is restyled (Trifid plan part 3): every dot in star white at the strip's lower opacity. */
+const DOT = [0, 1, 2].map(() => `rgba(${STAR_WHITE.join(',')},.42)`);
 /** Strip covers are smaller than the map's markers (64 / 46): the mockup's compact MapView sizes. */
 const STRIP_SEED = 38;
 const STRIP_REC = 28;

@@ -1,15 +1,9 @@
-import { hexToRgb } from '@/lib/color';
 import { atlasCount, atlasUrl } from '@/lib/data/sprites';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumRecord, Positions, StopId } from '@/lib/types';
 
 /** Slider position of each stop in the shader (0 sonic, 0.5 balanced, 1 mood). */
 export const STOP_T: Record<StopId, number> = { sonic: 0, balanced: 0.5, mood: 1 };
-
-const rgb = (hex: string): [number, number, number] => hexToRgb(hex).map((v) => v / 255) as [number, number, number];
-
-/** Dot colours by cluster k (k % 3: clay, moss, ochre), written straight to the framebuffer as sRGB literals. */
-export const CLUSTER_RGB: [number, number, number][] = Array.from({ length: 8 }, (_, k) => rgb(['#c4886f', '#97a077', '#c8a560'][k % 3]));
 
 /** Raw layout units (positions.json) to world units: world = (raw - centre) * s. */
 export interface MapTransform {
