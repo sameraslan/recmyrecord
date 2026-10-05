@@ -8,7 +8,7 @@ This part was written before part 1 was built. It has been checked against the c
 - Global: four constraints added from the handoff: the sharper gas image's bounded fade is the one exception to "nothing draws at rest" and frame counting waits for it; browser checks that read gas pixels force the full shader (`window.__rmrGasLite = 'off'`); names and twinkle add no work on the pointer move path; first-load JS is 191.2 KB of 200 after part 1 and new code goes in the lazy map chunk.
 - Review Focus: item 9 added (the names driver's new skip rule must not skip a frame it needs).
 - Interfaces: `ThemeData { v: 1; ... }` -> `{ v: 3; ...; gas: Record<StopId, ThemeGas> }`, with `ThemeGas` (rect, px, sharp, hash), the hashed gas file names and the theme.json path `public/data/theme/theme.json`; "measured at 600 px per world unit" -> names the constant `LABEL_REF_PPW` in `scripts/theme/bake-core.js`; "confirmed against part 1 (its Task 5)" -> confirmed against the code: `setTheme`, `useThemeLoad`, `themeFor`, `GasField` at `canvas/GasField.tsx`, its draw settings, part 1's `window.__rmr` fields and `waitForMap`'s gas wait.
-- Interfaces (produced): `capture.mjs` L380 -> L390; `--still` also waits for the sharper gas image; new `waitForGasSharpSettled` helper; names driver skip rule and `clearNameWidths` / `nameWidthsVersion`.
+- Interfaces (produced): `capture.mjs` L380 -> L390; `--still` also waits for the sharper gas image; `waitForGasSharpSettled` reused from Task 0; names driver skip rule and `clearNameWidths` / `nameWidthsVersion`.
 - 1, step 1: "part 1 adds its own fields" -> lists the fields part 1 added and where `starSeed` goes.
 - 1, step 2: `stars.test.ts` fixture `theme()` `v: 1` with no `gas` -> `v: 3` with a `gas` stub (typecheck covers test files).
 - 2: design note added on how the stars sit over `GasField` (opaque quad, `renderOrder -1`, no depth; transparent canvas before the first gas texture and without a theme).
@@ -17,12 +17,12 @@ This part was written before part 1 was built. It has been checked against the c
 - 2, new step 10: capture the cross-fade tiles and show them to the owner before Task 9 closes (tile colour = star colour, never seen rendered).
 - 2, broken e2e note: `explore.spec.ts` picked cover test "broken by this task" -> already red since part 1 (`meanLuma`), this task adds `isLamp`.
 - 4: inherited acceptance item added (neighbour lines beside an open album, on the brightest cream gas).
-- 5: "fitted overview 595.8 px per world unit, the default view, full halo" -> that is the Whole map; Task 0's Overview opening view is closer than 600, so names there take the solved halo; the 12.5 px reference is the prototype's `Cam.fitOverview` cap.
+- 5: "fitted overview 595.8 px per world unit, the default view, full halo" -> that is the Whole map: 596.7 px per world unit at Balanced (full halo), 708.5 at Sonic and 618.2 at Mood (over 600: solved halo for an unmoved name at rest); Task 0's Overview opening view is 1,639.5 at Balanced, so names there take the solved halo; the 12.5 px reference is the prototype's `Cam.fitOverview` cap.
 - 6: first-load note added (the toggle, its preference, the flag, icons and string are first-load code through `MapStage`).
 - 7: `MusicMap.tsx` "L38-39 today, L41-42 after part 1" -> L41-42; `Scene.tsx` "L26 / L171-172 today" -> L27 and L176-177; "part 1 adds its gas mesh" -> part 1's `<GasField />` line.
 - 7: `RegionNames.test.tsx` fixture `v: 1` -> `v: 3` with a `gas` stub.
 - 7: `RegionNamesDriver` laid names out on every drawn frame -> keeps the inputs of its last placement and returns after a few compares when none changed (a hover frame, a cover fade, the gas fade); `nameWidths.ts` gains `clearNameWidths()` and `nameWidthsVersion()`, which `RegionNames` uses in place of `nameWidths.clear()`.
-- 8: `helpers.ts` `waitForAnimations` "L61-66 / L67-72" -> L68-73; new `waitForGasSharpSettled`; `gas.spec.ts` "one line in `lumaAt` (if part 1 named it otherwise ...)" -> `lumaAt` at L45 plus the registration test's second screenshot reader (L1287).
+- 8: `helpers.ts` `waitForAnimations` "L61-66 / L67-72" -> L68-73; reuses Task 0's `waitForGasSharpSettled`; `gas.spec.ts` "one line in `lumaAt` (if part 1 named it otherwise ...)" -> `lumaAt` at L45 plus the registration test's second screenshot reader (L1287).
 - 8: `twinkle.spec.ts` `openAtRest` waits for the sharper gas image before counting frames; `twinkle-cost.mjs` waits for `gas` ready or off and for the sharper image; note that the app picks its gas shader as for a visitor; mains power.
 - 9: `names.spec.ts` forces the full gas shader (its pictures go to the owner), its idle test waits for the sharper gas image, and its zoom comment no longer assumes the whole cloud opening view.
 - 9, step 6: suites run -> `gas.spec.ts` added on both projects, and the `nowebgl` project.
@@ -32,6 +32,7 @@ This part was written before part 1 was built. It has been checked against the c
 - 9, step 11: reviewer told which pictures use the lighter gas shader, given two more crops, and asked to recheck the inherited weak marks on the brightest cream gas.
 - Independent check (2026-10-05) folded in: precondition (ledger "Task 6: complete"); sharper image wait default 1.5 s -> 2.5 s (longer than `GAS_SHARP_RETRY_MS` 2000) in the helper, `twinkle-cost.mjs` and `capture.mjs`; the flag's wording on the test browser ('waiting' or 'off'); Task 7 `nameWidths.test.ts` added; `setStageTop` needs a `requestRender()` from part 3 (four frame request cases); Task 9 step 7 note on `perf.mjs` idle window vs the sharper image fade (Task 0's fix); Task 9 step 3 label count wording; Task 2 part 1 evidence crops named; Task 8 step 11 wording on the twinkle switch's listener.
 - Self-review: test edit list and type consistency updated for the above.
+- Task 0 (2026-10-05, `2026-10-05-trifid-theme-2-task0-overview-framing.md`): Task 0 owns `waitForGasSharpSettled`, the perf idle wait and the capture/hover sharper-image waits; Task 8 and Task 9 reuse them. Task 5's halo numbers, the `names.spec.ts` zoom comment, Task 9 steps 7, 8, 9 and 11 updated to Task 0's framing (the map opens at the Overview; `map-opening.jpg` is the Overview picture, `map-overview.jpg` stays the whole-cloud fit).
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -71,7 +72,7 @@ node -p process.arch   # must print arm64
 - Machine rules: arm64 Node 22.23.3 (`export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"`; `node -p process.arch` must print `arm64`), one browser at a time, one Playwright project at a time, jobs serial, gentle on the laptop (no parallel test runs). Every Playwright command carries `--workers=1` (the config default is 2) and sets the PATH itself, so it can be pasted alone.
 - Every commit message carries `Refs #45` and ends with the trailer `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - **Push after each verified task** (handoff of 2026-10-05, which withdraws the old "commit, do not push"). The owner said Vercel previews do not need his go-ahead; only merging does, after he has checked the preview. Commit at each commit step; once the task has passed its review, push it to `feat/trifid-theme` (`git push origin feat/trifid-theme`). Every commit message carries `Refs #45`.
-- **The map canvas at rest, as part 1 built it.** Part 1's sharper gas image (ordinary desktops and laptops with a real GPU only; `window.__rmr.gasSharp`) is fetched in a quiet moment about a second after the map settles and fades in over up to 14 bounded frames. It is the one exception to "nothing draws at rest", and it is part 1's. Any check this part adds that counts canvas frames at rest first waits for the sharper image to settle, as `e2e/gas.spec.ts` does: `waitForGasSharpSettled(page)` in `e2e/helpers.ts` (added in Task 8 step 11), or the same wait inlined in a script.
+- **The map canvas at rest, as part 1 built it.** Part 1's sharper gas image (ordinary desktops and laptops with a real GPU only; `window.__rmr.gasSharp`) is fetched in a quiet moment about a second after the map settles and fades in over up to 14 bounded frames. It is the one exception to "nothing draws at rest", and it is part 1's. Any check this part adds that counts canvas frames at rest first waits for the sharper image to settle, as `e2e/gas.spec.ts` does: `waitForGasSharpSettled(page)` in `e2e/helpers.ts` (added in Task 0, step 11), or the same wait inlined in a script.
 - **The gas shader in tests.** The test browser renders in software, where the app draws the gas with its lighter shader (`GAS_LITE`). A browser check that reads gas pixels, or takes a picture a reviewer or the owner judges the gas by, asks for the full shader first with an init script (`window.__rmrGasLite = 'off'`, as `e2e/gas.spec.ts` does in its `beforeEach`). `capture.mjs` asks for the full shader by default (`--gas full`).
 - **No work on the pointer move path.** `GasField` tracks pointer and wheel activity at window level so that no gas upload lands inside a gesture. The names layer (Task 7) and the twinkle (Task 8) add no pointer listener and do no layout, style or DOM work on a frame that only a hover drew: their frame callbacks compare a few numbers with the last frame's and return.
 - **First-load JS is 191.2 KB of 200 KB after part 1** (baseline 190.5). New code goes in the lazy map chunk: anything imported only from `components/map/MusicMap.tsx` and its tree. The only first-load additions this part makes are the ones Task 9 step 7's size check lists (the names toggle and its preference, two store flags, two icons, one string).
@@ -131,10 +132,10 @@ Produced by this part for part 3:
 - Twinkle: `frontcreck/src/components/map/state/twinkle.ts` (`createTwinkle(host, env): Twinkle`, `pickStar`, `glintFor`, the `TWINKLE_*` settings), `overlays/Twinkle.tsx` (`TwinkleLayer`, `addGlint`), `canvas/TwinkleDriver.tsx`.
 - Names driver: `canvas/RegionNamesDriver.tsx` keeps the inputs of its last placement and places nothing on a frame where none changed (a hover redraw, a cover fading in, part 1's gas fade). Part 3 Task 3 Step 8 edits its `visibleArea(inset, width, height, 0)` line, which stays as written here; `getStageTop()` is one of the compared inputs, so a `setStageTop` call takes effect on the next drawn frame. `state/nameWidths.ts` exports `clearNameWidths()` and `nameWidthsVersion()` beside `nameWidths` and `setNameFontFamily`.
 - `useAppStore` gains `twinkleOn: boolean` (true, not saved, no control on screen) and `setTwinkleOn(v: boolean): void`: the switch for tests, measurements and still screenshots, reached as `window.__rmr.getState().setTwinkleOn(false)`.
-- Test hooks on `window.__rmr`: `starSeed?: number` (the seed of the page's star deal; a test may set it before the map loads for a repeatable sky) and `twinkle?: { stats: TwinkleStats }` (the glints' counters). `e2e/helpers.ts` gains `twinkleOff(page)`: any check that reads screenshot pixels while stars show calls it first; and `waitForGasSharpSettled(page)`: any check that counts canvas frames at rest calls it first (part 1's sharper gas image may fade in about a second after the map settles).
+- Test hooks on `window.__rmr`: `starSeed?: number` (the seed of the page's star deal; a test may set it before the map loads for a repeatable sky) and `twinkle?: { stats: TwinkleStats }` (the glints' counters). `e2e/helpers.ts` gains `twinkleOff(page)`: any check that reads screenshot pixels while stars show calls it first; and it already has `waitForGasSharpSettled(page)` (added in Task 0, step 11): any check that counts canvas frames at rest calls it first (part 1's sharper gas image may fade in about a second after the map settles).
 - CSS classes `.tw-layer`, `.tw`, `.tw-flare`, `.rn-layer`, `.rn`, `.map-names`, `.mk-case`, `.mk-core`. Selectors tests wait on: `.rn:not(.off)` (a placed name), `.tw-layer .tw` (a live glint, with `data-album="<index>"`), `svg.mk-lines g.mk-case line[data-case]`.
 - `frontcreck/scripts/perf/twinkle-cost.mjs`: the twinkle cost measurement (Task 8; Task 9 runs it again on the final build). Part 3 can rerun it with glass on.
-- `docs/design/trifid-theme/reviews/baseline/capture.mjs` gains `--still` (Task 9 step 9): star seed fixed at 20261004 by an init script, glints off after every load and before every settle, the map ready only once `window.__rmr.gas` is `'ready'` or `'off'` (with `--still` the flag is required: the option is for builds with the theme), and every settle waits for part 1's sharper gas image to settle. Every capture from Task 9 on, part 3's included, uses `--still` (with the script's default `--gas full`, which part 1 added). Part 1's captures ran before the option existed and stay without it. Part 3 Task 10 changes one other line of the same script (L390 since part 1's edits, where the edge hover state reads the canvas top; it becomes `#stage`); this part's edit does not touch that line, and after it that line is a few lines lower. Task 0 may also edit this script (the opening view), so every edit here is found by its text, not by its line number.
+- `docs/design/trifid-theme/reviews/baseline/capture.mjs` gains `--still` (Task 9 step 9): star seed fixed at 20261004 by an init script, glints off after every load and before every settle, the map ready only once `window.__rmr.gas` is `'ready'` or `'off'` (with `--still` the flag is required: the option is for builds with the theme), and every settle waits for part 1's sharper gas image to settle (that wait is Task 0's, in `settle` for every run). Every capture from Task 9 on, part 3's included, uses `--still` (with the script's default `--gas full`, which part 1 added). Part 1's captures ran before the option existed and stay without it. Part 3 Task 10 changes one other line of the same script (L390 since part 1's edits, where the edge hover state reads the canvas top; it becomes `#stage`); this part's edit does not touch that line, and after it that line is a few lines lower. Task 0 may also edit this script (the opening view), so every edit here is found by its text, not by its line number.
 
 ---
 
@@ -2258,7 +2259,7 @@ Commit. Once this task's review has passed, push: `git push origin feat/trifid-t
 - Size tiers (labels.js L66-70, k = 0.88): strong `0.88 * (17 + 7 * min(1, sqrt(n / 346)))`, others `0.88 * (15 + 3 * min(1, sqrt(n / 346)))`; times a zoom factor `clamp((coverPx / 12.5) ^ 0.3, 0.85, 1.35)` on desktop, in half-pixel steps; on a phone `clamp(size * 0.72, 13, 16)`. `ThemeLabel` has no broad-area level, so the prototype's third tier is not used. The zoom factor is relative to 12.5 px covers, the same reference the stars use (inferred: the prototype measures it against its Overview framing, `Cam.fitOverview`, which is capped at 12.5 px covers, just under the names band; the app gains an Overview framing in Task 0, and the reference stays 12.5 px whatever Task 0's framing measures on a given window).
 - A name tries its true centre, then the prototype's twelve nudges (`OFFSETS`), keeping its last spot first. A box must stay 10 px inside the visible map and clear of chrome, of other names and of the album picked in Explore.
 - **Halo and contrast.** The dark halo round the glyphs is the name's immediate surround, so contrast is measured against it. With gas luminance `bg`, ink luminance `ink`, ink opacity `a` and halo strength `h`: the surround is `b = bg * (1 - h)^2.2` (the gas seen through a black layer of opacity `h`, blended in gamma space), the ink over it is `t = (a * ink^(1/2.2) + (1 - a) * b^(1/2.2))^2.2`, and the ratio is `(t + 0.05) / (b + 0.05)`. `haloFor` takes the first `h` in 0.50, 0.55 … 1.00 that reaches 4.5 and adds 0.15 (capped at 1).
-- **When the halo is at full strength (1).** `label.lum` is the brightest gas under the unmoved name's box, at rest, measured by part 1's build at 600 px per world unit (part 1 Task 3). It says nothing about any other case, so the halo is full: **whenever the view is under 600 px per world unit** (`NAME_LUM_PX_PER_WORLD`; zoomed further out, a name covers more of the map than was measured), for a name that was nudged off its centre, for every name during a slider morph, and for every name on a phone. Only an unmoved name at rest on a desktop at 600 px per world unit or closer in gets the solved, lighter halo. For scale: the fitted whole cloud of a 1440 x 900 window (today's opening view, the Whole map once Task 0 is in) is 0.784 * 836 / 1.1 = 595.8 px per world unit, just under 600, so there every name has the full halo, and the solved halo applies once the visitor zooms in a little (names last until 13 px covers, 1,912 px per world unit). Task 0 makes the map open at the Overview framing, which is closer in (at most 12.5 px covers, 1,838 px per world unit; read the exact scale Task 0 records for a 1440 x 900 window), so on the opening view an unmoved name at rest gets the solved halo. The full halo at the Whole map is left as built and is judged by eye in Task 9 (step 9's `map-whole` and `map-overview` pictures and step 11's review), not changed here. The layout helper takes the scale as `pxPerWorld` and its test pins both sides of 600 with exact values.
+- **When the halo is at full strength (1).** `label.lum` is the brightest gas under the unmoved name's box, at rest, measured by part 1's build at 600 px per world unit (part 1 Task 3). It says nothing about any other case, so the halo is full: **whenever the view is under 600 px per world unit** (`NAME_LUM_PX_PER_WORLD`; zoomed further out, a name covers more of the map than was measured), for a name that was nudged off its centre, for every name during a slider morph, and for every name on a phone. Only an unmoved name at rest on a desktop at 600 px per world unit or closer in gets the solved, lighter halo. For scale: the Whole map of a 1440 x 900 window is 596.7 px per world unit at Balanced (just under 600: every name has the full halo), 708.5 at Sonic and 618.2 at Mood (over 600: an unmoved name at rest gets the solved halo); at Balanced the solved halo applies once the visitor zooms in a little (names last until 13 px covers, 1,912 px per world unit). Task 0 makes the map open at the Overview framing, which is closer in (1,639.5 px per world unit at Balanced, 11.15 px covers, names zoom factor 0.966; 1,534.7 at Sonic; 1,838.2 at Mood, capped at 12.5 px), so on the opening view an unmoved name at rest gets the solved halo. The full halo at the Whole map is left as built and is judged by eye in Task 9 (step 9's `map-opening` and `map-opening-fit` pictures and step 11's review), not changed here. The layout helper takes the scale as `pxPerWorld` and its test pins both sides of 600 with exact values.
 - Chrome rectangles are fixed numbers read from `styles/map.css` and `styles/phone.css`, not measured, so no layout is read per frame. The zoom corner is the taller one: the detached names toggle (one box) 8 px above the three zoom buttons. Only Explore's controls are listed: with an album open there are no names. Everything anchored to the top of the map is offset by `ChromeInput.top`, the part of the canvas under the site header (`getStageTop()`, Task 7): 0 today, the header's height once part 3 extends the stage under it. The bottom-anchored rectangles do not depend on it.
 
 - [ ] **Step 1: Write the failing test**
@@ -4023,7 +4024,7 @@ Commit. Once this task's review has passed, push: `git push origin feat/trifid-t
 - Modify: `frontcreck/src/components/map/MusicMap.tsx` (one import, one element after `<Scene />`)
 - Modify: `frontcreck/src/components/map/canvas/Scene.tsx` (one import, one element after `<RegionNamesDriver />`)
 - Modify: `frontcreck/src/styles/map.css` (new rules after the region names rules from Task 7)
-- Modify: `frontcreck/e2e/helpers.ts` (`waitForAnimations`, L68-73 since part 1 lengthened `waitForMap` above it; new `twinkleOff` and `waitForGasSharpSettled`)
+- Modify: `frontcreck/e2e/helpers.ts` (`waitForAnimations`, L68-73 since part 1 lengthened `waitForMap` above it; new `twinkleOff` (`waitForGasSharpSettled` is Task 0's))
 - Modify: `frontcreck/e2e/a11y.spec.ts` (L12-13, the wait before the audit)
 - Modify: `frontcreck/e2e/gas.spec.ts` (part 1's file: one line in `lumaAt`, one line before the registration test's screenshot, one import)
 - Create: `frontcreck/e2e/twinkle.spec.ts`
@@ -4072,8 +4073,8 @@ Commit. Once this task's review has passed, push: `git push origin feat/trifid-t
   // window.__rmr.twinkle?: { stats: TwinkleStats }
   // e2e/helpers.ts
   export async function twinkleOff(page: Page): Promise<void>;
-  export async function waitForGasSharpSettled(page: Page, quietMs?: number): Promise<void>;   // before counting idle frames
   ```
+- Consumes (from Task 0, already in `e2e/helpers.ts`): `waitForGasSharpSettled(page: Page, quietMs = 2500): Promise<void>`, called before counting idle frames.
 
 **What it is.** Now and then one star catches the light. A port of the prototype's `src/twinkle.js` and the twinkle block of `src/css/pages.css` (L225-236), with the settings of the prototype README, section "Twinkle":
 
@@ -5178,9 +5179,9 @@ In `frontcreck/src/styles/map.css`, directly after the `.rn.fair b` rule (the la
 
 These are the prototype's rules with its ids turned into classes (`#twinkle` is `.tw-layer`) and its two debug variants (`tw-hold`, `tw-ring`) left out.
 
-- [ ] **Step 11: Teach two waits and the gas spec's pixel readers about the glints, and add the sharper image wait**
+- [ ] **Step 11: Teach two waits and the gas spec's pixel readers about the glints**
 
-Existing test helpers wait for, or look at, a page that is now never fully still. Each edit below is as narrow as it can be, and says what the check still proves. One helper is new: `waitForGasSharpSettled`, which the browser checks of this task and of Task 9 call before they count canvas frames at rest (handoff of 2026-10-05).
+Existing test helpers wait for, or look at, a page that is now never fully still. Each edit below is as narrow as it can be, and says what the check still proves. The sharper image wait `waitForGasSharpSettled` is already in `helpers.ts` (Task 0); do not add a second copy. The browser checks of this task and of Task 9 call it before they count canvas frames at rest (handoff of 2026-10-05).
 
 In `frontcreck/e2e/helpers.ts`, replace `waitForAnimations` (L68-73, with its doc comment; part 1's longer `waitForMap` sits above it):
 
@@ -5214,33 +5215,6 @@ export async function waitForAnimations(page: Page): Promise<void> {
 export async function twinkleOff(page: Page): Promise<void> {
   await page.evaluate(() => window.__rmr?.getState().setTwinkleOn(false));
 }
-
-/** Waits until part 1's sharper gas image has settled: it is not on its way, and neither its flag
- * (window.__rmr.gasSharp) nor the frame count has changed for `quietMs`. On an ordinary desktop with a real GPU
- * the image is fetched in a quiet moment about a second after the map settles and fades in over up to 14 frames;
- * on the test browser (software) it says 'waiting', and turns 'off' once the view would want the image (it
- * stays 'waiting' on Home); on touch devices it says 'off'. A check that counts canvas frames at
- * rest calls this first, as e2e/gas.spec.ts waits for the flag before its own idle windows. */
-// 2500, not less: a failed load goes back to 'waiting' and is tried again after GAS_SHARP_RETRY_MS (2000, shaders/gas.ts).
-export async function waitForGasSharpSettled(page: Page, quietMs = 2500): Promise<void> {
-  await page.waitForFunction(
-    (quiet) => {
-      const w = window as unknown as { __gsF?: number; __gsS?: string; __gsT?: number };
-      const s = String(window.__rmr?.gasSharp);
-      const f = window.__rmr?.frames ?? 0;
-      const now = performance.now();
-      if (s === 'loading' || w.__gsF !== f || w.__gsS !== s) {
-        w.__gsF = f;
-        w.__gsS = s;
-        w.__gsT = now;
-        return false;
-      }
-      return now - (w.__gsT ?? now) >= quiet;
-    },
-    quietMs,
-    { polling: 50, timeout: 45_000 },
-  );
-}
 ```
 
 What `waitForAnimations` still proves: every other animation and transition on the page (panels, cards, rows, fades) has finished before its callers take a screenshot or measure. Only animations whose target is inside `.tw-layer` are skipped.
@@ -5271,7 +5245,7 @@ with:
 
 What the audit still proves: axe runs on every route only once every panel, card and fade has settled, with the same 2 s bound and the same error that names what is still running. The glints are the one thing it no longer waits for.
 
-In `frontcreck/e2e/gas.spec.ts` (written by part 1), add `twinkleOff` to the names imported from `'./helpers'` (today `isPhone, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet`), and make it the first statement of `lumaAt` (L45), the helper that takes the screenshot:
+In `frontcreck/e2e/gas.spec.ts` (written by part 1), add `twinkleOff` to the names imported from `'./helpers'` (today `isPhone, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet`), and make it the first statement of `lumaAt` (L50 after Task 0's `beforeEach` comment; find it by text), the helper that takes the screenshot:
 
 ```ts
 async function lumaAt(page: Page, r: Rect, q = 0.5): Promise<number> {
@@ -5852,8 +5826,9 @@ test('region names are gone once the map is zoomed in, and back at the overview'
   await openMap(page);
   await page.locator('canvas.map-canvas').focus();
   // Eight key steps of 1.4 (14.8 times): covers are then over 13 px on both projects, whatever the map opens on
-  // (Task 0's Overview framing: at most 12.5 px; the whole cloud: about 4 px on desktop and about 1.7 px on the
-  // phone, where four steps would still leave them under 13).
+  // (Task 0's Overview, the opening view: 11.1 px on desktop, 2.7 px on the phone; the whole cloud, which '0' and
+  // the fit button give: about 4 px on desktop and about 1.8 px on the phone (267.8 px per world unit), where four
+  // steps would still leave them under 13. Names show at both framings).
   for (let i = 0; i < 8; i++) {
     await page.keyboard.press('+');
     await waitForCameraIdle(page);
@@ -6129,7 +6104,7 @@ Then write `docs/design/trifid-theme/reviews/app-perf-part2.md` with:
 - a table for the reported only column `gpu desktop2x` and the reported only rows (`deepDragGapMs`, `deepMorphGapMs`, `gasShownMs`, and which gas shader drew each column) in every column that prints them, judged by the same median rule against their baselines: for `gpu desktop2x`, `baseline/perf/perf-dpr2-run1.json` to `perf-dpr2-run3.json` (made in part 1 Task 6) and the section "gpu desktop at dpr 2, added later with the same script" of `BASELINE-PERF.md`; for the two deep zoom rows of the gpu columns at dpr 1, `perf-part1/baseline-gpu-deep-run1.json` to `run3.json` (today's site with the extended script; the software columns have no baseline for them); and part 1's own numbers beside them. They have no budget; the 50 ms frame gap is the yardstick;
 - every single run over a budget, named with the other two values beside it and what explains it;
 - the idle rows on their own line: frames while idle must be at most 1 and long tasks while idle 0 in all four columns of all three runs, with the glints playing (the script does not switch them off). The baseline is 0 and 0 everywhere;
-- if `idleFrames` is over 1 in a gpu column, first check whether `window.__rmr.gasSharp` changed during the window: `exploreFlow` in `scripts/perf/perf.mjs` (L246-260) takes its 3 s idle window after `setCamera(home)`, `settled()` and 1.5 s without waiting for the sharper gas image, whose up to 14 frame fade can land in it on a desktop GPU (more so once Task 0 opens at the Overview). The fix is in `perf.mjs` (wait for the sharper image to settle before the idle window, as `waitForGasSharpSettled` does) and is Task 0's edit; never change the budget;
+- Task 0 already waits for the sharper image before the idle window (`sharpSettled`, with `idleSharpSettled` and `sharpFlag` in the JSON); an `idleFrames` over 1 is not the fade unless `idleSharpSettled` is `false`. Never change the budget. The two rows at the opening view (`openingDragGapMs`, `openingZoomGapMs`, Task 0) are reported only: put them in the reported only table, judged against 50 ms by hand (no baseline);
 - which version of each effect shipped (as built, or the cheaper one from the table above).
 
 - [ ] **Step 8: First hover, with the baseline's own script, and the twinkle cost once more**
@@ -6149,7 +6124,7 @@ The rules for this part:
 2. The median "pointer move to tip visible" of each of the three hovers is no worse than the baseline's worst load for that hover, or is explained or fixed like any other number that got worse.
 3. Map frames per hover stay at 3.
 
-The script loads `/map` fresh and hovers soon after (its header has the method). Once Task 0 opens the map at the Overview framing, the first gas image can be magnified there on the GPU, and part 1's sharper image may then be fetched in a quiet moment and fade in over up to 14 frames. If a hover shows more than 3 frames, first check whether that fade landed in its window (`window.__rmr.gasSharp` changed during it); that is part 1's, not the hover path. Say so in the write-up with the numbers, and do not edit the baseline's script to hide it.
+`hover-measure.mjs` waits for the sharper image before the idle (Task 0) and hovers at the Whole map by default (`--open whole`, the baseline's framing), so the run above is like for like. Run it again with `--open app` for the opening view (the Overview), into `app-hover-part2-opening.json`, and report it beside the first; the three rules apply to the default run, and the opening run's numbers are judged by the same rules without a baseline.
 
 If a rule fails, find the cause before going on. The hover path is `CursorTracker` (hit test), `setHoveredIndex`, the `HoverLabel` render with its 40 px cover, and the map frames that draw the hover mark. What this part could have added to it: the wider star quads making those frames slower (the frame gap shows it; cheaper version in step 7's table), the region names pass on the hover frames (the driver returns after its compares when nothing it reads changed, Task 7; check that a hover changes none of them, so it neither lays names out nor rewrites transforms), or the twinkle driver's per-frame comparison (ten number compares; it must not clear the glints on a hover). Fix it, or take the cheaper version of the effect that causes it, and tell the owner afterwards.
 
@@ -6190,9 +6165,9 @@ add:
 ```js
  *   --still      for builds with the Trifid theme: the same picture on every run. One fixed star deal (STILL_SEED
  *                is put on window.__rmr before any page script runs), the star glints switched off after every
- *                page load and before every settle, and the map counts as ready only once the gas has settled,
- *                the sharper gas image of a desktop GPU included. Without it the script behaves as it did for the
- *                baseline.
+ *                page load and before every settle, and the map counts as ready only once the gas has settled
+ *                (every settle already waits for the sharper gas image of a desktop GPU, since part 2's Task 0).
+ *                Without it the script behaves as it did for the baseline.
 ```
 
 Replace (L57):
@@ -6254,30 +6229,6 @@ const mapReady = (p) =>
 /** --still: no star glints. A no-op on a build without them. A full page load resets the store, so this runs
  * after every load (go) and before every settle. */
 const stillGlints = (p) => (STILL ? p.evaluate(() => window.__rmr?.getState?.().setTwinkleOn?.(false)) : Promise.resolve());
-
-/** --still: part 1's sharper gas image (desktop GPU only) has settled: it is not on its way, and neither its flag
- * (window.__rmr.gasSharp) nor the frame count has changed for 2.5 s. It is fetched about a second after the map
- * settles and fades in over up to 14 frames, so without this wait a picture shows one image or the other. The
- * same wait as frontcreck/e2e/helpers.ts waitForGasSharpSettled. */
-const stillGasSharp = (p) =>
-  STILL
-    ? p.waitForFunction(
-        (quiet) => {
-          const s = String(window.__rmr?.gasSharp);
-          const f = window.__rmr?.frames ?? 0;
-          const now = performance.now();
-          if (s === 'loading' || window.__capSF !== f || window.__capSS !== s) {
-            window.__capSF = f;
-            window.__capSS = s;
-            window.__capST = now;
-            return false;
-          }
-          return now - window.__capST >= quiet;
-        },
-        2500, // longer than GAS_SHARP_RETRY_MS (2000, shaders/gas.ts): a failed load goes back to 'waiting' and retries
-        { polling: 50, timeout: 45000 },
-      )
-    : Promise.resolve();
 ```
 
 Replace (L178-179):
@@ -6295,20 +6246,7 @@ async function settle(p, name, { map = true } = {}) {
   await p.evaluate(() => document.fonts.ready);
 ```
 
-and, at the end of the same function, replace:
-
-```js
-  if (map) await mapQuiet(p, 300).catch(warn(name, 'map still drawing'));
-}
-```
-
-with:
-
-```js
-  if (map) await mapQuiet(p, 300).catch(warn(name, 'map still drawing'));
-  if (map) await stillGasSharp(p).catch(warn(name, 'the sharper gas image did not settle'));
-}
-```
+(The end of `settle` is not changed here: since Task 0 it ends with `sharpSettled`, the sharper gas image wait, for every run with or without `--still`.)
 
 Replace (L195-198):
 
@@ -6334,14 +6272,16 @@ async function go(p, url) {
 ```js
       const ctx = await browser.newContext({ ...VIEWPORTS[vp], ...(state.context ?? {}) });
       await ctx.addInitScript((v) => { window.__rmrGasLite = v; }, GAS === 'lighter' ? 'force' : 'off');
+      if (OPEN === 'whole' && state.open !== 'app') await ctx.addInitScript(() => { window.__rmrOpen = 'whole'; });
       const page = await ctx.newPage();
 ```
 
-with:
+(the `__rmrOpen` line is Task 0's) with:
 
 ```js
       const ctx = await browser.newContext({ ...VIEWPORTS[vp], ...(state.context ?? {}) });
       await ctx.addInitScript((v) => { window.__rmrGasLite = v; }, GAS === 'lighter' ? 'force' : 'off');
+      if (OPEN === 'whole' && state.open !== 'app') await ctx.addInitScript(() => { window.__rmrOpen = 'whole'; });
       // Before any page script: the store module spreads the object it finds (src/lib/store.ts), so the seed stays.
       if (STILL) await ctx.addInitScript((seed) => { window.__rmr = { ...(window.__rmr || {}), starSeed: seed }; }, STILL_SEED);
       const page = await ctx.newPage();
@@ -6370,7 +6310,7 @@ Then retake the baseline's screenshots of this build with it (186 named states, 
 (export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"; node -p process.arch; cd frontcreck && node ../docs/design/trifid-theme/reviews/baseline/capture.mjs test-results/after-part2 http://127.0.0.1:3400 --start --still)
 ```
 
-Its arguments are `<outDir> <baseURL> [--start] [--still] [--viewport desktop|phone|both] [--mode gpu|software] [--only <text>] [--gas full|lighter]` (`--gas full`, the default, is what these pictures need: the full gas shader, as a GPU draws it); it is run from `frontcreck/` on the production build of step 7, `--start` starts and stops `next start` on port 3400, and the pictures land in `test-results/after-part2/desktop/` and `phone/` (full views `.jpg`, crops `.png`) with a `capture-log-<viewport>.json` beside them. With `--still` two runs of this build give the same stars and no glint, so its own pictures can be compared file by file from run to run (Spotify cover images aside, as the baseline's README says). Against the baseline the star sizes still differ by design: the baseline has dots of one size, this build has stars of four sizes in the fixed deal of seed 20261004. If `selected-dense-crop` or another state is in doubt, take it again with `--only <state name> --still`.
+Its arguments are `<outDir> <baseURL> [--start] [--still] [--viewport desktop|phone|both] [--mode gpu|software] [--only <text>] [--gas full|lighter] [--open whole|app]`. The default `--open whole` (Task 0) opens every baseline-named state at the Whole map, as the baseline did, so `map-overview` stays the whole-cloud fit and every pair compares like for like; the new state `map-opening` always takes the app's own opening view and writes `map-opening.jpg` (the Overview) and `map-opening-fit.jpg` (the fit button's Whole map) (`--gas full`, the default, is what these pictures need: the full gas shader, as a GPU draws it); it is run from `frontcreck/` on the production build of step 7, `--start` starts and stops `next start` on port 3400, and the pictures land in `test-results/after-part2/desktop/` and `phone/` (full views `.jpg`, crops `.png`) with a `capture-log-<viewport>.json` beside them. With `--still` two runs of this build give the same stars and no glint, so its own pictures can be compared file by file from run to run (Spotify cover images aside, as the baseline's README says). Against the baseline the star sizes still differ by design: the baseline has dots of one size, this build has stars of four sizes in the fixed deal of seed 20261004. If `selected-dense-crop` or another state is in doubt, take it again with `--only <state name> --still`.
 
 It exits non-zero and leaves a `FAILED-<state>.jpg` if a state could not be reached: that is a regression to fix (the script finds its way by the class names in `SEL` at its top and by `window.__rmr`; this part renames none of them).
 
@@ -6400,7 +6340,7 @@ Commit. Once this task's review has passed, push: `git push origin feat/trifid-t
 
 Dispatch one fresh reviewer subagent that did not write this part. Give it only the paths below and this brief. It opens the images one at a time with the Read tool and starts no browser.
 
-> Compare what part 2 built with the approved pictures and list every difference, worst first. App images, under `frontcreck/test-results/shots/` (written by the runs of steps 3, 4 and 6): `desktop-explore.png`, `desktop-explore-zoomed.png`, `desktop-explore-hover.png`, `desktop-focus.png`, `desktop-album.png`, `desktop-names-toggle-on.png`, `desktop-names-toggle-off.png`, `phone-names-toggle-on.png`, `phone-album-mapmode.png`; and under `frontcreck/test-results/after-part2/desktop/` (step 9): `map-overview.jpg`, `map-whole.jpg`, `map-covers-dense-fade-crop.png`, `album-open.jpg`, `hover-map-album-crop.png`, `selected-dense-crop.png`. The `test-results/shots/` pictures of the older specs (explore, focus, album) were taken on the test browser's software renderer, where the app draws the gas with its lighter shader; the names toggle pictures and the `after-part2` pictures ask for the full shader. Judge the gas only in the latter, and the marks in all. Approved, under `docs/design/trifid-theme/options/`: `final-overview.jpg`, `final-album.jpg`, `toggle-b-on.jpg`, `toggle-b-off.jpg`, `final-phone-map.jpg`, `q-twinkle-live.jpg`. Judge only what this part built: the stars (four sizes in a random mix with a few bright ones, tint, glow, the dark disc under them on bright gas; their positions are the albums and must match, their sizes are dealt at random on each load and will not match star for star), a glint if one was caught (a soft white bloom on a star, a thin four point flare on a bright one, never a new star), covers and their keyline, the white cased lines and where they start and end, frames and rank badges, the region names (face, capitals, spacing, size, halo, which show, none over a control, none in any picture with an album open, at most four on the phone) and the names button (a separate box above the zoom stack, the on and off icons). Look again, on the brightest cream gas, at the marks part 1's independent review found weak there (`docs/design/trifid-theme/reviews/app-fidelity-part1-independent.md`): the hover ring on a star, the stars on cream and rust and beside an open album, the cross-fade tiles at about 23 px, the half transparent covers around a pick, and the lines beside an open album; each must now read clearly. Mark each difference "worse than approved", "equal" or "expected until part 3". The only expected ones: rings, focus outlines and the hot badge are still amber, panels and the header are still solid warm brown with no map behind the header, the pane beyond the gas is still brown, the film grain is still there, and the selected ring has no dark casing, because part 3 changes those. One approved picture is out of date on purpose: `final-album.jpg` shows a region name beside the open album, and the owner has since ruled that out.
+> Compare what part 2 built with the approved pictures and list every difference, worst first. App images, under `frontcreck/test-results/shots/` (written by the runs of steps 3, 4 and 6): `desktop-explore.png`, `desktop-explore-zoomed.png`, `desktop-explore-hover.png`, `desktop-focus.png`, `desktop-album.png`, `desktop-names-toggle-on.png`, `desktop-names-toggle-off.png`, `phone-names-toggle-on.png`, `phone-album-mapmode.png`; and under `frontcreck/test-results/after-part2/desktop/` (step 9): `map-opening.jpg` (the Overview, judge against `final-overview.jpg`), `map-opening-fit.jpg` (the fit button's Whole map, judge against `final-whole.jpg`), `map-whole.jpg` (the zoom-out floor, 0.8 of the Whole map), `map-covers-dense-fade-crop.png`, `album-open.jpg`, `hover-map-album-crop.png`, `selected-dense-crop.png`. The `test-results/shots/` pictures of the older specs (explore, focus, album) were taken on the test browser's software renderer, where the app draws the gas with its lighter shader; the names toggle pictures and the `after-part2` pictures ask for the full shader. Judge the gas only in the latter, and the marks in all. Approved, under `docs/design/trifid-theme/options/`: `final-overview.jpg`, `final-whole.jpg`, `final-album.jpg`, `toggle-b-on.jpg`, `toggle-b-off.jpg`, `final-phone-map.jpg`, `q-twinkle-live.jpg`. Judge only what this part built: the stars (four sizes in a random mix with a few bright ones, tint, glow, the dark disc under them on bright gas; their positions are the albums and must match, their sizes are dealt at random on each load and will not match star for star), a glint if one was caught (a soft white bloom on a star, a thin four point flare on a bright one, never a new star), covers and their keyline, the white cased lines and where they start and end, frames and rank badges, the region names (face, capitals, spacing, size, halo, which show, none over a control, none in any picture with an album open, at most four on the phone) and the names button (a separate box above the zoom stack, the on and off icons). Look again, on the brightest cream gas, at the marks part 1's independent review found weak there (`docs/design/trifid-theme/reviews/app-fidelity-part1-independent.md`): the hover ring on a star, the stars on cream and rust and beside an open album, the cross-fade tiles at about 23 px, the half transparent covers around a pick, and the lines beside an open album; each must now read clearly. Mark each difference "worse than approved", "equal" or "expected until part 3". The only expected ones: rings, focus outlines and the hot badge are still amber, panels and the header are still solid warm brown with no map behind the header, the pane beyond the gas is still brown, the film grain is still there, and the selected ring has no dark casing, because part 3 changes those. One approved picture is out of date on purpose: `final-album.jpg` shows a region name beside the open album, and the owner has since ruled that out.
 
 Fix every "worse than approved" item in the task that owns it, run that task's checks again and have the same reviewer look again. Save its final list as the second section of `docs/design/trifid-theme/reviews/app-fidelity-part2.md`, "Fidelity against the approved pictures", under the regression checklist of step 9, and commit it:
 
@@ -6468,7 +6408,7 @@ Revised on 2026-10-04 to match the owner's decisions of that day (overview, sect
 - `lib/store.test.ts`: appended tests only (Tasks 6 and 8).
 - `e2e/helpers.ts` `waitForAnimations` and the audit wait in `e2e/a11y.spec.ts`: both skip animations inside `.tw-layer` only, and still wait for every other animation on the page (Task 8, step 11).
 - `e2e/gas.spec.ts` (part 1's): `lumaAt` and the registration test switch the glints off before reading pixels; the assertions are unchanged (Task 8, step 11).
-- `e2e/helpers.ts` gains `waitForGasSharpSettled` (Task 8, step 11), an addition: no existing helper changes for it. `e2e/twinkle.spec.ts`, the idle test of `e2e/names.spec.ts`, `scripts/perf/twinkle-cost.mjs` and `capture.mjs --still` wait for part 1's sharper gas image before they count frames or take pictures (handoff of 2026-10-05).
+- `e2e/helpers.ts` has `waitForGasSharpSettled` from Task 0 (step 11), an addition: no existing helper changes for it. `e2e/twinkle.spec.ts`, the idle test of `e2e/names.spec.ts`, `scripts/perf/twinkle-cost.mjs` and `capture.mjs --still` wait for part 1's sharper gas image before they count frames or take pictures (handoff of 2026-10-05).
 - Not edited and expected to fail until part 3: the `isLamp` and `meanLuma` assertions of `e2e/explore.spec.ts` (listed at the end of Task 2; the test has been red on purpose since part 1).
 
 **Not covered here, on purpose:** the DOM ring round the Explore pick among stars (`.map-sel`, `styles/map.css` L17-18, positioned by `canvas/OverlayDriver.tsx` L60-76, rendered by `SelectedRing` in `MusicMap.tsx`) keeps its lamp border with no dark casing; this part does not edit it, and part 3 gives it the casing when it changes the tokens. The film grain, the glass and the stage under the header are part 3's. The prototype showed the seed's region name beside an open album; the owner has ruled that out, and no name shows while an album is open.
@@ -6479,4 +6419,4 @@ Revised on 2026-10-04 to match the owner's decisions of that day (overview, sect
 
 **Checked while revising** (plain `node`, arm64, on the code in this file): the random deal matches the prototype's for the same seed, album for album, and gives 41, 367, 1,102 and 2,571 for 4,081 albums; the 24 star tests, the 28 names layout tests, the 25 twinkle tests and the 2 stage top tests pass against the code as written here (run again by an independent checker under the repo's vitest in a scratch copy: stars 24, focusLayout 21 with the 13 existing tests unchanged, namesLayout 28, namesPref 4, stageTop 2, twinkle 25, all passing); `haloFor(0.4, ...)` is exactly 0.65 and `haloFor(0.9, ...)` exactly 0.75; `twinkle-cost.mjs` parses. Not run: anything that needs the app, a browser or WebGL (the shaders, the React components, every Playwright spec, both perf scripts).
 
-**Type consistency:** `StarAttributes` (`star` Float32Array x4, `tint` and `bg` Uint8Array x3) matches the three `InstancedBufferAttribute` sizes in Task 2 and the shader's `vec4 a_star`, `vec3 a_tint`, `vec3 a_bg`. `buildStarAttributes(classes, theme)` is called with `pageStarClasses(n)` in `AlbumField` and nowhere with a count. `pageStarClasses(n)` is the one source of classes for `AlbumField` (Task 2) and `TwinkleDriver` (Task 8), and the one part 3's strip must use. `edgePoint`, `SEED_FRAME_PX`, `REC_FRAME_PX`, `HOT_FRAME_PX` are defined in Task 3 and used with the same signatures in Task 4 and its CSS insets (4, 1, 3). `ViewBounds` is the one rectangle type for `layoutNames`, `chromeBlockers`, `visibleArea` and `pickStar`. `nameKey(stop, id)` is the overlay key in `RegionNames` and `RegionNamesDriver`. `ChromeInput` is `{ width, height, top, inset, phone, bottomCover, card }` in Task 5, its tests and the driver of Task 7; `NamesInput` has `pxPerWorld` and no `lines` in all three. `namesShown(coverPx, albumOpen)` has two parameters in Task 5, its tests and the driver. `getStageTop()` is defined in Task 7 and read in Tasks 7 and 8. `namesOn` / `setNamesOn` are added to `AppState` in Task 6 and read in Tasks 6, 7 and 9; `twinkleOn` / `setTwinkleOn` are added in Task 8 and used by its driver, `twinkleOff` and `twinkle-cost.mjs`. `COPY.map.names` is added in Task 6 and used in Tasks 6 and 9; `namesHide` and `namesShow` no longer exist anywhere. `clearNameWidths()` and `nameWidthsVersion()` are defined in `state/nameWidths.ts` (Task 7) and used by `RegionNames` and `RegionNamesDriver`; `waitForGasSharpSettled(page, quietMs?)` is defined in `e2e/helpers.ts` (Task 8) and used by `twinkle.spec.ts` and `names.spec.ts`. The `ThemeData` fixtures of `stars.test.ts` and `RegionNames.test.tsx` are version 3 with a `gas` field, as `lib/data/theme.ts` requires since part 1. `GlintHandle`, `Glint`, `TwinkleHost` and `TwinkleStats` are defined in `state/twinkle.ts` and used with the same shapes in `overlays/Twinkle.tsx`, `canvas/TwinkleDriver.tsx`, `types/global.d.ts`, `e2e/twinkle.spec.ts` and `scripts/perf/twinkle-cost.mjs`.
+**Type consistency:** `StarAttributes` (`star` Float32Array x4, `tint` and `bg` Uint8Array x3) matches the three `InstancedBufferAttribute` sizes in Task 2 and the shader's `vec4 a_star`, `vec3 a_tint`, `vec3 a_bg`. `buildStarAttributes(classes, theme)` is called with `pageStarClasses(n)` in `AlbumField` and nowhere with a count. `pageStarClasses(n)` is the one source of classes for `AlbumField` (Task 2) and `TwinkleDriver` (Task 8), and the one part 3's strip must use. `edgePoint`, `SEED_FRAME_PX`, `REC_FRAME_PX`, `HOT_FRAME_PX` are defined in Task 3 and used with the same signatures in Task 4 and its CSS insets (4, 1, 3). `ViewBounds` is the one rectangle type for `layoutNames`, `chromeBlockers`, `visibleArea` and `pickStar`. `nameKey(stop, id)` is the overlay key in `RegionNames` and `RegionNamesDriver`. `ChromeInput` is `{ width, height, top, inset, phone, bottomCover, card }` in Task 5, its tests and the driver of Task 7; `NamesInput` has `pxPerWorld` and no `lines` in all three. `namesShown(coverPx, albumOpen)` has two parameters in Task 5, its tests and the driver. `getStageTop()` is defined in Task 7 and read in Tasks 7 and 8. `namesOn` / `setNamesOn` are added to `AppState` in Task 6 and read in Tasks 6, 7 and 9; `twinkleOn` / `setTwinkleOn` are added in Task 8 and used by its driver, `twinkleOff` and `twinkle-cost.mjs`. `COPY.map.names` is added in Task 6 and used in Tasks 6 and 9; `namesHide` and `namesShow` no longer exist anywhere. `clearNameWidths()` and `nameWidthsVersion()` are defined in `state/nameWidths.ts` (Task 7) and used by `RegionNames` and `RegionNamesDriver`; `waitForGasSharpSettled(page, quietMs?)` is defined in `e2e/helpers.ts` (Task 0) and used by `twinkle.spec.ts` and `names.spec.ts`. The `ThemeData` fixtures of `stars.test.ts` and `RegionNames.test.tsx` are version 3 with a `gas` field, as `lib/data/theme.ts` requires since part 1. `GlintHandle`, `Glint`, `TwinkleHost` and `TwinkleStats` are defined in `state/twinkle.ts` and used with the same shapes in `overlays/Twinkle.tsx`, `canvas/TwinkleDriver.tsx`, `types/global.d.ts`, `e2e/twinkle.spec.ts` and `scripts/perf/twinkle-cost.mjs`.
