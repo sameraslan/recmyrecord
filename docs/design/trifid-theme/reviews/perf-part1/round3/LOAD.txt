@@ -1,0 +1,118 @@
+Load averages (1, 5 and 15 minutes, from uptime) and power around every measurement of round 3.
+Machine: MacBook Pro, Apple M1 Pro, 16 GB, shared with other sessions. Date 2026-10-05, local time (EDT).
+Each perf run waited for the 1 minute load to fall under 4 before it began (up to 30 minutes); the load after a run
+includes the run's own work. Taken from the first and last line of each .txt in this folder and from the
+measurement script's log (copied below as it was written).
+
+== first line (before) and last line (after) of each output file ==
+perf-current-run1.txt
+  # 2026-10-05 07:37:03 current (37906968); waited 621 s; load 3.89; load averages before: 3.89 5.54 8.02; Now drawing from 'AC Power'
+  # exit 0; load averages after: 8.22 6.61 8.04; Now drawing from 'AC Power'
+perf-prev-run1.txt
+  # 2026-10-05 07:50:50 prev (161d530b); waited 681 s; load 3.38; load averages before: 3.38 5.20 6.57; Now drawing from 'AC Power'
+  # exit 0; load averages after: 15.20 8.61 7.68; Now drawing from 'AC Power'
+perf-current-run2.txt
+  # 2026-10-05 08:16:40 current (37906968); waited 1402 s; load 3.75; load averages before: 3.75 6.21 6.98; Now drawing from 'AC Power'
+  # exit 0; load averages after: 5.14 6.16 6.86; Now drawing from 'AC Power'
+perf-prev-run2.txt
+  # 2026-10-05 08:23:45 prev (161d530b); waited 281 s; load 3.92; load averages before: 3.92 5.23 6.25; Now drawing from 'AC Power'
+  # exit 0; load averages after: 13.10 7.69 7.04; Now drawing from 'AC Power'
+perf-current-run3.txt
+  # 2026-10-05 08:33:53 current (37906968); waited 461 s; load 3.85; load averages before: 3.85 5.24 6.07; Now drawing from 'AC Power'
+  # exit 0; load averages after: 10.33 7.27 6.75; Now drawing from 'AC Power'
+perf-prev-run3.txt
+  # 2026-10-05 08:50:40 prev (161d530b); waited 861 s; load 3.93; load averages before: 3.93 5.00 5.66; Now drawing from 'AC Power'
+  # exit 0; load averages after: 5.75 5.96 5.99; Now drawing from 'AC Power'
+hover.txt
+  # 2026-10-05 08:56:07 current; waited 180 s; load 3.98; load averages before: 3.98 5.15 5.64; Now drawing from 'AC Power'
+  # load averages after: 5.08 5.18 5.61
+startup-longtask.txt
+  # 2026-10-05 08:57:52; waited 40 s; load 3.99; load averages before: 3.99 4.90 5.48; Now drawing from 'AC Power'
+  # load averages after: 5.93 5.65 5.73
+startup-longtask-plain.txt
+  # 2026-10-05 08:59:58 untimed WebGL calls; load averages before: 5.93 5.65 5.73; Now drawing from 'AC Power'
+  # load averages after: 7.68 6.03 5.85
+software-frames.txt
+  # 2026-10-05 09:06:48; waited 340 s; load 3.99; load averages before: 3.99 6.23 6.12; Now drawing from 'AC Power'
+  # load averages after: 12.81 12.17 9.13
+fade-measure.txt
+  # 2026-10-05 09:13:28; load averages before: 12.81 12.17 9.13; Now drawing from 'AC Power'
+  # load averages after: 8.62 10.83 9.00
+
+== lite-ab (same session A/B of the lighter shader, 06:38 to 06:52): first line of each ==
+software-baseline-b-run1.txt: # 2026-10-05 06:47:09 baseline (6f10463e) load before: 10.84 9.46 9.33 ; Now drawing from 'AC Power'
+software-baseline-b-run2.txt: # 2026-10-05 06:49:10 baseline (6f10463e) load before: 8.95 9.44 9.35 ; Now drawing from 'AC Power'
+software-baseline-b-run3.txt: # 2026-10-05 06:51:04 baseline (6f10463e) load before: 7.73 9.25 9.32 ; Now drawing from 'AC Power'
+software-full-run1.txt: # 2026-10-05 06:38:51 load before: 8.21 8.35 8.98 ; Now drawing from 'AC Power'
+software-full-run2.txt: # 2026-10-05 06:41:09 load before: 9.30 9.11 9.21 ; Now drawing from 'AC Power'
+software-full-run3.txt: # 2026-10-05 06:43:18 load before: 9.42 9.39 9.32 ; Now drawing from 'AC Power'
+software-lite-b-run1.txt: # 2026-10-05 06:48:03 lite (0fe67fd1) load before: 11.01 9.74 9.44 ; Now drawing from 'AC Power'
+software-lite-b-run2.txt: # 2026-10-05 06:49:57 lite (0fe67fd1) load before: 10.14 9.86 9.52 ; Now drawing from 'AC Power'
+software-lite-b-run3.txt: # 2026-10-05 06:51:51 lite (0fe67fd1) load before: 7.26 8.86 9.17 ; Now drawing from 'AC Power'
+software-lite-run1.txt: # 2026-10-05 06:40:02 load before: 11.23 9.17 9.23 ; Now drawing from 'AC Power'
+software-lite-run2.txt: # 2026-10-05 06:42:11 load before: 11.28 9.71 9.42 ; Now drawing from 'AC Power'
+software-lite-run3.txt: # 2026-10-05 06:44:27 load before: 9.46 9.50 9.37 ; Now drawing from 'AC Power'
+
+== measure.log, as written by the measurement script ==
+done current 1: # exit 0; load averages after: 8.22 6.61 8.04; Now drawing from 'AC Power'
+done prev 1: # exit 0; load averages after: 15.20 8.61 7.68; Now drawing from 'AC Power'
+done current 2: # exit 0; load averages after: 5.14 6.16 6.86; Now drawing from 'AC Power'
+done prev 2: # exit 0; load averages after: 13.10 7.69 7.04; Now drawing from 'AC Power'
+done current 3: # exit 0; load averages after: 10.33 7.27 6.75; Now drawing from 'AC Power'
+done prev 3: # exit 0; load averages after: 5.75 5.96 5.99; Now drawing from 'AC Power'
+done hover
+3301 200
+3302 200
+3303 200
+done startup
+stopped
+done frames
+ALL DONE Mon Oct  5 09:15:26 EDT 2026
+
+== measure.sh, the script that ran the sequence (paths shortened: <repo> is this checkout, <scratch> a temporary folder; wt-prev is a checkout of 161d530b, wt-base of 6f10463e) ==
+#!/bin/bash
+# Round 3 measurements, one after another. Raw output to docs/.../perf-part1/round3/.
+export PATH="$HOME/.nvm/versions/node/v22.23.3/bin:$PATH"
+M=<repo>/frontcreck
+SP=<scratch>
+R=$M/../docs/design/trifid-theme/reviews/perf-part1/round3
+S=$M/../docs/design/trifid-theme/reviews/perf-part1/scripts
+mkdir -p $R
+load1() { uptime | sed 's/.*load averages: //' | awk '{print $1}'; }
+waitquiet() { # up to 30 minutes for the 1 minute load to fall under 4
+  local t0=$(date +%s)
+  while :; do
+    local l=$(load1)
+    if awk "BEGIN{exit !($l < 4)}"; then echo "waited $(( $(date +%s) - t0 )) s; load $l"; return 0; fi
+    if [ $(( $(date +%s) - t0 )) -ge 1800 ]; then echo "waited 1800 s and the load never fell under 4; running at load $l"; return 1; fi
+    sleep 20
+  done
+}
+power() { pmset -g batt | head -1; }
+for i in 1 2 3; do
+  for v in current prev; do
+    if [ $v = current ]; then D=$M; else D=$SP/wt-prev/frontcreck; fi
+    f=$R/perf-$v-run$i.txt
+    w=$(waitquiet)
+    if ! power | grep -q "AC Power"; then echo "ON BATTERY: stopped before $v run $i" > $R/STOPPED-ON-BATTERY.txt; exit 1; fi
+    cd $D
+    { echo "# $(date '+%Y-%m-%d %H:%M:%S') $v ($(git rev-parse --short HEAD)); $w; load averages before: $(uptime | sed 's/.*load averages: //'); $(power)"; echo "> npm run perf"; npm run perf 2>&1; echo "# exit $?; load averages after: $(uptime | sed 's/.*load averages: //'); $(power)"; } > $f
+    cp "$(ls -t scripts/perf/out/*.json | head -1)" $R/perf-$v-run$i.json
+    echo "done $v $i: $(tail -1 $f)" >> $SP/measure.log
+  done
+done
+cd $M
+w=$(waitquiet)
+{ echo "# $(date '+%Y-%m-%d %H:%M:%S') current; $w; load averages before: $(uptime | sed 's/.*load averages: //'); $(power)"; node ../docs/design/trifid-theme/reviews/baseline/hover-measure.mjs $R/hover.json http://127.0.0.1:3500 --start 2>&1; echo "# load averages after: $(uptime | sed 's/.*load averages: //')"; } > $R/hover.txt
+echo "done hover" >> $SP/measure.log
+$SP/servers.sh start >> $SP/measure.log
+w=$(waitquiet)
+{ echo "# $(date '+%Y-%m-%d %H:%M:%S'); $w; load averages before: $(uptime | sed 's/.*load averages: //'); $(power)"; node $S/startup-longtask.mjs $R/startup-longtask.json --rounds 6 baseline=http://127.0.0.1:3301 current=http://127.0.0.1:3302 prev=http://127.0.0.1:3303 2>&1; echo "# load averages after: $(uptime | sed 's/.*load averages: //')"; } > $R/startup-longtask.txt
+{ echo "# $(date '+%Y-%m-%d %H:%M:%S') untimed WebGL calls; load averages before: $(uptime | sed 's/.*load averages: //'); $(power)"; node $S/startup-longtask.mjs $R/startup-longtask-plain.json --plain --rounds 5 baseline=http://127.0.0.1:3301 current=http://127.0.0.1:3302 2>&1; echo "# load averages after: $(uptime | sed 's/.*load averages: //')"; } > $R/startup-longtask-plain.txt
+echo "done startup" >> $SP/measure.log
+w=$(waitquiet)
+{ echo "# $(date '+%Y-%m-%d %H:%M:%S'); $w; load averages before: $(uptime | sed 's/.*load averages: //'); $(power)"; node $S/software-frames.mjs $R/software-frames.json --rounds 3 baseline=http://127.0.0.1:3301 "full=http://127.0.0.1:3302?lite=off" lighter=http://127.0.0.1:3302 2>&1; echo "# load averages after: $(uptime | sed 's/.*load averages: //')"; } > $R/software-frames.txt
+$SP/servers.sh stop >> $SP/measure.log
+echo "done frames" >> $SP/measure.log
+{ echo "# $(date '+%Y-%m-%d %H:%M:%S'); load averages before: $(uptime | sed 's/.*load averages: //'); $(power)"; node $S/fade-measure.mjs $R/fade-measure.json --runs 5 2>&1; echo "# load averages after: $(uptime | sed 's/.*load averages: //')"; } > $R/fade-measure.txt
+echo "ALL DONE $(date)" >> $SP/measure.log

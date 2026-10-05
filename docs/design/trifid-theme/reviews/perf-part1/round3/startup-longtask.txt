@@ -1,0 +1,26 @@
+# 2026-10-05 08:57:52; waited 40 s; load 3.99; load averages before: 3.99 4.90 5.48; Now drawing from 'AC Power'
+round 1 baseline  load 3.99 4.90 5.48 | long tasks [] | warm-up end 3347 (cap) | first frames [[3814,1]] | nebula none | WebGL calls inside long tasks: none
+round 1 current   load 5.83 5.26 5.61 | long tasks [[3277,51]] | warm-up end 3277 (cap) | first frames [[3747,1],[4057,2]] | nebula 4050 | WebGL calls inside long tasks: none
+round 1 prev      load 6.48 5.41 5.65 | long tasks [[3277,131]] | warm-up end 3277 (cap) | first frames [[3840,1],[4170,2]] | nebula 4163 | WebGL calls inside long tasks: none
+round 2 baseline  load 6.42 5.43 5.66 | long tasks [] | warm-up end 3459 (cap) | first frames [[3910,1]] | nebula none | WebGL calls inside long tasks: none
+round 2 current   load 6.46 5.46 5.67 | long tasks [[3295,66]] | warm-up end 3295 (cap) | first frames [[3771,1],[4080,2]] | nebula 4074 | WebGL calls inside long tasks: none
+round 2 prev      load 7.19 5.65 5.73 | long tasks [] | warm-up end 3300 (done) | first frames [[3742,1],[4038,2]] | nebula 4031 | WebGL calls inside long tasks: none
+round 3 baseline  load 7.57 5.76 5.77 | long tasks [] | warm-up end 3156 (done) | first frames [[3589,1]] | nebula none | WebGL calls inside long tasks: none
+round 3 current   load 7.21 5.71 5.75 | long tasks [] | warm-up end 3183 (done) | first frames [[3606,1],[3915,2]] | nebula 3909 | WebGL calls inside long tasks: none
+round 3 prev      load 6.47 5.60 5.72 | long tasks [] | warm-up end 3293 (cap) | first frames [[3738,1],[4071,2]] | nebula 4063 | WebGL calls inside long tasks: none
+round 4 baseline  load 6.36 5.59 5.71 | long tasks [] | warm-up end 3380 (cap) | first frames [[3807,1]] | nebula none | WebGL calls inside long tasks: none
+round 4 current   load 6.25 5.58 5.71 | long tasks [] | warm-up end 3405 (cap) | first frames [[3854,1],[4165,2]] | nebula 4159 | WebGL calls inside long tasks: none
+round 4 prev      load 7.41 5.86 5.80 | long tasks [] | warm-up end 3192 (done) | first frames [[3620,1],[3930,2]] | nebula 3923 | WebGL calls inside long tasks: none
+round 5 baseline  load 7.14 5.83 5.79 | long tasks [] | warm-up end 3173 (done) | first frames [[3621,1]] | nebula none | WebGL calls inside long tasks: none
+round 5 current   load 6.34 5.70 5.75 | long tasks [[3656,52]] | warm-up end 3274 (done) | first frames [[3719,1],[4031,2]] | nebula 4023 | WebGL calls inside long tasks: texImage2D() at 3673 for 0.2 ms on other; texImage2D() at 3674 for 0 ms on other; texImage2D() at 3674 for 0 ms on other; texImage2D() at 3674 for 0 ms on other; texImage2D() at 3674 for 0 ms on other; texImage2D() at 3674 for 0 ms on other; texImage2D() at 3674 for 0 ms on other
+round 5 prev      load 6.23 5.69 5.74 | long tasks [[3683,52]] | warm-up end 3294 (done) | first frames [[3746,1],[4043,2]] | nebula 4036 | WebGL calls inside long tasks: texImage2D() at 3703 for 0.1 ms on other; texImage2D() at 3703 for 0 ms on other; texImage2D() at 3703 for 0 ms on other; texImage2D() at 3703 for 0 ms on other; texImage2D() at 3703 for 0 ms on other; texImage2D() at 3703 for 0 ms on other; texImage2D() at 3703 for 0 ms on other
+round 6 baseline  load 5.81 5.61 5.72 | long tasks [] | warm-up end 3300 (done) | first frames [[3742,1]] | nebula none | WebGL calls inside long tasks: none
+round 6 current   load 6.19 5.69 5.74 | long tasks [[3318,73]] | warm-up end 3318 (cap) | first frames [[3818,1],[4121,2]] | nebula 4113 | WebGL calls inside long tasks: none
+round 6 prev      load 6.09 5.68 5.74 | long tasks [] | warm-up end 3504 (cap) | first frames [[3967,1],[4281,2]] | nebula 4272 | WebGL calls inside long tasks: none
+
+Worst startup long task per run (ms):
+baseline: 0, 0, 0, 0, 0, 0 (median 0; runs with a task of 50 ms or more: 0 of 6)
+current: 51, 66, 0, 0, 52, 73 (median 52; runs with a task of 50 ms or more: 4 of 6)
+prev: 131, 0, 0, 0, 52, 0 (median 0; runs with a task of 50 ms or more: 2 of 6)
+wrote /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/laughing-sinoussi-95fc12/docs/design/trifid-theme/reviews/perf-part1/round3/startup-longtask.json
+# load averages after: 5.93 5.65 5.73

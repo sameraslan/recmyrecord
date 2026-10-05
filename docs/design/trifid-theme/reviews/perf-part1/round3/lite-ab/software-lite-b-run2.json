@@ -1,0 +1,145 @@
+{
+ "js": {
+  "kb": 191.2,
+  "modernKb": 152.6,
+  "threeKb": 0,
+  "files": [
+   {
+    "src": "/_next/static/chunks/2mmpezlrfmbu5.js",
+    "gzKb": 8.5,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/1rj7ns8rte9vc.js",
+    "gzKb": 69.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/3un1mb5bx4x8k.js",
+    "gzKb": 42.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/turbopack-29-tawvx8tojb.js",
+    "gzKb": 3.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/26cndkt7ua0-z.js",
+    "gzKb": 13.4,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/2kqixb5xm38hz.js",
+    "gzKb": 10.9,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0_8zpjvu_b1ry.js",
+    "gzKb": 0.2,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/3fgf7ruzmfpg3.js",
+    "gzKb": 0.3,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0em8pai484f8q.js",
+    "gzKb": 1,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+    "gzKb": 38.6,
+    "isThree": false,
+    "nomodule": true
+   },
+   {
+    "src": "/_next/static/chunks/310vm2bl3xxpt.js",
+    "gzKb": 1.9,
+    "isThree": false,
+    "nomodule": false
+   }
+  ]
+ },
+ "rows": [
+  {
+   "mode": "software",
+   "vp": "desktop",
+   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+   "errors": [],
+   "longTasksSupported": true,
+   "thumbsOnFirstLoad": false,
+   "searchUsableMs": 494,
+   "startupLongTaskMs": 0,
+   "mapFirstFrameMs": 3702,
+   "gasShownMs": 3990,
+   "warmUp": {
+    "ms": 3252,
+    "why": "done"
+   },
+   "startupLongTasks": [],
+   "settled": [
+    true
+   ],
+   "typeToSuggestionsMs": 5,
+   "selectToAlbumMs": 23,
+   "transitionGapMs": 1564,
+   "sliderToListMs": 8,
+   "morphGapMs": 70,
+   "dragGapMs": 97,
+   "zoomGapMs": 263,
+   "deepDragGapMs": 57,
+   "deepZoom": 1,
+   "deepMorphGapMs": 57,
+   "idleLongTasks": 0,
+   "idleFrames": 0,
+   "gasLite": true
+  },
+  {
+   "mode": "software",
+   "vp": "phone",
+   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+   "errors": [],
+   "longTasksSupported": true,
+   "thumbsOnFirstLoad": false,
+   "searchUsableMs": 79,
+   "startupLongTaskMs": 0,
+   "mapFirstFrameMs": 2701,
+   "gasShownMs": 2978,
+   "warmUp": {
+    "ms": 2264,
+    "why": "done"
+   },
+   "startupLongTasks": [],
+   "settled": [
+    true,
+    true
+   ],
+   "typeToSuggestionsMs": 5,
+   "selectToAlbumMs": 18,
+   "transitionGapMs": 746,
+   "sliderToListMs": 12,
+   "morphGapMs": 125,
+   "dragGapMs": 83,
+   "zoomGapMs": 61,
+   "deepDragGapMs": 46,
+   "deepZoom": 1,
+   "deepMorphGapMs": 44,
+   "idleLongTasks": 0,
+   "idleFrames": 0,
+   "gasLite": true
+  }
+ ],
+ "fails": []
+}

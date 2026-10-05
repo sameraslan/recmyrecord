@@ -1,0 +1,31 @@
+# 2026-10-05 09:06:48; waited 340 s; load 3.99; load averages before: 3.99 6.23 6.12; Now drawing from 'AC Power'
+round 1 baseline  desktop load 4.15 6.23 6.12 | drag mean 80.3 median 66.8 p95 150.1 worst 400 | zoom mean 50.8 median 50 p95 66.7 worst 66.7 | morph mean 38.2 median 50 worst 50.1 | idle frames 0 | lite null
+round 1 baseline  phone   load 6.25 6.54 6.23 | drag mean 62.8 median 66.7 p95 83.3 worst 83.4 | zoom mean 45.7 median 50 p95 66.7 worst 66.7 | morph mean 36.3 median 49.9 worst 66.8 | idle frames 0 | lite null
+round 1 full      desktop load 7.44 6.79 6.33 | drag mean 92.9 median 83.4 p95 166.7 worst 416.5 | zoom mean 59.1 median 66.6 p95 83.3 worst 83.4 | morph mean 50.9 median 66.6 worst 83.4 | idle frames 0 | lite false
+round 1 full      phone   load 8.51 7.08 6.44 | drag mean 74 median 83.3 p95 100 worst 116.6 | zoom mean 51.7 median 50 p95 66.7 worst 83.4 | morph mean 39 median 33.4 worst 83.4 | idle frames 0 | lite false
+round 1 lighter   desktop load 8.91 7.28 6.53 | drag mean 82 median 83.3 p95 150 worst 400 | zoom mean 48.1 median 50 p95 66.7 worst 66.7 | morph mean 31.3 median 16.8 worst 66.7 | idle frames 0 | lite true
+round 1 lighter   phone   load 10.16 7.66 6.68 | drag mean 66.3 median 66.7 p95 83.4 worst 83.4 | zoom mean 44 median 49.9 p95 66.7 worst 66.8 | morph mean 37.4 median 49.9 worst 66.7 | idle frames 0 | lite true
+round 2 baseline  desktop load 10.06 7.79 6.75 | drag mean 82.4 median 66.7 p95 150 worst 416.7 | zoom mean 47.1 median 50 p95 66.6 worst 66.7 | morph mean 30.7 median 33.2 worst 50.1 | idle frames 0 | lite null
+round 2 baseline  phone   load 12.70 8.66 7.10 | drag mean 63.5 median 66.7 p95 83.4 worst 83.4 | zoom mean 41.2 median 49.9 p95 66.7 worst 66.8 | morph mean 31.3 median 33.3 worst 50.1 | idle frames 0 | lite null
+round 2 full      desktop load 13.67 9.12 7.30 | drag mean 93.4 median 83.3 p95 166.5 worst 416.7 | zoom mean 60.3 median 66.6 p95 83.3 worst 83.5 | morph mean 62.2 median 66.7 worst 83.4 | idle frames 0 | lite false
+round 2 full      phone   load 16.00 10.00 7.67 | drag mean 70.2 median 83.2 p95 83.4 worst 83.4 | zoom mean 45.5 median 50 p95 66.7 worst 66.7 | morph mean 42.2 median 50 worst 66.7 | idle frames 0 | lite false
+round 2 lighter   desktop load 16.17 10.42 7.87 | drag mean 85.6 median 83.3 p95 150.1 worst 383.3 | zoom mean 46.4 median 50 p95 66.7 worst 66.8 | morph mean 30.6 median 16.8 worst 50.1 | idle frames 0 | lite true
+round 2 lighter   phone   load 15.77 10.75 8.06 | drag mean 67.4 median 66.7 p95 99.9 worst 133.4 | zoom mean 62.6 median 66.6 p95 83.4 worst 83.5 | morph mean 39.5 median 50 worst 66.7 | idle frames 0 | lite true
+round 3 baseline  desktop load 19.81 11.98 8.56 | drag mean 75.4 median 66.7 p95 150 worst 400 | zoom mean 46.2 median 50 p95 50.1 worst 66.8 | morph mean 27.9 median 33.2 worst 50 | idle frames 0 | lite null
+round 3 baseline  phone   load 17.99 12.07 8.67 | drag mean 62.2 median 66.7 p95 83.3 worst 83.3 | zoom mean 37.9 median 33.4 p95 66.7 worst 66.7 | morph mean 32.7 median 33.3 worst 50.1 | idle frames 0 | lite null
+round 3 full      desktop load 16.51 12.10 8.76 | drag mean 95.3 median 83.4 p95 150 worst 416.7 | zoom mean 62.8 median 66.7 p95 83.4 worst 83.4 | morph mean 57.3 median 66.7 worst 166.7 | idle frames 0 | lite false
+round 3 full      phone   load 17.96 12.77 9.10 | drag mean 73.4 median 83.3 p95 83.4 worst 100.1 | zoom mean 71.8 median 83.3 p95 83.4 worst 100.1 | morph mean 55 median 66.6 worst 116.7 | idle frames 0 | lite false
+round 3 lighter   desktop load 15.04 12.43 9.06 | drag mean 81.5 median 83.3 p95 150 worst 383.4 | zoom mean 48.1 median 50 p95 66.7 worst 66.8 | morph mean 33 median 33.3 worst 66.6 | idle frames 0 | lite true
+round 3 lighter   phone   load 13.74 12.30 9.11 | drag mean 70.9 median 83.3 p95 83.4 worst 83.4 | zoom mean 44.1 median 49.9 p95 66.7 worst 83.4 | morph mean 33 median 33.4 worst 50.1 | idle frames 0 | lite true
+
+Median over rounds of the mean frame gap (ms), and of the worst:
+| Variant | Viewport | Drag mean | Drag worst | Zoom mean | Zoom worst | Morph mean | Morph worst |
+|---|---|---|---|---|---|---|---|
+| baseline | desktop | 80.3 | 400 | 47.1 | 66.7 | 30.7 | 50.1 |
+| baseline | phone | 62.8 | 83.4 | 41.2 | 66.7 | 32.7 | 50.1 |
+| full | desktop | 93.4 | 416.7 | 60.3 | 83.4 | 57.3 | 83.4 |
+| full | phone | 73.4 | 100.1 | 51.7 | 83.4 | 42.2 | 83.4 |
+| lighter | desktop | 82 | 383.4 | 48.1 | 66.8 | 31.3 | 66.6 |
+| lighter | phone | 67.4 | 83.4 | 44.1 | 83.4 | 37.4 | 66.7 |
+wrote /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/laughing-sinoussi-95fc12/docs/design/trifid-theme/reviews/perf-part1/round3/software-frames.json
+# load averages after: 12.81 12.17 9.13

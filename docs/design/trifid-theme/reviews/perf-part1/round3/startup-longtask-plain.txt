@@ -1,0 +1,17 @@
+# 2026-10-05 08:59:58 untimed WebGL calls; load averages before: 5.93 5.65 5.73; Now drawing from 'AC Power'
+round 1 baseline  load 5.53 5.57 5.70 | long tasks [] | warm-up end 3274 (done) | first frames [[3699,1]] | nebula none | WebGL calls inside long tasks: none
+round 1 current   load 6.05 5.68 5.74 | long tasks [] | warm-up end 3223 (done) | first frames [[3665,1],[3986,2]] | nebula 3980 | WebGL calls inside long tasks: none
+round 2 baseline  load 5.64 5.60 5.71 | long tasks [[3264,55]] | warm-up end 3265 (cap) | first frames [[3751,1]] | nebula none | WebGL calls inside long tasks: none
+round 2 current   load 5.09 5.48 5.66 | long tasks [] | warm-up end 3172 (done) | first frames [[3604,1],[3903,2]] | nebula 3897 | WebGL calls inside long tasks: none
+round 3 baseline  load 4.92 5.44 5.65 | long tasks [] | warm-up end 3179 (done) | first frames [[3610,1]] | nebula none | WebGL calls inside long tasks: none
+round 3 current   load 5.58 5.57 5.69 | long tasks [[3510,50]] | warm-up end 3117 (done) | first frames [[3571,1],[3877,2]] | nebula 3872 | WebGL calls inside long tasks: none
+round 4 baseline  load 5.37 5.53 5.68 | long tasks [] | warm-up end 3218 (done) | first frames [[3630,1]] | nebula none | WebGL calls inside long tasks: none
+round 4 current   load 5.66 5.59 5.70 | long tasks [] | warm-up end 3127 (done) | first frames [[3551,1],[3872,2]] | nebula 3866 | WebGL calls inside long tasks: none
+round 5 baseline  load 6.05 5.67 5.72 | long tasks [] | warm-up end 3283 (done) | first frames [[3715,1]] | nebula none | WebGL calls inside long tasks: none
+round 5 current   load 6.05 5.67 5.72 | long tasks [[3557,162]] | warm-up end 3557 (cap) | first frames [[4137,1],[4447,2]] | nebula 4441 | WebGL calls inside long tasks: none
+
+Worst startup long task per run (ms):
+baseline: 0, 55, 0, 0, 0 (median 0; runs with a task of 50 ms or more: 1 of 5)
+current: 0, 0, 50, 0, 162 (median 0; runs with a task of 50 ms or more: 2 of 5)
+wrote /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/laughing-sinoussi-95fc12/docs/design/trifid-theme/reviews/perf-part1/round3/startup-longtask-plain.json
+# load averages after: 7.68 6.03 5.85
