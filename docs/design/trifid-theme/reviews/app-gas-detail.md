@@ -197,3 +197,27 @@ node $D/edge-check.mjs /some/dir/edge
 node $D/sharp-measure.mjs /some/dir/sharp-measure.json --loads 3   # GPU, mains
 node $D/crops.mjs out.png 950,380,300,240 2 "before=a.png" "after=b.png"
 ```
+
+## Round 3: the gas on a real GPU, with no override (2026-10-05)
+
+Every picture above this section is software WebGL with the sharper image forced on. These are headless Google Chrome on Metal (`ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro)`), the launch of `npm run perf` and of `baseline/capture.mjs`, with nothing set by the capture: the app decides for itself. Script, pictures and numbers: `app-gas-detail/real-gpu/` (`capture-real-gpu.mjs`, `real-gpu.md`, `real-gpu.json`). The pictures are the builder's own captures and reading, not a sign-off.
+
+**Does an ordinary desktop get the sharper image by itself?** Yes. The gate was told: fine pointer, 0 touch points, 16 GB (Chrome's report), textures up to 16384 px, the renderer above. At the app's opening framing the flag reads `waiting` (the first image is not magnified there). At Overview and beside an album it fetched one sharper image (Balanced; Sonic after the slider moved) and the flag named the stop, in all five desktop captures and in all thirty loads of `perf-part1/scripts/fade-measure.mjs`. A phone profile (390 x 844, dpr 3, touch) says `off` from the start and fetched none.
+
+| State | Sharper image | Bands, app over prototype (under 0.7, to 1.4, to 2.8, to 5.6, to 11.2 device px) |
+|---|---|---|
+| Overview, dpr 1 | balanced | 1.00 1.02 1.00 1.00 1.00 |
+| Overview, dpr 2 | balanced | 2.10 1.43 1.19 1.06 1.02 |
+| Beside The Stone Roses, dpr 1 | balanced | 0.95 0.99 1.00 1.00 1.00 |
+| Beside The Stone Roses, dpr 2 | balanced | 2.06 1.19 1.06 1.03 1.01 |
+| Overview on Sonic, dpr 1 | sonic | 0.98 1.00 1.00 1.00 1.01 |
+| Phone, opening framing, dpr 3 | off | 1.05 1.29 1.11 1.05 1.01 |
+| Phone, The Stone Roses in map mode, dpr 3 | off | 1.10 1.23 1.13 1.07 1.02 |
+
+Framing residual 0 px in every state. The bands are the measure of the tables above, without the sky floor taken off, so the finest band holds grain on both sides.
+
+**What I see, desktop.** At dpr 1 the app and the prototype are the same picture at Overview, beside The Stone Roses and on Sonic: the same flow lines, the same hairline dust, the same tone. I cannot tell them apart except by the album dots. The numbers agree with the software captures (0.99 to 1.02 where those read 0.99 to 1.01; the 0.95 in the finest band beside an album is the band the second look called grain). At dpr 2 the app is crisper than the prototype's own 2x picture, as on software (the prototype draws at CSS resolution and is stretched): `overview-d2-crop.png` and `album-d2-crop.png` show the same lines, thinner. Nothing in these looks different from the software captures, so the GPU adds no new finding.
+
+**What I see, phone.** At the opening framing the whole cloud is drawn smaller than the image, and the app's picture is the prototype's with slightly finer dust (the prototype is stretched three times from CSS px). In map mode with The Stone Roses open (the state of `options/final-phone-map.jpg`; 1403 px per world unit, so about 772 CSS px and 2315 device px per raw unit against the first image's 700 texels) the first image is magnified about 3.3 times in device px. Plainly: at the phone's own pixel grid it is soft. Single device px carry no detail, the hairline dust is two to three device px wide, and the finest flow lines of the approved picture are faint. It is not softer than the prototype on the same screen (the bands read 1.10 to 1.23, the app a little ahead, because the prototype is softer still at dpr 3), and in CSS px it holds about 0.9 texels per px, so it is close to what `final-phone-map.jpg` shows at its own 390 px width: the same swirl rings, dust lanes and tone, with the thinnest striations weaker. What a phone does not get is the extra sharpness its screen could show. Whether that is enough is the owner's call on a real phone; a headless capture at dpr 3 is not a hand held screen. A sharper image for phones would cost 47 to 63 MB of GPU memory against a budget of 58 for all three first images, which is why it is not there.
+
+**Not seen here.** Motion and the fade by eye (frame counts and gaps are measured, `perf-part1/round3/fade-measure.txt`), Safari, Firefox, a real phone, a weak GPU.
