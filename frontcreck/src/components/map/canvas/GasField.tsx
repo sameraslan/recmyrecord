@@ -23,6 +23,7 @@ import {
   focusPool,
   gasCurve,
   gasDust,
+  gasImageFits,
   gasLodBias,
   gasNoise,
   gasPair,
@@ -90,6 +91,18 @@ function uploadGas(gl: THREE.WebGLRenderer, g: LoadedGas): void {
 function disposeGas(g: LoadedGas): void {
   g.texture.dispose();
   g.bitmap.close(); // closing twice is allowed
+}
+
+/** What a stop shows when its image could not be used (it failed to load, or is not the image theme.json
+ * describes): no gas and no dust, so plain sky, never another stop's gas or an image in the wrong place. */
+function emptyGas(): THREE.Texture {
+  const texture = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat, THREE.UnsignedByteType);
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.minFilter = THREE.NearestFilter;
+  texture.magFilter = THREE.NearestFilter;
+  texture.generateMipmaps = false;
+  texture.needsUpdate = true;
+  return texture;
 }
 
 function setGasFlag(value: "loading" | "ready" | "off"): void {
@@ -247,11 +260,19 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       if (lost) return;
       fetching.add(stop);
       const mine = gen;
-      loadGas(gasUrl(stop))
+      const url = gasUrl(stop, theme.gas[stop].hash);
+      loadGas(url)
         .then((g) => {
           // (the context can be lost a moment before its event arrives)
           if (!alive || mine !== gen || gl.getContext().isContextLost()) {
             disposeGas(g);
+            return;
+          }
+          if (!gasImageFits(g.bitmap, theme.gas[stop].px)) {
+            const [w, h] = theme.gas[stop].px;
+            console.error("gas texture refused", url, `is ${g.bitmap.width} x ${g.bitmap.height}, theme.json says ${w} x ${h}`);
+            disposeGas(g);
+            noGas(stop);
             return;
           }
           // The stop on screen (or the first to arrive, which stands in for it) goes in as soon as the GPU has
@@ -265,9 +286,15 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
         })
         .catch((err) => {
           if (!alive || mine !== gen) return;
-          console.error("gas texture failed", gasUrl(stop), err);
-          settle();
+          console.error("gas texture failed", url, err);
+          noGas(stop);
         });
+    }
+    /** The stop's image cannot be used: the stop shows plain sky (emptyGas), and the load is settled. */
+    function noGas(stop: StopId): void {
+      store[stop] = emptyGas();
+      if (stopsShown(useMapStore.getState().sliderT).includes(stop) || !mesh.visible) invalidate();
+      settle();
     }
     /** True when this stop is, or is about to be, what the quad shows (or nothing is shown yet). */
     function onScreen(stop: StopId): boolean {
@@ -503,7 +530,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       };
       const fail = (why: unknown) => {
         if (dead) return;
-        console.error("sharper gas image failed", gasUrl(stop, true), why);
+        console.error("sharper gas image failed", gasUrl(stop, theme.gas[stop].hash, true), why);
         end();
         sharpLoading = null;
         sharpAllowed = false; // not tried again on this map
@@ -513,13 +540,13 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       step = whenQuiet(() => {
         step = null;
         loader.load(
-          gasUrl(stop, true),
+          gasUrl(stop, theme.gas[stop].hash, true),
           (result) => {
             const image = result as unknown as ImageBitmap;
             if (dead || !alive || mine !== gen) return image.close();
             bitmap = image;
             const [w, h] = theme.gas[stop].sharp;
-            if (image.width !== w || image.height !== h) return fail(`is ${image.width} x ${image.height}, theme.json says ${w} x ${h}`);
+            if (!gasImageFits(image, theme.gas[stop].sharp)) return fail(`is ${image.width} x ${image.height}, theme.json says ${w} x ${h}`);
             // Only a carrier for the strips: this texture itself is never uploaded.
             const source = new THREE.Texture(image as unknown as HTMLImageElement);
             const texture = emptySharpTexture(w, h);

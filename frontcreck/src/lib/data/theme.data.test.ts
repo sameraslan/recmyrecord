@@ -50,9 +50,22 @@ describe('committed theme data (public/data/theme)', () => {
     return { alpha: (b[20] & 0x10) === 0x10, size: [1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3)] };
   };
 
+  const sha = (b: Buffer): string => crypto.createHash('sha256').update(b).digest('hex').slice(0, 10);
+
+  it('names every gas image after its own bytes, and holds no other gas image (/data is cached for a day)', () => {
+    const t = theme();
+    const named = STOP_IDS.flatMap((s) => [`gas-${s}.${t.gas[s].hash[0]}.webp`, `gas-${s}-sharp.${t.gas[s].hash[1]}.webp`]);
+    // a name without its hash, or an image of an earlier bake, must not be left behind
+    expect(fs.readdirSync(path.join(DATA, 'theme')).filter((f) => f.endsWith('.webp')).sort()).toEqual([...named].sort());
+    for (const s of STOP_IDS) {
+      expect(sha(read(`theme/gas-${s}.${t.gas[s].hash[0]}.webp`)), `${s} first`).toBe(t.gas[s].hash[0]);
+      expect(sha(read(`theme/gas-${s}-sharp.${t.gas[s].hash[1]}.webp`)), `${s} sharp`).toBe(t.gas[s].hash[1]);
+    }
+  });
+
   it.each(STOP_IDS)('has the first image of %s: WebP with a dust channel, 2048 px on its longer side, under 400 KB', (stop) => {
     const g = theme().gas[stop];
-    const b = read(`theme/gas-${stop}.webp`);
+    const b = read(`theme/gas-${stop}.${g.hash[0]}.webp`);
     const w = webp(b);
     expect(w.alpha, 'alpha flag').toBe(true);
     expect(w.size).toEqual(g.px);
@@ -67,7 +80,7 @@ describe('committed theme data (public/data/theme)', () => {
   it.each(STOP_IDS)('has the sharper image of %s: the prototype\'s texels per raw unit over the same rectangle, under 1 MB', (stop) => {
     const t = theme();
     const g = t.gas[stop];
-    const b = read(`theme/gas-${stop}-sharp.webp`);
+    const b = read(`theme/gas-${stop}-sharp.${g.hash[1]}.webp`);
     const w = webp(b);
     expect(w.alpha, 'alpha flag').toBe(true);
     expect(w.size).toEqual(g.sharp);

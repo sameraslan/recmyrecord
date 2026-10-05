@@ -5,9 +5,9 @@ import { THEME_URL, isTheme, loadTheme, peekTheme, themeFor, type ThemeData } fr
 import { useThemeLoad } from './useData';
 
 const LABEL = { id: 'live', name: 'The Live Belt', x: -0.236, y: 0.883, strong: true, n: 174, p: 2.1772, rgb: [255, 236, 224] as [number, number, number], lum: 0.31 };
-const STOP_GAS = { rect: [-1.4, -1.4, 1.1, 1.4] as [number, number, number, number], px: [1829, 2048] as [number, number], sharp: [3200, 3584] as [number, number] };
+const STOP_GAS = { rect: [-1.4, -1.4, 1.1, 1.4] as [number, number, number, number], px: [1829, 2048] as [number, number], sharp: [3200, 3584] as [number, number], hash: ['0123456789', 'abcdef0123'] as [string, string] };
 const THEME: ThemeData = {
-  v: 2,
+  v: 3,
   n: 2,
   positionsHash: 'a7c1dbd996fd',
   bakeHalf: 1.6,
@@ -31,8 +31,13 @@ describe('isTheme', () => {
 
   it.each([
     ['nothing', null],
-    ['another version', { ...THEME, v: 3 }],
+    ['another version', { ...THEME, v: 4 }],
     ['the version before the gas had rectangles', { ...THEME, v: 1 }],
+    ['the version before the gas images were named after their content', { ...THEME, v: 2 }],
+    ['a gas image with no content hash', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, hash: undefined } } }],
+    ['a gas image with one content hash', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, hash: ['0123456789'] } } }],
+    ['a content hash that is not 10 hex characters (it becomes part of a URL)', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, hash: ['0123456789', '../../x.js'] } } }],
+    ['a content hash in capitals', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, hash: ['0123456789', 'ABCDEF0123'] } } }],
     ['no gas images', { ...THEME, gas: undefined }],
     ['a stop without gas images', { ...THEME, gas: { sonic: STOP_GAS, balanced: STOP_GAS } }],
     ['a gas rectangle that is inside out', { ...THEME, gas: { ...THEME.gas, mood: { ...STOP_GAS, rect: [1.1, -1.4, -1.4, 1.4] } } }],
@@ -66,7 +71,7 @@ describe('loadTheme', () => {
   it('rejects a missing or wrongly shaped file with DataLoadError and retries on the next call', async () => {
     vi.stubGlobal('fetch', serve('nope', 404));
     await expect(loadTheme()).rejects.toBeInstanceOf(DataLoadError);
-    vi.stubGlobal('fetch', serve({ ...THEME, v: 3 }));
+    vi.stubGlobal('fetch', serve({ ...THEME, v: 4 }));
     await expect(loadTheme()).rejects.toBeInstanceOf(DataLoadError);
     expect(peekTheme()).toBeNull();
     vi.stubGlobal('fetch', serve(THEME));

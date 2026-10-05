@@ -119,6 +119,19 @@ describe('bake-core (the DOM-free half of the theme build)', () => {
     expect(T.labelInk([0, 0, 0])).toEqual([204, 204, 204]);
   });
 
+  it('names a gas image after its own bytes, and lists every file a theme names', () => {
+    expect(T.GAS_HASH_LEN).toBe(10);
+    expect(T.gasHash('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')).toBe('0123456789');
+    expect(T.gasFile('gas-mood', '0123456789')).toBe('gas-mood.0123456789.webp');
+    expect(T.gasFile('gas-mood-sharp', 'abcdef0123')).toBe('gas-mood-sharp.abcdef0123.webp');
+    const g = { hash: ['0123456789', 'abcdef0123'] };
+    expect(T.gasFiles({ sonic: g, balanced: g, mood: g })).toEqual([
+      'gas-sonic.0123456789.webp', 'gas-sonic-sharp.abcdef0123.webp',
+      'gas-balanced.0123456789.webp', 'gas-balanced-sharp.abcdef0123.webp',
+      'gas-mood.0123456789.webp', 'gas-mood-sharp.abcdef0123.webp',
+    ]);
+  });
+
   it('assembles theme.json from the luminance renders', () => {
     const n = T.GAS.LUM;
     const px = new Uint8Array(4 * n * n);
@@ -131,11 +144,11 @@ describe('bake-core (the DOM-free half of the theme build)', () => {
       weights: [50, 20, 10, 10, 0, 10, 10, 10, 10, 10, 20, 40],
       regions: { sonic: [], balanced: [region, { ...region, id: 'area', level: 0 }, { ...region, id: 'bare', name: null }], mood: [] },
     };
-    const gas = { sonic: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560] }, balanced: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560] }, mood: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560] } };
+    const gas = { sonic: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560], hash: ['0123456789', 'abcdef0123'] }, balanced: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560], hash: ['0123456789', 'abcdef0123'] }, mood: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560], hash: ['0123456789', 'abcdef0123'] } };
     const theme = T.assemble(input, { sonic: px, balanced: px, mood: px }, 1.6, 1.75, gas);
     const byte = Math.min(255, Math.round((T.luminance([60, 30, 15]) / 0.6) * 255));
     expect(theme).toEqual({
-      v: 2,
+      v: 3,
       n: 2,
       positionsHash: 'a7c1dbd996fd',
       bakeHalf: 1.6,

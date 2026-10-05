@@ -1,6 +1,23 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
+import sharp from 'sharp';
 import { COPY } from '../src/lib/copy';
 import { isPhone, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet } from './helpers';
+
+/** The committed theme: every gas image carries the hash of its content in its name (theme.json gas.<stop>.hash). */
+type Stop = 'sonic' | 'balanced' | 'mood';
+const THEME = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'public/data/theme/theme.json'), 'utf8')) as {
+  gas: Record<Stop, { rect: [number, number, number, number]; px: [number, number]; sharp: [number, number]; hash: [string, string] }>;
+};
+/** Path of a stop's first image, or of its sharper one. */
+const gasPath = (stop: Stop, sharper = false): string => `/data/theme/gas-${stop}${sharper ? '-sharp' : ''}.${THEME.gas[stop].hash[sharper ? 1 : 0]}.webp`;
+const THEME_JSON = '/data/theme/theme.json';
+/** Any first image (not a sharper one), and any sharper image. */
+const FIRST_IMAGE = /\/data\/theme\/gas-(sonic|balanced|mood)\.[0-9a-f]{10}\.webp$/;
+const SHARP_IMAGE = /\/data\/theme\/gas-(sonic|balanced|mood)-sharp\.[0-9a-f]{10}\.webp$/;
+/** The first images of the two stops the map does not open on. */
+const LATE_IMAGE = /\/data\/theme\/gas-(sonic|mood)\.[0-9a-f]{10}\.webp$/;
 
 /** In Rainbows in albums.json: near the middle of every layout, where the gas is dense. */
 const IN_RAINBOWS = 11;
@@ -120,7 +137,7 @@ async function holdLateGas(page: Page): Promise<{ release: () => void; arrived: 
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const late = /\/data\/theme\/gas-(sonic|mood)\.webp$/;
+  const late = LATE_IMAGE;
   await page.route(late, async (route) => {
     await held;
     await route.continue();
@@ -177,7 +194,7 @@ test('the gas is drawn behind the albums at the overview, and nothing draws at r
   await waitForCameraIdle(page);
   expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
   // polled: the other two stops are fetched in an idle slot, so their requests must not be raced
-  await expect.poll(() => [...requested].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp', '/data/theme/theme.json']);
+  await expect.poll(() => [...requested].sort()).toEqual([gasPath('balanced'), gasPath('mood'), gasPath('sonic'), THEME_JSON].sort());
   expect(await lumaAt(page, await patchAt(page, IN_RAINBOWS, [0, 0], 80))).toBeGreaterThan(SKY_LUMA * 3);
   expect(await page.evaluate(() => window.__rmr!.gasPool)).toBe(0);
   const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
@@ -269,11 +286,11 @@ test('moving the slider to a stop whose gas has not arrived keeps gas on screen,
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  await page.route('**/data/theme/gas-mood.webp', async (route) => {
+  await page.route(`**${gasPath('mood')}`, async (route) => {
     await held;
     await route.continue();
   });
-  const balanced = page.waitForResponse((r) => r.url().endsWith('/data/theme/gas-balanced.webp') && r.ok());
+  const balanced = page.waitForResponse((r) => r.url().endsWith(gasPath('balanced')) && r.ok());
   await page.goto('/map');
   await balanced;
   await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 20_000 });
@@ -307,7 +324,7 @@ test('gas images that arrive during a drag are not uploaded until the map is lef
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  const late = /\/data\/theme\/gas-(sonic|mood)\.webp$/;
+  const late = LATE_IMAGE;
   await page.route(late, async (route) => {
     await held;
     await route.continue();
@@ -438,7 +455,7 @@ test('the gas comes back after the WebGL context is lost and restored', async ({
   test.skip(isPhone(info), 'the gas checks use the desktop framing');
   const gasRequests: string[] = [];
   page.on('request', (r) => {
-    if (/\/data\/theme\/gas-\w+\.webp$/.test(r.url())) gasRequests.push(new URL(r.url()).pathname);
+    if (FIRST_IMAGE.test(r.url())) gasRequests.push(new URL(r.url()).pathname);
   });
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -448,7 +465,7 @@ test('the gas comes back after the WebGL context is lost and restored', async ({
   const patch = await patchAt(page, IN_RAINBOWS, [0, 0], 80);
   const before = await lumaAt(page, patch);
   expect(before).toBeGreaterThan(SKY_LUMA * 3);
-  expect([...gasRequests].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp']);
+  expect([...gasRequests].sort()).toEqual([gasPath('balanced'), gasPath('mood'), gasPath('sonic')].sort());
   // The decoded images are freed once they are on the GPU, so a lost context takes the gas with it: the flag
   // must say so while the context is gone and right after it is back, until the images have been fetched again.
   const flags = await page.evaluate(async () => {
@@ -470,7 +487,7 @@ test('the gas comes back after the WebGL context is lost and restored', async ({
   expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
   expect(await page.evaluate(() => window.__rmr!.getState().webgl)).toBe('ok');
   // every stop was fetched a second time (from the HTTP cache), and the same patch of gas is back
-  expect([...gasRequests].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp', '/data/theme/gas-sonic.webp']);
+  expect([...gasRequests].sort()).toEqual([gasPath('balanced'), gasPath('balanced'), gasPath('mood'), gasPath('mood'), gasPath('sonic'), gasPath('sonic')].sort());
   const after = await lumaAt(page, patch);
   expect(after).toBeGreaterThan(SKY_LUMA * 3);
   expect(Math.abs(after - before), 'the same gas as before the loss').toBeLessThan(2);
@@ -493,7 +510,7 @@ test('without theme data the map still works, with plain sky and no gas requests
   page.on('pageerror', (e) => errors.push(e.message));
   const gasRequests: string[] = [];
   page.on('request', (r) => {
-    if (/\/data\/theme\/gas-\w+\.webp$/.test(r.url())) gasRequests.push(r.url());
+    if (/\/data\/theme\/gas-.*\.webp$/.test(r.url())) gasRequests.push(r.url());
   });
   await page.route('**/data/theme/theme.json', (route) => route.fulfill({ status: 404, contentType: 'text/plain', body: 'missing' }));
   await page.goto('/map');
@@ -519,11 +536,11 @@ test('Home loads only the gas of the stop it shows, and the other two wait for t
   await waitForMap(page);
   expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
   await page.waitForTimeout(1500); // well past the idle slot in which an interactive map fetches the other stops
-  expect([...requested].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/theme.json']);
+  expect([...requested].sort()).toEqual([gasPath('balanced'), THEME_JSON].sort());
   // The same canvas becomes the interactive map: now, and only now, the other two stops are fetched.
   await page.getByRole('navigation', { name: COPY.nav.label }).getByRole('link', { name: COPY.nav.map, exact: true }).click();
   await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
-  await expect.poll(() => [...requested].sort()).toEqual(['/data/theme/gas-balanced.webp', '/data/theme/gas-mood.webp', '/data/theme/gas-sonic.webp', '/data/theme/theme.json']);
+  await expect.poll(() => [...requested].sort()).toEqual([gasPath('balanced'), gasPath('mood'), gasPath('sonic'), THEME_JSON].sort());
   await waitForMap(page);
   expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
 });
@@ -542,7 +559,7 @@ test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('request', (r) => {
-    if (/\/data\/theme\/gas-\w+-sharp\.webp$/.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
+    if (SHARP_IMAGE.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
   });
   const sharp = () => page.evaluate(() => window.__rmr!.gasSharp);
   await page.goto('/map');
@@ -562,7 +579,7 @@ test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at
     api.setCamera({ ...cam, zoom: cam.zoom * 3 }, false);
   });
   await expect.poll(sharp, { timeout: 30000 }).toBe('balanced');
-  expect(sharpRequests).toEqual(['/data/theme/gas-balanced-sharp.webp']);
+  expect(sharpRequests).toEqual([gasPath('balanced', true)]);
   await page.waitForTimeout(700);
   const log = await page.evaluate(() => (window as unknown as { __sharpLog: [number, string][] }).__sharpLog);
   const firstLoading = log.findIndex(([, s]) => s === 'loading');
@@ -574,7 +591,7 @@ test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at
   // The slider goes to Mood: once it rests there Balanced's sharper image is freed and Mood's is fetched.
   await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
   await expect.poll(sharp, { timeout: 30000 }).toBe('mood');
-  expect(sharpRequests).toEqual(['/data/theme/gas-balanced-sharp.webp', '/data/theme/gas-mood-sharp.webp']);
+  expect(sharpRequests).toEqual([gasPath('balanced', true), gasPath('mood', true)]);
   await waitForMapQuiet(page, 400);
   const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
   await page.waitForTimeout(1200);
@@ -587,7 +604,7 @@ test('Home never fetches a sharper image, and a software renderer does not eithe
   test.skip(isPhone(info), 'the sharper image is for desktops');
   const sharpRequests: string[] = [];
   page.on('request', (r) => {
-    if (/-sharp\.webp$/.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
+    if (/-sharp\./.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
   });
   // Home, with the software renderer's rule lifted: the backdrop is not an interactive map.
   await page.addInitScript(() => {
@@ -610,4 +627,42 @@ test('Home never fetches a sharper image, and a software renderer does not eithe
   await expect.poll(() => page.evaluate(() => window.__rmr!.gasSharp), { timeout: 15000 }).toBe('off');
   await page.waitForTimeout(800);
   expect(sharpRequests).toEqual([]);
+});
+
+test('an image of another bake is refused: that stop shows plain sky, never gas in the wrong place, and the other stops still draw', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the gas checks use the desktop framing');
+  const errors: string[] = [];
+  const refused: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => {
+    if (m.type() === 'error' && m.text().includes('gas texture refused')) refused.push(m.text());
+  });
+  // What a browser cache could hold after a new bake if the names did not change: the whole square at
+  // 2048 x 2048 where theme.json describes a rectangle of another size. Bright, so a wrong draw cannot be missed.
+  const square = await sharp({ create: { width: 2048, height: 2048, channels: 4, background: { r: 230, g: 150, b: 90, alpha: 1 } } }).webp({ quality: 50 }).toBuffer();
+  expect(THEME.gas.balanced.px).not.toEqual([2048, 2048]);
+  await page.route(`**${gasPath('balanced')}`, (route) => route.fulfill({ status: 200, contentType: 'image/webp', body: square }));
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForMapQuiet(page, 300);
+  // settled (not stuck on 'loading'), with the refusal said once in the console
+  expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
+  expect(refused).toHaveLength(1);
+  expect(refused[0]).toContain('2048 x 2048');
+  // Balanced, at rest: plain sky between the albums, not the bright square and not another stop's gas.
+  // (the 10th percentile reads the background; the sky is about 6, the old test's gas over 18, the square over 150)
+  const vp = page.viewportSize()!;
+  const middle = { x: vp.width / 2 - 150, y: vp.height / 2 - 150, w: 300, h: 300 };
+  expect(await lumaAt(page, middle, 0.1)).toBeLessThan(SKY_LUMA + 4);
+  expect(await lumaAt(page, middle, 0.5)).toBeLessThan(SKY_LUMA * 2);
+  // The map still works and the stops whose images are right still show their gas.
+  await page.evaluate(() => window.__rmr!.getState().setStop('mood'));
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForMapQuiet(page, 300);
+  expect(await lumaAt(page, middle)).toBeGreaterThan(SKY_LUMA * 2);
+  expect(errors).toEqual([]);
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBeLessThanOrEqual(1);
 });

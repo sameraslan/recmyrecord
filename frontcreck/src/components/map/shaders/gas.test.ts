@@ -39,6 +39,7 @@ import {
   gasUploadOverdue,
   gasUploadWait,
   gasTextureFits,
+  gasImageFits,
   gasUrl,
   stopMix,
   stopsOnPath,
@@ -262,8 +263,18 @@ describe("texture and noise", () => {
   });
 
   it("names the baked files", () => {
-    expect(gasUrl("mood")).toBe("/data/theme/gas-mood.webp");
-    expect(gasUrl("mood", true)).toBe("/data/theme/gas-mood-sharp.webp");
+    // the hash of the file's own bytes is in its name (theme.json gas.<stop>.hash), so a cached image of an
+    // earlier bake can never be drawn with a newer theme.json
+    expect(gasUrl("mood", ["0123456789", "abcdef0123"])).toBe("/data/theme/gas-mood.0123456789.webp");
+    expect(gasUrl("mood", ["0123456789", "abcdef0123"], true)).toBe("/data/theme/gas-mood-sharp.abcdef0123.webp");
+  });
+
+  it("refuses a decoded image that is not the size theme.json says (an image of another bake)", () => {
+    expect(gasImageFits({ width: 1803, height: 2048 }, [1803, 2048])).toBe(true);
+    // the whole square of the bake before the rectangles: drawn into the rectangle it would sit beside the albums
+    expect(gasImageFits({ width: 2048, height: 2048 }, [1803, 2048])).toBe(false);
+    expect(gasImageFits({ width: 2048, height: 1803 }, [1803, 2048])).toBe(false);
+    expect(gasImageFits({ width: 1803, height: 2047 }, [1803, 2048])).toBe(false);
   });
 });
 

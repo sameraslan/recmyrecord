@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 /** npm run theme: bakes the map theme into public/data/theme/ (two gas images per slider stop and theme.json).
+ * Each gas image carries the first 10 hex characters of the SHA-256 of its own bytes in its name, and theme.json
+ * records them: /data is cached by browsers for a day, so an image whose content changed must change its name,
+ * or a visitor could draw an old image into a new rectangle. Images of an earlier bake are deleted.
  * One headless Chromium on software WebGL does the shading, so the output is the same on every machine.
  * Inputs: data-pipeline/theme/{weights,regions}.json and public/data/{albums,positions}.json. It refuses to run
  * when the inputs were made for other albums or layouts. Previews for a human go to test-results/theme/. */
@@ -117,8 +120,10 @@ async function downsample(rgba, w, h, w2, h2) {
 }
 
 /** Writes one image as WebP (lossy colour at a quality that keeps lines one texel wide, lossless dust channel)
- * after checking it, and checks the file once more as a browser will decode it. */
-async function writeGas(name, rgba, w, h, quality) {
+ * after checking it, and checks the file once more as a browser will decode it. `stem` is the name without the
+ * hash of the content, which is added here; returns the size and that hash. */
+async function writeGas(stem, rgba, w, h, quality) {
+  const name = `${stem}.webp`;
   checkGas(name, rgba, w, h, 16, 0);
   const raw = { raw: { width: w, height: h, channels: 4 } };
   const webp = await sharp(rgba, raw).webp({ quality, alphaQuality: 100, effort: 5 }).toBuffer();
@@ -143,8 +148,9 @@ async function writeGas(name, rgba, w, h, quality) {
   const meanDustErr = dustPx ? dustErr / (3 * dustPx) : 0;
   if (meanErr > 2 || meanDustErr > 4 || alphaErr > 2) throw new Error(`${name}: the WebP differs from the bake (colour ${meanErr.toFixed(2)}, colour under dust ${meanDustErr.toFixed(2)}, dust ${alphaErr})`);
   checkGas(name, back.data, w, h, 16, 2);
-  writeAtomic(path.join(OUT, name), webp);
-  return webp.length;
+  const hash = T.gasHash(crypto.createHash('sha256').update(webp).digest('hex'));
+  writeAtomic(path.join(OUT, T.gasFile(stem, hash)), webp);
+  return { bytes: webp.length, hash };
 }
 
 async function main() {
@@ -184,10 +190,12 @@ async function main() {
       // half of the padding becomes exact sky: over 16 px (a codec block) in the smaller image too
       clearEdge(`gas-${stop}`, rgba, w, h, Math.floor((T.GAS.RECT_PAD * w) / (rect[2] - rect[0]) / 2));
       const small = await downsample(rgba, w, h, px[0], px[1]);
-      const kb = [await writeGas(`gas-${stop}.webp`, small, px[0], px[1], WEBP_QUALITY.first), await writeGas(`gas-${stop}-sharp.webp`, rgba, w, h, WEBP_QUALITY.sharp)].map((b) => Math.round(b / 1024));
+      const files = [await writeGas(`gas-${stop}`, small, px[0], px[1], WEBP_QUALITY.first), await writeGas(`gas-${stop}-sharp`, rgba, w, h, WEBP_QUALITY.sharp)];
+      const kb = files.map((f) => Math.round(f.bytes / 1024));
+      const hash = files.map((f) => f.hash);
       await sharp(small, { raw: { width: px[0], height: px[1], channels: 4 } }).flatten({ background: SKY }).resize(768, 768, { fit: 'contain', background: SKY }).png().toFile(path.join(PREVIEW, `gas-${stop}.png`));
-      gas[stop] = { rect, px, sharp: big };
-      console.log(`gas-${stop}.webp ${px.join(' x ')}, ${kb[0]} KB; gas-${stop}-sharp.webp ${big.join(' x ')}, ${kb[1]} KB; raw x ${rect[0]} to ${rect[2]}, y ${rect[1]} to ${rect[3]} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
+      gas[stop] = { rect, px, sharp: big, hash };
+      console.log(`${T.gasFile(`gas-${stop}`, hash[0])} ${px.join(' x ')}, ${kb[0]} KB; ${T.gasFile(`gas-${stop}-sharp`, hash[1])} ${big.join(' x ')}, ${kb[1]} KB; raw x ${rect[0]} to ${rect[2]}, y ${rect[1]} to ${rect[3]} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
     }
     if (errors.length) throw new Error(`the bake page reported: ${errors.join('; ')}`);
   } finally {
@@ -195,6 +203,11 @@ async function main() {
   }
   const theme = T.assemble(input, lumPx, bakeHalf, rawHalf, gas);
   writeAtomic(path.join(OUT, 'theme.json'), `${JSON.stringify(theme)}\n`);
+  // Only after theme.json names the new images: the images of an earlier bake (and the names without a hash).
+  const keep = new Set(T.gasFiles(theme.gas));
+  for (const f of fs.readdirSync(OUT)) {
+    if (/^gas-.*\.webp$/.test(f) && !keep.has(f)) fs.rmSync(path.join(OUT, f));
+  }
   const names = T.STOPS.map((s) => `${s} ${theme.labels[s].length}`).join(', ');
   console.log(`theme.json ${Math.round(fs.statSync(path.join(OUT, 'theme.json')).size / 1024)} KB (names: ${names}; positions ${theme.positionsHash})`);
 }

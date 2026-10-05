@@ -23,15 +23,19 @@ export interface ThemeLabel {
 export interface ThemeGas {
   /** The raw rectangle both images cover: west, south, east, north. Outside it the stop is plain sky. */
   rect: [number, number, number, number];
-  /** Width and height in px of gas-<stop>.webp (the longer side is 2048). */
+  /** Width and height in px of the first image (the longer side is 2048). */
   px: [number, number];
-  /** Width and height in px of gas-<stop>-sharp.webp (no side over 4096). */
+  /** Width and height in px of the sharper image (no side over 4096). */
   sharp: [number, number];
+  /** First 10 hex characters of the SHA-256 of the first image's bytes and of the sharper image's. They are part
+   * of the file names (gas-<stop>.<hash>.webp, gas-<stop>-sharp.<hash>.webp), so this theme.json can only ever be
+   * drawn with the images it was baked with. */
+  hash: [string, string];
 }
 
 /** public/data/theme/theme.json, written by `npm run theme` (scripts/theme/build-theme.mjs). */
 export interface ThemeData {
-  v: 2;
+  v: 3;
   /** Album count the theme was built for. */
   n: number;
   /** First 12 hex characters of the SHA-256 of the positions.json it was built for. */
@@ -78,13 +82,15 @@ function isGas(v: unknown, half: number): v is ThemeGas {
   const size = (s: unknown, max: number): boolean => Array.isArray(s) && s.length === 2 && s.every((n) => isInt(n, 1, max));
   if (!Array.isArray(g.rect) || g.rect.length !== 4 || !g.rect.every((n) => isNum(n) && Math.abs(n) <= half)) return false;
   const [x0, y0, x1, y1] = g.rect as number[];
-  return x0 < x1 && y0 < y1 && size(g.px, 2048) && size(g.sharp, 4096);
+  // (the hashes go into URLs: nothing but lower-case hex)
+  const hashes = Array.isArray(g.hash) && g.hash.length === 2 && g.hash.every((h) => typeof h === 'string' && /^[0-9a-f]{10}$/.test(h));
+  return x0 < x1 && y0 < y1 && size(g.px, 2048) && size(g.sharp, 4096) && hashes;
 }
 
 export function isTheme(x: unknown): x is ThemeData {
   if (!x || typeof x !== 'object') return false;
   const t = x as Record<string, unknown>;
-  if (t.v !== 2 || !isInt(t.n, 1, 1e6) || typeof t.positionsHash !== 'string' || !isNum(t.bakeHalf) || t.bakeHalf <= 0) return false;
+  if (t.v !== 3 || !isInt(t.n, 1, 1e6) || typeof t.positionsHash !== 'string' || !isNum(t.bakeHalf) || t.bakeHalf <= 0) return false;
   const n = t.n as number;
   const gas = t.gas as Record<string, unknown> | null | undefined;
   if (!gas || !STOP_IDS.every((s) => isGas(gas[s], t.bakeHalf as number))) return false;

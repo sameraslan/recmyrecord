@@ -195,10 +195,19 @@
         };
       });
     });
-    return { v: 2, n, positionsHash: input.positionsHash, bakeHalf: Math.round(bakeHalf * 1e4) / 1e4, gas, stars: { lead: Array.from(leadFamilies(weights, n)), bg }, labels };
+    return { v: 3, n, positionsHash: input.positionsHash, bakeHalf: Math.round(bakeHalf * 1e4) / 1e4, gas, stars: { lead: Array.from(leadFamilies(weights, n)), bg }, labels };
   }
 
+  /** A gas image is named after its own bytes: the first 10 hex characters of their SHA-256, between the stem and
+   * the extension. theme.json records the hashes (gas.<stop>.hash: first image, sharper image). */
+  const GAS_HASH_LEN = 10;
+  const gasHash = (sha256Hex) => sha256Hex.slice(0, GAS_HASH_LEN);
+  const gasFile = (stem, hash) => `${stem}.${hash}.webp`;
+  /** Every gas file a theme names. */
+  const gasFiles = (gas) => STOPS.flatMap((s) => [gasFile(`gas-${s}`, gas[s].hash[0]), gasFile(`gas-${s}-sharp`, gas[s].hash[1])]);
+
   globalThis.RMR_THEME = Object.assign(globalThis.RMR_THEME || {}, {
+    GAS_HASH_LEN, gasHash, gasFile, gasFiles,
     GAS, EMBER, STOPS, noiseTable, blur, at, halves, gasRect, gasSizes, fieldData, leadFamilies, positionsTransform,
     luminance, lumCell, lumGrid, lumIn, labelFontPx, labelBox, labelInk, assemble,
   });

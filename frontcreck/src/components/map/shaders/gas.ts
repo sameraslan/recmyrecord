@@ -4,10 +4,10 @@ import { NAMES_BAND_PX } from "../theme";
 
 /**
  * The nebula gas behind the album points. Each slider stop's gas is baked at build time (npm run theme:
- * scripts/theme/) into public/data/theme/gas-<stop>.webp, where rgb is the toned gas with no sky and no dust and
+ * scripts/theme/) into public/data/theme/gas-<stop>.<hash>.webp, where rgb is the toned gas with no sky and no dust and
  * a is what the dust lets through. An image covers only the raw rectangle that holds the stop's gas (theme.json
- * `gas`); beyond it there is plain sky. A second, sharper image of the same rectangle (gas-<stop>-sharp.webp, the
- * prototype's resolution) replaces the first on capable desktops, for the stop on screen only (gasSharpPlan).
+ * `gas`); beyond it there is plain sky. A second, sharper image of the same rectangle (gas-<stop>-sharp.<hash>.webp,
+ * the prototype's resolution) replaces the first on capable desktops, for the stop on screen only (gasSharpPlan).
  * This shader draws one quad in world space: it cross-fades two stops, applies the zoom band strength, the dust
  * and the pool around an open album, adds the fine octaves the bake could not hold, a soft glow from the bake's
  * mips, the sky and a little grain. In deep zoom (covers past 32 px) what is left of the gas is fainter, greyer,
@@ -45,7 +45,17 @@ export const POOL_MIN_PX = 170;
 /** The empty sky as the shader writes it; rounds to SKY_RGB (../theme). */
 export const GAS_SKY: [number, number, number] = [0.024, 0.022, 0.034];
 
-export const gasUrl = (stop: StopId, sharp = false): string => `/data/theme/gas-${stop}${sharp ? "-sharp" : ""}.webp`;
+/** Where a stop's image is. `hash` is theme.json's gas.<stop>.hash: the first 10 hex characters of the SHA-256
+ * of the first image and of the sharper one. The name changes whenever the content does, so a browser's cached
+ * copy (/data is cached for a day) can never be an image of another bake. */
+export const gasUrl = (stop: StopId, hash: readonly [string, string], sharp = false): string =>
+  `/data/theme/gas-${stop}${sharp ? "-sharp" : ""}.${hash[sharp ? 1 : 0]}.webp`;
+
+/** True when a decoded image is the size theme.json says. Any other size is an image of another bake (or not
+ * the image at all): drawn into this bake's rectangle it would put the gas beside the albums, so it is refused. */
+export function gasImageFits(image: { width: number; height: number }, px: readonly [number, number]): boolean {
+  return image.width === px[0] && image.height === px[1];
+}
 
 /** A raw rectangle [west, south, east, north] (theme.json `gas`). */
 export type GasRect = readonly [number, number, number, number];

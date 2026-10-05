@@ -50,9 +50,11 @@ App state (current stop, focus, hover, selection and the trail of visited albums
 
 The gas behind the albums is painted once, at build time, not in the visitor's browser. `npm run theme` starts one headless Chromium on software WebGL and writes seven files to `public/data/theme/`, which are committed:
 
-- `gas-sonic.webp`, `gas-balanced.webp`, `gas-mood.webp`: the gas of each slider stop, 2048 px on its longer side. This is the image every map visit loads first (250 to 370 KB), and the only one Home, About, the 404 page, phones and tablets ever load.
-- `gas-sonic-sharp.webp`, `gas-balanced-sharp.webp`, `gas-mood-sharp.webp`: the same gas at the resolution of the approved design (about 3300 by 3700 px, 600 to 820 KB). A desktop with a real GPU fetches the one for the stop on screen once the map is idle and frees it when the slider comes to rest at another stop.
-- `theme.json`: for every album its colour family and the gas brightness under it at each stop, the region names and where they sit, and for each stop the rectangle its two gas images cover and their sizes.
+- `gas-sonic.<hash>.webp`, `gas-balanced.<hash>.webp`, `gas-mood.<hash>.webp`: the gas of each slider stop, 2048 px on its longer side. This is the image every map visit loads first (250 to 370 KB), and the only one Home, About, the 404 page, phones and tablets ever load.
+- `gas-sonic-sharp.<hash>.webp`, `gas-balanced-sharp.<hash>.webp`, `gas-mood-sharp.<hash>.webp`: the same gas at the resolution of the approved design (about 3300 by 3700 px, 600 to 820 KB). A desktop with a real GPU fetches the one for the stop on screen once the map is idle and frees it when the slider comes to rest at another stop.
+- `theme.json`: for every album its colour family and the gas brightness under it at each stop, the region names and where they sit, and for each stop the rectangle its two gas images cover, their sizes and their hashes.
+
+`<hash>` is the first 10 hex characters of the SHA-256 of the image's own bytes. Browsers keep everything under `/data` for a day, so an image whose content changes must change its name: `theme.json` names the images it was baked with, and the map draws no others. It also refuses an image whose size is not the one `theme.json` gives, and shows plain sky for that stop. A bake that changes nothing writes the same names again. One that changes an image writes a new name and deletes the old file.
 
 An image covers only the rectangle that holds its stop's gas, with a little empty sky around it, not the whole layout square. The build finds that rectangle itself and refuses to write an image whose edge is not plain sky. The smaller image is the sharper one scaled down, so the two always show the same gas.
 
@@ -66,7 +68,7 @@ To bake again:
 
 1. Refresh the inputs, following `../data-pipeline/theme/README.md`. Its last step is `cd ../data-pipeline && .venv/bin/python -m rmr_pipeline.theme`.
 2. `npm run theme`, on arm64 Node with nothing else heavy running.
-3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit the seven files in `public/data/theme/`. `src/lib/data/theme.data.test.ts` also checks the file sizes (under 400 KB for a first image, under 1 MB for a sharper one) and the GPU memory the images need, so a bake that outgrows those limits fails there.
+3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit `public/data/theme/` as it now is: the seven files, and the removal of any image the bake replaced. `src/lib/data/theme.data.test.ts` also checks the file sizes (under 400 KB for a first image, under 1 MB for a sharper one) and the GPU memory the images need, so a bake that outgrows those limits fails there.
 
 A stale or missing theme never breaks the map for a visitor: the map checks the album count, and without a matching theme it shows plain sky.
 
