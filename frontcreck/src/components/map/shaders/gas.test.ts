@@ -13,6 +13,7 @@ import {
   GAS_GLOW,
   GAS_REFERENCE_PX,
   GAS_SHARP_STRIPS,
+  GAS_SHARP_FADE_MS,
   GAS_SHARP_MIN_MEMORY_GB,
   GAS_SHARP_RETRY_MS,
   GAS_SHARP_TRIES,
@@ -34,6 +35,7 @@ import {
   gasRectUniform,
   gasRestingStop,
   gasSharpBlocked,
+  gasSharpFade,
   gasSoftwareRenderer,
   gasSharpPlan,
   gasSharpRetry,
@@ -348,6 +350,30 @@ describe("the sharper image (one stop at a time, desktops with a real GPU)", () 
     expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 2 })).toBe("little memory");
     expect(gasSharpBlocked({ ...DESKTOP, deviceMemory: 0.5 })).toBe("little memory");
     expect(gasSharpBlocked({ ...DESKTOP, saveData: true })).toBe("save data");
+  });
+
+  it("fades in over 200 ms, eased, and is exactly done after that (a bounded number of frames, none after)", () => {
+    expect(GAS_SHARP_FADE_MS).toBe(200);
+    expect(gasSharpFade(1000, 1000)).toBe(0);
+    expect(gasSharpFade(1100, 1000)).toBeCloseTo(0.5, 6);
+    expect(gasSharpFade(1050, 1000)).toBeCloseTo(0.15625, 6); // eased: slow at both ends
+    expect(gasSharpFade(1150, 1000)).toBeCloseTo(0.84375, 6);
+    expect(gasSharpFade(1199.9, 1000)).toBeLessThan(1);
+    expect(gasSharpFade(1200, 1000)).toBe(1);
+    expect(gasSharpFade(999999, 1000)).toBe(1);
+    // a frame that comes late, or a clock that went wrong, ends the fade: it can never go on asking for frames
+    expect(gasSharpFade(NaN, 1000)).toBe(1);
+    expect(gasSharpFade(900, 1000)).toBe(0);
+    // never backwards, and at 60 frames a second no more than 12 frames are under 1
+    let last = 0;
+    let frames = 0;
+    for (let now = 1000; now <= 1400; now += 1000 / 60) {
+      const k = gasSharpFade(now, 1000);
+      expect(k).toBeGreaterThanOrEqual(last);
+      last = k;
+      if (k < 1) frames += 1;
+    }
+    expect(frames).toBe(12);
   });
 
   it("is asked for once more after a failed load, then given up", () => {

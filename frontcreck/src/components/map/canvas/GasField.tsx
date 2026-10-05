@@ -30,6 +30,7 @@ import {
   gasRectUniform,
   gasRestingStop,
   gasSharpBlocked,
+  gasSharpFade,
   gasSharpPlan,
   gasSharpRetry,
   gasSharpStrips,
@@ -154,11 +155,11 @@ function emptySharpTexture(width: number, height: number): THREE.Texture {
  * pointer is down or a wheel or pinch zoom is running.
  * On a desktop with a real GPU the stop the slider rests at then gets its sharper image (the prototype's
  * resolution), once all three first images are in: fetched at a quiet moment, decoded off the main thread, sent
- * to the GPU in strips (each cut out as a small image of its own), each in its own quiet moment, and swapped in
- * with one frame. Only one sharper image is
+ * to the GPU in strips (each cut out as a small image of its own), each in its own quiet moment, and faded in
+ * over a fifth of a second (one frame with reduced motion). Only one sharper image is
  * held at a time; it is freed when the slider comes to rest at another stop (gasSharpPlan).
- * Nothing here draws at rest: the dim and the pool ask for another frame only while they are easing, and a
- * texture that arrives asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
+ * Nothing here draws at rest: the dim, the pool and the fade to a sharper image ask for another frame only while
+ * they are easing, and a texture that arrives or is released asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
  * they change only in frames the camera has already asked for.
  */
 export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
@@ -177,6 +178,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   const frameAt = useRef(-Infinity);
   // The sharper image of one stop, when it is in.
   const sharp = useRef<SharpGas | null>(null);
+  // The short fade from a stop's first image to its sharper one: the stop, and when its first frame was drawn.
+  const fade = useRef<{ stop: StopId; start: number } | null>(null);
   // Zoom of the last drawn frame, as the sharper image's rule reads it.
   const view = useRef({ ppr: 0, deep: 0 });
   // Per stop: the shader's rectangle, and texels per raw unit of the first and of the sharper image.
@@ -574,6 +577,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     function releaseSharp(): void {
       sharp.current?.texture.dispose();
       sharp.current = null;
+      fade.current = null;
     }
     function cancelSharp(): void {
       sharpLoading?.cancel();
@@ -659,6 +663,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
                   sharpLoading = null;
                   sharpFails = 0;
                   sharp.current = { stop, texture };
+                  // On screen and at rest (it always is: every strip waited for a quiet map), the picture fades
+                  // over to it. The fade's clock starts in the first frame that draws it (start -1 until then),
+                  // not here: the GPU is still building the mips, and that frame may come late.
+                  fade.current = { stop, start: -1 };
                   if (stopsShown(useMapStore.getState().sliderT).includes(stop)) invalidate();
                   sharpFlag();
                 },
@@ -843,18 +851,46 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     const sharper = sharp.current;
     const a = images[pair.a];
     const b = images[pair.b];
-    const sharpA = sharper?.stop === pair.a;
-    const sharpB = sharper?.stop === pair.b;
-    // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-    u.u_gasA.value = sharpA ? sharper!.texture : got[pair.a]!;
-    u.u_gasB.value = sharpB ? sharper!.texture : got[pair.b]!;
-    u.u_mix.value = pair.k;
-    (u.u_rectA.value as THREE.Vector4).fromArray(a.rect);
-    (u.u_rectB.value as THREE.Vector4).fromArray(b.rect);
-    const texels = lerp(sharpA ? a.sharp : a.first, sharpB ? b.sharp : b.first, pair.k);
-    u.u_bakePpr.value = texels;
-    u.u_lodBias.value = gasLodBias(texels, theme.bakeHalf);
-    u.u_octPpr.value = lerp(a.sharp, b.sharp, pair.k);
+    const reduced = prefersReducedMotion();
+    const now = performance.now();
+    // Just in, at rest at its stop: for GAS_SHARP_FADE_MS the stop's first image is A and its sharper image B,
+    // mixed like two stops (the same reads as a morph), and each such frame asks for the next. The frame in which
+    // the fade is over binds the sharper image alone (one read) and asks for nothing. A morph that starts, a
+    // release or reduced motion ends it at once.
+    let fading = 0;
+    const f = fade.current;
+    if (f) {
+      if (f.start < 0) f.start = now;
+      const k = sharper?.stop === f.stop && pair.a === f.stop && pair.b === f.stop && !reduced ? gasSharpFade(now, f.start) : 1;
+      if (k < 1) {
+        fading = k;
+        invalidate();
+      } else fade.current = null;
+    }
+    if (fade.current) {
+      // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
+      u.u_gasA.value = got[pair.a]!;
+      u.u_gasB.value = sharper!.texture;
+      u.u_mix.value = fading;
+      (u.u_rectA.value as THREE.Vector4).fromArray(a.rect);
+      (u.u_rectB.value as THREE.Vector4).fromArray(a.rect);
+      const texels = lerp(a.first, a.sharp, fading);
+      u.u_bakePpr.value = texels;
+      u.u_lodBias.value = gasLodBias(texels, theme.bakeHalf);
+      u.u_octPpr.value = a.sharp;
+    } else {
+      const sharpA = sharper?.stop === pair.a;
+      const sharpB = sharper?.stop === pair.b;
+      u.u_gasA.value = sharpA ? sharper!.texture : got[pair.a]!;
+      u.u_gasB.value = sharpB ? sharper!.texture : got[pair.b]!;
+      u.u_mix.value = pair.k;
+      (u.u_rectA.value as THREE.Vector4).fromArray(a.rect);
+      (u.u_rectB.value as THREE.Vector4).fromArray(b.rect);
+      const texels = lerp(sharpA ? a.sharp : a.first, sharpB ? b.sharp : b.first, pair.k);
+      u.u_bakePpr.value = texels;
+      u.u_lodBias.value = gasLodBias(texels, theme.bakeHalf);
+      u.u_octPpr.value = lerp(a.sharp, b.sharp, pair.k);
+    }
 
     const zoom = (camera as THREE.OrthographicCamera).zoom;
     const height = state.size.height;
@@ -865,7 +901,6 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
 
     // The dimmed backdrop (Home, About, 404) eases with the dots (AlbumField). With frameloop="demand" the first
     // frame after an idle period has a delta of seconds; clamp it, or the dim would jump instead of easing.
-    const reduced = prefersReducedMotion();
     const dt = Math.min(delta, 1 / 30);
     const dimTarget = input.dimmed ? GAS_DIMMED_STRENGTH : 1;
     if (dim.current < 0 || reduced) dim.current = dimTarget;
@@ -887,7 +922,6 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     }
     const p = pool.current;
     const target = focus ? 1 : 0;
-    const now = performance.now();
     if (p.value < 0 || reduced) {
       p.value = target;
       p.to = target;

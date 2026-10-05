@@ -293,6 +293,23 @@ export function gasSharpPlan(have: StopId | null, loading: StopId | null, wanted
   return { release, cancel, start };
 }
 
+/** When the sharper image is in, the picture goes from the first image to it over this long, eased, so the
+ * detail arrives as a short focus pull and not as a snap in one frame. */
+export const GAS_SHARP_FADE_MS = 200;
+
+/**
+ * How much of the sharper image shows `now - start` ms after it came in: 0 at the start, eased (smoothstep), and
+ * exactly 1 from GAS_SHARP_FADE_MS on. GasField draws frames only while this is under 1, binds the two images
+ * of the stop as the shader's A and B with this as the mix, and from 1 on binds the sharper image alone again
+ * (mix 0, one read). There is no clock at rest: the value is worked out in frames the fade itself asked for.
+ */
+export function gasSharpFade(now: number, start: number): number {
+  const t = (now - start) / GAS_SHARP_FADE_MS;
+  if (!(t < 1)) return 1; // also when the clock is not a number
+  if (t <= 0) return 0;
+  return t * t * (3 - 2 * t);
+}
+
 /** A sharper image that fails to load (the network dropped it, or it is not the image theme.json describes) is
  * asked for once more, at a quiet moment at least GAS_SHARP_RETRY_MS later. After the second failure it is not
  * asked for again on this map, and the first image stays. */

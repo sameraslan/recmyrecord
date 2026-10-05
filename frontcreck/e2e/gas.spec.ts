@@ -201,8 +201,8 @@ interface Gesture {
   uploadsAtEnd: number;
   /** Every gap between two animation frames while the gesture ran, ms. */
   gaps: number[];
-  /** Every texture upload of any kind inside the gesture (the map's own cover sheets among them), for the
-   * message of a failed check. */
+  /** When the gesture began, and every texture upload of any kind (the map's own cover sheets among them) and
+   * every long task inside it, for the message of a failed check. */
   other: string[];
 }
 
@@ -240,7 +240,7 @@ async function installGestures(page: Page): Promise<void> {
         const cy = r.top + r.height / 2;
         const fire = (t: string, x: number, y: number) =>
           c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0, buttons: t === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
-        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[], other: [] as string[] };
+        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[], other: [`began at ${Math.round(performance.now())} ms`] };
         g.run = run;
         if (kind === 'drag') fire('pointerdown', cx, cy);
         run.done = (async () => {
@@ -289,6 +289,12 @@ async function installGestures(page: Page): Promise<void> {
         return out;
       };
     }
+    // long tasks on the main thread, for the message of a failed frame gap check
+    if (PerformanceObserver.supportedEntryTypes?.includes('longtask')) {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries()) if (g.run && !g.run.stop) g.run.other.push(`long task at ${Math.round(e.startTime)} ms, ${Math.round(e.duration)} ms`);
+      }).observe({ type: 'longtask' });
+    }
     const fence = P.fenceSync;
     P.fenceSync = function (this: unknown, ...a: unknown[]) {
       const out = fence.apply(this, a);
@@ -320,7 +326,7 @@ const worstGap = (g: Gesture): number => Math.max(...g.gaps.slice(1));
  * take what two runs of the same drag differ by on this renderer. */
 function expectGapsOfControl(got: Gesture, control: Gesture): void {
   expect(got.gaps.length, 'frames in the gesture').toBeGreaterThan(3);
-  expect(worstGap(got), `longest frame gap with an image waiting (control ${Math.round(worstGap(control))} ms; gaps ${got.gaps.map(Math.round).join(' ')}; texture uploads inside the gesture: ${got.other.join('; ') || 'none'})`).toBeLessThanOrEqual(worstGap(control) * 1.25 + 17);
+  expect(worstGap(got), `longest frame gap with an image waiting (control ${Math.round(worstGap(control))} ms; gaps ${got.gaps.map(Math.round).join(' ')}; inside the gesture: ${got.other.join('; ')})`).toBeLessThanOrEqual(worstGap(control) * 1.25 + 17);
 }
 
 test('the gas is drawn behind the albums at the overview, and nothing draws at rest', async ({ page }, info) => {
@@ -685,7 +691,7 @@ test('Home loads only the gas of the stop it shows, and the other two wait for t
   expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
 });
 
-test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at a time, with one frame and nothing at rest', async ({ page }, info) => {
+test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at a time, with a short fade and nothing at rest', async ({ page }, info) => {
   test.skip(isPhone(info), 'the sharper image is for desktops');
   // The test browser renders in software, where the app would not load the sharper image by itself.
   await page.addInitScript(() => {
@@ -761,8 +767,17 @@ test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at
   const log = await page.evaluate(() => (window as unknown as { __sharpLog: [number, string][] }).__sharpLog);
   const firstLoading = log.findIndex(([, s]) => s === 'loading');
   expect(firstLoading).toBeGreaterThan(-1);
-  // From the moment it began to load (the map was at rest by then) to 700 ms after it is in: one frame, the swap.
-  expect(log[log.length - 1][0] - log[firstLoading][0]).toBeLessThanOrEqual(1);
+  // From the moment it began to load (the map was at rest by then) to 700 ms after it is in, the only frames are
+  // those of the fade from the first image to the sharper one: the frame that starts its clock, 200 ms (at most
+  // 12 frames at 60 a second) and the frame that ends it. At least three, or it would be a snap (with reduced
+  // motion it is one frame: see the test at the end of this file).
+  const fadeFrames = log[log.length - 1][0] - log[firstLoading][0];
+  expect(fadeFrames).toBeGreaterThanOrEqual(3);
+  expect(fadeFrames).toBeLessThanOrEqual(14);
+  // and the fade has ended: not one frame more
+  const afterFade = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1000);
+  expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - afterFade).toBe(0);
   expect(await lumaAt(page, await patchAt(page, IN_RAINBOWS, [0, 0], 80))).toBeGreaterThan(SKY_LUMA * 3);
 
   // The slider goes to Mood: once it rests there Balanced's sharper image is freed and Mood's is fetched.
@@ -1287,4 +1302,26 @@ test('on screen the gas lies under the albums it was baked for: the picture matc
   console.log(`registration on screen: r ${inPlace.toFixed(4)} over ${seen.grid.length} points; ${Object.entries(others).map(([name, r]) => `${name} ${r.toFixed(4)}`).join(', ')}`);
   expect(inPlace).toBeGreaterThan(0.9);
   for (const [name, r] of Object.entries(others)) expect(r, name).toBeLessThan(inPlace - 0.01);
+});
+
+test('with reduced motion the sharper image is swapped in with one frame, and nothing draws after it', async ({ page }, info) => {
+  test.skip(isPhone(info), 'the sharper image is for desktops');
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    window.__rmrGasSharp = 'force';
+    const log: [number, string][] = [];
+    (window as unknown as { __sharpLog: [number, string][] }).__sharpLog = log;
+    setInterval(() => log.push([window.__rmr?.frames ?? 0, String(window.__rmr?.gasSharp)]), 16);
+  });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await zoomIn(page);
+  await expect.poll(() => sharpFlag(page), { timeout: 30_000 }).toBe('balanced');
+  await page.waitForTimeout(700);
+  const log = await page.evaluate(() => (window as unknown as { __sharpLog: [number, string][] }).__sharpLog);
+  const firstLoading = log.findIndex(([, s]) => s === 'loading');
+  expect(firstLoading).toBeGreaterThan(-1);
+  // From the moment it began to load (the map was at rest by then) to 700 ms after it is in: one frame, the swap.
+  expect(log[log.length - 1][0] - log[firstLoading][0]).toBe(1);
 });
