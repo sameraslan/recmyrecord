@@ -28,9 +28,16 @@ export async function coversSettled(page: Page, scope = 'body'): Promise<void> {
   }, scope);
 }
 
-/** Waits until the map has loaded, rendered and exposed its API. */
+/** Waits until the map has loaded, rendered and exposed its API, and its gas has settled: every started stop's
+ * texture is in ('ready': all three on an interactive map, the one shown on Home, About and 404), or there is
+ * none to wait for ('off'). After this no late texture can cost a frame inside a test's idle window. After going
+ * from Home to the map without a reload, wait for the view to change before calling this. */
 export async function waitForMap(page: Page): Promise<void> {
-  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 20_000 });
+  await page.waitForFunction(
+    () => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'),
+    null,
+    { timeout: 20_000 },
+  );
 }
 
 /** Waits until no camera animation is running and the map has stopped drawing. */

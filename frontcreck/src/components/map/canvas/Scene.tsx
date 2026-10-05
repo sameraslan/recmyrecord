@@ -19,6 +19,7 @@ import { CameraTween } from "./CameraTween";
 import { CursorTracker } from "./CursorTracker";
 import { FrameCounter } from "./FrameCounter";
 import { FocusFramer } from "./FocusFramer";
+import { GasField } from "./GasField";
 import { FRUSTUM_HALF_HEIGHT, InitialFrame } from "./InitialFrame";
 import { MarkerDriver } from "./MarkerDriver";
 import { MorphDriver } from "./MorphDriver";
@@ -137,6 +138,7 @@ export function Scene({ initialCamera, onApi }: { initialCamera: MapCamera | nul
 
 function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null; onApi: (api: MapApi | null) => void }) {
   const data = useMapStore((s) => s.data)!;
+  const theme = useMapStore((s) => s.theme);
   // Hot-path pointer state lives in refs, not React state: pointermove and
   // zoom frames must never trigger a SceneInner re-render.
   // Canvas-relative CSS px of the mouse, written by CursorTracker.
@@ -166,6 +168,9 @@ function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null;
       <PickController positionsRef={positionsRef} hoverRef={hoverRef} />
       {/* Before AlbumField: its frame callback moves sliderT, which AlbumField draws in the same frame. */}
       <MorphDriver />
+      {/* The gas reads the slider position MorphDriver has just written and is drawn under the album points.
+          Without a theme there is no gas: the pane's sky colour shows through the transparent canvas. */}
+      {theme ? <GasField data={data} theme={theme} /> : null}
       <AlbumField data={data} atlasTextures={textures} positionsRef={positionsRef} />
       <OverlayDriver positionsRef={positionsRef} />
       <MarkerDriver positionsRef={positionsRef} />

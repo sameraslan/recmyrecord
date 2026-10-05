@@ -176,7 +176,7 @@ async function albumFlow(page, isPhone) {
 
 async function exploreFlow(page, isPhone) {
   await page.goto(`${BASE}/map`, { waitUntil: 'load' });
-  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 20000 });
+  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), null, { timeout: 20000 });
   await page.waitForTimeout(1500);
   return page.evaluate(async (phone) => {
     const P = window.__perf;

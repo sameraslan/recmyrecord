@@ -1,3 +1,4 @@
+import type { ThemeData } from '@/lib/data/theme';
 import type { AlbumId, Focus, MapCamera, StopId } from '@/lib/types';
 import type { MapData } from './data';
 
@@ -58,6 +59,8 @@ export interface MapApi {
 
 export interface MusicMapProps {
   data: MapData;
+  /** Null while the theme loads and when there is none: the map then shows plain sky. */
+  theme: ThemeData | null;
   input: MapInput;
   callbacks: MapCallbacks;
   /** Applied once after the first framing, e.g. the saved Explore camera. */

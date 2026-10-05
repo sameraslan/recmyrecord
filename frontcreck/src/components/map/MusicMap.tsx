@@ -22,10 +22,13 @@ function SelectedRing() {
 }
 
 /** Loaded with next/dynamic (ssr: false) after first paint, so three.js is its own chunk. */
-export default function MusicMap({ data, input, callbacks, initialCamera, onApi }: MusicMapProps) {
+export default function MusicMap({ data, theme, input, callbacks, initialCamera, onApi }: MusicMapProps) {
   useLayoutEffect(() => {
     useMapStore.getState().setData(data);
   }, [data]);
+  useLayoutEffect(() => {
+    useMapStore.getState().setTheme(theme);
+  }, [theme]);
   useLayoutEffect(() => {
     useMapStore.getState().setInput(input);
   }, [input]);

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ThemeData } from '@/lib/data/theme';
 import type { MapData } from '../data';
 import type { MapCallbacks, MapInput } from '../types';
 import { requestRender } from './invalidate';
@@ -20,6 +21,8 @@ const NO_CALLBACKS: MapCallbacks = { onHover: () => {}, onPick: () => {}, onEmpt
 
 export interface MapStore {
   data: MapData | null;
+  /** Gas, star colours and region names; null while it loads and when there is none (plain sky, white stars). */
+  theme: ThemeData | null;
   input: MapInput;
   callbacks: MapCallbacks;
   /** Animated slider position: 0 sonic, 0.5 balanced, 1 mood. */
@@ -41,6 +44,7 @@ export interface MapStore {
   /** Date.now() of the last Reset while focused: camera grabs before it no longer stop the focus framing. */
   focusRearmedAt: number;
   setData: (data: MapData | null) => void;
+  setTheme: (theme: ThemeData | null) => void;
   setInput: (input: MapInput) => void;
   setCallbacks: (callbacks: MapCallbacks) => void;
   setSliderT: (t: number) => void;
@@ -56,8 +60,9 @@ export interface MapStore {
   rearmFocus: () => void;
 }
 
-export const useMapStore = create<MapStore>()((set) => ({
+export const useMapStore = create<MapStore>()((set, get) => ({
   data: null,
+  theme: null,
   input: DEFAULT_INPUT,
   callbacks: NO_CALLBACKS,
   sliderT: 0.5,
@@ -72,6 +77,11 @@ export const useMapStore = create<MapStore>()((set) => ({
   morphing: false,
   focusRearmedAt: 0,
   setData: (data) => set({ data }),
+  setTheme: (theme) => {
+    if (get().theme === theme) return;
+    set({ theme });
+    requestRender();
+  },
   setInput: (input) => {
     set({ input });
     requestRender();

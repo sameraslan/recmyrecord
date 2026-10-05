@@ -4,7 +4,8 @@ import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toSummary } from '@/lib/data/catalog';
-import { useCatalog, usePositions } from '@/lib/data/useData';
+import { themeFor } from '@/lib/data/theme';
+import { useCatalog, usePositions, useThemeLoad } from '@/lib/data/useData';
 import { useIsNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
 import type { StopId } from '@/lib/types';
@@ -168,6 +169,14 @@ export function MapStage() {
   const { status: catalogStatus, catalog, retry: retryCatalog } = useCatalog(enabled);
   const { status: positionsStatus, positions, retry: retryPositions } = usePositions(enabled);
   const mapData = useMemo(() => (catalog && positions ? buildMapData(catalog.albums, positions) : null), [catalog, positions]);
+  // The theme is optional. Missing, failed or built for another album count, the map goes on with plain sky.
+  const { status: themeStatus, theme: loadedTheme } = useThemeLoad(enabled);
+  const theme = mapData ? themeFor(loadedTheme, mapData.n) : null;
+  useEffect(() => {
+    // Tests wait for the gas to settle (e2e/helpers.ts waitForMap); tell them when there is none to wait for.
+    if (!window.__rmr) return;
+    if (themeStatus === 'error' || (mapData !== null && loadedTheme !== null && theme === null)) window.__rmr.gas = 'off';
+  }, [themeStatus, mapData, loadedTheme, theme]);
 
   const interactive = view === 'explore' || (view === 'album' && (!narrow || mapMode));
   const dimmed = view === 'home' || view === 'about' || view === 'other';
@@ -334,7 +343,7 @@ export function MapStage() {
       <AmbientLayers ambient={view === 'album' ? ambient : null} variant="map" />
       <div className="map-host">
         {enabled && mapData ? (
-          <MusicMap data={mapData} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
+          <MusicMap data={mapData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
         ) : null}
       </div>
       {/* Home (mockup .veil): dims the map further round the hero; a click on empty map area opens the map. Always
