@@ -7,9 +7,15 @@
  *
  *   node --import ./scripts/perf/no-energy-saver.mjs scripts/perf/perf.mjs
  *
- * `browser.newContext()` starts a browser of its own, so a script that opens several contexts gets a cold
- * browser for each (npm run perf opens one per browser, so it is measured exactly as without this file).
- * Not needed on mains power or above 20% battery. Say so in the write-up when it was used.
+ * This is NOT the same as an ordinary launch, so do not compare its numbers with ordinary ones without saying so:
+ * - every `browser.newContext()` starts a Chrome of its own on a fresh profile (a persistent context), so a
+ *   script that opens several contexts gets a cold browser for each;
+ * - `chromium.launch()` first makes one ordinary launch, only to read the version string, and closes it;
+ * - `browser.newPage()` (the native-architecture check of scripts/check-native.mjs uses it) starts one more
+ *   Chrome, which is closed again when that page closes.
+ * Measured on this laptop: the gpu rows land where an ordinary launch puts them; a software renderer starts
+ * more slowly on the fresh profile (search usable and map first frame were 30 to 100% later). Use it only when
+ * the battery leaves no choice, never for the numbers a write-up leads with, and say when it was used.
  */
 import fs from 'node:fs';
 import os from 'node:os';
@@ -39,13 +45,14 @@ chromium.launch = async (options = {}) => {
     open.push(ctx);
     return ctx;
   };
-  let shared = null;
   return {
     version: () => version,
     newContext,
     newPage: async () => {
-      shared ??= await newContext();
-      return shared.newPage();
+      const ctx = await newContext();
+      const page = await ctx.newPage();
+      page.on('close', () => void ctx.close().catch(() => {}));
+      return page;
     },
     close: async () => {
       for (const ctx of [...open]) await ctx.close();

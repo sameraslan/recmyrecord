@@ -7,13 +7,16 @@ import * as THREE from "three";
 import type { ThemeData } from "@/lib/data/theme";
 import { easeOutCubic, prefersReducedMotion } from "@/lib/media";
 import { STOP_IDS, type StopId } from "@/lib/types";
-import type { MapData } from "../data";
+import { STOP_T, type MapData } from "../data";
 import {
   GAS_DIMMED_STRENGTH,
   GAS_FRAGMENT_SHADER,
   GAS_QUAD_SCALE,
   GAS_TEXTURE_PX,
-  GAS_UPLOAD_QUIET_MS,
+  GAS_BUSY_UPLOAD_CAP_MS,
+  GAS_FIRST_UPLOAD_CAP_MS,
+  GAS_UPLOAD_GAP_MS,
+  GAS_UPLOAD_MAX_WAIT_MS,
   GAS_VERTEX_SHADER,
   POOL_MIN_PX,
   POOL_MS,
@@ -24,8 +27,10 @@ import {
   gasPair,
   gasStopsToStart,
   gasTextureFits,
+  gasUploadOverdue,
   gasUploadWait,
   gasUrl,
+  stopsOnPath,
   stopsShown,
 } from "../shaders/gas";
 import { useMapStore } from "../state/mapStore";
@@ -85,8 +90,9 @@ function setGasFlag(value: "loading" | "ready" | "off"): void {
  * The nebula gas: one quad in world space under the album points, textured with the stop baked at build time.
  * The current stop's texture loads first. The other two load only on an interactive map, in an idle slot after
  * the first is on screen (or at once when the slider asks); the dimmed backdrop loads only the stop it shows.
- * An image that is not needed on screen is uploaded to the GPU only in a quiet moment, never during a pan, a
- * zoom, a hover or a camera move, and one at a time.
+ * An image that is needed on screen is uploaded once the GPU has finished the frames already asked of it. One
+ * that is not is uploaded only in a quiet moment, never during a pan, a zoom, a hover or a camera move, and one
+ * at a time; if no quiet moment comes for four seconds it goes in at the next idle moment.
  * Nothing here draws at rest: the dim and the pool ask for another frame only while they are easing, and a
  * texture that arrives asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
  * they change only in frames the camera has already asked for.
@@ -165,9 +171,15 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     // Goes up when the WebGL context is lost: a fetch started before that belongs to the old context and is dropped.
     let gen = 0;
     let lost = false;
-    // Decoded images of stops that are not on screen, waiting for a quiet moment to be uploaded.
-    const waiting = new Map<StopId, LoadedGas>();
+    // Decoded images of stops that are not on screen, waiting for a quiet moment to be uploaded, with the time
+    // each began to wait.
+    const waiting = new Map<StopId, { g: LoadedGas; since: number }>();
     let quiet: { cancel: () => void } | null = null;
+    // Decoded images that are needed on screen: uploaded one at a time, each once the GPU has caught up.
+    const urgent: [StopId, LoadedGas][] = [];
+    let urgentBusy: { cancel: () => void } | null = null;
+    let lastUpload = -Infinity;
+    let afterPaint: { cancel: () => void } | null = null;
     let lastInput = -Infinity;
     const onInput = () => {
       lastInput = performance.now();
@@ -191,12 +203,12 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
             disposeGas(g);
             return;
           }
-          // The stop on screen (or the first to arrive, which stands in for it) is uploaded at once. Any other
-          // waits for a quiet moment: its upload and mip build take main-thread time that a pan, a zoom or a
-          // hover would feel.
-          if (onScreen(stop)) take(stop, g);
+          // The stop on screen (or the first to arrive, which stands in for it) goes in as soon as the GPU has
+          // caught up. Any other waits for a quiet moment: an upload takes main-thread time that a pan, a zoom
+          // or a hover would feel.
+          if (onScreen(stop)) pushUrgent(stop, g);
           else {
-            waiting.set(stop, g);
+            waiting.set(stop, { g, since: performance.now() });
             pump();
           }
         })
@@ -221,6 +233,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     }
     /** Uploads a decoded stop, outside a frame, so the first frame that shows it does not stall on it. */
     function take(stop: StopId, g: LoadedGas): void {
+      if (gl.getContext().isContextLost()) {
+        disposeGas(g); // the lost-context handler runs next and starts over
+        return;
+      }
       uploadGas(gl, g);
       store[stop] = g.texture;
       // frameloop="demand": a texture arriving is not an input event. Draw one frame if this stop is on
@@ -235,49 +251,137 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       }, ms);
       return { cancel: () => window.clearTimeout(handle) };
     }
-    /** Runs fn when the main thread has nothing else to do. A timer alone is not proof of a quiet map: after
-     * a slow frame an overdue timer can run before the input that queued up behind that frame. */
-    function whenIdle(fn: () => void): { cancel: () => void } {
+    /** Runs fn when the main thread has nothing else to do, or after `timeout` ms if that never happens. A
+     * timer alone is not proof of a quiet map: after a slow frame an overdue timer can run before the input
+     * that queued up behind that frame. */
+    function whenIdle(fn: () => void, timeout?: number): { cancel: () => void } {
       if (typeof window.requestIdleCallback !== "function") return later(fn, 50);
-      const handle = window.requestIdleCallback(() => {
-        quiet = null;
-        fn();
-      });
+      const handle = window.requestIdleCallback(
+        () => {
+          quiet = null;
+          fn();
+        },
+        timeout === undefined ? undefined : { timeout },
+      );
       return { cancel: () => window.cancelIdleCallback(handle) };
+    }
+    /**
+     * Runs fn once the GPU has finished everything the map has asked of it so far, or after `capMs`. The first
+     * call into WebGL that needs an answer (three asks for an extension when it uploads its first mipmapped
+     * texture) blocks the main thread until the renderer has drawn what is queued; on a software renderer that
+     * is the map's whole first frame, 250 ms and more (measured). A fence is asked for and polled from timers
+     * instead, which blocks nothing. On a GPU it is signalled within a few ms.
+     */
+    function whenGpuDone(fn: () => void, capMs: number, firstLookMs = 0): { cancel: () => void } {
+      const ctx = gl.getContext() as WebGL2RenderingContext;
+      const sync = typeof ctx.fenceSync === "function" ? ctx.fenceSync(ctx.SYNC_GPU_COMMANDS_COMPLETE, 0) : null;
+      if (sync) ctx.flush();
+      const t0 = performance.now();
+      let handle = 0;
+      let done = false;
+      const finish = () => {
+        done = true;
+        if (sync) ctx.deleteSync(sync);
+      };
+      const poll = () => {
+        if (done) return;
+        // (the status of a fence only changes between tasks, so the first look is in a later task too)
+        const ready = !sync || ctx.isContextLost() || ctx.getSyncParameter(sync, ctx.SYNC_STATUS) === ctx.SIGNALED;
+        if (ready || performance.now() - t0 >= capMs) {
+          finish();
+          fn();
+        } else handle = window.setTimeout(poll, 8);
+      };
+      handle = window.setTimeout(poll, firstLookMs);
+      return {
+        cancel: () => {
+          window.clearTimeout(handle);
+          if (!done) finish();
+        },
+      };
+    }
+    function pushUrgent(stop: StopId, g: LoadedGas): void {
+      urgent.push([stop, g]);
+      runUrgent();
+    }
+    function runUrgent(): void {
+      if (!alive || urgentBusy || urgent.length === 0) return;
+      const first = !STOP_IDS.some((id) => store[id]);
+      urgentBusy = whenGpuDone(
+        () => {
+          urgentBusy = null;
+          const next = urgent.shift();
+          if (next) take(next[0], next[1]);
+          lastUpload = performance.now();
+          runUrgent();
+        },
+        first ? GAS_FIRST_UPLOAD_CAP_MS : GAS_BUSY_UPLOAD_CAP_MS,
+        // never two uploads in one frame
+        Math.max(0, lastUpload + GAS_UPLOAD_GAP_MS - performance.now()),
+      );
     }
     const quietFor = () => gasUploadWait(performance.now(), lastInput, frameAt.current);
     /** Uploads one waiting stop once the map is quiet, else looks again when it may be. One upload per quiet
-     * moment, so two images that arrive together never share a frame. */
+     * moment, so two images that arrive together never share a frame. An image that has waited too long (the
+     * visitor never stops moving) goes in at the next idle moment instead, and the others' clocks restart. */
     function pump(): void {
       if (!alive || quiet !== null || waiting.size === 0) return;
+      const [stop, entry] = waiting.entries().next().value!;
+      const overdue = gasUploadOverdue(performance.now(), entry.since);
       const wait = quietFor();
-      if (wait > 0) {
-        quiet = later(pump, wait);
+      if (wait > 0 && !overdue) {
+        quiet = later(pump, Math.min(wait, Math.max(0, entry.since + GAS_UPLOAD_MAX_WAIT_MS - performance.now())));
         return;
       }
-      quiet = whenIdle(() => {
-        if (!alive) return;
-        if (quietFor() > 0) {
-          pump();
-          return;
-        }
-        const next = waiting.entries().next().value;
-        if (!next) return;
-        waiting.delete(next[0]);
-        take(next[0], next[1]);
-        if (waiting.size > 0) quiet = later(pump, GAS_UPLOAD_QUIET_MS);
-      });
+      quiet = whenIdle(
+        () => {
+          if (!alive || waiting.get(stop) !== entry) return pump();
+          if (quietFor() > 0 && !gasUploadOverdue(performance.now(), entry.since)) return pump();
+          waiting.delete(stop);
+          if (overdue) for (const other of waiting.values()) other.since = performance.now();
+          pushUrgent(stop, entry.g);
+          if (waiting.size > 0) quiet = later(pump, GAS_UPLOAD_GAP_MS);
+        },
+        // Idle time may never come while the visitor keeps the map moving on a slow renderer.
+        overdue ? 200 : undefined,
+      );
     }
-    /** The slider asked for another stop: whatever waits is uploaded now, as the morph will show it. */
-    function flush(): void {
-      for (const [stop, g] of waiting) take(stop, g);
-      waiting.clear();
+    /** The slider asked for another stop. Of the images that wait, those the morph will show are uploaded
+     * now; "now" is after the frame that paints the new list, so the click itself stays free of uploads. Until
+     * they are in, the stop on screen stands in (gasPair). An image the morph never shows goes on waiting. */
+    function takeForMorph(path: StopId[]): void {
+      if (!path.some((stop) => waiting.has(stop)) || afterPaint) return;
+      let timer = 0;
+      const frame = window.requestAnimationFrame(() => {
+        timer = window.setTimeout(() => {
+          afterPaint = null;
+          const shown = stopsOnPath(useMapStore.getState().sliderT, STOP_T[useMapStore.getState().input.stop]);
+          for (const stop of shown) {
+            const entry = waiting.get(stop);
+            if (!entry) continue;
+            waiting.delete(stop);
+            pushUrgent(stop, entry.g);
+          }
+        }, 0);
+      });
+      afterPaint = {
+        cancel: () => {
+          window.cancelAnimationFrame(frame);
+          window.clearTimeout(timer);
+        },
+      };
     }
     function dropWaiting(): void {
       quiet?.cancel();
       quiet = null;
-      for (const g of waiting.values()) disposeGas(g);
+      urgentBusy?.cancel();
+      urgentBusy = null;
+      afterPaint?.cancel();
+      afterPaint = null;
+      for (const entry of waiting.values()) disposeGas(entry.g);
       waiting.clear();
+      for (const [, g] of urgent) disposeGas(g);
+      urgent.length = 0;
     }
     function rest(): void {
       idle = null;
@@ -306,10 +410,12 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     fetchStop(first.stop);
     schedule(gasStopsToStart(first.stop, first.interactive));
     const unsubscribe = useMapStore.subscribe((s, prev) => {
-      // The slider asked for a stop: fetch it at once, whether or not it was waiting for an idle slot.
+      // The slider asked for a stop: the stops its morph passes are fetched at once, whether or not they were
+      // waiting for an idle slot, and those already decoded are uploaded after the next paint.
       if (s.input.stop !== prev.input.stop) {
-        flush();
-        fetchStop(s.input.stop);
+        const path = stopsOnPath(s.sliderT, STOP_T[s.input.stop]);
+        for (const stop of path) fetchStop(stop);
+        takeForMorph(path);
       }
       // The backdrop became the map (same page, no reload): the other stops are started now, so the flag goes
       // back to 'loading' until they are in.

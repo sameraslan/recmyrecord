@@ -73,6 +73,18 @@ export function stopsShown(t: number): StopId[] {
   return m.k <= 0 ? [m.a] : m.k >= 1 ? [m.b] : [m.a, m.b];
 }
 
+/** Slider position of each stop (the same numbers as STOP_T in ../data, which stopMix is built on). */
+const STOP_AT: Record<StopId, number> = { sonic: 0, balanced: 0.5, mood: 1 };
+
+/** Every stop whose gas shows at some moment of a morph from slider position `fromT` to `toT`, in slider
+ * order: Balanced to Mood never shows Sonic, Sonic to Mood passes through Balanced. */
+export function stopsOnPath(fromT: number, toT: number): StopId[] {
+  const lo = Math.min(fromT, toT);
+  const hi = Math.max(fromT, toT);
+  const ends = [...stopsShown(fromT), ...stopsShown(toT)];
+  return STOP_IDS.filter((s) => ends.includes(s) || (STOP_AT[s] >= lo && STOP_AT[s] <= hi));
+}
+
 /**
  * The textures to bind at slider position t. At a stop it is one texture twice with k 0. When a needed stop has
  * not loaded yet, the nearer loaded stop of the pair stands in (then any loaded stop), so the gas never drops
@@ -122,6 +134,21 @@ export function gasStopsToStart(current: StopId, interactive: boolean): StopId[]
 
 /** A gas image that is not needed on screen is uploaded only once the map has been left alone this long. */
 export const GAS_UPLOAD_QUIET_MS = 250;
+/** Two uploads are at least this far apart (two frames at 60 a second), so they never share a frame. */
+export const GAS_UPLOAD_GAP_MS = 34;
+/** A visitor who never stops moving would never get the late images. After this long an image stops waiting
+ * for a quiet map and goes in at the next idle moment between input events (one image, then the clock restarts). */
+export const GAS_UPLOAD_MAX_WAIT_MS = 4000;
+/** How long an image that is needed on screen waits for the GPU to finish the frames already asked of it: the
+ * first image of a map (nothing is on screen yet, and a software renderer needs a few hundred ms for the map's
+ * first frame), and any later one (a morph is running and must not show the stand-in for long). */
+export const GAS_FIRST_UPLOAD_CAP_MS = 1500;
+export const GAS_BUSY_UPLOAD_CAP_MS = 100;
+
+/** True when an image has waited for a quiet map since `since` for as long as it may. */
+export function gasUploadOverdue(now: number, since: number): boolean {
+  return now - since >= GAS_UPLOAD_MAX_WAIT_MS;
+}
 
 /**
  * How long (ms) the upload of a gas image that is not on screen must still wait: until GAS_UPLOAD_QUIET_MS have

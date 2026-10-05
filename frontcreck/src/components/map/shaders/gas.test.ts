@@ -19,12 +19,18 @@ import {
   gasDust,
   gasNoise,
   gasPair,
+  GAS_BUSY_UPLOAD_CAP_MS,
+  GAS_FIRST_UPLOAD_CAP_MS,
+  GAS_UPLOAD_GAP_MS,
+  GAS_UPLOAD_MAX_WAIT_MS,
   GAS_UPLOAD_QUIET_MS,
   gasStopsToStart,
+  gasUploadOverdue,
   gasUploadWait,
   gasTextureFits,
   gasUrl,
   stopMix,
+  stopsOnPath,
   stopsShown,
 } from "./gas";
 
@@ -112,6 +118,16 @@ describe("stopMix and gasPair (which baked stops the slider shows)", () => {
     expect(stopsShown(0.9)).toEqual(["balanced", "mood"]);
   });
 
+  it("names the stops a morph passes, and no other", () => {
+    expect(stopsOnPath(0.5, 1)).toEqual(["balanced", "mood"]); // Balanced to Mood never shows Sonic
+    expect(stopsOnPath(0.5, 0)).toEqual(["sonic", "balanced"]);
+    expect(stopsOnPath(0, 1)).toEqual(["sonic", "balanced", "mood"]); // end to end passes Balanced
+    expect(stopsOnPath(1, 0)).toEqual(["sonic", "balanced", "mood"]);
+    expect(stopsOnPath(0.25, 1)).toEqual(["sonic", "balanced", "mood"]); // an interrupted morph still shows Sonic
+    expect(stopsOnPath(0.75, 1)).toEqual(["balanced", "mood"]);
+    expect(stopsOnPath(1, 1)).toEqual(["mood"]);
+  });
+
   it("binds one texture at a stop and two between stops", () => {
     expect(gasPair(0, ALL)).toEqual({ a: "sonic", b: "sonic", k: 0 });
     expect(gasPair(0.5, ALL)).toEqual({ a: "balanced", b: "balanced", k: 0 });
@@ -155,6 +171,17 @@ describe("gasUploadWait (when a gas image that is not on screen may be uploaded)
     expect(gasUploadWait(5000, 4990, 4900)).toBe(240);
     // exactly at the end of the quiet time
     expect(gasUploadWait(5000, 4750, 4750)).toBe(0);
+  });
+
+  it("stops waiting for a quiet map after the longest wait, so constant input cannot starve an image", () => {
+    expect(GAS_UPLOAD_MAX_WAIT_MS).toBe(4000);
+    expect(gasUploadOverdue(1000, 0)).toBe(false);
+    expect(gasUploadOverdue(3999, 0)).toBe(false);
+    expect(gasUploadOverdue(4000, 0)).toBe(true);
+    expect(gasUploadOverdue(9000, 5500)).toBe(false);
+    // two uploads never share a frame, and the caps on a busy GPU are bounded
+    expect(GAS_UPLOAD_GAP_MS).toBeGreaterThan(1000 / 60);
+    expect(GAS_BUSY_UPLOAD_CAP_MS).toBeLessThan(GAS_FIRST_UPLOAD_CAP_MS);
   });
 
   it("never lets an upload through while input keeps coming", () => {
