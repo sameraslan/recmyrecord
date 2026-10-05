@@ -4,7 +4,8 @@
 # instead of running board.sh themselves (see .claude/skills/board/SKILL.md). It also moves a PR's linked
 # issue (`Closes #n`) to In progress when a draft PR opens and to Final review when the PR is ready.
 #
-# Needs the repo secret BOARD_TOKEN: a classic personal access token with the `project` scope.
+# Needs the repo secret BOARD_TOKEN: a classic personal access token with the `project` and `read:org` scopes
+# (without read:org, gh project fails with "unknown owner type"; fine-grained tokens cannot reach user Projects).
 name: board
 
 on:
