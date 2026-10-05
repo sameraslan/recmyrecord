@@ -8,6 +8,10 @@ Work is tracked as GitHub issues on the `recmyrecord` GitHub Project board (Back
 
 When you start a piece of work, pause on a question for Samer, or open its final PR, find its ticket (or create one) and move it to the matching column, even if the request did not mention a ticket.
 
+## Writing for visitors
+
+Any text a visitor reads on the site (messages, errors, empty states, labels) is friendly and plain. It says what still works and suggests a next step, for example "To enjoy the full exploratory map, open this page in an up-to-date Chrome, Firefox, Safari or Edge." It avoids technical terms (not "WebGL", "context", "fetch") and does not blame the visitor or their device. The strings live in `frontcreck/src/lib/copy.ts`, whose header lists the other copy rules (no dashes, no hype, no emoji), and Samer signs copy off on the PR.
+
 ## Experiments
 
 The full cycle (starting, running, writing up, merging, referencing) is in `experiments/README.md`. Read it before starting or merging an experiment. The rules in short:
