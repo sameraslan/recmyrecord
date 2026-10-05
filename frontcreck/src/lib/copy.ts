@@ -72,7 +72,9 @@ export const COPY = {
     cardPrimary: 'See closest albums',
     cardSpotify: 'Spotify',
     cardClose: 'Close',
-    noWebgl: 'The map needs WebGL, which this browser has turned off. Search and lists still work.',
+    /** Shown where the map can't draw (no WebGL2, or WebGL turned off); `noWebglHint` under it says what to try. */
+    noWebgl: 'The map can’t run in this browser. Search and album lists still work.',
+    noWebglHint: 'To see the map, update your browser, or open this page in Chrome, Firefox, Safari or Edge.',
     preview: 'Map preview of the album and its closest albums',
     openMap: 'Open map',
     /** Beside an album: leaves it for Explore with the map left where it is. */
