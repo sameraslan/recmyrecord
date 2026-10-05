@@ -1,0 +1,372 @@
+{
+ "when": "2026-10-05T11:24:58.687Z",
+ "rows": [
+  {
+   "state": "overview",
+   "dpr": 1,
+   "viewport": "1440 x 900",
+   "device": {
+    "override": null,
+    "coarsePointer": false,
+    "maxTouchPoints": 0,
+    "deviceMemory": 16,
+    "maxTextureSize": 16384,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "gasLite": false,
+    "dpr": 1
+   },
+   "gasSharp": "balanced",
+   "sharpRequests": [
+    "/data/theme/gas-balanced-sharp.1b10f6b8be.webp"
+   ],
+   "stop": "balanced",
+   "pxPerWorld": 1639,
+   "coverPx": 11.1,
+   "framingResidualPx": 0,
+   "crop": {
+    "left": 800,
+    "top": 182,
+    "width": 360,
+    "height": 360
+   },
+   "bands": {
+    "app": [
+     1.069,
+     1.212,
+     1.876,
+     2.556,
+     3.374
+    ],
+    "prototype": [
+     1.073,
+     1.194,
+     1.866,
+     2.554,
+     3.355
+    ],
+    "ratio": [
+     0.996,
+     1.016,
+     1.005,
+     1.001,
+     1.005
+    ]
+   },
+   "errors": []
+  },
+  {
+   "state": "overview",
+   "dpr": 2,
+   "viewport": "1440 x 900",
+   "device": {
+    "override": null,
+    "coarsePointer": false,
+    "maxTouchPoints": 0,
+    "deviceMemory": 16,
+    "maxTextureSize": 16384,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "gasLite": false,
+    "dpr": 2
+   },
+   "gasSharp": "balanced",
+   "sharpRequests": [
+    "/data/theme/gas-balanced-sharp.1b10f6b8be.webp"
+   ],
+   "stop": "balanced",
+   "pxPerWorld": 1639,
+   "coverPx": 11.1,
+   "framingResidualPx": 0,
+   "crop": {
+    "left": 1780,
+    "top": 544,
+    "width": 360,
+    "height": 360
+   },
+   "bands": {
+    "app": [
+     0.777,
+     0.742,
+     1.321,
+     1.996,
+     2.681
+    ],
+    "prototype": [
+     0.369,
+     0.52,
+     1.112,
+     1.878,
+     2.636
+    ],
+    "ratio": [
+     2.103,
+     1.427,
+     1.188,
+     1.063,
+     1.017
+    ]
+   },
+   "errors": []
+  },
+  {
+   "state": "album",
+   "dpr": 1,
+   "viewport": "1440 x 900",
+   "device": {
+    "override": null,
+    "coarsePointer": false,
+    "maxTouchPoints": 0,
+    "deviceMemory": 16,
+    "maxTextureSize": 16384,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "gasLite": false,
+    "dpr": 1
+   },
+   "gasSharp": "balanced",
+   "sharpRequests": [
+    "/data/theme/gas-balanced-sharp.1b10f6b8be.webp"
+   ],
+   "stop": "balanced",
+   "pxPerWorld": 2373,
+   "coverPx": 16.1,
+   "framingResidualPx": 0,
+   "crop": {
+    "left": 800,
+    "top": 182,
+    "width": 360,
+    "height": 360
+   },
+   "bands": {
+    "app": [
+     0.853,
+     0.859,
+     1.43,
+     2.03,
+     2.654
+    ],
+    "prototype": [
+     0.896,
+     0.866,
+     1.429,
+     2.026,
+     2.652
+    ],
+    "ratio": [
+     0.952,
+     0.992,
+     1.001,
+     1.002,
+     1.001
+    ]
+   },
+   "errors": []
+  },
+  {
+   "state": "album",
+   "dpr": 2,
+   "viewport": "1440 x 900",
+   "device": {
+    "override": null,
+    "coarsePointer": false,
+    "maxTouchPoints": 0,
+    "deviceMemory": 16,
+    "maxTextureSize": 16384,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "gasLite": false,
+    "dpr": 2
+   },
+   "gasSharp": "balanced",
+   "sharpRequests": [
+    "/data/theme/gas-balanced-sharp.1b10f6b8be.webp"
+   ],
+   "stop": "balanced",
+   "pxPerWorld": 2373,
+   "coverPx": 16.1,
+   "framingResidualPx": 0,
+   "crop": {
+    "left": 1780,
+    "top": 544,
+    "width": 360,
+    "height": 360
+   },
+   "bands": {
+    "app": [
+     0.688,
+     0.456,
+     0.832,
+     1.439,
+     2.065
+    ],
+    "prototype": [
+     0.334,
+     0.384,
+     0.781,
+     1.4,
+     2.045
+    ],
+    "ratio": [
+     2.057,
+     1.188,
+     1.064,
+     1.028,
+     1.01
+    ]
+   },
+   "errors": []
+  },
+  {
+   "state": "overview-sonic",
+   "dpr": 1,
+   "viewport": "1440 x 900",
+   "device": {
+    "override": null,
+    "coarsePointer": false,
+    "maxTouchPoints": 0,
+    "deviceMemory": 16,
+    "maxTextureSize": 16384,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "gasLite": false,
+    "dpr": 1
+   },
+   "gasSharp": "sonic",
+   "sharpRequests": [
+    "/data/theme/gas-sonic-sharp.9b2d64d782.webp"
+   ],
+   "stop": "sonic",
+   "pxPerWorld": 1535,
+   "coverPx": 10.4,
+   "framingResidualPx": 0,
+   "crop": {
+    "left": 800,
+    "top": 182,
+    "width": 360,
+    "height": 360
+   },
+   "bands": {
+    "app": [
+     1.191,
+     1.387,
+     2.141,
+     2.876,
+     3.622
+    ],
+    "prototype": [
+     1.21,
+     1.386,
+     2.142,
+     2.866,
+     3.589
+    ],
+    "ratio": [
+     0.984,
+     1,
+     1,
+     1.004,
+     1.009
+    ]
+   },
+   "errors": []
+  },
+  {
+   "state": "phone-opening",
+   "dpr": 3,
+   "viewport": "390 x 844",
+   "device": {
+    "override": null,
+    "coarsePointer": true,
+    "maxTouchPoints": 1,
+    "deviceMemory": 16,
+    "maxTextureSize": 16384,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "gasLite": false,
+    "dpr": 3
+   },
+   "gasSharp": "off",
+   "sharpRequests": [],
+   "stop": "balanced",
+   "pxPerWorld": 268,
+   "coverPx": 1.8,
+   "framingResidualPx": 0,
+   "crop": {
+    "left": 405,
+    "top": 876,
+    "width": 360,
+    "height": 360
+   },
+   "bands": {
+    "app": [
+     0.231,
+     0.241,
+     0.299,
+     0.384,
+     0.512
+    ],
+    "prototype": [
+     0.22,
+     0.187,
+     0.269,
+     0.366,
+     0.504
+    ],
+    "ratio": [
+     1.049,
+     1.289,
+     1.111,
+     1.048,
+     1.015
+    ]
+   },
+   "errors": []
+  },
+  {
+   "state": "phone-album",
+   "dpr": 3,
+   "viewport": "390 x 844",
+   "device": {
+    "override": null,
+    "coarsePointer": true,
+    "maxTouchPoints": 1,
+    "deviceMemory": 16,
+    "maxTextureSize": 16384,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "gasLite": false,
+    "dpr": 3
+   },
+   "gasSharp": "off",
+   "sharpRequests": [],
+   "stop": "balanced",
+   "pxPerWorld": 1403,
+   "coverPx": 9.5,
+   "framingResidualPx": 0,
+   "crop": {
+    "left": 405,
+    "top": 876,
+    "width": 360,
+    "height": 360
+   },
+   "bands": {
+    "app": [
+     0.26,
+     0.368,
+     0.812,
+     1.495,
+     2.136
+    ],
+    "prototype": [
+     0.236,
+     0.299,
+     0.717,
+     1.398,
+     2.09
+    ],
+    "ratio": [
+     1.1,
+     1.229,
+     1.132,
+     1.069,
+     1.022
+    ]
+   },
+   "errors": []
+  }
+ ]
+}
