@@ -28,7 +28,8 @@
  *                view, the Overview since Task 0). The state `map-opening` always uses the app's own opening view.
  *
  * Output: <outDir>/desktop/*.jpg|png, <outDir>/phone/*.jpg|png and <outDir>/capture-log-<viewport>.json (what was
- * captured, what failed, and the camera at each shot). JPEG quality 90; tight crops are PNG.
+ * captured, what failed, and the camera at each shot). JPEG quality 90; tight crops are PNG. An --only run writes
+ * capture-log-<viewport>.only.json instead, so it never overwrites a full run's log.
  *
  * Determinism: albums are fixed by id (ALBUMS below), zoom steps use the app's own controls (the fly-to used by a
  * map pick, the Zoom in / Zoom out / Reset buttons), every state starts in a fresh browser context, and waits use
@@ -998,7 +999,8 @@ async function runViewport(vp, assertNativeChrome) {
   } finally {
     await browser.close();
   }
-  if (!ONLY) fs.writeFileSync(path.join(OUT, `capture-log-${vp}.json`), JSON.stringify(log, null, 1));
+  // A partial (--only) run never overwrites a full run's log: it writes capture-log-<viewport>.only.json.
+  fs.writeFileSync(path.join(OUT, `capture-log-${vp}${ONLY ? '.only' : ''}.json`), JSON.stringify(log, null, 1));
   return log;
 }
 
