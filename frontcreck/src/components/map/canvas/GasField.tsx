@@ -50,8 +50,9 @@ const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
 // Decoded off the main thread. The alpha channel is data (what the dust lets through), so it must not be
 // multiplied into the colour: premultiplyAlpha "none", and never a 2D canvas.
+const GAS_BITMAP: ImageBitmapOptions = { imageOrientation: "none", premultiplyAlpha: "none", colorSpaceConversion: "none" };
 const loader = new THREE.ImageBitmapLoader();
-loader.setOptions({ imageOrientation: "none", premultiplyAlpha: "none" });
+loader.setOptions(GAS_BITMAP);
 
 interface LoadedGas {
   texture: THREE.Texture;
@@ -142,7 +143,8 @@ function emptySharpTexture(width: number, height: number): THREE.Texture {
  * pointer is down or a wheel or pinch zoom is running.
  * On a desktop with a real GPU the stop the slider rests at then gets its sharper image (the prototype's
  * resolution), once all three first images are in: fetched at a quiet moment, decoded off the main thread, sent
- * to the GPU in strips, each in its own quiet moment, and swapped in with one frame. Only one sharper image is
+ * to the GPU in strips (each cut out as a small image of its own), each in its own quiet moment, and swapped in
+ * with one frame. Only one sharper image is
  * held at a time; it is freed when the slider comes to rest at another stop (gasSharpPlan).
  * Nothing here draws at rest: the dim and the pool ask for another frame only while they are easing, and a
  * texture that arrives asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
@@ -558,12 +560,15 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       let dead = false;
       let step: { cancel: () => void } | null = null;
       let bitmap: ImageBitmap | null = null;
+      // The strip that is cut and not yet on the GPU.
+      let piece: ImageBitmap | null = null;
       let target: THREE.Texture | null = null;
       const mine = gen;
       const end = () => {
         dead = true;
         step?.cancel();
         bitmap?.close();
+        piece?.close();
         target?.dispose();
       };
       const fail = (why: unknown) => {
@@ -585,33 +590,34 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
             bitmap = image;
             const [w, h] = theme.gas[stop].sharp;
             if (!gasImageFits(image, theme.gas[stop].sharp)) return fail(`is ${image.width} x ${image.height}, theme.json says ${w} x ${h}`);
-            // Only a carrier for the strips: this texture itself is never uploaded.
-            const source = new THREE.Texture(image as unknown as HTMLImageElement);
             const texture = emptySharpTexture(w, h);
             target = texture;
             const strips = gasSharpStrips(h);
-            const box = new THREE.Box2();
             const at = new THREE.Vector2();
             let i = -1; // -1 allocates the texture; 0 and up send strip i
-            const next = () => {
+            /** Sends what is ready (the allocation, or the strip that was cut) in a quiet moment, and once the
+             * GPU has finished the strip before: never two in one frame. */
+            const send = () => {
               step = whenQuiet(() => {
-                // ...and once the GPU has finished the strip before, never two in one frame
                 step = whenGpuDone(
                   () => {
                     step = null;
                     if (dead) return;
                     // The wait behind the fence was 34 to 100 ms: a drag, a zoom or a hover can have begun in
                     // it. Then this strip (and with the last one the mip build) waits for the next quiet moment.
-                    if (quietFor() > 0) return next();
+                    if (quietFor() > 0) return send();
                     if (gl.getContext().isContextLost()) return; // the lost-context handler cancels this load
                     if (i < 0) gl.initTexture(texture);
                     else {
-                      const [y0, y1] = strips[i];
                       if (i === strips.length - 1) texture.generateMipmaps = true;
-                      gl.copyTextureToTexture(source, texture, box.set(at.set(0, y0), new THREE.Vector2(w, y1)), at);
+                      // The strip is a whole image of its own, so the upload has no row offset to get wrong;
+                      // only where it goes (row strips[i][0]) is given. The carrier texture is never uploaded.
+                      gl.copyTextureToTexture(new THREE.Texture(piece as unknown as HTMLImageElement), texture, null, at.set(0, strips[i][0]));
+                      piece?.close();
+                      piece = null;
                     }
                     i += 1;
-                    if (i < strips.length) return next();
+                    if (i < strips.length) return cut();
                     // All of it is on the GPU: free the decoded copy, swap it in, draw one frame.
                     image.close();
                     bitmap = null;
@@ -626,7 +632,17 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
                 );
               });
             };
-            next();
+            /** Cuts strip i out of the decoded image as an image of its own (a copy of its rows, about 3 MB),
+             * then sends it. */
+            const cut = () => {
+              const [y0, y1] = strips[i];
+              createImageBitmap(image, 0, y0, w, y1 - y0, GAS_BITMAP).then((strip) => {
+                if (dead) return strip.close();
+                piece = strip;
+                send();
+              }, fail);
+            };
+            send();
           },
           undefined,
           fail,

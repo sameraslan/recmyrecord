@@ -183,12 +183,25 @@ const stopBusy = (page: Page): Promise<void> =>
     await b.done;
   });
 
+/** One strip of a sharper image as it was handed to WebGL: where it went, how many rows, how many rows the source
+ * image has, and the row and pixel offsets into the source that were set at that moment. */
+interface StripUpload {
+  y: number;
+  rows: number;
+  sourceRows: number;
+  skipRows: number;
+  skipPixels: number;
+}
+
 interface Gesture {
   /** Gas uploads (first images and strips of a sharper one) counted when the gesture began and in its last frame. */
   uploadsAtStart: number;
   uploadsAtEnd: number;
   /** Every gap between two animation frames while the gesture ran, ms. */
   gaps: number[];
+  /** Every texture upload of any kind inside the gesture (the map's own cover sheets among them), for the
+   * message of a failed check. */
+  other: string[];
 }
 
 /**
@@ -204,15 +217,17 @@ async function installGestures(page: Page): Promise<void> {
     interface G {
       uploads: number;
       strips: number;
+      stripLog: StripUpload[];
       onFence: (() => void) | null;
       onStrip: (() => void) | null;
-      run: { stop: boolean; done: Promise<void>; uploadsAtStart: number; uploadsAtEnd: number; gaps: number[] } | null;
+      run: { stop: boolean; done: Promise<void>; uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[] } | null;
       start: (kind: 'drag' | 'wheel') => void;
-      stop: () => Promise<{ uploadsAtStart: number; uploadsAtEnd: number; gaps: number[] }>;
+      stop: () => Promise<{ uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[] }>;
     }
     const g: G = {
       uploads: 0,
       strips: 0,
+      stripLog: [],
       onFence: null,
       onStrip: null,
       run: null,
@@ -223,7 +238,7 @@ async function installGestures(page: Page): Promise<void> {
         const cy = r.top + r.height / 2;
         const fire = (t: string, x: number, y: number) =>
           c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0, buttons: t === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
-        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[] };
+        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[], other: [] as string[] };
         g.run = run;
         if (kind === 'drag') fire('pointerdown', cx, cy);
         run.done = (async () => {
@@ -245,7 +260,7 @@ async function installGestures(page: Page): Promise<void> {
         const run = g.run!;
         run.stop = true;
         await run.done;
-        return { uploadsAtStart: run.uploadsAtStart, uploadsAtEnd: run.uploadsAtEnd, gaps: run.gaps };
+        return { uploadsAtStart: run.uploadsAtStart, uploadsAtEnd: run.uploadsAtEnd, gaps: run.gaps, other: run.other };
       },
     };
     (window as unknown as { __gesture: G }).__gesture = g;
@@ -254,11 +269,16 @@ async function installGestures(page: Page): Promise<void> {
       const orig = P[fn];
       P[fn] = function (this: unknown, ...a: unknown[]) {
         const src = a[a.length - 1];
+        const t0 = performance.now();
         const out = orig.apply(this, a);
+        const sized = src as { width?: number; height?: number } | null;
+        if (g.run && !g.run.stop) g.run.other.push(`${fn} ${sized?.width ?? '?'} x ${sized?.height ?? '?'} at ${Math.round(t0)} ms, ${Math.round(performance.now() - t0)} ms`);
         if (src instanceof ImageBitmap) {
           if (Math.max(src.width, src.height) === 2048) g.uploads += 1;
           else if (widths.includes(src.width)) {
             g.strips += 1;
+            const gl = this as WebGL2RenderingContext;
+            g.stripLog.push({ y: a[3] as number, rows: a[5] as number, sourceRows: src.height, skipRows: gl.getParameter(gl.UNPACK_SKIP_ROWS) as number, skipPixels: gl.getParameter(gl.UNPACK_SKIP_PIXELS) as number });
             const hook = g.onStrip;
             g.onStrip = null;
             hook?.();
@@ -277,7 +297,7 @@ async function installGestures(page: Page): Promise<void> {
     };
   }, sharpWidths);
 }
-type GestureWindow = { __gesture: { uploads: number; strips: number; onFence: (() => void) | null; onStrip: (() => void) | null; start: (kind: 'drag' | 'wheel') => void; stop: () => Promise<Gesture> } };
+type GestureWindow = { __gesture: { uploads: number; strips: number; stripLog: StripUpload[]; onFence: (() => void) | null; onStrip: (() => void) | null; start: (kind: 'drag' | 'wheel') => void; stop: () => Promise<Gesture> } };
 const gestureCounts = (page: Page): Promise<{ uploads: number; strips: number }> =>
   page.evaluate(() => {
     const g = (window as unknown as GestureWindow).__gesture;
@@ -298,7 +318,7 @@ const worstGap = (g: Gesture): number => Math.max(...g.gaps.slice(1));
  * take what two runs of the same drag differ by on this renderer. */
 function expectGapsOfControl(got: Gesture, control: Gesture): void {
   expect(got.gaps.length, 'frames in the gesture').toBeGreaterThan(3);
-  expect(worstGap(got), `longest frame gap with an image waiting (control ${Math.round(worstGap(control))} ms)`).toBeLessThanOrEqual(worstGap(control) * 1.25 + 17);
+  expect(worstGap(got), `longest frame gap with an image waiting (control ${Math.round(worstGap(control))} ms; gaps ${got.gaps.map(Math.round).join(' ')}; texture uploads inside the gesture: ${got.other.join('; ') || 'none'})`).toBeLessThanOrEqual(worstGap(control) * 1.25 + 17);
 }
 
 test('the gas is drawn behind the albums at the overview, and nothing draws at rest', async ({ page }, info) => {
@@ -680,6 +700,23 @@ test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at
     if (SHARP_IMAGE.test(r.url())) sharpRequests.push(new URL(r.url()).pathname);
   });
   const sharp = () => page.evaluate(() => window.__rmr!.gasSharp);
+  await installGestures(page);
+  // Balanced's sharper image is held back until the picture with the first image has been read.
+  let releaseSharp = (): void => {};
+  const sharpHeld = new Promise<void>((resolve) => {
+    releaseSharp = resolve;
+  });
+  await page.route(`**${gasPath('balanced', true)}`, async (route) => {
+    await sharpHeld;
+    await route.continue();
+  });
+  /** Median luma of a 4 by 3 grid of 120 px patches over the map pane. */
+  const picture = async (): Promise<number[]> => {
+    const vp = page.viewportSize()!;
+    const out: number[] = [];
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 4; i++) out.push(await lumaAt(page, { x: 200 + (i * (vp.width - 520)) / 3, y: 160 + (j * (vp.height - 440)) / 2, w: 120, h: 120 }));
+    return out;
+  };
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);
@@ -696,9 +733,29 @@ test('a zoomed-in desktop map gets the sharper image of the stop at rest, one at
     const cam = api.getCamera();
     api.setCamera({ ...cam, zoom: cam.zoom * 3 }, false);
   });
+  await expect.poll(() => sharpRequests).toEqual([gasPath('balanced', true)]);
+  await waitForMapQuiet(page, 400);
+  expect(await sharp()).toBe('loading');
+  const before = await picture();
+  releaseSharp();
   await expect.poll(sharp, { timeout: 30000 }).toBe('balanced');
   expect(sharpRequests).toEqual([gasPath('balanced', true)]);
   await page.waitForTimeout(700);
+  // Every strip went to WebGL as a whole image of its own rows, with no offset into a larger source for a browser
+  // to misread, and together the strips are the image, each row once, in place.
+  const strips = (await page.evaluate(() => (window as unknown as GestureWindow).__gesture.stripLog)).sort((a, b) => a.y - b.y);
+  expect(strips).toHaveLength(16);
+  let row = 0;
+  for (const st of strips) {
+    expect(st, `strip at row ${st.y}`).toEqual({ y: row, rows: st.rows, sourceRows: st.rows, skipRows: 0, skipPixels: 0 });
+    row += st.rows;
+  }
+  expect(row).toBe(THEME.gas.balanced.sharp[1]);
+  // And the picture is the one the first image showed, in focus: a strip in the wrong place, or one strip written
+  // sixteen times, would change these patches by tens of levels (the two images differ by a level or two).
+  const after = await picture();
+  expect(Math.max(...before), 'the patches show gas').toBeGreaterThan(SKY_LUMA * 3);
+  after.forEach((v, i) => expect(Math.abs(v - before[i]), `patch ${i}: ${before[i].toFixed(1)} with the first image, ${v.toFixed(1)} with the sharper one`).toBeLessThan(4));
   const log = await page.evaluate(() => (window as unknown as { __sharpLog: [number, string][] }).__sharpLog);
   const firstLoading = log.findIndex(([, s]) => s === 'loading');
   expect(firstLoading).toBeGreaterThan(-1);
@@ -853,6 +910,16 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
   });
   await installGestures(page);
   for (const when of ['fence', 'strip'] as const) {
+    // The sharper image is held back while the view is warmed: the first drag at this zoom brings in cover sheets
+    // (uploads of the map's own, 400 ms and more on this renderer), which the control drag would not have.
+    let release = (): void => {};
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    await page.route(SHARP_IMAGE, async (route) => {
+      await held;
+      await route.continue();
+    });
     await page.goto('/map');
     await waitForMap(page);
     await waitForCameraIdle(page);
@@ -861,6 +928,9 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
       const cam = api.getCamera();
       api.setCamera({ ...cam, zoom: cam.zoom * 3 }, false);
     });
+    await controlGesture(page, 'drag', 2100);
+    await waitForMapQuiet(page, 800);
+    expect((await gestureCounts(page)).strips).toBe(0);
     // After the third strip: 'fence' begins the drag in the task that asks for the next strip's fence (the map
     // was found quiet a moment before), 'strip' begins it inside the fourth strip's upload call.
     await page.evaluate((w) => {
@@ -872,6 +942,7 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
       };
       g.onStrip = arm;
     }, when);
+    release();
     await expect.poll(() => page.evaluate(() => (window as unknown as { __gesture: { run: unknown } }).__gesture.run !== null), { timeout: 30_000 }).toBe(true);
     await page.waitForTimeout(1200);
     const drag = await stopGesture(page);
@@ -882,6 +953,7 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
     expect((await gestureCounts(page)).strips).toBe(16);
     await waitForMapQuiet(page, 400);
     expectGapsOfControl(drag, await controlGesture(page, 'drag', 1200));
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
   }
   expect(errors).toEqual([]);
 });
