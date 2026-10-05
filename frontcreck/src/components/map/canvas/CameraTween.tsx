@@ -10,7 +10,7 @@ import { focusCamera } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
 import { worldToScreen } from '../state/projection';
 import { overviewView } from '../state/bounds';
-import { getFitCamera, getFitKind, getOverviewFraming, openingKind, setFitKind, untouchedOverview } from '../state/view';
+import { getFitCamera, getFitKind, getOverviewFraming, isFramed, openingKind, setFitKind, untouchedOverview } from '../state/view';
 import { COVER_FADE_END_PX, zoomForCoverPx } from '../state/zoomLimits';
 import type { MapApi } from '../types';
 import { clampZoom, stopCameraRig } from './CameraRig';
@@ -117,19 +117,32 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       flyTo: (id) => start(flyTarget(id), FLY_MS),
       opening: (animate = true) => {
         const { input, data, sliderT, insetCurrent } = useMapStore.getState();
-        if (!data) return;
+        // Before InitialFrame has framed this data there is no whole fit to start from; its snap opens the map at
+        // the same framing (openingKind).
+        if (!data || !isFramed()) return;
         const kind = openingKind(input, window.__rmrOpen);
         const { width, height } = get().size;
         const whole = overview();
         const to = kind === 'overview' ? overviewView(data, sliderT, { width, height, insetLeft: insetCurrent, bottomCover: input.bottomCover }, whole.zoom) : null;
         const target = to ? { x: to.center.x, y: to.center.y, zoom: to.zoom } : whole;
         setFitKind(kind, target);
+        // Already there (About and back with the Overview untouched): no glide, no frames.
+        if (!tween.current && untouchedOverview(kind, target, current())) return;
         start(target, animate ? DURATION.camera : 0);
       },
-      homeBackdrop: () => {
-        // Still the Overview the map opened at (no tween running, nothing moved it): Home's Whole map, as on a fresh
-        // load of Home (prototype app.js L114). A moved camera stays, as today.
-        if (tween.current || !untouchedOverview(getFitKind(), getFitCamera(), current())) return false;
+      homeBackdrop: (to) => {
+        // Called by MapStage on every route change (its logic lives here: MapStage.tsx sits just under the source size
+        // at which Turbopack splits its first-load chunk). Untouched: the camera, or the end of the tween running now
+        // (the glide to the opening view) with no grab cutting it short, is still the Overview the map opened at.
+        // Arriving at a page then keeps no Explore camera (true), so the Map link opens at the Overview again; on Home
+        // it also glides from where the camera is to the Whole map, as a fresh load of Home frames it (prototype
+        // app.js L114, final-home.jpg), also after About or 404. /map and albums never: an album's close restores
+        // the saved camera. A moved camera stays, as today.
+        if (to !== 'home' && to !== 'about' && to !== 'other') return false;
+        const t = tween.current;
+        if (t && useMapStore.getState().lastCameraGrab > t.startWall) return false;
+        if (!untouchedOverview(getFitKind(), getFitCamera(), t ? t.to : current())) return false;
+        if (to !== 'home') return true;
         const whole = overview();
         setFitKind('whole', whole);
         start(whole, DURATION.camera);

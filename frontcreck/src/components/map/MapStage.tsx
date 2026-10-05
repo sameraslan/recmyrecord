@@ -238,13 +238,10 @@ export function MapStage() {
     if (prev === view) return;
     const s = useAppStore.getState();
     if (prev === 'explore') {
-      // To Home with the Overview untouched: Home shows the Whole map, as on a fresh load (prototype app.js L114,
-      // final-home.jpg), and nothing is kept, so the Map link opens at the Overview again (Task 0).
-      const toHome = view === 'home' && apiRef.current?.homeBackdrop() === true;
-      if (toHome) s.saveExploreCamera(null);
-      else if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
+      if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
       s.setSelected(null);
     }
+    if (apiRef.current?.homeBackdrop(view)) s.saveExploreCamera(null);
     pendingReturn.current = view === 'explore' && prev === 'album' && !exploreHere.current;
     // Home, About or 404 to the map, with no camera saved in Explore: the map glides to its opening view (Task 0,
     // prototype app.js L118). A saved camera stays where the visitor left it.
@@ -254,19 +251,21 @@ export function MapStage() {
   // The pathname can change a commit before the album panel unmounts and clears the focus, so the camera moves
   // only once the map input has no focus (MusicMap applies the input in its layout effect, before this one);
   // otherwise Reset would frame the album just left and the album framing could follow the restore.
+  // The opening glide (Home, About or 404 to the map) runs in the same commit. Without a map yet there is nothing to
+  // move: when the map mounts, InitialFrame opens it at the same framing. pendingReturn (from an album) and
+  // pendingOpening (from a page) never hold together. Keep this file under 20,000 bytes: past that Turbopack splits
+  // its first-load chunk in two (+0.6 KB, measured in Task 0).
   useLayoutEffect(() => {
-    if (!pendingReturn.current || view !== 'explore' || input.focus !== null || !apiRef.current) return;
+    if (view !== 'explore' || input.focus !== null) return;
+    if (pendingOpening.current) {
+      pendingOpening.current = false;
+      apiRef.current?.opening(true);
+    }
+    if (!pendingReturn.current || !apiRef.current) return;
     pendingReturn.current = false;
     const saved = useAppStore.getState().exploreCamera;
     if (saved) apiRef.current.setCamera(saved, true);
     else apiRef.current.reset();
-  }, [view, input]);
-  // Runs in the commit whose input says Explore (MusicMap applied it in its own layout effect). Without a map yet
-  // there is nothing to move: when the map mounts, InitialFrame opens it at the same framing.
-  useLayoutEffect(() => {
-    if (!pendingOpening.current || view !== 'explore' || input.focus !== null) return;
-    pendingOpening.current = false;
-    apiRef.current?.opening(true);
   }, [view, input]);
 
   // Escape closes the card (mockup keydown order: after the About layer and the album view, both other routes).

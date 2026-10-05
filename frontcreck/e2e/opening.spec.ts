@@ -145,6 +145,79 @@ test('/map to Home with the Overview untouched shows Home\'s Whole map, and the 
   expect(same(await camera(page), moved)).toBeLessThan(1e-6);
 });
 
+/** Home's own framing, as a fresh load of Home frames it, and a check that `page` shows it now (same zoom, centre
+ * within a pixel: on a phone the whole fit published on /map may carry the measured slider cover). */
+async function freshHome(page: Page): Promise<{ x: number; y: number; zoom: number }> {
+  await page.goto('/');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  return camera(page);
+}
+async function expectHomeFraming(page: Page, home: { x: number; y: number; zoom: number }, phone: boolean): Promise<void> {
+  const now = await camera(page);
+  const canvasH = await page.evaluate(() => document.querySelector('canvas.map-canvas')!.getBoundingClientRect().height);
+  expect(Math.abs(now.zoom - home.zoom)).toBeLessThan(1e-6);
+  expect(Math.hypot(now.x - home.x, now.y - home.y) * ((home.zoom * canvasH) / 1.1)).toBeLessThan(1);
+  expect(wholeMapMiss(await albumSpread(page), phone)).toEqual([]);
+}
+
+test('/map (untouched) to About and then Home shows Home\'s Whole map, and the Map link opens at the Overview again', async ({ page, isMobile }) => {
+  const home = await freshHome(page);
+  await openMap(page);
+  const opened = await camera(page);
+  const nav = page.getByRole('navigation', { name: COPY.nav.label });
+  await act(nav.getByRole('link', { name: COPY.nav.about, exact: true }), isMobile);
+  await expect(page).toHaveURL('/about');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  // About keeps the camera, as today.
+  expect(same(await camera(page), opened)).toBeLessThan(1e-6);
+  await act(page.locator('a.wordmark'), isMobile);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'home');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await expectHomeFraming(page, home, isMobile);
+  await act(nav.getByRole('link', { name: COPY.nav.map, exact: true }), isMobile);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  expect(overviewMiss(await albumSpread(page))).toEqual([]);
+});
+
+test('Home clicked while the glide to the Overview is still running counts as untouched: Home\'s Whole map, nothing saved', async ({ page, isMobile }) => {
+  const home = await freshHome(page);
+  const nav = page.getByRole('navigation', { name: COPY.nav.label });
+  await act(nav.getByRole('link', { name: COPY.nav.map, exact: true }), isMobile);
+  // In the page, so no round trip can let the 420 ms glide end first: once the map shows Explore and the glide is
+  // running, follow the wordmark in the same frame.
+  const glideRunning = await page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const t0 = performance.now();
+        const tick = () => {
+          const explore = document.querySelector('.map-pane')?.getAttribute('data-view') === 'explore';
+          if (explore && window.__rmr?.map?.isAnimating()) {
+            document.querySelector<HTMLAnchorElement>('a.wordmark')!.click();
+            resolve(true);
+          } else if (performance.now() - t0 > 10_000) resolve(false);
+          else requestAnimationFrame(tick);
+        };
+        tick();
+      }),
+  );
+  expect(glideRunning, 'the glide to the Overview was running when Home was clicked').toBe(true);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'home');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await expectHomeFraming(page, home, isMobile);
+  // No half-way camera was saved: the Map link glides to the Overview again.
+  await act(nav.getByRole('link', { name: COPY.nav.map, exact: true }), isMobile);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  expect(overviewMiss(await albumSpread(page))).toEqual([]);
+});
+
 test.describe('desktop', () => {
   test.skip(({ isMobile }) => isMobile, 'desktop framing');
 
@@ -240,6 +313,9 @@ test.describe('desktop', () => {
       window.__rmrGasLite = 'off'; // the full shader, as gas.spec.ts reads the gas
     });
     await openMap(page);
+    // The page's grain overlay (.grain, 3.5 % opacity) lifts bare sky from the shader's rgb(6, 6, 9) to rgb(10, 10, 12),
+    // which would leave SKY_LUMA + 4 under one 8-bit step of margin. Hidden for this test only: it reads the gas.
+    await page.addStyleTag({ content: '.grain { display: none !important; }' });
     expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
     const grid = async (): Promise<number[]> => {
       const vp = page.viewportSize()!;

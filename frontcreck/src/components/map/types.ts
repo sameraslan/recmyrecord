@@ -1,6 +1,7 @@
 import type { ThemeData } from '@/lib/data/theme';
 import type { AlbumId, Focus, MapCamera, StopId } from '@/lib/types';
 import type { MapData } from './data';
+import type { View } from '@/lib/url-state';
 
 /** CSS px kept clear around the framed albums, inside the visible map area. */
 export interface MapPadding {
@@ -53,9 +54,10 @@ export interface MapApi {
   /** Glide (or jump, with `animate` false) to the framing /map opens at: the Overview, or the Whole map where
    * state/view.ts openingKind says so. */
   opening: (animate?: boolean) => void;
-  /** Leaving /map for Home: when the camera is still the untouched Overview, glide to the Whole map (Home's own
-   * framing) and return true; otherwise leave the camera and return false. */
-  homeBackdrop: () => boolean;
+  /** On a route change to `to`. Arriving at a page (Home, About, 404) while the camera is still the Overview the map
+   * opened at (or the glide to it is running) and nothing the visitor did moved it: true, keep no Explore camera; on
+   * Home it also glides to the Whole map (Home's own framing). Otherwise false and the camera stays. */
+  homeBackdrop: (to: View) => boolean;
   /** Fit the focus (seed and visible recs, at the target stop) inside the padded visible area. */
   frameFocus: (animate?: boolean) => void;
   getCamera: () => MapCamera;
