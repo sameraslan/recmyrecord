@@ -38,16 +38,16 @@
 /* similarity slider (mockup .mode) */
 .mode { position: absolute; left: 20px; top: 20px; width: 244px; padding: 12px 16px 10px; }
 .mode-track { position: relative; height: 22px; margin-top: 2px; }
-.mode-track::before { content: ""; position: absolute; left: 8px; right: 8px; top: 10px; height: 2px; background: var(--color-rule-2); }
+.mode-track::before { content: ""; position: absolute; left: 8px; right: 8px; top: 10px; height: 2px; background: var(--color-rule-3); }
 .mode-track i { position: absolute; top: 7px; width: 8px; height: 8px; border-radius: 50%; background: var(--color-room-4); border: 1px solid var(--color-rule-2); transform: translateX(-50%); }
 .mode input[type=range] { -webkit-appearance: none; appearance: none; position: absolute; inset: 0; width: 100%; height: 22px; margin: 0; background: transparent; cursor: pointer; }
 .mode input[type=range]::-webkit-slider-runnable-track { height: 22px; background: transparent; }
 .mode input[type=range]::-moz-range-track { height: 22px; background: transparent; }
-.mode input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: 3px; border-radius: 50%; background: var(--color-lamp); border: 3px solid var(--color-float); box-shadow: 0 0 0 1px var(--color-lamp); }
-.mode input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--color-lamp); border: 3px solid var(--color-float); box-shadow: 0 0 0 1px var(--color-lamp); }
+.mode input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; margin-top: 3px; border-radius: 50%; background: var(--color-lamp); border: 3px solid var(--color-room-2); box-shadow: 0 0 0 1px var(--color-lamp); }
+.mode input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--color-lamp); border: 3px solid var(--color-room-2); box-shadow: 0 0 0 1px var(--color-lamp); }
 .mode input[type=range]:focus-visible { outline: none; }
-.mode input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--color-lamp), 0 0 0 5px rgba(230, 168, 86, .35); }
-.mode input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 1px var(--color-lamp), 0 0 0 5px rgba(230, 168, 86, .35); }
+.mode input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--color-lamp), 0 0 0 3px var(--color-room), 0 0 0 5px var(--color-lamp); }
+.mode input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 1px var(--color-lamp), 0 0 0 3px var(--color-room), 0 0 0 5px var(--color-lamp); }
 .mode-stops { display: grid; grid-template-columns: repeat(3, 1fr); }
 .mode-stops button { padding: 2px 0; font-size: 13.5px; color: var(--color-ash); min-height: 30px; }
 .mode-stops button:nth-child(1) { text-align: left; }
@@ -57,7 +57,9 @@
 .mode-note { font-size: 13px; color: var(--color-dust); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--color-rule); }
 
 /* Explore: the hint line and the picked album's card (mockup .map-hint, .card; lines 204 to 216, 432 to 438) */
-.map-hint { position: absolute; left: 20px; bottom: 20px; right: 90px; font-size: 13px; color: var(--color-ash); pointer-events: none; text-shadow: 0 1px 8px var(--color-pane); transition: opacity .25s var(--out), visibility 0s; }
+/* Text straight on the nebula: a soft full-width band under it (z-index -1 keeps it under the zoom buttons and the
+ * card), dark enough from 50% down that paper holds 4.5:1 over a white backdrop (contrast.test.ts). */
+.map-hint { position: absolute; left: 0; right: 0; bottom: 0; z-index: -1; padding: 44px 120px 18px 20px; font-size: 13px; color: var(--color-paper); pointer-events: none; background: linear-gradient(rgba(4, 4, 8, 0), rgba(4, 4, 8, .62) 50%, rgba(4, 4, 8, .78)); transition: opacity .25s var(--out), visibility 0s; }
 .map-hint.is-hidden, .map-hint[data-zoomed="1"] { opacity: 0; visibility: hidden; transition: opacity .25s var(--out), visibility 0s linear .25s; }
 /* 400 px, not the mockup's 380: "See closest albums" is longer than the mockup's label, and both actions stay on one row. */
 .card { position: absolute; left: 20px; bottom: 20px; width: 400px; padding: 14px; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; animation: rise .3s var(--out) both; }
@@ -177,10 +179,10 @@
   .map-pane[data-view="album"] .map-msg { left: calc(var(--panel) + (100% - var(--panel)) / 2); }
 }
 
-/* Home: a radial veil over the dimmed map, darkest behind the hero (mockup lines 167 to 172). Opacity only. */
+/* Home: a light even veil over the dimmed nebula; the hero has its own dark pad (home.css). Opacity only. */
 .veil {
   position: absolute; inset: 0; z-index: 4; cursor: pointer;
-  background: radial-gradient(50% 55% at 50% 45%, rgba(21, 17, 13, .72), rgba(21, 17, 13, .3) 70%, rgba(21, 17, 13, .15));
+  background: rgba(7, 6, 10, .1);
 }
 .veil { transition: opacity var(--dur) var(--out), visibility 0s; }
 /* Leaving Home: fades out, and takes no clicks while it does. */

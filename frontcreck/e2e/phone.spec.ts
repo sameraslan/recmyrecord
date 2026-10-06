@@ -200,3 +200,23 @@ test.describe('motion', () => {
     expect(await page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
   });
 });
+
+test('the "Link copied" toast keeps clear of the bottom edge and of the Map button', async ({ page, context, isMobile }) => {
+  test.skip(!isMobile, 'phone layout');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto(IR);
+  await expect(page.locator('li.rec')).toHaveCount(5);
+  // The copy button is in the album list; the slider panel is not on screen here (it belongs to map mode).
+  await expect(page.locator('.mode')).toHaveCount(0);
+  await page.getByRole('button', { name: COPY.album.copyLinkLabel }).tap();
+  const toast = page.getByRole('status').filter({ hasText: COPY.album.linkCopied });
+  await expect(toast).toBeVisible();
+  await waitForAnimations(page);
+  const t = (await toast.boundingBox())!;
+  const vp = page.viewportSize()!;
+  // 28 px above the bottom edge plus the safe area inset (0 in this emulation; glass.test.ts pins the env() term).
+  expect(vp.height - (t.y + t.height)).toBeGreaterThanOrEqual(27.5);
+  const fab = (await page.getByRole('button', { name: COPY.phone.mapLabel }).boundingBox())!;
+  const apart = t.x + t.width <= fab.x || fab.x + fab.width <= t.x || t.y + t.height <= fab.y || fab.y + fab.height <= t.y;
+  expect(apart, 'the toast and the Map button do not overlap').toBe(true);
+});

@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { hexToRgb } from '@/lib/color';
+import { ambientBackground } from '@/components/album/AmbientWash';
 import type { AlbumRecord } from '@/lib/types';
 import { contrastRatio, paintOver, rgbToHex, surfaceOver, type GlassFilter, type Rgb, type Tint } from './contrast';
 
@@ -164,5 +165,46 @@ describe('WCAG AA contrast', () => {
       panels.filter((p) => contrastRatio(resolve(lit.color, acc), rgbToHex(paintOver(hexToRgb(acc), pct, hexToRgb(p)))) < 4.5).map((p) => `${s} ${acc} on ${p}`),
     );
     expect(bad).toEqual([]);
+  });
+});
+
+describe('text over washes and bands', () => {
+  const WORST_PANEL = hexToRgb(surfaceOver(WHITE, FILTER, GLASS['panel-bg']));
+
+  it('paper and dust pass 4.5:1 on every album wash at full strength, on the brightest glass panel', () => {
+    const opacity = Number(rule(css('styles/album.css'), '.amb').opacity);
+    expect(opacity).toBeGreaterThan(0);
+    expect(opacity).toBeLessThanOrEqual(1);
+    const bad: string[] = [];
+    for (const a of ALBUMS) {
+      // The alphas ambientBackground gives the two washes (the panel variant paints w[0], then w[1]).
+      const alphas = [...ambientBackground(a.w, 'panel').matchAll(/rgba\(\d+,\d+,\d+,([\d.]+)\)/g)].map((m) => Number(m[1]));
+      a.w.slice(0, 2).forEach((wash, i) => {
+        const bg = rgbToHex(paintOver(hexToRgb(wash), alphas[i] * opacity, WORST_PANEL));
+        for (const t of ['paper', 'dust']) {
+          if (contrastRatio(tok(t), bg) < 4.5) bad.push(`${a.slug} ${wash} ${t} ${contrastRatio(tok(t), bg).toFixed(2)}`);
+        }
+      });
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('the About card is the glass panel and its body text passes on it', () => {
+    const home = css('styles/home.css');
+    expect(rule(home, '.about').background).toBe('var(--panel-bg)');
+    expect(contrastRatio(rule(home, '.about p').color, rgbToHex(WORST_PANEL))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('the Home search field is the float surface, on which its ash placeholder passes', () => {
+    expect(rule(css('styles/search.css'), '.combo--hero .combo-field').background).toBe('var(--color-float)');
+  });
+
+  it('the map hint is paper on a band that holds 4.5:1 over an unfiltered white backdrop', () => {
+    const hint = rule(css('styles/map.css'), '.map-hint');
+    expect(hint.color).toBe('var(--color-paper)');
+    const band = /rgba\(4, 4, 8, ([\d.]+)\) 50%/.exec(hint.background);
+    expect(band, hint.background).not.toBeNull();
+    const bg = surfaceOver(WHITE, null, { rgb: [4, 4, 8], alpha: Number(band![1]) });
+    expect(contrastRatio(tok('paper'), bg), bg).toBeGreaterThanOrEqual(4.5);
   });
 });

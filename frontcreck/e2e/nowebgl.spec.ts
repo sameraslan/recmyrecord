@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
+import { contrastOverBackdrop, waitForAnimations } from './helpers';
 
 test('without WebGL the map shows a message, asks for no theme file, and search still works', async ({ page }) => {
   const errors: string[] = [];
@@ -35,4 +36,18 @@ test('without WebGL the album list, the similarity slider and links still work',
   await expect(page.locator('li.rec').first()).toContainText('Tindersticks');
   await page.locator('li.rec').first().locator('a.rec-main').click();
   await expect(page.getByRole('heading', { level: 1 })).not.toHaveText('In Rainbows');
+});
+
+test('without WebGL the see-through panels sit on the plain sky and keep 4.5:1', async ({ page }) => {
+  await page.goto('/album/making-movies-dire-straits');
+  await expect(page.locator('li.rec')).toHaveCount(5);
+  await expect(page.getByText(COPY.map.noWebgl)).toBeVisible();
+  await waitForAnimations(page);
+  // No gas behind the glass: the pane is the plain sky colour, which the glass panels must not turn muddy or pale.
+  expect(await page.locator('.map-pane').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(7, 6, 10)');
+  const results = [
+    ...(await contrastOverBackdrop(page, 'section.album', ['.seed-artist', '.tags li', '.rec-n', '.rec-artist', '.rec-shared'])),
+    ...(await contrastOverBackdrop(page, '.map-pane', ['.map-msg', '.mode .cap', '.mode-stops button', '.mode-note'])),
+  ];
+  for (const r of results) expect(r.ratio, r.selector).toBeGreaterThanOrEqual(4.5);
 });

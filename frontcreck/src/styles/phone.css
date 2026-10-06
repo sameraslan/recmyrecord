@@ -1,14 +1,11 @@
 /* Phones and narrow tablets (mockup lines 372 to 440), plus 44 px tap targets. The slider, zoom controls and
  * Explore card positions live in map.css, where they follow the measured slider cover (--slider-cover). */
 @media (max-width: 899px) {
-  /* Home: the fitted cloud is denser on a phone, and overlapping WebGL dots add up where the mockup's canvas
-   * fills each cluster once, so the veil is darker here and centred on the map to keep the backdrop as quiet. */
-  .veil { background: radial-gradient(60% 50% at 50% 55%, rgba(21, 17, 13, .8), rgba(21, 17, 13, .52) 70%, rgba(21, 17, 13, .4)); }
   .wordmark { display: inline-flex; align-items: center; min-height: 44px; }
   .skip { display: inline-flex; align-items: center; min-height: 44px; }
 
   /* The list is the album view; the Map button slides it away for the full map and back. */
-  .album { width: 100%; border-right: 0; transition: transform var(--dur) var(--out), visibility 0s; }
+  .album { width: 100%; border-right: 0; background: var(--color-room); transition: transform var(--dur) var(--out), visibility 0s; }
   .album.album--hidden { transform: translateX(-101%); visibility: hidden; transition: transform var(--dur) var(--out), visibility 0s linear var(--dur); }
   .album.album--hidden .album-scroll { content-visibility: hidden; transition: content-visibility 0s linear var(--dur); transition-behavior: allow-discrete; }
   .album-scroll { padding: 12px var(--gut) 110px; }

@@ -256,3 +256,68 @@ export function wholeMapMiss(s: Spread, phone: boolean): string[] {
   if (!tightX && !tightY) out.push(`not fitted: slack x ${(s.minX - box.l).toFixed(1)} / ${(box.r - s.maxX).toFixed(1)}, y ${(s.minY - box.t).toFixed(1)} / ${(box.b - s.maxY).toFixed(1)}`);
   return out;
 }
+
+/**
+ * WCAG contrast of the text of each selector's first visible element against what is really painted behind it.
+ * axe cannot judge text over a canvas or over a see-through panel (it reports "incomplete"), so this does: the text
+ * under `scope` is made transparent for one screenshot, and the background is the 95th-percentile relative
+ * luminance inside the element's content box (a lone star does not decide it; a bright patch does).
+ */
+export async function contrastOverBackdrop(page: Page, scope: string, selectors: string[]): Promise<Array<{ selector: string; ratio: number }>> {
+  const targets = await page.evaluate(
+    (sels) =>
+      sels.map((selector) => {
+        const el = [...document.querySelectorAll<HTMLElement>(selector)].find((e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden');
+        if (!el) return { selector, rect: null, rgb: [0, 0, 0] };
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        const rgb = (cs.color.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+        // The content box, where the text is set: not the element's own border (on a small bordered chip, a mood
+        // tag, the border line alone is more than 5 % of the box and would be measured in place of the background)
+        // and not its padding (the map hint's top padding is the clear end of its band, with no text on it).
+        const px = (v: string) => parseFloat(v) || 0;
+        const l = Math.ceil(px(cs.borderLeftWidth)) + px(cs.paddingLeft);
+        const t = Math.ceil(px(cs.borderTopWidth)) + px(cs.paddingTop);
+        const w = r.width - l - Math.ceil(px(cs.borderRightWidth)) - px(cs.paddingRight);
+        const h = r.height - t - Math.ceil(px(cs.borderBottomWidth)) - px(cs.paddingBottom);
+        return { selector, rect: { x: r.x + l, y: r.y + t, w, h }, rgb };
+      }),
+    selectors,
+  );
+  const missing = targets.filter((t) => !t.rect).map((t) => t.selector);
+  if (missing.length) throw new Error(`contrastOverBackdrop: not visible: ${missing.join(', ')}`);
+  const style = await page.addStyleTag({
+    content: `${scope}, ${scope} * { color: transparent !important; -webkit-text-fill-color: transparent !important; -webkit-text-stroke-color: transparent !important; text-decoration-color: transparent !important; text-shadow: none !important; caret-color: transparent !important; transition: none !important; }`,
+  });
+  const png = (await page.screenshot()).toString('base64');
+  await style.evaluate((el) => (el as Element).remove());
+  return page.evaluate(
+    async ([data, list]) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const k = img.width / innerWidth;
+      const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      const lum = (r: number, g: number, b: number) => 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+      return list.map((t) => {
+        const x0 = Math.max(0, Math.ceil(t.rect!.x * k));
+        const y0 = Math.max(0, Math.ceil(t.rect!.y * k));
+        const x1 = Math.min(img.width, Math.floor((t.rect!.x + t.rect!.w) * k));
+        const y1 = Math.min(img.height, Math.floor((t.rect!.y + t.rect!.h) * k));
+        const d = ctx.getImageData(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0)).data;
+        const lums: number[] = [];
+        for (let i = 0; i < d.length; i += 4) lums.push(lum(d[i], d[i + 1], d[i + 2]));
+        lums.sort((a, b) => a - b);
+        const bg = lums[Math.min(lums.length - 1, Math.floor(lums.length * 0.95))];
+        const fg = lum(t.rgb[0], t.rgb[1], t.rgb[2]);
+        return { selector: t.selector, ratio: (Math.max(fg, bg) + 0.05) / (Math.min(fg, bg) + 0.05) };
+      });
+    },
+    [png, targets] as const,
+  );
+}

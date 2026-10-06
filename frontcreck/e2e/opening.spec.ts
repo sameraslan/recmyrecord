@@ -313,9 +313,6 @@ test.describe('desktop', () => {
       window.__rmrGasLite = 'off'; // the full shader, as gas.spec.ts reads the gas
     });
     await openMap(page);
-    // The page's grain overlay (.grain, 3.5 % opacity) lifts bare sky from the shader's rgb(6, 6, 9) to rgb(10, 10, 12),
-    // which would leave SKY_LUMA + 4 under one 8-bit step of margin. Hidden for this test only: it reads the gas.
-    await page.addStyleTag({ content: '.grain { display: none !important; }' });
     expect(await page.evaluate(() => window.__rmr!.gas)).toBe('ready');
     const grid = async (): Promise<number[]> => {
       const vp = page.viewportSize()!;
