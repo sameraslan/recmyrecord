@@ -6,9 +6,11 @@
  * all 13 spots), calls layoutNames as the frame driver would (sticky map kept between calls) and prints per call
  * mean, p99 and max, and the bytes allocated per call (heap growth with the young generation large enough that no
  * scavenge runs inside the window). */
+const os = require('os');
 const path = require('path');
 const { build } = require(require.resolve('rolldown', { paths: [process.cwd()] }));
-const OUT = path.join(__dirname, 'namesLayout.mjs');
+// Outside the repo, so a run leaves nothing to commit by mistake.
+const OUT = path.join(os.tmpdir(), `rmr-namesLayout-${process.pid}.mjs`);
 
 async function main() {
   await build({

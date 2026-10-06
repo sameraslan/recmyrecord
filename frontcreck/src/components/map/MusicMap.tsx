@@ -5,6 +5,7 @@ import { Scene } from './canvas/Scene';
 import { FocusMarkers } from './overlays/FocusMarkers';
 import { HoverLabel } from './overlays/HoverLabel';
 import { NamesToggle } from './overlays/NamesToggle';
+import { RegionNames } from './overlays/RegionNames';
 import { useMapStore } from './state/mapStore';
 import { setOverlayEl } from './state/overlayEls';
 import type { MusicMapProps } from './types';
@@ -40,6 +41,8 @@ export default function MusicMap({ data, theme, input, callbacks, initialCamera,
   return (
     <>
       <Scene initialCamera={initialCamera} onApi={onApi} />
+      {/* Under the focus markers, the hover label and the map's controls (z-index 2). */}
+      <RegionNames />
       <FocusMarkers albums={data.albums} />
       <HoverLabel albums={data.albums} />
       <SelectedRing />

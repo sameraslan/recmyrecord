@@ -25,6 +25,7 @@ import { MarkerDriver } from "./MarkerDriver";
 import { MorphDriver } from "./MorphDriver";
 import { OverlayDriver } from "./OverlayDriver";
 import { PickController } from "./PickController";
+import { RegionNamesDriver } from "./RegionNamesDriver";
 
 // Bridges R3F's demand-mode invalidate() out to state/invalidate.ts, so DOM
 // overlays and stores outside the <Canvas> can request a render without
@@ -174,6 +175,8 @@ function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null;
       <AlbumField data={data} atlasTextures={textures} positionsRef={positionsRef} />
       <OverlayDriver positionsRef={positionsRef} />
       <MarkerDriver positionsRef={positionsRef} />
+      {/* Region names: placed on every drawn frame, hidden while an album is open or the map is zoomed in. */}
+      <RegionNamesDriver positionsRef={positionsRef} />
       <FrameCounter />
       {/* Mounted last so its frame callback runs after every other camera
           writer, reining the idle camera back into the album cloud. */}

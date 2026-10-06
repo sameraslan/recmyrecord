@@ -112,6 +112,32 @@
 /* Until it arrives its place is kept free (a button and the 8 px), so the zoom buttons never move. */
 .map-zoom > button:first-child:not(.map-names) { margin-top: calc(var(--zb) + 8px); }
 
+/* region names: plain lettering over the map (RegionNamesDriver places them). Nothing to hover, focus or
+ * click; hidden from assistive technology. Tenor Sans, wide capitals. */
+.rn-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; font-family: var(--font-names-face), var(--font-sans); }
+.map-pane.is-dimmed .rn-layer { display: none; }
+.rn {
+  position: absolute; left: 0; top: 0; padding: 4px 8px; text-align: center; white-space: nowrap; font-size: 16px; pointer-events: none; will-change: transform; contain: layout style; transition: opacity .2s var(--out), visibility 0s;
+  /* The slider's fade (--a, written by the driver) is on the letters. The cheaper version for the morph moves
+   * it to the name's own layer, which the compositor fades without painting: `--rn-a-ink: 1; --rn-a-box: var(--a, 1);`. */
+  --rn-a-ink: var(--a, 1); --rn-a-box: 1;
+  opacity: var(--rn-a-box);
+  /* The halo's ink, as strong as the gas behind needs (--h, written by the driver), and its soft shadows. The
+   * cheaper version of the shadows is the 2, 8 and 26 px entries only: text-shadow: var(--rn-shadow-lite) below. */
+  --rn-ink: rgba(4, 4, 8, var(--h, .85)); --rn-ink-far: rgba(4, 4, 8, calc(var(--h, .85) * .85));
+  --rn-shadow-full: 0 0 2px var(--rn-ink), 0 0 4px var(--rn-ink), 0 0 4px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 14px var(--rn-ink), 0 0 14px var(--rn-ink), 0 0 26px var(--rn-ink-far), 0 0 44px rgba(4, 4, 8, calc(var(--h, .85) * .6));
+  --rn-shadow-lite: 0 0 2px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 26px var(--rn-ink-far);
+}
+.rn.off { opacity: 0; visibility: hidden; transition: opacity .2s var(--out), visibility 0s linear .2s; }
+.rn b {
+  display: block; font-weight: 400; font-style: normal; letter-spacing: .26em; padding-left: .26em; text-transform: uppercase; line-height: 1.05; color: var(--lc); opacity: var(--rn-a-ink);
+  /* The halo: a dark stroke under the fill and soft stacked shadows, as strong as the gas behind needs (--h,
+   * solved by state/namesLayout.ts haloFor so the ink is 4.5:1 against it). */
+  -webkit-text-stroke: 2.1px var(--rn-ink-far); paint-order: stroke fill;
+  text-shadow: var(--rn-shadow-full);
+}
+.rn.fair b { opacity: calc(var(--rn-a-ink) * .82); }
+
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
   /* 8 px above the slider panel: --slider-cover is its measured cover of the pane (MapStage), safe-area inset
