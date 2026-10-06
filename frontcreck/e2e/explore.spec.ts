@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { camera, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { camera, shot, twinkleOff, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 async function albumTitle(page: Page, id: number): Promise<string> {
   return page.evaluate(async (i) => (await (await fetch('/data/albums.json')).json())[i].t, id);
@@ -338,7 +338,7 @@ test('in cover mode the picked album is drawn large on top, framed in off-white,
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);
-  // TODO(part2-task8): twinkleOff(page)
+  await twinkleOff(page);
   await pickKnown(page, isMobile, IN_RAINBOWS);
   await shot(page, info, 'explore-selected-cover');
   const p = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;

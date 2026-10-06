@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, tabTo, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
+import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, tabTo, twinkleOff, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
 
 const GLASS = 'blur(22px) saturate(1.2) brightness(0.58)';
 /** Solid is fully solid; the browser reports rgba(10, 9, 14, 1) as rgb(10, 9, 14). */
@@ -107,15 +107,16 @@ test('the built CSS keeps the Safari prefix and the no-support fallback', async 
 test('text on the panels keeps 4.5:1 over the map, with the weakest accent', async ({ page, isMobile }) => {
   await page.addInitScript(() => {
     window.__rmrGasLite = 'off'; // the full shader: the test reads what the gas paints behind the panels
+    // No glints on either page this test loads (a glint is a bright spot at a random place and time). Set before
+    // the page's scripts, as twinkleOff does on a loaded page: it holds for the album and for /map below.
+    window.__rmrTwinkle = 'off';
   });
-  // TODO(part2-task8): twinkleOff(page)
   await page.goto(WEAKEST);
   await waitForMap(page);
   await waitForCameraIdle(page);
   await waitForAnimations(page);
   await waitForGasSharpSettled(page); // measure the image that stays
   const results = await contrastOverBackdrop(page, 'section.album', ['.seed-artist', '.seed-title', '.tags li', '.recs-h', '.rec-n', '.rec-title', '.rec-artist', '.rec-shared']);
-  // TODO(part2-task8): twinkleOff(page)
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);
@@ -271,7 +272,7 @@ test('header text keeps 4.5:1 with the brightest gas on screen behind the bar', 
   await waitForCameraIdle(page);
   await waitForAnimations(page);
   await waitForGasSharpSettled(page);
-  // TODO(part2-task8): twinkleOff(page)
+  await twinkleOff(page);
   const selectors = isMobile
     ? ['.wordmark', '.top nav .navbtn', '.search-toggle']
     : ['.wordmark', '.top nav .navbtn[aria-current="page"]', '.top nav .navbtn:not([aria-current])'];
@@ -342,7 +343,7 @@ test('on Home the header text keeps 4.5:1 over the brightest gas a moved map can
   await waitForCameraIdle(page);
   await waitForAnimations(page);
   await waitForGasSharpSettled(page);
-  // TODO(part2-task8): twinkleOff(page)
+  await twinkleOff(page);
   const HIDE = '.home, header.top';
   const selectors = ['.wordmark', '.top nav .navbtn[href="/map"]', '.top nav .navbtn[href="/about"]'];
   const results: Array<{ selector: string; ratio: number; gas: number }> = [];
@@ -408,7 +409,7 @@ test('the selected ring reads on the brightest gas', async ({ page, isMobile }) 
   await waitForCameraIdle(page);
   await waitForAnimations(page);
   await waitForGasSharpSettled(page);
-  // TODO(part2-task8): twinkleOff(page)
+  await twinkleOff(page);
   const vp = page.viewportSize()!;
   // The album with the brightest gas round it, among those on the canvas and clear of where the card opens
   // (bottom left, 400 px wide): the darkest of eight points 8 and 10 px out is the measure, so a neighbouring star
@@ -528,7 +529,7 @@ test('the keyboard focus ring of the controls that stand on the map reads on the
   await waitForCameraIdle(page);
   await waitForAnimations(page);
   await waitForGasSharpSettled(page);
-  // TODO(part2-task8): twinkleOff(page)
+  await twinkleOff(page);
   // The names toggle arrives with the map's own chunk.
   await expect(page.locator('.map-zoom .map-names')).toBeVisible();
   const rows = [
@@ -542,7 +543,7 @@ test('the keyboard focus ring of the controls that stand on the map reads on the
   await waitForCameraIdle(page);
   await waitForAnimations(page);
   await waitForGasSharpSettled(page);
-  // TODO(part2-task8): twinkleOff(page)
+  await twinkleOff(page);
   rows.push(...(await measure('.map-explore', true)));
   console.log(`focus rings over the brightest gas (white for .map-explore): ${rows.map((q) => `${q.selector} ${q.side} ring/casing ${over(q.ring, q.casing).toFixed(2)} gas/casing ${over(q.gas, q.casing).toFixed(2)} (gas ${lumOf(q.gas).toFixed(2)})`).join(', ')}`);
   for (const q of rows) {

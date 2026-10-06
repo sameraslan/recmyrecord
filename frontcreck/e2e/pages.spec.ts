@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { camera, contrastOverBackdrop, glRenderer, mapFrames, panBrightestGasUnder, shot, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap, waitForMapQuiet } from './helpers';
+import { camera, contrastOverBackdrop, glRenderer, mapFrames, panBrightestGasUnder, shot, twinkleOff, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap, waitForMapQuiet } from './helpers';
 
 // The owner's first and last name, stored encoded so this guard never spells them.
 const OWNER_NAME_RE = new RegExp(Buffer.from('c2FtZXJ8YXNsYW4=', 'base64').toString('utf8'), 'i');
@@ -297,7 +297,7 @@ test('text over the nebula keeps 4.5:1 on Home, About and 404, and Home says not
     await waitForMapQuiet(page);
     await waitForAnimations(page);
     // Glints play on Home (part 2, as in the prototype); a bloom must not drift into the screenshot being measured.
-    // TODO(part2-task8): twinkleOff(page)
+    await twinkleOff(page);
     // One at a time, each scrolled into view first (the About card is taller than the screen; the map behind it does
     // not scroll): the helper refuses a rectangle that is cut by the edge of the screenshot.
     const ratios: Array<{ selector: string; ratio: number }> = [];
@@ -348,7 +348,7 @@ async function brightestGasContrast(page: Page, url: string, scope: string, sele
   await waitForMap(page);
   await waitForCameraIdle(page);
   await waitForAnimations(page);
-  // TODO(part2-task8): twinkleOff(page)
+  await twinkleOff(page);
   console.log(`renderer: ${await glRenderer(page)}`);
   const at = size ? ` at ${size.width} x ${size.height}` : '';
   const fresh = await camera(page);
@@ -452,7 +452,7 @@ test('the shelf lets the gas glow behind its caption, down to the first row of c
   await waitForMap(page);
   await waitForCameraIdle(page);
   await waitForAnimations(page);
-  // TODO(part2-task8): twinkleOff(page)
+  await twinkleOff(page);
   // The brightest gas on screen behind the caption: in the approved picture (final-home.jpg) the core's lower edge
   // runs on behind the caption and between the covers.
   const gas = await panBrightestGasUnder(page, '.shelf-now .cap', '.home, header.top');
@@ -547,7 +547,7 @@ for (const size of [
     await waitForMap(page);
     await waitForCameraIdle(page);
     await waitForAnimations(page);
-    // TODO(part2-task8): twinkleOff(page)
+    await twinkleOff(page);
     const edge = await page.evaluate(() => document.querySelector('#stage')!.getBoundingClientRect().top);
     expect(edge).toBeGreaterThan(40);
     // Bright gas across the edge, in the middle 60 % of the window (clear of the wordmark and the header links).
