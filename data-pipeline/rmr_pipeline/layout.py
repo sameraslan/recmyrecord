@@ -1,4 +1,8 @@
-"""Map layouts: UMAP per stop from the site matrix, aligned, at one density and scaled into [-1, 1]."""
+"""Map layouts: UMAP per stop from the site matrix, aligned, at one density and scaled into [-1, 1].
+
+In a catalog build an album with no audio has no sonic or balanced position of its own: those two maps
+are fitted on the albums with audio, and the album is put at the mean position of its nearest albums with
+audio by descriptor distance (nearest_with_audio, with_derived)."""
 import math
 from collections import Counter
 
@@ -8,8 +12,9 @@ from scipy.sparse import coo_matrix
 from scipy.sparse.csgraph import connected_components
 from scipy.spatial import cKDTree
 
-from .audio import site_matrix
-from .constants import ISLAND_LINK_GAPS, SLIDER, STOPS, UMAP_MIN_DIST, UMAP_PARAMS
+from .audio import descriptors, site_matrix
+from .constants import (AUDIO_STOPS, ISLAND_LINK_GAPS, NO_AUDIO_NEIGHBOURS, SLIDER, STOPS, UMAP_MIN_DIST,
+                        UMAP_PARAMS)
 
 # Albums of an island nearer to each other than this many median gaps of the map are stacked (identical rows
 # of the matrix can land on one spot): they say nothing about how dense the island is. fix_stacks spreads them.
@@ -168,20 +173,61 @@ def _fit_all(out: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     return {stop: E / m for stop, E in out.items()}
 
 
-def finalize_layouts(raw: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
+def nearest_with_audio(desc: np.ndarray, has_audio: np.ndarray, k: int = NO_AUDIO_NEIGHBOURS) -> np.ndarray:
+    """For each album without audio, in album order, its k nearest albums with audio by euclidean
+    descriptor distance (the mood-side distance; equal distances go to the earlier album), as row numbers
+    among the albums with audio: (albums without audio, k)."""
+    desc, has_audio = np.asarray(desc, dtype=np.float64), np.asarray(has_audio, dtype=bool)
+    if has_audio.shape != (len(desc),):
+        raise ValueError(f"has_audio must be one bool per album ({len(desc)}), got shape {has_audio.shape}")
+    if not has_audio.all() and has_audio.sum() < k:
+        raise ValueError(f"{int(has_audio.sum())} album(s) with audio: an album without needs {k} of them")
+    D = desc[has_audio]
+    near = [np.argsort(((D - desc[i]) ** 2).sum(axis=1), kind="stable")[:k] for i in np.flatnonzero(~has_audio)]
+    return np.array(near, dtype=np.int64).reshape(len(near), k)
+
+
+def with_derived(E: np.ndarray, has_audio: np.ndarray, near: np.ndarray) -> np.ndarray:
+    """A layout of every album from `E`, the layout of the albums with audio: an album without audio is at
+    the mean position of the rows `near` (nearest_with_audio) gives it."""
+    has_audio = np.asarray(has_audio, dtype=bool)
+    out = np.empty((len(has_audio), 2), dtype=float)
+    out[has_audio] = E
+    out[~has_audio] = E[near].mean(axis=1)
+    return out
+
+
+def finalize_layouts(raw: dict[str, np.ndarray], has_audio: np.ndarray | None = None,
+                     near: np.ndarray | None = None) -> dict[str, np.ndarray]:
     """Islands moved next to the cloud, outlier compression, box normalisation, Procrustes of sonic and mood
     onto balanced, sonic and mood resized to balanced's median nearest-neighbour gap, all three scaled into
     [-1, 1] by one factor, then stacked points spread (up to 10 passes). Raises ValueError for a layout with
     non-finite positions or with half its albums on top of another one.
 
     The site applies one transform (the balanced layout's) to every stop and draws covers at one size, so the
-    stops have to share a density, not a bounding box."""
+    stops have to share a density, not a bounding box.
+
+    With `has_audio` (the catalog build), the sonic and balanced layouts of `raw` hold only the albums with
+    audio and `near` (nearest_with_audio) says where the others go. They are placed (with_derived) once a
+    stop's own shape is settled, after the islands, the outliers and the box, which are about what UMAP made
+    of the albums it was given: a point between its three neighbours could otherwise join an island to the
+    cloud or count as an outlier. From there on they are points like the others: the alignment needs every
+    album at every stop, the turns and resizings that follow keep a mean a mean, and the spreading of
+    stacked points makes their positions unique too (albums with the same descriptors get the same spot)."""
+    if has_audio is not None:
+        has_audio = np.asarray(has_audio, dtype=bool)
+        for stop in STOPS:
+            want = int(has_audio.sum()) if stop in AUDIO_STOPS else len(has_audio)
+            if len(raw[stop]) != want:
+                raise ValueError(f"the {stop} layout has {len(raw[stop])} positions for {want} albums"
+                                 + (" with audio" if stop in AUDIO_STOPS else ""))
     out: dict[str, np.ndarray] = {}
     for stop in STOPS:
         _positive_gap(raw[stop], f"the {stop} layout")
         E, _ = pull_islands(np.asarray(raw[stop], dtype=float))
         E, _ = fix_outliers(E)
-        out[stop] = norm_box(E)
+        E = norm_box(E)
+        out[stop] = with_derived(E, has_audio, near) if has_audio is not None and stop in AUDIO_STOPS else E
     gap = _positive_gap(out["balanced"], "the balanced layout")
     for stop in ("sonic", "mood"):
         E = procrustes_to(out[stop], out["balanced"])
@@ -196,10 +242,23 @@ def finalize_layouts(raw: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     raise RuntimeError(f"{bad}: stacked points remain after 10 passes")
 
 
-def build_layouts(sub: pd.DataFrame, block: np.ndarray, has_audio: np.ndarray | None = None) -> dict[str, np.ndarray]:
-    """The three layouts. `has_audio` is not used yet (see recs.build_recs)."""
-    return finalize_layouts({stop: umap_embed(site_matrix(sub, block, SLIDER[stop]), UMAP_MIN_DIST[stop])
-                             for stop in STOPS})
+def build_layouts(sub: pd.DataFrame, block: np.ndarray, has_audio: np.ndarray | None = None,
+                  mood_only: bool = False) -> dict[str, np.ndarray]:
+    """The three layouts. Without `mood_only` (the site build) `has_audio` is not used: every album is in
+    every UMAP. With it (the catalog build, see recs.build_recs) the sonic and balanced UMAPs are fitted on
+    the albums with audio and the others are placed from their mood-side neighbours (finalize_layouts);
+    the mood UMAP is fitted on every album."""
+    if not mood_only:
+        return finalize_layouts({stop: umap_embed(site_matrix(sub, block, SLIDER[stop]), UMAP_MIN_DIST[stop])
+                                 for stop in STOPS})
+    if has_audio is None:
+        raise ValueError("mood_only needs has_audio: which albums have audio")
+    pool = np.asarray(has_audio, dtype=bool)
+    raw = {}
+    for stop in STOPS:
+        X = site_matrix(sub, block, SLIDER[stop])
+        raw[stop] = umap_embed(X[pool] if stop in AUDIO_STOPS else X, UMAP_MIN_DIST[stop])
+    return finalize_layouts(raw, pool, nearest_with_audio(descriptors(sub), pool))
 
 
 def flat_positions(E: np.ndarray) -> list[float]:

@@ -16,6 +16,8 @@ An album with no embedding gets the mean block of its IMPUTE_K nearest albums by
 distance among the albums that have one, rescaled to those neighbours' mean norm.
 The store knows an album by its key (a RYM id); the feature table knows it by its Spotify URI, and
 audio/keys.csv says which key that is (rmr_pipeline.keys).
+The catalog build does not impute (audio_block(fill="mean")): an album with no embedding is limited to
+the mood side, and its block is the mean block of the albums that have one (mean_fill).
 Nothing here depends on the embedding model: the width comes from the store's manifest, and the transform
 must have been fitted on that store's model.
 """
@@ -41,6 +43,7 @@ BLOCK_DIMS = 64
 # Chosen by experiments/preview_features/imputation.py (hide the audio of albums that have it); see README.
 IMPUTE_K = 3
 IMPUTE_RESCALE = True
+FILLS = ("impute", "mean")  # what audio_block gives an album with no embedding
 TRANSFORM_ARRAYS = ("mean", "components", "scale", "target_total_variance", "fitted", "albums", "model")
 DEFAULT_CATALOG = PIPELINE_DIR / "catalog" / "albums.csv"
 
@@ -66,13 +69,15 @@ class Transform:
 @dataclass(frozen=True)
 class AudioBlock:
     block: np.ndarray  # (albums, k) float32, aligned with the album frame
-    has_audio: np.ndarray  # (albums,) bool; False = imputed
+    has_audio: np.ndarray  # (albums,) bool; False = imputed (or, with fill "mean", the mean block)
     shards: int
     transform: Transform
+    fill: str = "impute"  # what the albums without audio got: FILLS
 
     def summary(self) -> str:
         n = int(self.has_audio.sum())
-        return (f"audio: {n} albums with audio, {len(self.has_audio) - n} imputed, {self.shards} store shard(s), "
+        without = "imputed" if self.fill == "impute" else "without (mood side only)"
+        return (f"audio: {n} albums with audio, {len(self.has_audio) - n} {without}, {self.shards} store shard(s), "
                 f"transform fitted {self.transform.fitted} on {self.transform.albums} albums")
 
 
@@ -178,6 +183,22 @@ def impute(block: np.ndarray, desc: np.ndarray, has_audio: np.ndarray, k: int = 
     return out
 
 
+def mean_fill(block: np.ndarray, has_audio: np.ndarray) -> np.ndarray:
+    """`block` with the rows of the albums without audio set to the mean block of the albums with audio.
+
+    The catalog build's fill. An album with no audio has no sonic or balanced list and is in nobody's
+    (recs.build_recs), and its place on those two maps is derived from its mood-side neighbours
+    (layout.build_layouts), so its block is read at the mood stop only. There the descriptors are divided by
+    0.125 and the block carries almost no weight; the mean is the neutral value: it adds to the album's
+    distance to another album only that album's own distance from the middle of the audio space, and
+    claims no sound for the album, which a block imputed from its descriptors would."""
+    out = np.array(block, dtype=np.float32)
+    has_audio = np.asarray(has_audio, dtype=bool)
+    if not has_audio.all():
+        out[~has_audio] = out[has_audio].astype(np.float64).mean(axis=0)
+    return out
+
+
 def album_keys(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> list[str]:
     """The store key of each album of `sub`: the key audio/keys.csv gives its URI (a store kept inside
     another, audio/clap/, uses the outer one's: audio_store.keys_csv). Raises StoreError when keys.csv is
@@ -185,11 +206,15 @@ def album_keys(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> list[str]:
     return load_keys(keys_csv(audio_dir)).keys_of(sub["URI"])
 
 
-def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO, keys: list[str] | None = None) -> AudioBlock:
-    """The audio block for the albums of `sub`, imputed where the store has no embedding. The albums are
-    found in the store by `keys` (one per row of `sub`: the catalog build's, which has no URI for a new
-    album) or, without them, by the keys audio/keys.csv gives their URIs (album_keys). Raises StoreError
-    when the store, the keys or the transform are missing or malformed."""
+def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO, keys: list[str] | None = None,
+                fill: str = "impute") -> AudioBlock:
+    """The audio block for the albums of `sub`. Where the store has no embedding the block is imputed
+    (`fill` "impute", the site build's) or the mean block of the albums with audio ("mean", the catalog
+    build's: see mean_fill). The albums are found in the store by `keys` (one per row of `sub`: the catalog
+    build's, which has no URI for a new album) or, without them, by the keys audio/keys.csv gives their URIs
+    (album_keys). Raises StoreError when the store, the keys or the transform are missing or malformed."""
+    if fill not in FILLS:
+        raise ValueError(f"fill must be one of {', '.join(FILLS)}, got {fill!r}")
     store = load_store(audio_dir)
     t = load_transform(audio_dir / "transform.npz", store.dim)
     if t.model != store.manifest["model"]:
@@ -205,6 +230,8 @@ def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO, keys: list[s
         raise StoreError(f"no album of the feature table has an embedding in {audio_dir}")
     block = np.zeros((len(sub), len(t.components)), dtype=np.float32)
     block[has_audio] = t.apply(store.emb[rows[has_audio]])
+    if fill == "mean":
+        return AudioBlock(mean_fill(block, has_audio), has_audio, len(store.manifest["shards"]), t, fill)
     return AudioBlock(impute(block, descriptors(sub), has_audio), has_audio, len(store.manifest["shards"]), t)
 
 

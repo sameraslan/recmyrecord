@@ -1,29 +1,32 @@
 """CLI: python -m rmr_pipeline.build --map-root PATH [--table PATH] [--out PATH] [--overrides PATH]
                                     [--audio-dir PATH] [--hub-correction STOPS] [--skip-images]
                                     [--catalog --out PATH [--catalog-path CSV] [--descriptor-weights PROFILE]
-                                     [--existing-descriptors SOURCE]]
+                                     [--existing-descriptors SOURCE] [--require-sprites]]
 
 --catalog builds every album of catalog/albums.csv (rmr_pipeline.catalog) instead of the feature table's.
-It never writes into frontcreck/public/data."""
+It never writes into frontcreck/public/data. What it adds to the site's data (README, Catalog mode):
+covers of the new albums (rmr_pipeline.covers), listen links `l` for an album with no Spotify id
+(rmr_pipeline.links), and the mood-only rule for an album with no audio (`n`; audio.mean_fill,
+recs.build_recs, layout.build_layouts)."""
 import argparse
 import sys
 import time
 from pathlib import Path
 
 from .artists import clean_artist
-from .audio import DEFAULT_CATALOG, audio_block, site_matrix
+from .audio import DEFAULT_CATALOG, audio_block, descriptors, site_matrix
 from .audio_store import STORES, StoreError, site_store
 from .catalog import (EXISTING, WEIGHT_PROFILES, CatalogError, catalog_frame, load_catalog, neighbour_clusters,
-                      new_album_cover)
+                      new_album_covers)
 from .colors import ambient_from_image
-from .constants import (DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS, THUMB_COLS,
-                        THUMB_ROWS)
+from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS
 from .images import load_album_sprites, write_sheets
 from .io import write_json
 from .layout import build_layouts, flat_positions
+from .links import LINK_COLUMNS, album_links
 from .mapsource import MapSource, load_cover_ids, load_metadata
 from .overrides import apply_overrides, load_overrides, slugs_after_overrides
-from .recs import build_recs
+from .recs import build_recs, rec_lists
 from .slugs import make_slugs
 from .table import dedupe_table, load_table
 from .validate import validate_dir
@@ -53,6 +56,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--existing-descriptors", choices=EXISTING, default=None,
                    help="With --catalog: where an existing album's eight descriptors come from (default "
                         "table-novocals; see rmr_pipeline.catalog).")
+    p.add_argument("--require-sprites", action="store_true",
+                   help="With --catalog: stop when a new album has a cover in catalog/covers.csv and no sprite in "
+                        ".cache/covers/96 yet (python -m rmr_pipeline.covers sprites). For the final build.")
     p.add_argument("--hub-correction", default="", metavar="STOPS",
                    help="Comma-separated stops whose recommendations rank by mutual proximity instead of the raw "
                         "distance (for example: balanced). Off by default.")
@@ -71,6 +77,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         args.existing_descriptors = args.existing_descriptors or "table-novocals"
     elif args.descriptor_weights or args.existing_descriptors or args.catalog_path != DEFAULT_CATALOG:
         p.error("--catalog-path, --descriptor-weights and --existing-descriptors need --catalog")
+    elif args.require_sprites:
+        p.error("--require-sprites needs --catalog")
     args.audio_dir = args.audio_dir or site_store()
     args.hub_correction = tuple(s for s in args.hub_correction.split(",") if s)
     unknown = [s for s in args.hub_correction if s not in STOPS]
@@ -82,6 +90,37 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                     "committed albums.json is not overwritten")
         args.out = DEFAULT_OUT
     return args
+
+
+def listen_links(catalog, spotify_ids: list[str]) -> tuple[dict[int, dict[str, str]], str]:
+    """`l` of the albums with no Spotify id, from their catalog rows ({album number: {key: ref}}; an album
+    with no other link has none), and a line of counts for the build's output."""
+    links: dict[int, dict[str, str]] = {}
+    per_key = dict.fromkeys(LINK_COLUMNS, 0)
+    odd = dict.fromkeys(LINK_COLUMNS, 0)
+    without = [i for i, s in enumerate(spotify_ids) if not s]
+    for i, row in zip(without, catalog.iloc[without].to_dict("records")):
+        found, left_out = album_links(row)
+        for key in found:
+            per_key[key] += 1
+        for key, _ in left_out:
+            odd[key] += 1
+        if found:
+            links[i] = found
+    line = (f"links: {len(without)} albums with no Spotify id, {len(links)} with other links ("
+            + ", ".join(f"{k} {n}" for k, n in per_key.items()) + f"), {len(without) - len(links)} with none; "
+            + f"{sum(odd.values())} link(s) left out as not of their service's form"
+            + (" (" + ", ".join(f"{k} {n}" for k, n in odd.items() if n) + ")" if any(odd.values()) else ""))
+    return links, line
+
+
+def ambient_colours(sprites: list, covers: list[str], uris: list[str], clusters: list[int],
+                    override_images: dict) -> list[tuple[str, str, str]]:
+    """Each album's ambient colours: from its sprite when that is its cover (its own file, or the map's
+    sprite of an album with a cover id), else the fallback of its cluster. A catalog album the map does not
+    have (no URI) with a cover id and no sprite file yet has a flat tile, so it keeps the fallback."""
+    return [ambient_from_image(sprites[i], clusters[i]) if ((covers[i] and uris[i]) or i in override_images)
+            else FALLBACK_AMBIENT[clusters[i] % 3] for i in range(len(uris))]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -112,29 +151,30 @@ def main(argv: list[str] | None = None) -> int:
     artists = [clean_artist(a) for a in sub["Artist"].astype(str)]
     cover_ids, spotify_ids = [cover_by_uri.get(u, "") for u in uris], [u.split(":")[-1] for u in uris]
     slug_titles, slug_artists = titles, artists  # what the slugs are made from
-    keys, places, new_images, n_site = None, None, {}, len(sub)
+    keys, places, new_images, n_site, catalog = None, None, {}, len(sub), None
     if args.catalog:
         try:
-            cat = catalog_frame(sub, load_catalog(args.catalog_path), weights=args.descriptor_weights,
-                                existing=args.existing_descriptors)
+            catalog = load_catalog(args.catalog_path)
+            cat = catalog_frame(sub, catalog, weights=args.descriptor_weights, existing=args.existing_descriptors)
         except CatalogError as e:
             print(f"catalog: {e}", file=sys.stderr)
             return 1
         print(cat.summary())
-        if not args.skip_images and len(cat.keys) > THUMB_COLS * THUMB_ROWS:
-            print(f"--catalog without --skip-images is not possible yet: {len(cat.keys)} albums do not fit one "
-                  f"{THUMB_COLS}x{THUMB_ROWS} thumbnail sheet (several sheets are still to come)", file=sys.stderr)
-            return 1
         # The site's albums keep their rows; the new albums follow them.
         sub, keys, places, spotify_ids = cat.frame, cat.keys, cat.places, cat.spotify_ids
         new_keys = keys[n_site:]
         uris = uris + [""] * len(new_keys)
         titles, artists = titles + list(sub["Title"][n_site:]), artists + list(sub["Artist"][n_site:])
         slug_titles, slug_artists = cat.slug_titles, artists[:n_site] + cat.slug_artists[n_site:]
-        for i, (cover, image) in enumerate(map(new_album_cover, new_keys), start=n_site):
-            cover_ids.append(cover)
-            if image is not None:
-                new_images[i] = image
+        new_covers, new_images, waiting = new_album_covers(new_keys, n_site)
+        cover_ids = cover_ids + new_covers
+        print(f"covers: {len(new_keys)} new albums, {sum(1 for c in new_covers if c)} with a cover, "
+              f"{len(new_images)} with a sprite, {len(waiting)} with a cover and no sprite yet (a flat tile on the "
+              f"sheets): {', '.join(waiting[:5])}{' ...' if len(waiting) > 5 else ''}")
+        if waiting and args.require_sprites:
+            print(f"--require-sprites: {len(waiting)} new album(s) have a cover and no sprite. Run "
+                  "python -m rmr_pipeline.covers sprites", file=sys.stderr)
+            return 1
 
     slugs = make_slugs(slug_titles, slug_artists)  # overrides.json is keyed by these
     overrides = load_overrides(args.overrides)
@@ -152,27 +192,42 @@ def main(argv: list[str] | None = None) -> int:
                              + ", ".join(moved[:5]))
     vocab, tops = build_vocab(sub, places)
     try:
-        audio = audio_block(sub, args.audio_dir, keys)
+        # The catalog build does not impute: an album with no audio is limited to the mood side.
+        audio = audio_block(sub, args.audio_dir, keys, fill="mean" if args.catalog else "impute")
     except StoreError as e:
         print(f"audio store: {e}", file=sys.stderr)
         return 1
-    print(audio.summary() + (f"; hub correction at {', '.join(args.hub_correction)}" if args.hub_correction else ""))
-    if args.catalog:  # until the new albums have clusters of their own
-        clusters = clusters + neighbour_clusters(site_matrix(sub, audio.block, SLIDER["balanced"]), clusters)
+    no_audio = ~audio.has_audio
+    print(audio.summary()
+          + (f"; the albums without audio: {int(no_audio[:n_site].sum())} existing / {int(no_audio[n_site:].sum())} new"
+             if args.catalog else "")
+          + (f"; hub correction at {', '.join(args.hub_correction)}" if args.hub_correction else ""))
+    links: dict[int, dict[str, str]] = {}
+    if args.catalog:
+        links, line = listen_links(catalog, spotify_ids)
+        print(line)
+        # Until the new albums have clusters of their own: the cluster of an album's nearest existing albums,
+        # on the balanced matrix, or on the descriptors alone when the album has no audio.
+        by_balanced = neighbour_clusters(site_matrix(sub, audio.block, SLIDER["balanced"]), clusters)
+        by_mood = neighbour_clusters(descriptors(sub), clusters)
+        clusters = clusters + [m if quiet else b for b, m, quiet in zip(by_balanced, by_mood, no_audio[n_site:])]
     t1 = time.time()
-    recs = build_recs(sub, audio.block, args.hub_correction, has_audio=audio.has_audio)
+    recs = build_recs(sub, audio.block, args.hub_correction, has_audio=audio.has_audio, mood_only=args.catalog)
     t2 = time.time()
-    layouts = build_layouts(sub, audio.block, has_audio=audio.has_audio)
-    print(f"recs and layouts done ({time.time() - t0:.0f}s: recs {t2 - t1:.0f}s, layouts {time.time() - t2:.0f}s)")
+    layouts = build_layouts(sub, audio.block, has_audio=audio.has_audio, mood_only=args.catalog)
+    t3 = time.time()
+    print(f"recs and layouts done ({t3 - t0:.0f}s: recs {t2 - t1:.0f}s, layouts {t3 - t2:.0f}s)")
 
     ambient = [FALLBACK_AMBIENT[k % 3] for k in clusters]
     out = args.out
     if not args.skip_images:
         sprites = load_album_sprites(src, uris, meta, covers, clusters, override_images)
-        ambient = [ambient_from_image(sprites[i], clusters[i]) if (covers[i] or i in override_images)
-                   else FALLBACK_AMBIENT[clusters[i] % 3] for i in range(len(uris))]
+        ambient = ambient_colours(sprites, covers, uris, clusters, override_images)
+        t4 = time.time()
         for name, size in write_sheets(out, sprites).items():
             print(f"wrote {name}: {size / 1e6:.2f} MB")
+        if args.catalog:
+            print(f"images done (sprites and colours {t4 - t3:.0f}s, sheets {time.time() - t4:.0f}s)")
 
     albums = [{
         "slug": slugs[r],
@@ -184,12 +239,18 @@ def main(argv: list[str] | None = None) -> int:
         "d": tops[r],
         "w": list(ambient[r]),
     } for r in range(len(sub))]
+    if args.catalog:  # the optional keys, in the contract's order: `l`, then `n`
+        for r, album in enumerate(albums):
+            if r in links:
+                album["l"] = links[r]
+            if no_audio[r]:
+                album["n"] = 1
 
     sizes = {
         "albums.json": write_json(out / "albums.json", albums),
         "vocab.json": write_json(out / "vocab.json", vocab),
         "positions.json": write_json(out / "positions.json", {s: flat_positions(layouts[s]) for s in STOPS}),
-        "recs.json": write_json(out / "recs.json", {s: recs[s].tolist() for s in STOPS}),
+        "recs.json": write_json(out / "recs.json", {s: rec_lists(recs[s]) for s in STOPS}),
     }
     for name, size in sizes.items():
         print(f"wrote {name}: {size / 1e6:.2f} MB")

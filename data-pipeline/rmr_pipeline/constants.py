@@ -41,6 +41,9 @@ CATALOG_DESCRIPTORS = 8
 STOPS = ("sonic", "balanced", "mood")
 SLIDER = {"sonic": 5.0, "balanced": 1.765, "mood": 0.5}  # balanced: the original site's tuned default (1.765 ** 3 ≈ 5.5)
 RECS_PER_STOP = 10
+# The stops the audio block decides. In a catalog build an album with no audio has no list at these stops
+# and is in nobody's, and its position there is derived from its mood-side neighbours.
+AUDIO_STOPS = ("sonic", "balanced")
 TOP_DESCRIPTORS = 10
 LIVE_POOL = 4000
 # n_jobs=1 is what UMAP forces anyway when random_state is set; stating it avoids its UserWarning.
@@ -70,11 +73,20 @@ FALLBACK_AMBIENT = [
 # Typographic tile colours (mockup FB), indexed by k % 3.
 FALLBACK_TILE = [(59, 42, 34), (44, 48, 36), (59, 49, 32)]
 
+# Sprite sheet geometry. Album i is in sheet i // PER_SHEET at cell i % PER_SHEET, row-major. The frontend
+# (frontcreck/src/lib/data/sprites.ts) has the same numbers: change them on both sides together.
 ATLAS_SPRITE_PX = 96
 ATLAS_COLS = 32
 ATLAS_PER_SHEET = 1024
 THUMB_SPRITE_PX = 48
 THUMB_COLS = 64
 THUMB_ROWS = 64
+THUMB_PER_SHEET = THUMB_COLS * THUMB_ROWS
 # Served atlas file names: atlas-0.webp, atlas-1.webp, ... (no leading zeros).
 ATLAS_NAME_RE = re.compile(r"^atlas-(0|[1-9][0-9]*)\.webp$")
+# Served thumbnail sheets: thumbs.webp is sheet 0, then thumbs-1.webp, thumbs-2.webp, ... (images.thumbs_name).
+THUMBS_NAME_RE = re.compile(r"^thumbs-([1-9][0-9]*)\.webp$")
+
+# The catalog build puts an album with no audio at the mean position of this many albums with audio, its
+# nearest by descriptor distance, on the sonic and balanced maps (layout.nearest_with_audio).
+NO_AUDIO_NEIGHBOURS = 3

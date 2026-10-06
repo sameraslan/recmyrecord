@@ -1,4 +1,12 @@
-"""The data contract for frontcreck/public/data (spec section 6.2)."""
+"""The data contract for frontcreck/public/data (spec section 6.2), and for a catalog build's folder.
+
+A catalog build (python -m rmr_pipeline.build --catalog) adds to the site's contract:
+  albums.json   `c` may be a prefixed cover id (dz:, am:, bc:, yt:; rmr_pipeline.covers.cover_url);
+                `l`, after `w`: listen links of an album with no Spotify id (rmr_pipeline.links);
+                `n`: 1, after `l`: the album has no audio
+  recs.json     an `n` album's sonic and balanced rows are [], and no sonic or balanced row lists one
+  thumbs        one sheet per THUMB_PER_SHEET albums: thumbs.webp, thumbs-1.webp, ...
+"""
 import argparse
 import json
 import math
@@ -7,15 +15,20 @@ import sys
 from pathlib import Path
 
 from .colors import contrast_ratio, hex_to_rgb
-from .constants import (ATLAS_COLS, ATLAS_NAME_RE, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, DEFAULT_OUT, LYRIC_DROP,
-                        MIN_ACCENT_CONTRAST, NON_MOOD, RECS_PER_STOP, ROOM_RGB, STOPS, THUMB_COLS, THUMB_ROWS,
-                        THUMB_SPRITE_PX, TOP_DESCRIPTORS)
+from .constants import (ATLAS_COLS, ATLAS_NAME_RE, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, AUDIO_STOPS, DEFAULT_OUT,
+                        LYRIC_DROP, MIN_ACCENT_CONTRAST, NON_MOOD, RECS_PER_STOP, ROOM_RGB, STOPS, THUMB_COLS,
+                        THUMB_PER_SHEET, THUMB_ROWS, THUMB_SPRITE_PX, THUMBS_NAME_RE, TOP_DESCRIPTORS)
+from .links import LINK_COLUMNS, LINK_REF_RE
 
 ALBUM_KEYS = ["slug", "t", "a", "s", "c", "k", "d", "w"]
+OPTIONAL_KEYS = ["l", "n"]  # after ALBUM_KEYS, in this order
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX_RE = re.compile(r"^#[0-9a-f]{6}$")
 SPOTIFY_RE = re.compile(r"^[0-9A-Za-z]{22}$")
 COVER_RE = re.compile(r"^[0-9a-f]{24,64}$")
+# The cover ids of the other sources (covers.c_field): Deezer's image md5, the path of Apple's artwork,
+# Bandcamp's image number, a YouTube video id.
+PREFIXED_COVER_RE = re.compile(r"^(?:dz:[0-9a-f]{32}|am:[A-Za-z0-9]+(?:[/._-]+[A-Za-z0-9]+)*|bc:[0-9]+|yt:[A-Za-z0-9_-]{11})$")
 
 
 class ContractError(Exception):
@@ -54,14 +67,38 @@ def _validate_images(out: Path, n: int, err) -> None:
             err(f"unexpected file {q.name}: sprite sheets are named atlas-<n>.webp")
         elif int(m[1]) >= sheets:
             err(f"unexpected atlas file {q.name}: {n} albums need {sheets} sheets")
-    p = out / "thumbs.webp"
+    from .images import thumbs_name
+
+    sheets = math.ceil(n / THUMB_PER_SHEET)
     tw, th = THUMB_COLS * THUMB_SPRITE_PX, THUMB_ROWS * THUMB_SPRITE_PX
-    if not p.exists():
-        err("missing thumbs.webp")
-    else:
+    for i in range(sheets):
+        p = out / thumbs_name(i)
+        if not p.exists():
+            err(f"missing {p.name}")
+            continue
         with Image.open(p) as im:
             if im.format != "WEBP" or im.size != (tw, th):
-                err(f"thumbs.webp must be a {tw}x{th} WebP")
+                err(f"{p.name} must be a {tw}x{th} WebP")
+    for q in sorted(out.glob("thumbs-*.webp")):
+        m = THUMBS_NAME_RE.match(q.name)
+        if not m:
+            err(f"unexpected file {q.name}: thumbnail sheets are named thumbs.webp, thumbs-<n>.webp")
+        elif int(m[1]) >= sheets:
+            err(f"unexpected thumbnail file {q.name}: {n} albums need {sheets} sheets")
+
+
+def _validate_links(a: dict, where: str, err) -> None:
+    """`l`: {key: ref}, at least one, keys of LINK_COLUMNS in its order, only without a Spotify id."""
+    links = a["l"]
+    if a["s"] != "":
+        err(f"{where}: l is only for an album with no Spotify id")
+    if (not isinstance(links, dict) or not links
+            or list(links) != [k for k in LINK_COLUMNS if k in links]):
+        err(f"{where}: l must be an object with one or more of the keys {list(LINK_COLUMNS)} in that order")
+        return
+    for key, ref in links.items():
+        if not isinstance(ref, str) or not LINK_REF_RE[key].match(ref):
+            err(f"{where}: bad {key} link {ref!r}")
 
 
 def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
@@ -94,11 +131,22 @@ def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
     slugs: set[str] = set()
     no_cover = 0
     empty_d = 0
+    with_links = 0
+    no_audio: set[int] = set()
     for i, a in enumerate(albums):
         where = f"albums[{i}]"
-        if not isinstance(a, dict) or list(a.keys()) != ALBUM_KEYS:
-            err(f"{where}: keys must be exactly {ALBUM_KEYS} in that order")
+        if (not isinstance(a, dict) or list(a.keys())[:len(ALBUM_KEYS)] != ALBUM_KEYS
+                or list(a.keys())[len(ALBUM_KEYS):] != [k for k in OPTIONAL_KEYS if k in a]):
+            err(f"{where}: keys must be exactly {ALBUM_KEYS} in that order, then optionally {OPTIONAL_KEYS}")
             continue
+        if "l" in a:
+            with_links += 1
+            _validate_links(a, where, err)
+        if "n" in a:
+            if _is_int(a["n"]) and a["n"] == 1:
+                no_audio.add(i)
+            else:
+                err(f"{where}: n must be 1 (or absent), got {a['n']!r}")
         slug = a["slug"]
         if not isinstance(slug, str) or not SLUG_RE.match(slug):
             err(f"{where}: bad slug {slug!r}")
@@ -111,7 +159,7 @@ def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
                 err(f"{where}: {key} must be a non-empty string")
         if not isinstance(a["s"], str) or not (a["s"] == "" or SPOTIFY_RE.match(a["s"])):
             err(f"{where}: bad Spotify id {a['s']!r}")
-        if not isinstance(a["c"], str) or not (a["c"] == "" or COVER_RE.match(a["c"])):
+        if not isinstance(a["c"], str) or not (a["c"] == "" or COVER_RE.match(a["c"]) or PREFIXED_COVER_RE.match(a["c"])):
             err(f"{where}: bad cover id {a['c']!r}")
         elif a["c"] == "":
             no_cover += 1
@@ -155,16 +203,24 @@ def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
                 err(f"recs.{stop} must have {n} rows")
                 continue
             for i, row in enumerate(rows):
-                if (not isinstance(row, list) or len(row) != RECS_PER_STOP or len(set(row)) != RECS_PER_STOP
+                if stop in AUDIO_STOPS and i in no_audio:
+                    if row != []:
+                        err(f"recs.{stop}[{i}] must be empty: album {i} has no audio (n)")
+                elif (not isinstance(row, list) or len(row) != RECS_PER_STOP or len(set(row)) != RECS_PER_STOP
                         or i in row or not all(_is_int(j) and 0 <= j < n for j in row)):
                     err(f"recs.{stop}[{i}] must be {RECS_PER_STOP} unique album ids other than {i}")
+                elif stop in AUDIO_STOPS and not no_audio.isdisjoint(row):
+                    err(f"recs.{stop}[{i}] lists album {next(j for j in row if j in no_audio)}, which has no audio (n)")
 
     if images:
         _validate_images(out, n, err)
 
     if errs:
         raise ContractError("\n".join(errs))
-    return {"albums": n, "vocab": len(vocab), "no_cover": no_cover, "empty_descriptors": empty_d}
+    summary = {"albums": n, "vocab": len(vocab), "no_cover": no_cover, "empty_descriptors": empty_d}
+    if with_links or no_audio:  # a catalog build's; the site's summary stays what it was
+        summary |= {"links": with_links, "no_audio": len(no_audio)}
+    return summary
 
 
 def main(argv: list[str] | None = None) -> int:

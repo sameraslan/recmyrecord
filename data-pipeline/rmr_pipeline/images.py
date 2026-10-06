@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image, ImageOps
 
 from .constants import (ATLAS_COLS, ATLAS_NAME_RE, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, FALLBACK_TILE, THUMB_COLS,
-                        THUMB_ROWS, THUMB_SPRITE_PX)
+                        THUMB_PER_SHEET, THUMB_SPRITE_PX, THUMBS_NAME_RE)
 from .mapsource import MapSource
 
 SHEET_FILL = (44, 36, 28)  # #2c241c, the cover fallback background
@@ -43,7 +43,8 @@ def pack_sheets(sprites: list[Image.Image], sprite_px: int, cols: int, per_sheet
 def load_album_sprites(src: MapSource, uris: list[str], meta: dict[str, dict], cover_ids: list[str],
                        clusters: list[int], override_images: dict[int, Path]) -> list[Image.Image]:
     """One 96 px sprite per album in album order: an override image, else the map sprite,
-    else (no cover id) a flat tile in the cluster's fallback colour."""
+    else (no cover id, or no URI: a catalog album the map does not have) a flat tile in the cluster's
+    fallback colour. A new album's own sprite comes in through `override_images`."""
     cache: dict[int, Image.Image] = {}
     out: list[Image.Image] = []
     for i, uri in enumerate(uris):
@@ -51,7 +52,7 @@ def load_album_sprites(src: MapSource, uris: list[str], meta: dict[str, dict], c
             with Image.open(override_images[i]) as im:
                 out.append(square(im, ATLAS_SPRITE_PX))
             continue
-        if not cover_ids[i]:
+        if not cover_ids[i] or not uri:
             out.append(tile(clusters[i], ATLAS_SPRITE_PX))
             continue
         m = meta[uri]
@@ -62,9 +63,15 @@ def load_album_sprites(src: MapSource, uris: list[str], meta: dict[str, dict], c
     return out
 
 
+def thumbs_name(sheet: int) -> str:
+    """The file of thumbnail sheet `sheet`: thumbs.webp, then thumbs-1.webp, thumbs-2.webp, ..."""
+    return "thumbs.webp" if sheet == 0 else f"thumbs-{sheet}.webp"
+
+
 def write_sheets(out_dir: Path, sprites: list[Image.Image]) -> dict[str, int]:
-    if len(sprites) > THUMB_COLS * THUMB_ROWS:
-        raise ValueError(f"{len(sprites)} albums do not fit one {THUMB_COLS}x{THUMB_ROWS} thumbnail sheet")
+    """The atlas sheets (ATLAS_PER_SHEET sprites each) and the thumbnail sheets (THUMB_PER_SHEET each) of
+    `sprites`, as many of each as the albums need; numbered sheets left over from a larger build are
+    removed. Returns {file name: bytes}."""
     out_dir.mkdir(parents=True, exist_ok=True)
     sizes: dict[str, int] = {}
     atlases = pack_sheets(sprites, ATLAS_SPRITE_PX, ATLAS_COLS, ATLAS_PER_SHEET)
@@ -76,9 +83,15 @@ def write_sheets(out_dir: Path, sprites: list[Image.Image]) -> dict[str, int]:
         m = ATLAS_NAME_RE.match(stale.name)
         if m and int(m[1]) >= len(atlases):  # other atlas-like names are not ours; the validator reports them
             stale.unlink()
+    del atlases
     small = [s.resize((THUMB_SPRITE_PX, THUMB_SPRITE_PX), Image.Resampling.LANCZOS) for s in sprites]
-    thumbs = pack_sheets(small, THUMB_SPRITE_PX, THUMB_COLS, THUMB_COLS * THUMB_ROWS)[0]
-    p = out_dir / "thumbs.webp"
-    thumbs.save(p, "WEBP", quality=70, method=6)
-    sizes[p.name] = p.stat().st_size
+    thumbs = pack_sheets(small, THUMB_SPRITE_PX, THUMB_COLS, THUMB_PER_SHEET)
+    for i, sheet in enumerate(thumbs):
+        p = out_dir / thumbs_name(i)
+        sheet.save(p, "WEBP", quality=70, method=6)
+        sizes[p.name] = p.stat().st_size
+    for stale in out_dir.glob("thumbs-*.webp"):
+        m = THUMBS_NAME_RE.match(stale.name)
+        if m and int(m[1]) >= len(thumbs):
+            stale.unlink()
     return sizes

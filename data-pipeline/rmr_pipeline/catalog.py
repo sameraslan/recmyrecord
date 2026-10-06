@@ -31,6 +31,7 @@ from scipy.spatial.distance import cdist
 
 from .audio import DEFAULT_CATALOG
 from .constants import AUDIO, CATALOG_DESCRIPTORS, LYRIC_DROP, META, PIPELINE_DIR, VOCALS
+from .covers import cover_for
 
 DEFAULT_ALIASES = PIPELINE_DIR / "catalog" / "descriptor_aliases.json"
 EXISTING = ("table", "table-novocals", "sheet")
@@ -245,6 +246,25 @@ def neighbour_clusters(X: np.ndarray, clusters: list[int], k: int = CLUSTER_NEIG
 
 
 def new_album_cover(key: str) -> tuple[str, Path | None]:
-    """The cover of a new album: (cover id for albums.json, image for its sprite). Nothing yet: every new
-    album gets '' and the flat tile of its cluster. The covers work plugs in here."""
-    return "", None
+    """The cover of a new album: (cover id for albums.json, image for its sprite), as covers.cover_for reads
+    them from catalog/covers.csv and the sprite folder. ('', None) for an album with no row; (id, None) for
+    one whose sprite has not been fetched yet."""
+    return cover_for(key)
+
+
+def new_album_covers(keys: list[str], first: int, cover_of=new_album_cover) -> tuple[list[str], dict[int, Path], list[str]]:
+    """The covers of the new albums, whose album numbers start at `first`: (their cover ids in order,
+    {album number: sprite file} for those that have one, the keys with a cover id and no sprite yet).
+    An album keeps its cover id without a sprite: the site shows the remote image first, and the sheets
+    get the flat tile of its cluster until the sprite is there."""
+    cover_ids: list[str] = []
+    images: dict[int, Path] = {}
+    waiting: list[str] = []
+    for i, key in enumerate(keys, start=first):
+        cover, image = cover_of(key)
+        cover_ids.append(cover)
+        if image is not None:
+            images[i] = image
+        elif cover:
+            waiting.append(key)
+    return cover_ids, images, waiting

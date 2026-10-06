@@ -6,7 +6,7 @@ import pytest
 
 from rmr_pipeline.artists import clean_artist
 from rmr_pipeline.catalog import (WEIGHT_PROFILES, CatalogError, catalog_frame, load_aliases, load_catalog,
-                                  neighbour_clusters, new_album_cover, rym_columns)
+                                  neighbour_clusters, new_album_cover, new_album_covers, rym_columns)
 from rmr_pipeline.constants import AUDIO, CATALOG_DESCRIPTORS, LYRIC_DROP, META, NON_MOOD, VOCALS
 from rmr_pipeline.slugs import make_slugs
 from rmr_pipeline.table import descriptor_cols
@@ -190,8 +190,25 @@ def test_a_new_album_takes_the_cluster_of_most_of_its_nearest_existing_albums():
     assert neighbour_clusters(X[:7], [1, 1, 2, 2, 2, 5, 5]) == []
 
 
-def test_a_new_album_has_no_cover_yet():
-    assert new_album_cover("Album900") == ("", None)
+def test_a_new_albums_cover_comes_from_the_covers_table(tmp_path, monkeypatch):
+    """Its `c` as soon as catalog/covers.csv has a row for it; its sprite once the file is there."""
+    import rmr_pipeline.covers as cv
+
+    sprites = tmp_path / "96"
+    sprites.mkdir()
+    (sprites / "Album901.jpg").write_bytes(b"jpeg")
+    spotify = "ab67616d0000b273" + "1" * 24
+    table = cv.Covers({"Album900": ("deezer", "0f" * 16), "Album901": ("spotify", spotify),
+                       "Album903": ("youtube", "zdPCt5ZEf40")}, sprites)
+    monkeypatch.setattr(cv, "_default_covers", lambda: table)
+    assert new_album_cover("Album900") == ("dz:" + "0f" * 16, None)
+    assert new_album_cover("Album901") == (spotify, sprites / "Album901.jpg")
+    assert new_album_cover("Album902") == ("", None)
+    covers, images, waiting = new_album_covers(["Album900", "Album901", "Album902", "Album903"], 10)
+    assert covers == ["dz:" + "0f" * 16, spotify, "", "yt:zdPCt5ZEf40"]
+    assert images == {11: sprites / "Album901.jpg"}
+    assert waiting == ["Album900", "Album903"]  # a cover and no sprite yet; Album902 has neither
+    assert new_album_covers([], 10) == ([], {}, [])
 
 
 def test_the_committed_aliases_point_at_table_columns(deduped):

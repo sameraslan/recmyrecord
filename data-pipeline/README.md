@@ -21,7 +21,9 @@ Builds every file the site serves from `frontcreck/public/data/`. The outputs ar
 | `positions.json` | `{ sonic, balanced, mood }`, flat `[x, y, ...]` arrays in album order, 3 decimals, within [-1, 1] |
 | `recs.json` | `{ sonic, balanced, mood }`, 10 album ids per album, closest first |
 | `atlas-0.webp` .. `atlas-3.webp` | 96 px sprites, 1,024 per sheet, album index order (sheet = floor(i / 1024), cell = i % 1024, 32 columns) |
-| `thumbs.webp` | 48 px sprites, 64 columns, album index order |
+| `thumbs.webp` | 48 px sprites, 64 columns, 4,096 per sheet, album index order |
+
+A catalog build (`--catalog`, see Catalog mode) writes the same files into its own folder, with more of them and a few more fields: optional `l` and `n` in `albums.json`, cover ids of other sources in `c`, empty sonic and balanced lists for the albums without audio, `atlas-0.webp` to `atlas-10.webp`, and `thumbs-1.webp`, `thumbs-2.webp` after `thumbs.webp`.
 
 ## How it works
 
@@ -156,7 +158,7 @@ What the top-up and the refit of 2 October 2026 moved, against the four-clip dat
 
 ### Albums without audio
 
-101 albums have no audio: 98 have no listing with previews on Deezer or in the US, British or German iTunes store ("F♯A♯∞" is one), and 3 are kept out by hand in `match_overrides.json` (the stores only have cover versions or another album). Each still needs a row, so its block is imputed: the mean block of its 3 nearest albums by descriptor distance among the albums with audio, rescaled to those neighbours' mean norm. Until it has audio of its own, it sounds like the records that share its mood. `python -m rmr_pipeline.audio status` lists the imputed albums; the build prints the count.
+101 albums have no audio: 98 have no listing with previews on Deezer or in the US, British or German iTunes store ("F♯A♯∞" is one), and 3 are kept out by hand in `match_overrides.json` (the stores only have cover versions or another album). Each still needs a row, so its block is imputed: the mean block of its 3 nearest albums by descriptor distance among the albums with audio, rescaled to those neighbours' mean norm. Until it has audio of its own, it sounds like the records that share its mood. `python -m rmr_pipeline.audio status` lists the imputed albums; the build prints the count. A catalog build does not impute: there an album without audio is limited to the mood side (see Catalog mode).
 
 The settings come from `experiments/preview_features/imputation.py` (`results/imputation.md`), which hides the audio of 137 random albums that have it, five times, and compares their imputed lists with their real ones. With k = 3 and rescaling a hidden album gets back 8% of its real top 10 at the sonic stop and 42% at the balanced stop; the share of its recommendations with its primary genre is 0.15 (0.25 with its own audio) at sonic and 0.18 (0.28) at balanced; it appears in 14 lists at sonic and 12 at balanced, where an average album appears in 10. Without rescaling the mean block is shorter than a real one and the album lands in 28 and 19 lists. Larger k does not recover more and makes the imputed albums recommend each other.
 
@@ -261,6 +263,70 @@ Never a title alone across artists, never a title that extends another (a sequel
 
 **Deciding a doubtful pair, or giving an album its RYM id.** Edit the album's row of `audio/keys.csv`: put the right `rym_id` (or its placeholder, to say it is not that chart row) and set `matched_by` to `manual`. Then run the builder, which keeps rows set by hand and rewrites the catalog and the doubtful list around them, and `scripts/rekey_audio_store.py`, which renames the album in the store. A placeholder that became a RYM id is found by itself; when one RYM id replaces another, give the script the previous file (`git show HEAD:data-pipeline/audio/keys.csv > /tmp/keys.csv`, then `--previous /tmp/keys.csv`). When the album already had a row of its own in the catalog (the chart row was a new album), the builder drops that row; delete its row from `matches.csv` before the rekey, which refuses to give two rows one key. The one-pass clip cache is not committed and is brought along separately: write the renames and the dropped listings into `.cache/audio/pending_cache_rekey.csv` (`action`, `old_key`, `new_key`, `source`, `album_id`, `note`) and run `scripts/apply_cache_rekey.py`, which only counts until it is given `--apply` and does not start while a one-pass run holds the cache's lock. The script rewrites keys only: `tests/test_rekey.py` checks every album's store row (bit for bit) and audio block (exactly) against `tests/fixtures/audio_reference.npz`, recorded before the first rekey by `scripts/record_audio_reference.py`. Record that file again only after a change meant to move the blocks (a refit, a top-up, a corrected match).
 
+## Covers of the new albums
+
+An existing album takes its cover id and its sprite from the map (`mapsource.py`, `images.py`). A new album has neither, so `rmr_pipeline/covers.py` finds one image per new album and records it in `catalog/covers.csv` (committed): `rym_id,source,ref`. The sources, best first:
+
+| `source` | Where the image comes from | `ref` | `c` in `albums.json` |
+|---|---|---|---|
+| `spotify` | The catalog's Spotify link, asked from Spotify's oEmbed endpoint (no account) | The image id, as the site stores it today | `<id>` |
+| `deezer` | The album's store listing: the one `match_overrides.json` forces, else the one in `audio/matches.csv`, else the catalog's Deezer link | Deezer's image md5 | `dz:<md5>` |
+| `apple` | The same, for a listing on iTunes, else the catalog's Apple Music link | The path of Apple's artwork | `am:<path>` |
+| `bandcamp` | The `og:image` of the catalog's Bandcamp page | The image's number | `bc:<number>` |
+| `youtube` | The catalog's YouTube link, else the link the audio stage embedded (`audio/fulllength.csv`) | The video id. The image is a frame of the video, not a cover | `yt:<video id>` |
+
+`covers.cover_url(c, px)` documents the URL of each form at a given size; the frontend mirrors it. An album with no row has `c` `""`.
+
+```bash
+cd data-pipeline
+.venv/bin/python -m rmr_pipeline.covers refs --dry-run   # what a run would ask, per tier; no request, nothing written
+.venv/bin/python -m rmr_pipeline.covers refs             # (re)writes catalog/covers.csv
+.venv/bin/python -m rmr_pipeline.covers sprites          # one 96 px JPEG per row in .cache/covers/96/
+.venv/bin/python -m rmr_pipeline.covers status           # rows per source, sprites present and missing, albums without a cover
+```
+
+`refs` works in tiers, in this order: `spotify`, `cache`, `store`, `bandcamp`, `youtube` (`--tiers` to choose). `cache` reads the Deezer and iTunes listings from the audio stage's response cache (`.cache/audio/http.sqlite`, read only) and uses no network; `store` asks the store for a listing the cache lacks; `youtube` uses no network either. A tier never spends a request on an album that a better source may still answer: Bandcamp is not asked while the album's Spotify lookup is neither done nor failed. The `cache` tier is the exception, since it costs nothing: it gives every album it can a row at once, and the Spotify tier replaces that row later.
+
+Both commands can be stopped and started again. `refs` saves `covers.csv` every 50 albums and skips the albums that have their row; `sprites` skips the albums whose file is there. An album whose lookup failed for a reason of its own (a 404, a page with no image) is written to `.cache/covers/state.json` and not asked again without `--retry-failed`; a refused or unanswered request is not written there, so the next run asks again.
+
+Requests go only to the hosts in `ALLOWED_HOSTS` and `ALLOWED_SUFFIXES` of `covers.py` (the five services' pages, APIs and image hosts; never rateyourmusic.com), a redirect to another host is refused, requests are spaced per host, and the User-Agent names the project. HTTP 403 or 429 twice in a row from one host, or five times in a run, stops the run with exit code 2.
+
+The sprites live in `.cache/covers/96/<rym_id>.jpg` and are not committed: `covers.csv` is the record, and `sprites` makes them again from it. The catalog build reads both through `covers.cover_for(key)`. An album with a row and no sprite yet keeps its `c` and gets the flat tile of its cluster on the sheets, with the fallback ambient colours; the build prints how many there are, and `--require-sprites` makes that an error.
+
+## Catalog mode
+
+`python -m rmr_pipeline.build --catalog --out <folder> --map-root <map>` builds every album of `catalog/albums.csv` (10,467) instead of the feature table's 4,081, keyed by RYM id (`rmr_pipeline/catalog.py`). It is not what the site is built with: it refuses to write into `frontcreck/public/data` and reads the `effnet10k` store unless `--audio-dir` says otherwise. The default build and its outputs are unchanged by it. The site's albums keep their rows and slugs; the new albums follow, and a new album's slug is made from its romanised title and artist when the catalog has them.
+
+```bash
+cd data-pipeline
+.venv/bin/python -m rmr_pipeline.build --catalog --map-root /path/to/music_map --out .cache/site10k   # 1 to 2 minutes
+.venv/bin/python -m rmr_pipeline.validate --data .cache/site10k
+```
+
+What the folder holds, where it differs from the site's data:
+
+- **`albums.json`**: `slug, t, a, s, c, k, d, w`, then `l` when the album has one, then `n` when it has one.
+  - `c` is `""`, a Spotify image id, or one of the prefixed forms above (see Covers of the new albums).
+  - `d` has up to 8 indexes, in the order of the album's RYM page. Every album is described by its first 8 descriptors. `--existing-descriptors` says where an existing album's come from: `table-novocals` (default: the 8 largest table cells, the three vocals descriptors left out because the sheet never lists them), `table` (vocals kept) or `sheet` (the catalog's `top_descriptors`, as for a new album). `--descriptor-weights` weights them by place among the 8: `rank` (default, the table's `1.5 - place / 42`), `equal` or `slope` (1 down to 0.5), the last two scaled to the length of a full `rank` row. A sheet name that is not a table column is looked up in `catalog/descriptor_aliases.json` (RYM renames) and dropped otherwise; the build prints the counts.
+  - `k`: a new album takes the cluster of most of its 5 nearest existing albums, at the balanced stop, or by descriptors alone when it has no audio.
+  - `l`, the listen links beyond Spotify, is there only when `s` is empty and the catalog has another link for the album. It is an object with any of these keys, in this order, each a short ref made from the catalog's link column (`rmr_pipeline/links.py`; `link_url(service, ref)` gives the page back):
+
+    | Key | Catalog column | Ref | URL |
+    |---|---|---|---|
+    | `am` | `apple_music_url` | `<storefront>/<numeric album id>` | `https://music.apple.com/<storefront>/album/<id>` |
+    | `bc` | `bandcamp_url` | host and path, for example `magdalenabay.bandcamp.com/album/imaginal-disk` | `https://<ref>` |
+    | `dz` | `deezer_url` | the numeric album id | `https://www.deezer.com/album/<id>` |
+    | `yt` | `youtube_url` | the video id | `https://www.youtube.com/watch?v=<id>` |
+    | `sc` | `soundcloud_url` | the path, for example `radiohead/sets/ok-computer-3` | `https://soundcloud.com/<ref>` |
+
+    Query strings are dropped. A Bandcamp page can be on a label's own domain, so `bc` keeps the host. A link that is not of its service's form is left out, and the build prints how many were. An existing album whose `s` is empty (an override took it away) gets `l` by the same rule.
+  - `n` is `1` when the album has no audio in the store the build reads, and absent otherwise.
+- **Albums without audio are limited to the mood side** (the owner's decision of 6 October 2026; it replaces imputation, which the default build keeps). Nothing is imputed. In `recs.json` an `n` album's `sonic` and `balanced` rows are `[]` and no other album's `sonic` or `balanced` row lists it: those two stops rank the albums with audio among themselves. The `mood` stop ranks every album among all of them, so an `n` album has a normal list of 10 there and appears in other albums' lists. Its audio block at that stop is the mean block of the albums with audio, a neutral value where the block has almost no weight (`audio.mean_fill`).
+- **`positions.json`** has the same shape: every album has a position at all three stops. The sonic and balanced UMAPs are fitted on the albums with audio only. An `n` album is then put, on each of those two maps, at the mean position of its 3 nearest albums with audio by descriptor distance (`layout.nearest_with_audio`), once the islands, the outliers and the box of that map are settled and before the alignment, the resizing and the spreading of stacked points, so positions stay unique. The mood UMAP is fitted on every album.
+- **Sprites**: `atlas-N.webp` as on the site (96 px, 32 columns, 1,024 per sheet), 11 sheets for 10,467 albums. Thumbnails are 48 px, 64 x 64 = 4,096 per sheet: sheet 0 is `thumbs.webp`, then `thumbs-1.webp`, `thumbs-2.webp`; album i is in sheet floor(i / 4096) at cell i % 4096. Numbered sheets left in the folder by a larger build are removed. Every number is a constant in `constants.py`, and the frontend has the same ones.
+
+The build prints the albums with and without audio (existing and new), the new albums with a cover, with a sprite and with a cover but no sprite yet, and the counts of the links. `--require-sprites` stops it when a new album has a cover and no sprite (for the final build). `--skip-images` works as in the default build. `validate.py` checks all of the above: the shape of `l` and `n`, the cover id forms, `[]` at sonic and balanced exactly for the `n` albums, no `n` album in a sonic or balanced row, and one thumbnail sheet per 4,096 albums.
+
 ## Commands
 
 ```bash
@@ -282,7 +348,7 @@ The pinned requirements need Python 3.12.
 
 `--skip-images` is a faster development run that keeps the fallback ambient colours and writes no sprite sheets. It needs an explicit `--out` folder so it never overwrites the committed `albums.json`; check that folder with `.venv/bin/python -m rmr_pipeline.validate --data <folder> --no-images`.
 
-`--catalog --out <folder>` builds every album of `catalog/albums.csv` (10,467) instead of the feature table's 4,081, keyed by RYM id (`rmr_pipeline/catalog.py`). It is not what the site is built with: it refuses to write into `frontcreck/public/data`, reads the `effnet10k` store unless `--audio-dir` says otherwise, and for now only runs with `--skip-images` (one thumbnail sheet holds 4,096 albums). The site's albums keep their rows and slugs; a new album's slug is made from its romanised title and artist when the catalog has them. Every album is described by its first 8 descriptors. `--existing-descriptors` says where an existing album's come from: `table-novocals` (default: the 8 largest table cells, the three vocals descriptors left out because the sheet never lists them), `table` (vocals kept) or `sheet` (the catalog's `top_descriptors`, as for a new album). `--descriptor-weights` weights them by place among the 8: `rank` (default, the table's `1.5 - place / 42`), `equal` or `slope` (1 down to 0.5), the last two scaled to the length of a full `rank` row. A sheet name that is not a table column is looked up in `catalog/descriptor_aliases.json` (RYM renames) and dropped otherwise; the build prints the counts. A new album has no cover yet (`catalog.new_album_cover`) and takes the cluster of most of its 5 nearest existing albums at the balanced stop. Albums without audio are imputed as in the default build.
+`--catalog --out <folder>` builds every album of `catalog/albums.csv` (10,467) instead of the feature table's 4,081: see Catalog mode.
 
 UMAP output depends on the exact versions of umap-learn, pynndescent and numba; keep `requirements.txt` pinned so the layouts stay reproducible.
 

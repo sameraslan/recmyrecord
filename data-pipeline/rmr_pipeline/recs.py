@@ -13,7 +13,7 @@ from scipy.stats import norm
 from sklearn.neighbors import NearestNeighbors
 
 from .audio import site_matrix
-from .constants import RECS_PER_STOP, SLIDER, STOPS
+from .constants import AUDIO_STOPS, RECS_PER_STOP, SLIDER, STOPS
 
 # Candidates asked of the index beyond k and the seed. More are asked (twice as many each time)
 # for a row whose ties reach the end of its candidates.
@@ -35,8 +35,22 @@ def _exact_sq_distances(X: np.ndarray, rows: np.ndarray, cand: np.ndarray) -> np
     return out
 
 
-def top_k_neighbours(X: np.ndarray, k: int = RECS_PER_STOP) -> np.ndarray:
+def _in_pool(rank, X: np.ndarray, k: int, pool: np.ndarray) -> np.ndarray:
+    """`rank` (one of the two rankings below) over the rows of `pool` alone, in the numbering of `X`: a
+    row outside the pool is nobody's neighbour and gets a row of -1. The pool's rows keep their order, so
+    the row number breaks ties as it does without a pool."""
+    pool = np.asarray(pool)
+    if pool.dtype != bool or pool.shape != (len(X),):
+        raise ValueError(f"pool must be one bool per row ({len(X)}), got {pool.dtype} of shape {pool.shape}")
+    idx = np.flatnonzero(pool)
+    out = np.full((len(X), k), -1, dtype=np.int64)
+    out[idx] = idx[rank(np.asarray(X)[idx], k)]
+    return out
+
+
+def top_k_neighbours(X: np.ndarray, k: int = RECS_PER_STOP, pool: np.ndarray | None = None) -> np.ndarray:
     """The k nearest other rows of every row by euclidean distance, ordered by (distance, row number).
+    With `pool` (one bool per row) only its rows are ranked and only they are candidates; the others get -1.
 
     scikit-learn's index only proposes candidates: it returns equal distances in an order that
     changes with the number of threads. Their distances are computed again, exactly, and sorted
@@ -44,6 +58,8 @@ def top_k_neighbours(X: np.ndarray, k: int = RECS_PER_STOP) -> np.ndarray:
     its farthest candidate by more than the index's rounding error, so no row left out could
     belong in the list; otherwise it is asked again with twice the candidates. Self is removed by
     row number, so duplicate rows cannot push the seed out of place."""
+    if pool is not None:
+        return _in_pool(top_k_neighbours, X, k, pool)
     X = np.ascontiguousarray(X, dtype=np.float64)
     n = len(X)
     if not 0 < k < n:
@@ -68,8 +84,10 @@ def top_k_neighbours(X: np.ndarray, k: int = RECS_PER_STOP) -> np.ndarray:
     return out
 
 
-def top_k_mutual(X: np.ndarray, k: int = RECS_PER_STOP) -> np.ndarray:
+def top_k_mutual(X: np.ndarray, k: int = RECS_PER_STOP, pool: np.ndarray | None = None) -> np.ndarray:
     """The k nearest other rows of every row by mutual proximity, ordered by (mutual proximity, row number).
+    With `pool`, as top_k_neighbours: the pool's rows among themselves (their distances to the rows outside
+    it do not count towards an album's mean and deviation), -1 for the others.
 
     Hub correction: the mutual proximity of x and y is 1 - P(X > d_xy) P(Y > d_xy), each album's
     distances to the others taken as Gaussian. An album that is close to everything (a hub) stops
@@ -79,6 +97,8 @@ def top_k_mutual(X: np.ndarray, k: int = RECS_PER_STOP) -> np.ndarray:
     identical values and the result does not depend on the thread count. Memory: one n x n float32
     array (67 MB at 4,081 albums, 400 MB at 10,000) and temporaries of about 32 MB each; time grows
     with n squared (a few seconds at 4,081)."""
+    if pool is not None:
+        return _in_pool(top_k_mutual, X, k, pool)
     X = np.ascontiguousarray(X, dtype=np.float64)
     n = len(X)
     if not 0 < k < n:
@@ -106,10 +126,30 @@ def top_k_mutual(X: np.ndarray, k: int = RECS_PER_STOP) -> np.ndarray:
 
 
 def build_recs(sub: pd.DataFrame, block: np.ndarray, hub_correction: tuple[str, ...] = (),
-               has_audio: np.ndarray | None = None) -> dict[str, np.ndarray]:
+               has_audio: np.ndarray | None = None, mood_only: bool = False) -> dict[str, np.ndarray]:
     """Top 10 per album at each stop over the whole deduped catalog, on the site matrix
     [audio block | descriptors / slider**3]. The stops in `hub_correction` rank by mutual proximity.
-    `has_audio` (AudioBlock.has_audio) says which albums' blocks are their own. It is not used yet: an
-    imputed album is a candidate at every stop. The mood-only rule for albums without audio starts here."""
-    return {stop: (top_k_mutual if stop in hub_correction else top_k_neighbours)(site_matrix(sub, block, SLIDER[stop]))
-            for stop in STOPS}
+    `has_audio` (AudioBlock.has_audio) says which albums' blocks are their own.
+
+    Without `mood_only` (the site build) it is not used: an imputed album is ranked, and a candidate, at
+    every stop. With it (the catalog build) an album without audio is limited to the mood side: at the
+    sonic and balanced stops (AUDIO_STOPS) only the albums with audio are ranked, among themselves, and
+    the others' rows are -1 (rec_lists writes them as []). The mood stop ranks every album among all of
+    them, the block of an album without audio being the mean block (audio.mean_fill)."""
+    if not mood_only:
+        return {stop: (top_k_mutual if stop in hub_correction else top_k_neighbours)(site_matrix(sub, block, SLIDER[stop]))
+                for stop in STOPS}
+    if has_audio is None:
+        raise ValueError("mood_only needs has_audio: which albums have audio")
+    pool = np.asarray(has_audio, dtype=bool)
+    out = {}
+    for stop in STOPS:
+        rank = top_k_mutual if stop in hub_correction else top_k_neighbours
+        X = site_matrix(sub, block, SLIDER[stop])
+        out[stop] = rank(X, pool=pool) if stop in AUDIO_STOPS else rank(X)
+    return out
+
+
+def rec_lists(R: np.ndarray) -> list[list[int]]:
+    """The rows of one stop as recs.json holds them: [] for a row of -1 (an album with no list there)."""
+    return [row if row[0] >= 0 else [] for row in np.asarray(R).tolist()]
