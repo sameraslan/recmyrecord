@@ -82,14 +82,16 @@ interface Work {
    * NaN, and written afresh, for a line React has replaced. */
   lineAt: Float64Array;
   lineEls: (Element | undefined)[];
-  /** What the hover label is kept inside, as of the last frame. */
+  /** What the hover label is kept inside, as of the last frame (`top`: the header's inset). */
   inset: number;
+  top: number;
   width: number;
   height: number;
   settle: Settle | null;
   /** Eases run so far (a test reads it: an album opening should need none). */
   eases: number;
-  /** The focus and the tween target (x, y, zoom, inset, stop, width, height, bottom cover) last laid out for. */
+  /** The focus and the tween target (x, y, zoom, inset, stop, width, height, bottom cover, top inset) last laid out
+   * for. */
   focus: unknown;
   focusAt: number;
   target: Float64Array;
@@ -190,7 +192,7 @@ function paint(w: Work): void {
   if (tip && it) {
     // Measured by HoverLabel after each content change, so no layout read per frame.
     const { width: tw, height: th } = getOverlaySize('hover');
-    const area = visibleArea(w.inset, w.width, w.height, TIP_EDGE);
+    const area = visibleArea(w.inset, w.width, w.height, TIP_EDGE, w.top);
     const half = it.drawn / 2;
     let lx = it.x + half + 14;
     if (lx + tw > area.right) lx = it.x - half - 14 - tw;
@@ -221,7 +223,7 @@ function tweenTarget(w: Work, store: MapStore, width: number, height: number): {
   }
   const k = w.target;
   const stop = STOP_T[input.stop];
-  const moved = !w.hasTarget || k[0] !== to.x || k[1] !== to.y || k[2] !== to.zoom || k[3] !== input.insetLeft || k[4] !== stop || k[5] !== width || k[6] !== height || k[7] !== input.bottomCover;
+  const moved = !w.hasTarget || k[0] !== to.x || k[1] !== to.y || k[2] !== to.zoom || k[3] !== input.insetLeft || k[4] !== stop || k[5] !== width || k[6] !== height || k[7] !== input.bottomCover || k[8] !== input.insetTop;
   if (moved) {
     k[0] = to.x;
     k[1] = to.y;
@@ -231,14 +233,15 @@ function tweenTarget(w: Work, store: MapStore, width: number, height: number): {
     k[5] = width;
     k[6] = height;
     k[7] = input.bottomCover;
+    k[8] = input.insetTop;
     w.hasTarget = true;
   }
   if (!newFocus && !(moved && now - w.focusAt < RETARGET_MS)) return null;
-  const cam = frustumCamera(to, width, height, input.insetLeft);
+  const cam = frustumCamera(to, width, height, input.insetLeft, input.insetTop);
   const pos = interpolated(data, stop);
   const rect = canvasRect(width, height);
   const anchors = [f.seed, ...f.recs].map((id) => ({ id, ...worldToScreen(pos[2 * id], pos[2 * id + 1], rect, cam) }));
-  const area = visibleArea(input.insetLeft, width, height, MARKER_EDGE);
+  const area = visibleArea(input.insetLeft, width, height, MARKER_EDGE, input.insetTop);
   return { anchors, bounds: { ...area, bottom: Math.min(area.bottom, height - input.bottomCover - MARKER_EDGE) } };
 }
 
@@ -312,13 +315,14 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
       lineAt: new Float64Array(0),
       lineEls: [],
       inset: 0,
+      top: 0,
       width: 0,
       height: 0,
       settle: null,
       eases: 0,
       focus: null,
       focusAt: 0,
-      target: new Float64Array(8),
+      target: new Float64Array(9),
       hasTarget: false,
       asked: false,
     });
@@ -333,7 +337,7 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
     const rect = canvasRect(width, height);
     // The animated inset, so markers follow the map while the album panel slides.
     const inset = Math.max(0, insetCurrent);
-    const area = visibleArea(inset, width, height, MARKER_EDGE);
+    const area = visibleArea(inset, width, height, MARKER_EDGE, input.insetTop);
     // Above a full-width bottom panel (the phone slider), with the same edge as elsewhere.
     const b = w.bounds;
     b.left = area.left;
@@ -361,6 +365,7 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
     const n = placed.length;
     w.placed = placed;
     w.inset = inset;
+    w.top = input.insetTop;
     w.width = width;
     w.height = height;
     if (w.shown.length !== 2 * n) w.shown = new Float64Array(2 * n);

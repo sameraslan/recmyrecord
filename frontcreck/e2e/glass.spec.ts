@@ -259,3 +259,38 @@ test.describe('the hint band and the hover label', () => {
     expect(r.ratio).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+test('header text keeps 4.5:1 with the brightest gas on screen behind the bar', async ({ page, isMobile }) => {
+  // The map runs under the header: on wide screens the bar is glass over the gas, on a phone it is solid.
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  // TODO(part2-task8): twinkleOff(page)
+  const selectors = isMobile
+    ? ['.wordmark', '.top nav .navbtn', '.search-toggle']
+    : ['.wordmark', '.top nav .navbtn[aria-current="page"]', '.top nav .navbtn:not([aria-current])'];
+  const results: Array<{ selector: string; ratio: number; gas: number }> = [];
+  for (const selector of selectors) {
+    // The brightest gas on screen, found with the header hidden, slid behind this item's words.
+    const gas = await panBrightestGasUnder(page, selector);
+    // A zero pan every 150 ms counts as the visitor's hand on the map, which keeps the idle recentring away while
+    // the screenshot is taken with much of the cloud off screen.
+    await page.evaluate(() => {
+      (window as unknown as { __hold: number }).__hold = window.setInterval(() => window.__rmr!.map!.panBy(0, 0), 150);
+    });
+    const [r] = await contrastOverBackdrop(page, 'header.top', [selector]);
+    await page.evaluate(() => window.clearInterval((window as unknown as { __hold: number }).__hold));
+    results.push({ ...r, gas });
+  }
+  console.log(`header over the brightest gas: ${results.map((r) => `${r.selector} ${r.ratio.toFixed(2)} (gas ${r.gas.toFixed(2)})`).join(', ')}`);
+  for (const r of results) {
+    // Cream gas, not sky: otherwise this measures nothing.
+    expect(r.gas, `mean luminance of the gas moved under ${r.selector}`).toBeGreaterThan(0.4);
+    expect(r.ratio, r.selector).toBeGreaterThanOrEqual(4.5);
+  }
+});

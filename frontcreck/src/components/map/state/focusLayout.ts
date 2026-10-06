@@ -690,13 +690,15 @@ function markerBox(ids: readonly number[], positions: Float32Array, cx: number, 
  * then the markers are laid out as MarkerDriver lays them out (ring and separation, in CSS px), the framing
  * zooms out while their boxes do not fit, and it is centred on the boxes. The camera position is the centre of
  * the visible area (applyFrustum), so the fit is computed around it. `clampZoom` applies the camera's zoom range.
- * Markers that still do not fit (a pile the ring spreads wider than the area) are held inside by MarkerDriver. */
+ * Markers that still do not fit (a pile the ring spreads wider than the area) are held inside by MarkerDriver.
+ * `insetTopPx` is the header over the top of the canvas: the fit stays below it. */
 export function focusCamera(
   ids: readonly number[],
   positions: Float32Array,
   width: number,
   height: number,
   insetPx: number,
+  insetTopPx: number,
   pad: MapPadding,
   clampZoom: (zoom: number) => number,
 ): MapCamera {
@@ -717,7 +719,7 @@ export function focusCamera(
   const spanX = Math.max(x1 - x0, MIN_FOCUS_SPAN);
   const spanY = Math.max(y1 - y0, MIN_FOCUS_SPAN);
   const availW = Math.max(width - insetPx - pad.left - pad.right, 80);
-  const availH = Math.max(height - pad.top - pad.bottom, 80);
+  const availH = Math.max(height - insetTopPx - pad.top - pad.bottom, 80);
   const m = MARKER_SIZE.rec;
   // CSS px per world unit.
   const kAnchors = Math.min(Math.max(availW - m, 40) / spanX, Math.max(availH - m, 40) / spanY);

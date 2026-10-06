@@ -1,7 +1,7 @@
 import { interpolated, type MapData } from "../data";
 import { NAMES_BAND_PX } from "../theme";
 import type { MapPadding } from "../types";
-import { COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, MAX_ZOOM, pxPerWorld, zoomForPxPerWorld } from "./zoomLimits";
+import { COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, MAX_ZOOM, pxPerWorld, visibleScale, zoomForPxPerWorld } from "./zoomLimits";
 
 export interface Bounds {
   minX: number;
@@ -77,27 +77,33 @@ export interface FitArea {
   height: number;
   /** CSS px covered by the album panel on the left. */
   insetLeft: number;
+  /** CSS px covered by the header along the top. */
+  insetTop: number;
   /** CSS px kept clear around the cloud inside the visible area. */
   padding: MapPadding;
 }
 
 /**
  * The overview camera: the zoom at which the `cloud` box fits the visible
- * area (right of `insetLeft`) less `padding`, clamped to
- * [FIT_ZOOM_MIN, FIT_ZOOM_MAX], and the camera position that centres the box
+ * area (right of `insetLeft`, below `insetTop`) less `padding`, clamped to
+ * [FIT_ZOOM_MIN, FIT_ZOOM_MAX] in the size that range has on screen when
+ * nothing covers the canvas, and the camera position that centres the box
  * in the padded area. camera.position is the centre of the visible area
- * (canvas/InitialFrame.tsx applyFrustum), so uneven padding shifts it.
+ * (canvas/InitialFrame.tsx applyFrustum), so uneven padding shifts it and the
+ * insets do not.
  */
 export function fitView(cloud: Bounds, area: FitArea): { zoom: number; center: { x: number; y: number } } {
-  const { width, height, insetLeft, padding: pad } = area;
+  const { width, height, insetLeft, insetTop, padding: pad } = area;
   // Guard against a degenerate (zero-size) cloud so a single-point dataset
   // never divides by zero; the clamp then caps it at FIT_ZOOM_MAX.
   const w = Math.max(cloud.maxX - cloud.minX, 1e-6);
   const h = Math.max(cloud.maxY - cloud.minY, 1e-6);
   const availW = Math.max(width - insetLeft - pad.left - pad.right, 40);
-  const availH = Math.max(height - pad.top - pad.bottom, 40);
+  const availH = Math.max(height - insetTop - pad.top - pad.bottom, 40);
   const scale = Math.min(availW / w, availH / h);
-  const zoom = Math.max(FIT_ZOOM_MIN, Math.min(FIT_ZOOM_MAX, zoomForPxPerWorld(scale, height)));
+  // The fit range in the size it has on screen when nothing covers the canvas (zoomLimits visibleScale).
+  const s = visibleScale(height, insetTop);
+  const zoom = Math.max(FIT_ZOOM_MIN * s, Math.min(FIT_ZOOM_MAX * s, zoomForPxPerWorld(scale, height)));
   const wpp = 1 / pxPerWorld(zoom, height);
   const c = cloudCenter(cloud);
   return {
@@ -125,6 +131,8 @@ export interface OverviewArea {
   height: number;
   /** CSS px covered by the album panel on the left. */
   insetLeft: number;
+  /** CSS px covered by the header along the top. */
+  insetTop: number;
   /** CSS px covered by the phone slider panel at the bottom (MapInput.bottomCover; 0 on desktop). */
   bottomCover: number;
 }
@@ -151,14 +159,16 @@ export function overviewExtent(xy: Float32Array): OverviewExtent {
  * percentile x-span fills the width right of the album panel less 24 px a side, capped at 12.5 px covers, never
  * wider than the Whole map (`wholeZoom`, fitView's zoom). Centred on the span in x and on the median row in y; on a
  * phone the median row sits in the middle of the band above the slider panel (the prototype's free rectangle).
- * Regions above and below run off screen. camera.position is the centre of the visible area (applyFrustum).
+ * Regions above and below run off screen. camera.position is the centre of the visible area (applyFrustum), which
+ * is below the header's `insetTop`: the centre needs no term for it, and only the zoom ceiling does (MAX_ZOOM in
+ * the size it has on screen when nothing covers the canvas).
  */
 export function fitOverview(ext: OverviewExtent, wholeZoom: number, area: OverviewArea): { zoom: number; center: { x: number; y: number } } {
-  const { width, height, insetLeft, bottomCover } = area;
+  const { width, height, insetLeft, insetTop, bottomCover } = area;
   const whole = pxPerWorld(wholeZoom, height);
   const across = Math.max(width - insetLeft - 2 * OVERVIEW_SIDE_PAD_PX, 40) / Math.max(ext.x99 - ext.x1, 1e-6);
   const cap = OVERVIEW_COVER_MAX_PX / COVER_WORLD;
-  const zoom = Math.min(MAX_ZOOM, zoomForPxPerWorld(Math.max(whole, Math.min(across, cap)), height));
+  const zoom = Math.min(MAX_ZOOM * visibleScale(height, insetTop), zoomForPxPerWorld(Math.max(whole, Math.min(across, cap)), height));
   const ppw = pxPerWorld(zoom, height);
   return { zoom, center: { x: (ext.x1 + ext.x99) / 2, y: ext.medY - bottomCover / 2 / ppw } };
 }

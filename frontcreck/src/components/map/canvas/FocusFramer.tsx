@@ -9,10 +9,10 @@ function focusKey(s: MapStore): string {
   const f = s.input.focus;
   if (!f) return '';
   const p = s.input.framePadding;
-  return `${f.seed}|${f.recs.join(',')}|${s.input.stop}|${s.input.insetLeft}|${p.top},${p.right},${p.bottom},${p.left}`;
+  return `${f.seed}|${f.recs.join(',')}|${s.input.stop}|${s.input.insetLeft}|${s.input.insetTop}|${p.top},${p.right},${p.bottom},${p.left}`;
 }
 
-/** Frames the seed and visible recommendations whenever they, the stop, the inset or the padding change,
+/** Frames the seed and visible recommendations whenever they, the stop, the insets or the padding change,
  * unless the user has moved the camera since this seed was focused or since the last Reset
  * (`focusRearmedAt`). A new seed always frames. */
 export function FocusFramer() {

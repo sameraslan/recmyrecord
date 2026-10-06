@@ -1,7 +1,7 @@
 /** Screen and world conversion for the map's orthographic camera: the one implementation behind overlay
  * placement, picking, focus framing and marker layout. It mirrors three r169's
  * OrthographicCamera.updateProjectionMatrix exactly, including zoom and the view offset that applyFrustum
- * (canvas/InitialFrame.tsx) uses to centre the camera right of the album panel. */
+ * (canvas/InitialFrame.tsx) uses to centre the camera right of the album panel and below the header. */
 
 export interface ScreenRect {
   left: number;
@@ -69,8 +69,9 @@ export function screenToWorld(clientX: number, clientY: number, rect: ScreenRect
 /** The canvas's own rectangle, for drivers that position DOM overlays inside the map pane. */
 export const canvasRect = (width: number, height: number): ScreenRect => ({ left: 0, top: 0, width, height });
 
-/** The part of the canvas that shows the map (right of the album panel inset), less `edge` CSS px on every
- * side: the one area the hover label and the focus markers are kept inside. */
-export function visibleArea(insetLeft: number, width: number, height: number, edge: number): ViewBounds {
-  return { left: insetLeft + edge, top: edge, right: width - edge, bottom: height - edge };
+/** The part of the canvas that shows the map (right of the album panel inset, below the header's `insetTop`), less
+ * `edge` CSS px on every side: the one area the hover label, the focus markers and the region names are kept
+ * inside. */
+export function visibleArea(insetLeft: number, width: number, height: number, edge: number, insetTop: number): ViewBounds {
+  return { left: insetLeft + edge, top: insetTop + edge, right: width - edge, bottom: height - edge };
 }

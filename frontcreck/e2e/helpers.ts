@@ -219,7 +219,9 @@ export async function albumSpread(page: Page): Promise<Spread> {
     xs.sort((a, b) => a - b);
     ys.sort((a, b) => a - b);
     const at = (a: number[], q: number) => a[Math.min(a.length - 1, Math.max(0, Math.floor(q * (a.length - 1))))];
-    return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, cover, n: xs.length, minX: xs[0], maxX: xs[xs.length - 1], minY: ys[0], maxY: ys[ys.length - 1], x1: at(xs, 0.01), x99: at(xs, 0.99), medY: at(ys, 0.5) };
+    // The canvas runs under the header: the top of the map a visitor sees is the stage's, as it was the canvas's.
+    const top = document.querySelector('#stage')!.getBoundingClientRect().top;
+    return { left: r.left, top, right: r.right, bottom: r.bottom, cover, n: xs.length, minX: xs[0], maxX: xs[xs.length - 1], minY: ys[0], maxY: ys[ys.length - 1], x1: at(xs, 0.01), x99: at(xs, 0.99), medY: at(ys, 0.5) };
   });
 }
 

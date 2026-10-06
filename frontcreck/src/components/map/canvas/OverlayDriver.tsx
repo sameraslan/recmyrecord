@@ -39,8 +39,8 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
         let lx = p.x + 16;
         let ly = p.y - th - 12;
         if (lx + tw > width - TIP_EDGE) lx = p.x - tw - 16;
-        if (ly < 8) ly = p.y + 18;
-        const area = visibleArea(input.insetLeft, width, height, TIP_EDGE);
+        if (ly < input.insetTop + 8) ly = p.y + 18;
+        const area = visibleArea(input.insetLeft, width, height, TIP_EDGE, input.insetTop);
         lx = clamp(lx, area.left, area.right - tw);
         ly = clamp(ly, area.top, area.bottom - th);
         tip.style.transform = `translate3d(${lx}px, ${ly}px, 0)`;

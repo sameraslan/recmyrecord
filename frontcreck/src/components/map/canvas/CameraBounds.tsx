@@ -6,7 +6,7 @@ import * as THREE from "three";
 
 import { nudgeVector, viewportWorldRect, visibleFractionThreshold } from "../state/bounds";
 import { useMapStore } from "../state/mapStore";
-import { getOverviewFraming, isFramed } from "../state/view";
+import { getOverviewFraming, getVisibleScale, isFramed } from "../state/view";
 
 // How hard to pull the camera back toward the album box each frame. Soft so a
 // manual over-pan eases back in instead of snapping.
@@ -100,6 +100,8 @@ export function CameraBounds() {
 
     const cam = state.camera as THREE.OrthographicCamera;
     const viewport = viewportWorldRect(cam);
+    // Only what is below the header counts as in view; cam.position is the centre of that area.
+    viewport.halfH *= getVisibleScale();
     // The cloud's full extent, the same box the overview framing fits
     // (published by InitialFrame, recomputed on every sliderT change).
     const framing = getOverviewFraming();

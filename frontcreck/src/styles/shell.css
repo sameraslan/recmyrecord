@@ -70,9 +70,10 @@ ol, ul { padding: 0; list-style: none; }
 .textbtn.u span { text-decoration: underline; text-decoration-color: rgba(241, 236, 228, .35); text-underline-offset: 5px; }
 .textbtn.u:hover span { text-decoration-color: var(--color-lamp); }
 
-/* stage: everything below the header; the map lives here for the whole session */
+/* stage: everything below the header; the map lives here for the whole session. The map pane alone reaches up
+   under the header (styles/map.css) and clips itself, so the stage no longer clips. */
 main#main { display: block; }
-.stage { position: fixed; left: 0; right: 0; top: var(--hdr); bottom: 0; overflow: hidden; }
+.stage { position: fixed; left: 0; right: 0; top: var(--hdr); bottom: 0; }
 
 /* toast */
 .toast {

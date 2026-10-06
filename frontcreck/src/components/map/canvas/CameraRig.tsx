@@ -7,7 +7,7 @@ import * as THREE from "three";
 import { prefersReducedMotion } from "@/lib/media";
 import { useMapStore } from "../state/mapStore";
 import { screenToWorld } from "../state/projection";
-import { getOverviewFraming } from "../state/view";
+import { getOverviewFraming, getVisibleScale } from "../state/view";
 import { MAX_ZOOM, MIN_ZOOM_FIT_MULTIPLE } from "../state/zoomLimits";
 import { anchoredZoom, pinchZoom } from "../state/zoomMath";
 import { getCameraControl } from "./CameraTween";
@@ -41,8 +41,10 @@ const VELOCITY_HISTORY_LEN = 3;
 // flick: no fling, so the camera stays exactly where the drag left it.
 const FLING_MAX_IDLE_MS = 80;
 
+/** The ceiling is MAX_ZOOM in the size it has on screen when nothing covers the canvas (zoomLimits visibleScale):
+ * with the canvas running under the header, the deepest zoom shows albums exactly as far apart as before. */
 export function clampZoom(z: number): number {
-  return Math.max(getMinZoom(), Math.min(MAX_ZOOM, z));
+  return Math.max(getMinZoom(), Math.min(MAX_ZOOM * getVisibleScale(), z));
 }
 
 /** Keyboard steps: CSS px per arrow press and zoom factor per +/- press. */

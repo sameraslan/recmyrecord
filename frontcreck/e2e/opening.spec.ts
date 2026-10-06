@@ -6,9 +6,21 @@ import { act, albumSpread, camera, isPhone, overviewMiss, waitForCameraIdle, wai
 
 /** Task 0 of part 2: /map opens at the approved Overview (final-overview.jpg); the fit button gives the Whole map.
  * Zooms recorded in the plan (docs/superpowers/plans/2026-10-05-trifid-theme-2-task0-overview-framing.md) from the
- * committed positions: desktop 1440 x 900 (canvas 836 tall) and phone 390 x 844 (canvas 784 tall), Balanced. */
+ * committed positions: desktop 1440 x 900 (canvas 836 tall) and phone 390 x 844 (canvas 784 tall), Balanced.
+ * Those canvases started below the header. The canvas now runs under it (part 3 Task 3) and a zoom is relative to
+ * the canvas height, so the same scale on screen is `zoomAsRecorded`: the camera's zoom times the canvas height
+ * over the height of the map below the header (836 and 784 still). */
 const OVERVIEW_ZOOM = { desktop: 2.15721, phone: 0.56516 };
 const WHOLE_ZOOM = { desktop: 0.78507, phone: 0.37581 };
+
+/** The camera's zoom as a canvas that starts below the header would have it: the scale on screen is the same. */
+async function zoomAsRecorded(page: Page, zoom: number): Promise<number> {
+  const k = await page.evaluate(() => {
+    const canvas = document.querySelector('canvas.map-canvas')!.getBoundingClientRect();
+    return canvas.height / (canvas.bottom - document.querySelector('#stage')!.getBoundingClientRect().top);
+  });
+  return zoom * k;
+}
 
 async function openMap(page: Page): Promise<void> {
   await page.goto('/map');
@@ -23,9 +35,10 @@ test('/map opens at the Overview: the 1st to 99th percentile span fills the pane
   await openMap(page);
   const s = await albumSpread(page);
   expect(overviewMiss(s)).toEqual([]);
-  const z = (await camera(page)).zoom;
+  const z = await zoomAsRecorded(page, (await camera(page)).zoom);
   expect(z).toBeCloseTo(OVERVIEW_ZOOM[isPhone(info) ? 'phone' : 'desktop'], 3);
-  // covers stay dots and names can show: under 13 px (12.5 at most)
+  // covers stay dots and names can show: under 13 px (12.5 at most). `z` is the zoom of a canvas as tall as the
+  // map below the header, which is `h`.
   const h = s.bottom - s.top;
   expect((z * h) / 1.1 * 0.0068).toBeLessThan(12.5 + 1e-6);
 });
@@ -37,7 +50,7 @@ test('the fit button gives the Whole map, and pressing it again stays there', as
   await waitForCameraIdle(page);
   expect(wholeMapMiss(await albumSpread(page), isPhone(info))).toEqual([]);
   const whole = await camera(page);
-  expect(whole.zoom).toBeCloseTo(WHOLE_ZOOM[isPhone(info) ? 'phone' : 'desktop'], 3);
+  expect(await zoomAsRecorded(page, whole.zoom)).toBeCloseTo(WHOLE_ZOOM[isPhone(info) ? 'phone' : 'desktop'], 3);
   expect(whole.zoom).toBeLessThan(opened.zoom);
   await act(page.getByRole('button', { name: COPY.map.reset }), isMobile);
   await waitForCameraIdle(page);
@@ -84,7 +97,7 @@ test('an album link opens on the album whatever the opening switch says', async 
   const switched = await openAlbum();
   expect(same(switched, plain)).toBeLessThan(1e-6);
   // and it is the album's own framing, not the Overview's
-  expect(Math.abs(plain.zoom - OVERVIEW_ZOOM[isMobile ? 'phone' : 'desktop'])).toBeGreaterThan(0.05);
+  expect(Math.abs((await zoomAsRecorded(page, plain.zoom)) - OVERVIEW_ZOOM[isMobile ? 'phone' : 'desktop'])).toBeGreaterThan(0.05);
 });
 
 test('from Home the map link glides to the Overview; a camera saved in Explore is kept', async ({ page, isMobile }) => {

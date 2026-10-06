@@ -6,11 +6,10 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { toSummary } from '@/lib/data/catalog';
 import { themeFor } from '@/lib/data/theme';
 import { useCatalog, usePositions, useThemeLoad } from '@/lib/data/useData';
-import { useIsNarrow } from '@/lib/media';
+import { HEADER_NARROW_PX, HEADER_PX, useIsNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
 import type { StopId } from '@/lib/types';
 import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-state';
-import { AmbientLayers } from '@/components/album/AmbientWash';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { buildMapData } from './data';
 import { ExploreHere } from './overlays/ExploreHere';
@@ -151,7 +150,6 @@ export function MapStage() {
   const mapModeFor = useAppStore((s) => s.mapModeFor);
   // Phone map mode belongs to one album: on a pick the new URL turns it off before the old panel unmounts.
   const mapMode = mapModeFor !== null && pathname === `/album/${mapModeFor}`;
-  const ambient = useAppStore((s) => s.ambient);
 
   useEffect(() => {
     // After first paint, like the rest of the map: the probe creates (and releases) a WebGL context. A worker
@@ -204,6 +202,7 @@ export function MapStage() {
       explore: view === 'explore',
       dimmed,
       insetLeft: view === 'album' && !narrow ? panelInset : 0,
+      insetTop: narrow ? HEADER_NARROW_PX : HEADER_PX,
       framePadding: narrow ? phonePadding.frame : DESKTOP_PADDING,
       fitPadding: narrow ? phonePadding.fit : DESKTOP_FIT_PADDING,
       // The full-width phone slider panel; the desktop corner card stays out of the marker bounds.
@@ -356,8 +355,6 @@ export function MapStage() {
       // The phone zoom controls sit above the measured slider panel (styles/map.css).
       style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
     >
-      {/* Under the transparent canvas: the album's ambient wash shows beneath the dots. */}
-      <AmbientLayers ambient={view === 'album' ? ambient : null} variant="map" />
       <div className="map-host">
         {enabled && mapData ? (
           <MusicMap data={mapData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />

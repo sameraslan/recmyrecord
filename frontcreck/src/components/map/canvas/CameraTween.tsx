@@ -74,13 +74,15 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       // Centred. On phones, where the Explore card is a bottom sheet (it raises framePadding bottom while open),
       // an album whose centred position would fall outside the framing band sits in the middle of the band,
       // above the sheet. Desktop keeps the centre: its card sits in the corner.
-      const pad = useMapStore.getState().input.framePadding;
+      const { framePadding: pad, insetTop } = useMapStore.getState().input;
+      // In px of the visible map (below the header): camera.position is drawn at its centre, visible / 2.
+      const visible = height - insetTop;
       const top = pad.top;
-      const bottom = height - pad.bottom;
+      const bottom = visible - pad.bottom;
       let y = p[2 * id + 1];
-      if (isNarrow() && bottom > top && (height / 2 < top || height / 2 > bottom)) {
+      if (isNarrow() && bottom > top && (visible / 2 < top || visible / 2 > bottom)) {
         const wpp = (camera.top - camera.bottom) / (height * zoom);
-        y -= (height / 2 - (top + bottom) / 2) * wpp;
+        y -= (visible / 2 - (top + bottom) / 2) * wpp;
       }
       return { x: p[2 * id], y, zoom };
     };
@@ -89,7 +91,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       if (!input.focus || !data) return null;
       const { width, height } = get().size;
       const target = interpolated(data, STOP_T[input.stop]);
-      return focusCamera([input.focus.seed, ...input.focus.recs], target, width, height, input.insetLeft, input.framePadding, clampZoom);
+      return focusCamera([input.focus.seed, ...input.focus.recs], target, width, height, input.insetLeft, input.insetTop, input.framePadding, clampZoom);
     };
     const api: MapApi = {
       zoomBy: (factor) => {
@@ -123,7 +125,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
         const kind = openingKind(input, window.__rmrOpen);
         const { width, height } = get().size;
         const whole = overview();
-        const to = kind === 'overview' ? overviewView(data, sliderT, { width, height, insetLeft: insetCurrent, bottomCover: input.bottomCover }, whole.zoom) : null;
+        const to = kind === 'overview' ? overviewView(data, sliderT, { width, height, insetLeft: insetCurrent, insetTop: input.insetTop, bottomCover: input.bottomCover }, whole.zoom) : null;
         const target = to ? { x: to.center.x, y: to.center.y, zoom: to.zoom } : whole;
         setFitKind(kind, target);
         // Already there (About and back with the Overview untouched): no glide, no frames.
@@ -188,7 +190,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
     const ins = inset.current;
     if (ins.current < 0) {
       ins.current = ins.to = input.insetLeft;
-      applyFrustum(camera, width, height, ins.current);
+      applyFrustum(camera, width, height, ins.current, input.insetTop);
       useMapStore.getState().setInsetCurrent(ins.current);
     }
     if (input.insetLeft !== ins.to) {
@@ -200,7 +202,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
     if (ins.current !== ins.to) {
       const p = ins.duration ? Math.min(1, (performance.now() - ins.start) / ins.duration) : 1;
       ins.current = p >= 1 ? ins.to : ins.from + (ins.to - ins.from) * easeOutCubic(p);
-      applyFrustum(camera, width, height, ins.current);
+      applyFrustum(camera, width, height, ins.current, input.insetTop);
       useMapStore.getState().setInsetCurrent(ins.current);
       invalidate();
     }

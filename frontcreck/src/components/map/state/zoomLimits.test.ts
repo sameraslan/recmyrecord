@@ -8,6 +8,7 @@ import {
   coverFade,
   dotCssPx,
   pxPerWorld,
+  visibleScale,
   zoomForCoverPx,
   zoomForPxPerWorld,
 } from "./zoomLimits";
@@ -45,5 +46,20 @@ describe("zoom limits", () => {
     expect(dotCssPx(2, H)).toBeGreaterThan(dotCssPx(0.784, H));
     expect(dotCssPx(zoomForCoverPx(16, H), H)).toBeCloseTo(6.88, 2);
     expect(dotCssPx(zoomForCoverPx(32, H), H)).toBe(7.2);
+  });
+});
+
+describe("visibleScale", () => {
+  it("is the visible height over the canvas height, and 1 with nothing over the canvas", () => {
+    expect(visibleScale(900, 0)).toBe(1);
+    expect(visibleScale(900, 64)).toBeCloseTo(836 / 900, 12);
+    expect(visibleScale(844, 60)).toBeCloseTo(784 / 844, 12);
+    // A canvas that has not been measured yet: never zero or negative.
+    expect(visibleScale(0, 64)).toBe(0.5);
+  });
+
+  it("keeps a zoom limit the same size on screen", () => {
+    expect(pxPerWorld(MAX_ZOOM * visibleScale(900, 64), 900)).toBeCloseTo(pxPerWorld(MAX_ZOOM, 836), 8);
+    expect(pxPerWorld(MAX_ZOOM * visibleScale(844, 60), 844)).toBeCloseTo(pxPerWorld(MAX_ZOOM, 784), 8);
   });
 });

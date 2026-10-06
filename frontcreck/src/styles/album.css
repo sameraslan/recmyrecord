@@ -1,12 +1,10 @@
 .album { position: absolute; left: 0; top: 0; bottom: 0; width: var(--panel); z-index: 10; background: var(--panel-bg); border-right: 1px solid var(--color-rule); }
 .amb { position: absolute; left: 0; right: 0; top: 0; height: 440px; pointer-events: none; opacity: .9; }
-.amb i, .map-amb i { position: absolute; inset: 0; opacity: 0; }
-.amb i.on, .map-amb i.on { opacity: 1; animation: amb-in .42s ease both; }
-.amb i.off, .map-amb i.off { animation: amb-out .42s ease both; }
+.amb i { position: absolute; inset: 0; opacity: 0; }
+.amb i.on { opacity: 1; animation: amb-in .42s ease both; }
+.amb i.off { animation: amb-out .42s ease both; }
 @keyframes amb-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes amb-out { from { opacity: 1; } to { opacity: 0; } }
-/* The album's wash stays inside the panel: over the nebula a per-album tint would fight the map's own colours. */
-.map-amb { display: none; }
 .album-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px var(--gut) 20px; scrollbar-width: thin; scrollbar-color: var(--color-room-4) transparent; }
 .album-close { position: absolute; right: 10px; top: 8px; z-index: 3; width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-dust); border-radius: 2px; }
 .album-close:hover { color: var(--color-paper); }

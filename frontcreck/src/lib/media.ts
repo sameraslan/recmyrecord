@@ -1,6 +1,13 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 export const NARROW_MEDIA_QUERY = '(max-width: 899px)';
+/** Height of the header in CSS px: `--hdr` in app/globals.css, 64 px on wide screens and 60 px under 900 px wide
+ * (styles/stage.test.ts keeps both pairs equal). The map canvas runs under the header, so one of these is
+ * `MapInput.insetTop` on every route; MapStage picks it with NARROW_MEDIA_QUERY, the breakpoint of the CSS. They
+ * live here, not in components/map/types.ts (which re-exports them), so MapStage's first-load chunk gains no
+ * module: it already imports this file. */
+export const HEADER_PX = 64;
+export const HEADER_NARROW_PX = 60;
 export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 export const EASE_OUT = 'cubic-bezier(.22,.72,.2,1)';
 /** Milliseconds. */

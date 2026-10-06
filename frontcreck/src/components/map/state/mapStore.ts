@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { ThemeData } from '@/lib/data/theme';
 import type { MapData } from '../data';
-import type { MapCallbacks, MapInput } from '../types';
+import { HEADER_PX, type MapCallbacks, type MapInput } from '../types';
 import { requestRender } from './invalidate';
 
 export const DEFAULT_INPUT: MapInput = {
@@ -13,6 +13,7 @@ export const DEFAULT_INPUT: MapInput = {
   explore: false,
   dimmed: true,
   insetLeft: 0,
+  insetTop: HEADER_PX,
   framePadding: { top: 96, right: 96, bottom: 96, left: 96 },
   fitPadding: { top: 55, right: 40, bottom: 115, left: 40 },
   bottomCover: 0,

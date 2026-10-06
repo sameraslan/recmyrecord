@@ -81,8 +81,15 @@ describe('glass', () => {
     }
   });
 
-  it('the album wash stays inside the panel', () => {
-    expect(read('styles/album.css')).toContain('.map-amb { display: none; }');
+  it('the album wash stays inside the panel: the map has no wash element and no stylesheet names one', () => {
+    // It was hidden with `.map-amb { display: none; }`; now MapStage renders none, so there is nothing to hide.
+    for (const f of SHEETS) expect(read(f), f).not.toContain('map-amb');
+    const stage = read('components/map/MapStage.tsx');
+    expect(stage).not.toContain('AmbientLayers');
+    expect(stage).not.toContain('ambient');
+    // The panel's own wash is still there.
+    expect(read('styles/album.css')).toMatch(/(?:^|\n)\.amb \{/);
+    expect(read('components/album/AlbumPanel.tsx')).toContain('<AmbientLayers ambient={seed.ambient} variant="panel" />');
   });
 
   it('no colour of the old warm theme is left in the stylesheets', () => {

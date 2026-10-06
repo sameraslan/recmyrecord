@@ -83,10 +83,12 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
     }),
   );
   const vp = page.viewportSize()!;
+  // The map runs under the header, so "on screen" means below the header's bottom edge, not below y = 0.
+  const headerBottom = await page.locator('header.top').evaluate((el) => el.getBoundingClientRect().bottom);
   for (const box of boxes) {
     expect(box.left).toBeGreaterThanOrEqual(0);
     expect(box.right).toBeLessThanOrEqual(vp.width);
-    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeGreaterThanOrEqual(headerBottom);
     expect(box.bottom).toBeLessThanOrEqual(vp.height);
   }
   // (b) no two marker boxes closer than the 10 px gap (less a little rounding)

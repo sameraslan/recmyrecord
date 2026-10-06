@@ -279,8 +279,7 @@ export function createNamesPlacer(): NamesPlacer {
           const py = (vb.top - (positions[2 * input.selected + 1] - y)) * sy;
           blockers.push({ left: px - PICK_CLEAR_PX, top: py - PICK_CLEAR_PX, right: px + PICK_CLEAR_PX, bottom: py + PICK_CLEAR_PX });
         }
-        const visible = visibleArea(inset, width, height, 0);
-        visible.top = top;
+        const visible = visibleArea(inset, width, height, 0, top);
         const placed = layoutNames({
           candidates,
           visible,

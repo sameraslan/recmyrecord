@@ -138,3 +138,16 @@ export function releaseView(
   if (preFocusView) return { x: preFocusView.x, y: preFocusView.y, zoom: preFocusView.zoom };
   return { x: overview.center.x, y: overview.center.y, zoom: overview.zoom };
 }
+
+/** `visibleScale` of the current canvas (state/zoomLimits.ts), written by canvas/InitialFrame.tsx with the
+ * frustum and read where no canvas size is at hand: CameraRig's `clampZoom` and CameraBounds. 1 until a canvas has
+ * been measured. */
+let visibleScaleNow = 1;
+
+export function setVisibleScale(next: number): void {
+  visibleScaleNow = next;
+}
+
+export function getVisibleScale(): number {
+  return visibleScaleNow;
+}

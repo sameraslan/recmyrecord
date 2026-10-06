@@ -3,6 +3,9 @@ import type { AlbumId, Focus, MapCamera, StopId } from '@/lib/types';
 import type { MapData } from './data';
 import type { View } from '@/lib/url-state';
 
+/** The header's two heights, the values of `MapInput.insetTop` (defined in lib/media.ts, which says why). */
+export { HEADER_NARROW_PX, HEADER_PX } from '@/lib/media';
+
 /** CSS px kept clear around the framed albums, inside the visible map area. */
 export interface MapPadding {
   top: number;
@@ -24,6 +27,11 @@ export interface MapInput {
   dimmed: boolean;
   /** CSS px covered by the album panel on the left; the map re-centres on the rest. */
   insetLeft: number;
+  /** CSS px of the canvas covered by the header along the top. `camera.position` is drawn at the centre of what is
+   * below it (and right of `insetLeft`), and every fit, marker and label stays inside that area. */
+  insetTop: number;
+  /** Album framing, inside the visible map (below the header, right of the album panel): clear of the slider panel
+   * (top-left on desktop, bottom on phones, where the bottom is measured). */
   framePadding: MapPadding;
   /** CSS px kept clear around the whole cloud in the overview (clear of the header, slider and hint). */
   fitPadding: MapPadding;

@@ -52,7 +52,7 @@ const older = [];
 for (const file of olds) older.push({ name: path.basename(file), mod: await jiti.import(file) });
 const { normalizePositions } = await jiti.import(path.join(root, 'src/components/map/data.ts'));
 const { FRUSTUM_HALF_HEIGHT, MIN_ZOOM, MAX_ZOOM } = await jiti.import(path.join(root, 'src/components/map/state/zoomLimits.ts'));
-const { MARKER_SIZE, focusCamera, layoutMarkers, MarkerLayout } = current;
+const { MARKER_SIZE, layoutMarkers, MarkerLayout } = current;
 
 const positions = normalizePositions(JSON.parse(readFileSync(path.join(root, 'public/data/positions.json'), 'utf8')));
 const recs = JSON.parse(readFileSync(path.join(root, 'public/data/recs.json'), 'utf8'));
@@ -65,6 +65,10 @@ const VIEWS = {
   phone: { width: 390, height: 844, inset: 0, pad: { top: 80, right: 60, bottom: 169, left: 60 }, bottomCover: 165, worst: ['balanced', 3278] },
 };
 const clampZoom = (z) => Math.min(Math.max(z, MIN_ZOOM), MAX_ZOOM);
+// focusCamera takes the header's top inset as its sixth argument since the map runs under the header; a file passed
+// with --old may predate it (seven parameters). This model's canvas has nothing over its top: 0.
+const frameCamera = (mod, ids, pos, v) =>
+  mod.focusCamera.length >= 8 ? mod.focusCamera(ids, pos, v.width, v.height, v.inset, 0, v.pad, clampZoom) : mod.focusCamera(ids, pos, v.width, v.height, v.inset, v.pad, clampZoom);
 const boundsFor = (v, inset) => ({ left: inset + MARKER_EDGE, top: MARKER_EDGE, right: v.width - MARKER_EDGE, bottom: Math.min(v.height - MARKER_EDGE, v.height - v.bottomCover - MARKER_EDGE) });
 const pct = (sorted, q) => sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))];
 const us = (ms) => `${(ms * 1000).toFixed(1)} us`;
@@ -261,7 +265,7 @@ if (calls) {
             }
             return [best, out];
           };
-          const [tc, c] = fastest(() => mod.focusCamera(ids, pos, v.width, v.height, v.inset, v.pad, clampZoom));
+          const [tc, c] = fastest(() => frameCamera(mod, ids, pos, v));
           const k = (v.height * c.zoom) / (2 * FRUSTUM_HALF_HEIGHT);
           const cx = v.inset + (v.width - v.inset) / 2;
           const anchors = ids.map((id) => ({ id, x: cx + (pos[2 * id] - c.x) * k, y: v.height / 2 - (pos[2 * id + 1] - c.y) * k }));
@@ -281,7 +285,7 @@ if (calls) {
 function sequences(v, stop, seed) {
   const ids = [seed, ...recs[stop][seed].slice(0, RECS_SHOWN)];
   const pos = positions[stop];
-  const c = focusCamera(ids, pos, v.width, v.height, v.inset, v.pad, clampZoom);
+  const c = frameCamera(current, ids, pos, v);
   const k0 = (v.height * c.zoom) / (2 * FRUSTUM_HALF_HEIGHT);
   const frame = (p, camX, camY, k, inset) => {
     const cx = inset + (v.width - inset) / 2;
@@ -441,7 +445,7 @@ for (const [name, v] of Object.entries(VIEWS)) {
   for (const [stop, seed] of picks) {
     const ids = [seed, ...recs[stop][seed].slice(0, RECS_SHOWN)];
     const pos = positions[stop];
-    const to = focusCamera(ids, pos, v.width, v.height, v.inset, v.pad, clampZoom);
+    const to = frameCamera(current, ids, pos, v);
     const from = { x: to.x + 0.2, y: to.y - 0.1, zoom: to.zoom / 2.5 };
     const bounds = boundsFor(v, v.inset);
     const view = (c) => {

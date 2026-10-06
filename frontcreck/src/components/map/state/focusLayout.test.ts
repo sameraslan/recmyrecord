@@ -739,7 +739,7 @@ describe('focusCamera', () => {
     const pos = new Float32Array([0, 0, 0.3, 0.1, -0.2, 0.25, 0.1, -0.3]);
     const ids = [0, 1, 2, 3];
     const inset = 648;
-    const cam = focusCamera(ids, pos, W, H, inset, pad, noClamp);
+    const cam = focusCamera(ids, pos, W, H, inset, 0, pad, noClamp);
     const markers = layoutMarkers(project(cam, inset, pos, ids), MARKER_SIZE.seed, MARKER_SIZE.rec);
     for (const m of markers) {
       expect(m.x - m.size / 2).toBeGreaterThanOrEqual(inset + pad.left - 0.5);
@@ -758,7 +758,7 @@ describe('focusCamera', () => {
     }
     const ids = Array.from({ length: 11 }, (_, i) => i);
     const small = { top: 20, right: 20, bottom: 20, left: 20 };
-    const cam = focusCamera(ids, pos, 390, 400, 0, small, noClamp);
+    const cam = focusCamera(ids, pos, 390, 400, 0, 0, small, noClamp);
     const k = (400 * cam.zoom) / (2 * FRUSTUM_HALF_HEIGHT);
     const anchors = ids.map((id) => ({ id, x: 195 + (pos[2 * id] - cam.x) * k, y: 200 - (pos[2 * id + 1] - cam.y) * k }));
     const markers = layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec);
@@ -772,7 +772,21 @@ describe('focusCamera', () => {
 
   it('passes the zoom through the clamp', () => {
     const pos = new Float32Array([0, 0, 0.3, 0.1]);
-    expect(focusCamera([0, 1], pos, W, H, 0, pad, () => 1.5).zoom).toBe(1.5);
+    expect(focusCamera([0, 1], pos, W, H, 0, 0, pad, () => 1.5).zoom).toBe(1.5);
+  });
+
+  it('frames below a top inset exactly as on a canvas that starts under the header', () => {
+    const pos = new Float32Array([0, 0, 0.3, 0.1, -0.2, 0.25, 0.1, -0.3]);
+    const ids = [0, 1, 2, 3];
+    // The desktop header (64 px) and the phone's (60 px).
+    for (const TOP of [64, 60]) {
+      const before = focusCamera(ids, pos, W, H - TOP, 648, 0, pad, noClamp);
+      const after = focusCamera(ids, pos, W, H, 648, TOP, pad, noClamp);
+      expect(after.x).toBeCloseTo(before.x, 9);
+      expect(after.y).toBeCloseTo(before.y, 9);
+      // The same px per world unit: zoom times canvas height.
+      expect(after.zoom * H).toBeCloseTo(before.zoom * (H - TOP), 6);
+    }
   });
 });
 

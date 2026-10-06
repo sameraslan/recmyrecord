@@ -19,7 +19,7 @@ import {
   viewportWorldRect,
   visibleFractionThreshold,
 } from "./bounds";
-import { ATLAS_LOAD_PX, COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, pxPerWorld, zoomForPxPerWorld } from "./zoomLimits";
+import { ATLAS_LOAD_PX, COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, MAX_ZOOM, pxPerWorld, zoomForPxPerWorld } from "./zoomLimits";
 
 function fixtureData(xy: Array<[number, number]>): MapData {
   const flat = new Float32Array(xy.flat());
@@ -135,7 +135,7 @@ describe("fitView", () => {
     // 1.0 x 0.5 cloud on 1000 x 1100 px: 1000 px per world unit across, 2200 down, so the width
     // limits: zoom = 1000 * 1.1 / 1100 = 1.
     const cloud = { minX: -0.5, maxX: 0.5, minY: -0.25, maxY: 0.25 };
-    const v = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, padding: even });
+    const v = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, insetTop: 0, padding: even });
     expect(v.zoom).toBeCloseTo(1, 10);
     expect(v.center).toEqual({ x: 0, y: 0 });
   });
@@ -143,7 +143,7 @@ describe("fitView", () => {
   it("keeps the padding clear and centres the box in the padded area", () => {
     const cloud = { minX: 0, maxX: 1, minY: 0, maxY: 1 };
     const pad = { top: 100, right: 40, bottom: 200, left: 40 };
-    const v = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, padding: pad });
+    const v = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, insetTop: 0, padding: pad });
     // 800 px available both ways: 800 px per world unit, zoom = 800 * 1.1 / 1100.
     expect(v.zoom).toBeCloseTo(0.8, 10);
     // Bottom padding is 100 px larger, so the camera sits 50 px (1/16 world unit) below the box centre.
@@ -153,16 +153,47 @@ describe("fitView", () => {
 
   it("fits only the area right of the album panel", () => {
     const cloud = { minX: 0, maxX: 1, minY: 0, maxY: 0.1 };
-    const a = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, padding: even });
-    const b = fitView(cloud, { width: 1000, height: 1100, insetLeft: 500, padding: even });
+    const a = fitView(cloud, { width: 1000, height: 1100, insetLeft: 0, insetTop: 0, padding: even });
+    const b = fitView(cloud, { width: 1000, height: 1100, insetLeft: 500, insetTop: 0, padding: even });
     expect(b.zoom).toBeCloseTo(a.zoom / 2, 10);
   });
 
   it("clamps the zoom to the fit range", () => {
     const huge = { minX: -100, maxX: 100, minY: -100, maxY: 100 };
     const tiny = { minX: -0.001, maxX: 0.001, minY: -0.001, maxY: 0.001 };
-    expect(fitView(huge, { width: 400, height: 800, insetLeft: 0, padding: even }).zoom).toBe(FIT_ZOOM_MIN);
-    expect(fitView(tiny, { width: 400, height: 800, insetLeft: 0, padding: even }).zoom).toBe(FIT_ZOOM_MAX);
+    expect(fitView(huge, { width: 400, height: 800, insetLeft: 0, insetTop: 0, padding: even }).zoom).toBe(FIT_ZOOM_MIN);
+    expect(fitView(tiny, { width: 400, height: 800, insetLeft: 0, insetTop: 0, padding: even }).zoom).toBe(FIT_ZOOM_MAX);
+  });
+
+  it("fits below a top inset exactly as on a canvas that starts under the header", () => {
+    const cloud = { minX: -0.4, maxX: 0.7, minY: -0.5, maxY: 0.3 };
+    const pad = { top: 55, right: 40, bottom: 115, left: 40 };
+    const before = fitView(cloud, { width: 1440, height: 836, insetLeft: 0, insetTop: 0, padding: pad });
+    const after = fitView(cloud, { width: 1440, height: 900, insetLeft: 0, insetTop: 64, padding: pad });
+    // The same px per world unit (832.5) and the same camera centre: the camera is drawn at the centre of the
+    // visible area in both.
+    expect(pxPerWorld(before.zoom, 836)).toBeCloseTo(832.5, 8);
+    expect(pxPerWorld(after.zoom, 900)).toBeCloseTo(832.5, 8);
+    expect(after.center.x).toBeCloseTo(before.center.x, 10);
+    expect(after.center.y).toBeCloseTo(before.center.y, 10);
+    // The phone: a 390 x 784 canvas before, 390 x 844 with the 60 px header over it, the phone's overview padding.
+    const phonePad = { top: 90, right: 40, bottom: 169, left: 40 };
+    const phoneBefore = fitView(cloud, { width: 390, height: 784, insetLeft: 0, insetTop: 0, padding: phonePad });
+    const phoneAfter = fitView(cloud, { width: 390, height: 844, insetLeft: 0, insetTop: 60, padding: phonePad });
+    expect(pxPerWorld(phoneAfter.zoom, 844)).toBeCloseTo(pxPerWorld(phoneBefore.zoom, 784), 8);
+    expect(phoneAfter.center.x).toBeCloseTo(phoneBefore.center.x, 10);
+    expect(phoneAfter.center.y).toBeCloseTo(phoneBefore.center.y, 10);
+  });
+
+  it("keeps the fit clamp the same size on screen under a top inset", () => {
+    const tiny = { minX: -0.001, maxX: 0.001, minY: -0.001, maxY: 0.001 };
+    const huge = { minX: -100, maxX: 100, minY: -100, maxY: 100 };
+    for (const [cloud, limit] of [[tiny, FIT_ZOOM_MAX], [huge, FIT_ZOOM_MIN]] as const) {
+      const before = fitView(cloud, { width: 400, height: 800, insetLeft: 0, insetTop: 0, padding: even }).zoom;
+      const after = fitView(cloud, { width: 400, height: 864, insetLeft: 0, insetTop: 64, padding: even }).zoom;
+      expect(before).toBe(limit);
+      expect(pxPerWorld(after, 864)).toBeCloseTo(pxPerWorld(before, 800), 8);
+    }
   });
 });
 
@@ -266,7 +297,7 @@ describe("overviewExtent", () => {
 
 describe("fitOverview (prototype Cam.fitOverview, camera.js L27-34)", () => {
   const ext = { x1: -0.4, x99: 0.6, medY: 0.1 };
-  const area = { width: 1440, height: 836, insetLeft: 0, bottomCover: 0 };
+  const area = { width: 1440, height: 836, insetLeft: 0, insetTop: 0, bottomCover: 0 };
 
   it("fills the width less 24 px a side with the 1st..99th percentile span, centred on it and on the median row", () => {
     const wholeZoom = zoomForPxPerWorld(500, 836);
@@ -290,12 +321,12 @@ describe("fitOverview (prototype Cam.fitOverview, camera.js L27-34)", () => {
 
   it("never frames wider than the whole map: a narrow window keeps the whole map's scale", () => {
     const wide = { x1: -2, x99: 2, medY: 0 }; // (390 - 48) / 4 = 85.5 px per world unit, under the whole map's 200
-    const v = fitOverview(wide, zoomForPxPerWorld(200, 784), { width: 390, height: 784, insetLeft: 0, bottomCover: 165 });
+    const v = fitOverview(wide, zoomForPxPerWorld(200, 784), { width: 390, height: 784, insetLeft: 0, insetTop: 0, bottomCover: 165 });
     expect(pxPerWorld(v.zoom, 784)).toBeCloseTo(200, 6);
   });
 
   it("on a phone sets the median row in the middle of the band above the slider panel", () => {
-    const v = fitOverview(ext, zoomForPxPerWorld(100, 784), { width: 390, height: 784, insetLeft: 0, bottomCover: 165 });
+    const v = fitOverview(ext, zoomForPxPerWorld(100, 784), { width: 390, height: 784, insetLeft: 0, insetTop: 0, bottomCover: 165 });
     const ppw = pxPerWorld(v.zoom, 784); // (390 - 48) / 1.0 = 342
     expect(ppw).toBeCloseTo(342, 6);
     // camera.position is the canvas centre (y 392 of 784); the median row sits at (784 - 165) / 2 = 309.5, 82.5 px higher.
@@ -309,6 +340,28 @@ describe("fitOverview (prototype Cam.fitOverview, camera.js L27-34)", () => {
     const b = fitOverview(ext, 0.2, { ...area, insetLeft: 400 });
     expect(pxPerWorld(b.zoom, 836)).toBeCloseTo(1440 - 400 - 48, 6);
     expect(pxPerWorld(a.zoom, 836)).toBeCloseTo(1440 - 48, 6);
+  });
+
+  it("frames below a top inset exactly as on a canvas that starts under the header", () => {
+    // Desktop (64 px header), the phone (60 px, its slider panel covering 165 px), a span the 12.5 px cap limits,
+    // and one the Whole map limits.
+    const narrow = { x1: -0.1, x99: 0.1, medY: -0.2 };
+    const wide = { x1: -2, x99: 2, medY: 0.3 };
+    for (const [e, W, H, TOP, cover, wholePpw] of [[ext, 1440, 836, 64, 0, 500], [ext, 390, 784, 60, 165, 100], [narrow, 1440, 836, 64, 0, 500], [wide, 390, 784, 60, 165, 200]] as const) {
+      const before = fitOverview(e, zoomForPxPerWorld(wholePpw, H), { width: W, height: H, insetLeft: 0, insetTop: 0, bottomCover: cover });
+      const after = fitOverview(e, zoomForPxPerWorld(wholePpw, H + TOP), { width: W, height: H + TOP, insetLeft: 0, insetTop: TOP, bottomCover: cover });
+      expect(pxPerWorld(after.zoom, H + TOP)).toBeCloseTo(pxPerWorld(before.zoom, H), 8);
+      expect(after.center.x).toBeCloseTo(before.center.x, 10);
+      expect(after.center.y).toBeCloseTo(before.center.y, 10);
+    }
+  });
+
+  it("keeps the zoom ceiling the same size on screen under a top inset", () => {
+    // A Whole map already past the ceiling: the ceiling decides.
+    const before = fitOverview(ext, 1000, { width: 1440, height: 836, insetLeft: 0, insetTop: 0, bottomCover: 0 });
+    const after = fitOverview(ext, 1000, { width: 1440, height: 900, insetLeft: 0, insetTop: 64, bottomCover: 0 });
+    expect(before.zoom).toBe(MAX_ZOOM);
+    expect(pxPerWorld(after.zoom, 900)).toBeCloseTo(pxPerWorld(before.zoom, 836), 8);
   });
 });
 
@@ -334,9 +387,9 @@ describe("the Overview on the real map (Task 0's recorded scales)", () => {
     for (const stop of ["balanced", "sonic", "mood"] as const) {
       it(`${c.name}, ${stop}: whole ${c.whole[stop]} and Overview ${c.overview[stop]} px per world unit`, () => {
         const t = STOP_T[stop];
-        const whole = fitView(getCloudBounds(data, t), { width: c.width, height: c.height, insetLeft: 0, padding: c.pad });
+        const whole = fitView(getCloudBounds(data, t), { width: c.width, height: c.height, insetLeft: 0, insetTop: 0, padding: c.pad });
         expect(pxPerWorld(whole.zoom, c.height)).toBeCloseTo(c.whole[stop], 2);
-        const ov = overviewView(data, t, { width: c.width, height: c.height, insetLeft: 0, bottomCover: c.cover }, whole.zoom);
+        const ov = overviewView(data, t, { width: c.width, height: c.height, insetLeft: 0, insetTop: 0, bottomCover: c.cover }, whole.zoom);
         expect(pxPerWorld(ov.zoom, c.height)).toBeCloseTo(c.overview[stop], 2);
         // Covers stay dots and names show: under 13 px everywhere, at most 12.5.
         expect(pxPerWorld(ov.zoom, c.height) * COVER_WORLD).toBeLessThanOrEqual(12.5 + 1e-9);
@@ -345,8 +398,8 @@ describe("the Overview on the real map (Task 0's recorded scales)", () => {
   }
 
   it("desktop Balanced: the camera the map opens at", () => {
-    const whole = fitView(getCloudBounds(data, 0.5), { width: 1440, height: 836, insetLeft: 0, padding: DESKTOP_FIT });
-    const ov = overviewView(data, 0.5, { width: 1440, height: 836, insetLeft: 0, bottomCover: 0 }, whole.zoom);
+    const whole = fitView(getCloudBounds(data, 0.5), { width: 1440, height: 836, insetLeft: 0, insetTop: 0, padding: DESKTOP_FIT });
+    const ov = overviewView(data, 0.5, { width: 1440, height: 836, insetLeft: 0, insetTop: 0, bottomCover: 0 }, whole.zoom);
     expect(ov.zoom).toBeCloseTo(2.15721, 4);
     expect(ov.center.x).toBeCloseTo(0.033325, 5);
     expect(ov.center.y).toBeCloseTo(0, 6);
@@ -364,8 +417,8 @@ describe("the Overview on the real map (Task 0's recorded scales)", () => {
         const t = STOP_T[stop];
         const cloud = getCloudBounds(data, t);
         const pad = cover ? { ...PHONE_FIT, bottom: cover + 4 } : DESKTOP_FIT;
-        const whole = fitView(cloud, { width: w, height: h, insetLeft: 0, padding: pad });
-        const ov = overviewView(data, t, { width: w, height: h, insetLeft: 0, bottomCover: cover }, whole.zoom);
+        const whole = fitView(cloud, { width: w, height: h, insetLeft: 0, insetTop: 0, padding: pad });
+        const ov = overviewView(data, t, { width: w, height: h, insetLeft: 0, insetTop: 0, bottomCover: cover }, whole.zoom);
         const halfH = 0.55 / ov.zoom; // FRUSTUM_HALF_HEIGHT / zoom
         const viewport = { halfW: halfH * (w / h), halfH };
         // CameraBounds' MARGIN (0.04) and its threshold above the fitted zoom
@@ -377,8 +430,8 @@ describe("the Overview on the real map (Task 0's recorded scales)", () => {
   it("frames the same stop's own albums: the 1st and 99th percentile sit 24 px inside the sides on desktop", () => {
     const xy = interpolatedPositions(data, 0.5);
     const e = overviewExtent(xy);
-    const whole = fitView(getCloudBounds(data, 0.5), { width: 1440, height: 836, insetLeft: 0, padding: DESKTOP_FIT });
-    const ov = overviewView(data, 0.5, { width: 1440, height: 836, insetLeft: 0, bottomCover: 0 }, whole.zoom);
+    const whole = fitView(getCloudBounds(data, 0.5), { width: 1440, height: 836, insetLeft: 0, insetTop: 0, padding: DESKTOP_FIT });
+    const ov = overviewView(data, 0.5, { width: 1440, height: 836, insetLeft: 0, insetTop: 0, bottomCover: 0 }, whole.zoom);
     const ppw = pxPerWorld(ov.zoom, 836);
     expect(720 + (e.x1 - ov.center.x) * ppw).toBeCloseTo(24, 6);
     expect(720 + (e.x99 - ov.center.x) * ppw).toBeCloseTo(1440 - 24, 6);

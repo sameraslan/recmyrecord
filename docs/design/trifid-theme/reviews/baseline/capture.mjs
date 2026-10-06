@@ -438,7 +438,7 @@ const STATES = [
       await p.evaluate((i) => {
         const api = window.__rmr.map;
         const a = api.screenPoint(i);
-        const top = document.querySelector('canvas.map-canvas').getBoundingClientRect().top;
+        const top = document.querySelector('#stage').getBoundingClientRect().top;
         api.panBy(-(innerWidth - 30 - a.x), -(a.y - (top + 24)));
       }, id);
       await cameraIdle(p);

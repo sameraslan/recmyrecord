@@ -1,11 +1,19 @@
-.map-pane { position: absolute; inset: 0; background: var(--color-pane); transition: opacity var(--dur) var(--out); }
+/* The pane, and the canvas in it, start at the top of the window: the nebula runs behind the glass header
+ * (shell.css .top, z-index 60, above the whole stage). What must stay below the header is offset by --hdr: .map-ui
+ * and .map-msg here, and in the camera MapInput.insetTop (HEADER_PX 64 and, under 900 px wide, HEADER_NARROW_PX
+ * 60, in lib/media.ts: the two values of --hdr). */
+.map-pane { position: absolute; left: 0; right: 0; top: calc(-1 * var(--hdr)); bottom: 0; overflow: hidden; background: var(--color-pane); transition: opacity var(--dur) var(--out); }
 .map-host { position: absolute; inset: 0; }
 .map-pane[data-view="home"] .map-host,
 .map-pane[data-view="about"] .map-host,
 .map-pane[data-view="other"] .map-host { pointer-events: none; }
 .map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .map-canvas:active { cursor: grabbing; }
-.map-canvas:focus-visible { outline: 2px solid var(--color-lamp); outline-offset: -4px; }
+/* The canvas runs under the header, so its focus ring is drawn on the host instead, 4 px inside the visible map
+ * (the same place as the old outline), with a dark casing so it reads on bright gas. */
+.map-canvas:focus-visible { outline: none; }
+.map-host:has(.map-canvas:focus-visible)::after { content: ""; position: absolute; inset: calc(var(--hdr) + 4px) 4px 4px; border: 2px solid var(--color-lamp); box-shadow: 0 0 0 1px rgba(4, 4, 8, .8), inset 0 0 0 1px rgba(4, 4, 8, .8); pointer-events: none; }
+@supports not selector(:has(a)) { .map-canvas:focus-visible { outline: 2px solid var(--color-lamp); outline-offset: -4px; } }
 /* The hover label. Solid, not glass: it moves on every hover frame, and a backdrop blur there is the one effect
  * dropped for speed. z-index 7 puts it over .map-ui (6), whose hint band would otherwise dim it near the bottom. */
 .map-tip {
@@ -18,7 +26,7 @@
 .map-tip .a { font-size: 13px; color: var(--color-dust); }
 .map-sel { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; opacity: 0; border: 2px solid var(--color-lamp); border-radius: 50%; }
 .map-sel::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--color-lamp); }
-.map-ui { position: absolute; inset: 0; z-index: 6; pointer-events: none; transition: left var(--dur) var(--out); }
+.map-ui { position: absolute; left: 0; right: 0; top: var(--hdr); bottom: 0; z-index: 6; pointer-events: none; transition: left var(--dur) var(--out); }
 .map-ui > * { pointer-events: auto; }
 .panel { background: var(--color-float); border: 1px solid var(--color-rule); border-radius: 2px; box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .8); }
 /* "Explore this area" (album view): top right of the visible map, clear of the slider card top left. */
@@ -32,7 +40,7 @@
 .map-zoom button + button { border-top: 0; }
 .map-zoom button:hover { color: var(--color-paper); }
 .map-zoom svg { width: 16px; height: 16px; }
-.map-msg { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 7; width: min(420px, calc(100% - 32px)); padding: 20px 22px; display: grid; gap: 6px; justify-items: start; background: var(--color-float); border: 1px solid var(--color-rule-2); border-radius: 2px; color: var(--color-dust); font-size: 15px; }
+.map-msg { position: absolute; left: 50%; top: calc(50% + var(--hdr) / 2); transform: translate(-50%, -50%); z-index: 7; width: min(420px, calc(100% - 32px)); padding: 20px 22px; display: grid; gap: 6px; justify-items: start; background: var(--color-float); border: 1px solid var(--color-rule-2); border-radius: 2px; color: var(--color-dust); font-size: 15px; }
 /* The data error keeps the album list's message style (mockup .rec-error): a serif first line, the detail under it. */
 .map-msg .e1 { font-family: var(--font-serif); font-size: 24px; font-weight: 500; line-height: 1.2; color: var(--color-paper); }
 .map-msg .btn { margin-top: 12px; }

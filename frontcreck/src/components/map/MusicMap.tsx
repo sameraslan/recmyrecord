@@ -8,6 +8,7 @@ import { NamesToggle } from './overlays/NamesToggle';
 import { RegionNames } from './overlays/RegionNames';
 import { useMapStore } from './state/mapStore';
 import { setOverlayEl } from './state/overlayEls';
+import { setStageTop } from './state/stageTop';
 import type { MusicMapProps } from './types';
 
 /** Amber ring around the album selected in Explore; positioned by OverlayDriver. */
@@ -32,6 +33,9 @@ export default function MusicMap({ data, theme, input, callbacks, initialCamera,
     useMapStore.getState().setTheme(theme);
   }, [theme]);
   useLayoutEffect(() => {
+    // The region names (and the glints) read the header's height from state/stageTop.ts: the same number as the
+    // camera's, set before setInput asks for the frame that places them.
+    setStageTop(input.insetTop);
     useMapStore.getState().setInput(input);
   }, [input]);
   useLayoutEffect(() => {
