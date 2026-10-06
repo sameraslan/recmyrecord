@@ -161,7 +161,7 @@ def test_the_catalog_build_validates_and_keeps_the_sites_albums_first(catalog_bu
 
 def test_the_catalog_build_shows_bracketed_artists_and_keeps_the_slugs_of_the_latin_forms(catalog_build, deduped):
     from rmr_pipeline.catalog import catalog_frame, display_artist, display_title
-    from rmr_pipeline.slugs import make_slugs
+    from rmr_pipeline.slugs import MAX_SLUG_BYTES, make_slugs
 
     albums, _, _, printed, _, _ = catalog_build
     catalog, n_site = load_catalog(), len(deduped[0])
@@ -182,8 +182,11 @@ def test_the_catalog_build_shows_bracketed_artists_and_keeps_the_slugs_of_the_la
     # the slugs are what they were before the bracketed form: made from the romanised title and artist
     cat = catalog_frame(deduped[0], catalog)
     site = [a["a"] for a in albums[:n_site]]
-    before = make_slugs(cat.slug_titles, site + cat.slug_artists[n_site:])
+    # (a new album's within slugs.MAX_SLUG_BYTES: a slug is a file name on the host)
+    before = make_slugs(cat.slug_titles, site + cat.slug_artists[n_site:], cap_from=n_site)
     assert [a["slug"] for a in albums[n_site:]] == before[n_site:] and len(by_key) == len(albums)
+    assert max(len(a["slug"]) for a in albums[n_site:]) <= MAX_SLUG_BYTES
+    assert "slugs: 17 new album(s) have a slug cut to 120 bytes or fewer" in printed
 
 
 def test_the_catalog_builds_albums_without_audio_are_mood_only(catalog_build, deduped):

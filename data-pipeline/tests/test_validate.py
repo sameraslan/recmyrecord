@@ -210,3 +210,20 @@ def test_thumbnail_sheets_are_counted_like_the_atlases(tmp_path, monkeypatch):
     (tmp_path / "thumbs-0.webp").unlink()
     (tmp_path / "thumbs-1.webp").write_bytes((tmp_path / "atlas-0.webp").read_bytes())
     assert errors(9) == ["thumbs-1.webp must be a 96x96 WebP"]
+
+
+def test_a_slug_too_long_for_a_file_name_of_the_host_is_a_contract_error(out):
+    from rmr_pipeline.validate import MAX_SLUG_FILE_BYTES
+
+    assert MAX_SLUG_FILE_BYTES == 200
+    _edit(out, 12, slug="-".join(["word"] * 40))  # 199 bytes
+    validate_dir(out, images=False)
+    album = _read(out, "albums.json")[12]
+    _edit(out, 12, slug="x" + "-".join(["word"] * 40))  # 200: the limit itself passes
+    validate_dir(out, images=False)
+    _edit(out, 12, slug="xx" + "-".join(["word"] * 40))
+    with pytest.raises(ContractError) as e:
+        validate_dir(out, images=False)
+    message = str(e.value)
+    assert "albums[12]" in message and album["a"] in message and album["t"] in message
+    assert "201 bytes" in message and "200" in message and "file name" in message and "host" in message

@@ -6,7 +6,7 @@ Line numbers are of the working tree of 6 October. `frontcreck/` was being edite
 
 ## 1. What changes for a visitor
 
-- **Albums: 4,081 to 10,467** (`data-pipeline/README.md`, Catalog mode). Existing albums keep their number and slug. 6,386 new album pages.
+- **Albums: 4,081 to 10,467** (`data-pipeline/README.md`, Catalog mode). Existing albums keep their number and slug. 6,386 new album pages; a new album's slug is at most 120 bytes (17 are cut), since the host writes a file named after each slug.
 - **Every existing album's lists move**, for three reasons at once.
   - The store: four clips, not up to eight, and a transform fitted on the whole catalog. The cosine between the two stores' vectors has a median of 0.979 over the 3,978 albums in both (README, The 10k EffNet store).
   - The descriptors: first 8 only. With today's weights the cut alone keeps 3.6 of 10 at mood, 5.2 at balanced, 9.9 at sonic (`experiments/top8_descriptors/REPORT.md`, section 1). Words shown per album: mean 7.75 down to 5.2 (table) or 6.0 (sheet); vocabulary 114 down to 112 or 109 (section 3; no new albums in it).

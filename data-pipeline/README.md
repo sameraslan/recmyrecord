@@ -302,7 +302,7 @@ The catalog build reads all of this through `covers.cover_for(key)`. An album wi
 
 ## Catalog mode
 
-`python -m rmr_pipeline.build --catalog --out <folder> --map-root <map>` builds every album of `catalog/albums.csv` (10,467) instead of the feature table's 4,081, keyed by RYM id (`rmr_pipeline/catalog.py`). It is not what the site is built with: it refuses to write into `frontcreck/public/data` and reads the `effnet10k` store unless `--audio-dir` says otherwise. The default build and its outputs are unchanged by it. The site's albums keep their rows and slugs; the new albums follow, and a new album's slug is made from its romanised title and artist when the catalog has them.
+`python -m rmr_pipeline.build --catalog --out <folder> --map-root <map>` builds every album of `catalog/albums.csv` (10,467) instead of the feature table's 4,081, keyed by RYM id (`rmr_pipeline/catalog.py`). It is not what the site is built with: it refuses to write into `frontcreck/public/data` and reads the `effnet10k` store unless `--audio-dir` says otherwise. The default build and its outputs are unchanged by it. The site's albums keep their rows and slugs; the new albums follow, and a new album's slug is made from its romanised title and artist when the catalog has them. A new album's slug is at most 120 bytes (`slugs.MAX_SLUG_BYTES`), collision suffix included: a longer one is cut at word boundaries, the title's part to 80 characters or what a short artist leaves, the artist's part to the rest (17 albums today). A slug is a file name on the host, which fails the deploy over 233 bytes; `validate.py` refuses any slug over 200.
 
 ```bash
 cd data-pipeline

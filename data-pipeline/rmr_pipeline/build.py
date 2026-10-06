@@ -31,7 +31,7 @@ from .links import LINK_COLUMNS, album_links
 from .mapsource import MapSource, load_cover_ids, load_metadata
 from .overrides import apply_overrides, load_overrides, slugs_after_overrides
 from .recs import build_recs, rec_lists
-from .slugs import make_slugs
+from .slugs import MAX_SLUG_BYTES, make_slugs
 from .table import dedupe_table, load_table
 from .validate import validate_dir
 from .vocab import build_vocab
@@ -226,7 +226,10 @@ def main(argv: list[str] | None = None) -> int:
         titles, artists = titles + shown_titles, artists + shown
         slug_titles, slug_artists = cat.slug_titles, artists[:n_site] + cat.slug_artists[n_site:]
 
-    slugs = make_slugs(slug_titles, slug_artists)  # overrides.json is keyed by these
+    # A catalog build keeps a new album's slug within slugs.MAX_SLUG_BYTES (a slug is a file name on the host);
+    # the site's albums, and every album of the default build, have the slugs they always had.
+    cap_from = n_site if args.catalog else None
+    slugs = make_slugs(slug_titles, slug_artists, cap_from)  # overrides.json is keyed by these
     overrides = load_overrides(args.overrides)
     if args.catalog:
         # An existing album links to the sheet's Spotify album when the sheet has one (cat.spotify_ids), and
@@ -272,7 +275,7 @@ def main(argv: list[str] | None = None) -> int:
         print("\n".join(shared_spotify_lines(shared_spotify_ids(cat, spotify_ids))))
     changed = {slugs.index(k) for k, e in overrides.items() if "a" in e}
     slugs = slugs_after_overrides(slug_titles, [artists[i] if i in changed else a for i, a in enumerate(slug_artists)],
-                                  slugs, changed)
+                                  slugs, changed, cap_from)
     if args.catalog:
         moved = moved_site_slugs(slugs)
         if moved:
@@ -281,6 +284,10 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         print(f"slugs: no {DEFAULT_OUT / 'albums.json'} to compare with" if moved is None
               else "slugs: the site's albums keep the slugs of the committed albums.json")
+        bare = make_slugs(slug_titles, slug_artists)
+        cut = [i for i in range(n_site, len(slugs)) if slugs[i] != bare[i]]
+        print(f"slugs: {len(cut)} new album(s) have a slug cut to {MAX_SLUG_BYTES} bytes or fewer (a slug is a file name "
+              f"on the host); the longest new slug is {max((len(s) for s in slugs[n_site:]), default=0)} bytes")
     vocab, tops = build_vocab(sub, places)
     try:
         # The catalog build does not impute: an album with no audio is limited to the mood side.

@@ -23,6 +23,9 @@ from .links import LINK_COLUMNS, LINK_REF_RE
 ALBUM_KEYS = ["slug", "t", "a", "s", "c", "k", "d", "w"]
 OPTIONAL_KEYS = ["l", "n"]  # after ALBUM_KEYS, in this order
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+# A slug is a file name on the host (Vercel writes `<slug>.prerender-config.json`, and a file name holds 255
+# bytes: 233 for the slug). The build cuts a new album's to slugs.MAX_SLUG_BYTES; the longest existing one is 151.
+MAX_SLUG_FILE_BYTES = 200
 HEX_RE = re.compile(r"^#[0-9a-f]{6}$")
 SPOTIFY_RE = re.compile(r"^[0-9A-Za-z]{22}$")
 COVER_RE = re.compile(r"^[0-9a-f]{24,64}\Z")  # \Z: `$` would let a trailing newline through
@@ -152,6 +155,10 @@ def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
         slug = a["slug"]
         if not isinstance(slug, str) or not SLUG_RE.match(slug):
             err(f"{where}: bad slug {slug!r}")
+        elif len(slug.encode("utf-8")) > MAX_SLUG_FILE_BYTES:
+            err(f"{where} ({a.get('a')!r}, {a.get('t')!r}): the slug is {len(slug.encode('utf-8'))} bytes, over the "
+                f"{MAX_SLUG_FILE_BYTES} allowed: the host writes a file named after each slug and a file name holds "
+                f"255 bytes, so the deploy would fail ({slug!r})")
         elif slug in slugs:
             err(f"{where}: duplicate slug {slug!r}")
         else:
