@@ -23,9 +23,9 @@ Written by `python -m rmr_audio.album_status` with `album_status.csv`, the row p
 
 | audio_source | existing | new | all |
 |---|---:|---:|---:|
-| deezer | 3661 | 2815 | 6476 |
+| deezer | 3662 | 2815 | 6477 |
 | itunes | 218 | 2675 | 2893 |
-| youtube | 165 | 710 | 875 |
+| youtube | 164 | 710 | 874 |
 | none | 37 | 186 | 223 |
 | all | 4081 | 6386 | 10467 |
 
@@ -41,9 +41,9 @@ Written by `python -m rmr_audio.album_status` with `album_status.csv`, the row p
 
 | youtube_search | existing | new | all |
 |---|---:|---:|---:|
-| found | 92 | 158 | 250 |
+| found | 91 | 158 | 249 |
 | none | 80 | 222 | 302 |
-| failed | 2 | 0 | 2 |
+| failed | 3 | 0 | 3 |
 | not_tried | 3907 | 6006 | 9913 |
 | all | 4081 | 6386 | 10467 |
 
