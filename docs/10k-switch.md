@@ -22,7 +22,7 @@ Line numbers are of the working tree of 6 October. `frontcreck/` was being edite
 Owner decisions of 6 October 2026:
 
 - **Descriptor weights are not equal.** The gentle slope (`--descriptor-weights slope`, 1 down to 0.5) is expected and is the build's default; he confirms after comparing it with `rank` in `docs/review/weights-compare.html`.
-- **The vocals descriptors are kept**: `--existing-descriptors table`, now the default. New albums have none, because the sheet does not list them (2,772 existing albums have one among their 8, no new album does). To confirm after the numbers on what that asymmetry does to the lists.
+- **The vocals descriptors are dropped for every album**: `--existing-descriptors table-novocals`, the default. The sheet does not list them, so only the old albums would carry them (2,772 existing albums have one among their 8, no new album does). To be revisited if the sheet gains vocals for all albums.
 - **Artist form of a new album**: `native [Latin]`, as 33 existing albums have (`catalog.display_artist`). Titles stay as the catalog has them.
 - **The no-audio note**: "Sound matches aren't available for this album yet." with the link "Show mood matches".
 - **The link labels are approved.**
@@ -31,10 +31,9 @@ Owner decisions of 6 October 2026:
 Owner decisions still open:
 
 1. The weights, after the comparison page: `slope` (default) or `rank`.
-2. The vocals descriptors, after the asymmetry numbers: `table` (default) or `table-novocals`.
-3. The copy strings of section 5 that are not listed above.
-4. YouTube-frame covers: yes or no (`docs/review/youtube-covers.png`). If no, drop the `youtube` rows from `catalog/covers.csv` before the build.
-5. What happens to `audio/` and `audio/clap/` (section 8). The steps below assume both stay.
+2. The copy strings of section 5 that are not listed above.
+3. YouTube-frame covers: yes or no (`docs/review/youtube-covers.png`). If no, drop the `youtube` rows from `catalog/covers.csv` before the build.
+4. What happens to `audio/` and `audio/clap/` (section 8). The steps below assume both stay.
 
 State:
 
@@ -98,7 +97,7 @@ nice -n 19 .venv-audio/bin/python -m pytest tests_audio
 |---|---|---|---|
 | `tests/test_build.py:31-39` (`:35`, `:36`) | `SITE_MODEL == "effnet"`, default store `audio/` | hand | `"effnet10k"`, `STORES["effnet10k"]`; rename the test |
 | `tests/test_audio_store.py:338-342` (`:340`) | the same, and `site_store() == DEFAULT_AUDIO` | hand | the same; rename the test |
-| `tests/test_build_catalog.py:29-36` (`:31`, `:32`) | `SITE_MODEL == "effnet"`; defaults `slope`, `table` (the owner's choices of 6 October) | hand | the new value |
+| `tests/test_build_catalog.py:29-36` (`:31`, `:32`) | `SITE_MODEL == "effnet"`; defaults `slope`, `table-novocals` (the owner's choices of 6 October) | hand | the new value |
 | `tests/test_build_catalog.py:18-26` | `--catalog` needs `--out` and refuses `public/data` ("go-ahead") | hand | inverted: `--no-catalog` needs `--out` and refuses it |
 | `tests/test_build_catalog.py:39-46`, `:49-54` | catalog off by default; the catalog flags and `--require-sprites` error without it | hand | on by default; they error with `--no-catalog` |
 | `tests/conftest.py:16-28` | `audio`, `site_recs`: the feature table on `site_store()` | hand | pin both to `DEFAULT_AUDIO` (they test the old store's mechanics); the catalog's block and lists get fixtures of their own |

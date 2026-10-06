@@ -58,7 +58,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                         "to 0.5; rank is the feature table's 1.5 down to 1.33).")
     p.add_argument("--existing-descriptors", choices=EXISTING, default=None,
                    help="With --catalog: where an existing album's eight descriptors come from (default "
-                        "table, the vocals descriptors kept; see rmr_pipeline.catalog).")
+                        "table-novocals, the vocals descriptors dropped; see rmr_pipeline.catalog).")
     p.add_argument("--require-sprites", action="store_true",
                    help="With --catalog: stop when catalog/covers.csv is missing, when a new album has a cover in it "
                         "and no sprite of that image in .cache/covers/96 (python -m rmr_pipeline.covers sprites), or "

@@ -8,10 +8,10 @@ Every album is described by its first CATALOG_DESCRIPTORS (8) descriptors, weigh
 those eight (WEIGHT_PROFILES):
 
   an existing album   table            the eight largest of its 176 table cells (a cell is (63 - place) / 42,
-                                       so the largest are the first on its RYM page): the build's default
-                                       (DEFAULT_EXISTING), the three vocals descriptors kept
+                                       so the largest are the first on its RYM page), the three vocals
+                                       descriptors kept
                       table-novocals   the same without the three vocals columns: the sheet never lists them,
-                                       so a new album never has one
+                                       so a new album never has one (the build's default, DEFAULT_EXISTING)
                       sheet            its `top_descriptors` in the catalog, as for a new album; an album
                                        without a list falls back to table-novocals
   a new album         the first eight names of its `top_descriptors`, in that order. A name is a table
@@ -64,9 +64,9 @@ WEIGHT_PROFILES = {
 # default stays `rank`, the feature table's.
 DEFAULT_WEIGHTS = "slope"
 # And for --existing-descriptors (the owner's decision of 6 October 2026: the three vocals descriptors are
-# kept). A new album has none, because the sheet does not list them. catalog_frame's own default stays
-# `table-novocals`.
-DEFAULT_EXISTING = "table"
+# dropped for every album. The sheet does not list them, so only the existing albums would carry them; to
+# be revisited if the sheet gains vocals for all albums).
+DEFAULT_EXISTING = "table-novocals"
 
 
 class CatalogError(Exception):

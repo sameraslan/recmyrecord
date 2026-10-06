@@ -29,7 +29,7 @@ def test_catalog_needs_an_out_folder_that_is_not_the_sites(capsys, tmp_path):
 def test_catalog_defaults(tmp_path):
     args = parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path)])
     assert args.audio_dir == store.STORES["effnet10k"] and store.SITE_MODEL == "effnet"
-    assert (args.descriptor_weights, args.existing_descriptors) == ("slope", "table")
+    assert (args.descriptor_weights, args.existing_descriptors) == ("slope", "table-novocals")
     assert args.catalog_path == DEFAULT_CATALOG
     args = parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path), "--audio-dir", "x",
                        "--descriptor-weights", "rank", "--existing-descriptors", "sheet"])
