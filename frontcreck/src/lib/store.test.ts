@@ -107,4 +107,33 @@ describe('app store', () => {
   it('exposes getState for end-to-end tests', () => {
     expect(window.__rmr?.getState().stop).toBe('balanced');
   });
+
+  it('shows region names by default, and saves the choice when it changes', () => {
+    window.localStorage.clear();
+    expect(useAppStore.getState().namesOn).toBe(true);
+    const calls = countNotifications(() => {
+      useAppStore.getState().setNamesOn(true);
+      useAppStore.getState().setNamesOn(false);
+      useAppStore.getState().setNamesOn(false);
+    });
+    expect(calls).toBe(1);
+    expect(useAppStore.getState().namesOn).toBe(false);
+    expect(window.localStorage.getItem('rmr-names')).toBe('0');
+  });
+
+  it('still switches names off for the page load when storage is blocked', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('denied', 'SecurityError');
+    });
+    useAppStore.getState().setNamesOn(false);
+    expect(useAppStore.getState().namesOn).toBe(false);
+  });
+
+  it('starts from the saved choice in the browser', async () => {
+    window.localStorage.setItem('rmr-names', '0');
+    vi.resetModules();
+    const fresh = await import('./store');
+    expect(fresh.useAppStore.getState().namesOn).toBe(false);
+    window.localStorage.clear();
+  });
 });

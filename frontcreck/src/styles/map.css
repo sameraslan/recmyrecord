@@ -101,6 +101,12 @@
 /* Inverted when hot: room-coloured digits on the lamp token (17:1 with the Trifid values). */
 .mk-n[data-hot] { background: var(--color-lamp); border-color: var(--color-room); color: var(--color-room); }
 
+/* names toggle: its own box 8 px above the zoom stack (the owner's option B). It is the first child of
+ * .map-zoom, so it takes the zoom buttons' size and glass, and the phone rules that lift or hide the stack. */
+.map-zoom .map-names { margin-bottom: 8px; }
+/* The zoom-in button under it gets its top border back (.map-zoom button + button removes it). */
+.map-zoom .map-names + button { border-top: 1px solid var(--color-rule); }
+
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
   /* 8 px above the slider panel: --slider-cover is its measured cover of the pane (MapStage), safe-area inset
