@@ -46,20 +46,17 @@ export function glassRects(layer: HTMLElement, root: ParentNode = document): Vie
 /** Puts one glint in the layer: a positioned <i> the size of the bloom, centred on the star, holding one <b>
  * that the CSS keyframe `tw-glint` animates (opacity and transform only); the flare is the <b>'s two
  * pseudo-elements. Nothing is read from layout or style: the writes are one appendChild with inline styles and,
- * later, one remove(). `ended` is called when the animation ends.
- *
- * The centre is moved to the nearest point half a CSS px off a device pixel edge (at most half a device pixel
- * from the star): the flare's arms are 1 CSS px thick and cross at the centre, so anywhere else an arm is spread
- * over two rows or columns at half strength, and the two arms differ from glint to glint. */
-export function addGlint(layer: HTMLElement, glint: Glint, ended: () => void, dpr: number = window.devicePixelRatio || 1): GlintHandle {
+ * later, one remove(). `ended` is called when the animation ends. The box is put where the star is, to a
+ * hundredth of a px: a live capture on a GPU at 1x and 2x showed both of the flare's 1 px arms at like strength
+ * there, so the centre is not moved onto the device pixel grid (tried in the fix round, not kept:
+ * docs/design/trifid-theme/reviews/app-part2/twinkle-live-gpu-1x-2x.jpg). */
+export function addGlint(layer: HTMLElement, glint: Glint, ended: () => void): GlintHandle {
   const el = document.createElement('i');
   const dot = document.createElement('b');
   el.className = 'tw';
   // Which album's star this sits on (browser tests check the glint is centred on it).
   el.dataset.album = String(glint.index);
-  const cx = Math.round((glint.x - 0.5) * dpr) / dpr + 0.5;
-  const cy = Math.round((glint.y - 0.5) * dpr) / dpr + 0.5;
-  el.style.transform = `translate(${(cx - glint.radius).toFixed(2)}px,${(cy - glint.radius).toFixed(2)}px)`;
+  el.style.transform = `translate(${(glint.x - glint.radius).toFixed(2)}px,${(glint.y - glint.radius).toFixed(2)}px)`;
   el.style.width = `${(2 * glint.radius).toFixed(2)}px`;
   el.style.height = `${(2 * glint.radius).toFixed(2)}px`;
   dot.style.background = glintBackground(glint.rgb);

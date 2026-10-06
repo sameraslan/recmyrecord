@@ -461,15 +461,28 @@ test('glints never start under the header', async ({ page }) => {
   });
   await openMap(page);
   const bottom = await headerBottom(page);
-  // Where /map opens (the Overview) the cloud is taller than the window, so there are stars under the bar, and
-  // they are still dots. (The plan zoomed one step in, from the whole map it opened at then; from the Overview
-  // that step shows covers, where no glint plays at all.)
-  const under = await page.evaluate(async (minY) => {
-    const n: number = (await (await fetch('/data/albums.json')).json()).length;
-    let k = 0;
-    for (let id = 0; id < n; id++) if (window.__rmr!.map!.screenPoint(id)!.y < minY) k++;
-    return k;
-  }, bottom);
+  // Stars under the bar for a glint to choose, and still dots. Where /map opens (the Overview) the cloud's top is
+  // below the bar, so the map is panned in 40 px steps until its top albums are behind it. (The plan zoomed one
+  // step in, from the whole map it opened at then; from the Overview that step shows covers, where no glint
+  // plays at all.)
+  const countUnder = () =>
+    page.evaluate(async (minY) => {
+      const n: number = (await (await fetch('/data/albums.json')).json()).length;
+      let k = 0;
+      for (let id = 0; id < n; id++) {
+        const p = window.__rmr!.map!.screenPoint(id)!;
+        if (p.y < minY && p.y > 0) k++;
+      }
+      return k;
+    }, bottom);
+  let under = await countUnder();
+  for (let i = 0; i < 20 && under <= 20; i++) {
+    // Negative dy moves the view down, the albums up (helpers.ts panBrightestGasUnder).
+    await page.evaluate(() => window.__rmr!.map!.panBy(0, -40));
+    await waitForCameraIdle(page);
+    under = await countUnder();
+  }
+  await waitForMapQuiet(page, 400);
   expect(under, 'stars under the bar for a glint to choose').toBeGreaterThan(20);
   // Nine seconds of the map at rest: a glint starts about every 1.2 to 3 seconds. Each one's centre, and the top
   // of its whole extent (the bloom, or the flare's upward arm where that is longer).

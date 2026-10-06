@@ -428,7 +428,7 @@ for (const where of ['the map', 'an open album at 1280 x 720'] as const) {
       expect(g.under, `the glint on album ${g.album} reaches under a surface`).toEqual([]);
       expect(g.box.top, `the glint on album ${g.album} reaches under the header`).toBeGreaterThanOrEqual(run.headerBottom);
     }
-    // And with the clearance the code keeps (22 px, the blur's radius), less 1 px for the glint's snap to pixels.
+    // And with the clearance the code keeps (22 px, the blur's radius), less 1 px for rounding.
     expect(worst).toBeGreaterThanOrEqual(21);
   });
 }

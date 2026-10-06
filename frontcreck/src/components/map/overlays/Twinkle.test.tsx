@@ -30,9 +30,8 @@ describe('addGlint', () => {
     expect(el.tagName).toBe('I');
     expect(el.className).toBe('tw');
     expect(el.dataset.album).toBe('42');
-    // Top left corner at the star minus the radius, so the box (two radii wide) is centred on the star: here
-    // half a px to the right and down, the nearest centre that puts the flare's 1 px arms on whole pixels (below).
-    expect(numbers(el.style.transform)).toEqual([80.5, 30.5]);
+    // Top left corner at the star minus the radius, so the box (two radii wide) is centred on the star.
+    expect(numbers(el.style.transform)).toEqual([80, 30]);
     expect(parseFloat(el.style.width)).toBe(40);
     expect(parseFloat(el.style.height)).toBe(40);
     const dot = el.firstElementChild as HTMLElement;
@@ -148,31 +147,5 @@ describe('the glass surfaces a glint keeps clear of (glassRects)', () => {
       [...fs.readFileSync(path.join(dir, f), 'utf8').matchAll(/backdrop-filter:\s*([^;}]+)/g)].map((m) => m[1].trim()).filter((value) => value !== 'none' && value !== 'var(--glass-blur)').map((value) => `${f}: ${value}`),
     );
     expect(others).toEqual([]);
-  });
-});
-
-describe('a glint lands on whole device pixels', () => {
-  // The flare's arms are 1 CSS px thick and cross at the centre of the box, from half a px before it to half a px
-  // after. On a centre that is not half a px off a device pixel edge, an arm is spread over two rows (or columns)
-  // at half strength. So the centre is moved to the nearest such point: at most half a device pixel.
-  const at = (dpr: number): number[] => {
-    const layer = document.createElement('div');
-    addGlint(layer, { ...GLINT, x: 100.37, y: 50.81, radius: 20.3 }, () => {}, dpr);
-    return numbers((layer.lastElementChild as HTMLElement).style.transform).map((corner) => corner + 20.3);
-  };
-
-  it('at 1x the arms cover one whole row and one whole column', () => {
-    const [cx, cy] = at(1);
-    expect(cx).toBeCloseTo(100.5, 6);
-    expect(cy).toBeCloseTo(50.5, 6);
-  });
-
-  it('at 2x and 3x the arms start and end on device pixel edges, and the centre moves less than half a CSS px', () => {
-    for (const dpr of [2, 3]) {
-      const [cx, cy] = at(dpr);
-      for (const edge of [cx - 0.5, cy - 0.5]) expect(Math.abs(edge * dpr - Math.round(edge * dpr)), `dpr ${dpr}`).toBeLessThan(0.02);
-      expect(Math.abs(cx - 100.37)).toBeLessThanOrEqual(0.5 / dpr + 0.01);
-      expect(Math.abs(cy - 50.81)).toBeLessThanOrEqual(0.5 / dpr + 0.01);
-    }
   });
 });
