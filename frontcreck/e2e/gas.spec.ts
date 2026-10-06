@@ -3,7 +3,7 @@ import path from 'node:path';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import sharp from 'sharp';
 import { COPY } from '../src/lib/copy';
-import { isPhone, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet } from './helpers';
+import { isPhone, shot, twinkleOff, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet } from './helpers';
 
 /** The committed theme: every gas image carries the hash of its content in its name (theme.json gas.<stop>.hash). */
 type Stop = 'sonic' | 'balanced' | 'mood';
@@ -48,6 +48,7 @@ interface Rect {
 /** Luma at quantile q of a client-px rectangle of the screenshot. The median reads the background between album
  * dots and covers, which is the gas. */
 async function lumaAt(page: Page, r: Rect, q = 0.5): Promise<number> {
+  await twinkleOff(page);
   const png = (await page.screenshot()).toString('base64');
   return page.evaluate(
     async ([data, rect, quantile]) => {
@@ -1332,6 +1333,7 @@ test('on screen the gas lies under the albums it was baked for: the picture matc
   // The baked image, as theme.json places it, against the screenshot.
   const g = THEME.gas.balanced;
   const image = await sharp(path.resolve(process.cwd(), `public${gasPath('balanced')}`)).raw().toBuffer({ resolveWithObject: true });
+  await twinkleOff(page);
   const shotPng = await sharp(await page.screenshot()).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   const k = shotPng.info.width / page.viewportSize()!.width;
   const screenLuma = seen.grid.map(([x, y]) => {

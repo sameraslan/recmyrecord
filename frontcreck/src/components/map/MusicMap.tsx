@@ -6,6 +6,7 @@ import { FocusMarkers } from './overlays/FocusMarkers';
 import { HoverLabel } from './overlays/HoverLabel';
 import { NamesToggle } from './overlays/NamesToggle';
 import { RegionNames } from './overlays/RegionNames';
+import { TwinkleLayer } from './overlays/Twinkle';
 import { useMapStore } from './state/mapStore';
 import { setOverlayEl } from './state/overlayEls';
 import { setStageTop } from './state/stageTop';
@@ -45,6 +46,8 @@ export default function MusicMap({ data, theme, input, callbacks, initialCamera,
   return (
     <>
       <Scene initialCamera={initialCamera} onApi={onApi} />
+      {/* Star glints: over the canvas, under the region names (z-index 1). */}
+      <TwinkleLayer />
       {/* Under the focus markers, the hover label and the map's controls (z-index 2). */}
       <RegionNames />
       <FocusMarkers albums={data.albums} />

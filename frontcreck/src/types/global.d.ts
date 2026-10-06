@@ -1,3 +1,4 @@
+import type { TwinkleStats } from '@/components/map/state/twinkle';
 import type { MapApi } from '@/components/map/types';
 import type { AppState } from '@/lib/store';
 
@@ -20,6 +21,9 @@ declare global {
       /** The seed of this page load's random star sizes (components/map/state/stars.ts), published once the
        * stars are dealt. A test may set it before the map loads to get a repeatable sky. */
       starSeed?: number;
+      /** The star glints (components/map/canvas/TwinkleDriver.tsx), there while the map is mounted: their
+       * counters, and whether their switch (window.__rmrTwinkle) last said on. */
+      twinkle?: { stats: TwinkleStats; enabled: () => boolean };
       /** The gas layer. A stop is started from the moment it is scheduled: the stop on screen always, the other
        * two as soon as the map is interactive (also while their fetch waits for an idle slot). 'loading' while any
        * started stop is unsettled, 'ready' once every started stop is uploaded or has failed, 'off' when there is
@@ -55,6 +59,11 @@ declare global {
      * page load ('whole': the opening view of the site before the Trifid theme; 'overview': the default). It
      * changes nothing on Home, About, 404 or an album. */
     __rmrOpen?: 'whole' | 'overview';
+    /** The star glints' switch, for tests, measurements and still pictures: 'off' means none, 'on' means glints
+     * on any renderer (unset, a software renderer gets none: state/twinkle.ts twinkleShown). Set before the map
+     * loads or at any time after; a change takes effect inside the assignment (state/twinkle.ts
+     * watchTwinkleSwitch). Not saved, and there is no control for it on screen. */
+    __rmrTwinkle?: 'off' | 'on';
   }
 }
 

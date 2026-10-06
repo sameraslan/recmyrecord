@@ -104,11 +104,27 @@ export async function waitForMapQuiet(page: Page, quietMs = 200, opts: { since?:
   );
 }
 
-/** Waits until every finite CSS animation and transition on the page has finished. */
+/** Waits until every finite CSS animation and transition on the page has finished. The star glints (inside
+ * .tw-layer) are left out, as endless animations already are: a new one starts every 1.2 to 3 s for as long as
+ * the map rests, so waiting for them would never end. */
 export async function waitForAnimations(page: Page): Promise<void> {
   await page.waitForFunction(() =>
-    document.getAnimations().every((a) => a.playState !== 'running' || a.effect?.getComputedTiming().endTime === Infinity),
+    document.getAnimations().every((a) => {
+      if (a.playState !== 'running' || a.effect?.getComputedTiming().endTime === Infinity) return true;
+      const target = (a.effect as KeyframeEffect | null)?.target;
+      return target instanceof Element && target.closest('.tw-layer') !== null;
+    }),
   );
+}
+
+/** Switches the star glints off for the rest of this page load, at any moment: the ones playing are removed
+ * inside this call, none is made after, and no canvas frame is drawn for it (window.__rmrTwinkle, watched by
+ * canvas/TwinkleDriver.tsx). A check that reads screenshot pixels while stars show calls this first: a glint is
+ * a bright spot of up to 43 px at a random place and time. */
+export async function twinkleOff(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    window.__rmrTwinkle = 'off';
+  });
 }
 
 /** Client coordinates of an album that is on screen and not covered by another element. */

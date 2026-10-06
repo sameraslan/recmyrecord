@@ -10,7 +10,17 @@ async function audit(page: Page, label: string) {
   // Audit the settled state: mid-fade colours (a card sliding in, a panel cross-fading) are blends, not the design.
   // Bounded: a looping animation would otherwise hold the audit until the test times out.
   await page
-    .waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 2000 })
+    .waitForFunction(
+      () =>
+        document.getAnimations().every((a) => {
+          // The star glints never settle (one starts every 1.2 to 3 s). They are aria-hidden decoration over
+          // the canvas and change no colour that axe reads, so the audit does not wait for them.
+          const target = (a.effect as KeyframeEffect | null)?.target;
+          return a.playState !== 'running' || (target instanceof Element && target.closest('.tw-layer') !== null);
+        }),
+      null,
+      { timeout: 2000 },
+    )
     .catch(async () => {
       const running = await page.evaluate(() =>
         document.getAnimations().filter((a) => a.playState === 'running').map((a) => {

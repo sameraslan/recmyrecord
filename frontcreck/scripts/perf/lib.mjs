@@ -158,6 +158,19 @@ export function checkEffects(where, seen, want, vars) {
       if (s.namesOn !== (want.names === 'on')) fails.push(`${where}: forced effect not applied: --names ${want.names}, but the store has namesOn ${s.namesOn} (${s.at})`);
     }
   }
+  // The glints: what the app's own timer says its switch is (window.__rmr.twinkle.enabled(), null when the app
+  // publishes none), how many glints it has made on that page, and how many are in the DOM. Off needs none of
+  // either on every page; on needs at least one page where a glint had been made, or the run proved nothing.
+  if (want.twinkle) {
+    const flag = `--twinkle ${want.twinkle}`;
+    for (const s of seen) {
+      if (s.twinkleOn !== (want.twinkle === 'on')) fails.push(`${where}: forced effect not applied: ${flag}, but the glints' timer reads enabled ${s.twinkleOn ?? null} (${s.at})`);
+      if (want.twinkle === 'off' && ((s.twinkleSpawned ?? 0) > 0 || (s.twinkleNodes ?? 0) > 0)) {
+        fails.push(`${where}: forced effect not applied: ${flag}, but ${s.twinkleSpawned} glints were made and ${s.twinkleNodes} are on the page (${s.at})`);
+      }
+    }
+    if (want.twinkle === 'on' && !seen.some((s) => s.twinkleSpawned > 0)) fails.push(`${where}: forced effect not verified: ${flag}, but no glint had been made on any page read back`);
+  }
   return fails;
 }
 

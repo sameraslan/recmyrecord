@@ -505,6 +505,34 @@ describe('checkEffects', () => {
     ]);
   });
 
+  it('passes a twinkle run whose page did what was forced, read from the app and from the DOM', () => {
+    const off = [seen({ at: 'album', twinkleOn: false, twinkleSpawned: 0, twinkleNodes: 0 }), seen({ twinkleOn: false, twinkleSpawned: 0, twinkleNodes: 0 })];
+    expect(checkEffects('gpu desktop', off, { glass: null, names: null, twinkle: 'off' }, null)).toEqual([]);
+    // On: the timer says enabled on every page, and at least one page had made a glint by the time it was read.
+    const on = [seen({ at: 'album', twinkleOn: true, twinkleSpawned: 0, twinkleNodes: 0 }), seen({ twinkleOn: true, twinkleSpawned: 9, twinkleNodes: 2 })];
+    expect(checkEffects('gpu desktop', on, { glass: null, names: null, twinkle: 'on' }, null)).toEqual([]);
+    expect(checkEffects('gpu desktop', on, { glass: null, names: null, twinkle: null }, null)).toEqual([]);
+  });
+
+  it('fails a twinkle run in which the app ignored the switch, has no twinkle, or never made a glint', () => {
+    const want = (twinkle) => ({ glass: null, names: null, twinkle });
+    expect(checkEffects('gpu desktop', [seen({ twinkleOn: true, twinkleSpawned: 4, twinkleNodes: 1 })], want('off'))).toEqual([
+      'gpu desktop: forced effect not applied: --twinkle off, but the glints\' timer reads enabled true (map)',
+      'gpu desktop: forced effect not applied: --twinkle off, but 4 glints were made and 1 are on the page (map)',
+    ]);
+    // An app without the twinkle (or with its hook renamed) publishes nothing: that is not "off", it is unverified.
+    expect(checkEffects('gpu desktop', [seen({ twinkleOn: null, twinkleSpawned: null, twinkleNodes: null })], want('off'))).toEqual([
+      'gpu desktop: forced effect not applied: --twinkle off, but the glints\' timer reads enabled null (map)',
+    ]);
+    expect(checkEffects('gpu desktop', [seen({ twinkleOn: false, twinkleSpawned: 0, twinkleNodes: 0 })], want('on'))).toEqual([
+      'gpu desktop: forced effect not applied: --twinkle on, but the glints\' timer reads enabled false (map)',
+      'gpu desktop: forced effect not verified: --twinkle on, but no glint had been made on any page read back',
+    ]);
+    expect(checkEffects('gpu desktop', [seen({ twinkleOn: true, twinkleSpawned: 0, twinkleNodes: 0 })], want('on'))).toEqual([
+      'gpu desktop: forced effect not verified: --twinkle on, but no glint had been made on any page read back',
+    ]);
+  });
+
   it('fails a names run in which the store disagrees', () => {
     expect(checkEffects('gpu desktop', [seen({ namesOn: true })], { glass: null, names: 'off' }, null)).toEqual(['gpu desktop: forced effect not applied: --names off, but the store has namesOn true (map)']);
     expect(checkEffects('gpu desktop', [seen({ namesOn: null })], { glass: null, names: 'on' }, null)).toEqual(['gpu desktop: forced effect not applied: --names on, but the store has namesOn null (map)']);

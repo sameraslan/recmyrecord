@@ -63,22 +63,24 @@ if (GLASS_WANT) {
 }
 // --names: the region names, through the visitor's own saved choice.
 const NAMES = EFFECTS.names;
-// --twinkle: the glints. TODO(part2-task8): confirm the twinkle switch. The twinkle is not built yet; twinkleSwitch
-// below assumes a test global read before the map loads, in the style of window.__rmrGasLite and window.__rmrOpen
-// ('off' = no glints, anything else = the app's own behaviour). The flag is refused until TWINKLE_READBACK is a
-// function `(page) => Promise<'on' | 'off'>` that reads what the app itself did with the switch (for example from
-// window.__rmr.twinkle): echoing the global this script set would prove nothing, and an app that ignores the
-// switch would give two identical runs and a "costs nothing" result. Those two are the only places to change;
-// add the readback's result to effectsSeen and its check to checkEffects in lib.mjs.
+// --twinkle: the glints, through the app's own switch for tests and measurements: window.__rmrTwinkle, set before
+// the page's scripts run ('off' = no glints; 'on' = glints on any renderer, also the software one, where a visitor
+// gets none: src/components/map/state/twinkle.ts twinkleShown and watchTwinkleSwitch). TWINKLE_READBACK reads what the app did with it, never the global this script
+// set: whether the glints' own timer says it is enabled, how many glints it has made on this page, and how many
+// are in the DOM. An app that ignored the switch, or has no twinkle, reads back as that (checkEffects in lib.mjs).
 const TWINKLE = EFFECTS.twinkle;
-const TWINKLE_READBACK = null;
 function twinkleSwitch(v) {
   window.__rmrTwinkle = v;
 }
-if (TWINKLE && !TWINKLE_READBACK) {
-  console.error('--twinkle is refused: the app has no twinkle switch this script can read back yet (part 2 Task 8). See the TODO in scripts/perf/perf.mjs. Nothing was run.');
-  process.exit(2);
-}
+/** Runs in the page. */
+const TWINKLE_READBACK = () => {
+  const tw = window.__rmr?.twinkle;
+  return {
+    twinkleOn: typeof tw?.enabled === 'function' ? tw.enabled() : null,
+    twinkleSpawned: tw?.stats?.spawned ?? null,
+    twinkleNodes: document.querySelector('.tw-layer')?.childElementCount ?? null,
+  };
+};
 const ANY_EFFECT = !!(GLASS || TWINKLE || NAMES);
 
 /** Sets the forced effects up for every page of a browser context, before any script of the page runs. Called for
@@ -123,7 +125,8 @@ async function presetEffects(ctx) {
 
 /** What the page actually has, read back so a run proves its flags took effect (checkEffects in lib.mjs judges
  * it). Only called when a flag is set, and only after the measures of the page it reads. */
-const effectsSeen = (page, at) =>
+const effectsSeen = async (page, at) => ({ ...(await effectsSeenBase(page, at)), ...(await page.evaluate(TWINKLE_READBACK)) });
+const effectsSeenBase = (page, at) =>
   page.evaluate((where) => {
     const backdrop = (sel) => {
       const el = document.querySelector(sel);

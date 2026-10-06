@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { act, albumSpread, camera, isPhone, overviewMiss, waitForCameraIdle, waitForGasSharpSettled, waitForMap, wholeMapMiss } from './helpers';
+import { act, albumSpread, camera, isPhone, overviewMiss, twinkleOff, waitForCameraIdle, waitForGasSharpSettled, waitForMap, wholeMapMiss } from './helpers';
 
 /** Task 0 of part 2: /map opens at the approved Overview (final-overview.jpg); the fit button gives the Whole map.
  * Zooms recorded in the plan (docs/superpowers/plans/2026-10-05-trifid-theme-2-task0-overview-framing.md) from the
@@ -351,6 +351,8 @@ const SKY_LUMA = 6.2;
 
 /** Median luma of a client-px rectangle of a screenshot (gas.spec.ts lumaAt with q = 0.5). */
 async function medianLuma(page: Page, r: { x: number; y: number; w: number; h: number }): Promise<number> {
+  // A star glint is a bright spot at a random place and time: none while pixels are read.
+  await twinkleOff(page);
   const png = (await page.screenshot()).toString('base64');
   return page.evaluate(
     async ([data, rect]) => {
