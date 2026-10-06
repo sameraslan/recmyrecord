@@ -5,10 +5,13 @@ import { COPY } from '@/lib/copy';
 import { REC_DEFAULT_VISIBLE } from '@/lib/data/catalog';
 import { useAppStore } from '@/lib/store';
 import type { AlbumId, RecRow as Row, StopId } from '@/lib/types';
+import { showStop } from '@/lib/show-stop';
 import { RecRow } from './RecRow';
 import { useFlipList } from './useFlipList';
 
-export function RecList({ seedId, rows, total, stop, expanded, onToggle }: { seedId: AlbumId; rows: Row[]; total: number; stop: StopId; expanded: boolean; onToggle: () => void }) {
+/** `note`: shown in place of an empty list (an album without audio at the sonic and balanced stops), with a
+ * control that moves the slider to Mood. */
+export function RecList({ seedId, rows, total, stop, expanded, onToggle, note = false }: { seedId: AlbumId; rows: Row[]; total: number; stop: StopId; expanded: boolean; onToggle: () => void; note?: boolean }) {
   const listRef = useRef<HTMLOListElement>(null);
   const listId = useId();
   useFlipList(listRef, seedId, `${stop}|${expanded}`);
@@ -17,6 +20,14 @@ export function RecList({ seedId, rows, total, stop, expanded, onToggle }: { see
       <h2 className="recs-h" id="recs-h" tabIndex={-1}>
         {COPY.album.listHeading}
       </h2>
+      {note ? (
+        <div className="recs-note">
+          <p>{COPY.album.noAudio}</p>
+          <button type="button" className="textbtn u" onClick={() => showStop('mood')}>
+            <span>{COPY.album.noAudioAction}</span>
+          </button>
+        </div>
+      ) : null}
       <ol className="rec-list" id={listId} ref={listRef} onMouseLeave={() => useAppStore.getState().setHot(null)}>
         {rows.map((r) => (
           <RecRow key={r.id} row={r} stop={stop} />

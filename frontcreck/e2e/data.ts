@@ -8,7 +8,8 @@ import type { AlbumRecord, Recs, StopId } from '../src/lib/types';
  * lists change whenever the pipeline rebuilds the audio features, so tests take those expectations from here
  * and never name a title. Mood lists barely depend on audio and stay pinned in the specs.
  */
-const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', 'data');
+// RMR_DATA_DIR: the opt-in folder for another data set (see src/lib/data/server.ts).
+const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', process.env.RMR_DATA_DIR || 'data');
 const readJson = <T>(name: string): T => JSON.parse(fs.readFileSync(path.join(DATA_DIR, name), 'utf8')) as T;
 
 let cache: { albums: AlbumRecord[]; recs: Recs } | null = null;
@@ -40,6 +41,8 @@ export function albumWhoseFirstRecHasNoSpotify(stop: StopId): { slug: string; fi
   const { albums, recs } = data();
   for (let id = 0; id < albums.length; id++) {
     const [a, b] = recs[stop][id];
+    // An album without audio has no sonic or balanced rows.
+    if (a === undefined || b === undefined) continue;
     if (albums[a].s === '' && albums[b].s !== '') {
       const [first, second] = recsOf(albums[id].slug, stop);
       return { slug: albums[id].slug, first, second };

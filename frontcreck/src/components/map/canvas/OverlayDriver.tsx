@@ -2,7 +2,7 @@
 
 import { useFrame, useThree } from '@react-three/fiber';
 import type * as THREE from 'three';
-import { ATLAS_PER_SHEET } from '@/lib/data/sprites';
+import { atlasSheetOf } from '@/lib/data/sprites';
 import { renderedSpriteCssSize, selectedIsProminent } from '../shaders/album';
 import { useMapStore } from '../state/mapStore';
 import { getOverlayEl, getOverlaySize, setMapZoomed } from '../state/overlayEls';
@@ -62,7 +62,7 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
     if (sel) {
       const i = input.selected;
       // Mirrors the shader: the album is a cover only once its atlas sheet is loaded.
-      const loaded = i !== null && isAtlasSheetLoaded(Math.floor(i / ATLAS_PER_SHEET));
+      const loaded = i !== null && isAtlasSheetLoaded(atlasSheetOf(i));
       if (i === null || focusIds.includes(i) || selectedIsProminent(camera.zoom, height, loaded)) sel.style.opacity = '0';
       else {
         const p = toScreen(i);

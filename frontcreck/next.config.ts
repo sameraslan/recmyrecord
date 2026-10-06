@@ -7,12 +7,26 @@ const live = preview ? ' https://vercel.live' : '';
 
 // Every SSG page inlines its own RSC payload scripts, so hashes would differ per page, and nonces would force
 // dynamic rendering: 'unsafe-inline' is the deliberate trade-off for a fully static site with no user HTML.
+const COVER_HOSTS = [
+  'https://i.scdn.co',
+  'https://cdn-images.dzcdn.net',
+  'https://is1-ssl.mzstatic.com',
+  'https://f4.bcbits.com',
+  'https://i.ytimg.com',
+];
+
+// RMR_DATA_DIR=<folder under public/> serves that folder at /data instead of the committed public/data, for
+// building and testing against another data set (src/lib/data/server.ts reads the same variable at build time).
+// The value is checked there; here an unusable one simply changes nothing.
+const dataDir = /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(process.env.RMR_DATA_DIR ?? '') ? process.env.RMR_DATA_DIR : 'data';
+
 const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''}${live}`,
   `style-src 'self' 'unsafe-inline'${live}`,
-  // Covers come from Spotify's CDN; data: is the grain SVG in shell.css.
-  `img-src 'self' data: blob: https://i.scdn.co${preview ? ' https://vercel.live https://vercel.com' : ''}`,
+  // Covers come from the CDNs of Spotify, Deezer, Apple, Bandcamp and YouTube (coverUrlAt in
+  // src/lib/data/catalog.ts); data: is the grain SVG in shell.css.
+  `img-src 'self' data: blob: ${COVER_HOSTS.join(' ')}${preview ? ' https://vercel.live https://vercel.com' : ''}`,
   `font-src 'self'${preview ? ' https://vercel.live https://assets.vercel.com' : ''}`,
   `connect-src 'self'${dev ? ' ws:' : ''}${preview ? ' https://vercel.live wss://ws-us3.pusher.com' : ''}`,
   // webgl.ts warms up WebGL in a Blob worker.
@@ -59,6 +73,10 @@ const nextConfig: NextConfig = {
       { source: '/insights', destination: '/', permanent: true },
       { source: '/insights/:path*', destination: '/', permanent: true },
     ];
+  },
+  async rewrites() {
+    // beforeFiles: checked before public/, so /data/... never falls through to the committed files.
+    return { beforeFiles: dataDir === 'data' ? [] : [{ source: '/data/:path*', destination: `/${dataDir}/:path*` }], afterFiles: [], fallback: [] };
   },
   async headers() {
     return [

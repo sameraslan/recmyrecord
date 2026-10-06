@@ -13,7 +13,7 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
 
   An x64 Node under Rosetta is rejected by Next 16 and makes Playwright start a translated Chrome whose timings are far too slow. The end-to-end tests and the performance script check for this and stop.
 - Google Chrome installed, for the performance script and the review screenshots (both use the GPU). The end-to-end tests use Playwright's own Chromium, the revision that `@playwright/test` expects (`npx playwright install chromium` fetches it).
-- No environment variables. The site has no API, database or secrets.
+- No environment variables are needed. The site has no API, database or secrets. Two optional ones exist for trying a data set that is not the committed one (see below).
 
 ## Commands
 
@@ -29,6 +29,18 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
 | `npm run test:e2e` | Playwright end-to-end and accessibility tests at desktop and phone sizes, plus a run with WebGL turned off. Builds and serves the site on port 3100 first. `E2E_DEV=1 npm run test:e2e` runs them against a dev server instead. |
 | `npm run perf` | Measures the performance budgets of the design spec (section 7) at 1440 x 900 and 390 x 844, in software and GPU rendering, and fails when a budget is missed. Needs a build. |
 | `npm run shots` | Screenshots of every reviewed state at 1440 x 900, 1280 x 800 and 390 x 844, written to `test-results/review/`. Needs a build. Pass part of a name to shoot only some, for example `npm run shots -- d1440-d1`. |
+
+## Trying another data set
+
+`public/data/` is the committed data. To build, run or test against another build of the data without touching it, put that build in a folder beside it whose name starts with `data-` (those are ignored by git; a symlink works) and name the folder in `RMR_DATA_DIR`:
+
+```bash
+ln -s ../../data-pipeline/.cache/site10k public/data-10k
+RMR_DATA_DIR=data-10k npm run build && RMR_DATA_DIR=data-10k npm start
+RMR_DATA_DIR=data-10k npm run perf
+```
+
+The pages still ask for `/data/...`; the server answers from the named folder. `RMR_PRERENDER` limits which album pages a build prerenders, for a large data set on a small disk: a comma list of a count (that many leading albums) and slugs, for example `RMR_PRERENDER=300,in-rainbows-radiohead`. Albums left out answer 404, so this is for test builds only. Without these variables nothing changes.
 
 ## How it works
 

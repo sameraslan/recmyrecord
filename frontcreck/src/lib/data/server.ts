@@ -1,12 +1,22 @@
 import 'server-only';
 import fs from 'node:fs';
 import path from 'node:path';
-import { SHELF_SIZE, buildAlbumPageData, buildCatalog, pickShelf, toSummary } from '@/lib/data/catalog';
+import { REC_MAX, SHELF_SIZE, buildAlbumPageData, buildCatalog, pickShelf, toSummary } from '@/lib/data/catalog';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumPageData, AlbumRecord, AlbumSummary, Catalog, Positions, Recs, Vocab } from '@/lib/types';
 
+/**
+ * The folder under public/ that holds the data: `data` unless RMR_DATA_DIR names another one, for building
+ * and testing against a data set that is not the committed one (next.config.ts then serves it at /data).
+ */
+export function dataDirName(value: string | undefined = process.env.RMR_DATA_DIR): string {
+  if (!value) return 'data';
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) throw new Error(`RMR_DATA_DIR must be the name of a folder under public/, got "${value}"`);
+  return value;
+}
+
 // Relies on the working directory being frontcreck/, which holds for `next build`, `next dev` and Vitest.
-const DATA_DIR = path.join(process.cwd(), 'public', 'data');
+const DATA_DIR = path.join(process.cwd(), 'public', dataDirName());
 
 function readJson<T>(name: string): T {
   return JSON.parse(fs.readFileSync(path.join(DATA_DIR, name), 'utf8')) as T;
@@ -28,6 +38,45 @@ export function assertDataConsistent(albumCount: number, recs: Recs, positions: 
   }
 }
 
+/**
+ * Fails the build when a row of recs.json has the wrong number of albums: `expected` (ten) for every album at
+ * every stop, except that an album without audio (`n`) has none at sonic and balanced, and is in no other
+ * album's sonic or balanced row.
+ */
+export function assertRecsConsistent(albums: readonly AlbumRecord[], recs: Recs, expected = REC_MAX): void {
+  for (const stop of STOP_IDS) {
+    const byAudio = stop !== 'mood';
+    for (let id = 0; id < albums.length; id++) {
+      const row = recs[stop]?.[id];
+      const count = Array.isArray(row) ? row.length : 0;
+      if (byAudio && albums[id].n) {
+        if (count !== 0) throw new Error(`recs.json: ${stop} row of ${albums[id].slug} has ${count} albums but the album has no audio (expected none)`);
+        continue;
+      }
+      if (count !== expected) throw new Error(`recs.json: ${stop} row of ${albums[id].slug} has ${count} albums (expected ${expected})`);
+      if (!byAudio) continue;
+      for (const j of row) {
+        if (albums[j]?.n) throw new Error(`recs.json: ${stop} row of ${albums[id].slug} lists ${albums[j].slug}, which has no audio`);
+      }
+    }
+  }
+}
+
+/**
+ * The album pages to prerender: all of them, unless RMR_PRERENDER asks for fewer (a test build of a large data
+ * set on a small disk). Its value is a comma list of a count (that many leading albums) and slugs.
+ */
+export function prerenderSlugs(slugs: readonly string[], value: string | undefined = process.env.RMR_PRERENDER): string[] {
+  if (!value) return [...slugs];
+  const known = new Set(slugs);
+  const out = new Set<string>();
+  for (const part of value.split(',').map((s) => s.trim()).filter(Boolean)) {
+    if (/^\d+$/.test(part)) slugs.slice(0, Number(part)).forEach((s) => out.add(s));
+    else if (known.has(part)) out.add(part);
+  }
+  return slugs.filter((s) => out.has(s));
+}
+
 let cache: { catalog: Catalog; recs: Recs } | null = null;
 
 function load(): { catalog: Catalog; recs: Recs } {
@@ -36,6 +85,7 @@ function load(): { catalog: Catalog; recs: Recs } {
     const recs = readJson<Recs>('recs.json');
     // positions.json is only read to check it; the client fetches it.
     assertDataConsistent(albums.length, recs, readJson<Positions>('positions.json'));
+    assertRecsConsistent(albums, recs);
     cache = { catalog: buildCatalog(albums, readJson<Vocab>('vocab.json')), recs };
   }
   return cache;
@@ -47,6 +97,11 @@ export function getServerCatalog(): Catalog {
 
 export function getAllSlugs(): string[] {
   return load().catalog.albums.map((a) => a.slug);
+}
+
+/** The slugs `generateStaticParams` prerenders (every album unless RMR_PRERENDER limits it). */
+export function getPrerenderSlugs(): string[] {
+  return prerenderSlugs(getAllSlugs());
 }
 
 export function getAlbumPageData(slug: string): AlbumPageData | null {

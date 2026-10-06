@@ -133,6 +133,7 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
               stop={stop}
               expanded={expanded}
               onToggle={() => setExpandedFor(expanded ? null : seed.slug)}
+              note={seed.noAudio === true && rows.length === 0}
             />
           </div>
           <MapPreviewStrip focus={{ seed: seed.id, recs: visible.map((r) => r.id) }} stop={stop} onOpen={() => setMapMode(true)} />

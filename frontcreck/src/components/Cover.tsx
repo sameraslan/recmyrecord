@@ -2,7 +2,7 @@
 
 import { useState, type CSSProperties } from 'react';
 import { coverUrl, initialLetter } from '@/lib/data/catalog';
-import { thumbStyle } from '@/lib/data/sprites';
+import { thumbSheetOf, thumbStyle } from '@/lib/data/sprites';
 import { useThumbSheet } from '@/lib/thumb-sheet';
 import type { AlbumSummary } from '@/lib/types';
 
@@ -19,16 +19,17 @@ export interface CoverProps {
   fluid?: boolean;
 }
 
-/** Remote cover; on error the 48 px sprite from thumbs.webp; with no cover id, or when the sprite sheet
- * fails too, a lettered tile. The tile is a failure state only: while the remote image (or the sheet)
- * loads, the box is empty. The sprite element, the only reference to the 2.3 MB thumbs.webp, is rendered
- * only after the remote image failed and the sheet has loaded, so a normal page load never fetches it. */
+/** Remote cover; on error the 48 px sprite from the album's thumbnail sheet; with no cover id, or when the
+ * sprite sheet fails too, a lettered tile. The tile is a failure state only: while the remote image (or the
+ * sheet) loads, the box is empty. The sprite element, the only reference to a 2.3 MB thumbnail sheet, is
+ * rendered only after the remote image failed and the sheet has loaded, so a normal page load never fetches
+ * one. A cover that is a 4:3 video frame shows its centre square (`.cover img` is `object-fit: cover`). */
 export function Cover({ album, size, className = '', eager = false, fluid = false }: CoverProps) {
   const url = coverUrl(album.coverId, size);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [failedFor, setFailedFor] = useState<string | null>(null);
   const failed = url !== null && failedFor === url;
-  const sheet = useThumbSheet(failed);
+  const sheet = useThumbSheet(failed, thumbSheetOf(album.id));
   const state = url && !failed ? 'remote' : url && sheet !== 'error' ? 'sprite' : 'tile';
   const style = {
     ...(fluid ? null : { width: size }),

@@ -60,8 +60,10 @@ async function firstLoadJs() {
 
 /** Server HTML of `/` and of In Rainbows: size, and whether it names an album the page does not show. */
 async function pageChecks() {
-  const albums = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/albums.json'), 'utf8'));
-  const recs = JSON.parse(fs.readFileSync(path.join(ROOT, 'public/data/recs.json'), 'utf8'));
+  // RMR_DATA_DIR: the opt-in folder for another data set (see src/lib/data/server.ts).
+  const dataDir = path.join(ROOT, 'public', process.env.RMR_DATA_DIR || 'data');
+  const albums = JSON.parse(fs.readFileSync(path.join(dataDir, 'albums.json'), 'utf8'));
+  const recs = JSON.parse(fs.readFileSync(path.join(dataDir, 'recs.json'), 'utf8'));
   const ir = albums.findIndex((a) => a.slug === 'in-rainbows-radiohead');
   const shown = new Set([ir, ...Object.values(recs).flatMap((rows) => rows[ir])]);
   // A low-ranked album: never on the Home shelf (the top albums with a cover) and not among In Rainbows' rows.
@@ -235,7 +237,7 @@ async function measure(mode, vpName) {
   await page.addInitScript(PAGE_HELPERS);
   let thumbsOnFirstLoad = false;
   const onRequest = (r) => {
-    if (r.url().endsWith('/data/thumbs.webp')) thumbsOnFirstLoad = true;
+    if (/\/data\/thumbs(-\d+)?\.webp$/.test(r.url())) thumbsOnFirstLoad = true;
   };
   page.on('request', onRequest);
   await page.goto(`${BASE}/`, { waitUntil: 'load' });

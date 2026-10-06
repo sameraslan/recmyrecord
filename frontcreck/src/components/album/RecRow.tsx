@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Cover } from '@/components/Cover';
 import { Icon } from '@/components/Icon';
 import { COPY } from '@/lib/copy';
-import { spotifyUrl } from '@/lib/data/catalog';
+import { listenLink, listenText } from '@/lib/data/catalog';
 import { useAppStore } from '@/lib/store';
 import type { RecRow as Row, StopId } from '@/lib/types';
 import { albumHref } from '@/lib/url-state';
@@ -12,7 +12,8 @@ import { albumHref } from '@/lib/url-state';
 export function RecRow({ row, stop }: { row: Row; stop: StopId }) {
   const hot = useAppStore((s) => s.hot === row.id);
   const setHot = (id: number | null) => useAppStore.getState().setHot(id);
-  const spotify = spotifyUrl(row);
+  const listen = listenLink(row);
+  const text = listen ? listenText(listen.service) : null;
   return (
     <li className={`rec${hot ? ' hot' : ''}`} data-flip={row.id} data-album-id={row.id}>
       <Link
@@ -39,8 +40,8 @@ export function RecRow({ row, stop }: { row: Row; stop: StopId }) {
           ) : null}
         </span>
       </Link>
-      {spotify ? (
-        <a className="rec-sp" href={spotify} target="_blank" rel="noopener noreferrer" aria-label={COPY.album.rowSpotify(row.title)} title={COPY.album.openInSpotify}>
+      {listen && text ? (
+        <a className="rec-sp" href={listen.url} target="_blank" rel="noopener noreferrer" aria-label={text.row(row.title)} title={text.open}>
           <Icon name="ext" />
         </a>
       ) : null}

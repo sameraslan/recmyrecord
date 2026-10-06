@@ -18,7 +18,9 @@ const STRIP_SEED = 38;
 const STRIP_REC = 28;
 const images = new Map<string, { im: HTMLImageElement; decoded: boolean; failed: boolean; waiting: Set<() => void> }>();
 
-/** A cover is drawn only after img.decode() resolved (off the main thread); until then the tile is drawn. */
+/** A cover is drawn only after img.decode() resolved (off the main thread); until then the tile is drawn.
+ * The image is requested without CORS, which every cover host allows; the canvas is only drawn to, never read
+ * back, so a cross-origin cover cannot make anything fail. A cover that does not load keeps its tile. */
 function readyImage(url: string, onReady: () => void): HTMLImageElement | null {
   let entry = images.get(url);
   if (!entry) {
@@ -110,7 +112,12 @@ export function drawStrip(
     const y = it.y - s / 2;
     const url = coverUrl(a.c, s);
     const im = url ? readyImage(url, onReady) : null;
-    if (im) ctx.drawImage(im, x, y, s, s);
+    if (im) {
+      // The centre square of the image: all of a square cover, the middle of a 4:3 video frame.
+      const side = Math.min(im.naturalWidth, im.naturalHeight) || 0;
+      if (side) ctx.drawImage(im, (im.naturalWidth - side) / 2, (im.naturalHeight - side) / 2, side, side, x, y, s, s);
+      else ctx.drawImage(im, x, y, s, s);
+    }
     else {
       ctx.fillStyle = TILE[a.k % 3];
       ctx.fillRect(x, y, s, s);

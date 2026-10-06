@@ -54,6 +54,9 @@
 .rec-sp:hover { color: var(--color-paper); background: rgba(237, 229, 213, .06); }
 .rec-sp svg { width: 16px; height: 16px; }
 .show-more { margin: 8px 0 0 -10px; }
+/* In place of the list: an album without audio at the sonic and balanced stops. */
+.recs-note { padding-top: 14px; font-size: 15px; line-height: 1.5; color: var(--color-dust); }
+.recs-note .textbtn { margin: 2px 0 0 -10px; }
 
 @media (max-width: 1100px) and (min-width: 900px) {
   .rec-shared { display: none; }
