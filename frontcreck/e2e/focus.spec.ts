@@ -40,6 +40,9 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
   await expect(page.locator('.mk--seed')).toHaveAttribute('data-album-id', '11');
   await expect(page.locator('.mk-n')).toHaveText(['1', '2', '3', '4', '5']);
   await expect(page.locator('svg.mk-lines line[data-to]')).toHaveCount(5);
+  // Every line is a dark casing under a white core, and all casings are drawn below all cores.
+  await expect(page.locator('svg.mk-lines g.mk-case line[data-case]')).toHaveCount(5);
+  expect(await page.locator('svg.mk-lines > g').evaluateAll((gs) => gs.map((g) => g.getAttribute('class')))).toEqual(['mk-case', 'mk-core']);
 
   // (a) recommendation markers in list order, each with its own rank badge
   expect(await page.locator('.mk--rec').evaluateAll((els) => els.map((e) => Number((e as HTMLElement).dataset.albumId)))).toEqual(recs);
@@ -70,7 +73,9 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
   const seed = boxes.find((b) => b.id === 11)!;
   const seedPoint = (await page.evaluate(() => window.__rmr!.map!.screenPoint(11)))!;
   expect(Math.hypot(seed.cx - seedPoint.x, seed.cy - seedPoint.y)).toBeLessThan(40);
-  // (d) each line runs from the seed cover's centre to its recommendation's cover centre
+  // (d) each line runs from the edge of the seed's frame (4 px outside its cover) to the edge of its
+  // recommendation's frame (1 px outside), along the straight line between the two centres, and at least
+  // 23 px of it shows.
   const lines = await page.locator('svg.mk-lines line[data-to]').evaluateAll((els) => {
     const svg = (els[0] as SVGLineElement).ownerSVGElement!.getBoundingClientRect();
     return els.map((l) => ({
@@ -81,12 +86,17 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
       y2: svg.top + Number(l.getAttribute('y2')),
     }));
   });
+  const cheb = (x: number, y: number, b: { cx: number; cy: number }) => Math.max(Math.abs(x - b.cx), Math.abs(y - b.cy));
   for (const l of lines) {
     const end = boxes.find((b) => b.id === l.to)!;
-    expect(Math.abs(l.x1 - seed.cx), `line ${l.to} x1`).toBeLessThanOrEqual(2);
-    expect(Math.abs(l.y1 - seed.cy), `line ${l.to} y1`).toBeLessThanOrEqual(2);
-    expect(Math.abs(l.x2 - end.cx), `line ${l.to} x2`).toBeLessThanOrEqual(2);
-    expect(Math.abs(l.y2 - end.cy), `line ${l.to} y2`).toBeLessThanOrEqual(2);
+    expect(Math.abs(cheb(l.x1, l.y1, seed) - (seed.w / 2 + 4)), `line ${l.to} starts on the seed frame`).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(cheb(l.x2, l.y2, end) - (end.w / 2 + 1)), `line ${l.to} ends on its cover's frame`).toBeLessThanOrEqual(1.5);
+    // Collinear with the two centres: the cross product of (end - seed) and (point - seed) is near zero.
+    const dx = end.cx - seed.cx;
+    const dy = end.cy - seed.cy;
+    const len = Math.hypot(dx, dy);
+    for (const [x, y] of [[l.x1, l.y1], [l.x2, l.y2]]) expect(Math.abs(dx * (y - seed.cy) - dy * (x - seed.cx)) / len, `line ${l.to} aims at the centres`).toBeLessThanOrEqual(1.5);
+    expect(Math.hypot(l.x2 - l.x1, l.y2 - l.y1), `line ${l.to} shows`).toBeGreaterThanOrEqual(23);
   }
   await shot(page, info, 'focus');
 });

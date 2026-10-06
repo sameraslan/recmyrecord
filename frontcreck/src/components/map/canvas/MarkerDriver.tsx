@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import type * as THREE from 'three';
 import { easeOutCubic, prefersReducedMotion } from '@/lib/media';
 import { STOP_T, interpolated } from '../data';
-import { MARKER_SIZE, MarkerLayout, layoutMarkers, type MarkerAnchor, type MarkerBounds, type MarkerItem, type PlacedMarker } from '../state/focusLayout';
+import { HOT_FRAME_PX, MARKER_SIZE, MarkerLayout, REC_FRAME_PX, SEED_FRAME_PX, layoutMarkers, type MarkerAnchor, type MarkerBounds, type MarkerItem, type PlacedMarker } from '../state/focusLayout';
 import { useMapStore, type MapStore } from '../state/mapStore';
 import { inMotion } from '../state/motion';
 import { badgeKey, getOverlayEl, getOverlaySize, getPlacedMarkers, markerKey, setPlacedMarkers } from '../state/overlayEls';
@@ -19,19 +19,45 @@ const HOT_SCALE = 1.16;
 const MARKER_EDGE = 8;
 /** A marker moved further than this from its album gets a leader line back to it (mockup: 6 px). */
 const LEADER_MIN_PX = 6;
-/** Rank badge offset from the cover's top-left corner (mockup: 6 px up and left). */
-const BADGE_OFFSET = 6;
+/** Rank badge offset from the cover's top-left corner (prototype: 0.4 of the 18 px badge, up and left). */
+const BADGE_OFFSET = 7;
 /** How long the covers take to ease onto the settled layout once a motion ends. */
 export const MARKER_SETTLE_MS = 180;
 /** A tween that is sent elsewhere this soon after the focus changed (the album panel's inset arriving a frame
  * later, say) is still part of the opening: the layout follows it to the new view. Later reframings settle. */
 const RETARGET_MS = 300;
 
-function setLine(l: SVGLineElement, x1: number, y1: number, x2: number, y2: number) {
-  l.setAttribute('x1', x1.toFixed(1));
-  l.setAttribute('y1', y1.toFixed(1));
-  l.setAttribute('x2', x2.toFixed(1));
-  l.setAttribute('y2', y2.toFixed(1));
+/** Puts a white core and the dark casing under it on the same segment. */
+function setLines(core: SVGLineElement, casing: SVGLineElement | undefined, x1: number, y1: number, x2: number, y2: number) {
+  const a = x1.toFixed(1);
+  const b = y1.toFixed(1);
+  const c = x2.toFixed(1);
+  const d = y2.toFixed(1);
+  core.setAttribute('x1', a);
+  core.setAttribute('y1', b);
+  core.setAttribute('x2', c);
+  core.setAttribute('y2', d);
+  if (!casing) return;
+  casing.setAttribute('x1', a);
+  casing.setAttribute('y1', b);
+  casing.setAttribute('x2', c);
+  casing.setAttribute('y2', d);
+}
+
+/** The fraction of the step (dx, dy) at which it leaves a square of half side `half` centred on its start: the
+ * point `edgePoint` (focusLayout) gives, as one number, so that paint allocates nothing for it. */
+function edgeT(dx: number, dy: number, half: number): number {
+  return half / (Math.max(Math.abs(dx), Math.abs(dy)) || 1);
+}
+
+/** Half the side of a marker's cover plus its frame (the seed's ring, a hot ring, a hairline): where its lines end. */
+function frameHalf(it: PlacedMarker): number {
+  return it.drawn / 2 + (it.seed ? SEED_FRAME_PX : it.drawn !== it.size ? HOT_FRAME_PX : REC_FRAME_PX);
+}
+
+function markerOf(drawn: readonly PlacedMarker[], id: number): PlacedMarker | undefined {
+  for (let i = 0; i < drawn.length; i++) if (drawn[i].id === id) return drawn[i];
+  return undefined;
 }
 
 interface Settle {
@@ -98,18 +124,43 @@ function paint(w: Work): void {
   setPlacedMarkers(w.drawn);
   const drawn = w.drawn;
   const svg = getOverlayEl<SVGSVGElement>('lines');
-  if (svg && drawn.length) {
-    const rank = (id: number) => drawn.findIndex((p) => p.id === id);
-    svg.querySelectorAll<SVGLineElement>('line[data-to]').forEach((l) => {
-      const it = drawn[rank(Number(l.dataset.to))];
-      if (it) setLine(l, drawn[0].x, drawn[0].y, it.x, it.y);
-    });
-    svg.querySelectorAll<SVGLineElement>('line[data-leader]').forEach((l) => {
-      const it = drawn[rank(Number(l.dataset.leader))];
-      const show = !!it && Math.hypot(it.x - it.ax, it.y - it.ay) > LEADER_MIN_PX;
-      l.style.display = show ? '' : 'none';
-      if (show && it) setLine(l, it.ax, it.ay, it.x, it.y);
-    });
+  if (svg && drawn.length && svg.children.length === 2) {
+    const seed = drawn[0];
+    const seedHalf = frameHalf(seed);
+    // FocusMarkers renders the casings (g.mk-case) and the cores (g.mk-core) in the same order: the j-th casing
+    // lies under the j-th core. The live child lists are walked in place (no query, no list built per frame).
+    const cases = svg.children[0].children;
+    const cores = svg.children[1].children;
+    for (let j = 0; j < cores.length; j++) {
+      const core = cores[j] as SVGLineElement;
+      const casing = cases[j] as SVGLineElement | undefined;
+      const to = core.dataset.to;
+      if (to !== undefined) {
+        // From the edge of the seed's frame to the edge of the recommendation's frame, along the two centres.
+        const it = markerOf(drawn, Number(to));
+        if (!it) continue;
+        const dx = it.x - seed.x;
+        const dy = it.y - seed.y;
+        const a = edgeT(dx, dy, seedHalf);
+        const b = edgeT(dx, dy, frameHalf(it));
+        setLines(core, casing, seed.x + dx * a, seed.y + dy * a, it.x - dx * b, it.y - dy * b);
+        continue;
+      }
+      // A thin leader from a moved cover's frame back to the album's true position (the shader draws a ring
+      // there); none while the true position is still under the cover or its frame.
+      const it = markerOf(drawn, Number(core.dataset.leader));
+      const dx = it ? it.ax - it.x : 0;
+      const dy = it ? it.ay - it.y : 0;
+      const half = it ? frameHalf(it) : 0;
+      const show = !!it && Math.hypot(dx, dy) > LEADER_MIN_PX && Math.max(Math.abs(dx), Math.abs(dy)) > half;
+      const display = show ? '' : 'none';
+      core.style.display = display;
+      if (casing) casing.style.display = display;
+      if (show && it) {
+        const t = edgeT(dx, dy, half);
+        setLines(core, casing, it.x + dx * t, it.y + dy * t, it.ax, it.ay);
+      }
+    }
   }
   const tip = getOverlayEl('hover');
   const hovered = useMapStore.getState().hoveredIndex;

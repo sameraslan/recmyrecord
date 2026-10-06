@@ -69,30 +69,37 @@
 .card .x svg { width: 16px; height: 16px; }
 @keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
-/* focus markers: the mockup's canvas drawing (seed ring 4 px out, hot ring 3 px out, hairline on the others) */
+/* focus markers: the Trifid prototype's drawing (overlay.js L32-74). On the map the only accent is white. */
 .mk-layer { position: absolute; inset: 0; z-index: 3; pointer-events: none; overflow: hidden; }
 .mk-lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
-.mk-lines line { stroke: rgba(237, 229, 213, .22); stroke-width: 1; stroke-linecap: round; }
-.mk-lines line[data-hot] { stroke: var(--acc); stroke-opacity: .9; stroke-width: 1.5; }
-.mk-lines line[data-leader] { stroke: rgba(237, 229, 213, .35); }
+/* White lines on a dark casing, so they hold on any gas; every casing lies under every core. */
+.mk-lines line { stroke-linecap: round; }
+.mk-case line { stroke: rgba(6, 6, 10, .8); stroke-width: 4.5; }
+.mk-case line[data-hot] { stroke-width: 5.25; }
+.mk-case line[data-leader-case] { stroke-width: 3; }
+.mk-core line { stroke: rgba(255, 255, 255, .92); stroke-width: 1.5; }
+.mk-core line[data-hot] { stroke: #fff; stroke-width: 2.25; }
+.mk-core line[data-leader] { stroke: rgba(255, 255, 255, .7); stroke-width: 1; }
 /* Markers take no pointer events: the canvas hit-tests their boxes, so drags and pinches that start on a cover reach it. */
-.mk { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; }
-.mk .cover { width: 100% !important; box-shadow: 1px 3px 0 rgba(10, 8, 6, .55); }
-/* Square rings (an outline would follow the cover's 2 px radius): a hairline on the cover edge, the seed's
- * 2 px accent ring 3 px out, a hot recommendation's 2 px out. */
-.mk::after { content: ""; position: absolute; inset: -1px; border: 1px solid rgba(237, 229, 213, .28); pointer-events: none; }
+.mk { position: absolute; left: 0; top: 0; pointer-events: none; will-change: transform; background: var(--color-room); box-shadow: 0 4px 14px rgba(0, 0, 0, .6); }
+.mk .cover { width: 100% !important; }
+/* Square frames (an outline would follow the cover's 2 px radius). A recommendation: a white hairline with a
+ * dark hairline outside it. The seed: a 2 px dark gap, then a 2 px lamp ring. A hot recommendation: a 2 px lamp
+ * ring with a dark hairline outside it. MarkerDriver ends the lines on these frames (SEED_FRAME_PX 4,
+ * REC_FRAME_PX 1, HOT_FRAME_PX 3). */
+.mk::after { content: ""; position: absolute; inset: -1px; border: 1px solid rgba(255, 255, 255, .6); box-shadow: 0 0 0 1px rgba(6, 6, 10, .7); pointer-events: none; }
 .mk--seed { z-index: 3; }
-.mk--seed::after { inset: -5px; border: 2px solid var(--acc); }
+.mk--seed::after { inset: -4px; border: 2px solid var(--color-lamp); box-shadow: inset 0 0 0 2px var(--color-room); }
 .mk[data-hot] { z-index: 2; }
-.mk[data-hot]::after { inset: -4px; border: 2px solid var(--acc); }
-/* Badges in their own layer above every cover and ring (the mockup draws them last). */
+.mk[data-hot]::after { inset: -2px; border: 2px solid var(--color-lamp); box-shadow: 0 0 0 1px rgba(6, 6, 10, .8); }
+/* Badges in their own layer above every cover and ring (drawn last). Solid, not glass: digits must hold on any gas. */
 .mk-badges { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
 .mk-n {
   position: absolute; left: 0; top: 0; min-width: 18px; will-change: transform; height: 18px; padding: 0 4px; display: grid; place-items: center;
-  background: var(--color-float); border: 1px solid rgba(237, 229, 213, .35); color: var(--color-paper); font: 600 11px/1 var(--font-sans);
+  background: #0b0a0f; border: 1px solid rgba(255, 255, 255, .55); color: #fff; font: 600 11px/1 var(--font-sans);
 }
-/* Room-coloured digits: every album accent is at least 4.5:1 against the room colour (lamp ink is not). */
-.mk-n[data-hot] { background: var(--acc); border-color: var(--acc); color: var(--color-room); }
+/* Inverted when hot: room-coloured digits on the lamp token (17:1 with the Trifid values). */
+.mk-n[data-hot] { background: var(--color-lamp); border-color: var(--color-room); color: var(--color-room); }
 
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }

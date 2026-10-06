@@ -32,12 +32,24 @@ export function FocusMarkers({ albums }: { albums: AlbumRecord[] }) {
   return (
     <div className="mk-layer" aria-hidden="true">
       <svg className="mk-lines" ref={(el) => { setOverlayEl('lines', el); }}>
-        {focus.recs.map((id) => (
-          <line key={`to-${id}`} data-to={id} data-hot={isHot(id) ? 'true' : undefined} />
-        ))}
-        {ids.map((id) => (
-          <line key={`leader-${id}`} data-leader={id} style={{ display: 'none' }} />
-        ))}
+        {/* Every dark casing first, then every white core, so no casing ever crosses a core. MarkerDriver pairs
+          * the two groups' lines by their order: keep it the same in both. */}
+        <g className="mk-case">
+          {focus.recs.map((id) => (
+            <line key={`case-${id}`} data-case={id} data-hot={isHot(id) ? 'true' : undefined} />
+          ))}
+          {ids.map((id) => (
+            <line key={`leader-case-${id}`} data-leader-case={id} style={{ display: 'none' }} />
+          ))}
+        </g>
+        <g className="mk-core">
+          {focus.recs.map((id) => (
+            <line key={`to-${id}`} data-to={id} data-hot={isHot(id) ? 'true' : undefined} />
+          ))}
+          {ids.map((id) => (
+            <line key={`leader-${id}`} data-leader={id} style={{ display: 'none' }} />
+          ))}
+        </g>
       </svg>
       {ids.map((id, n) => (
         <div
