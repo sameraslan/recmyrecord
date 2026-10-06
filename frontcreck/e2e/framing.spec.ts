@@ -454,5 +454,53 @@ test('keyboard order is unchanged: skip link, header, then the map and its contr
   expect(ring).toEqual({ top: '68px', style: 'solid', width: '2px' });
 });
 
-// TODO(part2-task8): twinkleOff(page) is not on the branch yet, and neither is the glint layer (.tw-layer). The
-// plan's twelfth test, "glints never start under the header" (plan Task 3 Step 1), is added with part 2 Task 8.
+test('glints never start under the header', async ({ page, isMobile }) => {
+  // The test browser draws in software, where a visitor gets no glints: forced on here, as in e2e/twinkle.spec.ts.
+  await page.addInitScript(() => {
+    window.__rmrTwinkle = 'on';
+  });
+  await openMap(page);
+  const bottom = await headerBottom(page);
+  // One step in: the cloud is taller than the window, so there are stars under the bar, and they are still dots.
+  await act(page.getByRole('button', { name: COPY.map.zoomIn }), isMobile);
+  await waitForCameraIdle(page);
+  const under = await page.evaluate(async (minY) => {
+    const n: number = (await (await fetch('/data/albums.json')).json()).length;
+    let k = 0;
+    for (let id = 0; id < n; id++) if (window.__rmr!.map!.screenPoint(id)!.y < minY) k++;
+    return k;
+  }, bottom);
+  expect(under, 'stars under the bar for a glint to choose').toBeGreaterThan(20);
+  // Nine seconds of the map at rest: a glint starts about every 1.2 to 3 seconds. Each one's centre, and the top
+  // of its whole extent (the bloom, or the flare's upward arm where that is longer).
+  const seen = await page.evaluate(
+    () =>
+      new Promise<{ centre: number; top: number }[]>((resolve) => {
+        const out: { centre: number; top: number }[] = [];
+        const done = new Set<Element>();
+        const layer = document.querySelector('.tw-layer')!;
+        const note = () =>
+          layer.querySelectorAll<HTMLElement>('.tw').forEach((g) => {
+            if (done.has(g)) return;
+            done.add(g);
+            const r = g.getBoundingClientRect();
+            const centre = r.top + r.height / 2;
+            const flare = parseFloat((g.firstElementChild as HTMLElement).style.getPropertyValue('--fl')) || 0;
+            out.push({ centre, top: centre - Math.max(r.height / 2, flare / 2) });
+          });
+        const mo = new MutationObserver(note);
+        mo.observe(layer, { childList: true });
+        note();
+        setTimeout(() => {
+          mo.disconnect();
+          resolve(out);
+        }, 9000);
+      }),
+  );
+  expect(seen.length, 'glints seen in nine seconds').toBeGreaterThan(0);
+  for (const g of seen) {
+    expect(g.centre).toBeGreaterThanOrEqual(bottom);
+    // Not the star alone: nothing of the glint runs under the bar's glass.
+    expect(g.top).toBeGreaterThanOrEqual(bottom);
+  }
+});
