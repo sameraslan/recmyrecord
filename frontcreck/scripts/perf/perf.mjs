@@ -7,7 +7,7 @@ import zlib from 'node:zlib';
 import { chromium } from '@playwright/test';
 import { assertNativeChrome } from '../check-native.mjs';
 import { startServer } from '../serve.mjs';
-import { checkBudgets, checkPages, formatTable, glassVars } from './lib.mjs';
+import { checkBudgets, checkEffects, checkPages, formatTable, glassVars, jsonExtras, parseEffectFlags } from './lib.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const BUDGETS = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/perf/budgets.json'), 'utf8'));
@@ -40,36 +40,75 @@ if (OPEN !== null && OPEN !== 'whole') {
   console.error('--open takes whole');
   process.exit(2);
 }
-/** on or off, or null when the flag is absent; anything else stops the run. */
-const onOff = (name) => {
-  const v = opt(name);
-  if (args.includes(name) && v !== 'on' && v !== 'off') {
-    console.error(`${name} takes on or off`);
-    process.exit(2);
-  }
-  return v;
-};
-// --glass on|off: force glass or solid panels at any width, for an A/B of the blur's cost. The four custom
-// properties are read from globals.css (first value glass, last value the stylesheet's own solid fallback) and set
-// inline on <html> after every full page load. The hover label (.map-tip) is solid by design and not part of it.
-const GLASS_WANT = onOff('--glass');
+// --glass on|off, --twinkle on|off, --names on|off: force one effect for the whole run, for an A/B of what it
+// costs. Each is read back in the page and the run fails when the page did not have what was forced.
+let EFFECTS;
+try {
+  EFFECTS = parseEffectFlags(args);
+} catch (e) {
+  console.error(e.message);
+  process.exit(2);
+}
+// --glass: glass or solid panels at any width. The four custom properties are read from globals.css (first value
+// glass, last value the stylesheet's own solid fallback) and set inline on <html> before the page first paints.
+const GLASS_WANT = EFFECTS.glass;
 let GLASS = null;
 if (GLASS_WANT) {
   try {
     GLASS = glassVars(fs.readFileSync(path.join(ROOT, 'src/app/globals.css'), 'utf8'), GLASS_WANT);
   } catch (e) {
-    console.error(`--glass ${GLASS_WANT}: ${e.message} (this build has no glass tokens)`);
+    console.error(`--glass ${GLASS_WANT}: ${e.message}. Measure a build that has the glass tokens; nothing was run.`);
     process.exit(2);
   }
 }
-// --twinkle on|off: switch the glints for the whole run, for an A/B of what they cost at rest.
-const TWINKLE = onOff('--twinkle');
-// --names on|off: switch the region names for the whole run, for an A/B of what the names layer costs.
-const NAMES = onOff('--names');
+// --names: the region names, through the visitor's own saved choice.
+const NAMES = EFFECTS.names;
+// --twinkle: the glints. TODO(part2-task8): confirm the twinkle switch. The twinkle is not built yet; twinkleSwitch
+// below assumes a test global read before the map loads, in the style of window.__rmrGasLite and window.__rmrOpen
+// ('off' = no glints, anything else = the app's own behaviour). The flag is refused until TWINKLE_READBACK is a
+// function `(page) => Promise<'on' | 'off'>` that reads what the app itself did with the switch (for example from
+// window.__rmr.twinkle): echoing the global this script set would prove nothing, and an app that ignores the
+// switch would give two identical runs and a "costs nothing" result. Those two are the only places to change;
+// add the readback's result to effectsSeen and its check to checkEffects in lib.mjs.
+const TWINKLE = EFFECTS.twinkle;
+const TWINKLE_READBACK = null;
+function twinkleSwitch(v) {
+  window.__rmrTwinkle = v;
+}
+if (TWINKLE && !TWINKLE_READBACK) {
+  console.error('--twinkle is refused: the app has no twinkle switch this script can read back yet (part 2 Task 8). See the TODO in scripts/perf/perf.mjs. Nothing was run.');
+  process.exit(2);
+}
+const ANY_EFFECT = !!(GLASS || TWINKLE || NAMES);
 
-/** The switches that are read when the app starts, set before any script of any page of this context runs. Called
- * for every browser context the run opens. With no flag it adds nothing. */
+/** Sets the forced effects up for every page of a browser context, before any script of the page runs. Called for
+ * every context the run opens. With no flag it adds nothing.
+ *
+ * Glass is forced without touching a loaded page: the init script sets the four properties inline on <html> the
+ * moment the parser creates the element, which is before the stylesheet applies and before first paint. So the
+ * page computes its styles once, with the forced values, exactly as it would have with other values in the
+ * stylesheet; there is no restyle of a finished page inside the window the startup rows cover (a restyle after
+ * `load` was the first version; it invalidated the whole tree during the startup long task window). The time the
+ * properties were set is kept and checked against first paint. An in-page navigation keeps inline properties (as it
+ * keeps AlbumPanel's --acc); a full load runs the init script again. */
 async function presetEffects(ctx) {
+  if (GLASS) {
+    await ctx.addInitScript((vars) => {
+      const apply = () => {
+        const el = document.documentElement;
+        if (!el) return false;
+        for (const [name, value] of Object.entries(vars)) el.style.setProperty(name, value);
+        window.__perfGlassAt = performance.now();
+        return true;
+      };
+      if (!apply()) {
+        const mo = new MutationObserver(() => {
+          if (apply()) mo.disconnect();
+        });
+        mo.observe(document, { childList: true });
+      }
+    }, GLASS);
+  }
   // The names choice is the visitor's saved one (src/lib/namesPref.ts: key 'rmr-names', only an exact '0' is off);
   // the map's chunk reads it when it loads. Storage is blocked on about:blank, hence the try.
   if (NAMES) {
@@ -82,41 +121,35 @@ async function presetEffects(ctx) {
   if (TWINKLE) await ctx.addInitScript(twinkleSwitch, TWINKLE);
 }
 
-// TODO(part2-task8): confirm the twinkle switch. The twinkle is not built yet; this assumes a test global read
-// before the map loads, in the style of window.__rmrGasLite and window.__rmrOpen ('off' = no glints, anything else
-// = the app's own behaviour). If part 2 Task 8 names it differently, this function is the only place to change.
-function twinkleSwitch(v) {
-  window.__rmrTwinkle = v;
-}
-
-/** Applied after every full page load: inline custom properties live in the page, so a load drops them. With no
- * --glass flag it does nothing. (An in-page navigation keeps them, as it keeps AlbumPanel's --acc.) */
-async function forceEffects(page) {
-  if (!GLASS) return;
-  await page.evaluate((vars) => {
-    for (const [name, value] of Object.entries(vars)) document.documentElement.style.setProperty(name, value);
-  }, GLASS);
-}
-
-/** What the page actually has, read back so a run proves its flags took effect. Only called when a flag is set. */
-const effectsSeen = (page) =>
-  page.evaluate(() => {
-    const top = document.querySelector('header.top');
+/** What the page actually has, read back so a run proves its flags took effect (checkEffects in lib.mjs judges
+ * it). Only called when a flag is set, and only after the measures of the page it reads. */
+const effectsSeen = (page, at) =>
+  page.evaluate((where) => {
+    const backdrop = (sel) => {
+      const el = document.querySelector(sel);
+      return el ? getComputedStyle(el).backdropFilter : null;
+    };
     let names = null;
     try {
       names = window.localStorage.getItem('rmr-names');
     } catch {}
+    const paint = performance.getEntriesByType('paint').find((e) => e.name === 'first-paint');
+    const html = document.documentElement;
     return {
+      at: where,
       path: location.pathname,
-      glassBlur: getComputedStyle(document.documentElement).getPropertyValue('--glass-blur').trim() || null,
-      headerBackdropFilter: top ? getComputedStyle(top).backdropFilter : null,
-      headerBackground: top ? getComputedStyle(top).backgroundColor : null,
+      glassBlur: getComputedStyle(html).getPropertyValue('--glass-blur').trim() || null,
+      glassInline: html.style.getPropertyValue('--glass-blur') || null,
+      header: backdrop('header.top'),
+      panel: backdrop('.panel'),
+      album: backdrop('.album'),
+      headerBackground: document.querySelector('header.top') ? getComputedStyle(document.querySelector('header.top')).backgroundColor : null,
       namesSaved: names,
       namesOn: window.__rmr?.getState?.().namesOn ?? null,
-      twinkle: window.__rmrTwinkle ?? null,
+      forcedMs: typeof window.__perfGlassAt === 'number' ? Math.round(window.__perfGlassAt) : null,
+      firstPaintMs: paint ? Math.round(paint.startTime) : null,
     };
-  });
-const ANY_EFFECT = !!(GLASS || TWINKLE || NAMES);
+  }, at);
 
 function sh(cmd, cmdArgs) {
   return new Promise((resolve, reject) => {
@@ -302,7 +335,7 @@ async function openingFlow(browser, vpName, errors) {
     await page.addInitScript(PAGE_HELPERS);
     if (GAS_LITE) await page.addInitScript((v) => (window.__rmrGasLite = v), GAS_LITE);
     const res = await openingSteps(page, vpName === 'phone');
-    if (ANY_EFFECT) res.openingEffectsSeen = await effectsSeen(page);
+    if (ANY_EFFECT) res.openingEffectsSeen = await effectsSeen(page, 'opening view');
     return res;
   } finally {
     await ctx.close();
@@ -311,7 +344,6 @@ async function openingFlow(browser, vpName, errors) {
 
 async function openingSteps(page, isPhone) {
   await page.goto(`${BASE}/map`, { waitUntil: 'load' });
-  await forceEffects(page);
   await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
   await page.waitForTimeout(1500);
   return page.evaluate(async (phone) => {
@@ -359,7 +391,6 @@ async function exploreFlow(page, isPhone) {
     window.__rmrOpen = 'whole';
   });
   await page.goto(`${BASE}/map`, { waitUntil: 'load' });
-  await forceEffects(page);
   await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
   await page.waitForTimeout(1500);
   return page.evaluate(async (phone) => {
@@ -463,7 +494,6 @@ async function measure(mode, vpName) {
   };
   page.on('request', onRequest);
   await page.goto(`${BASE}/`, { waitUntil: 'load' });
-  await forceEffects(page);
   await page.waitForTimeout(4000);
   page.off('request', onRequest);
   const renderer = await page.evaluate(() => {
@@ -501,12 +531,16 @@ async function measure(mode, vpName) {
     warmUp: startup.warm,
     startupLongTasks: startup.lt,
     ...(await albumFlow(page, vpName === 'phone')),
+  };
+  // What the forced effects look like in the page (only with a flag): on the album, after its measures, where the
+  // header, a panel and the album panel all exist; then on /map after the budget rows; then at the opening view.
+  const seen = ANY_EFFECT ? [await effectsSeen(page, 'album')] : null;
+  Object.assign(result, {
     ...(await exploreFlow(page, vpName === 'phone')),
-    // After the budget rows, on /map: what the forced effects look like in the page (only with a flag).
-    ...(ANY_EFFECT ? { effectsSeen: await effectsSeen(page) } : {}),
+    ...(seen ? { effectsSeen: [...seen, await effectsSeen(page, 'map')] } : {}),
     // The opening rows last, in a fresh context: the budget rows above are measured exactly as in the baseline.
     ...(OPEN ? {} : await openingFlow(browser, vpName, errors)),
-  };
+  });
   // Which gas shader drew the map (reported only): the lighter one on a software renderer, the full one on a GPU.
   result.gasLite = await page.evaluate(() => window.__rmr?.gasLite ?? null);
   await browser.close();
@@ -536,6 +570,8 @@ async function main() {
         rows.push(r);
         // The dpr 2 column is reported only: it has no budget and is never checked.
         if (vp !== 'desktop2x') fails.push(...checkBudgets(r, mode, BUDGETS, { allowSoftwareGpu: args.includes('--allow-software-gpu') }));
+        // A forced effect the page did not have fails the run in every column: its numbers are not an A/B.
+        if (ANY_EFFECT) fails.push(...checkEffects(`${mode} ${vp}`, [...r.effectsSeen, ...(r.openingEffectsSeen ? [r.openingEffectsSeen] : [])], EFFECTS, GLASS));
       }
     }
     console.log(`\n${formatTable(rows)}\n`);
@@ -543,8 +579,8 @@ async function main() {
     if (NO_GAS) console.log('Run with --no-gas: the script did not wait for a gas layer.\n');
     if (GAS_LITE) console.log(`Run with --gas-lite ${GAS_LITE}: the gas shader was not the app's own choice.\n`);
     if (ANY_EFFECT) {
-      console.log(`Run with${GLASS ? ` --glass ${GLASS_WANT}` : ''}${TWINKLE ? ` --twinkle ${TWINKLE}` : ''}${NAMES ? ` --names ${NAMES}` : ''}: an A/B run, not the site as a visitor gets it.`);
-      for (const r of rows) console.log(`  ${r.mode} ${r.vp}: ${JSON.stringify(r.effectsSeen)}${r.openingEffectsSeen ? `; opening view: ${JSON.stringify(r.openingEffectsSeen)}` : ''}`);
+      console.log(`Run with${GLASS ? ` --glass ${GLASS_WANT}` : ''}${TWINKLE ? ` --twinkle ${TWINKLE}` : ''}${NAMES ? ` --names ${NAMES}` : ''}: an A/B run, not the site as a visitor gets it. Read back in the page:`);
+      for (const r of rows) for (const e of [...r.effectsSeen, ...(r.openingEffectsSeen ? [r.openingEffectsSeen] : [])]) console.log(`  ${r.mode} ${r.vp}, ${e.at}: ${JSON.stringify(e)}`);
       console.log('');
     }
     if (OPEN) console.log('Run with --open whole: the opening view rows were not measured (n/a). The budget rows are measured at the whole map in every run.\n');
@@ -555,7 +591,7 @@ async function main() {
     }
     const outDir = path.join(ROOT, 'scripts/perf/out');
     fs.mkdirSync(outDir, { recursive: true });
-    fs.writeFileSync(path.join(outDir, `perf-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ js, rows, fails, open: OPEN ?? 'app', ...(ANY_EFFECT ? { effects: { glass: GLASS_WANT, twinkle: TWINKLE, names: NAMES } } : {}) }, null, 1));
+    fs.writeFileSync(path.join(outDir, `perf-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ js, pages, rows, fails, ...jsonExtras({ open: OPEN, ...EFFECTS, noGas: NO_GAS, gasLite: GAS_LITE, allowSoftwareGpu: args.includes('--allow-software-gpu') }) }, null, 1));
   } finally {
     await server.stop();
   }
