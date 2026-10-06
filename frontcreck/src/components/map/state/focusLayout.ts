@@ -292,6 +292,16 @@ function startItems(anchors: readonly MarkerAnchor[], seedSize: number, recSize:
   return items;
 }
 
+/** How far a group spanning lo..hi is shifted to lie inside min..max. One larger than that is not shifted, unless
+ * `whole`: then it is shifted until it covers min..max. */
+function shiftBy(lo: number, hi: number, min: number, max: number, whole: boolean): number {
+  return hi - lo > max - min ? (!whole ? 0 : lo > min ? min - lo : hi < max ? max - hi : 0) : lo < min ? min - lo : hi > max ? max - hi : 0;
+}
+
+function sameBounds(a: MarkerBounds | null, b: MarkerBounds | null): boolean {
+  return a && b ? a.left === b.left && a.top === b.top && a.right === b.right && a.bottom === b.bottom : a === b;
+}
+
 /** Shifts the laid-out group inside the bounds as a whole (which keeps every rule) and holds at the wall any
  * marker still outside. True when one was held: the group is larger than the bounds. Allocates nothing.
  * A group larger than the bounds is not shifted, unless `whole`: then it is shifted until it covers them, so
@@ -309,10 +319,8 @@ function shiftInside(items: MarkerItem[], bounds: MarkerBounds, whole = false): 
     y0 = Math.min(y0, it.y - h);
     y1 = Math.max(y1, it.y + h);
   }
-  const shift = (lo: number, hi: number, min: number, max: number) =>
-    hi - lo > max - min ? (!whole ? 0 : lo > min ? min - lo : hi < max ? max - hi : 0) : lo < min ? min - lo : hi > max ? max - hi : 0;
-  const sx = shift(x0, x1, bounds.left, bounds.right);
-  const sy = shift(y0, y1, bounds.top, bounds.bottom);
+  const sx = shiftBy(x0, x1, bounds.left, bounds.right, whole);
+  const sy = shiftBy(y0, y1, bounds.top, bounds.bottom, whole);
   let held = false;
   for (const it of items) {
     it.x += sx;
@@ -406,8 +414,9 @@ function separateAtWalls(items: MarkerItem[], gap: number, walls: Walls): boolea
  *   shifted inside as a whole, and where it is larger than the bounds the markers are held there and the plain
  *   box separation makes room from where they were drawn, so the covers stay steady. Never a solve on a frame
  *   that carries. Where the bounds have no room for the group (the separation has failed, at the end of the
- *   solve or on one carried frame), nothing more is tried: the group rides as one body, with the overlaps the
- *   separation left, stopped at the walls, until it settles.
+ *   solve or on one carried frame), nothing more is tried while the walls stay where they are: the group rides
+ *   as one body, with the overlaps the separation left, stopped at the walls, until it settles. On a frame
+ *   where the walls have moved, the separation runs again.
  * - Back exactly at the view of the last solve (a tween landing on its target): that solve's layout.
  * - The first call that is not `moving` after the layout was carried (a ride or a pan) settles it: a fresh solve
  *   of that view, with `settledFrom` holding where the markers were when one moves SETTLE_EASE_PX or more, so the
@@ -431,9 +440,12 @@ export class MarkerLayout {
    * solves the view afresh. */
   private pending = false;
   /** True once the box separation has failed inside the walls, at the end of the last solve or on a carried frame
-   * since: there is no room for the group, and until the next solve it is carried as it is, with no further
-   * attempt. */
+   * since: there is no room for the group between those walls (`crowdedIn`), and while they stay where they are
+   * it is carried as it is, with no further attempt. `solvedCrowded` is the flag as the last solve left it. */
   private crowded = false;
+  private crowdedIn: MarkerBounds | null = null;
+  private readonly crowdedInCopy: MarkerBounds = { left: 0, top: 0, right: 0, bottom: 0 };
+  private solvedCrowded = false;
   /** Each album's offset from the seed's album at the last solve. */
   private rel = new Float64Array(0);
   /** The anchors and bounds of the last call. */
@@ -506,6 +518,7 @@ export class MarkerLayout {
       }
       this.record(bounds);
       this.pending = false;
+      this.setCrowded(this.solvedCrowded, bounds);
       this.stats.moves++;
       return items;
     }
@@ -523,15 +536,16 @@ export class MarkerLayout {
         it.x += dx;
         it.y += dy;
       }
-      if (this.crowded) {
-        // No room: the group rides as one body, stopped at the walls, with the overlaps it has.
+      if (this.crowded && sameBounds(bounds, this.crowdedIn)) {
+        // No room between these walls: the group rides as one body, stopped at them, with the overlaps it has.
         if (bounds) shiftInside(items, bounds, true);
       } else {
         // A layout solved without walls may also come with an overlap: the same separation clears it.
         const held = !!bounds && shiftInside(items, bounds);
         // Or it cannot: there is no room for the boxes here. Nothing dearer is tried, on this frame or on a later
-        // one: the covers stay as the separation left them and ride so until the view is solved afresh.
-        if ((held || overlapping(items, gap)) && !separateAtWalls(items, gap, bounds)) this.crowded = true;
+        // one between the same walls: the covers stay as the separation left them and ride so until the view is
+        // solved afresh. Walls that move (the album panel sliding, a resize) get the separation again.
+        this.setCrowded((held || overlapping(items, gap)) && !separateAtWalls(items, gap, bounds), bounds);
       }
     }
     if (moving) {
@@ -565,7 +579,7 @@ export class MarkerLayout {
     this.gap = gap;
     this.minLine = minLine;
     this.pending = false;
-    this.crowded = false;
+    this.setCrowded(false, null);
     if (this.rel.length !== 2 * n) {
       this.rel = new Float64Array(2 * n);
       this.last = new Float64Array(2 * n);
@@ -582,7 +596,7 @@ export class MarkerLayout {
       if (bounds && shiftInside(items, bounds)) {
         relaxHeld(items, gap, minLine, bounds);
         // relaxHeld ends on the box separation: an overlap left here is one it cannot clear inside these walls.
-        this.crowded = overlapping(items, gap);
+        this.setCrowded(overlapping(items, gap), bounds);
       }
       this.solvedAt[0] = x0;
       this.solvedAt[1] = y0;
@@ -591,6 +605,7 @@ export class MarkerLayout {
         this.solved[2 * i + 1] = items[i].y;
       }
     }
+    this.solvedCrowded = this.crowded;
     if (bounds) {
       Object.assign(this.solvedBoundsCopy, bounds);
       this.solvedBounds = this.solvedBoundsCopy;
@@ -599,6 +614,11 @@ export class MarkerLayout {
     }
     this.record(bounds);
     return items;
+  }
+
+  private setCrowded(crowded: boolean, bounds: MarkerBounds | null): void {
+    this.crowded = crowded;
+    this.crowdedIn = crowded && bounds ? Object.assign(this.crowdedInCopy, bounds) : null;
   }
 
   /** Keeps this call's anchors and bounds, and counts a change of layout. */

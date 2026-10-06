@@ -25,7 +25,10 @@
 // the gap between the settled layout and a cold solve of the same view, and what the covers look like while
 // they move: pairs of covers closer than the gap, how far one cover lies over another (px along the axis of
 // least overlap), and the largest jump of a cover between two frames beyond its own album's move. With --old,
-// the same for each older file's MarkerLayout.
+// the same for each older file's MarkerLayout. Then moving walls: clusters that open clean at 828x400, drawn
+// "moving" while the bottom wall rises 4 px a frame to 209 and comes back (as the album panel or the slider
+// cover does), with the frames that solve, that return a new array, and that show one cover over another or
+// over the picked cover.
 //
 // Run from frontcreck/. An older focusLayout.ts (git show <rev>:frontcreck/src/components/map/state/focusLayout.ts)
 // must import zoomLimits by an absolute path when it lies outside src/.
@@ -172,6 +175,66 @@ if (crowded) {
         `| ${w}x${h} | ${crowdedOpens} of ${CLUSTERS} | ${solves} of ${t.length} (${worstSolves}) | ${arrays} of ${t.length} (${worstArrays}) | ${ms(mean(t))} | ${ms(Math.max(...t))} | ${settleSolves} in ${CLUSTERS} | ${ms(mean(settle))} / ${ms(Math.max(...settle))} | ${gap.toExponential(1)} px | ${(pairs / t.length).toFixed(2)} | ${(cover / t.length).toFixed(1)} / ${coverWorst.toFixed(1)} px | ${jump.toFixed(1)} px |`,
       );
     }
+  }
+  console.log(`\n## Moving walls: clusters that open clean at 828x400, the bottom wall rising 4 px a frame to 209 and back, every frame moving`);
+  for (const { name: label, mod } of [{ name: 'current', mod: current }, ...older]) {
+    if (!mod.MarkerLayout) continue;
+    const rand = seeded(977);
+    const WIDE = 828;
+    const TALL = 400;
+    const SHORT = 209;
+    const STEPS = Math.ceil((TALL - SHORT) / 4);
+    const wall = (f) => MARKER_EDGE + Math.max(SHORT, f <= STEPS ? TALL - 4 * f : SHORT + 4 * (f - STEPS));
+    const r = { clusters: 0, frames: 0, solves: 0, arrays: 0, outside: 0, over: 0, overSeed: 0, deep: 0, deepSeed: 0, closeOpening: 0, opening: 0, restGap: 0, settles: 0 };
+    for (let c = 0; c < 200; c++) {
+      const anchors = Array.from({ length: RECS_SHOWN + 1 }, (_, i) => ({ id: i, x: MARKER_EDGE + WIDE / 2 + (i ? (rand() - 0.5) * 360 : 0), y: MARKER_EDGE + TALL / 2 + (i ? (rand() - 0.5) * 360 : 0) }));
+      const bounds = { left: MARKER_EDGE, top: MARKER_EDGE, right: MARKER_EDGE + WIDE, bottom: wall(0) };
+      if (faults(mod.layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds }), bounds)) continue;
+      r.clusters++;
+      const cache = new mod.MarkerLayout();
+      let prev = cache.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+      for (let f = 1; f <= 2 * STEPS; f++) {
+        bounds.bottom = wall(f);
+        const before = cache.stats.solves;
+        const got = cache.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+        r.frames++;
+        if (cache.stats.solves !== before) r.solves++;
+        if (got !== prev) r.arrays++;
+        prev = got;
+        let deep = 0;
+        let deepSeed = 0;
+        let close = false;
+        for (let i = 0; i < got.length; i++) {
+          const p = got[i];
+          if (p.x - p.size / 2 < bounds.left - 0.01 || p.x + p.size / 2 > bounds.right + 0.01 || p.y - p.size / 2 < bounds.top - 0.01 || p.y + p.size / 2 > bounds.bottom + 0.01) r.outside++;
+          for (let j = i + 1; j < got.length; j++) {
+            const reach = (p.size + got[j].size) / 2;
+            const d = Math.min(reach - Math.abs(got[j].x - p.x), reach - Math.abs(got[j].y - p.y));
+            deep = Math.max(deep, d);
+            if (i === 0) deepSeed = Math.max(deepSeed, d);
+            if (d + 10 > 1) close = true;
+          }
+        }
+        if (deep > 0.01) r.over++;
+        if (deepSeed > 0.01) r.overSeed++;
+        r.deep = Math.max(r.deep, deep);
+        r.deepSeed = Math.max(r.deepSeed, deepSeed);
+        if (f > STEPS) {
+          r.opening++;
+          if (close) r.closeOpening++;
+        }
+      }
+      const at = cache.stats.solves + cache.stats.settles;
+      const rest = cache.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+      r.settles += cache.stats.solves + cache.stats.settles - at;
+      const cold = mod.layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+      rest.forEach((m, i) => (r.restGap = Math.max(r.restGap, Math.abs(m.x - cold[i].x), Math.abs(m.y - cold[i].y))));
+    }
+    console.log(
+      `${label}: ${r.clusters} clusters, ${r.frames} moving frames; fresh solves ${r.solves}, new arrays ${r.arrays}, covers outside the walls ${r.outside};` +
+        ` frames with one cover over another ${r.over} (deepest ${r.deep.toFixed(1)} px), over the picked cover ${r.overSeed} (deepest ${r.deepSeed.toFixed(1)} px);` +
+        ` frames with a pair too close while the wall comes back ${r.closeOpening} of ${r.opening}; at rest ${r.settles} solves, gap to a cold solve ${r.restGap.toExponential(1)} px`,
+    );
   }
   process.exit(0);
 }
