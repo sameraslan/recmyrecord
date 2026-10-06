@@ -143,7 +143,8 @@ test('no glints once covers show', async ({ page }) => {
   await openAtRest(page);
   await page.locator('canvas.map-canvas').focus();
   // Zoom in until covers show (the Explore hint is marked data-zoomed once the cover fade passes a quarter).
-  for (let i = 0; i < 14 && (await page.locator('.map-hint').getAttribute('data-zoomed')) !== '1'; i++) {
+  let steps = 0;
+  for (; steps < 14 && (await page.locator('.map-hint').getAttribute('data-zoomed')) !== '1'; steps++) {
     await page.keyboard.press('+');
     await waitForCameraIdle(page);
   }
@@ -157,12 +158,8 @@ test('no glints once covers show', async ({ page }) => {
   expect(after.spawned).toBe(before.spawned);
   expect(after.ticks).toBe(before.ticks);
   await expect(page.locator(GLINT)).toHaveCount(0);
-  // Back out to stars: the timer starts again by itself.
-  for (let i = 0; i < 14 && (await page.locator('.map-hint').getAttribute('data-zoomed')) === '1'; i++) {
-    await page.keyboard.press('-');
-    await waitForCameraIdle(page);
-  }
-  for (let i = 0; i < 2; i++) {
+  // Back out by as many steps, to where the test began: stars again.
+  for (let i = 0; i < steps; i++) {
     await page.keyboard.press('-');
     await waitForCameraIdle(page);
   }
