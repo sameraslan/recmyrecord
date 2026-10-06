@@ -39,6 +39,9 @@ export interface StripGas {
 }
 /** The strip shows a small part of the 2048 px gas image, so it keeps a copy this long and lets the full decode go. */
 const GAS_PX = 512;
+/** How strongly the gas is drawn (the prototype's strip): stepped back, as the map steps it back beside an open
+ * album, so the covers and the stars stay the subject on the brightest gas too. */
+export const STRIP_GAS_STRENGTH = 0.62;
 /** The first gas image of a stop: the same name as shaders/gas.ts gasUrl(stop, hash), so the strip and the map share
  * one download. Written out here because gas.ts holds the gas shaders and belongs to the lazy map chunk
  * (MapPreviewStrip.test.ts keeps the two equal). Phones never use the sharper image. */
@@ -148,7 +151,9 @@ export function drawStrip(
     // sky, as the map's shader adds it; beyond the rectangle the sky fill stays.
     const [west, south, east, north] = gas.rect;
     ctx.globalCompositeOperation = 'lighter';
+    ctx.globalAlpha = STRIP_GAS_STRENGTH;
     ctx.drawImage(gas.image, sx(west), sy(north), (east - west) * k, (north - south) * k);
+    ctx.globalAlpha = 1;
     ctx.globalCompositeOperation = 'source-over';
   }
   ctx.beginPath();

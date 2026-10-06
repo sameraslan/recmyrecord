@@ -3,7 +3,7 @@ import { gasUrl } from '@/components/map/shaders/gas';
 import { FRAME_RGB, SKY_RGB, STAR_WHITE } from '@/components/map/theme';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumRecord } from '@/lib/types';
-import { drawStrip, gasCopySize, stripGasUrl } from './MapPreviewStrip';
+import { STRIP_GAS_STRENGTH, drawStrip, gasCopySize, stripGasUrl } from './MapPreviewStrip';
 
 const W: [string, string, string] = ['#222222', '#333333', '#d9a066'];
 const albums: AlbumRecord[] = Array.from({ length: 30 }, (_, i) => ({ slug: `a${i}`, t: `A${i}`, a: 'X', s: '', c: '', k: i % 8, d: [], w: W }));
@@ -46,9 +46,15 @@ describe('drawStrip', () => {
     expect(at).toBeLessThan(calls.findIndex((c) => c.startsWith('arc(')));
     // The image holds light only (black where there is no gas), so it is added to the sky, as the map's shader
     // does, and nothing after it is drawn that way.
-    expect(calls[at - 1]).toBe('globalCompositeOperation=lighter');
-    expect(calls[at + 1]).toBe('globalCompositeOperation=source-over');
+    expect(calls[at - 2]).toBe('globalCompositeOperation=lighter');
+    expect(calls[at + 2]).toBe('globalCompositeOperation=source-over');
     expect(count(calls, 'globalCompositeOperation=')).toBe(2);
+    // The gas is stepped back, as the map steps it back beside an open album: covers and stars are the subject.
+    // Only the gas is drawn at that strength; everything after it is at full alpha again.
+    expect(STRIP_GAS_STRENGTH).toBe(0.62);
+    expect(calls[at - 1]).toBe('globalAlpha=0.62');
+    expect(calls[at + 1]).toBe('globalAlpha=1');
+    expect(count(calls, 'globalAlpha=')).toBe(2);
   });
 
   it('uses the theme colours: star-white dots of one size, off-white frames, no cluster colours', () => {
