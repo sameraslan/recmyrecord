@@ -109,7 +109,9 @@ def test_the_real_catalogs_shared_spotify_ids(deduped):
     for r in rows:
         by_id.setdefault(r["spotify_id"], []).append(r)
     assert all(len(v) > 1 for v in by_id.values()) and all(r["spotify_id"] for r in rows)
-    assert [r["index"] for r in rows if r["side"] == "existing"] == sorted(r["index"] for r in rows if r["side"] == "existing")
+    # the ids in the order of their first album (with the sheet's links two existing albums can share one)
+    firsts = [v[0]["index"] for v in by_id.values()]
+    assert firsts == sorted(firsts) and all([r["index"] for r in v] == sorted(r["index"] for r in v) for v in by_id.values())
     assert shared_spotify_lines(rows)[0].startswith(f"spotify ids: {len(by_id)} shared by more than one album")
 
 

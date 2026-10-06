@@ -119,6 +119,9 @@ def _covers_table(new_keys, sprite_dir):
     return cv.Covers(rows, sprite_dir)
 
 
+RELINKED: dict = {}  # the two existing albums the catalog_build fixture gives a row: rym_id -> (source, ref)
+
+
 @pytest.fixture(scope="module")
 def catalog_build(deduped, tmp_path_factory):
     """The whole catalog built without images (about a minute). The covers table is the test's own
@@ -129,9 +132,16 @@ def catalog_build(deduped, tmp_path_factory):
     tmp = tmp_path_factory.mktemp("catalog_build")
     root, out = _fake_map(tmp / "map", deduped[0]["URI"]), tmp / "out"
     table = _covers_table(list(load_catalog()["rym_id"].iloc[len(deduped[0]):]), tmp / "96")
+    # The build's table has two rows more: the first two existing albums whose Spotify link on the sheet is
+    # another release, the first with a sprite of its new cover, the second without one.
+    first, second = [r["rym_id"] for r in cv.relinked_albums()][:2]
+    RELINKED.update({first: ("spotify", "ab67616d0000b273" + "2" * 24), second: ("spotify", "ab67616d0000b273" + "3" * 24)})
+    (tmp / "96").mkdir()
+    (tmp / "96" / f"{first}.jpg").write_bytes(b"jpeg")
+    built_with = cv.Covers({**RELINKED, **table.rows}, tmp / "96", made_from={first: cv.made_from(RELINKED[first])})
     stdout = io.StringIO()
     with pytest.MonkeyPatch.context() as patch, contextlib.redirect_stdout(stdout):
-        patch.setattr(cv, "_default_covers", lambda: table)
+        patch.setattr(cv, "_default_covers", lambda: built_with)
         assert main(["--map-root", str(root), "--catalog", "--skip-images", "--out", str(out)]) == 0
     read = {name: json.loads((out / f"{name}.json").read_text(encoding="utf-8")) for name in ("albums", "recs", "positions")}
     return read["albums"], read["recs"], read["positions"], stdout.getvalue(), out, table
@@ -150,7 +160,7 @@ def test_the_catalog_build_validates_and_keeps_the_sites_albums_first(catalog_bu
 
 
 def test_the_catalog_build_shows_bracketed_artists_and_keeps_the_slugs_of_the_latin_forms(catalog_build, deduped):
-    from rmr_pipeline.catalog import catalog_frame, display_artist
+    from rmr_pipeline.catalog import catalog_frame, display_artist, display_title
     from rmr_pipeline.slugs import make_slugs
 
     albums, _, _, printed, _, _ = catalog_build
@@ -158,7 +168,13 @@ def test_the_catalog_build_shows_bracketed_artists_and_keeps_the_slugs_of_the_la
     new = catalog.iloc[n_site:]
     shown = [display_artist(a, b) for a, b in zip(new["artist"], new["artist_latin"])]
     assert [a["a"] for a in albums[n_site:]] == shown
-    assert [a["t"] for a in albums[n_site:]] == list(new["title"])  # titles stay as the catalog has them
+    # titles too, since the owner's decision of 6 October 2026 (this line said they stay as the catalog has them)
+    shown_titles = [display_title(a, b) for a, b in zip(new["title"], new["title_latin"])]
+    assert [a["t"] for a in albums[n_site:]] == shown_titles
+    assert [a["t"] for a in albums[:n_site]] == [str(t) for t in deduped[0]["Title"]]  # an existing album's is not touched
+    changed = sum(s != t for s, t in zip(shown_titles, new["title"]))
+    assert changed == 456 and f"titles: {changed} new albums shown as native [Latin]" in printed
+    assert any(a["t"] == "ヴィジョン クリエイション ニューサン [Vision Creation Newsun]" for a in albums[n_site:])
     by_key = dict(zip(catalog["rym_id"], albums))
     parannoul = next(a for a in albums[n_site:] if a["a"].startswith("파란노을 ["))
     assert parannoul["a"] == "파란노을 [Parannoul]" and parannoul["slug"].endswith("-parannoul")
@@ -232,9 +248,51 @@ def test_the_catalog_builds_links_and_covers(catalog_build, deduped):
     assert f"WARNING, covers: {with_cover} new album(s) have a cover and no sprite" in printed
 
 
+def test_the_catalog_builds_existing_albums_link_where_the_sheet_links(catalog_build, deduped):
+    """The owner's decision of 6 October 2026: the sheet's Spotify link wins over the feature table's URI, an
+    override over both; an album whose link changed takes the cover of its new release when covers.csv has
+    it and its sprite is there, and keeps the map's cover (none, on the test's map) otherwise."""
+    from rmr_pipeline.catalog import catalog_frame
+    from rmr_pipeline.constants import DEFAULT_OVERRIDES
+
+    albums, _, _, printed, _, _ = catalog_build
+    n_site, catalog = len(deduped[0]), load_catalog()
+    cat = catalog_frame(deduped[0], catalog)
+    overrides = json.loads(DEFAULT_OVERRIDES.read_text(encoding="utf-8"))
+    legacy = [u.split(":")[-1] for u in deduped[0]["URI"]]
+    assert cat.legacy_ids[:n_site] == legacy and not any(cat.legacy_ids[n_site:])
+    by_override = [i for i in range(n_site) if albums[i]["s"] != cat.spotify_ids[i]]
+    assert 0 < len(by_override) <= len(overrides)
+    assert {albums[i]["s"] for i in by_override} <= {e["s"] for e in overrides.values() if "s" in e}
+    assert {e["s"] for e in overrides.values() if "s" in e} <= {a["s"] for a in albums[:n_site]}  # every override holds
+    no_link = [i for i in range(n_site) if not catalog["spotify_url"].iloc[i] and i not in by_override]
+    assert len(no_link) > 400 and all(albums[i]["s"] == legacy[i] for i in no_link)
+    moved = [i for i in range(n_site) if albums[i]["s"] != legacy[i] and i not in by_override]
+    assert len(moved) > 1000 and all(albums[i]["s"] in catalog["spotify_url"].iloc[i] for i in moved)
+    # covers: the album with a row and a sprite shows its new release; the one with a row alone, and every
+    # other one, keeps what the map gave it
+    (first, cover), (second, _) = RELINKED.items()
+    index = {k: i for i, k in enumerate(cat.keys)}
+    assert albums[index[first]]["c"] == cover[1] and albums[index[second]]["c"] == ""
+    held = {e["c"] for e in overrides.values() if "c" in e}
+    assert {a["c"] for i, a in enumerate(albums[:n_site]) if i != index[first]} <= held | {""}
+    relinked = len(cv_relinked())
+    assert f"for {relinked} it is another id than the table's" in printed
+    assert "existing albums link to another release: 1 take its cover" in printed
+    assert "WARNING, covers: 1 existing album(s) whose Spotify link changed have a cover in covers.csv and no sprite" in printed
+    assert "spotify ids: 32 were shared by more than one album with the feature table's ids" in printed
+    assert all("l" not in a for i, a in enumerate(albums[:n_site]) if a["s"])
+
+
+def cv_relinked():
+    import rmr_pipeline.covers as cv
+
+    return cv.relinked_albums()
+
+
 def test_the_committed_covers_table_parses_and_every_row_is_a_cover_id_the_validator_accepts():
     """catalog/covers.csv itself (the build above does not read it): it parses, each row is a new album of
-    the catalog, at most one per album, and gives a `c` of the form validate.py accepts and a URL on an
+    the catalog or an existing one whose Spotify link on the sheet is another release, at most one per album, and gives a `c` of the form validate.py accepts and a URL on an
     allowed host. Nothing here depends on the sprites or on the network."""
     import csv
 
@@ -245,8 +303,11 @@ def test_the_committed_covers_table_parses_and_every_row_is_a_cover_id_the_valid
         listed = [r["rym_id"] for r in csv.DictReader(f)]
     rows = cv.read_covers(cv.DEFAULT_COVERS)
     assert len(rows) == len(listed) > 0  # no album twice
-    new = [r["rym_id"] for r in cv.new_albums()]
-    assert set(rows) <= set(new) and list(rows) == [k for k in new if k in rows]  # new albums only, in catalog order
+    # The rows were of new albums only until the owner's decision of 6 October 2026 (the sheet's link wins
+    # for an existing album, and its cover follows): now also the relinked existing albums, which come first.
+    looked_up = [r["rym_id"] for r in cv.cover_albums()]
+    assert set(rows) <= set(looked_up) and list(rows) == [k for k in looked_up if k in rows]  # in catalog order
+    assert {rows[r["rym_id"]][0] for r in cv.relinked_albums() if r["rym_id"] in rows} <= {"spotify"}
     for key, (source, ref) in rows.items():
         c = cv.c_field(source, ref)
         assert (COVER_RE if source == "spotify" else PREFIXED_COVER_RE).fullmatch(c), (key, c)

@@ -23,7 +23,7 @@ import json
 import math
 import re
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -89,13 +89,14 @@ class CatalogAlbums:
     frame: pd.DataFrame  # one row per catalog album: Title, Artist, URI ('' for a new album), the descriptor columns
     places: pd.DataFrame  # the descriptor columns: the place (0..7) of the descriptor among the album's eight, -1 = not one
     keys: list[str]  # rym_id
-    spotify_ids: list[str]  # '' when the album has no Spotify link
+    spotify_ids: list[str]  # '' when the album has no Spotify link; an existing album's is the sheet's when it has one
     is_new: np.ndarray  # (albums,) bool: not in the feature table
     slug_titles: list[str]  # what the slug is made from: the romanised title of a new album when there is one
     slug_artists: list[str]  # (an existing album's artist is the table's, not cleaned yet)
     existing: str
     weights: str
     report: DescriptorReport
+    legacy_ids: list[str] = field(default_factory=list)  # the id of the feature table's URI, '' for a new album
 
     def summary(self) -> str:
         r, n_new = self.report, int(self.is_new.sum())
@@ -217,12 +218,17 @@ def catalog_frame(sub: pd.DataFrame, catalog: pd.DataFrame, *, weights: str = "r
                 P[i, j] = place
                 place += 1
 
-    spotify_ids = [u.split(":")[-1] for u in uris]
-    for key, url in zip(keys[n:], catalog["spotify_url"].iloc[n:]):
+    # The sheet's link wins over the feature table's URI (the owner's decision of 6 October 2026: "the sheet
+    # is more up to date than the existing albums"; where the two differ the table's id is another edition
+    # or, in the cases checked against Spotify, another album). An existing album the sheet has no link for
+    # keeps its URI's id. overrides.json is applied after this, by the build, and wins over both.
+    legacy_ids = [u.split(":")[-1] for u in uris] + [""] * (total - n)
+    spotify_ids = []
+    for key, url, old in zip(keys, catalog["spotify_url"], legacy_ids):
         m = SPOTIFY_URL_RE.match(url)
         if url and not m:
             raise CatalogError(f"{key}: spotify_url {url!r} is not an open.spotify.com album link")
-        spotify_ids.append(m[1] if m else "")
+        spotify_ids.append(m[1] if m else old)
 
     new = catalog.iloc[n:]
     profile = np.array(WEIGHT_PROFILES[weights] + (0.0,))  # place -1 reads the last entry
@@ -237,7 +243,34 @@ def catalog_frame(sub: pd.DataFrame, catalog: pd.DataFrame, *, weights: str = "r
         frame, pd.DataFrame(P, columns=cols), keys, spotify_ids, is_new,
         list(frame["Title"][:n]) + [a or b for a, b in zip(new["title_latin"], new["title"])],
         list(frame["Artist"][:n]) + [a or b for a, b in zip(new["artist_latin"], new["artist"])],
-        existing, weights, report)
+        existing, weights, report, legacy_ids)
+
+
+def _pure_latin(text: str) -> bool:
+    """Has a letter, and every letter is in Latin script."""
+    letters = [c for c in text if c.isalpha()]
+    return bool(letters) and all(_latin(c) for c in letters)
+
+
+_GROUP = re.compile(r"\(([^()]*)\)|\[([^\[\]]*)\]")
+
+
+def display_title(title: str, latin: str) -> str:
+    """How a new album's title is shown: `native [Latin]`, as display_artist does for the credit, when the
+    title has a letter that is not in Latin script and the catalog's `title_latin` is there and different
+    (the owner's decision of 6 October 2026). `title_latin` is used as given: it is a romanisation for some
+    albums and an English translation for others. A title that carries a Latin form of its own is left as it
+    is: RYM writes some as `Mother (マザー)` or `勝訴ストリップ (Shōso Strip)`, that is, with a part in round or
+    square brackets where the part or the rest is in Latin script alone. A bracket without letters (a year),
+    or one the Latin form repeats (a volume number), is not such a form. Slugs are not made from this (CatalogAlbums.slug_titles)."""
+    title, latin = str(title), str(latin).strip()
+    if not latin or latin == title.strip() or not any(c.isalpha() and not _latin(c) for c in title):
+        return title
+    # a bracket the Latin form has too (`静香 (III)`, `Shizuka (III)`) is part of the title, not a form of it
+    groups = ["".join(m.groups(default="")) for m in _GROUP.finditer(title) if m.group(0) not in latin]
+    if groups and (_pure_latin(_GROUP.sub(" ", title)) or any(_pure_latin(g) for g in groups)):
+        return title
+    return f"{title.strip()} [{latin}]"
 
 
 def display_artist(artist: str, latin: str) -> str:
@@ -279,14 +312,16 @@ def neighbour_clusters(X: np.ndarray, clusters: list[int], k: int = CLUSTER_NEIG
     return out
 
 
-def shared_spotify_ids(cat: CatalogAlbums) -> list[dict]:
+def shared_spotify_ids(cat: CatalogAlbums, spotify_ids: list[str] | None = None) -> list[dict]:
     """The albums that share their Spotify id with another album of the catalog, one dict per album (index:
     its number in albums.json, rym_id, artist, title, spotify_id, side: `existing` or `new`), the albums of
-    one id together, in the order of each id's first album. An existing album's id is its URI's, a new one's
-    is its `spotify_url`'s. Two albums cannot both be that Spotify album: one link is wrong, or the two rows
-    are one release. The build lists them and goes on; which is right is for the owner."""
+    one id together, in the order of each id's first album. `spotify_ids`: the ids to look at, one per album
+    (the build passes the ones it ends with, after overrides.json); cat.spotify_ids when None: the sheet's
+    link, or the URI's for an existing album the sheet has none for. Two albums cannot both be that Spotify
+    album: one link is wrong, or the two rows are one release. The build lists them and goes on; which is
+    right is for the owner."""
     by_id: dict[str, list[int]] = {}
-    for i, s in enumerate(cat.spotify_ids):
+    for i, s in enumerate(cat.spotify_ids if spotify_ids is None else spotify_ids):
         if s:
             by_id.setdefault(s, []).append(i)
     titles, artists = list(cat.frame["Title"]), list(cat.frame["Artist"])
@@ -341,3 +376,34 @@ def new_album_covers(keys: list[str], first: int, cover_of=new_album_cover) -> t
         elif cover:
             waiting.append(key)
     return cover_ids, images, waiting
+
+
+@dataclass(frozen=True)
+class ExistingCovers:
+    """What existing_album_covers found. Album numbers are rows of the catalog."""
+    relinked: list[int]  # the existing albums whose Spotify id is the sheet's and another than the feature table's
+    held: list[int]  # those of them an override decides (not in `relinked`)
+    covers: dict[int, str]  # album number -> `c`, for the relinked albums that take the cover of their new release
+    images: dict[int, Path]  # album number -> that cover's sprite
+    kept_map: list[str]  # keys of the relinked albums that keep the map's cover: no row, no sprite, gone, skipped
+    waiting: list[str]  # those of kept_map with a usable row and no sprite of it yet (`covers sprites` makes it)
+
+
+def existing_album_covers(keys: list[str], spotify_ids: list[str], legacy_ids: list[str], held: set[int],
+                          cover_of=new_album_cover) -> ExistingCovers:
+    """The covers of the existing albums whose link changed. `spotify_ids`, `legacy_ids`: CatalogAlbums' (an
+    album is existing where it has a legacy id); `held`: the album numbers whose `s`, `c` or image
+    overrides.json sets, which stay as the override says. An album whose id is the sheet's and differs from
+    the feature table's takes the cover covers.csv has for it (Spotify's, of the release it now links to)
+    once its sprite is there; without both it keeps the map's cover id and sprite, which is what it had."""
+    relinked = [i for i, (new, old) in enumerate(zip(spotify_ids, legacy_ids)) if old and new != old]
+    out = ExistingCovers([i for i in relinked if i not in held], [i for i in relinked if i in held], {}, {}, [], [])
+    for i in out.relinked:
+        cover, image = cover_of(keys[i])
+        if cover and image is not None:
+            out.covers[i], out.images[i] = cover, image
+            continue
+        out.kept_map.append(keys[i])
+        if cover:
+            out.waiting.append(keys[i])
+    return out

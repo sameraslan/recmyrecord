@@ -14,7 +14,9 @@ Line numbers are of the working tree of 6 October. `frontcreck/` was being edite
 - **In Rainbows at mood no longer matches the old live site.** Scratch build: Glitter, Takk..., Have You in My Wilderness, Carrie & Lowell Live, 0. Today: Tindersticks, Avalon, So, You Will Never Know Why, Imperial Bedroom.
 - **Every map position moves**, at all three stops (new store, new descriptors, a UMAP of 10,467 points).
 - **Albums without audio become mood-only.** Today 101 existing albums have an imputed block (README, Albums without audio). After: no imputation; an album without audio has `n`, no sonic or balanced list, is in nobody's, and shows the note. Store: 10,242 of 10,467. The catalog build marks 225 albums as without audio (the 223 with none, plus the 2 left out of the store with `--exclude`), 39 of them existing.
-- **Covers from other hosts.** Deezer, Apple, Bandcamp and YouTube image hosts beside Spotify's (README, Covers of the new albums). Scratch build: 5,191 Spotify, 2,326 Apple, 2,217 Deezer, 5 Bandcamp, 5 YouTube, 723 none (fetch unfinished). A YouTube cover is a video frame.
+- **Covers from other hosts.** Deezer, Apple, Bandcamp and YouTube image hosts beside Spotify's (README, Covers of the new albums). Scratch build: 5,191 Spotify, 2,326 Apple, 2,217 Deezer, 5 Bandcamp, 5 YouTube, 723 none (fetch unfinished). A YouTube cover is a video frame (approved; 11 frames that are not a cover are skipped and show the lettered tile).
+- **Existing albums link where the sheet links.** 3,557 of the 4,081 take their Spotify id from the sheet; for 1,137 it is another id than today's, and their cover becomes that release's (README, Catalog mode, `s`). Most are another edition of the same album; the changed pictures are in `docs/review/changed-covers.jpg`.
+- **Non-Latin titles of new albums get their Latin form in brackets** (456 albums), as artists do.
 - **Other listen links.** 774 new albums have no Spotify link (`tests/test_catalog.py:253`). They link to Apple Music, Bandcamp, Deezer, YouTube or SoundCloud. Scratch build: 696 albums with `l`, 81 with no link at all. Chill Out gets a YouTube link.
 
 ## 2. Preconditions
@@ -23,20 +25,22 @@ Owner decisions of 6 October 2026:
 
 - **Descriptor weights are not equal.** The gentle slope (`--descriptor-weights slope`, 1 down to 0.5) is the owner's choice (confirmed 6 October, after the comparison in `docs/review/weights-compare.html` and `experiments/top8_descriptors/REPORT.md` section 6) and the build's default.
 - **The vocals descriptors are dropped for every album**: `--existing-descriptors table-novocals`, the default. The sheet does not list them, so only the old albums would carry them (2,772 existing albums have one among their 8, no new album does). To be revisited if the sheet gains vocals for all albums.
-- **Artist form of a new album**: `native [Latin]`, as 33 existing albums have (`catalog.display_artist`). Titles stay as the catalog has them.
+- **Artist form of a new album**: `native [Latin]`, as 33 existing albums have (`catalog.display_artist`).
+- **Title form of a new album**: the same, `title [Latin]`, unless the title carries a Latin form of its own (`catalog.display_title`). Existing albums' titles are not touched; slugs do not change.
+- **The sheet's Spotify link wins for an existing album** ("the sheet is more up to date than the existing albums"), `overrides.json` over both, and the cover follows the link (`catalog/covers.csv` has those albums' rows; one Spotify does not answer for keeps the map's cover).
+- **YouTube-frame covers are approved**, except the frames that are not a cover: `catalog/covers_skip.csv` (11 rows, from `docs/review/youtube-covers.jpg`).
 - **The no-audio note**: "Sound matches aren't available for this album yet." with the link "Show mood matches".
 - **The link labels are approved.**
-- **Wrong Spotify links are fixed through `overrides.json`** (the ids two albums share, which the build lists).
+- **Wrong Spotify links are fixed through `overrides.json`** (the ids two albums share, which the build lists; 17 are left with the sheet's links: `docs/review/shared-spotify-ids.md`).
 
 Owner decisions still open:
 
 1. The copy strings of section 5 that are not listed above.
-2. YouTube-frame covers: yes or no (`docs/review/youtube-covers.png`). If no, drop the `youtube` rows from `catalog/covers.csv` before the build.
-3. What happens to `audio/` and `audio/clap/` (section 8). The steps below assume both stay.
+2. What happens to `audio/` and `audio/clap/` (section 8). The steps below assume both stay.
 
 State:
 
-- Cover fetch finished: `python -m rmr_pipeline.covers status` shows no sprite missing other than the failed ones. `catalog/covers.csv` is committed (untracked today).
+- Cover fetch finished: `python -m rmr_pipeline.covers status` shows no sprite missing other than the failed ones. `catalog/covers.csv` and `catalog/covers_skip.csv` are committed.
 - The sprites are recorded: once no `sprites` run is going, `python -m rmr_pipeline.covers adopt --dry-run`, then `adopt`. Delete the sprites it leaves alone as older than `covers.csv` and run `sprites` once more. `--require-sprites` refuses a sprite with no manifest entry. An album whose image is gone for good (recorded in `.cache/covers/state.json`) is built with an empty `c` and does not stop the flag.
 - A rehearsal passes: `build --catalog --require-sprites --map-root <map> --out .cache/site10k-final` with the chosen flags, then `validate --data .cache/site10k-final`.
 - The frontend work for the catalog data is merged into the branch (several thumbnail sheets, cover hosts, `l`, `n`, the note) and passes against the rehearsal folder with `RMR_DATA_DIR`. `frontcreck/public/data-10k` is a symlink into a scratch folder: remove it, never commit it.

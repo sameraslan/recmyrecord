@@ -6,9 +6,10 @@
 --catalog builds every album of catalog/albums.csv (rmr_pipeline.catalog) instead of the feature table's.
 It never writes into frontcreck/public/data. What it adds to the site's data (README, Catalog mode):
 covers of the new albums (rmr_pipeline.covers), listen links `l` for an album with no Spotify id
-(rmr_pipeline.links), the artist form `native [Latin]` of a new album (catalog.display_artist), and the
-mood-only rule for an album with no audio (`n`; audio.mean_fill, recs.build_recs, recs.no_audio_columns,
-layout.build_layouts)."""
+(rmr_pipeline.links), the form `native [Latin]` of a new album's artist and title (catalog.display_artist,
+display_title), the sheet's Spotify link for an existing album, with the cover of that release
+(catalog.catalog_frame, existing_album_covers), and the mood-only rule for an album with no audio (`n`;
+audio.mean_fill, recs.build_recs, recs.no_audio_columns, layout.build_layouts)."""
 import argparse
 import json
 import sys
@@ -19,8 +20,8 @@ from .artists import clean_artist
 from .audio import DEFAULT_CATALOG, audio_block, descriptors, site_matrix
 from .audio_store import STORES, StoreError, site_store
 from .catalog import (DEFAULT_EXISTING, DEFAULT_WEIGHTS, EXISTING, WEIGHT_PROFILES, CatalogError, catalog_frame, covers_table,
-                      display_artist, load_catalog, neighbour_clusters, new_album_covers, shared_spotify_ids,
-                      shared_spotify_lines)
+                      display_artist, display_title, existing_album_covers, load_catalog, neighbour_clusters,
+                      new_album_covers, shared_spotify_ids, shared_spotify_lines)
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS
 from .images import load_album_sprites, write_sheets
@@ -60,8 +61,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                    help="With --catalog: where an existing album's eight descriptors come from (default "
                         "table-novocals, the vocals descriptors dropped; see rmr_pipeline.catalog).")
     p.add_argument("--require-sprites", action="store_true",
-                   help="With --catalog: stop when catalog/covers.csv is missing, when a new album has a cover in it "
-                        "and no sprite of that image in .cache/covers/96 (python -m rmr_pipeline.covers sprites), or "
+                   help="With --catalog: stop when catalog/covers.csv is missing, when a new album (or an existing one "
+                        "whose Spotify link changed) has a cover in it and no sprite of that image in "
+                        ".cache/covers/96 (python -m rmr_pipeline.covers sprites), or "
                         "when a sprite has no entry in the manifest (covers adopt). An album whose image the state "
                         "file records as failed has no cover and is not counted. For the final build.")
     p.add_argument("--hub-correction", default="", metavar="STOPS",
@@ -119,10 +121,20 @@ def listen_links(catalog, spotify_ids: list[str]) -> tuple[dict[int, dict[str, s
     return links, line
 
 
-def cover_problems(table, new_keys: list[str], waiting: list[str]) -> list[str]:
+def held_by_overrides(slugs: list[str], overrides: dict[str, dict[str, str]]) -> set[int]:
+    """The album numbers whose Spotify id, cover id or cover image overrides.json sets: the sheet's link does
+    not change what they link to or show."""
+    index = {s: i for i, s in enumerate(slugs)}
+    return {index[slug] for slug, e in overrides.items() if slug in index and {"s", "c", "image"} & set(e)}
+
+
+def cover_problems(table, new_keys: list[str], waiting: list[str], existing_keys: list[str] = (),
+                   existing_waiting: list[str] = ()) -> list[str]:
     """What is wrong with the covers of the new albums, a line each: an error with --require-sprites, a
     warning without. `table`: catalog.covers_table(); `waiting`: the keys with a cover and no usable sprite
-    (new_album_covers)."""
+    (new_album_covers). `existing_keys`: the existing albums whose Spotify link changed, and
+    `existing_waiting` those of them with a row and no sprite of it (existing_album_covers): they keep the
+    map's cover until the sprite is there."""
     if not table.found:
         return [f"{table.path or 'catalog/covers.csv'}: covers.csv is missing, so NO new album has a cover (`c` is empty "
                 f"for all {len(new_keys)}). Restore the committed file, or run python -m rmr_pipeline.covers refs"]
@@ -132,7 +144,10 @@ def cover_problems(table, new_keys: list[str], waiting: list[str]) -> list[str]:
         problems.append(f"{len(waiting)} new album(s) have a cover and no sprite"
                         + (f" ({stale} of them with a sprite of another image than their row's)" if stale else "")
                         + ". Run python -m rmr_pipeline.covers sprites")
-    if unverified := table.unverified(new_keys):
+    if existing_waiting:
+        problems.append(f"{len(existing_waiting)} existing album(s) whose Spotify link changed have a cover in covers.csv "
+                        "and no sprite of it, so they keep the map's cover. Run python -m rmr_pipeline.covers sprites")
+    if unverified := table.unverified(list(existing_keys) + list(new_keys)):
         problems.append(f"{len(unverified)} sprite(s) have no entry in the manifest, so nothing says which image they "
                         f"were made from ({', '.join(unverified[:5])}{' ...' if len(unverified) > 5 else ''}). Once no "
                         "`sprites` run is going, run python -m rmr_pipeline.covers adopt")
@@ -197,7 +212,6 @@ def main(argv: list[str] | None = None) -> int:
             print(f"catalog: {e}", file=sys.stderr)
             return 1
         print(cat.summary())
-        print("\n".join(shared_spotify_lines(shared_spotify_ids(cat))))
         # The site's albums keep their rows; the new albums follow them.
         sub, keys, places, spotify_ids = cat.frame, cat.keys, cat.places, cat.spotify_ids
         new_keys = keys[n_site:]
@@ -206,30 +220,56 @@ def main(argv: list[str] | None = None) -> int:
         # romanisation; its slug is made from the romanisation alone, as before.
         shown = [display_artist(a, b) for a, b in zip(catalog["artist"].iloc[n_site:], catalog["artist_latin"].iloc[n_site:])]
         print(f"artists: {sum(a != b for a, b in zip(shown, sub['Artist'][n_site:]))} new albums shown as native [Latin]")
-        titles, artists = titles + list(sub["Title"][n_site:]), artists + shown
+        # The same for a title (the owner's decision of 6 October 2026); an existing album's is not touched.
+        shown_titles = [display_title(a, b) for a, b in zip(catalog["title"].iloc[n_site:], catalog["title_latin"].iloc[n_site:])]
+        print(f"titles: {sum(a != b for a, b in zip(shown_titles, sub['Title'][n_site:]))} new albums shown as native [Latin]")
+        titles, artists = titles + shown_titles, artists + shown
         slug_titles, slug_artists = cat.slug_titles, artists[:n_site] + cat.slug_artists[n_site:]
+
+    slugs = make_slugs(slug_titles, slug_artists)  # overrides.json is keyed by these
+    overrides = load_overrides(args.overrides)
+    if args.catalog:
+        # An existing album links to the sheet's Spotify album when the sheet has one (cat.spotify_ids), and
+        # one whose id thereby changes shows that release's cover, from covers.csv, in place of the map's.
+        # overrides.json is applied below and wins: the albums it decides are left out here.
+        old = existing_album_covers(keys, spotify_ids, cat.legacy_ids, held_by_overrides(slugs, overrides))
+        on_sheet = sum(1 for u in catalog["spotify_url"].iloc[:n_site] if u)
+        print(f"spotify links: {on_sheet} of {n_site} existing albums have a link on the sheet and take their id from it "
+              f"({n_site - on_sheet} have none and keep the feature table's); for {len(old.relinked) + len(old.held)} it is "
+              f"another id than the table's, {len(old.held)} of them decided by overrides.json instead")
+        print(f"covers: {len(old.relinked)} existing albums link to another release: {len(old.covers)} take its cover, "
+              f"{len(old.kept_map)} keep the map's cover (no row in covers.csv, no sprite, an image that is gone or "
+              f"skipped): {', '.join(old.kept_map[:5])}{' ...' if len(old.kept_map) > 5 else ''}")
+        for i, c in old.covers.items():
+            cover_ids[i] = c
         new_covers, new_images, waiting = new_album_covers(new_keys, n_site)
+        new_images = {**old.images, **new_images}
         cover_ids = cover_ids + new_covers
         table = covers_table()
         gone = table.gone(new_keys)
         print(f"covers: {len(new_keys)} new albums, {sum(1 for c in new_covers if c)} with a cover, "
-              f"{len(new_images)} with a sprite, {len(waiting)} with a cover and no sprite yet (a flat tile on the "
+              f"{len(new_images) - len(old.images)} with a sprite, {len(waiting)} with a cover and no sprite yet (a flat tile on the "
               f"sheets): {', '.join(waiting[:5])}{' ...' if len(waiting) > 5 else ''}")
         if gone:
             print(f"covers: {len(gone)} new album(s) have a row in covers.csv whose image could not be fetched (recorded "
                   f"in the covers state file): no cover, `c` is empty ({', '.join(gone[:5])}{' ...' if len(gone) > 5 else ''})")
-        problems = cover_problems(table, new_keys, waiting)
+        if skipped := table.skipped(new_keys):
+            print(f"covers: {len(skipped)} new album(s) have a row in covers.csv that catalog/covers_skip.csv names as not "
+                  f"a cover: no cover, `c` is empty ({', '.join(skipped[:5])}{' ...' if len(skipped) > 5 else ''})")
+        problems = cover_problems(table, new_keys, waiting, [keys[i] for i in old.relinked], old.waiting)
         if problems and args.require_sprites:
             print("\n".join(f"--require-sprites: {p}" for p in problems), file=sys.stderr)
             return 1
         for p in problems:
             print(f"WARNING, covers: {p}")
-
-    slugs = make_slugs(slug_titles, slug_artists)  # overrides.json is keyed by these
-    overrides = load_overrides(args.overrides)
     covers, spotify_ids, override_images, artists = apply_overrides(
         slugs, cover_ids, spotify_ids, overrides, args.overrides.parent, artists=artists)
     override_images = {**new_images, **override_images}
+    if args.catalog:
+        by_table = shared_spotify_ids(cat, cat.legacy_ids[:n_site] + cat.spotify_ids[n_site:])
+        print(f"spotify ids: {len({r['spotify_id'] for r in by_table})} were shared by more than one album with the feature "
+              "table's ids for the existing albums; with the sheet's links and overrides.json:")
+        print("\n".join(shared_spotify_lines(shared_spotify_ids(cat, spotify_ids))))
     changed = {slugs.index(k) for k, e in overrides.items() if "a" in e}
     slugs = slugs_after_overrides(slug_titles, [artists[i] if i in changed else a for i, a in enumerate(slug_artists)],
                                   slugs, changed)
@@ -284,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
 
     albums = [{
         "slug": slugs[r],
-        "t": str(sub.loc[r, "Title"]),
+        "t": titles[r],
         "a": artists[r],
         "s": spotify_ids[r],
         "c": covers[r],

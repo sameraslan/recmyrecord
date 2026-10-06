@@ -2,7 +2,10 @@
 
 The existing albums take their cover id and sprite from the map (mapsource.py, images.py). A new album
 (a row of catalog/albums.csv with no `legacy_uri`) has neither, so this module finds one image per album
-and records it in catalog/covers.csv as `rym_id,source,ref`. Sources, best first:
+and records it in catalog/covers.csv as `rym_id,source,ref`. It does the same, from Spotify alone, for an
+existing album whose Spotify link on the sheet is another release than its `legacy_uri` (relinked_albums; the
+owner's decision of 6 October 2026: the sheet's link wins, and the cover follows the link). Their rows come
+first in covers.csv, as they do in the catalog. Sources, best first:
 
     spotify   the catalog's Spotify link, asked from Spotify's oEmbed endpoint (no account). `ref` is the image
               id as the site stores it today: what follows https://i.scdn.co/image/.
@@ -17,6 +20,11 @@ and records it in catalog/covers.csv as `rym_id,source,ref`. Sources, best first
 A tier never spends a request on an album that a better source may still answer: Bandcamp is not asked while
 the album's Spotify lookup is neither done nor failed. The `cache` tier is the exception, since it costs
 nothing: it gives every album it can a row at once, and the Spotify tier replaces that row later.
+
+catalog/covers_skip.csv (`rym_id,source,ref,note`, written by hand) names the rows whose image is not a cover
+(a video frame with a track list, a "FULL ALBUM" card). Such a row gives no cover (cover_for: no `c`, no
+sprite) for as long as covers.csv has exactly that `source:ref` for the album; the row stays in covers.csv, so
+`refs` does not find the same image again, and `sprites` does not fetch it.
 
     python -m rmr_pipeline.covers refs      # (re)writes catalog/covers.csv; resumable
     python -m rmr_pipeline.covers sprites   # one 96 px JPEG per row in .cache/covers/96/ (not committed)
@@ -71,6 +79,7 @@ from PIL import Image, ImageOps, ImageStat
 PIPELINE_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_ALBUMS = PIPELINE_DIR / "catalog" / "albums.csv"
 DEFAULT_COVERS = PIPELINE_DIR / "catalog" / "covers.csv"
+DEFAULT_SKIP = PIPELINE_DIR / "catalog" / "covers_skip.csv"
 DEFAULT_MATCHES = PIPELINE_DIR / "audio" / "matches.csv"
 DEFAULT_MATCH_OVERRIDES = PIPELINE_DIR / "audio" / "match_overrides.json"
 DEFAULT_FULLLENGTH = PIPELINE_DIR / "audio" / "fulllength.csv"
@@ -465,6 +474,26 @@ def write_covers(path: Path, covers: dict[str, tuple[str, str]], order: list[str
     write_atomic(path, buf.getvalue().encode("utf-8"))
 
 
+def read_skips(path: Path = DEFAULT_SKIP) -> set[tuple[str, str]]:
+    """covers_skip.csv as {(rym_id, `source:ref`)}: the rows of covers.csv that are not a cover. Empty when
+    there is no file."""
+    path = Path(path)
+    if not path.exists():
+        return set()
+    out = set()
+    with path.open(encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            if row["source"] not in SOURCES or not row["ref"]:
+                raise ValueError(f"{path}: {row['rym_id']}: unknown source or empty ref ({row['source']!r}, {row['ref']!r})")
+            out.add((row["rym_id"], made_from((row["source"], row["ref"]))))
+    return out
+
+
+def without_skipped(covers: dict[str, tuple[str, str]], skips) -> dict[str, tuple[str, str]]:
+    """`covers` without the rows the skip list names (the same album, source and ref)."""
+    return {k: v for k, v in covers.items() if (k, made_from(v)) not in skips}
+
+
 class State:
     """The gitignored record of what failed: `refs` is rym_id -> {tier: why}, `sprites` is rym_id -> {of, why},
     `of` being the `source:ref` the image was asked for."""
@@ -529,6 +558,26 @@ def new_albums(path: Path = DEFAULT_ALBUMS) -> list[dict]:
         return [r for r in csv.DictReader(f) if not r["legacy_uri"]]
 
 
+def is_relinked(row: dict) -> bool:
+    """An existing album whose Spotify link on the sheet is another album than its `legacy_uri`: the build
+    links to the sheet's, so its cover is the sheet's release's too, not the map's."""
+    sheet = spotify_album_id(row["spotify_url"])
+    return bool(row["legacy_uri"] and sheet and sheet != row["legacy_uri"].rsplit(":", 1)[-1])
+
+
+def relinked_albums(path: Path = DEFAULT_ALBUMS) -> list[dict]:
+    """The catalog's existing albums that are relinked (is_relinked), in catalog order."""
+    with Path(path).open(encoding="utf-8", newline="") as f:
+        return [r for r in csv.DictReader(f) if is_relinked(r)]
+
+
+def cover_albums(path: Path = DEFAULT_ALBUMS) -> list[dict]:
+    """The albums this module finds a cover for, in catalog order: the relinked existing albums (they come
+    first in the catalog), then the new ones."""
+    with Path(path).open(encoding="utf-8", newline="") as f:
+        return [r for r in csv.DictReader(f) if not r["legacy_uri"] or is_relinked(r)]
+
+
 @dataclass
 class Inputs:
     """What the lookups read. `matches` and `overrides` are key -> (source, album id) as the audio stage names
@@ -549,7 +598,7 @@ class Inputs:
                   if v.get("source") and v.get("album_id")}
         with Path(fulllength).open(encoding="utf-8", newline="") as f:
             links = {r["key"]: r["url"] for r in csv.DictReader(f) if r["status"] == "embedded"}
-        return cls(new_albums(albums), matched, forced, links, ResponseCache(http_cache))
+        return cls(cover_albums(albums), matched, forced, links, ResponseCache(http_cache))
 
     def listings(self, row: dict) -> list[tuple[str, str, str]]:
         """The album's store listings, best first, as (source, the URLs the cache may know it by, the URL to
@@ -592,7 +641,11 @@ class Inputs:
         return youtube_ref(row["youtube_url"]) or youtube_ref(self.fulllength.get(row["rym_id"], ""))
 
     def wanted(self, row: dict, failed: dict[str, str]) -> list[str]:
-        """The tiers that can still give the album a cover, best first: those that apply and have not failed."""
+        """The tiers that can still give the album a cover, best first: those that apply and have not failed.
+        An existing album (is_relinked) is only asked from Spotify: its cover is the one of the release the
+        sheet links, or the map's as before."""
+        if row.get("legacy_uri"):
+            return [t for t in ["spotify"] if is_relinked(row) and t not in failed]
         tiers = []
         if spotify_album_id(row["spotify_url"]):
             tiers.append("spotify")
@@ -621,7 +674,7 @@ def is_due(tier: str, row: dict, inputs: Inputs, covers: dict, failed: dict[str,
 
 def plan(inputs: Inputs, covers: dict, state: State, tiers: tuple[str, ...], retry_failed: bool = False) -> dict:
     """Counts for --dry-run. `now`: albums each tier would look up in a run started now. `final`: where every
-    new album's cover comes from once every tier has run and every lookup has answered (`none`: no source)."""
+    album's cover comes from once every tier has run and every lookup has answered (`none`: no source)."""
     now, final = {t: 0 for t in TIERS}, {t: 0 for t in TIERS} | {"none": 0}
     by_source = {"spotify": "spotify", "deezer": "cache", "apple": "cache", "bandcamp": "bandcamp", "youtube": "youtube"}
     for row in inputs.albums:
@@ -719,8 +772,8 @@ def _run_refs(inputs: Inputs, covers_path: Path, state_path: Path, sprite_dir: P
     order = [r["rym_id"] for r in inputs.albums]
     known = set(order)
     if others := sum(k not in known for k in covers):
-        out(f"{others} row(s) of {Path(covers_path).name} are of albums that are not new albums of this catalog: kept as "
-            "they are, after the others")
+        out(f"{others} row(s) of {Path(covers_path).name} are of albums this catalog does not look up (not a new album, "
+            "nor an existing one with another Spotify link on the sheet): kept as they are, after the others")
     unsaved = handled = 0
     code = 0
 
@@ -977,6 +1030,7 @@ class Covers:
     made_from: dict[str, str] = field(default_factory=dict)
     path: Path | None = None
     failed: dict[str, str] = field(default_factory=dict)
+    skip: frozenset = frozenset()  # (rym_id, `source:ref`): rows that are not a cover (read_skips)
 
     def state(self, key: str) -> str:
         return sprite_state(key, self.rows[key], self.sprite_dir, self.made_from)
@@ -985,11 +1039,20 @@ class Covers:
         """(the album's `c`, the path of its 96 px sprite or None when there is none of that image yet: no file,
         or a file the manifest says was made from another image). ("", None) for an album with no cover source,
         and for one whose image is gone (is_gone): the site asks for the remote image of a `c` first, and that
-        request would fail for every visitor before the tile showed."""
-        if key not in self.rows or self.is_gone(key):
+        request would fail for every visitor before the tile showed. And for a row the skip list names
+        (is_skipped): its image is not a cover."""
+        if key not in self.rows or self.is_skipped(key) or self.is_gone(key):
             return "", None
         usable = self.state(key) in ("current", "unverified")
         return c_field(*self.rows[key]), sprite_path(self.sprite_dir, key) if usable else None
+
+    def is_skipped(self, key: str) -> bool:
+        """The skip list names exactly this row: the album, and the `source:ref` it has now."""
+        return key in self.rows and (key, made_from(self.rows[key])) in self.skip
+
+    def skipped(self, keys=None) -> list[str]:
+        """The albums (of `keys`, or every row) whose row is skipped (is_skipped): cover_for gives them no cover."""
+        return [k for k in (self.rows if keys is None else keys) if self.is_skipped(k)]
 
     def is_gone(self, key: str) -> bool:
         """The row's image could not be fetched and will not come back: the state file records a failure for
@@ -1003,7 +1066,8 @@ class Covers:
         return [k for k in (self.rows if keys is None else keys) if self.is_gone(k)]
 
     def _in_state(self, state: str, keys) -> list[str]:
-        return [k for k in (self.rows if keys is None else keys) if k in self.rows and self.state(k) == state]
+        return [k for k in (self.rows if keys is None else keys)
+                if k in self.rows and not self.is_skipped(k) and self.state(k) == state]
 
     def unverified(self, keys=None) -> list[str]:
         """The albums (of `keys`, or every row) whose sprite has no manifest entry: used, but nothing says which
@@ -1015,17 +1079,18 @@ class Covers:
         return self._in_state("stale", keys)
 
 
-def load_covers(path: Path = DEFAULT_COVERS, sprite_dir: Path = DEFAULT_SPRITES, state_path: Path | None = None) -> Covers:
+def load_covers(path: Path = DEFAULT_COVERS, sprite_dir: Path = DEFAULT_SPRITES, state_path: Path | None = None,
+                skip_path: Path | None = None) -> Covers:
     """`state_path`: the state file whose recorded sprite failures blank a cover (Covers.failed); none are read
-    without it."""
+    without it. `skip_path`: the skip list (Covers.skip); no row is skipped without it."""
     failed = {k: v["of"] for k, v in State(state_path).sprites.items() if v.get("of")} if state_path else {}
     return Covers(read_covers(path), Path(sprite_dir), Path(path).exists(), SpriteManifest(manifest_path(sprite_dir)).of,
-                  Path(path), failed)
+                  Path(path), failed, frozenset(read_skips(skip_path)) if skip_path else frozenset())
 
 
 @lru_cache(maxsize=1)
 def _default_covers() -> Covers:
-    return load_covers(state_path=DEFAULT_STATE)
+    return load_covers(state_path=DEFAULT_STATE, skip_path=DEFAULT_SKIP)
 
 
 def cover_for(key: str) -> tuple[str, Path | None]:
@@ -1054,12 +1119,17 @@ def _say(*args) -> None:
     print(*args, flush=True)
 
 
+def _albums_line(albums: list[dict]) -> str:
+    existing = sum(1 for r in albums if r.get("legacy_uri"))
+    return f"{len(albums)} albums ({existing} existing with another Spotify link on the sheet, {len(albums) - existing} new)"
+
+
 def cmd_refs(args) -> int:
     inputs = Inputs.load(args.albums)
     if args.dry_run:
         covers, state = read_covers(args.covers), State(args.state)
         counts = plan(inputs, covers, state, args.tiers, args.retry_failed)
-        _say(f"{len(inputs.albums)} new albums, {len(covers)} with a row in {Path(args.covers).name}")
+        _say(f"{_albums_line(inputs.albums)}, {len(covers)} with a row in {Path(args.covers).name}")
         _say("tier       asked by a run now   source in the end, if every lookup answers")
         for t in TIERS:
             now = counts["now"][t] if t in args.tiers else "-"
@@ -1070,13 +1140,14 @@ def cmd_refs(args) -> int:
     intervals = REFS_INTERVALS | {"open.spotify.com": args.spotify_interval, "bandcamp": args.bandcamp_interval}
     code = run_refs(inputs, args.covers, args.state, args.sprites, Fetcher(intervals, stop=stop), args.tiers, args.limit,
                     args.retry_failed, stop, _say)
-    _say(f"{len(read_covers(args.covers))} of {len(inputs.albums)} new albums have a row in {args.covers}")
+    have = read_covers(args.covers)
+    _say(f"{sum(r['rym_id'] in have for r in inputs.albums)} of {len(inputs.albums)} albums have a row in {args.covers}")
     return code
 
 
 def cmd_sprites(args) -> int:
-    covers = read_covers(args.covers)
-    order = [r["rym_id"] for r in new_albums(args.albums)]
+    covers = without_skipped(read_covers(args.covers), read_skips(args.skip))  # a skipped row's image is not fetched
+    order = [r["rym_id"] for r in cover_albums(args.albums)]
     if args.dry_run:
         state = State(args.state)
         todo = missing_sprites(covers, order, args.sprites, state, args.sources, args.retry_failed)
@@ -1095,16 +1166,25 @@ def cmd_adopt(args) -> int:
 
 def cmd_status(args) -> int:
     inputs, covers, state = Inputs.load(args.albums), read_covers(args.covers), State(args.state)
+    skips = read_skips(args.skip)
     by_source = Counter(s for s, _ in covers.values())
     of = SpriteManifest(manifest_path(args.sprites)).of
-    states = Counter(sprite_state(k, v, args.sprites, of) for k, v in covers.items())
+    wanted = without_skipped(covers, skips)
+    states = Counter(sprite_state(k, v, args.sprites, of) for k, v in wanted.items())
     have = states["current"] + states["unverified"]
     if not Path(args.covers).exists():
         _say(f"{args.covers} is MISSING: no album has a cover source (python -m rmr_pipeline.covers refs, or restore the file)")
-    _say(f"{len(inputs.albums)} new albums, {len(covers)} with a cover source")
+    _say(f"{_albums_line(inputs.albums)}, {len(covers)} with a cover source")
+    existing = {r["rym_id"] for r in inputs.albums if r.get("legacy_uri")}
+    _say(f"  of the existing: {sum(k in existing for k in covers)} with a row; the others keep the map's cover")
     for s in SOURCES:
         _say(f"  {s:<9} {by_source[s]:>5}")
-    _say(f"sprites: {have} present, {len(covers) - have} missing ({sum(k in covers for k in state.sprites)} of them failed)")
+    if skips:
+        unmatched = len(skips) - (len(covers) - len(wanted))
+        _say(f"skipped: {len(covers) - len(wanted)} row(s) named in {Path(args.skip).name} give no cover (not a cover image)"
+             + (f"; {unmatched} line(s) of {Path(args.skip).name} match no row (the album has another image now, or none)"
+                if unmatched else ""))
+    _say(f"sprites: {have} present, {len(wanted) - have} missing ({sum(k in wanted for k in state.sprites)} of them failed)")
     if states["stale"]:
         _say(f"  {states['stale']} of the missing have a file made from another image than their row's: `sprites` makes them again")
     if states["unverified"]:
@@ -1125,7 +1205,7 @@ def cmd_status(args) -> int:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m rmr_pipeline.covers", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="command", required=True)
-    for name, fn, text in [("refs", cmd_refs, "find a cover source per new album and write covers.csv"),
+    for name, fn, text in [("refs", cmd_refs, "find a cover source per album (new, or relinked) and write covers.csv"),
                            ("sprites", cmd_sprites, "fetch the small image of each row and save its 96 px sprite"),
                            ("status", cmd_status, "counts per source, sprites, albums without a cover"),
                            ("adopt", cmd_adopt, "record the sprites with no manifest entry as made from their rows; no request")]:
@@ -1135,6 +1215,7 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--covers", type=Path, default=DEFAULT_COVERS)
         p.add_argument("--state", type=Path, default=DEFAULT_STATE)
         p.add_argument("--sprites", type=Path, default=DEFAULT_SPRITES, help="the sprite folder")
+        p.add_argument("--skip", type=Path, default=DEFAULT_SKIP, help="the skip list: rows that are not a cover")
         if name == "status":
             continue
         p.add_argument("--dry-run", action="store_true", help="print the counts; no request, nothing written")
