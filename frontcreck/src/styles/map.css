@@ -133,6 +133,9 @@
   --rn-shadow-full: 0 0 2px var(--rn-ink), 0 0 4px var(--rn-ink), 0 0 4px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 14px var(--rn-ink), 0 0 14px var(--rn-ink), 0 0 26px var(--rn-ink-far), 0 0 44px rgba(4, 4, 8, calc(var(--h, .85) * .6));
   --rn-shadow-lite: 0 0 2px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 26px var(--rn-ink-far);
 }
+/* A name that moves to another spot when the map comes to rest (the driver sets the class for that one move):
+ * the compositor slides its layer, nothing is painted. Reduced motion: instant (styles/shell.css). */
+.rn.ease { transition: transform .2s var(--out), opacity .2s var(--out), visibility 0s; }
 .rn.off { opacity: 0; visibility: hidden; transition: opacity .2s var(--out), visibility 0s linear .2s; }
 .rn b {
   display: block; font-weight: 400; font-style: normal; letter-spacing: .26em; padding-left: .26em; text-transform: uppercase; line-height: 1.05; color: var(--lc); opacity: var(--rn-a-ink);

@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import type * as THREE from 'three';
 import { useMapStore } from '../state/mapStore';
 import { clearNamesPlacer, setNamesPlacer } from '../state/nameWidths';
-import { buildNamesWorld, createNamesPlacer } from '../state/namesPlacer';
+import { buildNamesWorld, createNamesPlacer, watchNamesRest } from '../state/namesPlacer';
 
-/** Places the region names (state/namesPlacer.ts) on every rendered frame, and when RegionNames asks
- * (state/nameWidths.ts placeNamesNow). It never asks for a frame, listens to nothing and reads no layout, so
- * nothing happens at rest. */
+/** Places the region names (state/namesPlacer.ts) on every rendered frame, when RegionNames asks
+ * (state/nameWidths.ts placeNamesNow), and once when a motion has ended without a frame that placed them at
+ * rest (watchNamesRest: a DOM write, no frame). It never asks for a frame and reads no layout, so nothing
+ * happens at rest. */
 export function RegionNamesDriver({ positionsRef }: { positionsRef: React.RefObject<Float32Array> }) {
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const get = useThree((s) => s.get);
@@ -30,7 +31,11 @@ export function RegionNamesDriver({ positionsRef }: { positionsRef: React.RefObj
     // The labels arrived or changed (the theme can load after the map): place them now. RegionNames, which
     // renders in another React root, may have asked just before this ran and been told there were none.
     place();
-    return () => clearNamesPlacer(place);
+    const unwatch = watchNamesRest(placer.pending, place);
+    return () => {
+      unwatch();
+      clearNamesPlacer(place);
+    };
   }, [placer, world, camera, get, positionsRef]);
 
   useFrame((state) => {

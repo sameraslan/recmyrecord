@@ -4,11 +4,13 @@ import { describe, expect, it } from 'vitest';
 import type { ThemeLabel } from '@/lib/data/theme';
 import { NAMES_BAND_PX } from '../theme';
 import { COVER_FADE_START_PX } from './zoomLimits';
+import '../../../../scripts/theme/bake-core.js';
 import {
   NAMES_MAX_PHONE,
   NAME_EDGE_PX,
   NAME_LUM_PX_PER_WORLD,
   NAME_LUM_WIDE_PX_PER_WORLD,
+  NAME_OFFSETS,
   chromeBlockers,
   createWidthCache,
   haloFor,
@@ -267,10 +269,8 @@ describe('layoutNames', () => {
     expect(at(480, 1.2)).toBe(0.75);
     expect(at(599.99, 1.2)).toBe(0.75);
     expect(at(600, 1.2)).toBe(0.65);
-    // A nudged name, a phone and a slider morph keep the full halo at any scale.
+    // A phone and a slider morph keep the full halo at any scale.
     expect(layoutNames(input({ candidates: [cand('a', 700, 400, 5, wide)], pxPerWorld: 478, zoomK: 0.85, fullHalo: true }))[0].halo).toBe(1);
-    const nudged = layoutNames(input({ candidates: [cand('a', 700, 400, 9, wide), cand('b', 700, 400, 5, wide)], pxPerWorld: 478, zoomK: 0.85 }));
-    expect(nudged.map((p) => p.halo)).toEqual([0.75, 1]);
   });
 
   it('a theme baked before the wider box (no lumWide) keeps the full halo under 510, as it did', () => {
@@ -326,6 +326,80 @@ describe('layoutNames', () => {
     expect(checked).toBe(30 * 5 * 4);
     // The scales the app reaches with the wider box are inside what was just checked: under 510 the size factor is 0.85.
     for (const scale of [340, 400, 478, 498, 509.99]) expect(nameZoomK(0.0068 * scale)).toBe(0.85);
+  });
+
+  it('says which spot each name took: 0 on its own point, else the nudge', () => {
+    const out = layoutNames(input({ candidates: [cand('a', 700, 400, 5), cand('b', 705, 405, 9)] }));
+    expect(out[0].spot).toBe(0);
+    expect(out[1].spot).toBeGreaterThan(0);
+    expect([out[1].x - 700, out[1].y - 400]).toEqual([...NAME_OFFSETS[out[1].spot]]);
+  });
+
+  it('a nudged name keeps a solved halo while it is still inside the box its gas was measured in, and the full one outside', () => {
+    const wide = { lumWide: 0.9 };
+    // 'Playful Way' at 478 px per world unit, size 0.85: the wider box is about 46 px half high, the first 31.
+    const at = (spot: number, pxPerWorld: number, zoomK: number, extra: Partial<ThemeLabel> = wide, over: Partial<NamesInput> = {}) => {
+      const sticky = new Map([[nameKey('balanced', 'a'), spot]]);
+      const p = layoutNames(input({ candidates: [cand('a', 700, 400, 5, extra)], blockers: [], pxPerWorld, zoomK, sticky, ...over }))[0];
+      expect(p.spot).toBe(spot);
+      return p.halo;
+    };
+    // 22 px up or down, 40 px left or right: inside the wider box, so its halo (lumWide 0.9: 0.75).
+    for (const spot of [1, 2, 3, 4]) expect(at(spot, 478, 0.85), `spot ${spot}`).toBe(0.75);
+    // 46 px and more: outside it.
+    for (const spot of [5, 6, 7, 8, 9, 10, 11, 12]) expect(at(spot, 478, 0.85), `spot ${spot}`).toBe(1);
+    // Closer in the same px are less map: at 900 the 22 px nudge is inside the first box (lum 0.4: 0.65), the 46 px one inside the wider.
+    expect(at(1, 900, 0.85)).toBe(0.65);
+    expect(at(5, 900, 0.85)).toBe(0.75);
+    expect(at(11, 900, 0.85)).toBe(1);
+    // Inside only the wider box and the theme has none: full.
+    expect(at(1, 478, 0.85, {})).toBe(1);
+    expect(at(1, 900, 0.85, {})).toBe(0.65);
+    // A phone and a morph: full, nudged or not.
+    expect(at(1, 900, 0.85, wide, { fullHalo: true })).toBe(1);
+  });
+
+  it('for every name of the real theme, on every spot and at every scale, a halo under the full one is solved for a box that holds the name with 8 px around it', () => {
+    const theme = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../public/data/theme/theme.json'), 'utf8')) as { labels: Record<string, ThemeLabel[]> };
+    const bake = (globalThis as unknown as { RMR_THEME: { GAS: { LABEL_REF_PPW: number; LABEL_WIDE_PPW: number }; labelBox: (name: string, strong: boolean, n: number, s: number, ppw?: number) => [number, number] } }).RMR_THEME;
+    expect([bake.GAS.LABEL_REF_PPW, bake.GAS.LABEL_WIDE_PPW]).toEqual([NAME_LUM_PX_PER_WORLD, NAME_LUM_WIDE_PX_PER_WORLD]);
+    // Tenor Sans capitals run about 0.7 em; widthOf adds the tracking.
+    const real = createWidthCache((text) => text.length * 70);
+    let solvedNudged = 0;
+    let fullNudged = 0;
+    let checked = 0;
+    for (const scale of [200, 339.99, 340, 400, 478.4, 498.1, 509.99, 510, 596.7, 600, 686.2, 900, 1300, 1900]) {
+      // The size the app draws names at for this scale.
+      const k = nameZoomK(0.0068 * scale);
+      for (const stop of ['sonic', 'balanced', 'mood']) {
+        for (const l of theme.labels[stop]) {
+          const key = nameKey('balanced', l.id);
+          // The boxes the build measured lum and lumWide in (scripts/theme/bake-core.js labelBox), in px at this scale.
+          const [lw, lh] = bake.labelBox(l.name, l.strong, l.n, 1).map((v) => v * scale);
+          const [ww, wh] = bake.labelBox(l.name, l.strong, l.n, 1, bake.GAS.LABEL_WIDE_PPW).map((v) => v * scale);
+          const alpha = l.strong ? 1 : 0.82;
+          const haloLum = haloFor(l.lum, luminance(l.rgb), alpha);
+          const haloWide = haloFor(l.lumWide as number, luminance(l.rgb), alpha);
+          for (let spot = 0; spot < NAME_OFFSETS.length; spot++) {
+            const p = layoutNames(input({ candidates: [{ key, label: l, x: 2000, y: 2000, alpha: 1 }], visible: { left: 0, top: 0, right: 4000, bottom: 4000 }, blockers: [], pxPerWorld: scale, zoomK: k, widthOf: real.widthOf, sticky: new Map([[key, spot]]) }))[0];
+            expect(p.spot).toBe(spot);
+            // The drawn name with 8 px around it, from the label's point.
+            const reachX = Math.abs(p.x - 2000) + real.widthOf(l, p.fontPx) / 2 + 8;
+            const reachY = Math.abs(p.y - 2000) + (p.fontPx * 1.05) / 2 + 8;
+            const inLum = reachX <= lw && reachY <= lh;
+            const inWide = reachX <= ww && reachY <= wh;
+            const why = `${stop} ${l.name} spot ${spot} at ${scale}`;
+            if (p.halo < 1) expect((inLum && p.halo >= haloLum) || (inWide && p.halo >= haloWide), why).toBe(true);
+            if (spot > 0 && p.halo < 1) solvedNudged++;
+            else if (spot > 0) fullNudged++;
+            checked++;
+          }
+        }
+      }
+    }
+    expect(checked).toBe(14 * 30 * 13);
+    expect(solvedNudged).toBeGreaterThan(300);
+    expect(fullNudged).toBeGreaterThan(300);
   });
 
   it('returns nothing for a stop with no labels', () => {

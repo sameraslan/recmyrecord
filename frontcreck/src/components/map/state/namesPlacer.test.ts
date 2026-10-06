@@ -4,7 +4,7 @@ import { useAppStore } from '@/lib/store';
 import { DEFAULT_INPUT, useMapStore } from './mapStore';
 import { clearNameWidths, nameWidths } from './nameWidths';
 import { nameKey } from './namesLayout';
-import { buildNamesWorld, createNamesPlacer, type NamesWorld } from './namesPlacer';
+import { buildNamesWorld, createNamesPlacer, watchNamesRest, type NamesWorld } from './namesPlacer';
 import { setOverlayEl } from './overlayEls';
 import type { OrthoCameraLike } from './projection';
 
@@ -229,5 +229,193 @@ describe('the names placer', () => {
     expect(layer.classList.contains('is-fading')).toBe(false);
     expect(shown()).toEqual([KEYS[2]]);
     expect(els[KEYS[2]].style.getPropertyValue('--a')).toBe('1.00');
+  });
+});
+
+describe('the names at rest', () => {
+  // Two names 0.04 world units apart, one above the other: clear of each other at 760 px per world unit
+  // (30 px), touching at 608 (24 px), where the lower priority one is nudged.
+  const NEAR: ThemeData = { ...THEME, labels: { sonic: [], balanced: [lab('p', 'Warm Halo', 0.1, 0.1, 2), lab('q', 'Sombre Void', 0.1, 0.12, 1)], mood: [] } };
+  const P = nameKey('balanced', 'p');
+  const Q = nameKey('balanced', 'q');
+  let near: NamesWorld;
+  let own: Record<string, HTMLDivElement>;
+  const STILL = { dragging: false, pinching: false, animating: false, rigMoving: false, nudging: false, morphing: false };
+
+  /** Fresh, hidden elements for the two names, as RegionNames renders them. */
+  function mount(): void {
+    own = {};
+    for (const k of [P, Q]) {
+      own[k]?.remove();
+      const el = document.createElement('div');
+      el.className = 'rn off';
+      layer.append(el);
+      own[k] = el;
+      setOverlayEl(k, el);
+    }
+  }
+  const look = () => [P, Q].map((k) => [own[k].classList.contains('off'), own[k].style.transform, own[k].style.getPropertyValue('--h'), own[k].style.fontSize]);
+  /** What a placer that has seen nothing else shows for this view. */
+  function cold(c: OrthoCameraLike): ReturnType<typeof look> {
+    const kept = own;
+    mount();
+    createNamesPlacer()(near, c, W, H, POS);
+    const out = look();
+    for (const k of [P, Q]) {
+      own[k].remove();
+      setOverlayEl(k, kept[k]);
+    }
+    own = kept;
+    return out;
+  }
+
+  beforeEach(() => {
+    near = buildNamesWorld(NEAR, TX);
+    mount();
+    useMapStore.setState(STILL);
+  });
+
+  afterEach(() => {
+    for (const k of [P, Q]) setOverlayEl(k, null);
+    useMapStore.setState(STILL);
+  });
+
+  it('while the map moves a nudged name keeps its nudged spot after its own point is free again, as before', () => {
+    const place = createNamesPlacer();
+    useMapStore.setState({ dragging: true });
+    place(near, cam(0, 0.2, 1), W, H, POS);
+    const free = own[Q].style.transform;
+    expect(look()).toEqual(cold(cam(0, 0.2, 1)));
+    place(near, cam(0, 0.2, 0.8), W, H, POS);
+    place(near, cam(0, 0.2, 1), W, H, POS);
+    expect(own[Q].style.transform).not.toBe(free);
+    expect(own[P].classList.contains('ease')).toBe(false);
+    expect(own[Q].classList.contains('ease')).toBe(false);
+    expect(place.pending()).toBe(true);
+  });
+
+  it('once it rests every name is where a first placement of the same view puts it, and a name that changed spot eases there', () => {
+    const place = createNamesPlacer();
+    useMapStore.setState({ dragging: true });
+    place(near, cam(0, 0.2, 1), W, H, POS);
+    place(near, cam(0, 0.2, 0.8), W, H, POS);
+    place(near, cam(0, 0.2, 1), W, H, POS);
+    useMapStore.setState({ dragging: false });
+    // Nothing about the camera changed: the placement still runs, because the last one was made in motion.
+    expect(place(near, cam(0, 0.2, 1), W, H, POS)).toBe(true);
+    expect(look()).toEqual(cold(cam(0, 0.2, 1)));
+    expect(place.pending()).toBe(false);
+    // Only the name that changed spot is eased (styles/map.css .rn.ease); the other was not touched.
+    expect(own[Q].classList.contains('ease')).toBe(true);
+    expect(own[P].classList.contains('ease')).toBe(false);
+    // The next motion takes the ease off before it moves the name, so the name follows the map again.
+    useMapStore.setState({ dragging: true });
+    place(near, cam(0.01, 0.2, 1), W, H, POS);
+    expect(own[Q].classList.contains('ease')).toBe(false);
+  });
+
+  it('rests on the same names in the same places whatever pans and zooms led to the view', () => {
+    const end = cam(0.02, 0.21, 0.9);
+    const want = cold(end);
+    const routes: [number, number, number][][] = [
+      [[0, 0.2, 1], [0, 0.2, 0.8], [0.02, 0.21, 0.9]],
+      [[0, 0.2, 0.5], [0, 0.2, 0.7], [0.3, 0.2, 0.7], [0.02, 0.21, 0.9]],
+      [[0.02, 0.21, 2], [0.02, 0.21, 0.6], [0.02, 0.21, 1.4], [0.02, 0.21, 0.9]],
+      [[0, 0.5, 0.8], [0, 0.2, 0.8], [0, 0.2, 0.75], [0.02, 0.21, 0.9]],
+    ];
+    const flags = [{ dragging: true }, { animating: true }, { rigMoving: true }, { pinching: true }];
+    routes.forEach((route, i) => {
+      mount();
+      const place = createNamesPlacer();
+      useMapStore.setState({ ...STILL, ...flags[i] });
+      for (const [x, y, z] of route) place(near, cam(x, y, z), W, H, POS);
+      useMapStore.setState(STILL);
+      place(near, end, W, H, POS);
+      expect(look(), `route ${i}`).toEqual(want);
+    });
+  });
+
+  it('writes nothing at rest when the names already are where a first placement puts them', () => {
+    const place = createNamesPlacer();
+    useMapStore.setState({ animating: true });
+    place(near, cam(0, 0.2, 1), W, H, POS);
+    place(near, cam(0.05, 0.2, 1), W, H, POS);
+    place(near, cam(0.1, 0.2, 1), W, H, POS);
+    seen.takeRecords();
+    const widthOf = vi.spyOn(nameWidths, 'widthOf');
+    useMapStore.setState({ animating: false });
+    expect(place.pending()).toBe(true);
+    place(near, cam(0.1, 0.2, 1), W, H, POS);
+    expect(seen.takeRecords()).toHaveLength(0);
+    expect(place.pending()).toBe(false);
+    // And once rested, a placement of the same view does not even lay out.
+    widthOf.mockClear();
+    place(near, cam(0.1, 0.2, 1), W, H, POS);
+    expect(widthOf).not.toHaveBeenCalled();
+    expect(seen.takeRecords()).toHaveLength(0);
+  });
+
+  it('does not ease a name that was hidden: it shows at its place', () => {
+    const place = createNamesPlacer();
+    useMapStore.setState({ animating: true, input: { ...EXPLORE, insetLeft: 420 } });
+    place(near, cam(0, 0.2, 0.8), W, H, POS);
+    expect(look().map((n) => n[0])).toEqual([true, true]);
+    useMapStore.setState({ animating: false, input: EXPLORE });
+    place(near, cam(0, 0.2, 0.8), W, H, POS);
+    expect(look()).toEqual(cold(cam(0, 0.2, 0.8)));
+    expect(own[P].classList.contains('ease')).toBe(false);
+    expect(own[Q].classList.contains('ease')).toBe(false);
+  });
+});
+
+describe('watchNamesRest', () => {
+  const STILL = { dragging: false, pinching: false, animating: false, rigMoving: false, nudging: false, morphing: false };
+  afterEach(() => useMapStore.setState(STILL));
+
+  it('places once, after the task, when a motion ends and the last placement was made in motion', async () => {
+    let pending = true;
+    const place = vi.fn(() => {
+      pending = false;
+    });
+    useMapStore.setState({ ...STILL, dragging: true });
+    const stop = watchNamesRest(() => pending, place);
+    // Still moving: nothing.
+    useMapStore.setState({ hoveredIndex: 3 });
+    await Promise.resolve();
+    expect(place).not.toHaveBeenCalled();
+    // The drag ends (two store writes in one task): one placement, not in the store's own notification.
+    useMapStore.setState({ dragging: false });
+    useMapStore.setState({ hoveredIndex: 4 });
+    expect(place).not.toHaveBeenCalled();
+    await Promise.resolve();
+    expect(place).toHaveBeenCalledTimes(1);
+    // Rested: later store changes (a hover) ask for nothing.
+    useMapStore.setState({ hoveredIndex: 5 });
+    await Promise.resolve();
+    expect(place).toHaveBeenCalledTimes(1);
+    stop();
+  });
+
+  it('does not place when the motion ended inside a frame that already placed, when another motion began, or after it stopped watching', async () => {
+    let pending = true;
+    const place = vi.fn();
+    useMapStore.setState({ ...STILL, animating: true });
+    const stop = watchNamesRest(() => pending, place);
+    // The frame that ended the tween placed at rest before the task was over.
+    useMapStore.setState({ animating: false });
+    pending = false;
+    await Promise.resolve();
+    expect(place).not.toHaveBeenCalled();
+    // A motion ends and another begins in the same task.
+    pending = true;
+    useMapStore.setState({ animating: true });
+    useMapStore.setState({ animating: false });
+    useMapStore.setState({ rigMoving: true });
+    await Promise.resolve();
+    expect(place).not.toHaveBeenCalled();
+    stop();
+    useMapStore.setState({ rigMoving: false });
+    await Promise.resolve();
+    expect(place).not.toHaveBeenCalled();
   });
 });

@@ -5,6 +5,7 @@ import { STOP_IDS } from '@/lib/types';
 import type { StopId } from '@/lib/types';
 import { STOP_T } from '../data';
 import { useMapStore } from './mapStore';
+import { inMotion } from './motion';
 import { nameWidths, nameWidthsVersion } from './nameWidths';
 import { chromeBlockers, layoutNames, nameFades, nameKey, namesShown, nameZoomK, type NameCandidate, type PlacedName } from './namesLayout';
 import { getOverlayEl } from './overlayEls';
@@ -20,6 +21,8 @@ const PICK_CLEAR_PX = 22;
 const NAMES_SCALE_WITH_ZOOM = true;
 /** On the layer while the slider is between stops (styles/map.css gives the fading letters their own layer). */
 const FADING_CLASS = 'is-fading';
+/** On a name while it moves to another spot at rest (styles/map.css eases its transform; no canvas frame). */
+const EASE_CLASS = 'ease';
 
 /** What was last written to an element, as numbers, so an unchanged value is neither formatted nor written. */
 interface Written {
@@ -29,6 +32,8 @@ interface Written {
   alpha: number;
   halo: number;
   off: boolean;
+  spot: number;
+  ease: boolean;
 }
 const written = new WeakMap<Element, Written>();
 
@@ -36,14 +41,21 @@ function stateOf(el: Element): Written {
   let w = written.get(el);
   if (!w) {
     // As RegionNames renders it: hidden, nothing set.
-    w = { x: NaN, y: NaN, fontPx: 0, alpha: NaN, halo: NaN, off: true };
+    w = { x: NaN, y: NaN, fontPx: 0, alpha: NaN, halo: NaN, off: true, spot: 0, ease: false };
     written.set(el, w);
   }
   return w;
 }
 
-function show(el: HTMLElement, p: PlacedName): void {
+/** `rest`: the placement the map comes to rest on. A name already showing that changes spot there eases over. */
+function show(el: HTMLElement, p: PlacedName, rest: boolean): void {
   const w = stateOf(el);
+  const ease = rest && !w.off && w.spot !== p.spot;
+  if (w.ease !== ease) {
+    el.classList.toggle(EASE_CLASS, ease);
+    w.ease = ease;
+  }
+  w.spot = p.spot;
   // The layout rounds x and y to a tenth of a px.
   if (w.x !== p.x || w.y !== p.y) {
     el.style.transform = `translate3d(${p.x.toFixed(1)}px, ${p.y.toFixed(1)}px, 0) translate(-50%, -50%)`;
@@ -109,14 +121,21 @@ export function buildNamesWorld(theme: ThemeData, tx: { cx: number; cy: number; 
 
 /** Places the names from a camera, a canvas size (CSS px) and the albums' current positions. False when it
  * could not place: no labels yet, or no layer. */
-export type NamesPlacer = (world: NamesWorld | null, camera: OrthoCameraLike, width: number, height: number, positions: Float32Array) => boolean;
+export interface NamesPlacer {
+  (world: NamesWorld | null, camera: OrthoCameraLike, width: number, height: number, positions: Float32Array): boolean;
+  /** The last placement was made while the map moved: the names are owed one placement at rest. */
+  pending: () => boolean;
+}
 
 /** The placement RegionNamesDriver runs on every drawn frame and when RegionNames asks: decides which region
  * names show and where (state/namesLayout.ts) and writes their transforms. It reads no layout, listens to
  * nothing and asks for no frame. It keeps what its last placement was made from (18 values) and returns at
  * once when none of them changed: a hover redraw (the pointer move path), a cover fading in or the sharper gas
  * image fading in costs those compares and nothing else, with no allocation and no DOM touched. No name shows
- * while an album is open, once the map is zoomed in, on the dimmed backdrop or while the names are off. */
+ * while an album is open, once the map is zoomed in, on the dimmed backdrop or while the names are off.
+ * While the map moves (state/motion.ts inMotion) a name keeps the spot it has, so names do not hop between
+ * spots under a pan. The first placement at rest forgets those spots and solves the view afresh, so a view
+ * always rests on the same names in the same places however it was reached; it writes only what differs. */
 export function createNamesPlacer(): NamesPlacer {
   // What the last placement was made from, written in place.
   let bLayer: Element | null = null;
@@ -145,8 +164,10 @@ export function createNamesPlacer(): NamesPlacer {
   const candidates: NameCandidate[] = [];
   let pass = 0;
   let fading = false;
+  // The last placement was made in motion (spots kept from earlier views).
+  let unsettled = false;
 
-  return (world, camera, width, height, positions) => {
+  const place = (world: NamesWorld | null, camera: OrthoCameraLike, width: number, height: number, positions: Float32Array): boolean => {
     // No theme data, or the names are switched off (RegionNames renders no layer): nothing to place.
     const layer = getOverlayEl('names');
     if (!world || !layer) {
@@ -155,13 +176,16 @@ export function createNamesPlacer(): NamesPlacer {
     }
     // A canvas with no size yet (or a collapsed one) has no map to place names on.
     if (!(width > 0 && height > 0)) return false;
-    const { input, sliderT, insetCurrent } = useMapStore.getState();
+    const store = useMapStore.getState();
+    const { input, sliderT, insetCurrent } = store;
+    const moving = inMotion(store);
     const namesOn = useAppStore.getState().namesOn;
     // CSS px of the canvas under the site header: 0 while the stage starts below it (state/stageTop.ts).
     const top = getStageTop();
     const widths = nameWidthsVersion();
     const { x, y } = camera.position;
     if (
+      (moving || !unsettled) &&
       bLayer === layer &&
       bWorld === world &&
       bx === x &&
@@ -205,6 +229,10 @@ export function createNamesPlacer(): NamesPlacer {
     bTop = top;
     bWidths = widths;
 
+    // At rest every name is tried on its own point first, whatever spot it had on the way here.
+    const settling = !moving && unsettled;
+    if (!moving) sticky.clear();
+    unsettled = moving;
     if (sliderT === STOP_T[input.stop]) rest = input.stop;
     const coverPx = coverCssPx(camera.zoom, height);
     // An album is open from the moment its panel takes its place (insetLeft) or its focus is set, whichever
@@ -271,7 +299,7 @@ export function createNamesPlacer(): NamesPlacer {
           const w = world.byKey.get(p.key);
           if (w) w.pass = now;
           const el = getOverlayEl(p.key);
-          if (el) show(el, p);
+          if (el) show(el, p, settling);
         }
       }
     }
@@ -284,5 +312,29 @@ export function createNamesPlacer(): NamesPlacer {
       fading = morph;
     }
     return true;
+  };
+  return Object.assign(place, { pending: () => unsettled });
+}
+
+/** Calls `place` once when the map's motion has ended and the names were last placed in motion (`pending`):
+ * the rest placement. A motion that ends inside a drawn frame (a tween, wheel easing, a fling) has usually been
+ * placed at rest by that frame; one that ends outside a frame (pointer up on a drag or a pinch) has not, and no
+ * frame is drawn for it: the names are DOM. Checked once the current task is over, as MarkerDriver does for the
+ * covers. While nothing is pending a store change costs one call and one compare. Returns the unsubscribe. */
+export function watchNamesRest(pending: () => boolean, place: () => void): () => void {
+  let asked = false;
+  let on = true;
+  const check = () => {
+    asked = false;
+    if (on && pending() && !inMotion(useMapStore.getState())) place();
+  };
+  const unsubscribe = useMapStore.subscribe((s) => {
+    if (asked || !pending() || inMotion(s)) return;
+    asked = true;
+    queueMicrotask(check);
+  });
+  return () => {
+    on = false;
+    unsubscribe();
   };
 }

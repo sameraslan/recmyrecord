@@ -33,6 +33,8 @@ export const NAME_LUM_PX_PER_WORLD = 600;
  * full size and k times it for a name at k of its size (340 at the Whole map, where k is 0.85). Under that, or
  * without lumWide, the full halo. */
 export const NAME_LUM_WIDE_PX_PER_WORLD = 400;
+/** The dark surround of a name that its ink is measured against, CSS px past the name's box on each side. */
+const NAME_SURROUND_PX = 8;
 /** Opacity of a name that is not `strong` (styles/map.css .rn.fair). */
 export const NAME_FAIR_ALPHA = 0.82;
 /** Nudges tried in order when the true centre is taken; small, so a name stays on its region. */
@@ -55,10 +57,15 @@ export function nameZoomK(coverPx: number): number {
   return clamp(Math.pow(coverPx / NAME_REF_COVER_PX, 0.3), 0.85, 1.35);
 }
 
+/** A name's full size in CSS px (scripts/theme/bake-core.js labelFontPx: the size its gas was boxed for). */
+function nameFullPx(label: Pick<ThemeLabel, 'strong' | 'n'>): number {
+  const s = Math.min(1, Math.sqrt(label.n / 346));
+  return NAME_SIZE_K * (label.strong ? 17 + 7 * s : 15 + 3 * s);
+}
+
 /** Font size in CSS px, in half-pixel steps so the element's font-size is rewritten only on a visible change. */
 export function nameFontPx(label: Pick<ThemeLabel, 'strong' | 'n'>, phone: boolean, zoomK: number): number {
-  const s = Math.min(1, Math.sqrt(label.n / 346));
-  const base = NAME_SIZE_K * (label.strong ? 17 + 7 * s : 15 + 3 * s);
+  const base = nameFullPx(label);
   const px = phone ? clamp(base * 0.72, 13, 16) : base * zoomK;
   return Math.round(px * 2) / 2;
 }
@@ -130,6 +137,8 @@ export interface PlacedName {
   fontPx: number;
   alpha: number;
   halo: number;
+  /** Which of NAME_OFFSETS it sits on: 0 is its own point. */
+  spot: number;
 }
 
 export interface NamesInput {
@@ -193,6 +202,24 @@ function haloOf(label: ThemeLabel, wide: boolean): number {
     solved.set(label, h);
   }
   return h;
+}
+
+/** The halo of a name nudged by (dx, dy) px from its point, its box (half size w by h px, as layoutNames boxes
+ * it) drawn at `pxPerWorld`. label.lum and label.lumWide are the brightest gas inside two boxes round the
+ * point (bake-core.js labelBox: the name at full size plus 30 and 28 px, at 600 and at 400 px per world unit;
+ * the numbers are repeated here, change them together). While the nudged name and its surround still lie
+ * inside one of them, that value bounds the gas behind it and the halo is solved for it: the first box if it
+ * holds the name, else the wider. Outside both, the full halo. */
+function nudgedHalo(label: ThemeLabel, w: number, h: number, dx: number, dy: number, pxPerWorld: number): number {
+  const full = nameFullPx(label);
+  const needW = w + NAME_SURROUND_PX + Math.abs(dx);
+  const needH = h + NAME_SURROUND_PX + Math.abs(dy);
+  // The measured box in px at this scale is these times pxPerWorld over the scale it was boxed at.
+  const boxW = (0.47 * full * label.name.length + 30) * pxPerWorld;
+  const boxH = (0.525 * full + 28) * pxPerWorld;
+  if (needW * NAME_LUM_PX_PER_WORLD <= boxW && needH * NAME_LUM_PX_PER_WORLD <= boxH) return haloOf(label, false);
+  if (needW * NAME_LUM_WIDE_PX_PER_WORLD <= boxW && needH * NAME_LUM_WIDE_PX_PER_WORLD <= boxH) return haloOf(label, true);
+  return 1;
 }
 
 /** Scratch reused by every call (the layout runs on camera frames, so it allocates little beyond its result). */
@@ -267,8 +294,10 @@ export function layoutNames(input: NamesInput): PlacedName[] {
         y: Math.round((t + b) * 5) / 10,
         fontPx,
         alpha: c.alpha,
-        // label.lum and lumWide are the brightest gas under the unmoved name: a nudged name takes the full halo too.
-        halo: fullHalo || used !== 0 ? 1 : haloOf(c.label, wide),
+        // label.lum and lumWide are the brightest gas under the unmoved name; a nudged name keeps a solved halo
+        // only while it is still inside the box one of them was measured in.
+        halo: used === 0 ? (fullHalo ? 1 : haloOf(c.label, wide)) : input.fullHalo ? 1 : nudgedHalo(c.label, w, h, NAME_OFFSETS[used][0], NAME_OFFSETS[used][1], input.pxPerWorld),
+        spot: used,
       });
     }
   } finally {
