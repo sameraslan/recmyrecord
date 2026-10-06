@@ -17,6 +17,10 @@ export interface ThemeLabel {
   rgb: [number, number, number];
   /** Brightest gas luminance (0..1) in the name's box at Overview, at full gas strength. */
   lum: number;
+  /** The same in a wider box, for the map zoomed out further (the Whole map in a short window): the name's box
+   * at 400 px per world unit, where `lum`'s is at 600. Never under `lum`. Missing in a theme baked before it. The loader does not check it (this
+   * file is in the first-load JS); state/namesLayout.ts takes anything but a number as missing. */
+  lumWide?: number;
 }
 
 /** The baked gas of one stop. */

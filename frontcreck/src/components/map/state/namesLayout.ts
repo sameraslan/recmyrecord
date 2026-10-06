@@ -28,6 +28,11 @@ export const NAME_CONTRAST = 4.5;
  * is then at full strength. Zoomed out, names are drawn smaller (nameZoomK, 0.85 at the least), and a name at
  * k of its size stays inside the measured box down to k times this scale: see layoutNames. */
 export const NAME_LUM_PX_PER_WORLD = 600;
+/** The scale of the second, wider box (ThemeLabel.lumWide; bake-core.js LABEL_WIDE_PPW, the same 30 px to spare):
+ * under NAME_LUM_PX_PER_WORLD a name's halo is solved for that gas instead, down to this scale for a name at
+ * full size and k times it for a name at k of its size (340 at the Whole map, where k is 0.85). Under that, or
+ * without lumWide, the full halo. */
+export const NAME_LUM_WIDE_PX_PER_WORLD = 400;
 /** Opacity of a name that is not `strong` (styles/map.css .rn.fair). */
 export const NAME_FAIR_ALPHA = 0.82;
 /** Nudges tried in order when the true centre is taken; small, so a name stays on its region. */
@@ -135,7 +140,9 @@ export interface NamesInput {
   blockers: readonly ViewBounds[];
   phone: boolean;
   zoomK: number;
-  /** The map scale, CSS px per world unit: under NAME_LUM_PX_PER_WORLD times the smaller of 1 and zoomK every name gets the full halo. */
+  /** The map scale, CSS px per world unit. From NAME_LUM_PX_PER_WORLD times the smaller of 1 and zoomK up a
+   * name's halo is solved for label.lum, from NAME_LUM_WIDE_PX_PER_WORLD times zoomK up for label.lumWide, and
+   * under that every name gets the full halo. */
   pxPerWorld: number;
   /** Every name gets the full halo whatever the scale (during a slider morph and on a phone, when label.lum
    * does not describe the gas behind the name). */
@@ -171,13 +178,19 @@ function hitsTaken(l: number, t: number, r: number, b: number, count: number): b
 /** Highest priority first; the key breaks ties so the order never depends on the input's. */
 const byPriority = (p: NameCandidate, q: NameCandidate): number => q.label.p - p.label.p || (p.key < q.key ? -1 : 1);
 
-/** The solved halo of an unmoved name depends only on its label (immutable theme data): solved once per label. */
+/** The solved halo of an unmoved name depends only on its label (immutable theme data): solved once per label
+ * and box. `wide` is the wider box, for the scales under NAME_LUM_PX_PER_WORLD: a label without lumWide (an
+ * older bake, or a value that is not a number: the loader does not check it) has the full halo there, and a
+ * lumWide under lum is not believed. */
 const solvedHalo = new WeakMap<ThemeLabel, number>();
-function haloOf(label: ThemeLabel): number {
-  let h = solvedHalo.get(label);
+const solvedHaloWide = new WeakMap<ThemeLabel, number>();
+function haloOf(label: ThemeLabel, wide: boolean): number {
+  const solved = wide ? solvedHaloWide : solvedHalo;
+  let h = solved.get(label);
   if (h === undefined) {
-    h = haloFor(label.lum, luminance(label.rgb), label.strong ? 1 : NAME_FAIR_ALPHA);
-    solvedHalo.set(label, h);
+    if (!wide) h = haloFor(label.lum, luminance(label.rgb), label.strong ? 1 : NAME_FAIR_ALPHA);
+    else h = Number.isFinite(label.lumWide) ? haloFor(Math.max(label.lum, label.lumWide as number), luminance(label.rgb), label.strong ? 1 : NAME_FAIR_ALPHA) : 1;
+    solved.set(label, h);
   }
   return h;
 }
@@ -191,8 +204,12 @@ export function layoutNames(input: NamesInput): PlacedName[] {
   const { visible: v, blockers, phone, zoomK, sticky } = input;
   // label.lum holds for the unmoved name at rest, at NAME_LUM_PX_PER_WORLD or closer in for a name at full size.
   // A name drawn at zoomK of its size is zoomK as wide, so the measured box (30 px to spare each side) covers
-  // it down to zoomK times that scale: 510 px per world unit at the Whole map, where zoomK is 0.85.
-  const fullHalo = input.fullHalo || input.pxPerWorld < NAME_LUM_PX_PER_WORLD * Math.min(1, zoomK);
+  // it down to zoomK times that scale: 510 px per world unit at the Whole map, where zoomK is 0.85. Under that
+  // the wider box of label.lumWide covers it by the same argument, down to 340 there; under that, the full halo.
+  // (A name drawn larger than full size needs the larger scale too, so the wider box's bound is not capped at 1.
+  // The app never draws one under 1800 px per world unit: nameZoomK.)
+  const fullHalo = input.fullHalo || input.pxPerWorld < NAME_LUM_WIDE_PX_PER_WORLD * zoomK;
+  const wide = input.pxPerWorld < NAME_LUM_PX_PER_WORLD * Math.min(1, zoomK);
   let blocked = 0;
   for (const k of blockers) {
     blocked += Math.max(0, Math.min(k.right, v.right) - Math.max(k.left, v.left)) * Math.max(0, Math.min(k.bottom, v.bottom) - Math.max(k.top, v.top));
@@ -250,8 +267,8 @@ export function layoutNames(input: NamesInput): PlacedName[] {
         y: Math.round((t + b) * 5) / 10,
         fontPx,
         alpha: c.alpha,
-        // label.lum is the brightest gas under the unmoved name: a nudged name takes the full halo too.
-        halo: fullHalo || used !== 0 ? 1 : haloOf(c.label),
+        // label.lum and lumWide are the brightest gas under the unmoved name: a nudged name takes the full halo too.
+        halo: fullHalo || used !== 0 ? 1 : haloOf(c.label, wide),
       });
     }
   } finally {

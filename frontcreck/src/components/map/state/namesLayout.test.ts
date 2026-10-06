@@ -8,6 +8,7 @@ import {
   NAMES_MAX_PHONE,
   NAME_EDGE_PX,
   NAME_LUM_PX_PER_WORLD,
+  NAME_LUM_WIDE_PX_PER_WORLD,
   chromeBlockers,
   createWidthCache,
   haloFor,
@@ -243,6 +244,88 @@ describe('layoutNames', () => {
       }
     }
     expect(checked).toBe(30);
+  });
+
+  it('below that, down to 400 times the size factor, solves the halo for the gas of the wider box, and under it gives the full halo', () => {
+    expect(NAME_LUM_WIDE_PX_PER_WORLD).toBe(400);
+    // lum 0.4 solves to 0.65, the wider box's 0.9 to 0.75.
+    const wide = { lumWide: 0.9 };
+    const at = (pxPerWorld: number, zoomK: number, extra: Partial<ThemeLabel> = wide) => layoutNames(input({ candidates: [cand('a', 700, 400, 5, extra)], pxPerWorld, zoomK }))[0].halo;
+    expect(haloFor(0.9, luminance([240, 236, 228]))).toBe(0.75);
+    // The Whole map on a laptop: names at 0.85 of their size, 340 to 510 px per world unit.
+    for (const scale of [340, 340.01, 478, 498, 509.99]) expect(at(scale, 0.85), `${scale} px per world unit`).toBe(0.75);
+    for (const scale of [120, 300, 339.99]) expect(at(scale, 0.85), `${scale} px per world unit`).toBe(1);
+    // From 510 up the first box holds the name: its own, lighter halo, as before.
+    for (const scale of [510, 597, 900]) expect(at(scale, 0.85), `${scale} px per world unit`).toBe(0.65);
+    // A name at full size: the wider box from 400, the first from 600.
+    expect(at(399.99, 1)).toBe(1);
+    expect(at(400, 1)).toBe(0.75);
+    expect(at(599.99, 1)).toBe(0.75);
+    expect(at(600, 1)).toBe(0.65);
+    // A name drawn larger covers more map: the wider box holds it only from 400 times its size.
+    expect(at(479.99, 1.2)).toBe(1);
+    expect(at(480, 1.2)).toBe(0.75);
+    expect(at(599.99, 1.2)).toBe(0.75);
+    expect(at(600, 1.2)).toBe(0.65);
+    // A nudged name, a phone and a slider morph keep the full halo at any scale.
+    expect(layoutNames(input({ candidates: [cand('a', 700, 400, 5, wide)], pxPerWorld: 478, zoomK: 0.85, fullHalo: true }))[0].halo).toBe(1);
+    const nudged = layoutNames(input({ candidates: [cand('a', 700, 400, 9, wide), cand('b', 700, 400, 5, wide)], pxPerWorld: 478, zoomK: 0.85 }));
+    expect(nudged.map((p) => p.halo)).toEqual([0.75, 1]);
+  });
+
+  it('a theme baked before the wider box (no lumWide) keeps the full halo under 510, as it did', () => {
+    const at = (pxPerWorld: number, zoomK: number) => layoutNames(input({ candidates: [cand('a', 700, 400, 5)], pxPerWorld, zoomK }))[0].halo;
+    expect(label('a', 1).lumWide).toBeUndefined();
+    for (const scale of [340, 400, 478, 498, 509.99]) expect(at(scale, 0.85), `${scale} px per world unit`).toBe(1);
+    expect(at(510, 0.85)).toBe(0.65);
+    expect(at(599.99, 1)).toBe(1);
+    // The loader lets any lumWide through: anything but a number counts as missing.
+    for (const bad of [null, '0.4', Number.NaN, Number.POSITIVE_INFINITY]) {
+      const h = layoutNames(input({ candidates: [cand('a', 700, 400, 5, { lumWide: bad as never })], pxPerWorld: 478, zoomK: 0.85 }))[0].halo;
+      expect(h, String(bad)).toBe(1);
+    }
+  });
+
+  it('never solves the wider box for less gas than the first one (a wider value below lum is not believed)', () => {
+    const h = layoutNames(input({ candidates: [cand('a', 700, 400, 5, { lum: 0.9, lumWide: 0.1 })], pxPerWorld: 478, zoomK: 0.85 }))[0].halo;
+    expect(h).toBe(0.75);
+  });
+
+  it('across that range every name of the real theme, with 8 px around it, lies inside the wider box its gas was measured in', () => {
+    const theme = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../public/data/theme/theme.json'), 'utf8')) as { labels: Record<string, ThemeLabel[]> };
+    // Tenor Sans capitals run about 0.7 em; widthOf adds the tracking.
+    const real = createWidthCache((text) => text.length * 70);
+    let checked = 0;
+    // Every size factor a name can be drawn at (nameZoomK's range), each from the lowest scale the wider box is
+    // used at (400 times the factor) up to where the first box takes over.
+    for (const k of [0.85, 0.9, 1, 1.2, 1.35]) {
+      const lowest = NAME_LUM_WIDE_PX_PER_WORLD * k;
+      const takeover = NAME_LUM_PX_PER_WORLD * Math.min(1, k);
+      for (const scale of [lowest, lowest + 0.01, (lowest + takeover) / 2, takeover - 0.01]) {
+        for (const stop of ['sonic', 'balanced', 'mood']) {
+          for (const l of theme.labels[stop]) {
+            expect(l.lumWide, `${stop} ${l.name} has the wider measurement`).toBeGreaterThanOrEqual(l.lum);
+            // scripts/theme/bake-core.js labelFontPx and labelBox at LABEL_WIDE_PPW, in world units.
+            const fs0 = 0.88 * (l.strong ? 17 + 7 * Math.min(1, Math.sqrt(l.n / 346)) : 15 + 3 * Math.min(1, Math.sqrt(l.n / 346)));
+            const measuredW = (0.47 * fs0 * l.name.length + 30) / NAME_LUM_WIDE_PX_PER_WORLD;
+            const measuredH = (0.525 * fs0 + 28) / NAME_LUM_WIDE_PX_PER_WORLD;
+            // The name as layoutNames boxes it, in world units at this scale.
+            const fontPx = nameFontPx(l, false, k);
+            const drawnW = (real.widthOf(l, fontPx) / 2 + 6 + 8) / scale;
+            const drawnH = ((fontPx * 1.05) / 2 + 4 + 8) / scale;
+            expect(drawnW, `${stop} ${l.name} width at ${scale} (size ${k})`).toBeLessThanOrEqual(measuredW);
+            expect(drawnH, `${stop} ${l.name} height at ${scale} (size ${k})`).toBeLessThanOrEqual(measuredH);
+            // And layoutNames does use the wider box there for this label.
+            const placed = layoutNames(input({ candidates: [{ key: nameKey('balanced', l.id), label: l, x: 700, y: 400, alpha: 1 }], blockers: [], pxPerWorld: scale, zoomK: k, widthOf: real.widthOf }))[0];
+            expect(placed.halo, `${stop} ${l.name} halo at ${scale}`).toBe(haloFor(l.lumWide as number, luminance(l.rgb), l.strong ? 1 : 0.82));
+            checked++;
+          }
+        }
+      }
+    }
+    expect(checked).toBe(30 * 5 * 4);
+    // The scales the app reaches with the wider box are inside what was just checked: under 510 the size factor is 0.85.
+    for (const scale of [340, 400, 478, 498, 509.99]) expect(nameZoomK(0.0068 * scale)).toBe(0.85);
   });
 
   it('returns nothing for a stop with no labels', () => {

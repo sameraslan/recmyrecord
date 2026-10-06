@@ -176,6 +176,40 @@ describe('the names placer', () => {
     next.remove();
   });
 
+  it('takes the fading mark off a layer that still carries it when the placer first meets it (a remount mid-fade)', () => {
+    // The layer outlived the placer that marked it: a new driver, the old class.
+    layer.classList.add('is-fading');
+    const place = createNamesPlacer();
+    place(world, cam(), W, H, POS);
+    expect(layer.classList.contains('is-fading')).toBe(false);
+    // And a layer that is rightly marked is not written again.
+    const next = createNamesPlacer();
+    useMapStore.setState({ input: { ...EXPLORE, stop: 'mood' }, sliderT: 0.6 });
+    place(world, cam(), W, H, POS);
+    expect(layer.classList.contains('is-fading')).toBe(true);
+    seen.takeRecords();
+    next(world, cam(), W, H, POS);
+    expect(layer.classList.contains('is-fading')).toBe(true);
+    expect(seen.takeRecords().some((r) => r.target === layer)).toBe(false);
+  });
+
+  it('places nothing and says so while the canvas has no width or no height, then places once it has both', () => {
+    const place = createNamesPlacer();
+    expect(place(world, cam(), 0, H, POS)).toBe(false);
+    expect(place(world, cam(), W, 0, POS)).toBe(false);
+    expect(place(world, cam(), 0, 0, POS)).toBe(false);
+    expect(shown()).toEqual([]);
+    expect(seen.takeRecords()).toHaveLength(0);
+    expect(place(world, cam(), W, H, POS)).toBe(true);
+    expect(shown()).toEqual(KEYS.slice(0, 2));
+    // Names already shown stay as they are through a moment without a size.
+    seen.takeRecords();
+    expect(place(world, cam(), W, 0, POS)).toBe(false);
+    expect(seen.takeRecords()).toHaveLength(0);
+    expect(place(world, cam(), W, H, POS)).toBe(true);
+    expect(shown()).toEqual(KEYS.slice(0, 2));
+  });
+
   it('marks the layer while the slider is between stops, and only then', () => {
     const place = createNamesPlacer();
     place(world, cam(), W, H, POS);

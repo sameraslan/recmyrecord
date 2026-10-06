@@ -29,6 +29,12 @@ describe('isTheme', () => {
     expect(isTheme(THEME)).toBe(true);
   });
 
+  it('accepts labels with the wider measurement, and labels of an older bake without it', () => {
+    expect(isTheme({ ...THEME, labels: { ...THEME.labels, mood: [{ ...LABEL, lumWide: 0.42 }] } })).toBe(true);
+    expect('lumWide' in LABEL).toBe(false);
+    expect(isTheme({ ...THEME, labels: { ...THEME.labels, mood: [LABEL] } })).toBe(true);
+  });
+
   it.each([
     ['nothing', null],
     ['another version', { ...THEME, v: 4 }],

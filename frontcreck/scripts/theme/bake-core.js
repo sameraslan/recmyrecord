@@ -22,6 +22,7 @@
     RAW_MARGIN: 0.75, // the fields reach a little further, past the widest blur that still lights anything
     LUM_MAX: 0.6, // a byte of 255 in stars.bg
     LABEL_REF_PPW: 600, // px per world unit names are boxed at: the desktop overview of the app
+    LABEL_WIDE_PPW: 400, // and for the second, wider box (lumWide): the whole map in a short laptop window
   };
   const EMBER = { hues: [[232, 96, 60], [244, 190, 120], [150, 200, 214], [66, 110, 190], [120, 140, 220]], neutral: [138, 138, 146] };
   const STOPS = ['sonic', 'balanced', 'mood'];
@@ -167,10 +168,11 @@
     return 0.88 * (strong ? 17 + 7 * k : 15 + 3 * k);
   }
   /** Half width and half height, in raw units, of the area a name may cover at the overview: wide capitals at
-   * about 0.94 em a letter (advance plus 0.26 em tracking), plus room for the nudges the placement may apply. */
-  function labelBox(name, strong, n, s) {
+   * about 0.94 em a letter (advance plus 0.26 em tracking), plus room for the nudges the placement may apply.
+   * `ppw` is the map scale the name is boxed at, px per world unit: the smaller it is, the more map the name covers. */
+  function labelBox(name, strong, n, s, ppw = GAS.LABEL_REF_PPW) {
     const fs = labelFontPx(strong, n);
-    return [(0.47 * fs * name.length + 30) / GAS.LABEL_REF_PPW / s, (0.525 * fs + 28) / GAS.LABEL_REF_PPW / s];
+    return [(0.47 * fs * name.length + 30) / ppw / s, (0.525 * fs + 28) / ppw / s];
   }
   /** Ink of a name: the gas colour under it at full brightness, then 80% of the way to white. */
   function labelInk(rgb) {
@@ -188,10 +190,13 @@
       for (let i = 0; i < n; i++) bg[3 * i + k] = Math.min(255, Math.round((lum[lumCell(P[2 * i], P[2 * i + 1], rawHalf)] / GAS.LUM_MAX) * 255));
       labels[stop] = regions[stop].filter((r) => r.level === 1 && r.name).map((r) => {
         const strong = r.strength === 'strong', c = 4 * lumCell(r.cx, r.cy, rawHalf), [hw, hh] = labelBox(r.name, strong, r.n, tx.s);
+        const [ww, wh] = labelBox(r.name, strong, r.n, tx.s, GAS.LABEL_WIDE_PPW);
         return {
           id: r.id, name: r.name, x: r.cx, y: r.cy, strong, n: r.n, p: r.priority,
           rgb: labelInk([px[c], px[c + 1], px[c + 2]]),
           lum: Math.round(lumIn(lum, rawHalf, r.cx - hw, r.cy - hh, r.cx + hw, r.cy + hh) * 1000) / 1000,
+          // the same in the wider box: the map shows the name over this much gas once it is zoomed out past LABEL_REF_PPW
+          lumWide: Math.round(lumIn(lum, rawHalf, r.cx - ww, r.cy - wh, r.cx + ww, r.cy + wh) * 1000) / 1000,
         };
       });
     });

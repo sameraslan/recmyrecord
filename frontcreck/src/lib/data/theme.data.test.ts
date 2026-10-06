@@ -32,6 +32,9 @@ describe('committed theme data (public/data/theme)', () => {
         expect(Math.min(...l.rgb), l.id).toBeGreaterThanOrEqual(204);
         expect(l.lum, l.id).toBeGreaterThan(0);
         expect(l.lum, l.id).toBeLessThanOrEqual(1);
+        // The wider box holds the first one, so its brightest gas is at least as bright.
+        expect(l.lumWide, l.id).toBeGreaterThanOrEqual(l.lum);
+        expect(l.lumWide, l.id).toBeLessThanOrEqual(1);
       }
     }
   });

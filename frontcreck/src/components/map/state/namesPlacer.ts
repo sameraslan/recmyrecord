@@ -153,6 +153,8 @@ export function createNamesPlacer(): NamesPlacer {
       bLayer = null;
       return false;
     }
+    // A canvas with no size yet (or a collapsed one) has no map to place names on.
+    if (!(width > 0 && height > 0)) return false;
     const { input, sliderT, insetCurrent } = useMapStore.getState();
     const namesOn = useAppStore.getState().namesOn;
     // CSS px of the canvas under the site header: 0 while the stage starts below it (state/stageTop.ts).
@@ -181,8 +183,9 @@ export function createNamesPlacer(): NamesPlacer {
     ) {
       return true;
     }
-    // A new layer (the names were switched off and on) starts without the class.
-    if (bLayer !== layer) fading = false;
+    // A new layer (the names were switched off and on) starts without the class; one that outlived the placer
+    // that marked it (a remount mid-fade) still has it, and loses it below.
+    if (bLayer !== layer) fading = layer.classList.contains(FADING_CLASS);
     bLayer = layer;
     bWorld = world;
     bx = x;
@@ -256,7 +259,7 @@ export function createNamesPlacer(): NamesPlacer {
           blockers,
           phone,
           zoomK: NAMES_SCALE_WITH_ZOOM ? nameZoomK(coverPx) : 1,
-          // Zoomed out past the scale label.lum holds at, layoutNames gives every name the full halo.
+          // Zoomed out past the scale label.lum holds at, layoutNames solves for label.lumWide, then the full halo.
           pxPerWorld: pxPerWorld(camera.zoom, height),
           // label.lum was measured under the name's box on a desktop. On a phone the same name covers far more
           // of the map, and mid-morph the gas is between two stops: the full halo in both cases.
