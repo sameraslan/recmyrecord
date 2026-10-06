@@ -445,3 +445,43 @@ export function settingsFindings(base, cur, { allowFlags = false } = {}) {
   if (forced.length && !allowFlags) findings.push(`the current runs were made with flags (${forced.join('; ')}): not the site as a visitor gets it (pass --allow-flags for an A/B)`);
   return { lines, findings };
 }
+
+/** The first hover with the glints on, off or held, judged across browser sessions (twinkle-cost.mjs
+ * --first-hover-verdict). `sessions` are the saved files of `twinkle-cost.mjs --no-warmup --first on|off|held`, one
+ * browser launch each. Only one row of each is read: the first measured mouse run, which holds the first hover of
+ * that page load, on a renderer where visitors get glints. The second mouse run of the same session is a later
+ * hover (about a third as long, whatever the glints do), so the two are never compared with each other.
+ *
+ * Per arm: median, best and worst of the longest frame gap and of the longest task. An arm with glints fails when
+ * its median is more than `noiseMs` above the median of the off sessions; fewer than `minN` sessions in an arm is a
+ * failure too (no verdict). `gapBeyondOffSpread` and `taskBeyondOffSpread` say whether the arm's median is above
+ * every off session: reported, so a difference inside the allowance is still seen. */
+export function firstHoverVerdict(sessions, noiseMs, minN = 3) {
+  const by = { on: [], off: [], held: [] };
+  let skipped = 0;
+  for (const s of sessions) {
+    const row = s.warmup === false ? (s.rows ?? []).find((r) => r.run === 'mouse moving' && r.firstHover === true && r.shown && r.vp === 'desktop') : null;
+    if (!row || !by[row.twinkle]) skipped += 1;
+    else by[row.twinkle].push(row);
+  }
+  const stat = (xs) => ({ median: median(xs), best: Math.min(...xs), worst: Math.max(...xs), n: xs.length });
+  const arms = {};
+  const fails = [];
+  for (const [arm, rows] of Object.entries(by)) if (rows.length) arms[arm] = { gap: stat(rows.map((r) => r.longestGapMs)), task: stat(rows.map((r) => r.longestTaskMs)) };
+  if (by.off.length < minN) fails.push(`first hover: ${by.off.length} session(s) with glints off first; a verdict needs at least ${minN} per arm`);
+  for (const arm of ['on', 'held']) {
+    if (!arms[arm]) continue;
+    if (by[arm].length < minN) {
+      fails.push(`first hover, glints ${arm}: ${by[arm].length} session(s); a verdict needs at least ${minN} per arm`);
+      continue;
+    }
+    if (by.off.length < minN) continue;
+    for (const [key, name] of [['gap', 'longest frame gap'], ['task', 'longest task']]) {
+      const a = arms[arm][key];
+      const o = arms.off[key];
+      arms[arm][`${key}BeyondOffSpread`] = a.median > o.worst;
+      if (a.median > o.median + noiseMs) fails.push(`first hover, glints ${arm}: median ${name} ${a.median} ms (${a.best} to ${a.worst}, n=${a.n}), ${o.median} ms with glints off (${o.best} to ${o.worst}, n=${o.n}): ${a.median - o.median} ms more, allowance ${noiseMs} ms`);
+    }
+  }
+  return { arms, fails, skipped };
+}

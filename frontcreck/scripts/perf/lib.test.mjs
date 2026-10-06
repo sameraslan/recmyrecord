@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  checkBudgets, checkDefaultGlints, checkEffects, checkPages, checkRun, compareRuns, fillBaseline, formatTable, glassVars, isDpr2File, jsonExtras, judgeRows,
+  checkBudgets, checkDefaultGlints, checkEffects, checkPages, checkRun, compareRuns, fillBaseline, firstHoverVerdict, formatTable, glassVars, isDpr2File, jsonExtras, judgeRows,
   pagesFromText, parseEffectFlags, rowsOfRun, settingsFindings, sizeFindings, sortRunFiles, summarise,
 } from './lib.mjs';
 
@@ -687,5 +687,63 @@ describe('checkDefaultGlints: glints are on by default where visitors get them',
     expect(checkDefaultGlints(row({ mode: 'software', renderer: SWIFT, idleGlints: 1, twinkleSoftware: true }), null)).toEqual([
       'software desktop: 1 glints were made while the map was idle on a software renderer with no --twinkle flag: visitors there must get none',
     ]);
+  });
+});
+
+describe('firstHoverVerdict: the first hover with glints on, off and held, judged across sessions', () => {
+  // One saved session of `twinkle-cost.mjs --no-warmup --first <arm>`: its first measured mouse run is the first
+  // hover of that page load; the second mouse run of the same session is a later hover and must not be read.
+  const session = (arm, gap, task = 0, { later = 19, warmup = false, shown = true, vp = 'desktop' } = {}) => ({
+    first: arm,
+    warmup,
+    rows: [
+      { mode: 'gpu', vp, shown, run: 'still', twinkle: arm, longestGapMs: 17, longestTaskMs: 0 },
+      { mode: 'gpu', vp, shown, run: 'mouse moving', twinkle: arm, firstHover: true, longestGapMs: gap, longestTaskMs: task },
+      { mode: 'gpu', vp, shown, run: 'mouse moving', twinkle: arm === 'off' ? 'on' : 'off', firstHover: false, longestGapMs: later, longestTaskMs: 0 },
+    ],
+  });
+  const many = (arm, gaps) => gaps.map((g) => session(arm, g));
+
+  it('reads only the first-hover row of each session, grouped by the arm that came first', () => {
+    const v = firstHoverVerdict([...many('on', [53, 55, 51]), ...many('off', [50, 49, 52]), ...many('held', [49, 50, 48])], 8);
+    expect(v.arms.on.gap).toEqual({ median: 53, best: 51, worst: 55, n: 3 });
+    expect(v.arms.off.gap).toEqual({ median: 50, best: 49, worst: 52, n: 3 });
+    expect(v.arms.held.gap).toEqual({ median: 49, best: 48, worst: 50, n: 3 });
+    expect(v.fails).toEqual([]);
+  });
+
+  it('does not fail for the order artefact: a first hover of 53 ms beside a later hover of 19 ms in the same session', () => {
+    const v = firstHoverVerdict([...many('on', [53, 55, 51]), ...many('off', [50, 49, 52])], 8);
+    expect(v.fails).toEqual([]);
+  });
+
+  it('fails when the median first hover with glints is more than the noise allowance above the median without', () => {
+    const v = firstHoverVerdict([...many('on', [70, 66, 68]), ...many('off', [50, 49, 52])], 8);
+    expect(v.fails).toEqual(['first hover, glints on: median longest frame gap 68 ms (66 to 70, n=3), 50 ms with glints off (49 to 52, n=3): 18 ms more, allowance 8 ms']);
+    expect(v.arms.on.gapBeyondOffSpread).toBe(true);
+  });
+
+  it('judges the longest task the same way, and the held arm too', () => {
+    const on = [session('held', 50, 90), session('held', 51, 95), session('held', 49, 92)];
+    const off = [session('off', 50, 60), session('off', 49, 0), session('off', 52, 61)];
+    expect(firstHoverVerdict([...on, ...off], 8).fails).toEqual(['first hover, glints held: median longest task 92 ms (90 to 95, n=3), 60 ms with glints off (0 to 61, n=3): 32 ms more, allowance 8 ms']);
+  });
+
+  it('says whether a difference inside the allowance is still beyond the spread of the off sessions', () => {
+    const v = firstHoverVerdict([...many('on', [56, 57, 58]), ...many('off', [50, 49, 52])], 8);
+    expect(v.fails).toEqual([]);
+    expect(v.arms.on.gapBeyondOffSpread).toBe(true);
+    expect(firstHoverVerdict([...many('on', [51, 53, 50]), ...many('off', [50, 49, 52])], 8).arms.on.gapBeyondOffSpread).toBe(false);
+  });
+
+  it('is not a verdict with fewer than three sessions in an arm, or with no off sessions', () => {
+    expect(firstHoverVerdict([...many('on', [53, 55]), ...many('off', [50, 49, 52])], 8).fails).toEqual(['first hover, glints on: 2 session(s); a verdict needs at least 3 per arm']);
+    expect(firstHoverVerdict(many('on', [53, 55, 54]), 8).fails).toEqual(['first hover: 0 session(s) with glints off first; a verdict needs at least 3 per arm']);
+  });
+
+  it('leaves out sessions with a warm-up, forced glints on a software renderer, and the phone', () => {
+    const v = firstHoverVerdict([...many('on', [53, 55, 51]), ...many('off', [50, 49, 52]), session('on', 400, 0, { warmup: true }), session('on', 400, 0, { shown: false }), session('on', 400, 0, { vp: 'phone' })], 8);
+    expect(v.arms.on.gap.n).toBe(3);
+    expect(v.skipped).toBe(3);
   });
 });

@@ -30,6 +30,14 @@
  * hover. --no-warmup leaves the wander out, and then the first measured mouse run IS the first hover: the watch
  * is started, and seen to be running, before the mouse first moves. To judge the first hover, compare sessions
  * of `--no-warmup --first on` with sessions of `--no-warmup --first off` (one browser launch each), interleaved.
+ * Within one --no-warmup session the first mouse run is the first hover and the second is a later hover, so this
+ * script does not compare those two with each other (its exit code used to, and failed on the order alone). The
+ * first hover is judged across sessions instead:
+ *   node scripts/perf/twinkle-cost.mjs --first-hover-verdict <saved session .json files or folders of them>
+ * starts no browser, reads the first-hover row of each saved --no-warmup session, prints the three arms (median,
+ * best to worst, n) and exits 1 when the median longest frame gap or longest task of the sessions with glints
+ * (on, or held) is more than NOISE_MS above the median of the sessions without, or an arm has fewer than three
+ * sessions (firstHoverVerdict in lib.mjs).
  *
  * --first held is the third arm: in the mouse run the glints stay off until 1.5 s after the hover label first
  * showed, and are then switched on (the stricter candidate fix; the app itself already makes no glint while an
@@ -44,6 +52,7 @@ import path from 'node:path';
 import { chromium } from '@playwright/test';
 import { assertNativeChrome } from '../check-native.mjs';
 import { startServer } from '../serve.mjs';
+import { firstHoverVerdict } from './lib.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const PORT = 3210;
@@ -325,6 +334,9 @@ function check(rows) {
     if (!r.shown) continue;
     if (r.worstSpawnMs > SPAWN_LIMIT_MS) fails.push(`${where}: making a glint took ${r.worstSpawnMs} ms (limit ${SPAWN_LIMIT_MS} ms)`);
     if (r.longTasksAtGlint > 0) fails.push(`${where}: ${r.longTasksAtGlint} long tasks began around a glint being made`);
+    // A pair that holds a first hover (--no-warmup) is a first hover beside a later one: the order decides it, not
+    // the glints. It is judged across sessions (--first-hover-verdict), not here.
+    if (r.firstHover || off?.firstHover) continue;
     if (off && r.longestTaskMs > off.longestTaskMs + NOISE_MS) fails.push(`${where}: longest task ${r.longestTaskMs} ms with glints, ${off.longestTaskMs} ms without`);
     if (off && r.longestGapMs > off.longestGapMs + NOISE_MS) fails.push(`${where}: longest frame gap ${r.longestGapMs} ms with glints, ${off.longestGapMs} ms without`);
   }
@@ -353,7 +365,31 @@ function gapLines(rows) {
   return out;
 }
 
+/** --first-hover-verdict: no browser; reads saved --no-warmup sessions and judges the first hover across them. */
+function verdict(paths) {
+  const files = paths.flatMap((p) => (fs.statSync(p).isDirectory() ? fs.readdirSync(p).filter((f) => /^twinkle-cost-.*\.json$/.test(f)).sort().map((f) => path.join(p, f)) : [p]));
+  if (!files.length) {
+    console.error('--first-hover-verdict takes saved twinkle-cost session files, or folders of them');
+    process.exit(2);
+  }
+  const v = firstHoverVerdict(files.map((f) => JSON.parse(fs.readFileSync(f, 'utf8'))), NOISE_MS);
+  const cell = (x) => (x ? `${x.median} (${x.best} to ${x.worst})` : 'n/a');
+  console.log(`First hover across ${files.length} saved session(s)${v.skipped ? `, ${v.skipped} left out (warmed up, no mouse run, or glints forced where visitors get none)` : ''}. One row per session: its first measured mouse run.\n`);
+  console.log('| Glints | Sessions | Longest frame gap, median (best to worst), ms | Longest task, median (best to worst), ms | Median above every off session (gap / task) |\n|---|---|---|---|---|');
+  for (const arm of ['on', 'off', 'held']) {
+    const a = v.arms[arm];
+    if (a) console.log(`| ${arm} | ${a.gap.n} | ${cell(a.gap)} | ${cell(a.task)} | ${arm === 'off' ? '' : `${a.gapBeyondOffSpread ?? 'n/a'} / ${a.taskBeyondOffSpread ?? 'n/a'}`} |`);
+  }
+  if (v.fails.length) {
+    console.error(`\nFAIL\n${v.fails.join('\n')}`);
+    process.exit(1);
+  }
+  console.log(`\nThe median first hover with glints (on, held) is within ${NOISE_MS} ms of the median without, in both measures.`);
+}
+
 async function main() {
+  const vi = args.indexOf('--first-hover-verdict');
+  if (vi >= 0) return verdict(args.slice(vi + 1));
   const server = await startServer(PORT);
   BASE = server.base;
   const rows = [];
@@ -394,7 +430,7 @@ async function main() {
       console.log(`Reported only (${r.mode} ${r.vp} ${r.run}, glints forced where visitors get none): longest frame gap ${r.longestGapMs} ms with glints, ${off.longestGapMs} ms without; longest task ${r.longestTaskMs} ms, ${off.longestTaskMs} ms.`);
     }
   }
-  console.log(`No rule of this script was broken where visitors get glints${WARMUP ? ' (the first hover was warmed up and is not in these numbers: see --no-warmup)' : ''}. One session is not a verdict: see docs/design/trifid-theme/reviews/app-twinkle-cost.md for the runs that are.`);
+  console.log(`No rule of this script was broken where visitors get glints${WARMUP ? ' (the first hover was warmed up and is not in these numbers: see --no-warmup)' : ' (the first hover is in the table but is not judged inside one session: judge it across sessions with --first-hover-verdict)'}. One session is not a verdict: see docs/design/trifid-theme/reviews/app-twinkle-cost.md for the runs that are.`);
 }
 
 main().catch((e) => {
