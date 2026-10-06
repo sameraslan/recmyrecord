@@ -72,6 +72,21 @@ FALLBACK_AMBIENT = [
 ]
 # Typographic tile colours (mockup FB), indexed by k % 3.
 FALLBACK_TILE = [(59, 42, 34), (44, 48, 36), (59, 49, 32)]
+# The lettered tile a catalog build draws on the sheets for an album without a cover (images.lettered_tile),
+# after the frontend's tile (frontcreck/src/components/Cover.tsx, `.cover .fb` in src/styles/search.css).
+MAP_RGB = (27, 21, 17)  # the map's background where the sprites are drawn, as measured on the site
+TILE_LIGHT = (237, 229, 213)  # the tile letter's colour, laid over the fill at TILE_INK_ALPHA (`.cover .fb`)
+TILE_INK_ALPHA = 0.78
+# The 1 px inner border: the fill mixed this far towards TILE_LIGHT, the least that is 3:1 on MAP_RGB for all
+# three fills (3.08, 3.11, 3.24).
+TILE_BORDER_MIX = 0.30
+# Font size over tile size. The frontend's is 0.48 in Cormorant Garamond (cap height 0.63 em); the pipeline's
+# font is DejaVu Serif (0.729 em), so this gives capitals of the same height.
+TILE_FONT_EM = 0.415
+# A letter is drawn when its code point is below this (Basic Latin, Latin-1, Latin Extended-A and -B); the
+# committed font has every letter and digit there (tests/test_images.py).
+TILE_LETTER_BELOW = 0x0250
+TILE_NO_INITIAL = "\u00b7"  # a title with no letter or digit: the frontend's COPY.cover.noInitial
 
 # Sprite sheet geometry. Album i is in sheet i // PER_SHEET at cell i % PER_SHEET, row-major. The frontend
 # (frontcreck/src/lib/data/sprites.ts) has the same numbers: change them on both sides together.

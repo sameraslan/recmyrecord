@@ -329,3 +329,10 @@ def test_the_audio_block_takes_explicit_keys(deduped, audio):
     assert (by_key.block == audio.block).all() and (by_key.has_audio == audio.has_audio).all()
     with pytest.raises(ValueError, match="keys for"):
         audio_block(sub, store.site_store(), keys[:-1])
+
+
+def test_only_the_catalog_build_letters_its_tiles():
+    from rmr_pipeline.build import sprite_titles
+
+    assert sprite_titles(False, ["Chill Out"]) is None  # the default build: flat tiles, the bytes it always wrote
+    assert sprite_titles(True, ["Chill Out"]) == ["Chill Out"]

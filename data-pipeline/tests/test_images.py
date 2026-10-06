@@ -126,3 +126,156 @@ def test_a_new_album_without_a_sprite_gets_its_clusters_tile(tmp_path):
     assert sprites[0].getpixel((5, 5)) == tile(1, 96).getpixel((5, 5))
     assert sprites[1].getpixel((5, 5)) == tile(2, 96).getpixel((5, 5))
     assert _near(sprites[2].getpixel((48, 48)), (200, 30, 30))
+
+
+# --- the lettered tile of an album without a cover (catalog mode) ---
+
+def _lum(c):
+    r, g, b = ((v / 255 / 12.92) if v / 255 <= 0.04045 else ((v / 255 + 0.055) / 1.055) ** 2.4 for v in c)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _contrast(a, b):
+    hi, lo = sorted((_lum(a), _lum(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def test_the_tile_letter_rule():
+    from rmr_pipeline.images import tile_letter
+
+    # Latin: the first letter or digit, upper-cased, after a leading "The " (the frontend's initialLetter).
+    assert tile_letter("Chill Out") == "C"
+    assert tile_letter("midtown 120 Blues") == "M"
+    assert tile_letter("The Gate") == "G" and tile_letter("the  Old Kit Bag") == "O"
+    assert tile_letter("Theatre") == "T"
+    # A digit first; punctuation first is passed over.
+    assert tile_letter("12 Hits From Hell") == "1" and tile_letter("4k God") == "4"
+    assert tile_letter("...And Justice") == "A" and tile_letter("(What's the Story)") == "W"
+    assert tile_letter("¿Dónde?") == "D"
+    # Diacritics the font draws are kept (everything below U+0250); one above it folds to its base letter.
+    assert tile_letter("Étoile") == "É" and tile_letter("älskar") == "Ä"
+    assert tile_letter("Völkerball") == "V"
+    assert tile_letter("Ế") == "E" and tile_letter("ệ x") == "E"  # Vietnamese E with two marks
+    assert tile_letter("ßig") == "ß"  # upper-cases to two letters: kept as it is
+    # Not Latin, with a Latin form in a bracket at the end: the bracket's first Latin letter or digit.
+    assert tile_letter("アダンの風 [Windswept Adan]") == "W"
+    assert tile_letter("Симфония № 5 [Symphony No. 5]") == "S"
+    assert tile_letter("ゼルダ [The Legend of Zelda]") == "T"  # "The" is dropped at the title's start only
+    assert tile_letter("한 [‘한’ 1st take]") == "1"
+    # Not Latin and no Latin form: no letter.
+    assert tile_letter("보편적인 노래") == ""
+    assert tile_letter("Мор. Утопия") == ""
+    assert tile_letter("悲愴 [悲愴]") == ""
+    assert tile_letter("マザー (Mother)") == ""  # only a square bracket at the end counts
+    # A Latin first character decides even when the rest is not Latin.
+    assert tile_letter("MarioKart Wii (マリオ)") == "M" and tile_letter("1984年 [Nineteen]") == "1"
+    # No letter or digit at all: the frontend's dot.
+    assert tile_letter("( )") == "·" and tile_letter("") == "·"
+
+
+def test_the_committed_font_draws_every_letter_and_digit_below_u0250():
+    """The frontend mirrors the rule by code point alone (below U+0250), so the font must have them all."""
+    import unicodedata
+
+    from rmr_pipeline.images import TILE_FONT, tile_font
+
+    assert TILE_FONT.is_file() and (TILE_FONT.parent / "LICENSE_DEJAVU").is_file()
+    font = tile_font(96)
+    notdef = bytes(font.getmask("\U0010fffe"))
+    assert notdef == bytes(font.getmask("￿"))
+    missing = [hex(c) for c in list(range(0x250)) + [0xB7] if (unicodedata.category(chr(c))[0] in "LN" or c == 0xB7)
+               and bytes(font.getmask(chr(c))) in (notdef, b"")]
+    assert missing == []
+
+
+def test_a_lettered_tile_has_the_fill_a_border_and_a_light_centred_letter():
+    from rmr_pipeline.constants import FALLBACK_TILE, MAP_RGB
+    from rmr_pipeline.images import lettered_tile, tile_border, tile_ink
+
+    for px in (96, 48):
+        for k in range(3):
+            fill = FALLBACK_TILE[k]
+            t = lettered_tile(k + 3, px, "W")
+            assert t.size == (px, px) and t.mode == "RGB"
+            assert len(t.getcolors(px * px)) > 3  # not uniform
+            # the 1 px inner border, lighter than the fill and visible on the map's background
+            border = tile_border(k)
+            edge = [(x, y) for x in range(px) for y in (0, px - 1)] + [(x, y) for y in range(px) for x in (0, px - 1)]
+            assert {t.getpixel(p) for p in edge} == {border}
+            assert t.getpixel((1, 1)) == fill and t.getpixel((px - 2, px - 2)) == fill
+            assert _lum(border) > _lum(fill) and _contrast(border, MAP_RGB) >= 3.0
+            # the letter: the frontend's tone over the fill, at least 4.5:1
+            ink = tile_ink(k)
+            assert _contrast(ink, fill) >= 4.5
+            inked = [(x, y) for x in range(1, px - 1) for y in range(1, px - 1) if t.getpixel((x, y)) == ink]
+            assert inked
+            every = [(x, y) for x in range(1, px - 1) for y in range(1, px - 1) if t.getpixel((x, y)) != fill]
+            xs, ys = [p[0] for p in every], [p[1] for p in every]
+            assert abs((min(xs) + max(xs) + 1) / 2 - px / 2) <= 1.5
+            assert abs((min(ys) + max(ys) + 1) / 2 - px / 2) <= 1.5
+            assert max(xs) - min(xs) < px * 0.7 and px * 0.2 < max(ys) - min(ys) < px * 0.5
+    # no letter: the bordered tile alone; and the same call gives the same bytes
+    bare = lettered_tile(0, 96, "")
+    assert len(bare.getcolors()) == 2
+    assert lettered_tile(1, 96, "É").tobytes() == lettered_tile(1, 96, "É").tobytes()
+    assert lettered_tile(1, 96, "A").tobytes() != lettered_tile(1, 96, "B").tobytes()
+
+
+def _map_with_one_atlas(tmp_path):
+    """A stand-in map source with one 2 x 1 atlas: a red sprite, then a blue one."""
+    atlas = Image.new("RGB", (192, 96), (200, 30, 30))
+    atlas.paste((30, 30, 200), (96, 0, 192, 96))
+    atlas.save(tmp_path / "atlas.png")
+
+    class Src:
+        def atlas_path(self, a):
+            return tmp_path / "atlas.png"
+
+    meta = {"u:red": {"atlasIndex": 0, "atlasUV": [0.0, 0.0, 0.5, 1.0]}, "u:blue": {"atlasIndex": 0, "atlasUV": [0.5, 0.0, 0.5, 1.0]}}
+    return Src(), meta
+
+
+def test_titles_letter_the_tiles_and_leave_every_other_sprite_alone(tmp_path):
+    """Catalog mode passes the shown titles: an album on the tile path gets the lettered tile; a covered
+    album's sprite (the map's, or its own file) is the one it had. Without titles nothing changes."""
+    from rmr_pipeline.images import lettered_tile, load_album_sprites, tile_thumbs
+
+    src, meta = _map_with_one_atlas(tmp_path)
+    own = tmp_path / "own.jpg"
+    Image.new("RGB", (96, 96), (20, 180, 60)).save(own, quality=95)
+    uris = ["u:red", "u:blue", "", "", ""]
+    covers = ["a" * 40, "", "dz:" + "a" * 32, "", "bc:9"]
+    clusters = [0, 1, 2, 3, 4]
+    titles = ["Red", "Chill Out", "Own", "アダン [Windswept Adan]", "보편"]
+    args = (src, uris, meta, covers, clusters, {2: own})
+    before = load_album_sprites(*args)
+    after = load_album_sprites(*args, titles=titles)
+    assert [s.tobytes() for s in before] == [s.tobytes() for s in load_album_sprites(*args, titles=None)]
+    assert before[1].tobytes() == tile(1, 96).tobytes() and before[3].tobytes() == tile(3, 96).tobytes()
+    assert after[0].tobytes() == before[0].tobytes() and after[2].tobytes() == before[2].tobytes()  # covered: unchanged
+    assert after[1].tobytes() == lettered_tile(1, 96, "C").tobytes()
+    assert after[3].tobytes() == lettered_tile(3, 96, "W").tobytes()
+    assert after[4].tobytes() == lettered_tile(4, 96, "").tobytes()  # a cover id and no sprite yet, no Latin form
+    # the 48 px tiles are drawn at their own size, for exactly the same albums
+    small = tile_thumbs(uris, covers, clusters, {2: own}, titles)
+    assert sorted(small) == [1, 3, 4]
+    assert small[1].tobytes() == lettered_tile(1, 48, "C").tobytes() and small[3].size == (48, 48)
+
+
+def test_write_sheets_takes_the_48_px_tiles_as_drawn(tmp_path):
+    """With `small`, those albums' thumbnails are the given images, not the 96 px sprite scaled down; the
+    atlas is the same either way, and without `small` the bytes are the ones written before."""
+    from rmr_pipeline.images import lettered_tile
+
+    sprites = [Image.new("RGB", (96, 96), (200, 30, 30)), lettered_tile(1, 96, "C"), lettered_tile(2, 96, "")]
+    plain, drawn = tmp_path / "plain", tmp_path / "drawn"
+    write_sheets(plain, sprites)
+    write_sheets(drawn, sprites, small={1: lettered_tile(1, 48, "C"), 2: lettered_tile(2, 48, "")})
+    assert (plain / "atlas-0.webp").read_bytes() == (drawn / "atlas-0.webp").read_bytes()
+    assert (plain / "thumbs.webp").read_bytes() != (drawn / "thumbs.webp").read_bytes()
+    small = [s.resize((THUMB_SPRITE_PX, THUMB_SPRITE_PX), Image.Resampling.LANCZOS) for s in sprites]
+    small[1], small[2] = lettered_tile(1, 48, "C"), lettered_tile(2, 48, "")
+    pack_sheets(small, THUMB_SPRITE_PX, THUMB_COLS, THUMB_COLS * THUMB_ROWS)[0].save(tmp_path / "ref.webp", "WEBP", quality=70, method=6)
+    assert (drawn / "thumbs.webp").read_bytes() == (tmp_path / "ref.webp").read_bytes()
+    write_sheets(tmp_path / "none", sprites, small=None)
+    assert (plain / "thumbs.webp").read_bytes() == (tmp_path / "none" / "thumbs.webp").read_bytes()

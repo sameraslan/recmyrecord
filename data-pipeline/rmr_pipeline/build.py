@@ -24,7 +24,7 @@ from .catalog import (DEFAULT_EXISTING, DEFAULT_WEIGHTS, EXISTING, WEIGHT_PROFIL
                       new_album_covers, shared_spotify_ids, shared_spotify_lines)
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS
-from .images import load_album_sprites, write_sheets
+from .images import load_album_sprites, tile_thumbs, write_sheets
 from .io import write_json
 from .layout import build_layouts, flat_positions
 from .links import LINK_COLUMNS, album_links
@@ -175,6 +175,12 @@ def ambient_colours(sprites: list, covers: list[str], uris: list[str], clusters:
             else FALLBACK_AMBIENT[clusters[i] % 3] for i in range(len(uris))]
 
 
+def sprite_titles(catalog: bool, titles: list[str]) -> list[str] | None:
+    """The titles the sheets' tiles are lettered from: the shown titles in a catalog build, None in the
+    default build, whose tiles stay flat (its sheets are the committed site's, byte for byte)."""
+    return titles if catalog else None
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     t0 = time.time()
@@ -321,10 +327,15 @@ def main(argv: list[str] | None = None) -> int:
     ambient = [FALLBACK_AMBIENT[k % 3] for k in clusters]
     out = args.out
     if not args.skip_images:
-        sprites = load_album_sprites(src, uris, meta, covers, clusters, override_images)
+        # A catalog build letters the tile of an album without a cover, as the album page does (96 such
+        # albums; flat squares on the map read as images that failed to load). The default build's are flat.
+        lettered = sprite_titles(args.catalog, titles)
+        sprites = load_album_sprites(src, uris, meta, covers, clusters, override_images, titles=lettered)
+        small = tile_thumbs(uris, covers, clusters, override_images, lettered) if lettered is not None else None
+        # A tile's ambient colours stay its cluster's fallback: ambient_colours does not read a tile.
         ambient = ambient_colours(sprites, covers, uris, clusters, override_images)
         t4 = time.time()
-        for name, size in write_sheets(out, sprites).items():
+        for name, size in write_sheets(out, sprites, small).items():
             print(f"wrote {name}: {size / 1e6:.2f} MB")
         if args.catalog:
             print(f"images done (sprites and colours {t4 - t3:.0f}s, sheets {time.time() - t4:.0f}s)")
