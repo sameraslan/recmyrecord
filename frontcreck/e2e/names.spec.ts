@@ -1656,10 +1656,10 @@ async function expectContrast(page: Page, info: TestInfo, view: string, painted 
     expect(r.halo, `${view}: the halo of "${r.name}"`).toBeGreaterThanOrEqual(0.65);
     expect(r.under, `${view}: "${r.name}" over the 99th percentile of the gas under it (luminance ${r.p99.toFixed(3)}, halo ${r.halo})`).toBeGreaterThanOrEqual(4.5);
     if (!painted) continue;
-    // The letters were found, and the band round them is a sample worth a median. The smallest name at the Whole
-    // map (12 letters at 13 px, hairlines one device px wide) has fewer than 50 px as bright as half its ink, so
-    // the letters are counted per character, and the band itself is counted too.
-    expect(r.letters, `${view}: pixels of the letters of "${r.name}" found in the screenshot`).toBeGreaterThan(2 * r.name.replace(/\s/g, '').length);
+    // The letters were found, and the band round them is a sample worth a median. (In the picture of the names
+    // alone the smallest name at the Whole map has 94 px as bright as half its ink, on the software renderer and
+    // on a GPU; the band of the smallest has 892.)
+    expect(r.letters, `${view}: pixels of the letters of "${r.name}" found in the screenshot`).toBeGreaterThan(50);
     expect(r.ringPixels, `${view}: pixels in the band round "${r.name}"`).toBeGreaterThan(150);
     expect(r.ring, `${view}: "${r.name}" against the halo painted round it (median luminance ${r.ringMedian.toFixed(3)} 2 to 3 px outside its letters)`).toBeGreaterThanOrEqual(4.5);
   }
