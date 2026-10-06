@@ -21,7 +21,7 @@ Line numbers are of the working tree of 6 October. `frontcreck/` was being edite
 
 Owner decisions of 6 October 2026:
 
-- **Descriptor weights are not equal.** The gentle slope (`--descriptor-weights slope`, 1 down to 0.5) is expected and is the build's default; he confirms after comparing it with `rank` in `docs/review/weights-compare.html`.
+- **Descriptor weights are not equal.** The gentle slope (`--descriptor-weights slope`, 1 down to 0.5) is the owner's choice (confirmed 6 October, after the comparison in `docs/review/weights-compare.html` and `experiments/top8_descriptors/REPORT.md` section 6) and the build's default.
 - **The vocals descriptors are dropped for every album**: `--existing-descriptors table-novocals`, the default. The sheet does not list them, so only the old albums would carry them (2,772 existing albums have one among their 8, no new album does). To be revisited if the sheet gains vocals for all albums.
 - **Artist form of a new album**: `native [Latin]`, as 33 existing albums have (`catalog.display_artist`). Titles stay as the catalog has them.
 - **The no-audio note**: "Sound matches aren't available for this album yet." with the link "Show mood matches".
@@ -30,10 +30,9 @@ Owner decisions of 6 October 2026:
 
 Owner decisions still open:
 
-1. The weights, after the comparison page: `slope` (default) or `rank`.
-2. The copy strings of section 5 that are not listed above.
-3. YouTube-frame covers: yes or no (`docs/review/youtube-covers.png`). If no, drop the `youtube` rows from `catalog/covers.csv` before the build.
-4. What happens to `audio/` and `audio/clap/` (section 8). The steps below assume both stay.
+1. The copy strings of section 5 that are not listed above.
+2. YouTube-frame covers: yes or no (`docs/review/youtube-covers.png`). If no, drop the `youtube` rows from `catalog/covers.csv` before the build.
+3. What happens to `audio/` and `audio/clap/` (section 8). The steps below assume both stay.
 
 State:
 
