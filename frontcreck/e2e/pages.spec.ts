@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { camera, contrastOverBackdrop, mapFrames, panBrightestGasUnder, shot, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap, waitForMapQuiet } from './helpers';
+import { camera, contrastOverBackdrop, glRenderer, mapFrames, panBrightestGasUnder, shot, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap, waitForMapQuiet } from './helpers';
 
 // The owner's first and last name, stored encoded so this guard never spells them.
 const OWNER_NAME_RE = new RegExp(Buffer.from('c2FtZXJ8YXNsYW4=', 'base64').toString('utf8'), 'i');
@@ -246,11 +246,40 @@ test.describe('album to album', () => {
  * on their content box as every other text is. Their content box is the 44 px tap target; the words are one 15 px
  * line in the middle of it, and the 14 px or so below the words is behind no glyph. Sizing the dark pad to that
  * empty strip is what dimmed the brightest gas of the approved Home (review of part 3 Task 6, I1 and option C;
- * ruled by the orchestrator). The tap target itself stays 44 px: phone.spec.ts and a11y.spec.ts test that.
+ * ruled by the orchestrator). The tap target itself stays 44 px: e2e/phone.spec.ts tests that.
  * Not measured for these two links: the backdrop above and below their line of words inside the tap target.
  */
 const HERO_LINKS = ['.hero-row a.textbtn', '.hero-row button.textbtn'];
 const boxOf = (selector: string): 'content' | 'text' => (HERO_LINKS.includes(selector) ? 'text' : 'content');
+/** The shelf's line names a cover while that cover has the focus or the pointer: its title and artist stand where
+ * the caption stood, over the same gas. */
+const SHELF_NAMED = ['.shelf-now .t', '.shelf-now .a'];
+const HOME_TEXT = ['.hero h1', '.hero .lede', ...HERO_LINKS, '.shelf-now .cap', ...SHELF_NAMED];
+/** Puts the shelf's line in the state that shows `selector`: the first cover focused for a title or an artist,
+ * no cover focused for the caption (and for every other text). */
+async function showShelfLine(page: Page, selector: string): Promise<void> {
+  if (SHELF_NAMED.includes(selector)) await page.locator('.mosaic a').first().focus();
+  else await page.evaluate(() => (document.activeElement?.closest('.mosaic') ? (document.activeElement as HTMLElement).blur() : undefined));
+  await expect(page.locator(selector).first()).toBeVisible();
+}
+/** Mean luma (0 to 255) of a rectangle of the page as it is painted now. */
+async function meanLuma(page: Page, clip: { x: number; y: number; width: number; height: number }): Promise<number> {
+  const png = (await page.screenshot({ clip })).toString('base64');
+  return page.evaluate(async (data) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${data}`;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.width;
+    c.height = img.height;
+    const ctx = c.getContext('2d')!;
+    ctx.drawImage(img, 0, 0);
+    const d = ctx.getImageData(0, 0, img.width, img.height).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    return sum / (d.length / 4);
+  }, png);
+}
 
 test('text over the nebula keeps 4.5:1 on Home, About and 404, and Home says nothing about regions', async ({ page }) => {
   // The full gas shader also on the software test browser: the lighter one is dimmer, and would flatter the text.
@@ -258,7 +287,7 @@ test('text over the nebula keeps 4.5:1 on Home, About and 404, and Home says not
     window.__rmrGasLite = 'off';
   });
   const PAGES: Array<[string, string, string[]]> = [
-    ['/', '.home', ['.hero h1', '.hero .lede', ...HERO_LINKS, '.shelf-now .cap']],
+    ['/', '.home', HOME_TEXT],
     ['/about', '.about', ['.about h1', '.about p', '.about .about-h2', '.about .about-credits']],
     ['/nothing-here', '.notfound', ['.notfound h1', '.notfound-sub', '.notfound .textbtn']],
   ];
@@ -273,9 +302,11 @@ test('text over the nebula keeps 4.5:1 on Home, About and 404, and Home says not
     // not scroll): the helper refuses a rectangle that is cut by the edge of the screenshot.
     const ratios: Array<{ selector: string; ratio: number }> = [];
     for (const selector of selectors) {
+      if (url === '/') await showShelfLine(page, selector);
       await page.locator(selector).first().scrollIntoViewIfNeeded();
       ratios.push(...(await contrastOverBackdrop(page, scope, [selector], { box: boxOf(selector) })));
     }
+    if (url === '/') console.log(`renderer: ${await glRenderer(page)}`);
     console.log(`contrast over the nebula ${url}: ${ratios.map((r) => `${r.selector} ${r.ratio.toFixed(2)}`).join(', ')}`);
     for (const r of ratios) expect(r.ratio, `${url} ${r.selector}`).toBeGreaterThanOrEqual(4.5);
   }
@@ -304,16 +335,22 @@ test('the nebula behind Home, About and 404 costs no frame at rest', async ({ pa
  * desktop / phone: the wide blocks (heading, lede, 404 sub line) 0.15 to 0.26 at the page's zoom and 0.34 to 0.71 at
  * three times it; the short lines (links, caption) 0.26 to 0.68 and 0.50 to 0.94. */
 const gasFloor = (selector: string, zoom: 1 | 3): number => (/h1|lede|notfound-sub/.test(selector) ? 0.1 : zoom === 1 ? 0.2 : 0.4);
+/** Windows a laptop gives (1440 x 790, 1280 x 720) and a small phone: there Home has its compact hero (home.css). */
+const SHORT_DESKTOP = { width: 1280, height: 720 };
+const SHORT_PHONE = { width: 360, height: 640 };
 
 /** Moves the brightest gas on screen under each text in turn, at the page's own zoom and at three times it, and
  * measures the text there. The gas under the words after the pan must be at least gasFloor: a pan that the camera
  * clamp stopped short cannot pass on dark sky. */
-async function brightestGasContrast(page: Page, url: string, scope: string, selectors: string[]): Promise<void> {
+async function brightestGasContrast(page: Page, url: string, scope: string, selectors: string[], size?: { width: number; height: number }): Promise<void> {
+  if (size) await page.setViewportSize(size);
   await page.goto(url);
   await waitForMap(page);
   await waitForCameraIdle(page);
   await waitForAnimations(page);
   // TODO(part2-task8): twinkleOff(page)
+  console.log(`renderer: ${await glRenderer(page)}`);
+  const at = size ? ` at ${size.width} x ${size.height}` : '';
   const fresh = await camera(page);
   for (const zoom of [1, 3] as const) {
     if (zoom !== 1) {
@@ -326,13 +363,26 @@ async function brightestGasContrast(page: Page, url: string, scope: string, sele
     }
     const out: string[] = [];
     for (const selector of selectors) {
-      const gas = await panBrightestGasUnder(page, selector, `${scope}, header.top`);
+      if (url === '/') await showShelfLine(page, selector);
+      // A title or an artist is there only while its cover has the focus, and the pan's own screenshots hide Home,
+      // which takes the focus away: the pan is given the words' rectangle, and the cover is focused again after it.
+      const named = SHELF_NAMED.includes(selector);
+      const words = named
+        ? await page.evaluate((sel) => {
+            const range = document.createRange();
+            range.selectNodeContents(document.querySelector(sel)!);
+            const r = range.getBoundingClientRect();
+            return { x: r.x, y: r.y, width: r.width, height: r.height };
+          }, selector)
+        : selector;
+      const gas = await panBrightestGasUnder(page, words, `${scope}, header.top`);
+      if (named) await showShelfLine(page, selector);
       const [{ ratio }] = await contrastOverBackdrop(page, scope, [selector], { box: boxOf(selector) });
       out.push(`${selector} ${ratio.toFixed(2)} (gas ${gas.toFixed(2)})`);
-      expect(gas, `${url} x${zoom} ${selector}: bright gas is under the words`).toBeGreaterThanOrEqual(gasFloor(selector, zoom));
-      expect(ratio, `${url} x${zoom} ${selector}`).toBeGreaterThanOrEqual(4.5);
+      expect(gas, `${url}${at} x${zoom} ${selector}: bright gas is under the words`).toBeGreaterThanOrEqual(gasFloor(selector, zoom));
+      expect(ratio, `${url}${at} x${zoom} ${selector}`).toBeGreaterThanOrEqual(4.5);
     }
-    console.log(`contrast with the brightest gas under the text ${url} x${zoom}: ${out.join(', ')}`);
+    console.log(`contrast with the brightest gas under the text ${url}${at} x${zoom}: ${out.join(', ')}`);
   }
 }
 
@@ -344,7 +394,15 @@ test('Home text keeps 4.5:1 with the brightest gas on screen moved under it', as
   await page.addInitScript(() => {
     window.__rmrGasLite = 'off';
   });
-  await brightestGasContrast(page, '/', '.home', ['.hero h1', '.hero .lede', ...HERO_LINKS, '.shelf-now .cap']);
+  await brightestGasContrast(page, '/', '.home', HOME_TEXT);
+});
+
+test('Home text keeps 4.5:1 with the brightest gas moved under it in a short window, where the hero is compact', async ({ page, isMobile }) => {
+  test.setTimeout(150_000);
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await brightestGasContrast(page, '/', '.home', HOME_TEXT, isMobile ? SHORT_PHONE : SHORT_DESKTOP);
 });
 
 test('404 text keeps 4.5:1 with the brightest gas on screen moved under it', async ({ page }) => {
@@ -373,24 +431,7 @@ test('the pads leave the gas under the hero links bright', async ({ page }) => {
   });
   // Nothing else is in the band: the shelf starts below it.
   expect((await page.locator('.shelf').boundingBox())!.y).toBeGreaterThan(band.y + band.height);
-  /** Mean luma (0 to 255) of the band. */
-  const luma = async (): Promise<number> => {
-    const png = (await page.screenshot({ clip: band })).toString('base64');
-    return page.evaluate(async (data) => {
-      const img = new Image();
-      img.src = `data:image/png;base64,${data}`;
-      await img.decode();
-      const c = document.createElement('canvas');
-      c.width = img.width;
-      c.height = img.height;
-      const ctx = c.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
-      const d = ctx.getImageData(0, 0, img.width, img.height).data;
-      let sum = 0;
-      for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-      return sum / (d.length / 4);
-    }, png);
-  };
+  const luma = (): Promise<number> => meanLuma(page, band);
   const withPads = await luma();
   const style = await page.addStyleTag({ content: '.hero::before, .hero-row::before { display: none !important; }' });
   const without = await luma();
@@ -402,6 +443,90 @@ test('the pads leave the gas under the hero links bright', async ({ page }) => {
   // 0.68 when the hero pad was stretched to 28 px below the links at .78 to carry the links' contrast by itself.
   expect(withPads / without).toBeGreaterThanOrEqual(0.8);
 });
+
+test('the shelf lets the gas glow behind its caption, down to the first row of covers', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await page.goto('/');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  // TODO(part2-task8): twinkleOff(page)
+  // The brightest gas on screen behind the caption: in the approved picture (final-home.jpg) the core's lower edge
+  // runs on behind the caption and between the covers.
+  const gas = await panBrightestGasUnder(page, '.shelf-now .cap', '.home, header.top');
+  expect(gas, 'bright gas is behind the caption').toBeGreaterThanOrEqual(0.2);
+  // The hero's width, from the shelf's top to the top of the first row of covers.
+  const band = await page.evaluate(() => {
+    const hero = document.querySelector('.hero')!.getBoundingClientRect();
+    const shelf = document.querySelector('.shelf')!.getBoundingClientRect();
+    const covers = document.querySelector('.mosaic')!.getBoundingClientRect();
+    return { x: Math.round(hero.left), y: Math.round(shelf.top), width: Math.round(hero.width), height: Math.round(covers.top - shelf.top) };
+  });
+  expect(band.height).toBeGreaterThan(60);
+  const shown = await meanLuma(page, band);
+  const style = await page.addStyleTag({ content: '.shelf::before, .shelf-now::before { display: none !important; }' });
+  const bare = await meanLuma(page, band);
+  await style.evaluate((el) => (el as Element).remove());
+  console.log(`gas behind the shelf's caption: ${shown.toFixed(1)} with the scrim and the caption's pad, ${bare.toFixed(1)} without = ${(shown / bare).toFixed(3)}`);
+  expect(bare, 'the band is gas, not sky').toBeGreaterThan(40);
+  // At least 0.45 of what is there without them. Round 1's scrim (.82 across the window's full width, from 30 px
+  // into the shelf) left 0.34 on the desktop project. The prototype's scrim with the caption's pad leaves more on
+  // a desktop than on a phone, where the pad is most of the band's width: see the log line above.
+  expect(shown / bare).toBeGreaterThanOrEqual(0.45);
+});
+
+// A laptop window is about 790 px tall (1440 x 900 screen) or 720 (1280 x 800): with a full-size hero and two rows
+// of covers the links met the shelf there, and the nebula's core, which the whole-map view puts at about 0.63 of
+// the height, was behind the shelf. The compact hero (home.css) is the same hero with a smaller heading (on one
+// line in a desktop window) and less room above it. Nothing is taken away: both rows of covers, the lede, the field
+// and both links are there. Measured on the GPU with the compact hero: about 154, 90 and 31 px.
+for (const size of [
+  { width: 1440, height: 790, phone: false, gap: 140 },
+  { width: 1280, height: 720, phone: false, gap: 80 },
+  { width: 360, height: 640, phone: true, gap: 28 },
+]) {
+  test(`Home at ${size.width} x ${size.height} keeps bare nebula between the links and the shelf, with nothing removed`, async ({ page, isMobile }) => {
+    test.skip(isMobile !== size.phone, size.phone ? 'a phone window' : 'a desktop window');
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.goto('/');
+    await waitForMap(page);
+    await waitForAnimations(page);
+    const g = await page.evaluate(() => {
+      const top = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
+      const hero = document.querySelector('.hero')!;
+      const home = document.querySelector('.home')!;
+      return {
+        gap: top('.shelf').top - top('.hero-row').bottom,
+        scroll: home.scrollHeight - home.clientHeight,
+        shelfBottom: top('.shelf').bottom,
+        headingTop: top('.hero h1').top,
+        headingLines: top('.hero h1').height / parseFloat(getComputedStyle(document.querySelector('.hero h1')!).fontSize),
+        headingWidth: (() => {
+          const range = document.createRange();
+          range.selectNodeContents(document.querySelector('.hero h1')!);
+          return range.getBoundingClientRect().width;
+        })(),
+        // The pad's dark shape starts 80 px inside its box (the clear border that holds the blur's halo).
+        padTop: hero.getBoundingClientRect().top + parseFloat(getComputedStyle(hero, '::before').top) + 80,
+        covers: [...document.querySelectorAll('.mosaic a')].filter((a) => a.getClientRects().length > 0).length,
+      };
+    });
+    console.log(`Home at ${size.width} x ${size.height}: ${g.gap.toFixed(0)} px between the links and the shelf, pad from ${g.padTop.toFixed(0)}, heading from ${g.headingTop.toFixed(0)} (${g.headingWidth.toFixed(0)} px wide), scrolls by ${g.scroll}`);
+    // Round 1 measured 29 px at 1440 x 790, none at 1280 x 720 (Home scrolled by 22 px) and 2 px at 360 x 640.
+    expect(g.gap).toBeGreaterThanOrEqual(size.gap);
+    expect(g.scroll, 'Home fits without scrolling').toBe(0);
+    expect(g.shelfBottom).toBeLessThanOrEqual(size.height);
+    // The heading starts inside the pad's dark shape, not above it.
+    expect(g.padTop).toBeLessThanOrEqual(g.headingTop);
+    // One line in a desktop window, inside the hero's 640 px; two on a phone (line-height .98).
+    expect(Math.round(g.headingLines), 'lines of the heading').toBe(size.phone ? 2 : 1);
+    if (!size.phone) expect(g.headingWidth).toBeLessThanOrEqual(640);
+    expect(g.covers, 'two rows of covers').toBe(size.phone ? 8 : 24);
+    for (const sel of ['.hero h1', '.hero .lede', '.hero .combo-field', ...HERO_LINKS, '.shelf-now .cap']) await expect(page.locator(sel).first(), sel).toBeInViewport({ ratio: 1 });
+  });
+}
 
 // The map runs behind Home's clear header, and the Home layer (a scroll container) is clipped at the header's bottom
 // edge. Anything of Home that still darkens the gas at that edge is cut there and shows as a horizontal line under
@@ -429,8 +554,12 @@ for (const size of [
     const strip = { x: Math.round(size.width * 0.2), y: edge - 16, width: Math.round(size.width * 0.6), height: 32 };
     const gas = await panBrightestGasUnder(page, strip, '.home, header.top');
     expect(gas, 'bright gas lies across the header edge').toBeGreaterThanOrEqual(0.1);
-    // Mean luma of each device pixel row of the strip, as the visitor sees it (header, its scrim and Home all on).
+    // Mean luma of each device pixel row of the strip with the header and Home on, but without the header's own
+    // scrim: its ramp across the edge is smooth, yet steep enough (up to 6 % from row to row) to hide a cut of that
+    // size beside it. Without it, what is left at the edge is the gas's own gradient and whatever Home cuts there.
+    const noScrim = await page.addStyleTag({ content: 'header.top::before { display: none !important; }' });
     const png = (await page.screenshot({ clip: strip })).toString('base64');
+    await noScrim.evaluate((el) => (el as Element).remove());
     const rows = await page.evaluate(async (data) => {
       const img = new Image();
       img.src = `data:image/png;base64,${data}`;
@@ -449,23 +578,27 @@ for (const size of [
       }
       return out;
     }, png);
-    // The step between the last row above the edge and the first row below it, as a share of the brightness there,
-    // against the largest step between any other two neighbouring rows of the strip: the gas's own gradient together
-    // with the header scrim's (a smooth ramp across the edge). A cut is a step at the edge only. Allowed: one and a
-    // half times the largest other step plus 1 % (half a screenshot level at this brightness). Measured on the
-    // phone project: 13.6 % and 12.5 % at the edge before the fix against 5.7 % and 6.3 % elsewhere; 0.2 % and
-    // 1.3 % after it.
-    const at = rows.length / 2;
+    // The step across the edge, as a share of the brightness there, against the largest step between any other two
+    // neighbouring rows of the strip (the gas's own gradient). A cut is a step at the edge only. The edge need not
+    // fall exactly between the two middle device rows, so the largest of the three steps round the middle is taken
+    // as the edge's, and none of them counts among the others. Allowed: one and a half times the largest other step
+    // plus 1 %, and never more than 3 %. Measured on the phone project with the header's scrim on, before this
+    // test hid it: 13.6 % and 12.5 % at the edge before the fix (5.7 % and 6.3 % elsewhere, the scrim's ramp), 0.2 %
+    // and 1.3 % after it. With the scrim hidden: 13.9 % and 28.0 % with the pad's mask taken out (2.9 % and 3.1 %
+    // elsewhere), 1.5 % and 1.2 % as built.
+    const at = Math.floor(rows.length / 2);
     const step = (i: number) => Math.abs(rows[i] - rows[i - 1]) / Math.max(rows[i], rows[i - 1]);
-    const others = rows.map((_, i) => i).filter((i) => i > 0 && i !== at).map(step);
-    const largest = Math.max(...others);
-    console.log(`header edge at ${size.width} x ${size.height}: step ${(step(at) * 100).toFixed(1)} %, largest other ${(largest * 100).toFixed(1)} %, rows ${rows[at - 1].toFixed(1)} / ${rows[at].toFixed(1)}, gas ${gas.toFixed(2)}`);
+    const near = [at - 1, at, at + 1];
+    const edgeStep = Math.max(...near.map(step));
+    const largest = Math.max(...rows.map((_, i) => i).filter((i) => i > 0 && !near.includes(i)).map(step));
+    console.log(`header edge at ${size.width} x ${size.height}: step ${(edgeStep * 100).toFixed(1)} %, largest other ${(largest * 100).toFixed(1)} %, rows ${rows[at - 1].toFixed(1)} / ${rows[at].toFixed(1)}, gas ${gas.toFixed(2)}`);
     expect(rows[at], 'the edge rows are lit').toBeGreaterThan(8);
-    expect(step(at)).toBeLessThanOrEqual(1.5 * largest + 0.01);
+    expect(edgeStep).toBeLessThanOrEqual(Math.min(0.03, 1.5 * largest + 0.01));
   });
 }
 
 test('Home shows the nebula nearly as bright as the map does: only the veil dims it', async ({ page, isMobile }) => {
+  test.setTimeout(120_000);
   test.skip(isMobile, 'on a phone the hero pad and the shelf leave too little bare nebula to compare');
   await page.addInitScript(() => {
     window.__rmrGasLite = 'off';
@@ -502,29 +635,39 @@ test('Home shows the nebula nearly as bright as the map does: only the veil dims
     await waitForGasSharpSettled(page);
   };
 
-  await page.goto('/map');
-  await settle();
-  const mapCamera = await camera(page);
-  await page.addStyleTag({ content: '.map-ui, .top { visibility: hidden !important; }' });
-  const onMap = await cells();
+  // The project's window, the approved picture's and a short laptop window: each frames the nebula differently.
+  for (const size of [
+    { width: 1440, height: 900 },
+    { width: 1600, height: 1000 },
+    { width: 1280, height: 720 },
+  ]) {
+    await page.setViewportSize(size);
+    await page.goto('/map');
+    await settle();
+    const mapCamera = await camera(page);
+    await page.addStyleTag({ content: '.map-ui, .top { visibility: hidden !important; }' });
+    const onMap = await cells();
 
-  await page.goto('/');
-  await settle();
-  // Without the hero and the shelf (their pad and scrim are pinned in styles/glass.test.ts): the veil stays.
-  await page.addStyleTag({ content: '.home, .top { visibility: hidden !important; }' });
-  await expect(page.locator('.map-pane .veil')).toBeVisible();
-  const homeCamera = await camera(page);
-  // The same view of the same nebula, or the comparison means nothing.
-  expect(homeCamera.zoom).toBeCloseTo(mapCamera.zoom, 3);
-  expect(homeCamera.x).toBeCloseTo(mapCamera.x, 3);
-  expect(homeCamera.y).toBeCloseTo(mapCamera.y, 3);
-  const onHome = await cells();
-  // The twenty brightest cells of the map are gas, not sky: there a dimmer shader shows.
-  const brightest = onMap.map((_, i) => i).sort((a, b) => onMap[b] - onMap[a]).slice(0, 20);
-  expect(brightest.length).toBe(20);
-  const mean = (v: number[]) => brightest.reduce((s, i) => s + v[i], 0) / brightest.length;
-  console.log(`nebula on Home against the map: ${mean(onHome).toFixed(1)} / ${mean(onMap).toFixed(1)} = ${(mean(onHome) / mean(onMap)).toFixed(3)}`);
-  expect(mean(onMap), 'the compared cells are gas').toBeGreaterThan(40);
-  // The approved picture (final-home.jpg) has the lower core at 0.89 of the map's: the veil's .1 and nothing else.
-  expect(mean(onHome) / mean(onMap)).toBeGreaterThanOrEqual(0.8);
+    await page.goto('/');
+    await settle();
+    // Without the hero and the shelf (their pad and scrim are pinned in styles/glass.test.ts): the veil stays.
+    await page.addStyleTag({ content: '.home, .top { visibility: hidden !important; }' });
+    await expect(page.locator('.map-pane .veil')).toBeVisible();
+    const homeCamera = await camera(page);
+    // The same view of the same nebula, or the comparison means nothing.
+    expect(homeCamera.zoom).toBeCloseTo(mapCamera.zoom, 3);
+    expect(homeCamera.x).toBeCloseTo(mapCamera.x, 3);
+    expect(homeCamera.y).toBeCloseTo(mapCamera.y, 3);
+    const onHome = await cells();
+    // The twenty brightest cells of the map are gas, not sky: there a dimmer shader shows.
+    const brightest = onMap.map((_, i) => i).sort((a, b) => onMap[b] - onMap[a]).slice(0, 20);
+    expect(brightest.length).toBe(20);
+    const mean = (v: number[]) => brightest.reduce((s, i) => s + v[i], 0) / brightest.length;
+    console.log(`nebula on Home against the map at ${size.width} x ${size.height}: ${mean(onHome).toFixed(1)} / ${mean(onMap).toFixed(1)} = ${(mean(onHome) / mean(onMap)).toFixed(3)}`);
+    expect(mean(onMap), 'the compared cells are gas').toBeGreaterThan(40);
+    // Only the veil is over these cells on Home. Measured at full strength: 0.989 at 1440 x 900, 0.944 at
+    // 1600 x 1000, 1.025 at 1280 x 720; and 0.726 at 1440 x 900 with the gas at 0.6 of its strength (the dimmed
+    // backdrop this replaced).
+    expect(mean(onHome) / mean(onMap), `${size.width} x ${size.height}`).toBeGreaterThanOrEqual(0.9);
+  }
 });

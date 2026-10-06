@@ -4,6 +4,12 @@ const PORT = 3100;
 const dev = process.env.E2E_DEV === '1';
 // Software WebGL in headless Chrome (Chrome no longer falls back to SwiftShader on its own).
 const WEBGL_ARGS = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+// By hand only, never in the default suite: E2E_GPU=1 runs the named tests in the installed Chrome on the real GPU
+// (Metal), to prove a measurement of painted pixels (text contrast over the gas) where visitors see it and not only
+// on the software renderer. Name the spec and the tests (-g); the tests that read gas pixels print the renderer.
+//   E2E_GPU=1 npx playwright test e2e/pages.spec.ts -g "brightest gas" --project=desktop --workers=1
+const gpu = process.env.E2E_GPU === '1';
+const GPU_ARGS = ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'];
 
 export default defineConfig({
   testDir: './e2e',
@@ -20,7 +26,8 @@ export default defineConfig({
     // Playwright's bundled Chromium, not the system Chrome channel: Chrome starts GoogleUpdater, which kept
     // worker teardown from finishing. Only GPU runs (npm run perf, npm run shots) use the Chrome channel.
     trace: 'retain-on-failure',
-    launchOptions: { args: WEBGL_ARGS },
+    ...(gpu ? { channel: 'chrome' } : {}),
+    launchOptions: { args: gpu ? GPU_ARGS : WEBGL_ARGS },
   },
   projects: [
     { name: 'desktop', testIgnore: /nowebgl\.spec\.ts/, use: { viewport: { width: 1440, height: 900 } } },

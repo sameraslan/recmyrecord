@@ -357,6 +357,17 @@ export async function contrastOverBackdrop(
   );
 }
 
+/** The WebGL vendor and renderer of this browser ("... SwiftShader ..." in the default suite, "... ANGLE Metal
+ * Renderer: Apple M1 Pro ..." under E2E_GPU=1): printed by the tests that measure painted gas, so a log says where
+ * its numbers were measured. */
+export async function glRenderer(page: Page): Promise<string> {
+  return page.evaluate(() => {
+    const gl = document.createElement('canvas').getContext('webgl2') ?? document.createElement('canvas').getContext('webgl');
+    const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+    return gl && ext ? `${gl.getParameter(ext.UNMASKED_VENDOR_WEBGL)} | ${gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)}` : 'unknown';
+  });
+}
+
 /**
  * Pans the map so that the brightest gas on screen lies under the words of `target` (the window of the size of
  * its text with the highest mean luminance, found with `hide` hidden), and waits for the map to settle. For

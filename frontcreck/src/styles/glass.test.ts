@@ -186,20 +186,62 @@ describe('Home, About and 404 over the nebula', () => {
     expect(pad['pointer-events']).toBe('none');
     // Static: rasterised once, never animated, no layer hint.
     expect(home).not.toMatch(/will-change|animation|@keyframes/);
-    for (const sel of ['.hero::before', '.hero-row::before', '.notfound::before, .page-msg::before']) expect(rule(home, sel).transition, sel).toBeUndefined();
+    for (const sel of ['.hero::before', '.hero-row::before', '.shelf-now::before', '.notfound::before, .page-msg::before']) expect(rule(home, sel).transition, sel).toBeUndefined();
   });
 
-  it('the shelf has a full-width scrim, dark enough for its caption, clipped by the Home layer', () => {
+  it("the shelf has the prototype's scrim: its own width, light at the caption, so the gas runs on into the covers", () => {
     const scrim = rule(home, '.shelf::before');
-    expect(scrim.background).toBe('linear-gradient(rgba(7, 6, 10, 0), rgba(7, 6, 10, .82) 30px)');
-    expect(scrim.inset).toBe('0 -50vw');
+    // pages.css of the prototype: from 10 px below the shelf's top, reaching .7 at 40 % of its height (inside the
+    // first row of covers). One rule for every window: no other .shelf::before, so no floor line at any size.
+    expect(scrim.background).toBe('linear-gradient(rgba(5, 4, 8, 0), rgba(5, 4, 8, .7) 40%)');
+    expect(scrim.inset).toBe('10px 0 0');
     expect(scrim['pointer-events']).toBe('none');
+    expect(scrim['z-index']).toBe('-1');
+    expect(home.match(/\.shelf::before/g)).toHaveLength(1);
     expect(rule(home, '.shelf').position).toBe('relative');
-    expect(rule(home, '.home')['overflow-x']).toBe('hidden');
-    // In a tall window the same scrim starts 40 px above the shelf and ramps over 76 px: full (.82) at the same line,
-    // 36 px into the shelf where the caption starts (the shelf's top padding), with no floor line across the nebula.
-    expect(home).toContain('\n@media (min-height: 861px) {\n  .shelf::before { inset: -40px -50vw 0; background: linear-gradient(rgba(7, 6, 10, 0), rgba(7, 6, 10, .82) 76px); }\n}\n');
     expect(rule(home, '.shelf').padding).toBe('36px var(--gut) 28px');
+    // Still needed: the hero pad is wider than a phone's window.
+    expect(rule(home, '.home')['overflow-x']).toBe('hidden');
+  });
+
+  it("the shelf's line has a small pad of its own that follows its words, static, as the hero links have", () => {
+    // The line is as wide as its words (the caption, or a title and an artist), so the pad behind it is too; it must
+    // not clip the pad (no overflow: hidden), and the title still shortens with an ellipsis inside the shelf's width.
+    const line = rule(home, '.shelf-now');
+    expect(line.position).toBe('relative');
+    expect(line.width).toBe('fit-content');
+    expect(line['max-width']).toBe('100%');
+    expect(line.margin).toBe('0 auto 12px');
+    expect(line.overflow).toBeUndefined();
+    expect(rule(home, '.shelf-now .t').overflow).toBe('hidden');
+    const pad = rule(home, '.shelf-now::before');
+    // .82 is the ladder's value for the caption (ash, the weakest text): 5.2:1 with the brightest gas under it
+    // (.78 gives 4.7, .86 gives 5.8; GPU, e2e/pages.spec.ts measures it). From 10 px above the
+    // 30 px line to 4 px below it and 24 px wider each side, blurred 8 px: it covers the caption at the line's top
+    // and the artist's name at its bottom.
+    expect(pad.background).toBe('rgba(5, 4, 8, .82)');
+    expect(pad.filter).toBe('blur(8px)');
+    expect(pad.inset).toBe('-10px -24px -4px');
+    expect(pad['border-radius']).toBe('22px');
+    expect(pad['z-index']).toBe('-1');
+    expect(pad['pointer-events']).toBe('none');
+    expect(pad.transition).toBeUndefined();
+  });
+
+  it('short windows have a compact hero: a smaller heading and less room above it, the pad starting above the heading', () => {
+    // A desktop window 860 px tall or less: the heading on one line (56 px at most, never wrapped, and allowed 40 px
+    // past the hero each side should a fallback font run wide), 3vh above it, the pad's dark shape 16 px higher.
+    expect(home).toContain(
+      '\n@media (min-width: 900px) and (max-height: 860px) {\n  .hero { padding-top: clamp(20px, 3vh, 28px); --pad-top: clamp(4px, calc(3vh - 16px), 12px); }\n  .hero h1 { margin: 0 -40px; font-size: clamp(42px, min(5.8vw, 8.1vh), 56px); white-space: nowrap; }\n}\n',
+    );
+    // A phone under 700 px tall: the same tightening; on a narrow one the heading keeps two even lines.
+    expect(home).toContain(
+      '\n@media (max-width: 899px) and (max-height: 699px) {\n  .hero { padding-top: 22px; --pad-top: 6px; }\n  .hero h1 { font-size: clamp(32px, 9.4vw, 52px); }\n}\n@media (max-width: 479px) and (max-height: 699px) {\n  .hero h1 { max-width: 8.6em; margin-inline: auto; }\n}\n',
+    );
+    // These come after the phone block, whose .hero rule they override.
+    expect(home.indexOf('(max-height: 699px)')).toBeGreaterThan(home.indexOf('\n  .hero { padding-top: 40px; --pad-top: 22px; }\n'));
+    // Nothing is removed in a short window: no rule there hides a cover.
+    expect(home).not.toMatch(/max-height[^{]*\{[^@]*display: none/);
   });
 
   it('About and the 404 have the same light scrim; the 404 text sits on a blurred pad, as the hero does', () => {
