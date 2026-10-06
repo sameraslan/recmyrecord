@@ -4,20 +4,28 @@ import { useId, useRef } from 'react';
 import { COPY } from '@/lib/copy';
 import { STOP_IDS, type StopId } from '@/lib/types';
 
+/** The stops that have no list for an album without audio (its sonic and balanced rows are empty). */
+const NEEDS_AUDIO: readonly StopId[] = ['sonic', 'balanced'];
+const TRACK_LEFT = [8, '50%', 'calc(100% - 8px)'] as const;
+
 /** Three-stop similarity control (mockup `.mode`): a native range for keyboard and assistive tech,
- * clickable stop names, and one line describing the current stop. */
-export function SimilaritySlider({ stop, onChange }: { stop: StopId; onChange: (stop: StopId) => void }) {
+ * clickable stop names, and one line describing the current stop.
+ * `noAudio` (beside an album without audio): the Sonic and Balanced stops and their names are dimmed and say
+ * why (the list's own note, as their accessible description and tooltip); they stay operable and keep their names. At
+ * those stops the line under them is that note instead of the stop's caption. */
+export function SimilaritySlider({ stop, onChange, noAudio = false }: { stop: StopId; onChange: (stop: StopId) => void; noAudio?: boolean }) {
   const id = useId();
   const rangeRef = useRef<HTMLInputElement>(null);
+  const off = (s: StopId) => noAudio && NEEDS_AUDIO.includes(s);
   return (
     <div className="mode panel">
       <label className="cap" htmlFor={`${id}-r`}>
         {COPY.slider.label}
       </label>
       <div className="mode-track">
-        <i style={{ left: 8 }} />
-        <i style={{ left: '50%' }} />
-        <i style={{ left: 'calc(100% - 8px)' }} />
+        {STOP_IDS.map((s, n) => (
+          <i key={s} className={off(s) ? 'is-off' : undefined} style={{ left: TRACK_LEFT[n] }} />
+        ))}
         <input
           ref={rangeRef}
           id={`${id}-r`}
@@ -36,7 +44,10 @@ export function SimilaritySlider({ stop, onChange }: { stop: StopId; onChange: (
             key={s}
             type="button"
             tabIndex={-1}
+            className={off(s) ? 'is-off' : undefined}
             aria-pressed={s === stop}
+            aria-describedby={off(s) ? `${id}-off` : undefined}
+            title={off(s) ? COPY.album.noAudio : undefined}
             onClick={() => {
               onChange(s);
               rangeRef.current?.focus({ preventScroll: true });
@@ -46,7 +57,13 @@ export function SimilaritySlider({ stop, onChange }: { stop: StopId; onChange: (
           </button>
         ))}
       </div>
-      <p className="mode-note">{COPY.slider.notes[stop]}</p>
+      {/* The description of the dimmed stops (referenced by id; `hidden` keeps it out of the page's own reading order). */}
+      {noAudio ? (
+        <span id={`${id}-off`} hidden>
+          {COPY.album.noAudio}
+        </span>
+      ) : null}
+      <p className="mode-note">{off(stop) ? COPY.album.noAudio : COPY.slider.notes[stop]}</p>
     </div>
   );
 }

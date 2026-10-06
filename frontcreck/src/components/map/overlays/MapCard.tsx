@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BracketText } from '@/components/BracketText';
 import { Cover } from '@/components/Cover';
 import { Icon } from '@/components/Icon';
 import { COPY } from '@/lib/copy';
@@ -17,8 +18,12 @@ export function MapCard({ album, stop, onClose }: { album: AlbumSummary; stop: S
     <div className="card panel" role="region" aria-label={COPY.titles.album(album.title, album.artist)}>
       <Cover album={album} size={narrow ? 72 : 88} eager />
       <div className="card-text">
-        <p className="t">{album.title}</p>
-        <p className="a">{album.artist}</p>
+        <p className="t">
+          <BracketText text={album.title} />
+        </p>
+        <p className="a">
+          <BracketText text={album.artist} />
+        </p>
         <div className="row">
           <Link className="btn btn-lamp" href={albumHref(album.slug, stop)}>
             {COPY.map.cardPrimary}

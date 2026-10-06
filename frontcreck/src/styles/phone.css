@@ -27,7 +27,9 @@
   .icon-quiet { width: 44px; height: 44px; }
   .rec-main { grid-template-columns: 16px 56px minmax(0, 1fr); gap: 12px; padding: 12px 52px 12px 2px; }
   .rec .cover { width: 56px !important; }
-  .rec-title { white-space: normal; font-size: 22px; }
+  .rec-title { -webkit-line-clamp: 3; font-size: 22px; }
+  .seed-title.len-l .seed-title-box { -webkit-line-clamp: 4; }
+  .recs-note .btn { align-self: stretch; min-height: 44px; }
   .rec-shared { white-space: normal; }
   .rec-sp { right: 0; }
 
@@ -41,6 +43,9 @@
     background: var(--color-paper); color: var(--color-lamp-ink); font-weight: 600; font-size: 15px; border-radius: 24px; box-shadow: 0 10px 26px -8px rgba(0, 0, 0, .8);
   }
   .fab-map svg { width: 17px; height: 17px; }
+  /* While the list's own map strip is on screen (mapPill.ts): faded out and out of reach. Opacity only. */
+  .fab-map { transition: opacity .2s var(--out), visibility 0s; }
+  .fab-map--away { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .2s var(--out), visibility 0s linear .2s; }
   .fab-map--on { top: 12px; bottom: auto; right: 12px; background: var(--color-float); color: var(--color-paper); border: 1px solid var(--color-rule-2); box-shadow: none; border-radius: 2px; }
 
   .map-zoom button { width: 44px; height: 44px; }

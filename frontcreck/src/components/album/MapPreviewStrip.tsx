@@ -1,12 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type Ref } from 'react';
 import { Icon } from '@/components/Icon';
-import { TILE } from '@/components/Cover';
+import { FRAME_COVER_ZOOM, TILE } from '@/components/Cover';
 import { CLUSTER_RGB } from '@/components/map/data';
 import { MARKER_GAP, layoutMarkers } from '@/components/map/state/focusLayout';
 import { COPY } from '@/lib/copy';
-import { coverUrl } from '@/lib/data/catalog';
+import { coverUrl, isFrameCover } from '@/lib/data/catalog';
 import { useCatalog, usePositions } from '@/lib/data/useData';
 import { useIsNarrow } from '@/lib/media';
 import type { AlbumRecord, Focus, StopId } from '@/lib/types';
@@ -113,8 +113,9 @@ export function drawStrip(
     const url = coverUrl(a.c, s);
     const im = url ? readyImage(url, onReady) : null;
     if (im) {
-      // The centre square of the image: all of a square cover, the middle of a video frame.
-      const side = Math.min(im.naturalWidth, im.naturalHeight) || 0;
+      // The centre square of the image: all of a square cover, the middle of a video frame, the frame slightly
+      // enlarged as on the page (FRAME_COVER_ZOOM) so the slivers of its border at the left and right are cut.
+      const side = (Math.min(im.naturalWidth, im.naturalHeight) || 0) / (isFrameCover(a.c) ? FRAME_COVER_ZOOM : 1);
       if (side) ctx.drawImage(im, (im.naturalWidth - side) / 2, (im.naturalHeight - side) / 2, side, side, x, y, s, s);
       else ctx.drawImage(im, x, y, s, s);
     }
@@ -144,7 +145,7 @@ export function drawStrip(
   }
 }
 
-export function MapPreviewStrip({ focus, stop, onOpen }: { focus: Focus; stop: StopId; onOpen: () => void }) {
+export function MapPreviewStrip({ focus, stop, onOpen, stripRef }: { focus: Focus; stop: StopId; onOpen: () => void; stripRef?: Ref<HTMLDivElement> }) {
   const ref = useRef<HTMLCanvasElement>(null);
   // The strip only exists under 900 px; on wider screens it is display:none, so load nothing for it there.
   const narrow = useIsNarrow();
@@ -186,7 +187,7 @@ export function MapPreviewStrip({ focus, stop, onOpen }: { focus: Focus; stop: S
   }, [catalog, positions, stop, focus.seed, recsKey]);
 
   return (
-    <div className="strip">
+    <div className="strip" ref={stripRef}>
       <canvas ref={ref} className="strip-canvas" role="img" aria-label={COPY.map.preview} onClick={onOpen} />
       <button type="button" className="strip-open" onClick={onOpen}>
         <span>{COPY.map.openMap}</span>

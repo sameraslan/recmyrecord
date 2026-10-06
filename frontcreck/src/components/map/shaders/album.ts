@@ -66,7 +66,9 @@ export const DOT_ALPHA_DIMMED = 0.34;
 /** The dimmed map draws its dots this much larger (mockup `muted`: radius * 1.35), easing with the alpha. */
 export const MUTED_DOT_SCALE = 1.35;
 
-/** Alpha factor of the other covers while an album is picked (mockup coverA * .5); dots are unaffected. */
+/** How much of the other covers' own colour is left while an album is picked (mockup coverA * .5): the rest is
+ * the map's background colour, mixed in by the fragment shader. The covers stay opaque, so where they overlap
+ * the one on top hides the one under it instead of both showing through. Dots are unaffected. */
 export const SELECTION_DIM = 0.5;
 
 /** True when the picked album is drawn large and framed by the shader (else OverlayDriver's DOM ring marks it). */
@@ -242,11 +244,12 @@ export const albumFragmentShader = (sheetCount: number): string => {
   uniform float u_pixelRatio;
   uniform float u_dotAlpha;   // 0.78, 0.34 when the map is dimmed
   uniform float u_focusDim;   // alpha factor of albums outside the focus
-  uniform float u_selDim;     // alpha factor of the other covers while an album is picked
+  uniform float u_selDim;     // share of their own colour the other covers keep while an album is picked
 
   const vec3 PAPER = vec3(0.929, 0.898, 0.835); // #ede5d5
   const vec3 LAMP = vec3(0.902, 0.659, 0.337);  // #e6a856
   const vec3 ROOM = vec3(0.082, 0.067, 0.051);  // #15110d
+  const vec3 PANE = vec3(0.090, 0.071, 0.055);  // #17120e, the map's background (--color-pane)
 
   varying vec2 v_atlasOrigin;
   varying vec2 v_atlasSize;
@@ -310,8 +313,10 @@ export const albumFragmentShader = (sheetCount: number): string => {
     }
     float alpha = mask * mix(u_dotAlpha, 1.0, v_coverT);
     if (v_dim > 0.5) alpha *= u_focusDim;
-    // Only the cover part dims, so dots stay as they are.
-    if (v_selDim > 0.5) alpha *= mix(1.0, u_selDim, v_coverT);
+    // Only the cover part dims, so dots stay as they are. The colour moves toward the map's background and the
+    // alpha stays: over the bare map this is the same pixel as lowering the alpha was, and an opaque dimmed
+    // cover no longer shows the covers under it.
+    if (v_selDim > 0.5) col = mix(PANE, col, mix(1.0, u_selDim, v_coverT));
     if (v_sel > 0.5) {
       // Mockup: a 1 px room-coloured backing around the cover, then a 2 px lamp frame 4 px outside it.
       float back = 1.0 - smoothstep(1.0 - 0.5 * aa, 1.0 + 0.5 * aa, squareSd(p, halfSize));

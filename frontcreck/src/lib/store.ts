@@ -22,6 +22,8 @@ export interface AppState {
   /** CSS px of the map covered by the album panel on the left (0 when there is none). */
   panelInset: number;
   webgl: WebglStatus;
+  /** Album view: the album has no audio, so the slider's Sonic and Balanced stops have no list for it. */
+  noAudio: boolean;
   /** Ambient colours of the current album, null outside album view. */
   ambient: Ambient | null;
   trail: TrailItem[];
@@ -34,6 +36,7 @@ export interface AppState {
   setMapModeFor: (slug: string | null) => void;
   setPanelInset: (px: number) => void;
   setWebgl: (status: WebglStatus) => void;
+  setNoAudio: (noAudio: boolean) => void;
   setAmbient: (ambient: Ambient | null) => void;
   visit: (item: TrailItem) => void;
   showToast: (message: string) => void;
@@ -62,6 +65,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   mapModeFor: null,
   panelInset: 0,
   webgl: 'unknown',
+  noAudio: false,
   ambient: null,
   trail: [],
   toast: null,
@@ -73,6 +77,7 @@ export const useAppStore = create<AppState>()((set, get) => ({
   setMapModeFor: (mapModeFor) => set((s) => (s.mapModeFor === mapModeFor ? s : { mapModeFor })),
   setPanelInset: (panelInset) => set((s) => (s.panelInset === panelInset ? s : { panelInset })),
   setWebgl: (webgl) => set((s) => (s.webgl === webgl ? s : { webgl })),
+  setNoAudio: (noAudio) => set((s) => (s.noAudio === noAudio ? s : { noAudio })),
   setAmbient: (ambient) => set((s) => (s.ambient?.join() === ambient?.join() ? s : { ambient })),
   visit: (item) => {
     const current = get().trail;

@@ -1,13 +1,23 @@
 'use client';
 
 import { useState, type CSSProperties } from 'react';
-import { coverUrl, initialLetter } from '@/lib/data/catalog';
+import { withLightnessFloor } from '@/lib/color';
+import { coverUrl, isFrameCover, tileLetter } from '@/lib/data/catalog';
 import { thumbSheetOf, thumbStyle } from '@/lib/data/sprites';
 import { useThumbSheet } from '@/lib/thumb-sheet';
 import type { AlbumSummary } from '@/lib/types';
 
 /** Tile background by `cluster % 3`; the one definition, reused by every other tile drawing (Task 11). */
 export const TILE: readonly string[] = ['#3b2a22', '#2c3024', '#3b3120'];
+/** HSL lightness a page's tile is never darker than: the cluster colours are close to the album header's wash,
+ * where a tile at its own colour disappears. The map sprites and the phone strip keep TILE as it is. */
+export const TILE_LIGHTNESS_FLOOR = 0.24;
+const TILE_SHOWN: readonly string[] = TILE.map((c) => withLightnessFloor(c, TILE_LIGHTNESS_FLOOR));
+/** Background of the lettered tile for a cluster. */
+export const tileColor = (cluster: number): string => TILE_SHOWN[cluster % 3];
+/** A video frame is drawn this much larger inside its square, so the frame's own edges (a sliver of its border
+ * at the left and right) fall outside the box. The phone strip's canvas uses the same factor. */
+export const FRAME_COVER_ZOOM = 1.06;
 
 export interface CoverProps {
   album: Pick<AlbumSummary, 'id' | 'title' | 'coverId' | 'cluster'>;
@@ -24,7 +34,8 @@ export interface CoverProps {
  * sheet) loads, the box is empty. The sprite element, the only reference to a 2.3 MB thumbnail sheet, is
  * rendered only after the remote image failed and the sheet has loaded, so a normal page load never fetches
  * one. A cover that is a video frame (16:9, without bars: see coverUrlAt) shows its centre square (`.cover img`
- * is `object-fit: cover`). */
+ * is `object-fit: cover`), slightly enlarged (`data-frame`, FRAME_COVER_ZOOM in search.css). The tile's letter
+ * follows `tileLetter`. */
 export function Cover({ album, size, className = '', eager = false, fluid = false }: CoverProps) {
   const url = coverUrl(album.coverId, size);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
@@ -32,16 +43,18 @@ export function Cover({ album, size, className = '', eager = false, fluid = fals
   const failed = url !== null && failedFor === url;
   const sheet = useThumbSheet(failed, thumbSheetOf(album.id));
   const state = url && !failed ? 'remote' : url && sheet !== 'error' ? 'sprite' : 'tile';
+  const frame = isFrameCover(album.coverId);
   const style = {
     ...(fluid ? null : { width: size }),
-    '--fb': TILE[album.cluster % 3],
+    '--fb': tileColor(album.cluster),
     '--fs': `${Math.round(size * 0.48)}px`,
+    ...(frame ? { '--zoom': FRAME_COVER_ZOOM } : null),
   } as CSSProperties;
   return (
-    <div className={`cover ${className}`.trim()} style={style} data-state={state}>
+    <div className={`cover ${className}`.trim()} style={style} data-state={state} data-frame={frame ? '' : undefined}>
       {state === 'tile' ? (
         <span className="fb" aria-hidden="true">
-          {initialLetter(album.title)}
+          {tileLetter(album.title)}
         </span>
       ) : null}
       {state === 'sprite' && sheet === 'ready' ? <span className="spr" style={thumbStyle(album.id)} aria-hidden="true" /> : null}

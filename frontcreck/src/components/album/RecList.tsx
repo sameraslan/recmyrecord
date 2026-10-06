@@ -34,8 +34,8 @@ export function RecList({ seedId, rows, total, stop, expanded, onToggle, note = 
       <div className={note ? 'recs-note' : undefined}>
         <p role="status">{note ? COPY.album.noAudio : null}</p>
         {note ? (
-          <button type="button" className="textbtn u" onClick={showMood}>
-            <span>{COPY.album.noAudioAction}</span>
+          <button type="button" className="btn btn-line" onClick={showMood}>
+            {COPY.album.noAudioAction}
           </button>
         ) : null}
       </div>

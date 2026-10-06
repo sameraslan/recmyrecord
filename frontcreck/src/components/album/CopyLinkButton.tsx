@@ -26,7 +26,9 @@ function legacyCopy(text: string): boolean {
   }
 }
 
-export function CopyLinkButton({ slug, stop }: { slug: string; stop: StopId }) {
+/** `labelled`: a bordered button with the control's name as its visible label, for where it is the only action
+ * (an album with no link to listen to); otherwise the icon alone, named by `aria-label`. */
+export function CopyLinkButton({ slug, stop, labelled = false }: { slug: string; stop: StopId; labelled?: boolean }) {
   const copy = async () => {
     const url = absoluteUrl(albumHref(slug, stop));
     const { showToast } = useAppStore.getState();
@@ -37,6 +39,14 @@ export function CopyLinkButton({ slug, stop }: { slug: string; stop: StopId }) {
       showToast(legacyCopy(url) ? COPY.album.linkCopied : COPY.album.copyFailed(url.replace(/^https?:\/\//, '')));
     }
   };
+  if (labelled) {
+    return (
+      <button type="button" className="btn btn-line" onClick={copy}>
+        <Icon name="link" />
+        {COPY.album.copyLinkLabel}
+      </button>
+    );
+  }
   return (
     <button type="button" className="icon-quiet" aria-label={COPY.album.copyLinkLabel} title={COPY.album.copyLink} onClick={copy}>
       <Icon name="link" />

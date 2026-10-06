@@ -21,6 +21,19 @@ ol, ul { padding: 0; list-style: none; }
   position: fixed; inset: 0; z-index: 150; pointer-events: none; opacity: .035;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 .95 0 0 0 0 .85 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+/* Album titles in the display serif: a fallback face without the asked weight (a Korean or Chinese system serif
+ * with one weight) is shown at the weight it has, not smeared into a synthetic bold. */
+.seed-title, .rec-title, .card .t, .map-tip .t, .opt-t, .shelf-now .t, .cover .fb { font-synthesis-weight: none; }
+/* A trailing bracketed form, as in "native [Latin]" (BracketText): one piece that moves to the next line whole
+ * when it does not fit on this one, and wraps inside only when it is wider than a line by itself. A short part
+ * before it (.bh) is one piece in the same way. */
+.bk, .bh { display: inline-block; max-width: 100%; }
+/* A line clamp does not count the lines inside an inline block, so a form too long for one line of these
+ * clamped boxes flows as plain text there ("l": on any screen, "m": in the narrower rows up to 1100 px). */
+.seed-title .bk[data-w="l"], .rec-title .bk[data-w="l"], .rec-artist .bk[data-w="l"] { display: inline; }
+@media (max-width: 1100px) {
+  .seed-title .bk[data-w="m"], .rec-title .bk[data-w="m"], .rec-artist .bk[data-w="m"] { display: inline; }
+}
 .cap { font-size: 11.5px; font-weight: 500; letter-spacing: .09em; text-transform: uppercase; color: var(--color-ash); }
 
 /* header */

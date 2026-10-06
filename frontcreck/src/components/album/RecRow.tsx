@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { BracketText } from '@/components/BracketText';
 import { Cover } from '@/components/Cover';
 import { Icon } from '@/components/Icon';
 import { COPY } from '@/lib/copy';
@@ -29,8 +30,12 @@ export function RecRow({ row, stop }: { row: Row; stop: StopId }) {
         </span>
         <Cover album={row} size={60} />
         <span className="rec-text" aria-hidden="true">
-          <span className="rec-title">{row.title}</span>
-          <span className="rec-artist">{row.artist}</span>
+          <span className="rec-title">
+            <BracketText text={row.title} />
+          </span>
+          <span className="rec-artist">
+            <BracketText text={row.artist} />
+          </span>
           {row.shared.length ? (
             // The mockup sets the words in a lighter colour than "Shares".
             <span className="rec-shared">

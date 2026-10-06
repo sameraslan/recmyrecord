@@ -1,16 +1,18 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from '@/components/Icon';
 import { COPY } from '@/lib/copy';
 import { REC_DEFAULT_VISIBLE, REC_MAX } from '@/lib/data/catalog';
 import { prefersReducedMotion, useIsNarrow } from '@/lib/media';
 import { entryFrom, previousPath, recordedPath } from '@/lib/nav-history';
 import { useAppStore } from '@/lib/store';
+import { useInView } from '@/lib/useInView';
 import type { AlbumPageData, StopId } from '@/lib/types';
 import { AmbientLayers } from './AmbientWash';
 import { MapModeButton } from './MapModeButton';
+import { mapPillHidden } from './mapPill';
 import { MapPreviewStrip } from './MapPreviewStrip';
 import { RecList } from './RecList';
 import { SeedHeader } from './SeedHeader';
@@ -35,6 +37,9 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
   const narrow = useIsNarrow();
   const mapMode = useAppStore((s) => s.mapModeFor === seed.slug) && narrow;
   const fabRef = useRef<HTMLButtonElement>(null);
+  // The list's own map strip (preview and "Open map" row): while it is on screen the floating Map button hides.
+  const stripRef = useRef<HTMLDivElement>(null);
+  const stripInView = useInView(stripRef, narrow);
   const rows = data.recs[stop];
   const visible = rows.slice(0, expanded ? REC_MAX : REC_DEFAULT_VISIBLE);
   const visibleKey = visible.map((r) => r.id).join(',');
@@ -62,9 +67,20 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
   }, [seed.id, visibleKey]);
 
   useEffect(() => {
+    useAppStore.getState().setNoAudio(seed.noAudio === true);
+  }, [seed.noAudio]);
+
+  useEffect(() => {
     useAppStore.getState().setAmbient(seed.ambient);
     document.documentElement.style.setProperty('--acc', seed.ambient[2]);
   }, [seed.ambient]);
+
+  // The floating Map button hides while the strip is on screen. If it has focus at that moment (the List button
+  // was just used with the strip in view), focus goes to the strip's own "Open map" button, not to <body>.
+  const pillHidden = mapPillHidden({ mapMode, stripInView });
+  useLayoutEffect(() => {
+    if (pillHidden && document.activeElement === fabRef.current) stripRef.current?.querySelector('button')?.focus({ preventScroll: true });
+  }, [pillHidden]);
 
   usePanelInset(panelRef);
 
@@ -76,6 +92,7 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
       s.setFocus(null);
       s.setHot(null);
       s.setAmbient(null);
+      s.setNoAudio(false);
       s.setMapModeFor(null);
       document.documentElement.style.removeProperty('--acc');
     },
@@ -136,10 +153,10 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
               note={seed.noAudio === true && rows.length === 0}
             />
           </div>
-          <MapPreviewStrip focus={{ seed: seed.id, recs: visible.map((r) => r.id) }} stop={stop} onOpen={() => setMapMode(true)} />
+          <MapPreviewStrip stripRef={stripRef} focus={{ seed: seed.id, recs: visible.map((r) => r.id) }} stop={stop} onOpen={() => setMapMode(true)} />
         </div>
       </section>
-      <MapModeButton on={mapMode} onToggle={() => setMapMode(!mapMode)} buttonRef={fabRef} />
+      <MapModeButton on={mapMode} onToggle={() => setMapMode(!mapMode)} buttonRef={fabRef} hidden={pillHidden} />
     </>
   );
 }

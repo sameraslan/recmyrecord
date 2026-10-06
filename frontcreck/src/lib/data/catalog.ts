@@ -1,4 +1,5 @@
 import { COPY } from '@/lib/copy';
+import { isLatinChar } from '@/lib/display-text';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumId, AlbumPageData, AlbumRecord, AlbumSummary, Catalog, ListenLinks, RecRow, Recs, SeedData, StopId, Vocab } from '@/lib/types';
 
@@ -199,4 +200,41 @@ export function initialLetter(title: string): string {
   const upper = m[0].toUpperCase();
   // Some letters upper-case to two (for example the sharp s); keep the tile to one character.
   return [...upper].length === 1 ? upper : m[0];
+}
+
+/**
+ * `ch` as a tile shows it (`_initial` in the pipeline's images.py): upper-cased (left as it is when that gives
+ * two characters, like the sharp s), and when that is not Latin (`isLatinChar`), its base letter, the first
+ * character of its NFD form (Ế gives E). '' when neither is a Latin letter or digit.
+ */
+function tileInitial(ch: string): string {
+  const upper = ch.toUpperCase();
+  const c = [...upper].length === 1 ? upper : ch;
+  if (isLatinChar(c)) return c;
+  const base = [...c.normalize('NFD')][0] ?? '';
+  return isLatinChar(base) && /[\p{L}\p{N}]/u.test(base) ? base : '';
+}
+
+/**
+ * The letter a cover tile shows, '' for none. The same rule as the map sprites' tiles, which the pipeline draws
+ * (`tile_letter` in data-pipeline/rmr_pipeline/images.py, with the same test cases): change both together.
+ *
+ * 1. Drop a leading "The " (any case). The first letter or digit of the rest decides: when there is none,
+ *    `COPY.cover.noInitial`.
+ * 2. That character through `tileInitial`: upper-cased, a base letter for one that is not Latin.
+ * 3. When it is still not Latin and the title ends with a square bracket (`native [Latin]`): the first letter
+ *    or digit inside the bracket that is (a leading "The " there is not dropped).
+ * 4. Else no letter: the tile alone.
+ */
+export function tileLetter(title: string): string {
+  const first = title.replace(/^the\s+/i, '').match(/[\p{L}\p{N}]/u)?.[0];
+  if (first === undefined) return COPY.cover.noInitial;
+  const shown = tileInitial(first);
+  if (shown) return shown;
+  const bracket = /\[([^[\]]*)\]\s*$/u.exec(title);
+  for (const ch of bracket?.[1].match(/[\p{L}\p{N}]/gu) ?? []) {
+    const c = tileInitial(ch);
+    if (c) return c;
+  }
+  return '';
 }
