@@ -454,16 +454,16 @@ test('keyboard order is unchanged: skip link, header, then the map and its contr
   expect(ring).toEqual({ top: '68px', style: 'solid', width: '2px' });
 });
 
-test('glints never start under the header', async ({ page, isMobile }) => {
+test('glints never start under the header', async ({ page }) => {
   // The test browser draws in software, where a visitor gets no glints: forced on here, as in e2e/twinkle.spec.ts.
   await page.addInitScript(() => {
     window.__rmrTwinkle = 'on';
   });
   await openMap(page);
   const bottom = await headerBottom(page);
-  // One step in: the cloud is taller than the window, so there are stars under the bar, and they are still dots.
-  await act(page.getByRole('button', { name: COPY.map.zoomIn }), isMobile);
-  await waitForCameraIdle(page);
+  // Where /map opens (the Overview) the cloud is taller than the window, so there are stars under the bar, and
+  // they are still dots. (The plan zoomed one step in, from the whole map it opened at then; from the Overview
+  // that step shows covers, where no glint plays at all.)
   const under = await page.evaluate(async (minY) => {
     const n: number = (await (await fetch('/data/albums.json')).json()).length;
     let k = 0;
