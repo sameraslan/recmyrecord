@@ -7,6 +7,7 @@ import { easeOutCubic, prefersReducedMotion } from '@/lib/media';
 import { STOP_T, interpolated } from '../data';
 import { MARKER_SIZE, MarkerLayout, layoutMarkers, type MarkerAnchor, type MarkerBounds, type MarkerItem, type PlacedMarker } from '../state/focusLayout';
 import { useMapStore, type MapStore } from '../state/mapStore';
+import { inMotion } from '../state/motion';
 import { badgeKey, getOverlayEl, getOverlaySize, getPlacedMarkers, markerKey, setPlacedMarkers } from '../state/overlayEls';
 import { canvasRect, visibleArea, worldToScreen } from '../state/projection';
 import { getCameraControl } from './CameraTween';
@@ -22,13 +23,9 @@ const LEADER_MIN_PX = 6;
 const BADGE_OFFSET = 6;
 /** How long the covers take to ease onto the settled layout once a motion ends. */
 export const MARKER_SETTLE_MS = 180;
-
-/** True while the view is still on its way somewhere, so that another drawn frame is coming or the visitor still
- * holds the map: a camera tween, a fling or wheel easing, a slider morph (also the frame before it starts), a
- * bounds nudge, the album panel sliding, or a drag. */
-function inMotion(s: MapStore): boolean {
-  return s.animating || s.rigMoving || s.morphing || s.nudging || s.dragging || s.sliderT !== STOP_T[s.input.stop] || s.insetCurrent !== s.input.insetLeft;
-}
+/** A tween that is sent elsewhere this soon after the focus changed (the album panel's inset arriving a frame
+ * later, say) is still part of the opening: the layout follows it to the new view. Later reframings settle. */
+const RETARGET_MS = 300;
 
 function setLine(l: SVGLineElement, x1: number, y1: number, x2: number, y2: number) {
   l.setAttribute('x1', x1.toFixed(1));
@@ -37,15 +34,57 @@ function setLine(l: SVGLineElement, x1: number, y1: number, x2: number, y2: numb
   l.setAttribute('y2', y2.toFixed(1));
 }
 
-/** Writes the covers, badges, lines and leaders at `pos` (x, y per marker in rank order). DOM only. */
-function writeMarkers(placed: readonly MarkerItem[], pos: Float64Array): void {
+interface Settle {
+  from: Float64Array;
+  to: Float64Array;
+  start: number;
+  version: number;
+  raf: number;
+}
+
+interface Work {
+  layout: MarkerLayout;
+  anchors: MarkerAnchor[];
+  bounds: MarkerBounds;
+  /** The last layout, where its markers are drawn (eased while settling), and the boxes published for hits. */
+  placed: readonly MarkerItem[];
+  shown: Float64Array;
+  drawn: PlacedMarker[];
+  /** What the hover label is kept inside, as of the last frame. */
+  inset: number;
+  width: number;
+  height: number;
+  settle: Settle | null;
+  /** Eases run so far (a test reads it: an album opening should need none). */
+  eases: number;
+  /** The focus and the tween target (x, y, zoom, inset, stop, width, height, bottom cover) last laid out for. */
+  focus: unknown;
+  focusAt: number;
+  target: Float64Array;
+  hasTarget: boolean;
+  /** A settle frame is already asked for this task. */
+  asked: boolean;
+}
+
+/** Draws the covers, badges, lines and leaders where `w.shown` has them, publishes those boxes for hover and
+ * pick, and places the hover label beside the hovered one. DOM only: a frame and each step of an ease call it. */
+function paint(w: Work): void {
+  const placed = w.placed;
+  const pos = w.shown;
+  if (w.drawn.length !== placed.length) w.drawn = placed.map((it) => ({ ...it, drawn: it.size }));
   for (let i = 0; i < placed.length; i++) {
     const it = placed[i];
     const el = getOverlayEl(markerKey(it.id));
+    const s = el?.dataset.hot === 'true' ? it.size * HOT_SCALE : it.size;
+    // Hover and pick hit-test these boxes (CursorTracker, PickController): the markers take no pointer events.
+    const d = w.drawn[i];
+    Object.assign(d, it);
+    d.x = pos[2 * i];
+    d.y = pos[2 * i + 1];
+    d.drawn = s;
     if (!el) continue;
-    const s = el.dataset.hot === 'true' ? it.size * HOT_SCALE : it.size;
-    const x0 = pos[2 * i] - s / 2;
-    const y0 = pos[2 * i + 1] - s / 2;
+    const x0 = d.x - s / 2;
+    const y0 = d.y - s / 2;
     el.style.width = `${s}px`;
     el.style.height = `${s}px`;
     el.style.transform = `translate3d(${x0.toFixed(1)}px, ${y0.toFixed(1)}px, 0)`;
@@ -56,53 +95,43 @@ function writeMarkers(placed: readonly MarkerItem[], pos: Float64Array): void {
       badge.style.visibility = '';
     }
   }
+  setPlacedMarkers(w.drawn);
+  const drawn = w.drawn;
   const svg = getOverlayEl<SVGSVGElement>('lines');
-  if (!svg || !placed.length) return;
-  const rank = (id: number) => placed.findIndex((p) => p.id === id);
-  svg.querySelectorAll<SVGLineElement>('line[data-to]').forEach((l) => {
-    const i = rank(Number(l.dataset.to));
-    if (i >= 0) setLine(l, pos[0], pos[1], pos[2 * i], pos[2 * i + 1]);
-  });
-  svg.querySelectorAll<SVGLineElement>('line[data-leader]').forEach((l) => {
-    const i = rank(Number(l.dataset.leader));
-    const it = placed[i];
-    const show = !!it && Math.hypot(pos[2 * i] - it.ax, pos[2 * i + 1] - it.ay) > LEADER_MIN_PX;
-    l.style.display = show ? '' : 'none';
-    if (show) setLine(l, it.ax, it.ay, pos[2 * i], pos[2 * i + 1]);
-  });
+  if (svg && drawn.length) {
+    const rank = (id: number) => drawn.findIndex((p) => p.id === id);
+    svg.querySelectorAll<SVGLineElement>('line[data-to]').forEach((l) => {
+      const it = drawn[rank(Number(l.dataset.to))];
+      if (it) setLine(l, drawn[0].x, drawn[0].y, it.x, it.y);
+    });
+    svg.querySelectorAll<SVGLineElement>('line[data-leader]').forEach((l) => {
+      const it = drawn[rank(Number(l.dataset.leader))];
+      const show = !!it && Math.hypot(it.x - it.ax, it.y - it.ay) > LEADER_MIN_PX;
+      l.style.display = show ? '' : 'none';
+      if (show && it) setLine(l, it.ax, it.ay, it.x, it.y);
+    });
+  }
+  const tip = getOverlayEl('hover');
+  const hovered = useMapStore.getState().hoveredIndex;
+  const it = hovered === null ? undefined : drawn.find((p) => p.id === hovered);
+  if (tip && it) {
+    // Measured by HoverLabel after each content change, so no layout read per frame.
+    const { width: tw, height: th } = getOverlaySize('hover');
+    const area = visibleArea(w.inset, w.width, w.height, TIP_EDGE);
+    const half = it.drawn / 2;
+    let lx = it.x + half + 14;
+    if (lx + tw > area.right) lx = it.x - half - 14 - tw;
+    lx = clamp(lx, area.left, area.right - tw);
+    const ly = clamp(it.y - th / 2, area.top, area.bottom - th);
+    tip.style.transform = `translate3d(${lx}px, ${ly}px, 0)`;
+    tip.style.opacity = '1';
+  }
 }
-
-interface Settle {
-  placed: readonly MarkerItem[];
-  from: Float64Array;
-  to: Float64Array;
-  now: Float64Array;
-  start: number;
-  version: number;
-  raf: number;
-}
-
-interface Work {
-  layout: MarkerLayout;
-  anchors: MarkerAnchor[];
-  bounds: MarkerBounds;
-  pos: Float64Array;
-  settle: Settle | null;
-  /** Eases run so far (a test reads it: an album opening should need none). */
-  eases: number;
-  /** The focus and the tween target (x, y, zoom, inset, stop, width, height, bottom cover) last laid out for. */
-  focus: unknown;
-  focusAt: number;
-  target: (number | string)[];
-}
-
-/** A tween that is sent elsewhere this soon after the focus changed (the album panel's inset arriving a frame
- * later, say) is still part of the opening: the layout follows it to the new view. Later reframings settle. */
-const RETARGET_MS = 300;
 
 /** The anchors and bounds of the view a running camera tween lands on, on the frames where the layout should be
  * solved for it: the focus has just changed (an album opens, a recommendation is picked), or the opening tween
- * was just sent elsewhere. Null otherwise. Allocates only then. */
+ * was just sent elsewhere. Null otherwise. It compares the target in place and allocates only when it returns
+ * one (once per album open or reframing). */
 function tweenTarget(w: Work, store: MapStore, width: number, height: number): { anchors: MarkerAnchor[]; bounds: MarkerBounds } | null {
   const { input, data } = store;
   const f = input.focus;
@@ -114,20 +143,35 @@ function tweenTarget(w: Work, store: MapStore, width: number, height: number): {
     w.focusAt = now;
   }
   if (!to || !f || !data) {
-    w.target.length = 0;
+    w.hasTarget = false;
     return null;
   }
-  const key = w.target;
-  const fresh = [to.x, to.y, to.zoom, input.insetLeft, input.stop, width, height, input.bottomCover];
-  const moved = fresh.length !== key.length || fresh.some((v, i) => v !== key[i]);
-  if (moved) w.target = fresh;
+  const k = w.target;
+  const stop = STOP_T[input.stop];
+  const moved = !w.hasTarget || k[0] !== to.x || k[1] !== to.y || k[2] !== to.zoom || k[3] !== input.insetLeft || k[4] !== stop || k[5] !== width || k[6] !== height || k[7] !== input.bottomCover;
+  if (moved) {
+    k[0] = to.x;
+    k[1] = to.y;
+    k[2] = to.zoom;
+    k[3] = input.insetLeft;
+    k[4] = stop;
+    k[5] = width;
+    k[6] = height;
+    k[7] = input.bottomCover;
+    w.hasTarget = true;
+  }
   if (!newFocus && !(moved && now - w.focusAt < RETARGET_MS)) return null;
   const cam = frustumCamera(to, width, height, input.insetLeft);
-  const pos = interpolated(data, STOP_T[input.stop]);
+  const pos = interpolated(data, stop);
   const rect = canvasRect(width, height);
   const anchors = [f.seed, ...f.recs].map((id) => ({ id, ...worldToScreen(pos[2 * id], pos[2 * id + 1], rect, cam) }));
   const area = visibleArea(input.insetLeft, width, height, MARKER_EDGE);
   return { anchors, bounds: { ...area, bottom: Math.min(area.bottom, height - input.bottomCover - MARKER_EDGE) } };
+}
+
+function stopSettle(w: Work): void {
+  if (w.settle) cancelAnimationFrame(w.settle.raf);
+  w.settle = null;
 }
 
 /** Every rendered frame in focus mode: places the cover markers, the lines and the label of a hovered marker. The
@@ -140,31 +184,42 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
   const work = useRef<Work | null>(null);
 
   useEffect(() => {
-    // A motion that ends after this driver's frame (a bounds nudge, pointerup on a drag) asks for the one frame
-    // that settles the layout. Nothing else: a resting, settled map draws nothing.
+    // A motion that ends outside a drawn frame (pointerup on a drag or a pinch, a bounds nudge that ends after
+    // this driver's frame) asks for the one frame that settles the layout. Checked once the current task is
+    // over: a motion that ends inside a frame (a tween, wheel easing, a fling) has settled in that same frame by
+    // then, and asks for nothing. A resting, settled map draws nothing.
+    const check = () => {
+      const w = work.current;
+      if (w) w.asked = false;
+      const s = useMapStore.getState();
+      if (s.input.focus && w?.layout.unsettled && !inMotion(s)) invalidate();
+    };
     const unsubscribe = useMapStore.subscribe((s) => {
-      if (s.input.focus && work.current?.layout.unsettled && !inMotion(s)) invalidate();
+      const w = work.current;
+      if (!s.input.focus || !w?.layout.unsettled || w.asked || inMotion(s)) return;
+      w.asked = true;
+      queueMicrotask(check);
     });
     // Test hook: how far the shown layout is from a fresh solve of the same view.
-    if (window.__rmr) {
-      window.__rmr.markerLayout = () => {
-        const w = work.current;
-        if (!w || !useMapStore.getState().input.focus || w.settle) return null;
-        const fresh = layoutMarkers(w.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: w.bounds });
-        const shown = getPlacedMarkers();
-        let gap = 0;
-        shown.forEach((m, i) => (gap = Math.max(gap, Math.abs(m.x - fresh[i].x), Math.abs(m.y - fresh[i].y))));
-        return {
-          placed: shown.map((m) => ({ id: m.id, x: m.x, y: m.y, drawn: m.drawn })),
-          freshGap: shown.length === fresh.length ? gap : Infinity,
-          settles: w.layout.stats.settles,
-          eases: w.eases,
-        };
+    const hook = () => {
+      const w = work.current;
+      if (!w || !useMapStore.getState().input.focus || w.settle) return null;
+      const fresh = layoutMarkers(w.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: w.bounds });
+      const shown = getPlacedMarkers();
+      let gap = 0;
+      shown.forEach((m, i) => (gap = Math.max(gap, Math.abs(m.x - fresh[i].x), Math.abs(m.y - fresh[i].y))));
+      return {
+        placed: shown.map((m) => ({ id: m.id, x: m.x, y: m.y, drawn: m.drawn })),
+        freshGap: shown.length === fresh.length ? gap : Infinity,
+        settles: w.layout.stats.settles,
+        eases: w.eases,
       };
-    }
+    };
+    if (window.__rmr) window.__rmr.markerLayout = hook;
     return () => {
       unsubscribe();
-      if (work.current?.settle) cancelAnimationFrame(work.current.settle.raf);
+      if (work.current) stopSettle(work.current);
+      if (window.__rmr?.markerLayout === hook) delete window.__rmr.markerLayout;
       // A remounted Scene must not hit-test the markers of the previous one.
       setPlacedMarkers([]);
     };
@@ -172,15 +227,29 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
 
   useFrame(() => {
     const store = useMapStore.getState();
-    const { input, hoveredIndex, insetCurrent } = store;
+    const { input, insetCurrent } = store;
     const f = input.focus;
-    const w = (work.current ??= { layout: new MarkerLayout(), anchors: [], bounds: { left: 0, top: 0, right: 0, bottom: 0 }, pos: new Float64Array(0), settle: null, eases: 0, focus: null, focusAt: 0, target: [] });
+    const w = (work.current ??= {
+      layout: new MarkerLayout(),
+      anchors: [],
+      bounds: { left: 0, top: 0, right: 0, bottom: 0 },
+      placed: [],
+      shown: new Float64Array(0),
+      drawn: [],
+      inset: 0,
+      width: 0,
+      height: 0,
+      settle: null,
+      eases: 0,
+      focus: null,
+      focusAt: 0,
+      target: new Float64Array(8),
+      hasTarget: false,
+      asked: false,
+    });
     if (!f) {
       w.focus = null;
-      if (w.settle) {
-        cancelAnimationFrame(w.settle.raf);
-        w.settle = null;
-      }
+      stopSettle(w);
       if (getPlacedMarkers().length) setPlacedMarkers([]);
       return;
     }
@@ -215,57 +284,42 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
     const target = tweenTarget(w, store, width, height);
     const placed = layout.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: b, moving: inMotion(store), target: target ?? undefined });
     const n = placed.length;
-    if (w.pos.length !== 2 * n) w.pos = new Float64Array(2 * n);
-    for (let i = 0; i < n; i++) {
-      w.pos[2 * i] = placed[i].x;
-      w.pos[2 * i + 1] = placed[i].y;
-    }
+    w.placed = placed;
+    w.inset = inset;
+    w.width = width;
+    w.height = height;
+    if (w.shown.length !== 2 * n) w.shown = new Float64Array(2 * n);
 
-    if (w.settle && w.settle.version !== layout.version) {
-      // The layout changed again (a new motion): drop the ease and follow it.
-      cancelAnimationFrame(w.settle.raf);
-      w.settle = null;
-    }
+    // The layout changed again (a new motion): drop the ease and follow it.
+    if (w.settle && w.settle.version !== layout.version) stopSettle(w);
     if (layout.settledFrom && layout.settledFrom.length === 2 * n && !prefersReducedMotion()) {
-      const s: Settle = { placed, from: layout.settledFrom, to: Float64Array.from(w.pos), now: new Float64Array(2 * n), start: performance.now(), version: layout.version, raf: 0 };
+      const to = new Float64Array(2 * n);
+      for (let i = 0; i < n; i++) {
+        to[2 * i] = placed[i].x;
+        to[2 * i + 1] = placed[i].y;
+      }
+      const s: Settle = { from: layout.settledFrom, to, start: performance.now(), version: layout.version, raf: 0 };
       const step = () => {
+        if (w.settle !== s) return;
         const p = Math.min(1, (performance.now() - s.start) / MARKER_SETTLE_MS);
         const e = easeOutCubic(p);
-        for (let i = 0; i < s.now.length; i++) s.now[i] = s.from[i] + (s.to[i] - s.from[i]) * e;
-        writeMarkers(s.placed, s.now);
+        for (let i = 0; i < s.to.length; i++) w.shown[i] = s.from[i] + (s.to[i] - s.from[i]) * e;
+        paint(w);
         if (p < 1) s.raf = requestAnimationFrame(step);
-        else if (w.settle === s) w.settle = null;
+        else w.settle = null;
       };
-      s.now.set(s.from);
+      w.shown.set(s.from);
       s.raf = requestAnimationFrame(step);
       w.settle = s;
       w.eases++;
+    } else if (!w.settle) {
+      for (let i = 0; i < n; i++) {
+        w.shown[2 * i] = placed[i].x;
+        w.shown[2 * i + 1] = placed[i].y;
+      }
     }
-
-    const drawn: PlacedMarker[] = [];
-    for (const it of placed) {
-      const el = getOverlayEl(markerKey(it.id));
-      drawn.push({ ...it, drawn: el?.dataset.hot === 'true' ? it.size * HOT_SCALE : it.size });
-    }
-    // Hover and pick hit-test these boxes (CursorTracker, PickController): the markers take no pointer events.
-    setPlacedMarkers(drawn);
-    // While the covers ease onto a settled layout, the frame draws them where the ease has them.
-    writeMarkers(placed, w.settle ? w.settle.now : w.pos);
-
-    const tip = getOverlayEl('hover');
-    const it = hoveredIndex === null ? undefined : placed.find((p) => p.id === hoveredIndex);
-    if (tip && it) {
-      // Measured by HoverLabel after each content change, so no layout read per frame.
-      const { width: tw, height: th } = getOverlaySize('hover');
-      const area = visibleArea(inset, width, height, TIP_EDGE);
-      const half = (drawn.find((d) => d.id === it.id)?.drawn ?? it.size) / 2;
-      let lx = it.x + half + 14;
-      if (lx + tw > area.right) lx = it.x - half - 14 - tw;
-      lx = clamp(lx, area.left, area.right - tw);
-      const ly = clamp(it.y - th / 2, area.top, area.bottom - th);
-      tip.style.transform = `translate3d(${lx}px, ${ly}px, 0)`;
-      tip.style.opacity = '1';
-    }
+    // While the covers ease onto a settled layout, the frame draws them (and their hit boxes) where the ease is.
+    paint(w);
   });
 
   return null;

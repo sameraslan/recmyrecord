@@ -35,6 +35,8 @@ export interface MapStore {
   lastInteraction: number;
   lastCameraGrab: number;
   dragging: boolean;
+  /** True while two fingers pinch the map (CameraRig). */
+  pinching: boolean;
   animating: boolean;
   /** True while CameraBounds eases the camera back towards the cloud. */
   nudging: boolean;
@@ -54,6 +56,7 @@ export interface MapStore {
   registerInteraction: () => void;
   registerCameraGrab: () => void;
   setDragging: (dragging: boolean) => void;
+  setPinching: (pinching: boolean) => void;
   setAnimating: (animating: boolean) => void;
   setNudging: (nudging: boolean) => void;
   setRigMoving: (rigMoving: boolean) => void;
@@ -72,6 +75,7 @@ export const useMapStore = create<MapStore>()((set, get) => ({
   lastInteraction: 0,
   lastCameraGrab: 0,
   dragging: false,
+  pinching: false,
   animating: false,
   nudging: false,
   rigMoving: false,
@@ -97,6 +101,7 @@ export const useMapStore = create<MapStore>()((set, get) => ({
   registerInteraction: () => set({ lastInteraction: Date.now() }),
   registerCameraGrab: () => set({ lastCameraGrab: Date.now() }),
   setDragging: (dragging) => set({ dragging }),
+  setPinching: (pinching) => set((s) => (s.pinching === pinching ? s : { pinching })),
   setAnimating: (animating) => set((s) => (s.animating === animating ? s : { animating })),
   setNudging: (nudging) => set((s) => (s.nudging === nudging ? s : { nudging })),
   setRigMoving: (rigMoving) => set((s) => (s.rigMoving === rigMoving ? s : { rigMoving })),

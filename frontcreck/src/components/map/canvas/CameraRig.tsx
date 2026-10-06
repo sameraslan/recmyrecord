@@ -148,6 +148,8 @@ export function CameraRig() {
         pinchStartDist.current = dist(pts[0], pts[1]);
         pinchStartZoom.current = camera.zoom;
         pinchActive.current = true;
+        // Published as motion (state/motion.ts), so the focus covers ride through the pinch and settle once.
+        useMapStore.getState().setPinching(true);
         registerCameraGrab();
       }
       // A 3rd+ pointer is ignored: the existing pinch (or pan) continues
@@ -212,6 +214,7 @@ export function CameraRig() {
       if (pointers.current.size < 2) {
         // Pinch ends the moment fewer than two fingers remain.
         pinchActive.current = false;
+        useMapStore.getState().setPinching(false);
       }
 
       if (pointers.current.size === 0) {
@@ -324,6 +327,10 @@ export function CameraRig() {
       canvas.removeEventListener("pointerup", endDrag);
       canvas.removeEventListener("pointercancel", endDrag);
       canvas.removeEventListener("wheel", onWheel);
+      if (pinchActive.current) {
+        pinchActive.current = false;
+        useMapStore.getState().setPinching(false);
+      }
     };
   }, [camera, gl, registerInteraction, registerCameraGrab, setDragging, invalidate]);
 

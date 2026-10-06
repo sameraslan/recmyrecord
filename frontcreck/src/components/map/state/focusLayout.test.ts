@@ -428,6 +428,29 @@ describe('MarkerLayout (layoutMarkers for every drawn frame, steady from frame t
     expect(cache.settledFrom).toBeNull();
   });
 
+  it('keeps a group pressed into a corner steady: no cover jumps more than 30 px beyond its album between frames', () => {
+    const rand = lcg(12);
+    const jump = (prev: { x: number; y: number; ax: number; ay: number }[], cur: readonly MarkerItem[]) =>
+      Math.max(...cur.map((m, i) => Math.hypot(m.x - prev[i].x - (m.ax - prev[i].ax), m.y - prev[i].y - (m.ay - prev[i].ay))));
+    let worst = 0;
+    for (let t = 0; t < 60; t++) {
+      const cache = new MarkerLayout();
+      let a = cluster(rand, 195, 340, 10, 250 + rand() * 350);
+      let prev = cache.layout(a, 64, 46, { bounds }).map((m) => ({ ...m }));
+      const dx = 8 * (rand() < 0.5 ? 1 : -1) * 0.894;
+      const dy = 8 * (rand() < 0.5 ? 1 : -1) * 0.447;
+      for (let f = 0; f < 60; f++) {
+        a = moved(a, dx, dy);
+        const out = cache.layout(a, 64, 46, { bounds, moving: true });
+        expect(outside([...out], bounds), `round ${t}, frame ${f}`).toBe(0);
+        expect(overlaps([...out]), `round ${t}, frame ${f}`).toBe(0);
+        worst = Math.max(worst, jump(prev, out));
+        prev = out.map((m) => ({ ...m }));
+      }
+    }
+    expect(worst).toBeLessThanOrEqual(30);
+  });
+
   it('solves again for other albums, sizes, gap or minimum line', () => {
     const cache = new MarkerLayout();
     const a = cluster(lcg(9), 300, 300, 5);

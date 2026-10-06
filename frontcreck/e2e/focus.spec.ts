@@ -384,3 +384,89 @@ test('an album opens with its covers laid out for the framed view: nothing eases
   expect(open!.eases, 'eases run since the album opened').toBe(0);
   expect(open!.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
 });
+
+test('a pinch with an album open carries the covers and settles them once, after the fingers lift', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'a two-finger pinch is a touch gesture');
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await waitForGasSharpSettled(page);
+  const canvas = page.locator('canvas.map-canvas');
+  const box = (await canvas.boundingBox())!;
+  const cx = box.x + box.width / 2;
+  const cy = box.y + box.height * 0.35;
+  // Synthetic touch pointers: the canvas captures pointers, which needs a real pointer behind it.
+  await canvas.evaluate((c: HTMLCanvasElement) => {
+    c.setPointerCapture = () => {};
+    c.hasPointerCapture = () => false;
+    c.releasePointerCapture = () => {};
+  });
+  const touch = (type: string, id: number, x: number) =>
+    canvas.evaluate(
+      (c, [type, id, x, y]) => c.dispatchEvent(new PointerEvent(type as string, { pointerId: id as number, pointerType: 'touch', clientX: x as number, clientY: y as number, bubbles: true, isPrimary: id === 1, button: 0, buttons: 1 })),
+      [type, id, x, cy] as const,
+    );
+  const before = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+  const z0 = (await camera(page)).zoom;
+  const f0 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await touch('pointerdown', 1, cx - 40);
+  await touch('pointerdown', 2, cx + 40);
+  for (let i = 1; i <= 20; i++) {
+    await touch('pointermove', 1, cx - 40 - i * 5);
+    await touch('pointermove', 2, cx + 40 + i * 5);
+    await page.waitForTimeout(60);
+  }
+  const pinchFrames = (await page.evaluate(() => window.__rmr!.frames ?? 0)) - f0;
+  expect(pinchFrames, 'the pinch drew frames').toBeGreaterThan(10);
+  const during = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+  expect(during, 'no ease runs during the pinch').not.toBeNull();
+  expect(during.settles - before.settles, 'settles during the pinch').toBe(0);
+  await touch('pointerup', 1, cx - 140);
+  await touch('pointerup', 2, cx + 140);
+  await waitForCameraIdle(page);
+  await page.waitForTimeout(400);
+  const after = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+  expect((await camera(page)).zoom, 'the pinch zoomed in').toBeGreaterThan(z0 * 1.5);
+  expect(after.settles - before.settles, 'settles for the whole pinch').toBe(1);
+  expect(after.eases - before.eases, 'eases for the whole pinch').toBeLessThanOrEqual(1);
+  expect(after.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
+});
+
+test('a wheel zoom with an album open draws no frame after it ends', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'a mouse wheel');
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await waitForGasSharpSettled(page);
+  const box = (await page.locator('canvas.map-canvas').boundingBox())!;
+  const extra: number[] = [];
+  for (let r = 0; r < 4; r++) {
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    // Frames drawn in the 400 ms after the frame where the zoom easing ends (isAnimating turns false).
+    const after = page.evaluate(
+      () =>
+        new Promise<number>((done) => {
+          let seen = false;
+          const tick = () => {
+            const moving = window.__rmr!.map!.isAnimating();
+            if (moving) seen = true;
+            if (seen && !moving) {
+              const at = window.__rmr!.frames ?? 0;
+              setTimeout(() => done((window.__rmr!.frames ?? 0) - at), 400);
+              return;
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
+    await page.mouse.wheel(0, r % 2 ? 150 : -150);
+    extra.push(await after);
+    await waitForCameraIdle(page);
+  }
+  expect(extra, 'frames after each wheel zoom ended').toEqual([0, 0, 0, 0]);
+  const rest = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+  expect(rest.freshGap).toBeLessThan(0.01);
+});

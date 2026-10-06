@@ -175,7 +175,7 @@ for (const [name, v] of Object.entries(VIEWS)) {
   const settle = { t: [], worst: null, gap: 0, faultsFresh: 0 };
   for (const [pi, [stop, seed]] of picks.entries()) {
     for (const [kind, frames] of Object.entries(sequences(v, stop, seed))) {
-      const row = (rows[`${kind}${pi === 0 ? ' (worst album)' : ''}`] ??= { cur: [], old: older.map(() => []), jumpNow: [], jumpFresh: [], faults: 0, faultsFresh: 0, frames: 0 });
+      const row = (rows[`${kind}${pi === 0 ? ' (worst album)' : ''}`] ??= { cur: [], old: older.map(() => []), jumpNow: [], jumpFresh: [], jumpOld: older.map(() => []), faults: 0, faultsFresh: 0, frames: 0 });
       const motion = kind !== 'hover';
       const best = new Float64Array(frames.length + 1).fill(Infinity);
       const oldBest = older.map(() => new Float64Array(frames.length).fill(Infinity));
@@ -211,10 +211,13 @@ for (const [name, v] of Object.entries(VIEWS)) {
           rest.forEach((m, i) => (settle.gap = Math.max(settle.gap, Math.abs(m.x - fresh[i].x), Math.abs(m.y - fresh[i].y))));
         }
         older.forEach(({ mod }, oi) => {
+          let prevOld = null;
           frames.forEach((fr, f) => {
             const t1 = performance.now();
-            mod.layoutMarkers(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds });
+            const got = mod.layoutMarkers(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds });
             oldBest[oi][f] = Math.min(oldBest[oi][f], performance.now() - t1);
+            if (run === 0 && prevOld) row.jumpOld[oi].push(jumps(prevOld, got)[0]);
+            prevOld = snap(got);
           });
         });
       }
@@ -239,6 +242,17 @@ for (const [name, v] of Object.entries(VIEWS)) {
       `  steadiness, cover jump beyond its album's move p99 / max: now ${q(jn.map((j) => j[0]), 0.99).toFixed(1)} / ${q(jn.map((j) => j[0]), 1).toFixed(1)} px, fresh every frame ${q(jf.map((j) => j[0]), 0.99).toFixed(1)} / ${q(jf.map((j) => j[0]), 1).toFixed(1)} px;` +
         ` beyond the seed's move: now ${q(jn.map((j) => j[1]), 0.99).toFixed(1)} / ${q(jn.map((j) => j[1]), 1).toFixed(1)} px, fresh ${q(jf.map((j) => j[1]), 0.99).toFixed(1)} / ${q(jf.map((j) => j[1]), 1).toFixed(1)} px`,
     );
+    older.forEach((o, oi) => {
+      if (r.jumpOld[oi].length) console.log(`  steadiness of ${o.name} every frame, beyond its album's move p99 / max: ${q(r.jumpOld[oi], 0.99).toFixed(1)} / ${q(r.jumpOld[oi], 1).toFixed(1)} px`);
+    });
+    if (jn.length) {
+      const nowMax = q(jn.map((j) => j[0]), 1);
+      const nowP99 = q(jn.map((j) => j[0]), 0.99);
+      const others = [jf.map((j) => j[0]), ...r.jumpOld].filter((xs) => xs.length);
+      const bestMax = Math.min(...others.map((xs) => q(xs, 1)));
+      const bestP99 = Math.min(...others.map((xs) => q(xs, 0.99)));
+      if (nowMax > bestMax + 0.05 || nowP99 > bestP99 + 0.05) console.log(`  (!) now jumps more than the steadiest of the others: p99 ${nowP99.toFixed(1)} against ${bestP99.toFixed(1)}, max ${nowMax.toFixed(1)} against ${bestMax.toFixed(1)} px`);
+    }
     console.log(`  frames with an overlap or a cover outside the bounds: now ${r.faults} where a fresh solve has none; fresh solve itself ${r.faultsFresh}`);
   }
   console.log(`settle frame (the motion's end, a fresh solve): n ${settle.t.length}, ${summary(settle.t)}; worst ${settle.worst.kind} of album ${settle.worst.seed} at ${settle.worst.stop}; largest gap to a fresh solve ${settle.gap.toExponential(2)} px`);
