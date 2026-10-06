@@ -1699,13 +1699,16 @@ test('every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside
   await contrastAtBothViews(page, info, isMobile, true);
 });
 
-test('1600 x 1000: every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside its letters, at the Overview and at the Whole map', async ({ page, isMobile }, info) => {
-  test.skip(isMobile, 'a desktop window');
-  // The same measure in the larger of the two desktop windows the review names (item 17): the names are larger
-  // there and lie over other gas.
-  await page.setViewportSize({ width: 1600, height: 1000 });
-  await contrastAtBothViews(page, info, false, true);
-});
+// The same measure in the other desktop windows the review names (item 17): the names are of another size there
+// and lie over other gas. (At 1366 x 768 "Playful Way", a strong name, was at 4.50 to 4.54 on a GPU before strong
+// names had the inner halo, and under 4.5 on one load in six.)
+for (const [w, h] of [[1366, 768], [1440, 790], [1600, 1000]] as const) {
+  test(`${w} x ${h}: every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside its letters, at the Overview and at the Whole map`, async ({ page, isMobile }, info) => {
+    test.skip(isMobile, 'a desktop window');
+    await page.setViewportSize({ width: w, height: h });
+    await contrastAtBothViews(page, info, false, true);
+  });
+}
 
 // Running the contrast tests on a real GPU (the numbers that count: the software renderer draws dimmer gas), by
 // hand and on mains power, one project at a time:
