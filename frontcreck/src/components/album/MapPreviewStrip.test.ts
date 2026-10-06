@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import { gasUrl } from '@/components/map/shaders/gas';
 import { layoutMarkers } from '@/components/map/state/focusLayout';
 import { FRAME_RGB, SKY_RGB, STAR_WHITE } from '@/components/map/theme';
-import { resetDataCache } from '@/lib/data/client';
 import type { ThemeData, ThemeGas } from '@/lib/data/theme';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumRecord } from '@/lib/types';
@@ -18,6 +17,7 @@ import {
   STRIP_STAR_ALPHA,
   STRIP_STAR_PX,
   drawStrip,
+  forgetStripGas,
   gasCopySize,
   loadStripGas,
   stripGasUrl,
@@ -179,7 +179,7 @@ describe('the strip’s gas image', () => {
   let copyCtx: ReturnType<typeof fakeCtx>;
 
   beforeEach(() => {
-    resetDataCache(); // forgets the copies of earlier tests
+    forgetStripGas(); // forgets the copies of earlier tests
     copyCtx = fakeCtx();
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => copyCtx.ctx as never);
   });

@@ -7,7 +7,6 @@ import { MARKER_GAP, layoutMarkers } from '@/components/map/state/focusLayout';
 import { FRAME_RGB, SKY_RGB, STAR_WHITE } from '@/components/map/theme';
 import { COPY } from '@/lib/copy';
 import { coverUrl } from '@/lib/data/catalog';
-import { registerReset } from '@/lib/data/client';
 import { loadTheme, themeFor } from '@/lib/data/theme';
 import type { ThemeGas } from '@/lib/data/theme';
 import { useCatalog, usePositions } from '@/lib/data/useData';
@@ -111,7 +110,9 @@ async function canvasCopy(url: string, px: readonly [number, number]): Promise<H
 }
 
 const gasCopies = new Map<string, Promise<CanvasImageSource>>();
-registerReset(() => gasCopies.clear());
+/** Tests only. Not registered with lib/data/client's reset: importing that module here reorders the shared
+ * first-load chunk (the same code, 16 B more gzip). */
+export const forgetStripGas = (): void => gasCopies.clear();
 
 /** The small copy of a stop's gas image, made once per image (the hash is in the URL) and kept for the page's
  * life, whichever strip asked first. */
