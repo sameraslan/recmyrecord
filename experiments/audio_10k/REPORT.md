@@ -1,11 +1,12 @@
 # Audio 10k: why CLAP keeps Deezer and Apple albums apart, and what removes it
 
-5 October 2026. **Finished, except that nobody has listened.** Branch `feat/audio-10k` (draft PR #31). Sections 3.1 to 3.3 are as written on 4 October. 3.4 (the fix on 250 catalog albums, 4 October) and 3.5 (the whole catalog on the final store, 5 October) were added after them.
+5 October 2026. **Finished. The owner listened on 5 October and chose EffNet over CLAP (section 3.6).** Branch `feat/audio-10k` (draft PR #31). Sections 3.1 to 3.3 are as written on 4 October. 3.4 (the fix on 250 catalog albums, 4 October), 3.5 (the whole catalog on the final store, 5 October) and 3.6 (the listening and the EffNet store, 5 October) were added after them.
 
 The files call the Apple store `iTunes`. It is the same thing.
 
 ## 1. Verdict
 
+- **The owner's verdict, by ear (5 October): EffNet, not CLAP.** With the store effect fixed, he listened through the page of lists and EffNet's sounded closer to the seed. The RYM-based proxies point the same way on the same 10,235 albums: `genre_primary` 0.241 for EffNet and 0.197 for CLAP, never recommended 0.8% and 2.1% (3.6). The rest of this verdict is about the CLAP store effect and stands as written.
 - **The check that matters, on the final store (5 October): Deezer-sourced and Apple-sourced albums now mix at about the genre make-up rate, and YouTube-sourced albums are not left out of lists.** A Deezer seed's ten nearest albums are 24.9% Apple-sourced where the make-up of its genre would give 26.7% (n 6,473 seeds). An Apple seed's are 35.0% Apple-sourced against a make-up of 34.8% (n 2,893). Before the fix, new Deezer seeds got 2.3% and new Apple seeds 91.7% (n 2,869 and 2,730). YouTube-sourced albums (n 869) are in 9.7 lists on average and 2.2% are in none (Deezer 10.1 and 2.2%, Apple 9.8 and 1.9%).
 - **What remains: YouTube seeds lean towards YouTube albums.** 31.2% of their neighbours are YouTube-sourced against a make-up of 20.9% (n 869). The YouTube albums are also a different population (albums no store carries), so these numbers cannot say how much of the lean is the audio.
 - **What remains: a probe still reads the store.** On the full 512-number vectors a linear probe tells Apple-sourced from Deezer-sourced new albums with AUC 0.893 (n 2,675 / 2,815). It was 0.998. EffNet gives 0.670, and year, rank and genre alone 0.639. It does not show in the lists.
@@ -13,8 +14,8 @@ The files call the Apple store `iTunes`. It is the same thing.
 - **The cause is the encoding.** Deezer previews are 128 kbit/s stereo MP3 and Apple's are AAC at about 272 kbit/s. CLAP reads the difference in its top mel bands, 12 to 14 kHz. It is not the excerpt and not loudness (349 tracks fetched from both stores, 120 albums).
 - **The fix adopted: a stereo MP3 round trip before CLAP, for every clip that is not from Deezer.** In the clip cache it is the model `clap_mp3`. The Apple clips, about 11,600, and the YouTube albums were fetched again for it, because audio is never stored. Deezer clips are unchanged.
 - **Measured and not adopted: a linear map on the stored Apple vectors, fitted on the pairs.** It needs no downloads and closed about 85% of the gap, but about ten points remained on the Apple side, and it cannot be applied to YouTube audio.
-- **What to ship.** The CLAP store is written from `clap_mp3`: 10,235 of the 10,467 albums (Deezer 6,473, Apple 2,893, YouTube 869). Whether CLAP replaces EffNet on the site is the owner's decision after listening. The build switch still says EffNet.
-- **Main caveat.** Every number is a probe on stored vectors or an RYM-based proxy. Nobody listened to anything, and there is no held-out test split.
+- **What to ship.** The 10k EffNet store, `data-pipeline/audio/effnet10k/`: 10,237 of the 10,467 albums (Deezer 6,475, Apple 2,893, YouTube 869), four clips per album, written from the clip cache on 5 October. The CLAP store (from `clap_mp3`, 10,235 albums) stays on the branch and is not what the site will use. Nothing is shipped yet: the site data is still built from `data-pipeline/audio/` (3,980 albums), and pointing the build at the new store waits for the owner's go-ahead.
+- **Main caveat.** Every number is a probe on stored vectors or an RYM-based proxy, and there is no held-out test split. The listening was one pass by the owner over 38 seeds with the columns labelled: a judgement, not a measurement.
 
 ## 2. Data, split, metrics
 
@@ -145,9 +146,42 @@ Takeaway:
 - The store probe is still at 0.893, above EffNet (0.670), above year, rank and genre alone (0.639) and above the pair map of 3.3 (0.804). On the 250 albums of 3.4 it read 0.776: with ten times the Apple albums to learn from it finds more. Something of the store, or of which albums each store has, is left in the vectors. It does not reach the lists: removing up to eight store directions from the vectors moves the Apple shares of new Deezer and new Apple seeds by less than half a point (section 6 of the result file).
 - The same-recording check of 3.1 was not repeated. The 16 doubles have no `clap_mp3` vectors. The one album the cache now holds from both stores (`Album1039131`) is a corrected listing: the two listings are different recordings.
 
+### 3.6 The listening, and EffNet against CLAP on the same albums, 5 October (`results/sonic_measures.clap_mp3.md`)
+
+**The listening.** The owner went through `results/listening.html`: 38 seeds (the 23 of the earlier pages and 15 new chart albums), each with its ten nearest albums by CLAP (the `clap_mp3` store) and by EffNet side by side, the columns labelled. He chose EffNet: its lists sounded closer to the seed. An example of a CLAP miss: for My Bloody Valentine's Loveless, CLAP's second album is Scorpions' World Wide Live, a hard rock record; EffNet's first four are m b v, Alison's Halo, Slowdive and Verve. This is one person's judgement of one page, not a measurement.
+
+**The store.** The EffNet lists he heard came from a stand-in: four-clip means of the clip cache through a PCA fitted on the albums with both models. The 10k EffNet store was written afterwards from the same clips (`data-pipeline/audio/effnet10k/`, 10,237 albums, transform fitted on all of them). Its lists are the same ten albums in the same order for all 38 seeds, and over the 10,235 albums in both they share 9.99 of 10 with the stand-in's (98.8% of the lists hold the same ten).
+
+**The proxies**, RYM-based, on stored vectors. Same albums, labels and candidates for the two rows of a pool:
+
+| Pool | Block | n | `genre_primary` | `genre_any` | `genre_family` | `desc_jaccard` | `genre_primary`, artist removed | Never recommended | Max N10 | N10 skew |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Albums in both stores | EffNet | 10,235 | 0.241 | 0.429 | 0.643 | 0.200 | 0.212 | 0.8% | 48 | 0.95 |
+| Albums in both stores | CLAP | 10,235 | 0.197 | 0.362 | 0.601 | 0.194 | 0.166 | 2.1% | 62 | 1.24 |
+| The site's albums only | EffNet | 4,037 | 0.245 | 0.427 | 0.664 | 0.208 | 0.208 | 0.6% | 37 | 0.79 |
+| The site's albums only | CLAP | 4,037 | 0.197 | 0.354 | 0.624 | 0.200 | 0.159 | 1.8% | 57 | 1.24 |
+| Ten random albums (floor) | | 10,235 | 0.008 | 0.022 | 0.114 | 0.064 | | | | |
+
+The two models' lists share 2.1 albums of 10 on average. Over its own store (10,237 albums) EffNet's row is the first one to the digits shown.
+
+EffNet's lists by audio source, every album of its store. In brackets the make-up, as in 3.5:
+
+| Seeds | n | Deezer neighbours | Apple neighbours | YouTube neighbours | Mean N10 | Never recommended |
+|---|---|---|---|---|---|---|
+| Deezer-sourced | 6,475 | 68.0% (66.3%) | 24.3% (26.7%) | 7.7% (7.0%) | 10.1 | 0.7% |
+| Apple-sourced | 2,893 | 58.8% (57.5%) | 33.0% (34.8%) | 8.2% (7.7%) | 9.5 | 1.1% |
+| YouTube-sourced | 869 | 51.2% (52.3%) | 24.4% (26.8%) | 24.4% (20.9%) | 10.9 | 1.0% |
+
+Takeaway:
+
+- The ear and the proxies agree: EffNet's neighbours share RYM genres and descriptors more often than CLAP's on the same albums, and fewer albums are in no list.
+- A higher genre match is not better by itself. The proxies were not what decided it.
+- EffNet's lists mix the three sources at about the make-up. YouTube seeds get 3.5 points more YouTube neighbours than the make-up, where CLAP's get about ten (3.5).
+- The new store is not the store the site data is built from. For the site's albums it has four clips where `data-pipeline/audio/` has up to eight: the cosine between the two vectors has a median of 0.979 (n 3,978), and it is under 0.9 for 82 albums, of which 59 are now on YouTube windows, 6 are hand-corrected listings (the seventh is at 0.951) and 17 differ only by the clips: for those the cache's eight-clip mean is the old vector exactly.
+
 ### Also in this folder
 
-`results/sonic_measures.md` (`measure.py`, 4 October): RYM-based proxy measures of the CLAP block as first stored. It is where the gap between new and existing albums first showed. `listening_page.py` writes a local page of lists for the owner to listen through, now built on the `clap_mp3` store. Nobody has listened yet.
+`results/sonic_measures.md` (`measure.py`, 4 October): RYM-based proxy measures of the CLAP block as first stored. It is where the gap between new and existing albums first showed. `listening_page.py` writes a local page of lists for the owner to listen through: EffNet first, from the 10k EffNet store, and CLAP second, from the `clap_mp3` store.
 
 ## 4. Final results
 
@@ -174,7 +208,7 @@ There is no held-out test score. The numbers to carry forward, each a proxy:
 
 Limitations, most important first:
 
-1. Nobody listened. The proxies cannot say whether the lists sound right, or whether CLAP's top bands were good for something.
+1. The listening was one pass by the owner over 38 seeds, with the columns labelled (3.6). Everything else is a proxy, which cannot say whether the lists sound right, or whether CLAP's top bands were good for something.
 2. Everything in 3.5 is a whole-catalog description on stored vectors. There is no held-out split and no interval.
 3. A probe still reads the store at 0.893 (3.5). The numbers cannot say whether that is store signal left over or a real difference between the albums each store has.
 4. YouTube seeds lean towards YouTube albums by about ten points. The population differs, and no same-track pair between YouTube and a store exists to tell audio from music.
@@ -184,7 +218,7 @@ Limitations, most important first:
 
 Ideas not run, most useful first:
 
-1. **A listening pass.** Needs the owner and the page of `listening_page.py`.
+1. **A listening pass.** Done on 5 October (3.6). A second listener, or columns without labels, would make it firmer.
 2. **A same-store control**: Deezer albums with an Apple link against Deezer albums without, matched on genre and decade. No downloads. Says whether the remaining 0.893 is the albums and not the store.
 3. **Same-track pairs between YouTube and a store.** Needs albums that have both, fetched from both. Says whether the YouTube lean is the audio.
 4. **The 16 doubles under `clap_mp3`.** Needs their Apple clips fetched again. Repeats the same-recording check of 3.1 on the final recipe.
@@ -213,7 +247,14 @@ nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/
 PYTHONDONTWRITEBYTECODE=1 nice -n 19 <build venv python> measure.py --model clap_mp3 --clap-dir ../../data-pipeline/audio/clap   # results/sonic_measures.clap_mp3.*
 PYTHONDONTWRITEBYTECODE=1 nice -n 19 <build venv python> source_effect.py --model clap_mp3   # results/source_effect.clap_mp3.*, about 6 minutes
 PYTHONDONTWRITEBYTECODE=1 nice -n 19 <build venv python> listening_page.py    # results/listening.html
+
+# 3.6, the 10k EffNet store. From data-pipeline/:
+nice -n 19 .venv/bin/python -m rmr_audio.modelstore write --model effnet --audio-dir audio/effnet10k --clips 4 --exclude Album999417,Album739618
+nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/effnet10k
+# then the measure.py --model clap_mp3 and listening_page.py lines above again: both read audio/effnet10k when it is there
 ```
+
+`measure.py` and `listening_page.py` take `--effnet-dir` (default `data-pipeline/audio/effnet10k`). `--effnet-stand-in` gives the EffNet rows and lists of before that store was written, named `effnet_4clip`: four-clip means of the clip cache through a PCA fitted on the albums with both models.
 
 `store_effect_fix.py run` and the pipeline's embedding commands use the network and a model. They resume, and should run on mains power. The others read stored vectors.
 
@@ -236,12 +277,12 @@ PYTHONDONTWRITEBYTECODE=1 nice -n 19 <build venv python> listening_page.py    # 
 
 | File | What |
 |---|---|
-| `sonic.py`, `measure.py` | Blocks, nearest albums, and the proxy measures. With `--model clap_mp3 --clap-dir` the other half of 3.5 |
+| `sonic.py`, `measure.py` | Blocks, nearest albums, and the proxy measures. With `--model clap_mp3 --clap-dir` the other half of 3.5, and the tables of 3.6 |
 | `source_effect.py` | Experiment 3.1, and with `--model clap_mp3` half of 3.5 |
 | `store_effect_fix.py`, `store_effect_fetch.py`, `store_effect_dsp.py`, `store_effect_report.py`, `store_effect_md.py` | Experiment 3.2: the run, the fetcher, the variants, the report |
 | `pair_map_check.py` | Experiment 3.3 |
 | `mp3_variant_check.py` | Experiment 3.4 |
-| `listening_page.py` | The local listening page (`results/listening.html`, not committed) |
+| `listening_page.py` | The local listening page (`results/listening.html`, not committed): EffNet first, CLAP second |
 | `results/*.md`, `results/*.json` | Result tables and the numbers behind them. `*.clap_mp3.*` are the final store (5 October); the same names without it are before the fix (4 October) |
 
 **Where this differs from `experiments/README.md`.** The folder is on `feat/audio-10k`, not on an `experiment/` branch, because it reads the catalog, the clip cache and pipeline modules that exist only on that branch. PR #31 also changes pipeline code, so it waits for the owner. This report and the result files can go to `main` in a documents-only PR, with a row in the `CLAUDE.md` index (that file is on `main`, not on this branch). Experiment 3.5 needed the store written first, which is a pipeline step. The stereo round trip itself now lives in the pipeline (`data-pipeline/rmr_audio/mp3trip.py`), and the experiment imports it from there.

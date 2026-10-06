@@ -1,5 +1,5 @@
-"""A local listening page: for about 40 seed albums, the ten nearest albums by the CLAP block over the whole
-catalog, next to the ten nearest by EffNet where the seed has both.
+"""A local listening page: for about 40 seed albums, the ten nearest albums by the EffNet block over the
+whole catalog, next to the ten nearest by CLAP where the seed has both.
 
     cd experiments/audio_10k
     nice -n 19 <build venv python> listening_page.py     -> results/listening.html (one static file)
@@ -10,12 +10,14 @@ Nothing is embedded, fetched or downloaded, and the page loads nothing from the 
 Seeds: the 23 of the earlier listening pages (evaluate.SEEDS of experiments/preview_features, Bitches Brew
 among them), named here by the feature table's Spotify URI, which the catalog keeps as `legacy_uri` whatever
 the album's key becomes; then NEW_SEEDS (15) new chart albums spread evenly over chart rank among the new
-albums with CLAP audio. A seed without CLAP audio is listed as such.
+albums of the EffNet store. A seed without audio is listed as such.
 
 Lists: the block alone, euclidean, the seed excluded, the seed artist's other albums kept (as the site shows
-them). CLAP: the committed store through its transform, every catalog album with CLAP audio as a candidate.
-EffNet: four-clip means from the clip cache through a PCA fitted on the albums with both models (sonic.py) —
-not the site's current lists, which use up to eight clips and only the site's albums.
+them). Each store through its own transform, every album it holds as a candidate. EffNet, the first column:
+the 10k catalog's store (--effnet-dir, data-pipeline/audio/effnet10k, four clips) — not the site's current
+lists, which use up to eight clips and only the site's albums. CLAP, the second: the committed CLAP store.
+--effnet-stand-in (and a missing EffNet store) gives the EffNet column of before that store was written:
+four-clip means from the clip cache through a PCA fitted on the albums with CLAP audio (sonic.effnet_block).
 """
 import argparse
 import datetime
@@ -107,7 +109,7 @@ def album_line(row: dict, new: bool) -> str:
 
 
 def new_seeds(albums: sonic.Albums, n: int = NEW_SEEDS) -> list[int]:
-    """n new on-chart albums with CLAP audio, evenly spread over chart rank."""
+    """n new on-chart albums of `albums`, evenly spread over chart rank."""
     rank = lambda i: int(albums.rows[i]["rank"])  # noqa: E731
     pool = sorted((i for i in np.flatnonzero(albums.new) if albums.rows[i]["on_chart"] == "1" and albums.rows[i]["rank"].isdigit()),
                   key=lambda i: (rank(i), albums.rows[i]["rym_id"]))
@@ -116,63 +118,80 @@ def new_seeds(albums: sonic.Albums, n: int = NEW_SEEDS) -> list[int]:
     return [int(pool[int((j + 0.5) * len(pool) / n)]) for j in range(n)]
 
 
-def page(catalog: Path, clap_dir: Path, cache_db: Path) -> str:
-    albums, clap = sonic.load_albums(catalog, clap_dir)
-    pos, effnet = sonic.effnet_block(albums, cache_db)
-    clap_lists = sonic.nearest(clap)
-    eff_lists = pos[sonic.nearest(effnet)]  # as positions in `albums`
-    eff_row = {int(p): i for i, p in enumerate(pos)}
-    by_uri = {r["legacy_uri"]: i for i, r in enumerate(albums.rows) if r["legacy_uri"]}
-    all_rows = {r["legacy_uri"]: r for r in sonic.read_catalog(catalog) if r["legacy_uri"]}
+def page(catalog: Path, clap_dir: Path, cache_db: Path, effnet_dir: Path | None = None) -> str:
+    """`effnet_dir`: the EffNet store; None for the stand-in (sonic.effnet_block)."""
+    calbums, clap = sonic.load_albums(catalog, clap_dir)
+    if effnet_dir:
+        ealbums, effnet = sonic.load_albums(catalog, effnet_dir)
+        eff_keys, first, effnet_title = ealbums.keys, ealbums, "EffNet (4 clips)"
+    else:
+        pos, effnet = sonic.effnet_block(calbums, cache_db)
+        eff_keys, first, effnet_title = calbums.keys[pos], calbums, "EffNet stand-in (4 clips, from the cache)"
+    lists = {"EffNet": dict(zip(eff_keys.tolist(), eff_keys[sonic.nearest(effnet)].tolist())),  # key -> its ten, as keys
+             "CLAP": dict(zip(calbums.keys.tolist(), calbums.keys[sonic.nearest(clap)].tolist()))}
+    table = {r["rym_id"]: r for r in sonic.read_catalog(catalog)}
+    is_new = lambda key: not table[key]["legacy_uri"]  # noqa: E731
+    audio = {k: (int(n), str(s).split(":")[0]) for a in (calbums, first) for k, n, s in zip(a.keys.tolist(), a.n_clips, a.source)}
+    by_uri = {r["legacy_uri"]: k for k, r in table.items() if r["legacy_uri"] and k in audio}
+    all_rows = {r["legacy_uri"]: r for r in table.values() if r["legacy_uri"]}
 
-    def column(title: str, items) -> str:
-        if items is None:
-            return f'<div><h3>{title}</h3><p class="none">no EffNet clips for this album</p></div>'
-        body = "".join(f'<li><span class="n">{k}</span>{album_line(albums.rows[i], bool(albums.new[i]))}</li>'
-                       for k, i in enumerate(items, start=1))
+    def column(model: str, title: str, seed: str) -> str:
+        if seed not in lists[model]:
+            return f'<div><h3>{title}</h3><p class="none">no {model} audio for this album</p></div>'
+        body = "".join(f'<li><span class="n">{n}</span>{album_line(table[k], is_new(k))}</li>'
+                       for n, k in enumerate(lists[model][seed], start=1))
         return f"<div><h3>{title}</h3><ol>{body}</ol></div>"
 
     sections, toc = [], []
-    seeds = [(by_uri.get(uri), uri, artist, title) for uri, artist, title in SEEDS] + [(i, "", "", "") for i in new_seeds(albums)]
-    for n, (i, uri, artist, title) in enumerate(seeds, start=1):
+    seeds = ([(by_uri.get(uri), uri, artist, title) for uri, artist, title in SEEDS]
+             + [(str(first.keys[i]), "", "", "") for i in new_seeds(first)])
+    for n, (key, uri, artist, title) in enumerate(seeds, start=1):
         anchor = f"s{n}"
-        if i is None:
+        if key is None:
             row = all_rows.get(uri)
             name = f"{row['artist']} — {row['title']}" if row else f"{artist} — {title}"
-            why = "no CLAP audio" if row else "not in the catalog"
+            why = "no audio" if row else "not in the catalog"
             toc.append(f'<a href="#{anchor}">{e(name)} <span class="none">({why})</span></a>')
             sections.append(f'<section id="{anchor}"><h2>{e(name)}</h2><p class="sub">{why}</p>'
                             + (f'<div class="links">{links(row)}</div>' if row else "") + "</section>")
             continue
-        row, new = albums.rows[i], bool(albums.new[i])
+        row, new = table[key], is_new(key)
         tag = '<span class="new">new</span>' if new else ""
-        clips = f"{int(albums.n_clips[i])} clip{'s' if albums.n_clips[i] != 1 else ''}, {e(str(albums.source[i]).split(':')[0])}"
+        clips = f"{audio[key][0]} clip{'s' if audio[key][0] != 1 else ''}, {e(audio[key][1])}"
         toc.append(f'<a href="#{anchor}">{e(row["artist"])} — {e(row["title"])}{tag}</a>')
         sections.append(
             f'<section id="{anchor}"><h2>{e(row["artist"])} — {e(row["title"])}{tag}</h2>'
             f'<p class="sub">{facts(row, new)} · {clips}</p><div class="links">{links(row)}</div>'
-            f'<div class="lists">{column("CLAP, 10 nearest", clap_lists[i].tolist())}'
-            f'{column("EffNet (4 clips), 10 nearest", eff_lists[eff_row[i]].tolist() if i in eff_row else None)}</div></section>')
-    held = sonic.load_store(clap_dir)  # which CLAP variant the lists are from: the manifest's model id
-    store = f"CLAP store: {held.manifest['model']}, {len(held.keys):,} albums."
-    meta = (f"Generated {datetime.date.today().isoformat()}. {len(albums):,} of {albums.catalog_size:,} catalog albums have CLAP "
-            f"audio ({int(albums.new.sum()):,} new); {len(pos):,} have both models. Audio block alone, euclidean, seed excluded, "
-            "seed's artist kept. Links only.")
+            f'<div class="lists">{column("EffNet", f"{effnet_title}, 10 nearest", key)}'
+            f'{column("CLAP", "CLAP, 10 nearest", key)}</div></section>')
+    stores = [f"{model} store: {held.manifest['model']}, {len(held.keys):,} albums."  # which store each column is from
+              for model, held in (("EffNet", effnet_dir and sonic.load_store(effnet_dir)), ("CLAP", sonic.load_store(clap_dir))) if held]
+    if not effnet_dir:
+        stores.insert(0, f"EffNet: no store; the stand-in, four-clip means of the clip cache, {len(eff_keys):,} albums.")
+    both = len(set(lists["EffNet"]) & set(lists["CLAP"]))
+    meta = (f"Generated {datetime.date.today().isoformat()}. Of {first.catalog_size:,} catalog albums {len(eff_keys):,} have EffNet "
+            f"audio ({sum(map(is_new, eff_keys.tolist())):,} new) and {len(calbums):,} CLAP audio; {both:,} have both. Each list's "
+            "candidates are every album of its own store. Audio block alone, euclidean, seed excluded, seed's artist kept. "
+            "Links only.")
+    head = "".join(f'<p class="meta">{e(x)}</p>' for x in [*stores, meta])
     return ("<!doctype html>\n<html lang=\"en\"><head><meta charset=\"utf-8\">"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
-            f"<title>Listening lists: CLAP and EffNet</title><style>{CSS}</style></head><body><main>"
-            f"<h1>Listening lists: CLAP and EffNet</h1><p class=\"meta\">{e(store)}</p><p class=\"meta\">{e(meta)}</p>"
-            f"<nav>{''.join(toc)}</nav>{''.join(sections)}</main></body></html>\n")
+            f"<title>Listening lists: EffNet and CLAP</title><style>{CSS}</style></head><body><main>"
+            f"<h1>Listening lists: EffNet and CLAP</h1>{head}<nav>{''.join(toc)}</nav>{''.join(sections)}</main></body></html>\n")
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--catalog", type=Path, default=sonic.DEFAULT_CATALOG)
     p.add_argument("--clap-dir", type=Path, default=sonic.STORES["clap"])
+    p.add_argument("--effnet-dir", type=Path, default=sonic.default_effnet_dir(),
+                   help="The EffNet store (default: audio/effnet10k when it is written and fitted).")
+    p.add_argument("--effnet-stand-in", action="store_true",
+                   help="The EffNet column of before that store: four-clip means of the cache, a PCA fitted here.")
     p.add_argument("--cache", type=Path, default=sonic.DEFAULT_CACHE_DB, help="The one-pass clip cache (opened read-only).")
     p.add_argument("--out", type=Path, default=RESULTS / "listening.html")
     args = p.parse_args(argv)
-    text = page(args.catalog, args.clap_dir, args.cache)
+    text = page(args.catalog, args.clap_dir, args.cache, None if args.effnet_stand_in else args.effnet_dir)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(text, encoding="utf-8")
     print(f"wrote {args.out} ({args.out.stat().st_size / 1024:.0f} kB)")

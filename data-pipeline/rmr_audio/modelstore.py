@@ -1,11 +1,12 @@
-"""A committed store for one embedding model, written whole from the one-pass clip cache: today the CLAP
-store, data-pipeline/audio/clap/ (embeddings/, manifest.json; its transform.npz is fitted afterwards by
-`python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap`).
+"""A committed store for one embedding model, written whole from the one-pass clip cache: the CLAP store,
+data-pipeline/audio/clap/, and the 10k catalog's EffNet store, data-pipeline/audio/effnet10k/ (embeddings/,
+manifest.json; the transform.npz is fitted afterwards by
+`python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap`, or `audio/effnet10k`).
 
-  python -m rmr_audio.modelstore write  [--model clap|clap_mp3] [--clips 4] [--cache SQLITE] [--catalog CSV]
+  python -m rmr_audio.modelstore write  [--model clap|clap_mp3|effnet] [--clips 4] [--cache SQLITE] [--catalog CSV]
                                         [--matches CSV] [--overrides JSON] [--keys-csv CSV] [--audio-dir DIR]
                                         [--exclude KEY[,KEY...]] [--dry-run]
-  python -m rmr_audio.modelstore status [--model clap|clap_mp3] [--audio-dir DIR] [--catalog CSV]
+  python -m rmr_audio.modelstore status [--model clap|clap_mp3|effnet] [--audio-dir DIR] [--catalog CSV]
                                         [--exclude KEY[,KEY...]]
 
 --model clap_mp3 writes the store from the cache's `clap_mp3` rows (the variant of rmr_audio.mp3trip; its
@@ -13,13 +14,17 @@ Deezer clips are the clap vectors, copied by `rmr_audio.onepass copy`). It has n
 own, so --audio-dir must say where (audio/clap to put it in the CLAP store's place, or any other folder
 to look at it first); its manifest names the variant as the model.
 
+--model effnet writes a store from the cache's `effnet` rows, pooled as below. It needs --audio-dir too
+(audio/effnet10k): EffNet's own folder is audio/, the store the site data is built from, which
+`rmr_audio sync` writes and this never does.
+
 `write` reads the cache strictly read-only (`mode=ro`; another job may be writing to it), the catalog
 table, matches.csv and match_overrides.json as they are when it runs, and makes the store exactly the
 catalog's albums that have an ok clip for the model, in catalog order. `--exclude` leaves the albums it
 names out of the store (an album whose only audio is of another record); the summary line names them, and
 `status --exclude` says whether they are in a store. It can be run again at any time: a store that already
 holds exactly that is not touched, anything else is replaced whole (audio_store.replace_store). It never
-writes the EffNet store, matches.csv or keys.csv. No model is loaded and nothing is downloaded: numpy only,
+writes audio/ itself (the site's EffNet store), matches.csv or keys.csv. No model is loaded and nothing is downloaded: numpy only,
 so it runs in the build venv as well as the audio venv.
 
 The pooling rule (OnePassCache.means, pool `rank`):
@@ -179,6 +184,8 @@ def write(model: str = "clap", clips: int = CLIPS, cache_db: Path = DEFAULT_CACH
 def store_dir(model: str, audio_dir: Path | None) -> Path:
     if audio_dir is not None:
         return Path(audio_dir)
+    if model == "effnet":  # STORES["effnet"] is audio/, which `rmr_audio sync` writes
+        raise StoreError("effnet's own store is audio/, the site's: say where with --audio-dir (audio/effnet10k)")
     if model not in STORES:
         raise StoreError(f"{model} has no committed store of its own: say where with --audio-dir")
     return STORES[model]
@@ -206,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m rmr_audio.modelstore",
                                 description="A model's committed store, written whole from the one-pass clip cache.")
     p.add_argument("cmd", choices=("write", "status"))
-    p.add_argument("--model", choices=tuple(m for m in MODELS if m != "effnet"), default="clap")
+    p.add_argument("--model", choices=tuple(MODELS), default="clap")
     p.add_argument("--clips", type=int, default=CLIPS, help="Clips per album (default 4, the standard).")
     p.add_argument("--cache", type=Path, default=DEFAULT_CACHE_DB, help="The one-pass cache (opened read-only).")
     p.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG, help="The catalog table (catalog/albums.csv).")
@@ -216,7 +223,7 @@ def main(argv: list[str] | None = None) -> int:
                    help="The listings forced by hand: they come before the ones --matches names.")
     p.add_argument("--keys-csv", type=Path, default=DEFAULT_AUDIO / "keys.csv",
                    help="Follows a cache key the catalog no longer has to the album's current key.")
-    p.add_argument("--audio-dir", type=Path, default=None, help="The store to write (default: audio/<model>).")
+    p.add_argument("--audio-dir", type=Path, default=None, help="The store to write (default: audio/clap for clap; the others have none).")
     p.add_argument("--exclude", default="", metavar="KEY[,KEY...]",
                    help="write: albums to leave out of the store. status: say whether they are in it.")
     p.add_argument("--dry-run", action="store_true", help="Print what would be written; write nothing.")

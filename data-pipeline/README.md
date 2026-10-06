@@ -54,6 +54,29 @@ The store began as 3,944 albums with four clips each, migrated from the experime
 
 Every file of the store is written under a temporary name and renamed into place, and a shard is in place before the manifest lists it. A crash leaves at worst a temporary file or an unlisted shard; the store still loads, `rmr_audio status` names the leftovers, and the next `sync` or `compact` removes them.
 
+### The 10k EffNet store (`data-pipeline/audio/effnet10k/`)
+
+The owner listened on 5 October 2026 and chose EffNet over CLAP for the 10k catalog. `audio/effnet10k/` is the Discogs-EffNet store for the whole catalog: 10,237 of the 10,467 albums (Deezer 6,475, Apple 2,893, YouTube 869), four clips per album, with its own `embeddings/`, `manifest.json` and `transform.npz`. It shares `keys.csv`, `matches.csv` and `match_overrides.json` with `audio/`. Like the CLAP store below it is written whole from the one-pass clip cache, by the same command and the same pooling rule, and can be written again at any time:
+
+```bash
+cd data-pipeline
+nice -n 19 .venv/bin/python -m rmr_audio.modelstore write --model effnet --audio-dir audio/effnet10k --clips 4 --exclude Album999417,Album739618
+nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/effnet10k   # audio/effnet10k/transform.npz
+.venv/bin/python -m rmr_audio.modelstore status --model effnet --audio-dir audio/effnet10k --exclude Album999417,Album739618
+```
+
+`--model effnet` needs `--audio-dir`. `write` refuses `audio/` itself, whatever the model: that store is `rmr_audio sync`'s. `--exclude` is as for the CLAP store, and has to be passed on every write.
+
+`audio/` and the site build are untouched. The site data is still built from `audio/`: 3,980 albums at up to eight clips, with a transform fitted on the site's albums. For the albums still on preview clips the cache's eight-clip means are the vectors of `audio/` bit for bit, except the seven whose listing was corrected by hand. So the new store differs from `audio/` by the clip count (four, not eight), by the seven corrected listings and by the 100 albums that are now on YouTube windows. The cosine between the two stores' vectors has a median of 0.979 over the 3,978 albums in both.
+
+A switch would need:
+
+- a build pointed at the store: `SITE_MODEL = "effnet10k"` in `rmr_pipeline/audio_store.py`, or `--audio-dir audio/effnet10k`. `audio_block` already reads it: 4,039 of the site's 4,081 albums have audio there;
+- `tests/fixtures/audio_reference.npz` recorded again, because every existing album's block changes (other clips, a transform fitted on the whole catalog);
+- the site data rebuilt and committed, with what the new albums still need (issue #39).
+
+None of that is done.
+
 ### The CLAP store (`data-pipeline/audio/clap/`) and the switch
 
 A store holds one model's embeddings; its manifest names the model and the width (`dim`), and `audio_store.py` checks every shard and the transform against it. `audio/` is the Discogs-EffNet store (1,280 numbers per album). `audio/clap/` is the store of `laion/larger_clap_music_and_speech` (512), with its own `embeddings/`, `manifest.json` and `transform.npz`. It is written from the clip cache's `clap_mp3` rows (the variant below), so its manifest names the model as `laion/larger_clap_music_and_speech+mp3-128k-stereo`. It shares `keys.csv`, `matches.csv` and `match_overrides.json` with the store it sits in.
@@ -68,6 +91,8 @@ nice -n 19 .venv/bin/python -m rmr_audio.modelstore write --model clap_mp3 --aud
 nice -n 19 .venv/bin/python -m rmr_pipeline.audio fit-catalog --audio-dir audio/clap   # audio/clap/transform.npz
 .venv/bin/python -m rmr_audio.modelstore status --exclude Album999417,Album739618
 ```
+
+The CLAP store stays on the branch. It is not the store the 10k catalog will use: see the section above.
 
 `--exclude Album999417,Album739618` leaves out A Clockwork Orange and Barry Lyndon: the only audio the cache has for them is of other records (a wrong YouTube pick and an unrelated store listing), and no right source was found. The flag is not remembered anywhere, so pass it on every `write`, or the two albums come back into the store.
 

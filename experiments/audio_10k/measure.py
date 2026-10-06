@@ -1,13 +1,16 @@
-"""Sonic-only measurements of the CLAP block over the 10k catalog: RYM-based proxies, descriptive.
+"""Sonic-only measurements of the CLAP and EffNet blocks over the 10k catalog: RYM-based proxies, descriptive.
 
     cd experiments/audio_10k
     nice -n 19 <build venv python> measure.py     -> results/sonic_measures.json, results/sonic_measures.md
     ... measure.py --model clap_mp3 --clap-dir DIR  -> results/sonic_measures.clap_mp3.{json,md}: the same over a store
         written from the cache's clap_mp3 rows (rmr_audio.modelstore write --model clap_mp3 --audio-dir DIR, then
         rmr_pipeline.audio fit-catalog --audio-dir DIR). Its rows and columns still read `clap`.
+    --effnet-dir DIR     the EffNet store (default data-pipeline/audio/effnet10k when it is there): the `effnet`
+        rows, and a pool of its own, `catalog_effnet`, with every album it holds.
+    --effnet-stand-in    the `effnet_4clip` rows of before that store was written (sonic.effnet_block), instead.
 
 Lists are the ten nearest albums by the 64-number audio block alone (euclidean; sonic.nearest). Everything is
-read-only on the catalog, the CLAP store and the clip cache; see sonic.py for what the two blocks are.
+read-only on the catalog, the two stores and the clip cache; see sonic.py for what the blocks are.
 
 What the numbers are, and are not:
   - They are computed over the whole catalog with audio. There is no held-out split here and nothing was
@@ -39,8 +42,8 @@ twice, embedded once by each run under two keys of one album, and the cosine bet
 the two runs make the same vector from the same preview, and the difference is in the albums.
 Hubness (simbench.hubness): N10 = the number of lists an album is in (mean 10); skew of N10, share of albums
 in no list, the largest N10, and the most-recommended albums.
-By audio source (`by_source`, whole catalog): the albums grouped by where the clips behind their mean came
-from (the store's `source` up to the colon: deezer, itunes, youtube, ...). Per group the albums, mean N10 and
+By audio source (`by_source` for the CLAP lists, `by_source_effnet` for the EffNet store's; whole catalog):
+the albums grouped by where the clips behind their mean came from (the store's `source` up to the colon: deezer, itunes, youtube, ...). Per group the albums, mean N10 and
 the share in no list; and, with the group's albums as seeds, the share of their ten neighbours from each
 source next to the share of that source among the other albums with the seed's first primary genre. That is
 source_effect.mixing, called here, so the numbers read as source_effect.md's; the pool and the block differ
@@ -48,9 +51,9 @@ source_effect.mixing, called here, so the numbers read as source_effect.md's; th
 
 Comparable with the earlier reports (experiments/preview_features/REPORT*.md)? Only in definition.
 genre_primary / genre_any / genre_family / *_xa and the hubness numbers are computed as there, but on other
-labels (the sheet's genres, not the 2023 scrape's), another pool (about 9,600 albums, not 3,944 or 1,000: a
+labels (the sheet's genres, not the 2023 scrape's), another pool (about 10,200 albums, not 3,944 or 1,000: a
 larger pool has more same-genre candidates and more near neighbours) and, for EffNet, four-clip means through
-a PCA fitted here. Levels must not be set against those reports. desc_jaccard is not their desc_cos (cosine
+a PCA fitted on the catalog. Levels must not be set against those reports. desc_jaccard is not their desc_cos (cosine
 over 120 weighted descriptor columns of the feature table, which only the site's albums have). The rows of
 one table here are comparable with each other: same albums, same labels, same code.
 """
@@ -223,35 +226,50 @@ def subset(albums: sonic.Albums, pos: np.ndarray) -> sonic.Albums:
                         [albums.descriptors[i] for i in pos], albums.catalog_size)
 
 
-def run(catalog: Path, clap_dir: Path, cache_db: Path) -> dict:
+def _counts(values) -> dict:
+    return {str(v): int(n) for v, n in zip(*np.unique(values, return_counts=True))}
+
+
+def run(catalog: Path, clap_dir: Path, cache_db: Path, effnet_dir: Path | None = None) -> dict:
+    """`effnet_dir`: the EffNet store, whose block is named `effnet` and which gets a pool of its own
+    (`catalog_effnet`: every album it holds). None: the stand-in of sonic.effnet_block, named `effnet_4clip`."""
     albums, clap = sonic.load_albums(catalog, clap_dir)
-    pos, effnet = sonic.effnet_block(albums, cache_db)
+    eff = "effnet" if effnet_dir else "effnet_4clip"
+    pos, effnet = sonic.store_block(albums, effnet_dir) if effnet_dir else sonic.effnet_block(albums, cache_db)
     both = subset(albums, pos)
     existing = np.flatnonzero(~both.new)
     old = subset(both, existing)
-    pools = {
-        "catalog": {"what": "every catalog album with CLAP audio", "albums": albums, "blocks": {"clap": clap}},
-        "both_models": {"what": "the albums with both models' clips: the same albums, labels and candidates for the two rows",
-                        "albums": both, "blocks": {"clap": clap[pos], "effnet_4clip": effnet}},
+    pools = {"catalog": {"what": "every catalog album with CLAP audio", "albums": albums, "blocks": {"clap": clap}}}
+    if effnet_dir:
+        whole, block = sonic.load_albums(catalog, effnet_dir)
+        pools["catalog_effnet"] = {"what": "every catalog album of the EffNet store", "albums": whole, "blocks": {eff: block}}
+    pools |= {
+        "both_models": {"what": "the albums with both models' audio: the same albums, labels and candidates for the two rows",
+                        "albums": both, "blocks": {"clap": clap[pos], eff: effnet}},
         "existing_only": {"what": "the site's albums only (seeds and candidates): the pool closest to the earlier reports'",
-                          "albums": old, "blocks": {"clap": clap[pos][existing], "effnet_4clip": effnet[existing]}},
+                          "albums": old, "blocks": {"clap": clap[pos][existing], eff: effnet[existing]}},
     }
     out = {"generated": datetime.date.today().isoformat(),
            "note": "RYM-based proxies over the whole catalog with audio; descriptive, not a held-out evaluation. "
                    "See measure.py's docstring for the definitions and for what is comparable.",
            "catalog_albums": albums.catalog_size, "with_clap_audio": len(albums), "with_both_models": len(both),
-           "clips_per_album": {str(c): int(n) for c, n in zip(*np.unique(albums.n_clips, return_counts=True))},
-           "sources": {str(s): int(n) for s, n in zip(*np.unique([x.split(":")[0] for x in albums.source.tolist()], return_counts=True))},
+           "clips_per_album": _counts(albums.n_clips), "sources": _counts([x.split(":")[0] for x in albums.source.tolist()]),
            "same_track_check": same_track_check(cache_db), "pools": {}}
+    if effnet_dir:
+        out["effnet_store"] = {"model": sonic.load_store(effnet_dir).manifest["model"], "albums": len(whole),
+                               "clips_per_album": _counts(whole.n_clips),
+                               "sources": _counts([x.split(":")[0] for x in whole.source.tolist()])}
     for name, pool in pools.items():
         labels = Labels(pool["albums"].genres, pool["albums"].descriptors)
         res = {b: score(X, pool["albums"], labels, b) for b, X in pool["blocks"].items()}
         entry = {"what": pool["what"]}
         if len(res) == 2:
-            a, b = (res[k]["lists"] for k in ("clap", "effnet_4clip"))
+            a, b = (res[k]["lists"] for k in ("clap", eff))
             entry["overlap_at_10"] = round(float(np.mean([len(set(x) & set(y)) for x, y in zip(a.tolist(), b.tolist())])), 3)
         if name == "catalog":
             out["by_source"] = by_source(albums, res["clap"]["lists"])
+        if name == "catalog_effnet":
+            out["by_source_effnet"] = by_source(whole, res[eff]["lists"])
         for r in res.values():
             del r["lists"]
         out["pools"][name] = entry | {"blocks": res}
@@ -266,7 +284,8 @@ def _table(header: list[str], rows: list[list[str]]) -> list[str]:
     return ["| " + " | ".join(header) + " |", "|" + "---|" * len(header), *("| " + " | ".join(r) + " |" for r in rows), ""]
 
 
-def source_lines(src: dict) -> list[str]:
+def source_lines(src: dict, model: str = "CLAP") -> list[str]:
+    """The "By audio source" table of one model's lists; the long explanation goes with the CLAP one."""
     names = src["sources"]
     rows = []
     for g, v in src["groups"].items():
@@ -274,6 +293,12 @@ def source_lines(src: dict) -> list[str]:
         rows.append([g, f"{v['albums']:,}", f"{v['mean_n10']:.1f}", f"{v['never_recommended']:.1%}",
                      *(f"{nb[s]['share_of_neighbours']:.1%} ({nb[s]['same_genre_share']:.1%})" for s in names),
                      f"{v['seeds_with_genre']:,}"])
+    table = _table(["Seeds", "Albums", "Mean N10", "Never recommended", *(f"Neighbours from {s} (same-genre share)" for s in names),
+                    "Seeds with a genre"], rows)
+    if model != "CLAP":
+        return [f"## By audio source ({model}, whole catalog)", "",
+                f"The same table for the {model} lists: every album of the {model} store, grouped by that store's `source`. "
+                "RYM-catalog proxies on the stored vectors, as above.", "", *table]
     return ["## By audio source (CLAP, whole catalog)", "",
             "The source is where the clips behind an album's mean came from (the store's `source`; every iTunes "
             "storefront counts as itunes; local, youtube and bandcamp are windows of a full-length file). Mean N10 is "
@@ -284,14 +309,14 @@ def source_lines(src: dict) -> list[str]:
             "tables of `source_effect.md`; the JSON also has the neighbour share over the seeds with a genre only. **Like everything here these are "
             "RYM-catalog proxies on the stored vectors: nobody listened.** They can show that lists lean towards the "
             "seed's own source beyond what RYM genre gives. They cannot say whether that is the music (which albums each "
-            "store has) or the audio's origin, and a small group's row is noisy.", "",
-            *_table(["Seeds", "Albums", "Mean N10", "Never recommended", *(f"Neighbours from {s} (same-genre share)" for s in names),
-                     "Seeds with a genre"], rows)]
+            "store has) or the audio's origin, and a small group's row is noisy.", "", *table]
 
 
 def markdown(res: dict) -> str:
     cat = res["pools"]["catalog"]["blocks"]["clap"]
-    lines = ["# Sonic-only measures of the CLAP block over the 10k catalog", "",
+    own = res["pools"].get("catalog_effnet", {}).get("blocks", {}).get("effnet")  # the EffNet store's own pool, if measured
+    eff = "effnet" if own else "effnet_4clip"
+    lines = [f"# Sonic-only measures of the CLAP {'and EffNet blocks' if own else 'block'} over the 10k catalog", "",
              f"Generated {res['generated']} by `measure.py`. Provisional until the clip cache and the catalog are final.", "",
              "**These are RYM-based proxies, computed over the whole catalog with audio. They describe the lists; they are "
              "not a held-out evaluation, and nobody listened.** Lists are the ten nearest albums by the 64-number audio "
@@ -304,6 +329,9 @@ def markdown(res: dict) -> str:
              f"genre in the sheet, {cat['albums_with_5_descriptors']:,} have five or more top descriptors (the site's "
              "off-chart albums have neither).",
              "Clips behind the CLAP mean: " + ", ".join(f"{c}: {n:,}" for c, n in res["clips_per_album"].items()) + ".", ""]
+    if own:
+        lines[-1:] = [f"EffNet store ({res['effnet_store']['model']}): {own['albums']:,} albums ({own['new_albums']:,} new). Clips "
+                      "behind its mean: " + ", ".join(f"{c}: {n:,}" for c, n in res["effnet_store"]["clips_per_album"].items()) + ".", ""]
     head = ["Pool", "Block", "Albums", "genre_primary", "genre_any", "genre_family", "desc_jaccard", "desc_shared",
             "genre_primary_xa", "desc_jaccard_xa", "Never recommended", "Max N10", "N10 skew"]
     rows = []
@@ -317,9 +345,12 @@ def markdown(res: dict) -> str:
         rows.append([pname, "random (floor)", f"{b['albums']:,}", *(_f(b["random"][k]) for k in MEASURES[:4]),
                      _f(b["random"]["desc_shared"], 2), "", "", "", "", ""])
     lines += ["## Top 10 by the audio block alone", "", *_table(head, rows),
-              "Pools: " + "; ".join(f"`{n}` = {p['what']}" for n, p in res["pools"].items()) + ". `effnet_4clip` is not the "
-              "site's EffNet block: it is the cache's four-clip means through a PCA fitted on the pool's albums (see "
-              "`sonic.py`). Mean shared neighbours between the CLAP and EffNet lists (of 10): "
+              "Pools: " + "; ".join(f"`{n}` = {p['what']}" for n, p in res["pools"].items()) + ". "
+              + ("`effnet` is the 10k catalog's EffNet store (`data-pipeline/audio/effnet10k`, four clips per album) through "
+                 "its own transform. It is not the site's current block, which is `data-pipeline/audio`: the site's albums "
+                 "only, at up to eight clips" if own else
+                 "`effnet_4clip` is not the site's EffNet block: it is the cache's four-clip means through a PCA fitted on "
+                 "the albums with both models") + " (see `sonic.py`). Mean shared neighbours between the CLAP and EffNet lists (of 10): "
               + ", ".join(f"{n} {p['overlap_at_10']}" for n, p in res["pools"].items() if "overlap_at_10" in p) + ".", ""]
 
     def groups(block: dict, names: tuple[str, ...], label: str = "") -> list[list[str]]:
@@ -349,9 +380,11 @@ def markdown(res: dict) -> str:
               "album is new would hold that share of new albums. \"Same-genre albums that are new\" is what the catalog's "
               "make-up alone would give (the share of new albums among the other albums with the seed's first primary "
               "genre). Mean N10 is how many lists an album of the group appears in (10 on average over all albums). The "
-              "first three rows are the whole catalog with CLAP audio, the others the albums with both models.", "",
+              "first three rows are the whole catalog with CLAP audio, "
+              + ("the next three every album of the EffNet store, " if own else "") + "the others the albums with both models.", "",
               *_table(ghead, groups(cat, ("all", "new", "existing"), "clap, ")
-                      + [r for b in ("clap", "effnet_4clip") for r in groups(both[b], ("new", "existing"), f"both models: {b}, ")]),
+                      + (groups(own, ("all", "new", "existing"), "effnet, ") if own else [])
+                      + [r for b in ("clap", eff) for r in groups(both[b], ("new", "existing"), f"both models: {b}, ")]),
               "A block whose lists hold more new albums for new seeds than the same-genre share, and fewer for existing "
               "seeds, separates new from existing albums by something other than RYM genre. That can be the music (era, "
               "production, how well known the record is) or how the two batches were made (the existing albums' clips were "
@@ -360,17 +393,24 @@ def markdown(res: dict) -> str:
               *_table(ghead, groups(cat, ("4_clips", "under_4_clips", "full_length_windows"))),
               "`under_4_clips`: the listing has fewer than four previews. `full_length_windows`: windows of a full-length "
               "file (local, youtube, bandcamp), where the mean takes every window.", "",
-              *source_lines(res["by_source"]),
-              "## Most-recommended albums (CLAP, whole catalog)", "",
-              *_table(["N10", "Album", "Year", "Rank", "Primary genres", "New", "Clips"],
-                      [[str(a["n10"]), f"{a['artist']}, {a['title']}", a["year"], str(a["rank"] or ""), a["primary_genres"],
-                        "new" if a["new"] else "", str(a["n_clips"])] for a in cat["most_recommended"]]),
-              "## What these numbers can and cannot say", "",
+              *source_lines(res["by_source"])]
+    if own:
+        lines += ["## By clips behind the mean (EffNet, whole catalog)", "",
+                  *_table(ghead, groups(own, ("4_clips", "under_4_clips", "full_length_windows"))),
+                  *source_lines(res["by_source_effnet"], "EffNet")]
+    for name, block in (("CLAP", cat), ("EffNet", own)):
+        if block:
+            lines += [f"## Most-recommended albums ({name}, whole catalog)", "",
+                      *_table(["N10", "Album", "Year", "Rank", "Primary genres", "New", "Clips"],
+                              [[str(a["n10"]), f"{a['artist']}, {a['title']}", a["year"], str(a["rank"] or ""), a["primary_genres"],
+                                "new" if a["new"] else "", str(a["n_clips"])] for a in block["most_recommended"]])]
+    lines += ["## What these numbers can and cannot say", "",
               "- They can say whether the CLAP block's neighbours share RYM genres and descriptors more or less often than "
               "the EffNet block's on the same albums, whether new albums are reachable (they appear in lists about as "
               "often as their share), and whether a few albums crowd the lists.",
-              "- They cannot say that a list sounds right. A higher genre match is not better by itself: the owner chose "
-              "CLAP partly because it crosses genres. The listening page (`listening_page.py`) is the check for that.",
+              "- They cannot say that a list sounds right. A higher genre match is not better by itself. The listening "
+              "page (`listening_page.py`) is the check for that: the owner listened on 5 October 2026 and chose EffNet "
+              "(`REPORT.md`).",
               "- The genre and descriptor columns are empty for the site's off-chart albums, so those albums count as "
               "candidates and in hubness, not in the genre or descriptor means (`n` in the JSON).",
               "- No confidence intervals: these are whole-catalog means, not estimates from a sample.", ""]
@@ -383,13 +423,18 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--model", choices=("clap", "clap_mp3"), default="clap",
                    help="Which CLAP store is measured. clap_mp3 has no committed store: give its folder with --clap-dir.")
     p.add_argument("--clap-dir", type=Path, default=None, help="The store to measure (default for clap: audio/clap).")
+    p.add_argument("--effnet-dir", type=Path, default=sonic.default_effnet_dir(),
+                   help="The EffNet store (default: audio/effnet10k when it is written and fitted).")
+    p.add_argument("--effnet-stand-in", action="store_true",
+                   help="The stand-in of before the EffNet store (four-clip means of the cache, a PCA fitted here), not the store.")
     p.add_argument("--cache", type=Path, default=sonic.DEFAULT_CACHE_DB, help="The one-pass clip cache (opened read-only).")
     p.add_argument("--out", type=Path, default=RESULTS)
     args = p.parse_args(argv)
     if args.clap_dir is None and args.model != "clap":
         p.error(f"--model {args.model} needs --clap-dir: the folder its store was written to")
-    res = run(args.catalog, args.clap_dir or sonic.STORES["clap"], args.cache)
-    res["model"] = args.model
+    effnet_dir = None if args.effnet_stand_in else args.effnet_dir
+    res = run(args.catalog, args.clap_dir or sonic.STORES["clap"], args.cache, effnet_dir)
+    res["model"], res["effnet_dir"] = args.model, effnet_dir and str(effnet_dir)
     name = "sonic_measures" + ("" if args.model == "clap" else f".{args.model}")
     args.out.mkdir(parents=True, exist_ok=True)
     (args.out / f"{name}.json").write_text(json.dumps(res, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

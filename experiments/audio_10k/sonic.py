@@ -1,18 +1,19 @@
 """What measure.py and listening_page.py share: the catalog's albums with audio, their 64-number audio
-blocks (CLAP from the committed store, EffNet from the clip cache at the same four clips) and their ten
-nearest albums by the block alone.
+blocks (CLAP and EffNet, each from its committed store) and their ten nearest albums by the block alone.
 
-Read-only on everything it touches: the catalog table, the CLAP store, the EffNet transform (for the target
-variance only) and the one-pass clip cache (opened `mode=ro`). No model is loaded, nothing is downloaded;
-numpy and the standard library, plus pandas through genres.py for the genre families. Peak memory is a few
-hundred MB at 10,000 albums.
+Read-only on everything it touches: the catalog table, the two stores, the site's EffNet transform (for the
+target variance only) and the one-pass clip cache (opened `mode=ro`). No model is loaded, nothing is
+downloaded; numpy and the standard library, plus pandas through genres.py for the genre families. Peak
+memory is a few hundred MB at 10,000 albums.
 
-  CLAP block    the committed store (data-pipeline/audio/clap) through its own transform.npz: what the site
-                would use once the switch (rmr_pipeline.audio_store.SITE_MODEL) says clap.
-  EffNet block  NOT the site's block: the cache's four-clip album means (pool `rank`, as the CLAP store) for
-                the albums that have both models, through a PCA(64) fitted here on those albums with
-                rmr_pipeline.audio.fit_transform and the same target variance. The committed EffNet store only
-                holds the site's 3,980 albums, at up to eight clips, so it cannot be compared over the catalog.
+  CLAP block    the committed store (data-pipeline/audio/clap) through its own transform.npz.
+  EffNet block  the 10k catalog's EffNet store (data-pipeline/audio/effnet10k, EFFNET_DIR: four clips per
+                album, written by rmr_audio.modelstore) through its own transform.npz: what the site would
+                use once a build is pointed at it. NOT the site's current block: that is data-pipeline/audio,
+                the site's 3,980 albums at up to eight clips.
+  The stand-in  what stood for the EffNet block before that store was written (effnet_block): the cache's
+                four-clip album means for the albums with CLAP audio, through a PCA(64) fitted here on those
+                albums with the same target variance. Used when there is no EffNet store, or when asked for.
 """
 import csv
 import sys
@@ -33,6 +34,7 @@ from rmr_pipeline.artists import clean_artist  # noqa: E402
 from rmr_pipeline.audio import BLOCK_DIMS, DEFAULT_CATALOG, fit_transform, load_transform  # noqa: E402
 from rmr_pipeline.audio_store import DEFAULT_AUDIO, STORES, load_store  # noqa: E402
 
+EFFNET_DIR = STORES["effnet10k"]
 K = 10  # as simbench.K: the recommender's top 10
 MIN_DESC = 5  # as simbench.MIN_DESC: descriptors an album needs to count in a descriptor measure
 VARIOUS = "Various Artists"
@@ -41,11 +43,11 @@ WINDOW_SOURCES = ("local", "youtube", "bandcamp")
 
 @dataclass
 class Albums:
-    """The catalog's albums that have CLAP audio, in catalog order."""
+    """The catalog's albums that a store has audio for, in catalog order."""
     rows: list[dict]  # the catalog rows
     keys: np.ndarray
     new: np.ndarray  # bool: not on the site yet (no legacy URI)
-    n_clips: np.ndarray  # clips behind the CLAP mean
+    n_clips: np.ndarray  # clips behind the store's mean
     source: np.ndarray
     artist: np.ndarray  # int id of the cleaned artist; each Various Artists album its own
     genres: list[list[str]]  # the sheet's primary genres, first one first; [] when the row has none
@@ -66,7 +68,8 @@ def read_catalog(path: Path = DEFAULT_CATALOG) -> list[dict]:
 
 
 def load_albums(catalog: Path = DEFAULT_CATALOG, clap_dir: Path = STORES["clap"]) -> tuple[Albums, np.ndarray]:
-    """(the albums with CLAP audio, their CLAP block (n, 64) float32)."""
+    """(the albums the store at `clap_dir` has, their block (n, 64) float32 through its transform). Any
+    store with a transform: the CLAP one, or the EffNet one."""
     table = read_catalog(catalog)
     store = load_store(clap_dir)
     t = load_transform(clap_dir / "transform.npz", store.dim)
@@ -82,11 +85,24 @@ def load_albums(catalog: Path = DEFAULT_CATALOG, clap_dir: Path = STORES["clap"]
     return albums, t.apply(store.emb[at])
 
 
+def default_effnet_dir() -> Path | None:
+    """The EffNet store when it is written and fitted, else None: the stand-in."""
+    return EFFNET_DIR if (EFFNET_DIR / "manifest.json").exists() and (EFFNET_DIR / "transform.npz").exists() else None
+
+
+def store_block(albums: Albums, store_dir: Path) -> tuple[np.ndarray, np.ndarray]:
+    """(positions in `albums` of the albums the store at `store_dir` also has, their block through that
+    store's transform)."""
+    store = load_store(store_dir)
+    at = store.rows(albums.keys.tolist())
+    return np.flatnonzero(at >= 0), load_transform(Path(store_dir) / "transform.npz", store.dim).apply(store.emb[at[at >= 0]])
+
+
 def effnet_block(albums: Albums, cache_db: Path = DEFAULT_CACHE_DB, matches: Path = DEFAULT_AUDIO / "matches.csv",
                  target_from: Path = DEFAULT_AUDIO,
                  overrides: Path = DEFAULT_AUDIO / "match_overrides.json") -> tuple[np.ndarray, np.ndarray]:
-    """(positions in `albums` of the albums that also have EffNet clips, their EffNet block). See the
-    module docstring: four-clip means from the cache, PCA(64) fitted on these albums."""
+    """The stand-in: (positions in `albums` of the albums that also have EffNet clips, their EffNet block).
+    See the module docstring: four-clip means from the cache, PCA(64) fitted on these albums."""
     cache = OnePassCache(cache_db, readonly=True)
     try:
         keys, X, _, _, _ = album_means(cache, "effnet", albums.keys.tolist(), matches, CLIPS, overrides=overrides)
