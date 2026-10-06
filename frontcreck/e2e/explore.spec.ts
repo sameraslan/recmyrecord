@@ -49,11 +49,14 @@ async function pixels(page: Page, points: { x: number; y: number }[]): Promise<n
   );
 }
 
-/** Mean luminance of a client-px rectangle of the screenshot. */
-async function meanLuma(page: Page, r: { x: number; y: number; w: number; h: number }): Promise<number> {
+type Box = { x: number; y: number; w: number; h: number };
+
+/** Mean, over `boxes` (client px), of the standard deviation of luminance inside each box of one screenshot: how
+ * much picture detail the covers there show against whatever is behind them. */
+async function meanLumaStd(page: Page, boxes: Box[]): Promise<number> {
   const png = (await page.screenshot()).toString('base64');
   return page.evaluate(
-    async ([data, rect]) => {
+    async ([data, rects]) => {
       const img = new Image();
       img.src = `data:image/png;base64,${data}`;
       await img.decode();
@@ -63,16 +66,51 @@ async function meanLuma(page: Page, r: { x: number; y: number; w: number; h: num
       const ctx = c.getContext('2d')!;
       ctx.drawImage(img, 0, 0);
       const k = img.width / innerWidth;
-      const d = ctx.getImageData(Math.round(rect.x * k), Math.round(rect.y * k), Math.round(rect.w * k), Math.round(rect.h * k)).data;
-      let sum = 0;
-      for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-      return sum / (d.length / 4);
+      let total = 0;
+      for (const r of rects) {
+        const d = ctx.getImageData(Math.round(r.x * k), Math.round(r.y * k), Math.round(r.w * k), Math.round(r.h * k)).data;
+        let sum = 0;
+        let sq = 0;
+        const n = d.length / 4;
+        for (let i = 0; i < d.length; i += 4) {
+          const l = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+          sum += l;
+          sq += l * l;
+        }
+        total += Math.sqrt(Math.max(0, sq / n - (sum / n) ** 2));
+      }
+      return total / rects.length;
     },
-    [png, r] as const,
+    [png, boxes] as const,
   );
 }
 
-const isLamp = ([r, g, b]: number[]) => Math.abs(r - 230) < 30 && Math.abs(g - 168) < 30 && Math.abs(b - 86) < 35;
+/** 20 px boxes at the centres of up to 12 covers on the canvas that stand alone: clear of the picked album's
+ * enlarged cover and frame, of every overlay (the card, the slider, the zoom buttons), and of every other cover (no
+ * other album within 27 px either way, so no 32 px neighbour reaches into the box). Such a box holds one cover's
+ * picture, with nothing over it and only the gas and the page colour under it. */
+async function otherCoverBoxes(page: Page, picked: number): Promise<Box[]> {
+  return page.evaluate(async (pickedId) => {
+    const api = window.__rmr!.map!;
+    const n: number = (await (await fetch('/data/albums.json')).json()).length;
+    const c = api.screenPoint(pickedId)!;
+    const pts: ({ x: number; y: number } | null)[] = [];
+    for (let id = 0; id < n; id++) pts.push(api.screenPoint(id));
+    const out: { x: number; y: number; w: number; h: number }[] = [];
+    for (let id = 0; id < n && out.length < 12; id++) {
+      const p = pts[id];
+      if (id === pickedId || !p || p.x < 10 || p.y < 10 || p.x > innerWidth - 10 || p.y > innerHeight - 10) continue;
+      if (Math.abs(p.x - c.x) < 70 && Math.abs(p.y - c.y) < 70) continue;
+      if (pts.some((q, j) => j !== id && q !== null && Math.abs(q.x - p.x) < 27 && Math.abs(q.y - p.y) < 27)) continue;
+      const onCanvas = [[-10, -10], [10, -10], [-10, 10], [10, 10]].every(([dx, dy]) => document.elementFromPoint(p.x + dx, p.y + dy)?.classList.contains('map-canvas'));
+      if (onCanvas) out.push({ x: p.x - 10, y: p.y - 10, w: 20, h: 20 });
+    }
+    return out;
+  }, picked);
+}
+
+/** The picked album's off-white frame (FRAME_RGB, rgb(241, 236, 228)). */
+const isFrame = ([r, g, b]: number[]) => Math.abs(r - 241) < 16 && Math.abs(g - 236) < 16 && Math.abs(b - 228) < 18;
 
 /** Client coordinates on the canvas at least 40 px from every album. */
 async function emptyMapPoint(page: Page): Promise<{ x: number; y: number }> {
@@ -292,21 +330,26 @@ test('leaving an album by the header nav leaves the album state clean and frames
   expect(again.zoom).toBeCloseTo(overview.zoom, 2);
 });
 
-test('in cover mode the picked album is drawn large on top, framed in lamp, with the other covers dimmed', async ({ page, isMobile }, info) => {
+test('in cover mode the picked album is drawn large on top, framed in off-white, with the other covers dimmed', async ({ page, isMobile }, info) => {
+  // The frame and the covers are read from screenshot pixels with gas behind them.
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);
+  // TODO(part2-task8): twinkleOff(page)
   await pickKnown(page, isMobile, IN_RAINBOWS);
   await shot(page, info, 'explore-selected-cover');
   const p = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
-  // Covers are 32 px here, so the picked one is 64 px with a 2 px lamp frame 4 px outside it (centre 36 px out).
-  const frame = await pixels(page, [
+  // Covers are 32 px here, so the picked one is 64 px with a 2 px off-white frame 4 px outside it (centre 36 px out).
+  const framePoints = [
     { x: p.x + 36, y: p.y },
     { x: p.x - 36, y: p.y },
     { x: p.x, y: p.y - 36 },
     { x: p.x + 20, y: p.y - 36 },
-  ]);
-  expect(frame.map(isLamp)).toEqual([true, true, true, true]);
+  ];
+  expect((await pixels(page, framePoints)).map(isFrame)).toEqual([true, true, true, true]);
   await expect(page.locator('.map-sel')).toHaveCSS('opacity', '0');
   // The hit area matches the drawn size: a click well outside a plain cover, near its corner, still lands on it.
   if (isMobile) await page.touchscreen.tap(p.x + 24, p.y + 24);
@@ -314,17 +357,26 @@ test('in cover mode the picked album is drawn large on top, framed in lamp, with
   await waitForCameraIdle(page);
   expect(await page.evaluate(() => window.__rmr!.getState().selected)).toBe(IN_RAINBOWS);
   await expect(page.locator('.card')).toBeVisible();
-  // The other covers are dimmed while the pick lasts: compare a band of covers away from it (left of it on
-  // desktop, above it on the phone) with the same band once the card is closed (the camera does not move).
-  const vp = page.viewportSize()!;
-  const region = isMobile ? { x: 16, y: 140, w: vp.width - 32, h: 150 } : { x: p.x - 420, y: p.y - 200, w: 300, h: 400 };
-  const dimmed = await meanLuma(page, region);
+  // The other covers step back while the pick lasts: each is drawn at half opacity (alpha, as before the theme), so
+  // the gas and the page colour show through it. That can make a cover brighter or darker, so brightness says
+  // nothing. Compare the picture detail inside the same covers, with the pick and without it (the camera does not
+  // move). The boxes are on covers that stand alone, and the gas is smooth across 20 px, so a cover at half opacity
+  // shows half its detail whatever is behind it.
+  if (!isMobile) await page.mouse.move(2, 2); // off the map: no hover label or hover ring over the sampled covers
+  await waitForCameraIdle(page);
+  const boxes = await otherCoverBoxes(page, IN_RAINBOWS);
+  expect(boxes.length, 'covers that stand alone, to compare').toBeGreaterThanOrEqual(4);
+  const dimmed = await meanLumaStd(page, boxes);
   await page.keyboard.press('Escape');
   await expect(page.locator('.card')).toHaveCount(0);
   await waitForCameraIdle(page);
-  const plain = await meanLuma(page, region);
-  const PANE_LUMA = 19; // #17120e
-  expect(dimmed - PANE_LUMA).toBeLessThan((plain - PANE_LUMA) * 0.7);
+  const plain = await meanLumaStd(page, boxes);
+  console.log(`picked cover: detail in ${boxes.length} lone covers ${dimmed.toFixed(2)} with the pick, ${plain.toFixed(2)} without (ratio ${(dimmed / plain).toFixed(2)})`);
+  expect(plain, 'the undimmed covers show detail').toBeGreaterThan(6);
+  expect(dimmed).toBeLessThan(plain * 0.7);
+  // With the pick gone the frame is gone: the same four points are no longer all frame-coloured, so the frame
+  // check above was not satisfied by pale gas.
+  expect((await pixels(page, framePoints)).every(isFrame)).toBe(false);
 });
 
 test('an album with no Spotify id shows the card without the Spotify action', async ({ page, isMobile }) => {

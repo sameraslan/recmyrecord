@@ -6,7 +6,7 @@ export const DEFAULT_STOP: StopId = 'balanced';
 /** Index into albums.json. */
 export type AlbumId = number;
 
-/** [wash, wash, accent] as #rrggbb. The accent passes 4.5:1 on #15110d. */
+/** [wash, wash, accent] as #rrggbb. The pipeline checks the accent at 4.5:1 on #15110d; on the Trifid room #07060a it is 4.84:1 or better. */
 export type Ambient = [string, string, string];
 
 /** One row of public/data/albums.json. */
