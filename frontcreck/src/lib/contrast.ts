@@ -42,6 +42,7 @@ export function filterBackdrop([r, g, b]: Rgb, { saturate: s, brightness: k }: G
     (0.213 - 0.213 * s) * r + (0.715 + 0.285 * s) * g + (0.072 - 0.072 * s) * b,
     (0.213 - 0.213 * s) * r + (0.715 - 0.715 * s) * g + (0.072 + 0.928 * s) * b,
   ];
+  // Clamped between the two steps; a browser that folds both into one matrix may not. Same result for white and cream.
   return sat.map((c) => clamp255(clamp255(c) * k)) as Rgb;
 }
 
