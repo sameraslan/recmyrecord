@@ -1,0 +1,897 @@
+"""Cover sources for the catalog's new albums: which image each one shows, and its 96 px sprite.
+
+The existing albums take their cover id and sprite from the map (mapsource.py, images.py). A new album
+(a row of catalog/albums.csv with no `legacy_uri`) has neither, so this module finds one image per album
+and records it in catalog/covers.csv as `rym_id,source,ref`. Sources, best first:
+
+    spotify   the catalog's Spotify link, asked from Spotify's oEmbed endpoint (no account). `ref` is the image
+              id as the site stores it today: what follows https://i.scdn.co/image/.
+    deezer    the album's store listing: the one match_overrides.json forces, else the one in audio/matches.csv,
+    apple     else the catalog's Deezer link, else its Apple Music link. Read from the audio stage's response
+              cache (tier `cache`, no network); a listing the cache lacks is asked from the store (tier `store`).
+              `ref` is Deezer's image md5, or the path of Apple's artwork.
+    bandcamp  the `og:image` of the catalog's Bandcamp page. `ref` is the image's number.
+    youtube   the catalog's YouTube link, else the link the audio stage embedded (audio/fulllength.csv).
+              `ref` is the video id; the image is a frame of the video, not a cover. No network.
+
+A tier never spends a request on an album that a better source may still answer: Bandcamp is not asked while
+the album's Spotify lookup is neither done nor failed. The `cache` tier is the exception, since it costs
+nothing: it gives every album it can a row at once, and the Spotify tier replaces that row later.
+
+    python -m rmr_pipeline.covers refs      # (re)writes catalog/covers.csv; resumable
+    python -m rmr_pipeline.covers sprites   # one 96 px JPEG per row in .cache/covers/96/ (not committed)
+    python -m rmr_pipeline.covers status
+
+The build calls cover_for(key) for a new album; cover_url(c, px) is the URL form of each kind of cover id,
+which the frontend mirrors.
+
+Requests go only to the hosts in ALLOWED_HOSTS and ALLOWED_SUFFIXES (never to rateyourmusic.com), spaced per
+host, with a User-Agent that names the project. HTTP 403 or 429 twice in a row from a host, or five times in a
+run, stops the run with exit code 2. An album whose lookup failed for a reason of its own (404, no image on
+the page) is written to .cache/covers/state.json and not asked again without --retry-failed; a refused or
+unanswered request is not written there, so the album is asked again by the next run.
+
+This module imports nothing from the rest of the pipeline and uses the standard library and Pillow only.
+"""
+import argparse
+import csv
+import http.client
+import io
+import json
+import os
+import re
+import signal
+import sqlite3
+import sys
+import tempfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+import zlib
+from collections import Counter
+from dataclasses import dataclass, field
+from functools import lru_cache
+from pathlib import Path
+
+from PIL import Image, ImageOps, ImageStat
+
+PIPELINE_DIR = Path(__file__).resolve().parents[1]
+DEFAULT_ALBUMS = PIPELINE_DIR / "catalog" / "albums.csv"
+DEFAULT_COVERS = PIPELINE_DIR / "catalog" / "covers.csv"
+DEFAULT_MATCHES = PIPELINE_DIR / "audio" / "matches.csv"
+DEFAULT_MATCH_OVERRIDES = PIPELINE_DIR / "audio" / "match_overrides.json"
+DEFAULT_FULLLENGTH = PIPELINE_DIR / "audio" / "fulllength.csv"
+DEFAULT_HTTP_CACHE = PIPELINE_DIR / ".cache" / "audio" / "http.sqlite"  # the audio stage's; only ever read here
+DEFAULT_CACHE = PIPELINE_DIR / ".cache" / "covers"  # gitignored: the sprites and the state file
+DEFAULT_SPRITES = DEFAULT_CACHE / "96"
+DEFAULT_STATE = DEFAULT_CACHE / "state.json"
+
+SOURCES = ("spotify", "deezer", "apple", "bandcamp", "youtube")
+TIERS = ("spotify", "cache", "store", "bandcamp", "youtube")  # in priority order; a run takes them in this order
+TIER_RANK = {"spotify": 0, "cache": 1, "store": 1, "bandcamp": 2, "youtube": 3}
+SOURCE_RANK = {"spotify": 0, "deezer": 1, "apple": 1, "bandcamp": 2, "youtube": 3}
+C_PREFIX = {"deezer": "dz:", "apple": "am:", "bandcamp": "bc:", "youtube": "yt:"}  # Spotify's id is stored bare
+
+ALLOWED_HOSTS = {"open.spotify.com", "i.scdn.co", "api.deezer.com", "cdn-images.dzcdn.net", "e-cdns-images.dzcdn.net",
+                 "itunes.apple.com", "f4.bcbits.com", "i.ytimg.com"}
+ALLOWED_SUFFIXES = (".spotifycdn.com", ".mzstatic.com", ".bandcamp.com")
+USER_AGENT = "recmyrecord-covers/1.0 (+https://github.com/sameraslan/recmyrecord; one small cover image per album)"
+
+SPRITE_PX = 96
+SPRITE_QUALITY = 90
+SAVE_EVERY = 50  # albums between two saves of covers.csv and the state file
+PROGRESS_S = 60.0
+REFS_INTERVALS = {"open.spotify.com": 1.0, "bandcamp": 3.0, "api.deezer.com": 0.2, "itunes.apple.com": 3.2}  # the last two: rmr_audio's
+SPRITES_INTERVAL = 0.5  # between any two image requests
+SPRITES_INTERVALS = {"f4.bcbits.com": 1.0}
+BACKOFF_S = 30.0  # a host that refused a request is left alone this long
+RETRY_S = 5.0  # before the one retry of a request that got no answer or a 5xx
+LIMITED_IN_A_ROW, LIMITED_IN_A_RUN = 2, 5  # HTTP 403/429 answers that stop the run
+DOWN_AFTER = 5  # requests in a row without a usable answer: the network is down, stop
+PAGE_BYTES = 512 * 1024  # of a Bandcamp page; og:image is in its head
+IMAGE_BYTES = 4 * 1024 * 1024
+
+SPOTIFY_PREFIX = "ab67616d0000b273"  # 640 px, the form of nearly every `c` on the site; 1e02 is 300 px, 4851 64 px
+SPOTIFY_ALBUM = re.compile(r"open\.spotify\.com/(?:intl-[a-z]{2}/)?album/([A-Za-z0-9]{22})")
+SPOTIFY_IMAGE = re.compile(r"^https://(?:i\.scdn\.co|[a-z0-9-]+\.spotifycdn\.com)/image/([0-9a-f]{40})$")
+DEEZER_LINK = re.compile(r"deezer\.com/(?:[a-z]{2}/)?album/(\d+)")  # as rmr_audio/catalog.py reads the links
+APPLE_LINK = re.compile(r"music\.apple\.com/([a-z]{2})/album/(?:[^/?#]+/)?(\d+)")
+APPLE_ART = re.compile(r"^https://is\d-ssl\.mzstatic\.com/image/thumb/(.+)/100x100bb\.jpg$")
+OG_IMAGE = re.compile(r"""<meta\b(?=[^>]*\bproperty=["']og:image["'])[^>]*\bcontent=["']([^"']+)["']""", re.I)
+BANDCAMP_ART = re.compile(r"^https://f\d\.bcbits\.com/img/a(\d+)_\d+\.(?:jpg|png)$")  # `a`: album art, not the band's photo
+YOUTUBE_ID = re.compile(r"(?:youtube\.com/watch\?(?:[^#]*&)?v=|youtu\.be/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])")
+SAFE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+DEEZER_SIZES = (56, 250, 500, 1000)
+BANDCAMP_SIZES = ((100, 3), (210, 9), (350, 2), (700, 16), (1200, 10))  # px, the file name's suffix
+
+
+# --- refs and URLs (pure) --------------------------------------------------------------------------
+
+def spotify_album_id(url: str) -> str:
+    """The album id of a Spotify album link, or ""."""
+    m = SPOTIFY_ALBUM.search(url or "")
+    return m.group(1) if m else ""
+
+
+def oembed_url(album_id: str) -> str:
+    return "https://open.spotify.com/oembed?url=" + urllib.parse.quote(f"https://open.spotify.com/album/{album_id}", safe="")
+
+
+def spotify_ref(image_url: str) -> str:
+    """The image id of a Spotify cover URL in the site's form (the 640 px prefix), or "" for another URL."""
+    m = SPOTIFY_IMAGE.match(image_url or "")
+    if not m:
+        return ""
+    return SPOTIFY_PREFIX + m.group(1)[16:] if m.group(1).startswith("ab67616d") else m.group(1)
+
+
+def apple_ref(artwork_url: str) -> str:
+    """The artwork path of an iTunes `artworkUrl100` (between /image/thumb/ and /100x100bb.jpg), or ""."""
+    m = APPLE_ART.match(artwork_url or "")
+    return m.group(1) if m else ""
+
+
+def bandcamp_ref(html: str) -> str:
+    """The number of the album art a Bandcamp page names in og:image, or ""."""
+    m = OG_IMAGE.search(html)
+    art = BANDCAMP_ART.match(m.group(1)) if m else None
+    return art.group(1) if art else ""
+
+
+def youtube_ref(url: str) -> str:
+    """The video id of a YouTube link, or "" (a playlist has no frame of its own)."""
+    m = YOUTUBE_ID.search(url or "")
+    return m.group(1) if m else ""
+
+
+def deezer_url(album_id: str) -> str:
+    return f"https://api.deezer.com/album/{album_id}"
+
+
+def deezer_tracks_url(album_id: str) -> str:
+    """The track list rmr_audio asks for. Each track carries the album's image md5, and for a listing found by
+    search it is the only answer the cache has."""
+    return f"https://api.deezer.com/album/{album_id}/tracks?limit=200"
+
+
+def apple_cached_url(album_id: str, storefront: str) -> str:
+    """The lookup rmr_audio makes for a listing, which is the URL its cache knows the answer by."""
+    return f"https://itunes.apple.com/lookup?id={album_id}&entity=song&limit=200&country={storefront}"
+
+
+def apple_url(album_id: str, storefront: str) -> str:
+    """The lookup this module makes: the collection alone, without its songs."""
+    return f"https://itunes.apple.com/lookup?id={album_id}&country={storefront}"
+
+
+def listing_ref(source: str, body: object) -> tuple[str, str] | None:
+    """(cover source, ref) from a store's answer for a listing (`deezer`, `itunes:<cc>`), or None when it has no cover."""
+    if not isinstance(body, dict):
+        return None
+    if source == "deezer":  # the album object, or its track list
+        heads = body["data"][:1] if isinstance(body.get("data"), list) else [body]
+        md5 = (heads[0].get("md5_image") or "") if heads and isinstance(heads[0], dict) else ""
+        return ("deezer", md5) if re.fullmatch(r"[0-9a-f]{32}", md5) else None
+    for r in body.get("results") or []:
+        if r.get("wrapperType") == "collection" and (ref := apple_ref(r.get("artworkUrl100") or "")):
+            return "apple", ref
+    return None
+
+
+def c_field(source: str, ref: str) -> str:
+    """The album's `c` in albums.json: the bare image id for Spotify (today's form), `dz:<md5>`, `am:<path>`,
+    `bc:<number>`, `yt:<video id>` for the others."""
+    return C_PREFIX.get(source, "") + ref
+
+
+def cover_url(c: str, px: int) -> str:
+    """The URL of the cover `c` at about `px` pixels (the smallest rendition at least that wide, where the host
+    has fixed sizes), or "" when `c` is empty.
+
+        <id>        https://i.scdn.co/image/<id>; an id that starts with ab67616d gets the size prefix
+                    ab67616d00004851 (64 px), ab67616d00001e02 (300) or ab67616d0000b273 (640)
+        dz:<md5>    https://cdn-images.dzcdn.net/images/cover/<md5>/<N>x<N>-000000-80-0-0.jpg, N in 56, 250, 500, 1000
+        am:<path>   https://is1-ssl.mzstatic.com/image/thumb/<path>/<px>x<px>bb.jpg, any size
+        bc:<n>      https://f4.bcbits.com/img/a<n>_<s>.jpg, s = 3 (100 px), 9 (210), 2 (350), 16 (700), 10 (1200)
+        yt:<id>     https://i.ytimg.com/vi/<id>/hqdefault.jpg: a 480 x 360 video frame, with black bars above and
+                    below a 16:9 picture; show its centre square (see crop_frame)
+    """
+    if not c:
+        return ""
+    kind, _, ref = c.partition(":")
+    if kind == "dz":
+        n = next((s for s in DEEZER_SIZES if s >= px), DEEZER_SIZES[-1])
+        return f"https://cdn-images.dzcdn.net/images/cover/{ref}/{n}x{n}-000000-80-0-0.jpg"
+    if kind == "am":
+        return f"https://is1-ssl.mzstatic.com/image/thumb/{ref}/{px}x{px}bb.jpg"
+    if kind == "bc":
+        suffix = next((s for size, s in BANDCAMP_SIZES if size >= px), BANDCAMP_SIZES[-1][1])
+        return f"https://f4.bcbits.com/img/a{ref}_{suffix}.jpg"
+    if kind == "yt":
+        return f"https://i.ytimg.com/vi/{ref}/hqdefault.jpg"
+    if c.startswith("ab67616d") and len(c) > 16:
+        prefix = "ab67616d00004851" if px <= 64 else "ab67616d00001e02" if px <= 300 else SPOTIFY_PREFIX
+        return "https://i.scdn.co/image/" + prefix + c[16:]
+    return "https://i.scdn.co/image/" + c
+
+
+def sprite_url(source: str, ref: str) -> str:
+    """The small rendition a sprite is made from: Spotify 300 px, Deezer 250, Apple 200, Bandcamp 350, YouTube 480 x 360."""
+    return cover_url(c_field(source, ref), {"spotify": 300, "deezer": 250, "apple": 200, "bandcamp": 350, "youtube": 480}[source])
+
+
+# --- the polite client -----------------------------------------------------------------------------
+
+class HostNotAllowed(ValueError):
+    """The URL is not https or its host is not on the allow-list: no request is made."""
+
+
+class Gone(IOError):
+    """This lookup failed for a reason of the album's own (HTTP 404, no image on the page): recorded, not asked again."""
+
+
+class Transient(IOError):
+    """No usable answer (network error, 5xx) after one retry: not recorded, asked again by the next run."""
+
+
+class RateLimited(Transient):
+    """HTTP 403 or 429. Not recorded against the album."""
+
+
+class StopRun(Exception):
+    """The stop rule: the host is refusing requests, or nothing answers."""
+
+
+class Interrupted(Exception):
+    """The run was asked to stop (SIGINT, SIGTERM)."""
+
+
+def allowed(url: str) -> bool:
+    """Is the URL https, without credentials, on a host this module may ask?"""
+    try:
+        parts = urllib.parse.urlsplit(url)
+        host = (parts.hostname or "").lower()
+    except ValueError:
+        return False
+    if parts.scheme != "https" or parts.username is not None or not host:
+        return False
+    return host in ALLOWED_HOSTS or any(host.endswith(s) and len(host) > len(s) for s in ALLOWED_SUFFIXES)
+
+
+def check_host(url: str) -> None:
+    if not allowed(url):
+        raise HostNotAllowed(f"not on the allow-list: {url[:120]}")
+
+
+def host_key(url: str) -> str:
+    """What requests are spaced and counted by: the host, with every Bandcamp subdomain as one (`bandcamp`)."""
+    host = (urllib.parse.urlsplit(url).hostname or "").lower()
+    return "bandcamp" if host.endswith(".bandcamp.com") else host
+
+
+class _CheckedRedirects(urllib.request.HTTPRedirectHandler):
+    """A redirect is followed only to an allowed host."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        check_host(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+_OPENER = urllib.request.build_opener(_CheckedRedirects)
+
+
+def http_get(url: str, max_bytes: int) -> tuple[int, bytes]:
+    """(status, at most max_bytes of the body). An HTTP error status is returned, not raised."""
+    check_host(url)
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept": "*/*"})
+    try:
+        with _OPENER.open(req, timeout=30) as r:
+            return r.status, r.read(max_bytes)
+    except urllib.error.HTTPError as e:
+        return e.code, b""
+
+
+class Fetcher:
+    """GET, spaced per host (`intervals`, by host_key) and overall, with the stop rule. `fetch` is http_get
+    unless a test passes its own; `stop` says whether the run was asked to end, and cuts a wait short."""
+
+    def __init__(self, intervals: dict[str, float], overall: float = 0.0, fetch=http_get, sleep=time.sleep,
+                 clock=time.monotonic, backoff: float = BACKOFF_S, stop=lambda: False):
+        self.intervals, self.overall, self.fetch, self.sleep, self.clock = intervals, overall, fetch, sleep, clock
+        self.backoff, self.stop = backoff, stop
+        self._next: dict[str, float] = {}
+        self._next_any = 0.0
+        self.requests = 0
+        self.limited_run = 0
+        self.limited_row: Counter = Counter()  # host -> 403/429 answers in a row
+        self.unanswered = 0  # requests in a row with no usable answer
+
+    def _pause(self, seconds: float) -> None:
+        end = self.clock() + seconds
+        while (left := end - self.clock()) > 0:
+            if self.stop():
+                raise Interrupted()
+            self.sleep(min(0.5, left))
+
+    def _wait(self, key: str) -> None:
+        now = self.clock()
+        start = max(now, self._next.get(key, 0.0), self._next_any)
+        self._pause(start - now)
+        self._next[key] = start + self.intervals.get(key, 0.0)
+        self._next_any = start + self.overall
+
+    def refused(self, url: str, what: str) -> None:
+        """Count a refusal (HTTP 403/429, Deezer's quota error) and raise: StopRun by the stop rule, else RateLimited."""
+        key = host_key(url)
+        self.limited_run += 1
+        self.limited_row[key] += 1
+        self._next[key] = self.clock() + self.backoff
+        if self.limited_row[key] >= LIMITED_IN_A_ROW:
+            raise StopRun(f"{key} answered {what}, {self.limited_row[key]} times in a row")
+        if self.limited_run >= LIMITED_IN_A_RUN:
+            raise StopRun(f"{key} answered {what}: {self.limited_run} refused requests in this run")
+        raise RateLimited(what)
+
+    def get(self, url: str, max_bytes: int = IMAGE_BYTES) -> bytes:
+        check_host(url)
+        key, why = host_key(url), ""
+        for attempt in range(2):
+            if attempt:
+                self._pause(RETRY_S)
+            self._wait(key)
+            self.requests += 1
+            try:
+                status, body = self.fetch(url, max_bytes)
+            except (OSError, http.client.HTTPException) as e:
+                why = f"{type(e).__name__}: {e}"[:120]
+                continue
+            if status in (403, 429):
+                self.refused(url, f"HTTP {status}")
+            if status >= 500:
+                why = f"HTTP {status}"
+                continue
+            self.limited_row[key] = 0
+            self.unanswered = 0
+            if status != 200:
+                raise Gone(f"HTTP {status}")
+            return body
+        self.unanswered += 1
+        if self.unanswered >= DOWN_AFTER:
+            raise StopRun(f"{self.unanswered} requests in a row got no answer (last: {why})")
+        raise Transient(why)
+
+
+# --- the files -------------------------------------------------------------------------------------
+
+def write_atomic(path: Path, data: bytes) -> None:
+    """Write beside `path`, then rename over it: a reader never sees half a file."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        os.chmod(tmp, path.stat().st_mode & 0o777 if path.exists() else 0o644)  # mkstemp makes it 0600
+        os.replace(tmp, path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
+
+
+def read_covers(path: Path = DEFAULT_COVERS) -> dict[str, tuple[str, str]]:
+    """covers.csv as rym_id -> (source, ref), in file order; {} when there is no file yet."""
+    path = Path(path)
+    if not path.exists():
+        return {}
+    out: dict[str, tuple[str, str]] = {}
+    with path.open(encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            if row["source"] not in SOURCES or not row["ref"]:
+                raise ValueError(f"{path}: {row['rym_id']}: unknown source or empty ref ({row['source']!r}, {row['ref']!r})")
+            out[row["rym_id"]] = (row["source"], row["ref"])
+    return out
+
+
+def write_covers(path: Path, covers: dict[str, tuple[str, str]], order: list[str]) -> None:
+    """Write covers.csv with its rows in `order` (the catalog's); an album that is not in `order` is dropped."""
+    buf = io.StringIO(newline="")
+    w = csv.writer(buf, lineterminator="\n")
+    w.writerow(["rym_id", "source", "ref"])
+    w.writerows([k, *covers[k]] for k in order if k in covers)
+    write_atomic(path, buf.getvalue().encode("utf-8"))
+
+
+class State:
+    """The gitignored record of what failed: `refs` is rym_id -> {tier: why}, `sprites` is rym_id -> {of, why},
+    `of` being the `source:ref` the image was asked for."""
+
+    def __init__(self, path: Path):
+        self.path = Path(path)
+        data = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
+        self.refs: dict[str, dict[str, str]] = data.get("refs", {})
+        self.sprites: dict[str, dict[str, str]] = data.get("sprites", {})
+
+    def save(self) -> None:
+        body = json.dumps({"refs": self.refs, "sprites": self.sprites}, ensure_ascii=False, indent=1, sort_keys=True)
+        write_atomic(self.path, body.encode("utf-8"))
+
+
+class ResponseCache:
+    """The audio stage's http.sqlite, opened read-only: url -> the JSON it answered, or None."""
+
+    def __init__(self, path: Path = DEFAULT_HTTP_CACHE):
+        self.db = sqlite3.connect(f"file:{Path(path).as_posix()}?mode=ro", uri=True) if Path(path).exists() else None
+
+    def get(self, url: str) -> object | None:
+        if self.db is None:
+            return None
+        hit = self.db.execute("SELECT body FROM http_cache WHERE url = ?", (url,)).fetchone()
+        return json.loads(zlib.decompress(hit[0])) if hit else None
+
+
+def new_albums(path: Path = DEFAULT_ALBUMS) -> list[dict]:
+    """The catalog's rows with no `legacy_uri`, in catalog order."""
+    with Path(path).open(encoding="utf-8", newline="") as f:
+        return [r for r in csv.DictReader(f) if not r["legacy_uri"]]
+
+
+@dataclass
+class Inputs:
+    """What the lookups read. `matches` and `overrides` are key -> (source, album id) as the audio stage names
+    them (`deezer`, `itunes:<cc>`), `fulllength` is key -> the embedded link, `cache` answers get(url)."""
+    albums: list[dict]
+    matches: dict[str, tuple[str, str]]
+    overrides: dict[str, tuple[str, str]]
+    fulllength: dict[str, str]
+    cache: object
+    _memo: dict = field(default_factory=dict, repr=False)  # rym_id -> (cached cover, uncached listings)
+
+    @classmethod
+    def load(cls, albums: Path = DEFAULT_ALBUMS, matches: Path = DEFAULT_MATCHES, overrides: Path = DEFAULT_MATCH_OVERRIDES,
+             fulllength: Path = DEFAULT_FULLLENGTH, http_cache: Path = DEFAULT_HTTP_CACHE) -> "Inputs":
+        with Path(matches).open(encoding="utf-8", newline="") as f:
+            matched = {r["key"]: (r["source"], r["source_album_id"]) for r in csv.DictReader(f) if r["source"]}
+        forced = {k: (v["source"], str(v["album_id"])) for k, v in json.loads(Path(overrides).read_text(encoding="utf-8")).items()
+                  if v.get("source") and v.get("album_id")}
+        with Path(fulllength).open(encoding="utf-8", newline="") as f:
+            links = {r["key"]: r["url"] for r in csv.DictReader(f) if r["status"] == "embedded"}
+        return cls(new_albums(albums), matched, forced, links, ResponseCache(http_cache))
+
+    def listings(self, row: dict) -> list[tuple[str, str, str]]:
+        """The album's store listings, best first, as (source, the URLs the cache may know it by, the URL to
+        ask): the forced one, the matched one, the catalog's Deezer link, its Apple link in its storefront,
+        then in `us`."""
+        named = [self.overrides.get(row["rym_id"]), self.matches.get(row["rym_id"])]
+        if m := DEEZER_LINK.search(row["deezer_url"]):
+            named.append(("deezer", m.group(1)))
+        if m := APPLE_LINK.search(row["apple_music_url"]):
+            named += [(f"itunes:{m.group(1)}", m.group(2)), ("itunes:us", m.group(2))]
+        out = []
+        for source, album_id in dict.fromkeys(n for n in named if n and n[1].isdigit()):
+            if source == "deezer":
+                out.append((source, (deezer_url(album_id), deezer_tracks_url(album_id)), deezer_url(album_id)))
+            elif re.fullmatch(r"itunes:[a-z]{2}", source):
+                cc = source.split(":")[1]
+                out.append((source, (apple_cached_url(album_id, cc),), apple_url(album_id, cc)))
+        return out
+
+    def _read(self, row: dict) -> tuple:
+        """(the cover of the album's best listing the response cache has one for, or None; the listings the
+        cache has no answer for, as (source, URL to ask)). Read once per album."""
+        if row["rym_id"] not in self._memo:
+            cover, absent = None, []
+            for source, cached, ask in self.listings(row):
+                bodies = [b for b in map(self.cache.get, cached) if b is not None]
+                if not bodies:
+                    absent.append((source, ask))
+                cover = cover or next(filter(None, (listing_ref(source, b) for b in bodies)), None)
+            self._memo[row["rym_id"]] = (cover, absent)
+        return self._memo[row["rym_id"]]
+
+    def cached_cover(self, row: dict) -> tuple[str, str] | None:
+        return self._read(row)[0]
+
+    def uncached(self, row: dict) -> list[tuple[str, str]]:
+        return self._read(row)[1]
+
+    def video(self, row: dict) -> str:
+        return youtube_ref(row["youtube_url"]) or youtube_ref(self.fulllength.get(row["rym_id"], ""))
+
+    def wanted(self, row: dict, failed: dict[str, str]) -> list[str]:
+        """The tiers that can still give the album a cover, best first: those that apply and have not failed."""
+        tiers = []
+        if spotify_album_id(row["spotify_url"]):
+            tiers.append("spotify")
+        if self.cached_cover(row):
+            tiers.append("cache")
+        elif self.uncached(row):
+            tiers.append("store")
+        if row["bandcamp_url"]:
+            tiers.append("bandcamp")
+        if self.video(row):
+            tiers.append("youtube")
+        return [t for t in tiers if t not in failed]
+
+
+# --- refs ------------------------------------------------------------------------------------------
+
+def is_due(tier: str, row: dict, inputs: Inputs, covers: dict, failed: dict[str, str]) -> bool:
+    """Does `tier` look this album up now? Yes when it can still answer, the album has no cover from a source
+    as good, and no better tier is still to answer (the `cache` tier, which costs nothing, does not wait)."""
+    have = covers.get(row["rym_id"])
+    if have and SOURCE_RANK[have[0]] <= TIER_RANK[tier]:
+        return False
+    wanted = inputs.wanted(row, failed)
+    return tier in wanted and (tier == "cache" or tier == wanted[0])
+
+
+def plan(inputs: Inputs, covers: dict, state: State, tiers: tuple[str, ...], retry_failed: bool = False) -> dict:
+    """Counts for --dry-run. `now`: albums each tier would look up in a run started now. `final`: where every
+    new album's cover comes from once every tier has run and every lookup has answered (`none`: no source)."""
+    now, final = {t: 0 for t in TIERS}, {t: 0 for t in TIERS} | {"none": 0}
+    by_source = {"spotify": "spotify", "deezer": "cache", "apple": "cache", "bandcamp": "bandcamp", "youtube": "youtube"}
+    for row in inputs.albums:
+        failed = {} if retry_failed else state.refs.get(row["rym_id"], {})
+        for t in tiers:
+            now[t] += is_due(t, row, inputs, covers, failed)
+        have, wanted = covers.get(row["rym_id"]), inputs.wanted(row, failed)
+        if wanted and not (have and SOURCE_RANK[have[0]] <= TIER_RANK[wanted[0]]):
+            final[wanted[0]] += 1
+        else:
+            final[by_source[have[0]] if have else "none"] += 1
+    return {"now": now, "final": final}
+
+
+def look_up(tier: str, row: dict, inputs: Inputs, fetcher: Fetcher) -> tuple[str, str]:
+    """(source, ref) of the album's cover from one tier. Raises Gone when the tier has none for it."""
+    if tier == "spotify":
+        body = fetcher.get(oembed_url(spotify_album_id(row["spotify_url"])), PAGE_BYTES)
+        try:
+            ref = spotify_ref(json.loads(body).get("thumbnail_url") or "")
+        except (ValueError, AttributeError):
+            ref = ""
+        if not ref:
+            raise Gone("no thumbnail in Spotify's answer")
+        return "spotify", ref
+    if tier == "cache":
+        return inputs.cached_cover(row)
+    if tier == "store":
+        for source, url in inputs.uncached(row):
+            try:
+                body = json.loads(fetcher.get(url, IMAGE_BYTES))
+            except Gone:
+                continue
+            except ValueError:
+                continue
+            if isinstance(body, dict) and (body.get("error") or {}).get("code") == 4:  # Deezer's quota error, sent as 200
+                fetcher.refused(url, "Deezer's quota error")
+            if got := listing_ref(source, body):
+                return got
+        raise Gone("the store has no cover for the album's listings")
+    if tier == "bandcamp":
+        try:
+            page = fetcher.get(row["bandcamp_url"], PAGE_BYTES)
+        except HostNotAllowed:
+            raise Gone("the page's host is not on the allow-list") from None
+        if not (ref := bandcamp_ref(page.decode("utf-8", "replace"))):
+            raise Gone("no album art in the page's og:image")
+        return "bandcamp", ref
+    return "youtube", inputs.video(row)
+
+
+class Progress:
+    """A line every PROGRESS_S seconds: done, left, failed, the time left at the pace so far."""
+
+    def __init__(self, what: str, total: int, out, clock=time.monotonic):
+        self.what, self.total, self.out, self.clock = what, total, out, clock
+        self.start = self.last = clock()
+
+    def tick(self, done: int, failed: int, force: bool = False) -> None:
+        now = self.clock()
+        if not force and now - self.last < PROGRESS_S:
+            return
+        self.last = now
+        left = (self.total - done) * (now - self.start) / done if done else 0.0
+        self.out(f"{self.what}: {done}/{self.total} done, {failed} failed, about {left / 60:.0f} min left")
+
+
+def run_refs(inputs: Inputs, covers_path: Path, state_path: Path, sprite_dir: Path, fetcher: Fetcher,
+             tiers: tuple[str, ...] = TIERS, limit: int | None = None, retry_failed: bool = False,
+             stop=lambda: False, out=print) -> int:
+    """Look the due albums up, tier by tier, and write covers.csv and the state file. Returns the exit code:
+    0, 2 when the stop rule ended the run, 130 when it was interrupted."""
+    covers, state = read_covers(covers_path), State(state_path)
+    order = [r["rym_id"] for r in inputs.albums]
+    unsaved = handled = 0
+    code = 0
+
+    def save() -> None:
+        nonlocal unsaved
+        write_covers(covers_path, covers, order)
+        state.save()
+        unsaved = 0
+
+    try:
+        for tier in (t for t in TIERS if t in tiers):
+            failed_for = lambda key: {} if retry_failed else state.refs.get(key, {})  # noqa: E731
+            due = [r for r in inputs.albums if is_due(tier, r, inputs, covers, failed_for(r["rym_id"]))]
+            if limit is not None:
+                due = due[:max(0, limit - handled)]
+            if not due:
+                continue
+            progress, found, failed = Progress(f"refs {tier}", len(due), out), 0, 0
+            for n, row in enumerate(due):
+                if stop():
+                    raise Interrupted()
+                key = row["rym_id"]
+                try:
+                    got = look_up(tier, row, inputs, fetcher)
+                except Gone as e:
+                    state.refs.setdefault(key, {})[tier] = str(e)
+                    failed += 1
+                except Transient as e:
+                    out(f"  {key}: {tier}: {e} (not recorded, asked again next time)")
+                else:
+                    if key in covers and covers[key] != got:
+                        (Path(sprite_dir) / f"{key}.jpg").unlink(missing_ok=True)  # made from the replaced source
+                    covers[key] = got
+                    if state.refs.get(key, {}).pop(tier, None) is not None and not state.refs[key]:
+                        del state.refs[key]
+                    found += 1
+                handled += 1
+                unsaved += 1
+                if unsaved >= SAVE_EVERY:
+                    save()
+                progress.tick(n + 1, failed)
+            out(f"refs {tier}: {found} found, {failed} failed, {len(due) - found - failed} to ask again, of {len(due)}")
+    except StopRun as e:
+        out(f"stopped: {e}. Nothing more is asked in this run; wait before starting it again.")
+        code = 2
+    except Interrupted:
+        out("interrupted: progress saved")
+        code = 130
+    finally:
+        if unsaved or not Path(covers_path).exists():
+            save()
+    return code
+
+
+# --- sprites ---------------------------------------------------------------------------------------
+
+def crop_frame(im: Image.Image) -> Image.Image:
+    """A 4:3 video thumbnail without the black bars YouTube puts above and below a 16:9 picture (an eighth of
+    the height each), when both bands are black; any other picture unchanged."""
+    w, h = im.size
+    bar = h // 8
+    if w * 3 != h * 4 or not bar:
+        return im
+    for box in ((0, 0, w, bar), (0, h - bar, w, h)):
+        stat = ImageStat.Stat(im.crop(box).convert("L"))
+        if stat.mean[0] > 18 or stat.stddev[0] > 10:
+            return im
+    return im.crop((0, bar, w, h - bar))
+
+
+def make_sprite(data: bytes, source: str) -> Image.Image:
+    """The 96 px RGB sprite of a downloaded image: its centre square (of the picture inside the bars, for a
+    video frame), resized with Lanczos. The image is decoded in memory."""
+    with Image.open(io.BytesIO(data)) as im:
+        im = im.convert("RGB")
+    if source == "youtube":
+        im = crop_frame(im)
+    return ImageOps.fit(im, (SPRITE_PX, SPRITE_PX), method=Image.Resampling.LANCZOS)
+
+
+def spread(keys: list[str], covers: dict[str, tuple[str, str]]) -> list[str]:
+    """The keys reordered so that the sources take turns (for a trial across every source)."""
+    queues = {s: [k for k in keys if covers[k][0] == s] for s in SOURCES}
+    out = []
+    while any(queues.values()):
+        out += [q.pop(0) for q in queues.values() if q]
+    return out
+
+
+def sprite_path(sprite_dir: Path, key: str) -> Path:
+    if not SAFE_NAME.match(key):
+        raise ValueError(f"not a file name: {key!r}")
+    return Path(sprite_dir) / f"{key}.jpg"
+
+
+def missing_sprites(covers: dict, order: list[str], sprite_dir: Path, state: State, sources=None,
+                    retry_failed: bool = False) -> list[str]:
+    """The albums of covers.csv, in `order`, with no sprite and no recorded failure for their current image."""
+    out = []
+    for key in order:
+        if key not in covers or (sources and covers[key][0] not in sources) or sprite_path(sprite_dir, key).exists():
+            continue
+        if not retry_failed and state.sprites.get(key, {}).get("of") == ":".join(covers[key]):
+            continue
+        out.append(key)
+    return out
+
+
+def run_sprites(covers: dict[str, tuple[str, str]], order: list[str], sprite_dir: Path, state_path: Path, fetcher: Fetcher,
+                limit: int | None = None, sources: tuple[str, ...] | None = None, retry_failed: bool = False,
+                spread_sources: bool = False, stop=lambda: False, out=print) -> int:
+    """Fetch the small image of each album that has no sprite yet and save its 96 px JPEG. The downloaded image
+    is never written to disk. Returns the exit code, as run_refs."""
+    state = State(state_path)
+    todo = missing_sprites(covers, order, sprite_dir, state, sources, retry_failed)
+    if spread_sources:
+        todo = spread(todo, covers)
+    todo = todo[:limit] if limit is not None else todo
+    progress, made, failed, unsaved, code = Progress("sprites", len(todo), out), 0, 0, 0, 0
+    try:
+        for n, key in enumerate(todo):
+            if stop():
+                raise Interrupted()
+            source, ref = covers[key]
+            try:
+                sprite = make_sprite(fetcher.get(sprite_url(source, ref), IMAGE_BYTES), source)
+            except Transient as e:
+                out(f"  {key}: {e} (not recorded, asked again next time)")
+            except (Gone, OSError, ValueError, Image.DecompressionBombError) as e:  # a 404, or not an image
+                state.sprites[key] = {"of": f"{source}:{ref}", "why": str(e)[:160]}
+                failed += 1
+                unsaved += 1
+            else:
+                buf = io.BytesIO()
+                sprite.save(buf, "JPEG", quality=SPRITE_QUALITY)
+                write_atomic(sprite_path(sprite_dir, key), buf.getvalue())
+                if state.sprites.pop(key, None) is not None:
+                    unsaved += 1
+                made += 1
+            if unsaved >= SAVE_EVERY:
+                state.save()
+                unsaved = 0
+            progress.tick(n + 1, failed)
+        out(f"sprites: {made} made, {failed} failed, {len(todo) - made - failed} to ask again, of {len(todo)}")
+    except StopRun as e:
+        out(f"stopped: {e}. Nothing more is asked in this run; wait before starting it again.")
+        code = 2
+    except Interrupted:
+        out("interrupted: progress saved")
+        code = 130
+    finally:
+        if unsaved or not state.path.exists():
+            state.save()
+    return code
+
+
+# --- what the build reads ----------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class Covers:
+    """covers.csv, read once, and the folder its sprites are in."""
+    rows: dict[str, tuple[str, str]]
+    sprite_dir: Path
+
+    def cover_for(self, key: str) -> tuple[str, Path | None]:
+        """(the album's `c`, the path of its 96 px sprite or None when there is none yet). ("", None) for an
+        album with no cover source."""
+        if key not in self.rows:
+            return "", None
+        path = sprite_path(self.sprite_dir, key)
+        return c_field(*self.rows[key]), path if path.exists() else None
+
+
+def load_covers(path: Path = DEFAULT_COVERS, sprite_dir: Path = DEFAULT_SPRITES) -> Covers:
+    return Covers(read_covers(path), Path(sprite_dir))
+
+
+@lru_cache(maxsize=1)
+def _default_covers() -> Covers:
+    return load_covers()
+
+
+def cover_for(key: str) -> tuple[str, Path | None]:
+    """Covers.cover_for on the committed covers.csv and the default sprite folder, read once per process."""
+    return _default_covers().cover_for(key)
+
+
+# --- the command line --------------------------------------------------------------------------------
+
+def _names(value: str, known: tuple[str, ...]) -> tuple[str, ...]:
+    names = tuple(v.strip() for v in value.split(",") if v.strip())
+    if unknown := [n for n in names if n not in known]:
+        raise argparse.ArgumentTypeError(f"unknown: {', '.join(unknown)} (known: {', '.join(known)})")
+    return names
+
+
+def _stopper():
+    """A function that says whether SIGINT or SIGTERM arrived."""
+    asked = []
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        signal.signal(sig, lambda *_: asked.append(1))
+    return lambda: bool(asked)
+
+
+def _say(*args) -> None:
+    print(*args, flush=True)
+
+
+def cmd_refs(args) -> int:
+    inputs = Inputs.load(args.albums)
+    if args.dry_run:
+        covers, state = read_covers(args.covers), State(args.state)
+        counts = plan(inputs, covers, state, args.tiers, args.retry_failed)
+        _say(f"{len(inputs.albums)} new albums, {len(covers)} with a row in {Path(args.covers).name}")
+        _say("tier       asked by a run now   source in the end, if every lookup answers")
+        for t in TIERS:
+            now = counts["now"][t] if t in args.tiers else "-"
+            _say(f"{t:<10} {now!s:>18}   {counts['final'][t]:>6}")
+        _say(f"{'none':<10} {'':>18}   {counts['final']['none']:>6}")
+        return 0
+    stop = _stopper()
+    intervals = REFS_INTERVALS | {"open.spotify.com": args.spotify_interval, "bandcamp": args.bandcamp_interval}
+    code = run_refs(inputs, args.covers, args.state, args.sprites, Fetcher(intervals, stop=stop), args.tiers, args.limit,
+                    args.retry_failed, stop, _say)
+    _say(f"{len(read_covers(args.covers))} of {len(inputs.albums)} new albums have a row in {args.covers}")
+    return code
+
+
+def cmd_sprites(args) -> int:
+    covers = read_covers(args.covers)
+    order = [r["rym_id"] for r in new_albums(args.albums)]
+    if args.dry_run:
+        state = State(args.state)
+        todo = missing_sprites(covers, order, args.sprites, state, args.sources, args.retry_failed)
+        _say(f"{len(covers)} rows, {len(todo)} sprites to fetch: " + ", ".join(
+            f"{s} {n}" for s, n in sorted(Counter(covers[k][0] for k in todo).items())))
+        return 0
+    stop = _stopper()
+    fetcher = Fetcher(SPRITES_INTERVALS, args.interval, stop=stop)
+    return run_sprites(covers, order, args.sprites, args.state, fetcher, args.limit, args.sources, args.retry_failed,
+                       args.spread, stop, _say)
+
+
+def cmd_status(args) -> int:
+    inputs, covers, state = Inputs.load(args.albums), read_covers(args.covers), State(args.state)
+    by_source = Counter(s for s, _ in covers.values())
+    have = sum(sprite_path(args.sprites, k).exists() for k in covers)
+    _say(f"{len(inputs.albums)} new albums, {len(covers)} with a cover source")
+    for s in SOURCES:
+        _say(f"  {s:<9} {by_source[s]:>5}")
+    _say(f"sprites: {have} present, {len(covers) - have} missing ({sum(k in covers for k in state.sprites)} of them failed)")
+    without = [r for r in inputs.albums if r["rym_id"] not in covers]
+    waiting = Counter((inputs.wanted(r, state.refs.get(r["rym_id"], {})) or ["none"])[0] for r in without)
+    _say(f"no cover source: {len(without)} (" + ", ".join(f"{n} {t}" for t, n in sorted(waiting.items())) + ")"
+         if without else "no cover source: 0")
+    if len(without) <= 50:
+        for r in without:
+            failed = "; ".join(f"{t}: {w}" for t, w in state.refs.get(r["rym_id"], {}).items())
+            _say(f"  {r['rym_id']}  {r['artist']} - {r['title']}" + (f"  [{failed}]" if failed else ""))
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(prog="python -m rmr_pipeline.covers", description=__doc__.split("\n")[0])
+    sub = ap.add_subparsers(dest="command", required=True)
+    for name, fn, text in [("refs", cmd_refs, "find a cover source per new album and write covers.csv"),
+                           ("sprites", cmd_sprites, "fetch the small image of each row and save its 96 px sprite"),
+                           ("status", cmd_status, "counts per source, sprites, albums without a cover")]:
+        p = sub.add_parser(name, help=text)
+        p.set_defaults(fn=fn)
+        p.add_argument("--albums", type=Path, default=DEFAULT_ALBUMS)
+        p.add_argument("--covers", type=Path, default=DEFAULT_COVERS)
+        p.add_argument("--state", type=Path, default=DEFAULT_STATE)
+        p.add_argument("--sprites", type=Path, default=DEFAULT_SPRITES, help="the sprite folder")
+        if name == "status":
+            continue
+        p.add_argument("--limit", type=int, help="albums looked up in this run, at most")
+        p.add_argument("--dry-run", action="store_true", help="print the counts; no request, nothing written")
+        p.add_argument("--retry-failed", action="store_true", help="ask again for the albums the state file lists")
+    refs, sprites = sub.choices["refs"], sub.choices["sprites"]
+    refs.add_argument("--tiers", type=lambda v: _names(v, TIERS), default=TIERS, help=f"comma-separated, of {', '.join(TIERS)}")
+    refs.add_argument("--spotify-interval", type=float, default=REFS_INTERVALS["open.spotify.com"], help="seconds between oEmbed requests")
+    refs.add_argument("--bandcamp-interval", type=float, default=REFS_INTERVALS["bandcamp"], help="seconds between Bandcamp pages")
+    sprites.add_argument("--interval", type=float, default=SPRITES_INTERVAL, help="seconds between two image requests")
+    sprites.add_argument("--sources", type=lambda v: _names(v, SOURCES), help=f"only these, of {', '.join(SOURCES)}")
+    sprites.add_argument("--spread", action="store_true", help="take the sources in turn instead of catalog order")
+    args = ap.parse_args(argv)
+    return args.fn(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
