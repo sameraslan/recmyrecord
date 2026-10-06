@@ -135,3 +135,42 @@ compute the jump rows for each `--old` file, and mark any row where "now" exceed
 - **New contract tests:** they are meaningful: exact reuse in place, rigidity or wall contact, settling to a fresh solve,
   landing on the target with nothing to settle, re-solving on retarget, and 0 frames at rest in e2e. None of them covers
   steadiness at the walls (finding 3) or a pinch (finding 1).
+
+## Re-check of the fixes in 0edee365 (2026-10-06)
+
+**Verdict: APPROVED.** All 8 findings are addressed. One new Minor point (9) is listed below; it can be fixed later.
+
+I ran each probe again on a fresh build of 0edee365, with base 1907f1fd built again alongside it for comparison:
+
+| # | Finding | Status | Evidence |
+|---|---|---|---|
+| 1 | Pinch was not treated as motion | ADDRESSED | `state/motion.ts` now includes `pinching`. CameraRig sets it for the second pointer and clears it when fewer than two remain, and also on unmount. `rv-pinch` on a phone (zoom 0.60 to 2.08, 25 frames): settles 0 and eases 0 during the pinch, then **settles 1 and eases 1** after release, freshGap 0. Before the fix it was 23 and 23. The new phone e2e test checks the same thing. |
+| 2 | One extra frame after a zoom or fling | ADDRESSED | The subscription now queues one `queueMicrotask(check)` per task, guarded by `w.asked`. The check runs after the r3f rAF callback, when a layout that settled in that frame is no longer `unsettled`. `rv-wheel`: HEAD **0,0,0,0**, the same as base. Flings: base gives 1,1,1 with no album and 1,1,2 with an album open, HEAD gives 1,1,1 both ways. So the frame that follows a fling is base behaviour, which confirms the implementer's claim (on this machine it was 1 frame, not 2). Drag release: one settle frame at about 25 ms, then only the base frame at about 545 ms. |
+| 3 | The wall-held ride jumped | ADDRESSED | The ride now carries the positions last drawn, moved with the seed, then `shiftInside`, then `separateAtWalls` from there. `rv-jump` on phone album 3278: every frame is at most 7.2 px beyond its album (it was 341). In `layout-cost`, all "now" rows are 8 px or less for pans, and both rows for the phone's worst album are 8.0/8.0. A new unit test caps a corner-pressed pan at 30 px. |
+| 4 | Hit-testing during the ease | ADDRESSED | `paint()` runs on every ease step and publishes the eased boxes (`setPlacedMarkers(w.drawn)`), and also places the hover label. `w.drawn` is reused from frame to frame. Its consumers only read `getPlacedMarkers()`, so reusing the same array is safe. |
+| 5 | `w.settle` stayed set after cleanup | ADDRESSED | `stopSettle()` cancels the rAF and clears `w.settle` on cleanup, on close and when the version changes. `step` also returns early if it has been replaced. |
+| 6 | Per-frame allocation in `tweenTarget`, and a wrong comment | ADDRESSED | The target is compared in place against a `Float64Array(8)` and allocates only when it returns a target. The comment is now accurate. The settle allocates `to` only once per ease. |
+| 7 | The test hook stayed installed | ADDRESSED | The hook is deleted on unmount, but only if it is still this driver's hook. |
+| 8 | `layout-cost.mjs` did not flag regressions | ADDRESSED | The steadiness of each older file is now printed, and a "(!)" marks any row where "now" is worse. Run against base, the only row it marks is the phone's worst-album zoom: 7.1 against 6.6 px at p99, which is negligible. |
+
+Other checks: e2e focus and map specs, desktop and phone, `--workers=1`: **34 passed, 8 skipped, 0 failed**. All state unit tests pass: 11 files, 169 tests. The desktop album open is still clean: opening from the map card gives eases 0 and settles 0; a direct load of the album page gives freshGap 0 and 0 frames at rest. I started and stopped my own probe servers and base worktree.
+
+### 9. Minor (new): in a bounds area too small for the group, the carried-layout fallback can run a fresh solve on many frames
+
+`frontcreck/src/components/map/state/focusLayout.ts`, in the `!still` branch (`separateAtWalls` fails, then `relaxHeld`,
+then `carrySolve`). It cannot loop: each call does at most one `relaxHeld` and one solve. But when even a fresh solve leaves
+boxes overlapping, every moving frame repeats the whole chain and allocates a new `items` array. My probe (`rv-crowd.mjs`)
+used 11 markers and a 300-frame pan:
+
+| Bounds | Frames that ran a fresh solve | Mean per frame | Worst frame |
+|---|---|---|---|
+| 150x150 | 300 of 300 | 1.2 ms | 21 ms |
+| 250x200 | 228 of 300 | 0.6 ms | 3.7 ms |
+| 828x209 (about a phone in landscape above the slider) | 32 of 300 | 0.46 ms | 30 ms |
+| 360x684, 300x500 | 0 | | |
+
+The version before the fix (ebfa4d23) was no better in these areas. It ran `relaxHeld` on every frame instead: 0.87 ms mean
+and 26 ms worst at 828x209, and 1.6 ms mean at 150x150. So this is an existing cost for degenerate bounds, not a regression.
+**Fix (optional):** record when the last solve itself left an overlap, and skip `relaxHeld` and `carrySolve` while that
+holds. The groups ride with their inherited overlap until the settle, and frames that are expensive anyway are spared a
+full solve.
