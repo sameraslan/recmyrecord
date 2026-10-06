@@ -29,11 +29,11 @@ def test_catalog_needs_an_out_folder_that_is_not_the_sites(capsys, tmp_path):
 def test_catalog_defaults(tmp_path):
     args = parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path)])
     assert args.audio_dir == store.STORES["effnet10k"] and store.SITE_MODEL == "effnet"
-    assert (args.descriptor_weights, args.existing_descriptors) == ("rank", "table-novocals")
+    assert (args.descriptor_weights, args.existing_descriptors) == ("slope", "table")
     assert args.catalog_path == DEFAULT_CATALOG
     args = parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path), "--audio-dir", "x",
-                       "--descriptor-weights", "slope", "--existing-descriptors", "sheet"])
-    assert (args.audio_dir.name, args.descriptor_weights, args.existing_descriptors) == ("x", "slope", "sheet")
+                       "--descriptor-weights", "rank", "--existing-descriptors", "sheet"])
+    assert (args.audio_dir.name, args.descriptor_weights, args.existing_descriptors) == ("x", "rank", "sheet")
 
 
 def test_the_catalog_flags_need_catalog(capsys):
@@ -149,6 +149,27 @@ def test_the_catalog_build_validates_and_keeps_the_sites_albums_first(catalog_bu
     assert "imputed" not in printed
 
 
+def test_the_catalog_build_shows_bracketed_artists_and_keeps_the_slugs_of_the_latin_forms(catalog_build, deduped):
+    from rmr_pipeline.catalog import catalog_frame, display_artist
+    from rmr_pipeline.slugs import make_slugs
+
+    albums, _, _, printed, _, _ = catalog_build
+    catalog, n_site = load_catalog(), len(deduped[0])
+    new = catalog.iloc[n_site:]
+    shown = [display_artist(a, b) for a, b in zip(new["artist"], new["artist_latin"])]
+    assert [a["a"] for a in albums[n_site:]] == shown
+    assert [a["t"] for a in albums[n_site:]] == list(new["title"])  # titles stay as the catalog has them
+    by_key = dict(zip(catalog["rym_id"], albums))
+    parannoul = next(a for a in albums[n_site:] if a["a"].startswith("파란노을 ["))
+    assert parannoul["a"] == "파란노을 [Parannoul]" and parannoul["slug"].endswith("-parannoul")
+    assert f"artists: {sum(s != a for s, a in zip(shown, new['artist']))} new albums shown as native [Latin]" in printed
+    # the slugs are what they were before the bracketed form: made from the romanised title and artist
+    cat = catalog_frame(deduped[0], catalog)
+    site = [a["a"] for a in albums[:n_site]]
+    before = make_slugs(cat.slug_titles, site + cat.slug_artists[n_site:])
+    assert [a["slug"] for a in albums[n_site:]] == before[n_site:] and len(by_key) == len(albums)
+
+
 def test_the_catalog_builds_albums_without_audio_are_mood_only(catalog_build, deduped):
     albums, recs, positions, printed, _, _ = catalog_build
     n_site = len(deduped[0])
@@ -174,11 +195,11 @@ def test_the_catalog_builds_derived_positions_sit_among_their_mood_neighbours(ca
     """An album without audio is at the mean of its three nearest albums with audio by descriptors, give or
     take the spreading of stacked points."""
     from rmr_pipeline.audio import descriptors
-    from rmr_pipeline.catalog import catalog_frame
+    from rmr_pipeline.catalog import DEFAULT_EXISTING, DEFAULT_WEIGHTS, catalog_frame
     from rmr_pipeline.layout import nearest_with_audio
 
     albums, _, positions, _, _, _ = catalog_build
-    cat = catalog_frame(deduped[0], load_catalog())
+    cat = catalog_frame(deduped[0], load_catalog(), weights=DEFAULT_WEIGHTS, existing=DEFAULT_EXISTING)  # the build's
     has_audio = np.array(["n" not in a for a in albums])
     near = nearest_with_audio(descriptors(cat.frame), has_audio)
     idx = np.flatnonzero(has_audio)

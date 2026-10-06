@@ -125,6 +125,29 @@ def top_k_mutual(X: np.ndarray, k: int = RECS_PER_STOP, pool: np.ndarray | None 
     return out
 
 
+def no_audio_columns(block: np.ndarray, has_audio: np.ndarray) -> np.ndarray:
+    """The mood stop's correction for the albums without audio: one column per such album, sqrt(V) on its own
+    row and 0 elsewhere, float32, to be put beside the site matrix. V is the mean squared distance of a block
+    from the mean block over the albums with audio.
+
+    Without it every album without audio has the mean block (audio.mean_fill), so two of them are at audio
+    distance 0 and each is nearer to the other than to any album with audio, by that album's distance from
+    the mean: they recommend each other too often. With the columns a pair of an album without audio and one
+    with pays V more, squared, and a pair of two without pays 2V, which is what two albums with audio pay on
+    average. The block enters the site matrix as it is (audio.site_matrix divides only the descriptors by
+    the slider term), so the columns are not scaled by the stop either. No column when every album has audio."""
+    has_audio = np.asarray(has_audio, dtype=bool)
+    B = np.asarray(block, dtype=np.float64)
+    if has_audio.shape != (len(B),) or not has_audio.any():
+        raise ValueError(f"has_audio must be one bool per album ({len(B)}), at least one True")
+    known = B[has_audio]
+    V = float(((known - known.mean(axis=0)) ** 2).sum(axis=1).mean())
+    quiet = np.flatnonzero(~has_audio)
+    cols = np.zeros((len(B), len(quiet)), dtype=np.float32)
+    cols[quiet, np.arange(len(quiet))] = math.sqrt(V)
+    return cols
+
+
 def build_recs(sub: pd.DataFrame, block: np.ndarray, hub_correction: tuple[str, ...] = (),
                has_audio: np.ndarray | None = None, mood_only: bool = False) -> dict[str, np.ndarray]:
     """Top 10 per album at each stop over the whole deduped catalog, on the site matrix
@@ -135,7 +158,9 @@ def build_recs(sub: pd.DataFrame, block: np.ndarray, hub_correction: tuple[str, 
     every stop. With it (the catalog build) an album without audio is limited to the mood side: at the
     sonic and balanced stops (AUDIO_STOPS) only the albums with audio are ranked, among themselves, and
     the others' rows are -1 (rec_lists writes them as []). The mood stop ranks every album among all of
-    them, the block of an album without audio being the mean block (audio.mean_fill)."""
+    them, the block of an album without audio being the mean block (audio.mean_fill), with one more column
+    per album without audio (no_audio_columns) so that those albums are not at audio distance 0 from each
+    other. The columns are for these lists only: the mood map is laid out without them (layout.build_layouts)."""
     if not mood_only:
         return {stop: (top_k_mutual if stop in hub_correction else top_k_neighbours)(site_matrix(sub, block, SLIDER[stop]))
                 for stop in STOPS}
@@ -146,7 +171,7 @@ def build_recs(sub: pd.DataFrame, block: np.ndarray, hub_correction: tuple[str, 
     for stop in STOPS:
         rank = top_k_mutual if stop in hub_correction else top_k_neighbours
         X = site_matrix(sub, block, SLIDER[stop])
-        out[stop] = rank(X, pool=pool) if stop in AUDIO_STOPS else rank(X)
+        out[stop] = rank(X, pool=pool) if stop in AUDIO_STOPS else rank(np.hstack([X, no_audio_columns(block, pool)]))
     return out
 
 

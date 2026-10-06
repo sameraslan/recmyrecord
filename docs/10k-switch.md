@@ -13,24 +13,33 @@ Line numbers are of the working tree of 6 October. `frontcreck/` was being edite
   - 6,386 more candidates, in neither report. Scratch build against today's data, existing albums: 2.9 of 10 kept at sonic, 3.0 at balanced, 2.1 at mood; 98% of lists hold a new album; vocabulary 113.
 - **In Rainbows at mood no longer matches the old live site.** Scratch build: Glitter, Takk..., Have You in My Wilderness, Carrie & Lowell Live, 0. Today: Tindersticks, Avalon, So, You Will Never Know Why, Imperial Bedroom.
 - **Every map position moves**, at all three stops (new store, new descriptors, a UMAP of 10,467 points).
-- **Albums without audio become mood-only.** Today 101 existing albums have an imputed block (README, Albums without audio). After: no imputation; an album without audio has `n`, no sonic or balanced list, is in nobody's, and shows the note. Store: 10,242 of 10,467. Scratch build: 225 `n` albums, 39 of them existing.
+- **Albums without audio become mood-only.** Today 101 existing albums have an imputed block (README, Albums without audio). After: no imputation; an album without audio has `n`, no sonic or balanced list, is in nobody's, and shows the note. Store: 10,242 of 10,467. The catalog build marks 225 albums as without audio (the 223 with none, plus the 2 left out of the store with `--exclude`), 39 of them existing.
 - **Covers from other hosts.** Deezer, Apple, Bandcamp and YouTube image hosts beside Spotify's (README, Covers of the new albums). Scratch build: 5,191 Spotify, 2,326 Apple, 2,217 Deezer, 5 Bandcamp, 5 YouTube, 723 none (fetch unfinished). A YouTube cover is a video frame.
 - **Other listen links.** 774 new albums have no Spotify link (`tests/test_catalog.py:253`). They link to Apple Music, Bandcamp, Deezer, YouTube or SoundCloud. Scratch build: 696 albums with `l`, 81 with no link at all. Chill Out gets a YouTube link.
 
 ## 2. Preconditions
 
+Owner decisions of 6 October 2026:
+
+- **Descriptor weights are not equal.** The gentle slope (`--descriptor-weights slope`, 1 down to 0.5) is expected and is the build's default; he confirms after comparing it with `rank` in `docs/review/weights-compare.html`.
+- **The vocals descriptors are kept**: `--existing-descriptors table`, now the default. New albums have none, because the sheet does not list them (2,772 existing albums have one among their 8, no new album does). To confirm after the numbers on what that asymmetry does to the lists.
+- **Artist form of a new album**: `native [Latin]`, as 33 existing albums have (`catalog.display_artist`). Titles stay as the catalog has them.
+- **The no-audio note**: "Sound matches aren't available for this album yet." with the link "Show mood matches".
+- **The link labels are approved.**
+- **Wrong Spotify links are fixed through `overrides.json`** (the ids two albums share, which the build lists).
+
 Owner decisions still open:
 
-1. Descriptor weights: `--descriptor-weights rank|equal|slope` (default `rank`).
-2. Vocals columns of existing albums: `--existing-descriptors table-novocals|table|sheet` (default `table-novocals`).
-3. The no-audio note: `frontcreck/src/lib/copy.ts:56,58` (marked "Working wording").
-4. The copy strings of section 5, and the listen strings `copy.ts:61-65` (also "Working wording").
-5. YouTube-frame covers: yes or no. If no, drop the `youtube` rows from `catalog/covers.csv` before the build.
-6. What happens to `audio/` and `audio/clap/` (section 8). The steps below assume both stay.
+1. The weights, after the comparison page: `slope` (default) or `rank`.
+2. The vocals descriptors, after the asymmetry numbers: `table` (default) or `table-novocals`.
+3. The copy strings of section 5 that are not listed above.
+4. YouTube-frame covers: yes or no (`docs/review/youtube-covers.png`). If no, drop the `youtube` rows from `catalog/covers.csv` before the build.
+5. What happens to `audio/` and `audio/clap/` (section 8). The steps below assume both stay.
 
 State:
 
-- Cover fetch finished: `python -m rmr_pipeline.covers status` shows no sprite missing. `catalog/covers.csv` is committed (untracked today).
+- Cover fetch finished: `python -m rmr_pipeline.covers status` shows no sprite missing other than the failed ones. `catalog/covers.csv` is committed (untracked today).
+- The sprites are recorded: once no `sprites` run is going, `python -m rmr_pipeline.covers adopt --dry-run`, then `adopt`. Delete the sprites it leaves alone as older than `covers.csv` and run `sprites` once more. `--require-sprites` refuses a sprite with no manifest entry. An album whose image is gone for good (recorded in `.cache/covers/state.json`) is built with an empty `c` and does not stop the flag.
 - A rehearsal passes: `build --catalog --require-sprites --map-root <map> --out .cache/site10k-final` with the chosen flags, then `validate --data .cache/site10k-final`.
 - The frontend work for the catalog data is merged into the branch (several thumbnail sheets, cover hosts, `l`, `n`, the note) and passes against the rehearsal folder with `RMR_DATA_DIR`. `frontcreck/public/data-10k` is a symlink into a scratch folder: remove it, never commit it.
 - The map worktree is at hand for `--map-root` (on this laptop `/Users/saslan.19/Desktop/Tengs/codingMiscellaneous/website/.claude/worktrees/music_map`).
@@ -61,7 +70,8 @@ All from `data-pipeline/`, one heavy job at a time.
 
 ```bash
 git status --short                                   # clean, covers.csv tracked
-.venv/bin/python -m rmr_pipeline.covers status       # no sprite missing
+.venv/bin/python -m rmr_pipeline.covers adopt --dry-run   # then `adopt`: every sprite recorded in the manifest
+.venv/bin/python -m rmr_pipeline.covers status       # no sprite missing but the failed ones
 # 1. apply section 3
 # 2. build into frontcreck/public/data (1 to 2 minutes, README)
 caffeinate -i nice -n 19 .venv/bin/python -m rmr_pipeline.build --require-sprites --map-root <map>
@@ -88,7 +98,7 @@ nice -n 19 .venv-audio/bin/python -m pytest tests_audio
 |---|---|---|---|
 | `tests/test_build.py:31-39` (`:35`, `:36`) | `SITE_MODEL == "effnet"`, default store `audio/` | hand | `"effnet10k"`, `STORES["effnet10k"]`; rename the test |
 | `tests/test_audio_store.py:338-342` (`:340`) | the same, and `site_store() == DEFAULT_AUDIO` | hand | the same; rename the test |
-| `tests/test_build_catalog.py:29-36` (`:31`, `:32`) | `SITE_MODEL == "effnet"`; defaults `rank`, `table-novocals` | hand | the new value; the owner's choices |
+| `tests/test_build_catalog.py:29-36` (`:31`, `:32`) | `SITE_MODEL == "effnet"`; defaults `slope`, `table` (the owner's choices of 6 October) | hand | the new value |
 | `tests/test_build_catalog.py:18-26` | `--catalog` needs `--out` and refuses `public/data` ("go-ahead") | hand | inverted: `--no-catalog` needs `--out` and refuses it |
 | `tests/test_build_catalog.py:39-46`, `:49-54` | catalog off by default; the catalog flags and `--require-sprites` error without it | hand | on by default; they error with `--no-catalog` |
 | `tests/conftest.py:16-28` | `audio`, `site_recs`: the feature table on `site_store()` | hand | pin both to `DEFAULT_AUDIO` (they test the old store's mechanics); the catalog's block and lists get fixtures of their own |
@@ -125,7 +135,7 @@ If `conftest.py` keeps following `site_store()` instead, these fail (seen in a s
 | `frontcreck/src/lib/copy.ts:6`, the rule at `:3` (`copy.test.ts:84` follows the constant) | `'4,000+'` |
 | `frontcreck/src/lib/copy.ts:116`, pinned at `copy.test.ts:48` | "measurements such as energy, tempo, danceability and acousticness, taken from the recording" |
 | `frontcreck/src/lib/copy.ts:132` | "Sound values from Spotify. Cover art from Spotify." |
-| `frontcreck/src/lib/copy.ts:56,58,61-65` | the no-audio note and the listen strings, still "Working wording" |
+| `frontcreck/src/lib/copy.ts:56,58,61-65` | the no-audio note (wording decided 6 October, section 2) and the listen strings (labels approved); check the "Working wording" marks are gone |
 | `README.md:25`, `frontcreck/README.md:3`, `:35`, `frontcreck/src/components/Cover.tsx:48` (a comment) | "4,000+"; "the only outside requests are cover images from Spotify's image server" |
 | `data-pipeline/README.md:3-26`, `:59-80`, `:86`, `:159-173`, `:296-298`, `:336-351`, `:377` | the default build, "None of that is done", "It is not what the site is built with", 101 imputed albums |
 

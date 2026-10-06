@@ -8,7 +8,7 @@ from rmr_pipeline.audio_store import site_store
 from rmr_pipeline.constants import AUDIO_STOPS, NO_AUDIO_NEIGHBOURS, SLIDER, STOPS
 from rmr_pipeline.layout import (build_layouts, finalize_layouts, flat_positions, nearest_with_audio, stacked3,
                                  with_derived)
-from rmr_pipeline.recs import build_recs, rec_lists, top_k_mutual, top_k_neighbours
+from rmr_pipeline.recs import build_recs, no_audio_columns, rec_lists, top_k_mutual, top_k_neighbours
 
 COLS = ["dark", "warm", "cold", "lush", "raw", "epic"]
 
@@ -116,8 +116,58 @@ def test_mood_only_albums_have_no_sonic_or_balanced_list_and_are_in_none():
         np.testing.assert_array_equal(recs[stop], top_k_neighbours(X, pool=has_audio))
         assert [len(r) for r in rec_lists(recs[stop])] == [10 if h else 0 for h in has_audio]
     # the mood stop ranks everyone, and albums without audio are recommended there
-    np.testing.assert_array_equal(recs["mood"], top_k_neighbours(site_matrix(sub, block, SLIDER["mood"])))
+    mood = np.hstack([site_matrix(sub, block, SLIDER["mood"]), no_audio_columns(block, has_audio)])
+    np.testing.assert_array_equal(recs["mood"], top_k_neighbours(mood))
     assert (recs["mood"] >= 0).all() and (~has_audio)[recs["mood"]].any()
+
+
+def test_the_mood_correction_puts_two_albums_without_audio_as_far_apart_as_two_with():
+    """Six albums with the same descriptors, so the audio side alone ranks them. Four have audio, at
+    distance 3 from their mean block on two axes (V = 9); two have none and sit at the mean block."""
+    sub = pd.DataFrame({"Title": list("abcdef"), "Artist": list("abcdef"), "URI": [f"u{i}" for i in range(6)], "dark": 1.0})
+    has_audio = np.array([True, True, True, True, False, False])
+    block = mean_fill(np.array([[3, 0], [-3, 0], [0, 3], [0, -3], [9, 9], [9, 9]], dtype=np.float32), has_audio)
+    cols = no_audio_columns(block, has_audio)
+    assert cols.dtype == np.float32 and cols.shape == (6, 2)
+    np.testing.assert_array_equal(cols, [[0, 0]] * 4 + [[3, 0], [0, 3]])  # sqrt(V) on the album's own row
+    X = np.hstack([block, cols]).astype(np.float64)
+    sq = ((X[:, None] - X[None]) ** 2).sum(axis=2)
+    assert sq[4, 5] == 18 and sq[4, 0] == 9 + 9 and sq[0, 1] == 36 and sq[0, 2] == 18  # 2V; own distance + V
+    # Uncorrected, each album without audio has the other first (distance 0). Corrected, the other one is as
+    # far as an album with audio, and the earlier album wins the tie.
+    plain = site_matrix(sub, block, SLIDER["mood"])
+    assert top_k_neighbours(plain, 1)[4:, 0].tolist() == [5, 4]
+    assert top_k_neighbours(np.hstack([plain, cols]), 1)[4:, 0].tolist() == [0, 0]
+
+
+def test_the_mood_correction_is_in_the_catalog_builds_mood_lists_only():
+    """Forty albums with the same descriptors; the eight without audio fill each other's lists (seven of
+    ten places) until the correction, and the site build's lists do not get it."""
+    sub, block, has_audio = _frame(40)
+    sub[COLS] = 1.0
+    quiet = ~has_audio
+
+    def among_themselves(R):
+        return int(quiet[R[quiet]].sum())
+
+    plain = top_k_neighbours(site_matrix(sub, block, SLIDER["mood"]))
+    recs = build_recs(sub, block, has_audio=has_audio, mood_only=True)
+    assert among_themselves(plain) == 8 * 7 and among_themselves(recs["mood"]) < 8 * 3
+    np.testing.assert_array_equal(build_recs(sub, block, has_audio=has_audio)["mood"], plain)
+    for stop in AUDIO_STOPS:  # ranked on the site matrix alone
+        np.testing.assert_array_equal(recs[stop], top_k_neighbours(site_matrix(sub, block, SLIDER[stop]), pool=has_audio))
+
+
+def test_the_mood_correction_is_nothing_when_every_album_has_audio_and_needs_one_that_has():
+    sub, block, _ = _frame(40)
+    everyone = np.ones(40, dtype=bool)
+    assert no_audio_columns(block, everyone).shape == (40, 0)
+    recs = build_recs(sub, block, has_audio=everyone, mood_only=True)
+    np.testing.assert_array_equal(recs["mood"], top_k_neighbours(site_matrix(sub, block, SLIDER["mood"])))
+    with pytest.raises(ValueError, match="has_audio"):
+        no_audio_columns(block, np.zeros(40, dtype=bool))
+    with pytest.raises(ValueError, match="has_audio"):
+        no_audio_columns(block, np.ones(39, dtype=bool))
 
 
 def test_without_the_rule_every_album_is_ranked_everywhere():

@@ -8,9 +8,10 @@ Every album is described by its first CATALOG_DESCRIPTORS (8) descriptors, weigh
 those eight (WEIGHT_PROFILES):
 
   an existing album   table            the eight largest of its 176 table cells (a cell is (63 - place) / 42,
-                                       so the largest are the first on its RYM page)
+                                       so the largest are the first on its RYM page): the build's default
+                                       (DEFAULT_EXISTING), the three vocals descriptors kept
                       table-novocals   the same without the three vocals columns: the sheet never lists them,
-                                       so a new album never has one (the default)
+                                       so a new album never has one
                       sheet            its `top_descriptors` in the catalog, as for a new album; an album
                                        without a list falls back to table-novocals
   a new album         the first eight names of its `top_descriptors`, in that order. A name is a table
@@ -29,6 +30,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 
+from .artists import _latin
 from .audio import DEFAULT_CATALOG
 from .constants import AUDIO, CATALOG_DESCRIPTORS, LYRIC_DROP, META, PIPELINE_DIR, VOCALS
 from . import covers as _covers
@@ -57,6 +59,14 @@ WEIGHT_PROFILES = {
     "equal": _same_length([1.0] * CATALOG_DESCRIPTORS, _RANK),
     "slope": _same_length([1 - p / 14 for p in range(CATALOG_DESCRIPTORS)], _RANK),
 }
+# What `build --catalog` uses unless --descriptor-weights says otherwise (the owner's decision of 6 October
+# 2026: the weights are not equal; the gentle slope, to be confirmed against `rank`). catalog_frame's own
+# default stays `rank`, the feature table's.
+DEFAULT_WEIGHTS = "slope"
+# And for --existing-descriptors (the owner's decision of 6 October 2026: the three vocals descriptors are
+# kept). A new album has none, because the sheet does not list them. catalog_frame's own default stays
+# `table-novocals`.
+DEFAULT_EXISTING = "table"
 
 
 class CatalogError(Exception):
@@ -230,6 +240,20 @@ def catalog_frame(sub: pd.DataFrame, catalog: pd.DataFrame, *, weights: str = "r
         existing, weights, report)
 
 
+def display_artist(artist: str, latin: str) -> str:
+    """How a new album's artist is shown: `native [Latin]` (`파란노을 [Parannoul]`), the form 33 of the site's
+    albums have, when the credit has a letter that is not in Latin script and the catalog's `artist_latin`
+    is there and different; otherwise the credit as it is (also one that carries its brackets already).
+    A credit of several names gets one bracket, with the romanisation as the catalog gives it: it can leave
+    out the names that were in Latin script already, or a collaborator (`菅野よう子 & Seatbelts [Yoko Kanno]`).
+    Slugs are not made from this (CatalogAlbums.slug_artists), and the site's search finds either spelling:
+    it reads words, and a bracket is not part of one."""
+    artist, latin = str(artist).strip(), str(latin).strip()
+    if not latin or latin == artist or "[" in artist or not any(c.isalpha() and not _latin(c) for c in artist):
+        return artist
+    return f"{artist} [{latin}]"
+
+
 def neighbour_clusters(X: np.ndarray, clusters: list[int], k: int = CLUSTER_NEIGHBOURS,
                        voters: np.ndarray | None = None) -> list[int]:
     """A cluster for each row of `X` after the first len(clusters), which are the albums that have one: the
@@ -288,15 +312,16 @@ def shared_spotify_lines(rows: list[dict]) -> list[str]:
 
 
 def covers_table() -> Covers:
-    """catalog/covers.csv, the default sprite folder and its manifest, read once per process (what cover_for
-    answers from). `found` is False when there is no covers.csv."""
+    """catalog/covers.csv, the default sprite folder, its manifest and the failures of the state file, read
+    once per process (what cover_for answers from). `found` is False when there is no covers.csv."""
     return _covers._default_covers()
 
 
 def new_album_cover(key: str) -> tuple[str, Path | None]:
     """The cover of a new album: (cover id for albums.json, image for its sprite), as covers.cover_for reads
-    them from catalog/covers.csv and the sprite folder. ('', None) for an album with no row; (id, None) for
-    one whose sprite has not been fetched yet, or was made from another image than its row's."""
+    them from catalog/covers.csv and the sprite folder. ('', None) for an album with no row, or whose
+    image could not be fetched (covers.Covers.gone); (id, None) for one whose sprite has not been fetched
+    yet, or was made from another image than its row's."""
     return cover_for(key)
 
 

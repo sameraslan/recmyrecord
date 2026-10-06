@@ -6,8 +6,9 @@
 --catalog builds every album of catalog/albums.csv (rmr_pipeline.catalog) instead of the feature table's.
 It never writes into frontcreck/public/data. What it adds to the site's data (README, Catalog mode):
 covers of the new albums (rmr_pipeline.covers), listen links `l` for an album with no Spotify id
-(rmr_pipeline.links), and the mood-only rule for an album with no audio (`n`; audio.mean_fill,
-recs.build_recs, layout.build_layouts)."""
+(rmr_pipeline.links), the artist form `native [Latin]` of a new album (catalog.display_artist), and the
+mood-only rule for an album with no audio (`n`; audio.mean_fill, recs.build_recs, recs.no_audio_columns,
+layout.build_layouts)."""
 import argparse
 import json
 import sys
@@ -17,8 +18,9 @@ from pathlib import Path
 from .artists import clean_artist
 from .audio import DEFAULT_CATALOG, audio_block, descriptors, site_matrix
 from .audio_store import STORES, StoreError, site_store
-from .catalog import (EXISTING, WEIGHT_PROFILES, CatalogError, catalog_frame, covers_table, load_catalog,
-                      neighbour_clusters, new_album_covers, shared_spotify_ids, shared_spotify_lines)
+from .catalog import (DEFAULT_EXISTING, DEFAULT_WEIGHTS, EXISTING, WEIGHT_PROFILES, CatalogError, catalog_frame, covers_table,
+                      display_artist, load_catalog, neighbour_clusters, new_album_covers, shared_spotify_ids,
+                      shared_spotify_lines)
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS
 from .images import load_album_sprites, write_sheets
@@ -52,15 +54,16 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                         "albums. Needs an explicit --out that is not frontcreck/public/data.")
     p.add_argument("--catalog-path", type=Path, default=DEFAULT_CATALOG, help="With --catalog: the catalog table.")
     p.add_argument("--descriptor-weights", choices=tuple(WEIGHT_PROFILES), default=None,
-                   help="With --catalog: the weight of an album's eight descriptors by place (default rank, the "
-                        "feature table's).")
+                   help="With --catalog: the weight of an album's eight descriptors by place (default slope, 1 down "
+                        "to 0.5; rank is the feature table's 1.5 down to 1.33).")
     p.add_argument("--existing-descriptors", choices=EXISTING, default=None,
                    help="With --catalog: where an existing album's eight descriptors come from (default "
-                        "table-novocals; see rmr_pipeline.catalog).")
+                        "table, the vocals descriptors kept; see rmr_pipeline.catalog).")
     p.add_argument("--require-sprites", action="store_true",
                    help="With --catalog: stop when catalog/covers.csv is missing, when a new album has a cover in it "
                         "and no sprite of that image in .cache/covers/96 (python -m rmr_pipeline.covers sprites), or "
-                        "when a sprite has no entry in the manifest (covers adopt). For the final build.")
+                        "when a sprite has no entry in the manifest (covers adopt). An album whose image the state "
+                        "file records as failed has no cover and is not counted. For the final build.")
     p.add_argument("--hub-correction", default="", metavar="STOPS",
                    help="Comma-separated stops whose recommendations rank by mutual proximity instead of the raw "
                         "distance (for example: balanced). Off by default.")
@@ -75,8 +78,8 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
             p.error(f"--catalog does not write into {DEFAULT_OUT}: switching the site to the catalog build needs "
                     "the owner's go-ahead. Pass another --out folder")
         args.audio_dir = args.audio_dir or STORES["effnet10k"]
-        args.descriptor_weights = args.descriptor_weights or "rank"
-        args.existing_descriptors = args.existing_descriptors or "table-novocals"
+        args.descriptor_weights = args.descriptor_weights or DEFAULT_WEIGHTS
+        args.existing_descriptors = args.existing_descriptors or DEFAULT_EXISTING
     elif args.descriptor_weights or args.existing_descriptors or args.catalog_path != DEFAULT_CATALOG:
         p.error("--catalog-path, --descriptor-weights and --existing-descriptors need --catalog")
     elif args.require_sprites:
@@ -199,14 +202,23 @@ def main(argv: list[str] | None = None) -> int:
         sub, keys, places, spotify_ids = cat.frame, cat.keys, cat.places, cat.spotify_ids
         new_keys = keys[n_site:]
         uris = uris + [""] * len(new_keys)
-        titles, artists = titles + list(sub["Title"][n_site:]), artists + list(sub["Artist"][n_site:])
+        # A new album shows `native [Latin]` when its credit is not in Latin script and the catalog has a
+        # romanisation; its slug is made from the romanisation alone, as before.
+        shown = [display_artist(a, b) for a, b in zip(catalog["artist"].iloc[n_site:], catalog["artist_latin"].iloc[n_site:])]
+        print(f"artists: {sum(a != b for a, b in zip(shown, sub['Artist'][n_site:]))} new albums shown as native [Latin]")
+        titles, artists = titles + list(sub["Title"][n_site:]), artists + shown
         slug_titles, slug_artists = cat.slug_titles, artists[:n_site] + cat.slug_artists[n_site:]
         new_covers, new_images, waiting = new_album_covers(new_keys, n_site)
         cover_ids = cover_ids + new_covers
+        table = covers_table()
+        gone = table.gone(new_keys)
         print(f"covers: {len(new_keys)} new albums, {sum(1 for c in new_covers if c)} with a cover, "
               f"{len(new_images)} with a sprite, {len(waiting)} with a cover and no sprite yet (a flat tile on the "
               f"sheets): {', '.join(waiting[:5])}{' ...' if len(waiting) > 5 else ''}")
-        problems = cover_problems(covers_table(), new_keys, waiting)
+        if gone:
+            print(f"covers: {len(gone)} new album(s) have a row in covers.csv whose image could not be fetched (recorded "
+                  f"in the covers state file): no cover, `c` is empty ({', '.join(gone[:5])}{' ...' if len(gone) > 5 else ''})")
+        problems = cover_problems(table, new_keys, waiting)
         if problems and args.require_sprites:
             print("\n".join(f"--require-sprites: {p}" for p in problems), file=sys.stderr)
             return 1

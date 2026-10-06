@@ -258,3 +258,43 @@ def test_the_real_catalog(deduped):
     slugs = make_slugs(cat.slug_titles, artists)
     assert slugs[:n] == make_slugs(cat.slug_titles[:n], artists[:n])
     assert len(set(slugs)) == len(slugs) and "album" not in slugs
+
+
+def test_a_new_albums_artist_is_shown_as_native_and_latin_in_brackets():
+    from rmr_pipeline.artists import clean_artist
+    from rmr_pipeline.catalog import display_artist
+
+    assert display_artist("파란노을", "Parannoul") == "파란노을 [Parannoul]"
+    assert display_artist("青葉市子", "Ichiko Aoba") == "青葉市子 [Ichiko Aoba]"
+    assert display_artist("Кино", "Kino") == "Кино [Kino]"
+    # several names: one bracket, the romanisation as the catalog gives it
+    assert display_artist("菅野よう子 & Seatbelts", "Yoko Kanno") == "菅野よう子 & Seatbelts [Yoko Kanno]"
+    # left as they are: Latin script (accents included), no romanisation, the same text, brackets already there
+    assert display_artist("Sigur Rós", "Sigur Ros") == "Sigur Rós"
+    assert display_artist("Philip Glass & The Philip Glass Ensemble", "The Ensemble") == "Philip Glass & The Philip Glass Ensemble"
+    assert display_artist("上海アリス幻樂団", "") == "上海アリス幻樂団"
+    assert display_artist("Кино", "Кино") == "Кино"
+    assert display_artist("ボアダムス [Boredoms]", "Boredoms") == "ボアダムス [Boredoms]"
+    assert display_artist("2814", "") == "2814" and display_artist("∞", "Infinity") == "∞"  # no letter of another script
+    # the form the site's albums have, which the artist cleaner leaves alone
+    for shown in ("파란노을 [Parannoul]", "菅野よう子 & Seatbelts [Yoko Kanno]", "Егор и Опизденевшие [Yegor i Opizdenevshie]"):
+        assert clean_artist(shown) == shown
+
+
+def test_the_catalogs_bracketed_artists_do_not_touch_the_slugs(deduped):
+    """Every new album of the committed catalog: the shown artist is the credit, or the credit and its
+    romanisation, and the slug is made from the romanisation alone, as before the bracketed form."""
+    from rmr_pipeline.artists import clean_artist
+    from rmr_pipeline.catalog import display_artist
+    from rmr_pipeline.slugs import kebab
+
+    catalog, n = load_catalog(), len(deduped[0])
+    cat = catalog_frame(deduped[0], catalog)
+    new = catalog.iloc[n:]
+    shown = [display_artist(a, b) for a, b in zip(new["artist"], new["artist_latin"])]
+    bracketed = [(s, a, b) for s, a, b in zip(shown, new["artist"], new["artist_latin"]) if s != a]
+    assert len(bracketed) > 400 and all(s == f"{a} [{b}]" for s, a, b in bracketed)
+    assert all(clean_artist(s) == s for s in shown)
+    assert cat.slug_artists[n:] == [b or a for a, b in zip(new["artist"], new["artist_latin"])]
+    assert list(cat.frame["Artist"][n:]) == list(new["artist"])
+    assert all("[" not in kebab(x) for x in cat.slug_artists[n:])

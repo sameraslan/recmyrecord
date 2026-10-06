@@ -213,3 +213,35 @@ def test_the_real_site_slugs_are_what_make_slugs_gives(deduped):
     site = json.loads((DEFAULT_OUT / "albums.json").read_text(encoding="utf-8"))
     assert moved_site_slugs([a["slug"] for a in site]) == []
     assert len(moved_site_slugs(["x"] + [a["slug"] for a in site[1:]])) == 1
+
+
+# --- an image that cannot be fetched: no cover ---
+
+def test_an_album_whose_image_is_gone_has_no_cover(tmp_path):
+    """The state file records, per album, the `source:ref` whose image `sprites` could not fetch (HTTP 404).
+    Such an album has an empty `c`: the site would ask for the remote image first and fail. A row that
+    changed since is another image; a sprite that is there wins over the record."""
+    from PIL import Image
+
+    from rmr_pipeline.catalog import new_album_covers
+
+    (tmp_path / "96").mkdir()
+    (tmp_path / "covers.csv").write_text("rym_id,source,ref\nA,youtube,aaaaaaaaaaa\nB,bandcamp,5\nC,bandcamp,6\nD,bandcamp,7\n")
+    Image.new("RGB", (96, 96)).save(tmp_path / "96" / "C.jpg")
+    (tmp_path / "state.json").write_text(json.dumps({"refs": {}, "sprites": {
+        "A": {"of": "youtube:aaaaaaaaaaa", "why": "HTTP 404"},  # gone
+        "B": {"of": "bandcamp:4", "why": "HTTP 404"},  # the row has another image now
+        "C": {"of": "bandcamp:6", "why": "HTTP 404"},  # fetched since
+        "X": {"of": "bandcamp:9", "why": "HTTP 410"}}}))  # no row
+    table_ = cv.load_covers(tmp_path / "covers.csv", tmp_path / "96", tmp_path / "state.json")
+    assert table_.gone() == ["A"] and table_.gone(["B", "C", "Z"]) == [] and table_.is_gone("A") and not table_.is_gone("Z")
+    assert table_.cover_for("A") == ("", None)
+    assert table_.cover_for("B") == ("bc:5", None) and table_.cover_for("D") == ("bc:7", None)
+    assert table_.cover_for("C") == ("bc:6", tmp_path / "96" / "C.jpg")
+    covers, images, waiting = new_album_covers(["A", "B", "C", "D"], 10, cover_of=table_.cover_for)
+    assert covers == ["", "bc:5", "bc:6", "bc:7"] and list(images) == [12] and waiting == ["B", "D"]
+    # an album that is gone is not "waiting for a sprite", so it does not stop --require-sprites
+    assert not any("no sprite" in p for p in cover_problems(table_, ["A", "C"], []))
+    # without a state file nothing is blanked: the tables the tests and other folders load are as before
+    assert cv.load_covers(tmp_path / "covers.csv", tmp_path / "96").cover_for("A") == ("yt:aaaaaaaaaaa", None)
+    assert cv.load_covers(tmp_path / "covers.csv", tmp_path / "96", tmp_path / "none.json").gone() == []

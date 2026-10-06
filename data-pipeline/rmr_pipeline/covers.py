@@ -26,7 +26,8 @@ nothing: it gives every album it can a row at once, and the Spotify tier replace
 `sprites` records the `source:ref` each sprite was made from in .cache/covers/96.manifest.json. A sprite whose
 entry is not its row's image counts as missing: it is not used by the build and is made again. A sprite with
 no entry (made before the manifest existed, or by a run that was killed) is used, and counted by the build and
-by `status`, until `adopt` records it.
+by `status`, until `adopt` records it. An album whose image `sprites` could not fetch for a reason of the image's
+own (the state file's `sprites`) has no cover in the build: its `c` is empty (Covers.is_gone).
 
 One `refs` run and one `sprites` run at a time: each holds a lock file beside the state file (refs.lock,
 sprites.lock) and a second run exits with code 1. Reading (`status`, --dry-run, the build) takes no lock.
@@ -967,23 +968,39 @@ def adopt(covers: dict[str, tuple[str, str]], sprite_dir: Path, covers_path: Pat
 @dataclass(frozen=True)
 class Covers:
     """covers.csv, read once, the folder its sprites are in and what the manifest says they were made from.
-    `found`: there was a covers.csv to read (without one `rows` is empty and no album has a cover)."""
+    `found`: there was a covers.csv to read (without one `rows` is empty and no album has a cover).
+    `failed`: rym_id -> the `source:ref` whose image `sprites` could not fetch for a reason of the image's own
+    (the state file's `sprites`: HTTP 404 or 410, a redirect off the allow-list, a file that is not an image)."""
     rows: dict[str, tuple[str, str]]
     sprite_dir: Path
     found: bool = True
     made_from: dict[str, str] = field(default_factory=dict)
     path: Path | None = None
+    failed: dict[str, str] = field(default_factory=dict)
 
     def state(self, key: str) -> str:
         return sprite_state(key, self.rows[key], self.sprite_dir, self.made_from)
 
     def cover_for(self, key: str) -> tuple[str, Path | None]:
         """(the album's `c`, the path of its 96 px sprite or None when there is none of that image yet: no file,
-        or a file the manifest says was made from another image). ("", None) for an album with no cover source."""
-        if key not in self.rows:
+        or a file the manifest says was made from another image). ("", None) for an album with no cover source,
+        and for one whose image is gone (is_gone): the site asks for the remote image of a `c` first, and that
+        request would fail for every visitor before the tile showed."""
+        if key not in self.rows or self.is_gone(key):
             return "", None
         usable = self.state(key) in ("current", "unverified")
         return c_field(*self.rows[key]), sprite_path(self.sprite_dir, key) if usable else None
+
+    def is_gone(self, key: str) -> bool:
+        """The row's image could not be fetched and will not come back: the state file records a failure for
+        exactly this `source:ref`, and there is no sprite of it. A row that changed since (another ref) is a
+        new image and is asked again; a sprite that is there wins over an old record."""
+        return (key in self.rows and self.failed.get(key) == made_from(self.rows[key])
+                and self.state(key) not in ("current", "unverified"))
+
+    def gone(self, keys=None) -> list[str]:
+        """The albums (of `keys`, or every row) whose image is gone (is_gone): cover_for gives them no cover."""
+        return [k for k in (self.rows if keys is None else keys) if self.is_gone(k)]
 
     def _in_state(self, state: str, keys) -> list[str]:
         return [k for k in (self.rows if keys is None else keys) if k in self.rows and self.state(k) == state]
@@ -998,14 +1015,17 @@ class Covers:
         return self._in_state("stale", keys)
 
 
-def load_covers(path: Path = DEFAULT_COVERS, sprite_dir: Path = DEFAULT_SPRITES) -> Covers:
+def load_covers(path: Path = DEFAULT_COVERS, sprite_dir: Path = DEFAULT_SPRITES, state_path: Path | None = None) -> Covers:
+    """`state_path`: the state file whose recorded sprite failures blank a cover (Covers.failed); none are read
+    without it."""
+    failed = {k: v["of"] for k, v in State(state_path).sprites.items() if v.get("of")} if state_path else {}
     return Covers(read_covers(path), Path(sprite_dir), Path(path).exists(), SpriteManifest(manifest_path(sprite_dir)).of,
-                  Path(path))
+                  Path(path), failed)
 
 
 @lru_cache(maxsize=1)
 def _default_covers() -> Covers:
-    return load_covers()
+    return load_covers(state_path=DEFAULT_STATE)
 
 
 def cover_for(key: str) -> tuple[str, Path | None]:
