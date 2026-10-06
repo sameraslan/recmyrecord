@@ -220,3 +220,58 @@ test('the "Link copied" toast keeps clear of the bottom edge and of the Map butt
   const apart = t.x + t.width <= fab.x || fab.x + fab.width <= t.x || t.y + t.height <= fab.y || fab.y + fab.height <= t.y;
   expect(apart, 'the toast and the Map button do not overlap').toBe(true);
 });
+
+test('the zoom corner, with the names button, clears the slider below it and whatever is above it', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone layout');
+  // The smallest phone the layout is checked on.
+  await page.setViewportSize({ width: 360, height: 640 });
+  /** The buttons of the bottom right corner (names, zoom in, zoom out, whole map), top to bottom. */
+  const corner = () =>
+    page.locator('.map-zoom button, button.map-names, .map-names button').evaluateAll((els) =>
+      els
+        .map((e) => ({ r: e.getBoundingClientRect(), names: e.classList.contains('map-names') }))
+        .filter(({ r }) => r.width > 0 && r.height > 0)
+        .map(({ r, names }) => ({ x: r.x, y: r.y, w: Math.round(r.width), h: Math.round(r.height), names }))
+        .sort((a, b) => a.y - b.y),
+    );
+  const check = async (ceiling: number, label: string) => {
+    // The names button arrives with the map's own chunk, after the three zoom buttons: wait for it before counting.
+    await expect(page.locator('.map-zoom .map-names'), label).toBeVisible();
+    const buttons = await corner();
+    const mode = (await page.locator('.mode').boundingBox())!;
+    for (const b of buttons) {
+      expect(b.w, label).toBeGreaterThanOrEqual(44);
+      expect(b.h, label).toBeGreaterThanOrEqual(44);
+      // Wholly on the screen.
+      expect(b.x, label).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.w, label).toBeLessThanOrEqual(360);
+    }
+    // No two overlap, the lowest ends 8 px above the slider panel (map.css: --slider-cover + 8px), the highest
+    // starts at least 8 px under what is above it.
+    for (let i = 1; i < buttons.length; i++) expect(buttons[i].y - (buttons[i - 1].y + buttons[i - 1].h), label).toBeGreaterThanOrEqual(-1);
+    const last = buttons[buttons.length - 1];
+    expect(mode.y - (last.y + last.h), label).toBeGreaterThanOrEqual(7);
+    expect(buttons[0].y - ceiling, label).toBeGreaterThanOrEqual(8);
+    // The names button is the top one, in its own box 8 px above the zoom stack.
+    expect(buttons[0].names, label).toBe(true);
+    expect(buttons[1].y - (buttons[0].y + buttons[0].h), label).toBeGreaterThanOrEqual(7);
+    return buttons.length;
+  };
+  // Explore at the opening view: the names button and three zoom buttons, under the header.
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  const header = (await page.locator('header.top').boundingBox())!;
+  expect(await check(header.y + header.height, 'explore')).toBe(4);
+  // An album's map mode: the corner must also clear the Explore and List buttons of the top row.
+  await page.goto(IR);
+  await waitForMap(page);
+  await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
+  await expect(page.locator('.mode')).toBeVisible();
+  await waitForMap(page); // map mode starts the other two stops' gas (part 1): settled before anything is measured
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  const list = (await page.locator('.fab-map--on').boundingBox())!;
+  const explore = (await page.locator('.map-explore').boundingBox())!;
+  expect(await check(Math.max(list.y + list.height, explore.y + explore.height), 'album map mode')).toBe(4);
+});
