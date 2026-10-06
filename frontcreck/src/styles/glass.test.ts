@@ -15,8 +15,27 @@ describe('glass', () => {
     const m = /\n([^{}\n]+)\{\s*-webkit-backdrop-filter: var\(--glass-blur\); backdrop-filter: var\(--glass-blur\);\s*\}/.exec(read('styles/shell.css'));
     expect(m, 'the glass rule in shell.css').not.toBeNull();
     expect(m![1].split(',').map((s) => s.trim())).toEqual([
-      '.top', '.panel', '.album', '.map-zoom button', '.map-names', '.map-tip', '.map-msg', '.about', '.combo--hero .combo-field', '.fab-map--on',
+      '.top', '.panel', '.album', '.map-zoom button', '.map-names', '.map-msg', '.about', '.combo--hero .combo-field', '.fab-map--on',
     ]);
+  });
+
+  it('the hover label is solid and above the hint band: no blur on the element that moves with the pointer', () => {
+    // Dropped for speed: glass on the hover label. It is moved on every hover frame (OverlayDriver).
+    const tip = /\n\.map-tip \{([^}]*)\}/.exec(read('styles/map.css'))![1];
+    expect(tip).toContain('background: rgba(10, 9, 14, 1);');
+    expect(tip).not.toContain('backdrop-filter');
+    // Over .map-ui, whose hint band would otherwise paint on it.
+    const z = (block: string) => Number(/z-index: (\d+)/.exec(block)![1]);
+    expect(z(tip)).toBeGreaterThan(z(/\n\.map-ui \{([^}]*)\}/.exec(read('styles/map.css'))![1]));
+  });
+
+  it('the focused Home search field takes the focus background of every search field', () => {
+    const search = read('styles/search.css');
+    const hero = search.indexOf('.combo--hero .combo-field { ');
+    const focused = search.indexOf('.combo--hero .combo-field:focus-within { background: var(--color-room-3); }');
+    expect(hero).toBeGreaterThan(-1);
+    // After the hero rule, and at least as specific: it wins.
+    expect(focused).toBeGreaterThan(hero);
   });
 
   it('no surface sets a blur of its own, so --glass-blur switches all of them', () => {

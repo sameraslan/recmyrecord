@@ -6,9 +6,11 @@
 .map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
 .map-canvas:active { cursor: grabbing; }
 .map-canvas:focus-visible { outline: 2px solid var(--color-lamp); outline-offset: -4px; }
+/* The hover label. Solid, not glass: it moves on every hover frame, and a backdrop blur there is the one effect
+ * dropped for speed. z-index 7 puts it over .map-ui (6), whose hint band would otherwise dim it near the bottom. */
 .map-tip {
-  position: absolute; left: 0; top: 0; z-index: 5; pointer-events: none; opacity: 0; display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;
-  max-width: 290px; padding: 8px 12px 8px 8px; background: var(--color-float); border: 1px solid var(--color-rule-2); border-radius: 2px; box-shadow: 0 10px 28px -10px rgba(0, 0, 0, .8);
+  position: absolute; left: 0; top: 0; z-index: 7; pointer-events: none; opacity: 0; display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center;
+  max-width: 290px; padding: 8px 12px 8px 8px; background: rgba(10, 9, 14, 1); border: 1px solid var(--color-rule-2); border-radius: 2px; box-shadow: 0 10px 28px -10px rgba(0, 0, 0, .8);
 }
 .map-tip:empty { display: none; }
 .map-tip-text { min-width: 0; }
@@ -58,8 +60,9 @@
 
 /* Explore: the hint line and the picked album's card (mockup .map-hint, .card; lines 204 to 216, 432 to 438) */
 /* Text straight on the nebula: a soft full-width band under it (z-index -1 keeps it under the zoom buttons and the
- * card), dark enough from 50% down that paper holds 4.5:1 over a white backdrop (contrast.test.ts). */
-.map-hint { position: absolute; left: 0; right: 0; bottom: 0; z-index: -1; padding: 44px 120px 18px 20px; font-size: 13px; color: var(--color-paper); pointer-events: none; background: linear-gradient(rgba(4, 4, 8, 0), rgba(4, 4, 8, .62) 50%, rgba(4, 4, 8, .78)); transition: opacity .25s var(--out), visibility 0s; }
+ * card), dark enough from 44 px down that paper holds 4.5:1 over a white backdrop. 44 px is the top padding, so
+ * the first line is on the dark part however many lines the hint wraps to (contrast.test.ts ties the two). */
+.map-hint { position: absolute; left: 0; right: 0; bottom: 0; z-index: -1; padding: 44px 120px 18px 20px; font-size: 13px; color: var(--color-paper); pointer-events: none; background: linear-gradient(rgba(4, 4, 8, 0), rgba(4, 4, 8, .62) 44px, rgba(4, 4, 8, .78)); transition: opacity .25s var(--out), visibility 0s; }
 .map-hint.is-hidden, .map-hint[data-zoomed="1"] { opacity: 0; visibility: hidden; transition: opacity .25s var(--out), visibility 0s linear .25s; }
 /* 400 px, not the mockup's 380: "See closest albums" is longer than the mockup's label, and both actions stay on one row. */
 .card { position: absolute; left: 20px; bottom: 20px; width: 400px; padding: 14px; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; animation: rise .3s var(--out) both; }

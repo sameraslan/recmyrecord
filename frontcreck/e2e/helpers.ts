@@ -263,15 +263,27 @@ export function wholeMapMiss(s: Spread, phone: boolean): string[] {
  * under `scope` is made transparent for one screenshot, and the background is the 95th-percentile relative
  * luminance inside the element's content box (a lone star does not decide it; a bright patch does).
  */
-export async function contrastOverBackdrop(page: Page, scope: string, selectors: string[]): Promise<Array<{ selector: string; ratio: number }>> {
+export async function contrastOverBackdrop(
+  page: Page,
+  scope: string,
+  selectors: string[],
+  opts: { box?: 'content' | 'text' } = {},
+): Promise<Array<{ selector: string; ratio: number }>> {
   const targets = await page.evaluate(
-    (sels) =>
-      sels.map((selector) => {
+    ([sels, box]) =>
+      (sels as string[]).map((selector) => {
         const el = [...document.querySelectorAll<HTMLElement>(selector)].find((e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden');
         if (!el) return { selector, rect: null, rgb: [0, 0, 0] };
         const r = el.getBoundingClientRect();
         const cs = getComputedStyle(el);
         const rgb = (cs.color.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number);
+        // 'text': the rectangle of the words themselves (all their lines), for a wide block with a short text.
+        if (box === 'text') {
+          const range = document.createRange();
+          range.selectNodeContents(el);
+          const t = range.getBoundingClientRect();
+          return { selector, rect: { x: t.x, y: t.y, w: t.width, h: t.height }, rgb };
+        }
         // The content box, where the text is set: not the element's own border (on a small bordered chip, a mood
         // tag, the border line alone is more than 5 % of the box and would be measured in place of the background)
         // and not its padding (the map hint's top padding is the clear end of its band, with no text on it).
@@ -282,10 +294,14 @@ export async function contrastOverBackdrop(page: Page, scope: string, selectors:
         const h = r.height - t - Math.ceil(px(cs.borderBottomWidth)) - px(cs.paddingBottom);
         return { selector, rect: { x: r.x + l, y: r.y + t, w, h }, rgb };
       }),
-    selectors,
+    [selectors, opts.box ?? 'content'] as const,
   );
   const missing = targets.filter((t) => !t.rect).map((t) => t.selector);
   if (missing.length) throw new Error(`contrastOverBackdrop: not visible: ${missing.join(', ')}`);
+  // Never a sliver: a rectangle that is empty, or cut by the edge of the screenshot, is not what was asked for.
+  const view = page.viewportSize()!;
+  const cut = targets.filter((t) => t.rect!.w < 1 || t.rect!.h < 1 || t.rect!.x < -0.5 || t.rect!.y < -0.5 || t.rect!.x + t.rect!.w > view.width + 0.5 || t.rect!.y + t.rect!.h > view.height + 0.5);
+  if (cut.length) throw new Error(`contrastOverBackdrop: empty or outside the viewport: ${cut.map((t) => `${t.selector} ${JSON.stringify(t.rect)}`).join(', ')}`);
   const style = await page.addStyleTag({
     content: `${scope}, ${scope} * { color: transparent !important; -webkit-text-fill-color: transparent !important; -webkit-text-stroke-color: transparent !important; text-decoration-color: transparent !important; text-shadow: none !important; caret-color: transparent !important; transition: none !important; }`,
   });
@@ -309,7 +325,8 @@ export async function contrastOverBackdrop(page: Page, scope: string, selectors:
         const y0 = Math.max(0, Math.ceil(t.rect!.y * k));
         const x1 = Math.min(img.width, Math.floor((t.rect!.x + t.rect!.w) * k));
         const y1 = Math.min(img.height, Math.floor((t.rect!.y + t.rect!.h) * k));
-        const d = ctx.getImageData(x0, y0, Math.max(1, x1 - x0), Math.max(1, y1 - y0)).data;
+        if (x1 <= x0 || y1 <= y0) throw new Error(`contrastOverBackdrop: no pixel inside ${t.selector}`);
+        const d = ctx.getImageData(x0, y0, x1 - x0, y1 - y0).data;
         const lums: number[] = [];
         for (let i = 0; i < d.length; i += 4) lums.push(lum(d[i], d[i + 1], d[i + 2]));
         lums.sort((a, b) => a - b);
@@ -320,4 +337,52 @@ export async function contrastOverBackdrop(page: Page, scope: string, selectors:
     },
     [png, targets] as const,
   );
+}
+
+/**
+ * Pans the map so that the brightest gas on screen lies under the words of `selector` (the window of the size of
+ * its text with the highest mean luminance, found with `hide` hidden), and waits for the map to settle. For
+ * contrast checks of text that sits straight on the nebula. Returns that window's mean luminance (0 to 1).
+ */
+export async function panBrightestGasUnder(page: Page, selector: string, hide = '.map-ui, header.top'): Promise<number> {
+  const style = await page.addStyleTag({ content: `${hide} { visibility: hidden !important; }` });
+  const png = (await page.screenshot()).toString('base64');
+  await style.evaluate((el) => (el as Element).remove());
+  const move = await page.evaluate(
+    async ([data, sel]) => {
+      const range = document.createRange();
+      range.selectNodeContents(document.querySelector(sel)!);
+      const t = range.getBoundingClientRect();
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const k = img.width / innerWidth;
+      const d = ctx.getImageData(0, 0, img.width, img.height).data;
+      const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      const lum = (i: number) => 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
+      const w = Math.floor(t.width * k);
+      const h = Math.floor(t.height * k);
+      let best = { m: -1, x: 0, y: 0 };
+      for (let y = 0; y + h <= img.height; y += 6) {
+        for (let x = 0; x + w <= img.width; x += 10) {
+          let sum = 0;
+          let n = 0;
+          for (let j = 0; j < h; j += 4) for (let i = 0; i < w; i += 6, n++) sum += lum(((y + j) * img.width + x + i) * 4);
+          if (sum / n > best.m) best = { m: sum / n, x: x / k, y: y / k };
+        }
+      }
+      // panBy: positive dx moves the view right (the gas left), positive dy moves the view up (the gas down).
+      return { dx: best.x - t.x, dy: t.y - best.y, m: best.m };
+    },
+    [png, selector] as const,
+  );
+  const since = await mapFrames(page);
+  await page.evaluate(([dx, dy]) => window.__rmr!.map!.panBy(dx, dy), [move.dx, move.dy]);
+  await waitForMapQuiet(page, 200, { since });
+  return move.m;
 }

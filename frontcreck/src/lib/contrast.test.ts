@@ -202,9 +202,26 @@ describe('text over washes and bands', () => {
   it('the map hint is paper on a band that holds 4.5:1 over an unfiltered white backdrop', () => {
     const hint = rule(css('styles/map.css'), '.map-hint');
     expect(hint.color).toBe('var(--color-paper)');
-    const band = /rgba\(4, 4, 8, ([\d.]+)\) 50%/.exec(hint.background);
+    // The band is clear at its top, reaches this darkness at a stop given in px, and only darkens below it.
+    const band = /^linear-gradient\(rgba\(4, 4, 8, 0\), rgba\(4, 4, 8, ([\d.]+)\) (\d+)px, rgba\(4, 4, 8, ([\d.]+)\)\)$/.exec(hint.background);
     expect(band, hint.background).not.toBeNull();
-    const bg = surfaceOver(WHITE, null, { rgb: [4, 4, 8], alpha: Number(band![1]) });
+    const [atStop, stopPx, atEnd] = [Number(band![1]), Number(band![2]), Number(band![3])];
+    expect(atEnd).toBeGreaterThanOrEqual(atStop);
+    const bg = surfaceOver(WHITE, null, { rgb: [4, 4, 8], alpha: atStop });
     expect(contrastRatio(tok('paper'), bg), bg).toBeGreaterThanOrEqual(4.5);
+    // The text starts below the top padding, however many lines it wraps to: the stop must not be lower than that.
+    const paddingTop = /^(\d+)px /.exec(hint.padding);
+    expect(paddingTop, hint.padding).not.toBeNull();
+    expect(stopPx).toBeLessThanOrEqual(Number(paddingTop![1]));
+  });
+
+  it('the hover label is paper and dust on a solid surface', () => {
+    const tip = rule(css('styles/map.css'), '.map-tip');
+    const bg = /^rgba\((\d+), (\d+), (\d+), 1\)$/.exec(tip.background);
+    expect(bg, tip.background).not.toBeNull();
+    const solid = rgbToHex([Number(bg![1]), Number(bg![2]), Number(bg![3])]);
+    expect(contrastRatio(tok('paper'), solid)).toBeGreaterThanOrEqual(4.5);
+    expect(rule(css('styles/map.css'), '.map-tip .a').color).toBe('var(--color-dust)');
+    expect(contrastRatio(tok('dust'), solid)).toBeGreaterThanOrEqual(4.5);
   });
 });

@@ -38,6 +38,8 @@
      checked for 4.5:1 text contrast over a white backdrop in src/lib/contrast.test.ts. */
   --panel-bg: rgba(8, 7, 11, 0.7);
   --top-bg: rgba(7, 6, 10, 0.58);
+  /* Speed fallback 1, a lighter blur: blur(22px) to blur(14px) here. Pins that move: GLASS in e2e/glass.spec.ts and
+     the FILTER regex in src/lib/contrast.test.ts. */
   --glass-blur: blur(22px) saturate(1.2) brightness(0.58);
   color-scheme: dark;
 }
@@ -50,6 +52,9 @@
 @media (max-width: 899px) { :root { --glass-blur: none; --color-float: rgba(10, 9, 14, 1); --panel-bg: rgba(10, 9, 14, 1); --top-bg: rgba(10, 9, 14, 1); } }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { :root { --glass-blur: none; --color-float: rgba(10, 9, 14, 1); --panel-bg: rgba(10, 9, 14, 1); --top-bg: rgba(10, 9, 14, 1); } }
 @media (prefers-reduced-transparency: reduce) { :root { --glass-blur: none; --color-float: rgba(10, 9, 14, 1); --panel-bg: rgba(10, 9, 14, 1); --top-bg: rgba(10, 9, 14, 1); } }
+/* Speed fallback 3, no glass on desktop either: one more line here with the same four values and no condition,
+   `:root { ... }`. Pins that turn red by design: the three desktop expectations of "panels are glass on wide
+   screens" in e2e/glass.spec.ts. (Fallback 2, a solid header, is noted at the glass rule in styles/shell.css.) */
 
 @media (max-width: 1100px) and (min-width: 900px) {
   :root { --gut: 24px; --panel: 480px; }
