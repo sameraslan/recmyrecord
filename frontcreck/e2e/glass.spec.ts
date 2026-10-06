@@ -240,20 +240,26 @@ test.describe('the hint band and the hover label', () => {
   });
 
   test('a hint that wraps to two lines keeps 4.5:1 on both, over a white backdrop', async ({ page }) => {
-    // Beside an album on a narrow desktop window the hint wraps, and its first line starts higher in the band.
+    // The hint shows in Explore only (none beside an open album, as in the approved picture), where its one
+    // sentence fits on a line at every desktop width. The band is still built for a wrapped hint, whose first line
+    // starts higher in it (contrast.test.ts ties the band's stop to the padding): so the wrap is forced here, by
+    // narrowing the room for the words and leaving the band itself as it is.
     await page.setViewportSize({ width: 1000, height: 900 });
-    await page.goto('/album/in-rainbows-radiohead');
+    await page.goto('/map');
     await waitForMap(page);
     await waitForCameraIdle(page);
     await waitForAnimations(page);
     const hint = page.locator('.map-hint');
     await expect(hint).toBeVisible();
+    const band = await hint.evaluate((el) => ({ width: el.getBoundingClientRect().width, image: getComputedStyle(el).backgroundImage }));
+    await page.addStyleTag({ content: '.map-hint { padding-right: calc(100% - 240px) !important; }' });
+    expect(await hint.evaluate((el) => ({ width: el.getBoundingClientRect().width, image: getComputedStyle(el).backgroundImage }))).toEqual(band);
     const lines = await hint.evaluate((el) => {
       const range = document.createRange();
       range.selectNodeContents(el);
       return range.getBoundingClientRect().height / parseFloat(getComputedStyle(el).lineHeight);
     });
-    expect(lines, 'the hint wraps at this width').toBeGreaterThan(1.5);
+    expect(lines, 'the hint wraps in this room').toBeGreaterThan(1.5);
     // The worst backdrop there is: white in place of the map.
     await page.addStyleTag({ content: '.map-host { visibility: hidden !important; } .map-pane { background: #fff !important; }' });
     const [r] = await contrastOverBackdrop(page, '.map-ui', ['.map-hint'], { box: 'text' });

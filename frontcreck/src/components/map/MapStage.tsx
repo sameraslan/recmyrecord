@@ -381,7 +381,7 @@ export function MapStage() {
             {mapData && view === 'album' && focus ? <ExploreHere onClick={onExploreHere} /> : null}
             {mapData ? <ZoomControls api={apiRef} /> : null}
             {/* No hint over an empty map: the data is still loading or failed to load. */}
-            {mapData && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'explore' && selected !== null} album={view === 'album'} /> : null}
+            {mapData && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'album' || selected !== null} /> : null}
             {cardShown && selected !== null && catalog ? (
               <MapCard
                 key={selected}

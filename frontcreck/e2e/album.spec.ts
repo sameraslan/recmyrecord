@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { shot, visibleAlbumPoint, waitForAnimations, waitForCameraIdle, waitForMap } from './helpers';
 
 const IR = '/album/in-rainbows-radiohead';
 const titles = (page: Page) => page.locator('ol.rec-list .rec-title').allTextContents();
@@ -31,13 +31,37 @@ test('renders the seed, tags and the closest albums (balanced by default)', asyn
   await shot(page, info, 'album');
 });
 
-test('the map beside an album shows the hint line on desktop, as in the mockup', async ({ page, isMobile }) => {
+test('the map beside an open album has no hint line, as in the approved picture', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the hint is desktop only');
+  // The approved picture (docs/design/trifid-theme/options/final-album.jpg) has no line and no band along the bottom
+  // of the map beside an album. The hint stays in Explore (explore.spec.ts), and comes back there.
   await page.goto(IR);
   await waitForMap(page);
   await waitForCameraIdle(page);
-  await expect(page.locator('.map-hint')).toHaveText(COPY.map.hintAlbum);
+  await waitForAnimations(page);
+  await expect(page.locator('.map-hint')).toBeHidden();
+  await expect(page.getByText(COPY.map.hint, { exact: false })).toBeHidden();
+  // Nothing of the band is painted either: no element of the map's controls draws a gradient along the bottom.
+  const band = await page.evaluate(() => {
+    const el = document.querySelector('.map-hint');
+    if (!el) return 'none';
+    const cs = getComputedStyle(el);
+    return cs.visibility === 'hidden' || cs.display === 'none' || cs.opacity === '0' ? 'none' : cs.backgroundImage;
+  });
+  expect(band).toBe('none');
+  // Reached from Explore, where the hint shows: opening the album takes it away.
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
   await expect(page.locator('.map-hint')).toBeVisible();
+  const p = await visibleAlbumPoint(page);
+  await page.mouse.click(p.x, p.y);
+  await page.getByRole('link', { name: COPY.map.cardPrimary }).click();
+  await expect(page).toHaveURL(/\/album\//);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'album');
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await expect(page.locator('.map-hint')).toBeHidden();
 });
 
 test('?by=mood shows the mood list, which matches the live site', async ({ page }) => {
