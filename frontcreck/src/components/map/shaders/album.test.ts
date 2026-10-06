@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { COVER_MAX_PX, COVER_WORLD, coverCssPx, pxPerWorld, zoomForCoverPx } from "../state/zoomLimits";
-import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, DOT_ALPHA, SELECTION_DIM, renderedSpriteCssSize, selectedIsProminent, selectedSpriteCssSize, spriteCssSize } from "./album";
+import fs from "node:fs";
+import path from "node:path";
+
+import { HEADER_NARROW_PX, HEADER_PX } from "../types";
+import { COVER_MAX_PX, COVER_WORLD, MAX_ZOOM, coverCssPx, pxPerWorld, visibleScale, zoomForCoverPx } from "../state/zoomLimits";
+import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, DOT_ALPHA, SELECTION_DIM, renderedSpriteCssSize, selectedIsProminent, selectedSpriteCssSize, spriteCapDevicePx, spriteCssSize } from "./album";
 
 const H = 836; // canvas height of a 1440 x 900 window, CSS px
 const FIT = 0.784; // its fitted overview zoom (whole cloud, mockup padding)
@@ -39,17 +43,17 @@ describe("spriteCssSize (JS mirror of the vertex shader's sizes)", () => {
 
 describe("renderedSpriteCssSize (sizes plus the shader's device-px caps)", () => {
   it("matches the base size when no cap applies", () => {
-    expect(renderedSpriteCssSize(FIT, H, 1)).toBeCloseTo(spriteCssSize(FIT, H), 10);
+    expect(renderedSpriteCssSize(FIT, H, H, 1)).toBeCloseTo(spriteCssSize(FIT, H), 10);
   });
 
   it("applies the 18%-of-viewport cap", () => {
     // 64 px cover on a 300 px canvas: capped at 0.18 * 300 = 54 px.
-    expect(renderedSpriteCssSize(100, 300, 1)).toBeCloseTo(54, 10);
+    expect(renderedSpriteCssSize(100, 300, 300, 1)).toBeCloseTo(54, 10);
   });
 
   it("applies the 240 device-px cap on a high-dpr screen", () => {
     // 64 px * 1.5 * dpr 3 = 288 device px, capped at 240 -> 80 CSS px.
-    expect(renderedSpriteCssSize(100, 2000, 3, 1.5)).toBeCloseTo(80, 10);
+    expect(renderedSpriteCssSize(100, 2000, 2000, 3, 1.5)).toBeCloseTo(80, 10);
   });
 });
 
@@ -61,13 +65,59 @@ describe("the picked album in cover mode (mockup max(cs * 1.8, 64))", () => {
   });
 
   it("is at least 64 px, then 1.8 times the cover", () => {
-    expect(selectedSpriteCssSize(zoomForCoverPx(32, H), H, 1)).toBeCloseTo(64, 5);
-    expect(selectedSpriteCssSize(zoomForCoverPx(48, H), H, 1)).toBeCloseTo(86.4, 3);
+    expect(selectedSpriteCssSize(zoomForCoverPx(32, H), H, H, 1)).toBeCloseTo(64, 5);
+    expect(selectedSpriteCssSize(zoomForCoverPx(48, H), H, H, 1)).toBeCloseTo(86.4, 3);
   });
 
   it("keeps its frame inside the viewport-relative sprite cap", () => {
     // 64 px covers on a 400 px tall canvas: the cap is 72 px, the frame takes 12 of it.
-    expect(selectedSpriteCssSize(zoomForCoverPx(64, 400), 400, 2)).toBeCloseTo(60, 5);
+    expect(selectedSpriteCssSize(zoomForCoverPx(64, 400), 400, 400, 2)).toBeCloseTo(60, 5);
+  });
+});
+
+describe("sprite sizes with the canvas running under the header", () => {
+  // Before the map ran under the header the canvas was the window less the header, at zoom z. Now it is the whole
+  // window at zoom z * visibleScale (the same scale on screen), with the header's height as the top inset.
+  const read = (file: string) => fs.readFileSync(path.join(process.cwd(), "src/components/map", file), "utf8");
+  const cases = [
+    { window: 700, header: HEADER_PX, picked: 0.18 * 636 - 12 }, // 102.48: the cap binds (18% of 636 px, less the frame)
+    { window: 900, header: HEADER_PX, picked: 64 * 1.8 }, // 115.2: the cap (150.48) does not bind
+    { window: 700, header: HEADER_NARROW_PX, picked: 0.18 * 640 - 12 }, // 103.2: the phone header, the cap binds
+    { window: 620, header: HEADER_NARROW_PX, picked: 0.18 * 560 - 12 },
+  ];
+  for (const { window: win, header, picked } of cases) {
+    it(`a ${win} px tall window under a ${header} px header: the picked cover at the deepest zoom is the size it was (${picked.toFixed(2)} px)`, () => {
+      const before = win - header;
+      const z = MAX_ZOOM;
+      const now = z * visibleScale(win, header);
+      for (const dpr of [1, 2]) {
+        const was = selectedSpriteCssSize(z, before, before, dpr);
+        expect(was).toBeCloseTo(Math.min(picked, 240 / dpr - 12), 6);
+        expect(selectedSpriteCssSize(now, win, win - header, dpr)).toBeCloseTo(was, 6);
+        // Every other cover too, and a dot.
+        expect(renderedSpriteCssSize(now, win, win - header, dpr)).toBeCloseTo(renderedSpriteCssSize(z, before, before, dpr), 6);
+        expect(renderedSpriteCssSize(now, win, win - header, dpr, 1, false)).toBeCloseTo(renderedSpriteCssSize(z, before, before, dpr, 1, false), 6);
+        // What the shader is given (AlbumField u_maxSpritePx).
+        expect(spriteCapDevicePx(win - header, dpr)).toBeCloseTo(0.18 * before * dpr, 9);
+      }
+    });
+  }
+
+  it("a cap taken from the whole canvas would draw the picked cover of a 700 px window 11.52 px larger", () => {
+    // The mistake this pins: 18% of the 64 px behind the header.
+    const z = MAX_ZOOM * visibleScale(700, HEADER_PX);
+    expect(selectedSpriteCssSize(z, 700, 700, 1) - selectedSpriteCssSize(z, 700, 700 - HEADER_PX, 1)).toBeCloseTo(0.18 * HEADER_PX, 6);
+  });
+
+  it("the shader, the hit test and the picked-album ring are all given the visible height for the cap", () => {
+    // These three need WebGL or a frame loop to run, so their source is read (as AlbumField.stars.test.ts does).
+    expect(read("canvas/AlbumField.tsx")).toContain("u.u_maxSpritePx.value = spriteCapDevicePx(state.size.height - input.insetTop, dpr);");
+    expect(read("canvas/AlbumField.tsx")).not.toContain("MAX_SPRITE_VIEWPORT_FRACTION");
+    const tracker = read("canvas/CursorTracker.tsx");
+    expect(tracker).toContain("const visibleHeightCssPx = viewportHeightCssPx - input.insetTop;");
+    expect(tracker).toContain("renderedSpriteCssSize(camera.zoom, viewportHeightCssPx, visibleHeightCssPx, pixelRatio, 1, loaded)");
+    expect(tracker).toContain("selectedSpriteCssSize(camera.zoom, viewportHeightCssPx, visibleHeightCssPx, pixelRatio)");
+    expect(read("canvas/OverlayDriver.tsx")).toContain("renderedSpriteCssSize(camera.zoom, height, height - input.insetTop, gl.getPixelRatio(), 1, loaded)");
   });
 });
 

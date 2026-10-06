@@ -206,6 +206,15 @@ export function viewportWorldRect(cam: OrthoFrustum): ViewportWorldRect {
   };
 }
 
+/** viewportWorldRect of the part of the canvas below the header, which the camera's position is the centre of.
+ * `scale` is the visible share of the canvas height (state/zoomLimits.ts visibleScale): what is behind the header
+ * does not count as in view. */
+export function visibleWorldRect(cam: OrthoFrustum, scale: number): ViewportWorldRect {
+  const rect = viewportWorldRect(cam);
+  rect.halfH *= scale;
+  return rect;
+}
+
 // Below this fraction of the cloud's bounding-box area actually inside the
 // viewport, the idle camera is considered to have wandered off the cloud and
 // gets nudged back. Above it (including "zoomed out enough to see the whole

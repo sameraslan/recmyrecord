@@ -37,14 +37,16 @@ export function albumAt(
 ): number {
   const toWorld = (px: number) =>
     cssPxToWorld(px, viewportHeightCssPx, camera.zoom, camera.top - camera.bottom);
+  const { input } = useMapStore.getState();
+  // The shader caps a sprite by the visible map's height (AlbumField u_maxSpritePx): the canvas less the header.
+  const visibleHeightCssPx = viewportHeightCssPx - input.insetTop;
   // An album whose atlas sheet is not loaded is still drawn as a dot, so it gets the dot's radius.
-  const drawnRadius = (loaded: boolean) => renderedSpriteCssSize(camera.zoom, viewportHeightCssPx, pixelRatio, 1, loaded) / 2;
+  const drawnRadius = (loaded: boolean) => renderedSpriteCssSize(camera.zoom, viewportHeightCssPx, visibleHeightCssPx, pixelRatio, 1, loaded) / 2;
   const coverR = drawnRadius(true);
   const dotR = drawnRadius(false);
   const loadedAt = (i: number) => isAtlasSheetLoaded(Math.floor(i / ATLAS_PER_SHEET));
   const hitCover = toWorld(spriteHitRadiusCssPx(pointerType, coverR * 2));
   const hitDot = toWorld(spriteHitRadiusCssPx(pointerType, dotR * 2));
-  const { input } = useMapStore.getState();
   const focusedIndex = input.focus?.seed ?? -1;
   // The Explore pick, drawn large on top of everything once covers show: it wins anywhere inside its cover.
   const sel = !input.focus && input.selected !== null ? input.selected : -1;
@@ -58,7 +60,7 @@ export function albumAt(
     hitCover === hitDot ? hitCover : (i) => (loadedAt(i) ? hitCover : hitDot),
     [
       // Out to the outer edge of its lamp frame, so the whole drawn square but its far corners is a hit.
-      { index: selProminent ? sel : -1, radiusWorld: toWorld(selectedSpriteCssSize(camera.zoom, viewportHeightCssPx, pixelRatio) / 2 + SELECTED_FRAME_GAP_PX + SELECTED_FRAME_PX) },
+      { index: selProminent ? sel : -1, radiusWorld: toWorld(selectedSpriteCssSize(camera.zoom, viewportHeightCssPx, visibleHeightCssPx, pixelRatio) / 2 + SELECTED_FRAME_GAP_PX + SELECTED_FRAME_PX) },
       // The hover marks (ring, stroke) are drawn outside the album; hits stay on the album itself.
       { index: focusedIndex, radiusWorld: drawnWorld(focusedIndex) },
       { index: hoverIndex, radiusWorld: drawnWorld(hoverIndex) },
@@ -175,8 +177,12 @@ export function CursorTracker({
   // eslint-disable-next-line react-hooks/immutability -- this per-frame callback sets canvas.style.cursor directly on the R3F canvas DOM node (see below); a plain DOM style write is cheaper than routing cursor state through React here and matches the rest of this hot path's ref-based, non-React-render pattern.
   useFrame((state) => {
     const canvas = gl.domElement;
+    const input = useMapStore.getState().input;
     // A route that turns the map non-interactive (Home, About) ends the hover even without a pointerleave.
-    const c = useMapStore.getState().input.interactive ? cursorRef.current : null;
+    const at = input.interactive ? cursorRef.current : null;
+    // The canvas runs under the header and holds the pointer during a drag, so the pointer can be over the bar:
+    // nothing is hovered there (an album dragged behind the bar would light its label under it).
+    const c = at && at[1] >= input.insetTop ? at : null;
 
     if (!c) {
       if (hoverRef.current !== -1) {
@@ -197,7 +203,7 @@ export function CursorTracker({
     // second label next to the one just clicked.
     // Focus markers are drawn over the canvas but take no pointer events: their boxes are hit first.
     // The boxes are from MarkerDriver's last frame (it runs after this callback): none count without a focus.
-    const focused = useMapStore.getState().input.focus !== null;
+    const focused = input.focus !== null;
     const marker = hoverSuppressedRef.current || !focused ? -1 : markerAt(getPlacedMarkers(), c[0], c[1]);
     const idx = hoverSuppressedRef.current
       ? -1

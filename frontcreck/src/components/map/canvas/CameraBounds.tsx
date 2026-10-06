@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
-import { nudgeVector, viewportWorldRect, visibleFractionThreshold } from "../state/bounds";
+import { nudgeVector, visibleFractionThreshold, visibleWorldRect } from "../state/bounds";
 import { useMapStore } from "../state/mapStore";
 import { getOverviewFraming, getVisibleScale, isFramed } from "../state/view";
 
@@ -99,9 +99,8 @@ export function CameraBounds() {
     if (now - lastCameraGrab < RELEASE_MS) return settle();
 
     const cam = state.camera as THREE.OrthographicCamera;
-    const viewport = viewportWorldRect(cam);
     // Only what is below the header counts as in view; cam.position is the centre of that area.
-    viewport.halfH *= getVisibleScale();
+    const viewport = visibleWorldRect(cam, getVisibleScale());
     // The cloud's full extent, the same box the overview framing fits
     // (published by InitialFrame, recomputed on every sliderT change).
     const framing = getOverviewFraming();

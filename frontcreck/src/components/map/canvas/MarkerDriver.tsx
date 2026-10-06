@@ -221,21 +221,10 @@ function tweenTarget(w: Work, store: MapStore, width: number, height: number): {
     w.hasTarget = false;
     return null;
   }
-  const k = w.target;
   const stop = STOP_T[input.stop];
-  const moved = !w.hasTarget || k[0] !== to.x || k[1] !== to.y || k[2] !== to.zoom || k[3] !== input.insetLeft || k[4] !== stop || k[5] !== width || k[6] !== height || k[7] !== input.bottomCover || k[8] !== input.insetTop;
-  if (moved) {
-    k[0] = to.x;
-    k[1] = to.y;
-    k[2] = to.zoom;
-    k[3] = input.insetLeft;
-    k[4] = stop;
-    k[5] = width;
-    k[6] = height;
-    k[7] = input.bottomCover;
-    k[8] = input.insetTop;
-    w.hasTarget = true;
-  }
+  // Compared first, so the key is always the latest target, whether or not one was held before.
+  const moved = retargeted(w.target, to, input.insetLeft, stop, width, height, input.bottomCover, input.insetTop) || !w.hasTarget;
+  w.hasTarget = true;
   if (!newFocus && !(moved && now - w.focusAt < RETARGET_MS)) return null;
   const cam = frustumCamera(to, width, height, input.insetLeft, input.insetTop);
   const pos = interpolated(data, stop);
@@ -243,6 +232,25 @@ function tweenTarget(w: Work, store: MapStore, width: number, height: number): {
   const anchors = [f.seed, ...f.recs].map((id) => ({ id, ...worldToScreen(pos[2 * id], pos[2 * id + 1], rect, cam) }));
   const area = visibleArea(input.insetLeft, width, height, MARKER_EDGE, input.insetTop);
   return { anchors, bounds: { ...area, bottom: Math.min(area.bottom, height - input.bottomCover - MARKER_EDGE) } };
+}
+
+/** True when the view a tween lands on, or anything else the markers' layout for it depends on (the panel and
+ * header insets, the stop, the canvas size, the phone sheet's cover), is not what `k` holds from the last call;
+ * `k` (nine numbers, allocated once) is then brought up to date in place. */
+export function retargeted(k: Float64Array, to: { x: number; y: number; zoom: number }, insetLeft: number, stop: number, width: number, height: number, bottomCover: number, insetTop: number): boolean {
+  const moved = k[0] !== to.x || k[1] !== to.y || k[2] !== to.zoom || k[3] !== insetLeft || k[4] !== stop || k[5] !== width || k[6] !== height || k[7] !== bottomCover || k[8] !== insetTop;
+  if (moved) {
+    k[0] = to.x;
+    k[1] = to.y;
+    k[2] = to.zoom;
+    k[3] = insetLeft;
+    k[4] = stop;
+    k[5] = width;
+    k[6] = height;
+    k[7] = bottomCover;
+    k[8] = insetTop;
+  }
+  return moved;
 }
 
 function stopSettle(w: Work): void {

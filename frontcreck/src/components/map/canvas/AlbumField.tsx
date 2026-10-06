@@ -8,7 +8,7 @@ import { atlasSlot } from "@/lib/data/sprites";
 import { prefersReducedMotion } from "@/lib/media";
 import { interpolateInto, type MapData } from "../data";
 import { buildStarAttributes, pageStarClasses } from "../state/stars";
-import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, DOT_ALPHA, DOT_ALPHA_DIMMED, MAX_SPRITE_VIEWPORT_FRACTION, SELECTION_DIM } from "../shaders/album";
+import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, DOT_ALPHA, DOT_ALPHA_DIMMED, SELECTION_DIM, spriteCapDevicePx } from "../shaders/album";
 import { useMapStore } from "../state/mapStore";
 
 interface AlbumFieldProps {
@@ -176,7 +176,8 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     const dpr = gl.getPixelRatio();
     u.u_pixelRatio.value = dpr;
     u.u_canvasHeight.value = state.size.height;
-    u.u_maxSpritePx.value = state.size.height * MAX_SPRITE_VIEWPORT_FRACTION * dpr;
+    // The cap follows the visible map, below the header: the canvas is taller than that by the header's height.
+    u.u_maxSpritePx.value = spriteCapDevicePx(state.size.height - input.insetTop, dpr);
     const targetAlpha = input.dimmed ? DOT_ALPHA_DIMMED : DOT_ALPHA;
     // With frameloop="demand", the first frame after an idle period has a delta of seconds; clamp it, or the
     // dim would jump to its target instead of easing. Settled (or reduced motion), no further frame is asked for.

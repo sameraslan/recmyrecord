@@ -2,13 +2,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { act, albumSpread, overviewMiss, visibleAlbumPoint, waitForAnimations, waitForCameraIdle, waitForMap, wholeMapMiss } from './helpers';
+import { act, albumSpread, overviewMiss, visibleAlbumPoint, waitForAnimations, waitForCameraIdle, waitForMap, waitForMapQuiet, wholeMapMiss } from './helpers';
 
-/** Album positions on screen, recorded while the map still started below the header (FRAMING_RECORD=1, run once on
- * the commit before the change). Every "same place" test compares with it, so the framing is that commit's to the
- * pixel. Never record it again. */
+/** Album positions on screen, recorded once while the map still started below the header (on the commit before
+ * the change). Every "same place" test compares with it, so the framing is that commit's to the pixel. It can not
+ * be recorded again: the code that wrote it is gone, since a record made now would be of the map under the header. */
 const BASELINE = path.join(process.cwd(), 'e2e/fixtures/framing-baseline.json');
-const RECORD = process.env.FRAMING_RECORD === '1';
 const TOLERANCE_PX = 0.75;
 const IR = '/album/in-rainbows-radiohead';
 const IN_RAINBOWS = 11;
@@ -37,19 +36,12 @@ const markers = (page: Page) =>
  * while that ease runs. With no album open there is nothing to wait for. */
 const markersSettled = (page: Page) => page.waitForFunction(() => !document.querySelector('.mk') || !!window.__rmr!.markerLayout?.());
 
-/** Records this state's album positions and marker boxes (FRAMING_RECORD=1), or compares them with the record.
- * `again` compares in a recording run too: a state reached a second time must be the one just recorded. */
-async function sameAsRecorded(page: Page, info: TestInfo, state: string, again = false): Promise<void> {
+/** Compares this state's album positions and marker boxes with the record. */
+async function sameAsRecorded(page: Page, info: TestInfo, state: string): Promise<void> {
   await markersSettled(page);
   const key = `${info.project.name}/${state}`;
   const now: Entry = { points: await points(page), markers: await markers(page) };
-  const all: Record<string, Entry> = fs.existsSync(BASELINE) ? JSON.parse(fs.readFileSync(BASELINE, 'utf8')) : {};
-  if (RECORD && !again) {
-    all[key] = now;
-    fs.mkdirSync(path.dirname(BASELINE), { recursive: true });
-    fs.writeFileSync(BASELINE, `${JSON.stringify(all, null, 1)}\n`);
-    return;
-  }
+  const all: Record<string, Entry> = JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
   const was = all[key];
   expect(was, `no recorded framing for ${key}: it is recorded on the commit before the header change`).toBeTruthy();
   expect(now.points.length).toBe(was.points.length);
@@ -157,7 +149,7 @@ test.describe('same place as before the map ran under the header', () => {
     await sameAsRecorded(page, info, 'floor');
     // The fit button comes back to the Whole map exactly.
     await fit(page, isMobile);
-    await sameAsRecorded(page, info, 'whole', true);
+    await sameAsRecorded(page, info, 'whole');
   });
 
   test('a picked album', async ({ page, isMobile }, info) => {
@@ -323,6 +315,108 @@ test('the header takes the pointer over the map under it; a drag that starts on 
   await waitForCameraIdle(page);
   const y1 = (await pointOf(page, p.id)).y;
   expect(Math.abs(y1 - y0 + (startY - bottom / 2))).toBeLessThanOrEqual(4);
+});
+
+test('an album dragged under the header does not light its hover label, during the drag or after the release', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'pointer hover');
+  await openMap(page);
+  const bottom = await headerBottom(page);
+  const tip = page.locator('.map-tip');
+  const p = await visibleAlbumPoint(page);
+  // The album can be hovered where it is.
+  await page.mouse.move(p.x, p.y);
+  await expect(tip).toHaveCSS('opacity', '1');
+  // Dragged up until it is behind the bar, the pointer still on it (the canvas holds the pointer).
+  await page.mouse.down();
+  await page.mouse.move(p.x, bottom / 2, { steps: 12 });
+  const held = await pointOf(page, p.id);
+  expect(Math.abs(held.x - p.x), 'the album followed the pointer').toBeLessThanOrEqual(4);
+  expect(Math.abs(held.y - bottom / 2), 'the album is behind the bar').toBeLessThanOrEqual(4);
+  // Longer than the hover label's delay (80 ms) and its fade, with the pointer at rest on the hidden album.
+  await page.waitForTimeout(500);
+  expect(await tip.evaluate((el) => getComputedStyle(el).opacity), 'while the album is held behind the bar').toBe('0');
+  await page.mouse.up();
+  await waitForCameraIdle(page);
+  await page.waitForTimeout(500);
+  expect(await tip.evaluate((el) => getComputedStyle(el).opacity), 'after the release behind the bar').toBe('0');
+  expect(await page.evaluate(() => window.__rmr!.getState().selected), 'a drag picks nothing').toBeNull();
+});
+
+test('a window resized across 900 px wide shows what a fresh load at the new size shows: an open album and an untouched map', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'a desktop window is resized');
+  test.setTimeout(120_000);
+  // The header is 64 px at 900 px wide and over, 60 px under it: the camera's top inset has to follow.
+  const WIDE = { width: 1000, height: 800 };
+  const NARROW = { width: 880, height: 800 };
+  const canvasWidth = () => page.evaluate(() => document.querySelector('canvas.map-canvas')!.getBoundingClientRect().width);
+  const names = () =>
+    page.locator('.rn-layer .rn').evaluateAll((els) =>
+      els
+        .filter((e) => e.getClientRects().length > 0 && Number(getComputedStyle(e).opacity) > 0.5)
+        .map((e) => {
+          const r = e.getBoundingClientRect();
+          return { text: e.textContent ?? '', x: r.x, y: r.y };
+        })
+        .sort((a, b) => a.text.localeCompare(b.text)),
+    );
+  const view = async () => {
+    await waitForCameraIdle(page);
+    await waitForAnimations(page);
+    await markersSettled(page);
+    await waitForMapQuiet(page, 400);
+    await waitForAnimations(page);
+    return { header: await headerBottom(page), points: await points(page), markers: await markers(page), names: await names() };
+  };
+  type View = Awaited<ReturnType<typeof view>>;
+  const load = async (size: { width: number; height: number }, url: string) => {
+    await page.setViewportSize(size);
+    await page.goto(url);
+    await waitForMap(page);
+    return view();
+  };
+  const resize = async (size: { width: number; height: number }) => {
+    await page.setViewportSize(size);
+    // R3F sees the new size through a ResizeObserver, and the header's height follows the media query.
+    await expect.poll(canvasWidth).toBe(size.width);
+    await expect.poll(() => headerBottom(page)).toBe(size.width < 900 ? 60 : 64);
+    return view();
+  };
+  const expectSame = (now: View, fresh: View, what: string) => {
+    let worst = 0;
+    now.points.forEach((p, i) => (worst = Math.max(worst, Math.abs(p.x - fresh.points[i].x), Math.abs(p.y - fresh.points[i].y))));
+    console.log(`resize ${what}: albums at most ${worst.toFixed(3)} px from a fresh load, ${now.markers.length} markers, ${now.names.length} names`);
+    expect(now.header, `${what}: header height`).toBe(fresh.header);
+    now.points.forEach((p, i) => {
+      expect(Math.abs(p.x - fresh.points[i].x), `${what}: album ${PROBES[i]} x`).toBeLessThanOrEqual(TOLERANCE_PX);
+      expect(Math.abs(p.y - fresh.points[i].y), `${what}: album ${PROBES[i]} y`).toBeLessThanOrEqual(TOLERANCE_PX);
+    });
+    expect(now.markers.map((m) => m.id), `${what}: markers`).toEqual(fresh.markers.map((m) => m.id));
+    now.markers.forEach((m, i) => {
+      for (const k of ['x', 'y', 'w', 'h'] as const) expect(Math.abs(m[k] - fresh.markers[i][k]), `${what}: marker ${m.id} ${k}`).toBeLessThanOrEqual(TOLERANCE_PX);
+    });
+    // The region names are laid out below the header's height as the names know it (state/stageTop.ts), the
+    // camera frames below the height it knows (MapInput.insetTop): after the resize both are the fresh load's.
+    expect(now.names.map((n) => n.text), `${what}: names`).toEqual(fresh.names.map((n) => n.text));
+    now.names.forEach((n, i) => {
+      expect(Math.abs(n.x - fresh.names[i].x), `${what}: name ${n.text} x`).toBeLessThanOrEqual(TOLERANCE_PX);
+      expect(Math.abs(n.y - fresh.names[i].y), `${what}: name ${n.text} y`).toBeLessThanOrEqual(TOLERANCE_PX);
+    });
+  };
+  for (const url of [IR, '/map']) {
+    const freshWide = await load(WIDE, url);
+    expect(freshWide.header).toBe(64);
+    if (url === IR) expect(freshWide.markers).toHaveLength(6);
+    else expect(freshWide.names.length, 'names on the untouched map').toBeGreaterThan(0);
+    const resizedNarrow = await resize(NARROW);
+    const resizedWide = await resize(WIDE);
+    const freshNarrow = await load(NARROW, url);
+    expect(freshNarrow.header).toBe(60);
+    expectSame(resizedNarrow, freshNarrow, `${url} from 1000 to 880 px`);
+    expectSame(resizedWide, freshWide, `${url} from 880 back to 1000 px`);
+    // On the wide window the album's markers are on show: all of them clear of the bar after the round trip.
+    for (const m of resizedWide.markers) expect(m.y, `${url}: marker ${m.id} below the bar`).toBeGreaterThanOrEqual(64 + 7.5);
+    if (url === '/map') expect(overviewMiss(await albumSpread(page)), 'the fresh narrow map opens at the Overview').toEqual([]);
+  }
 });
 
 test('keyboard order is unchanged: skip link, header, then the map and its controls', async ({ page, isMobile }) => {

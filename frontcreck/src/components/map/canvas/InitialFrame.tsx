@@ -56,6 +56,20 @@ export function applyFrustum(camera: THREE.OrthographicCamera, width: number, he
   camera.updateProjectionMatrix();
 }
 
+/** What the framing was last fitted for. */
+export interface FramedSize {
+  width: number;
+  height: number;
+  insetTop: number;
+}
+
+/** True when the canvas or the header over it is not the size the framing was last fitted for: a new header
+ * height (the window crossed 900 px wide) counts as a new size, also when it arrives without a canvas resize.
+ * False the first time (nothing was fitted yet). */
+export function sizeChanged(last: FramedSize | null, width: number, height: number, insetTop: number): boolean {
+  return last !== null && (last.width !== width || last.height !== height || last.insetTop !== insetTop);
+}
+
 /**
  * Owns the orthographic frustum and the overview framing.
  *
@@ -94,7 +108,7 @@ export function InitialFrame() {
   // The header's height over the canvas (64 px, or 60 px under 900 px wide): followed like the canvas size.
   const insetTop = useMapStore((s) => s.input.insetTop);
   const framedData = useRef<MapData | null>(null);
-  const lastSize = useRef<{ width: number; height: number; insetTop: number } | null>(null);
+  const lastSize = useRef<FramedSize | null>(null);
   const rafId = useRef<number | null>(null);
   // The sliderT value the most recent recompute (synchronous or throttled)
   // already accounted for; lets the sliderT effect below skip scheduling a
@@ -161,13 +175,10 @@ export function InitialFrame() {
       // Before the fit below and before any clampZoom: the zoom limits in this canvas's own scale.
       setVisibleScale(visibleScale(height, insetTop));
     }
-    // A new header height (the window crossed 900 px) counts as a new size: the framing is fitted again.
-    const sizeChanged =
-      lastSize.current !== null &&
-      (lastSize.current.width !== width || lastSize.current.height !== height || lastSize.current.insetTop !== insetTop);
+    const resized = sizeChanged(lastSize.current, width, height, insetTop);
     lastSize.current = { width, height, insetTop };
 
-    recomputeFraming(sizeChanged);
+    recomputeFraming(resized);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data, width, height, insetTop, camera, invalidate]);
 

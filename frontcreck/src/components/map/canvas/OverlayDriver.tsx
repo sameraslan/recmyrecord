@@ -66,7 +66,7 @@ export function OverlayDriver({ positionsRef }: { positionsRef: React.RefObject<
       if (i === null || focusIds.includes(i) || selectedIsProminent(camera.zoom, height, loaded)) sel.style.opacity = '0';
       else {
         const p = toScreen(i);
-        const sprite = renderedSpriteCssSize(camera.zoom, height, gl.getPixelRatio(), 1, loaded);
+        const sprite = renderedSpriteCssSize(camera.zoom, height, height - input.insetTop, gl.getPixelRatio(), 1, loaded);
         const s = Math.max(18, sprite + 8);
         sel.style.width = `${s}px`;
         sel.style.height = `${s}px`;

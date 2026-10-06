@@ -5,7 +5,8 @@ import { useEffect, useRef } from 'react';
 import { useMapStore, type MapStore } from '../state/mapStore';
 import { getCameraControl } from './CameraTween';
 
-function focusKey(s: MapStore): string {
+/** Everything the framing of an open album depends on, the header's height included (it changes at 900 px wide). */
+export function focusKey(s: Pick<MapStore, 'input'>): string {
   const f = s.input.focus;
   if (!f) return '';
   const p = s.input.framePadding;

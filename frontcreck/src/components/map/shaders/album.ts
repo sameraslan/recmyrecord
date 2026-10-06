@@ -36,21 +36,29 @@ export function spriteCssSize(zoom: number, canvasHeightCssPx: number, loaded = 
  * of the viewport height, even at max zoom on a short window. */
 export const MAX_SPRITE_VIEWPORT_FRACTION = 0.18;
 
+/** That cap in device px. The height is the visible map's: the canvas less the header it runs under
+ * (MapInput.insetTop), so a cover is capped at the size it had when the canvas started below the header. */
+export function spriteCapDevicePx(visibleHeightCssPx: number, pixelRatio: number): number {
+  return visibleHeightCssPx * MAX_SPRITE_VIEWPORT_FRACTION * pixelRatio;
+}
+
 /**
  * JS mirror of the sprite size the vertex shader actually draws, in CSS px:
  * the base size times `scale`, then the
  * 240 device-px and u_maxSpritePx caps. Hit testing and overlay placement use
  * it so both track the sprite on screen at every zoom. The dimmed map's MUTED_DOT_SCALE is not mirrored here:
  * the dimmed map (Home, About, 404) takes no pointer input, so nothing hit-tests it.
+ * Sizes follow the canvas height (the map's scale); the cap follows `visibleHeightCssPx` (spriteCapDevicePx).
  */
 export function renderedSpriteCssSize(
   zoom: number,
   canvasHeightCssPx: number,
+  visibleHeightCssPx: number,
   pixelRatio: number,
   scale = 1,
   loaded = true,
 ): number {
-  const capDevicePx = Math.min(240, canvasHeightCssPx * MAX_SPRITE_VIEWPORT_FRACTION * pixelRatio);
+  const capDevicePx = Math.min(240, spriteCapDevicePx(visibleHeightCssPx, pixelRatio));
   return Math.min(spriteCssSize(zoom, canvasHeightCssPx, loaded) * scale * pixelRatio, capDevicePx) / pixelRatio;
 }
 
@@ -78,9 +86,9 @@ export function selectedIsProminent(zoom: number, canvasHeightCssPx: number, loa
 }
 
 /** JS mirror of the shader: CSS px of the picked album's cover while it is prominent (hit testing uses it). */
-export function selectedSpriteCssSize(zoom: number, canvasHeightCssPx: number, pixelRatio: number): number {
+export function selectedSpriteCssSize(zoom: number, canvasHeightCssPx: number, visibleHeightCssPx: number, pixelRatio: number): number {
   const s = Math.max(spriteCssSize(zoom, canvasHeightCssPx, true) * SELECTED_SCALE, SELECTED_MIN_PX);
-  const capCss = Math.min(240, canvasHeightCssPx * MAX_SPRITE_VIEWPORT_FRACTION * pixelRatio) / pixelRatio;
+  const capCss = Math.min(240, spriteCapDevicePx(visibleHeightCssPx, pixelRatio)) / pixelRatio;
   return s + SELECTED_QUAD_EXTRA > capCss ? capCss - SELECTED_QUAD_EXTRA : s;
 }
 
@@ -110,7 +118,7 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   uniform float u_neighborMask[12];  // focus album indices (seed first), padded with -1
   uniform float u_hoverIndex;   // -1 = no hover target
   uniform float u_selectedIndex; // album picked in Explore, -1 = none (always -1 in album view)
-  uniform float u_maxSpritePx;  // device px cap, viewportHeightCssPx * 0.18 * dpr
+  uniform float u_maxSpritePx;  // device px cap, 0.18 of the visible map's height (below the header) * dpr
   uniform float u_atlasLoaded[5];
   uniform float u_dotAlpha;     // eases from DOT_ALPHA to DOT_ALPHA_DIMMED as the map dims
 
