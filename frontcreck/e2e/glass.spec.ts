@@ -369,8 +369,16 @@ test('on Home the header text keeps 4.5:1 over the brightest gas a moved map can
   for (const r of results) {
     // Bright gas, not sky: otherwise this measures nothing.
     expect(r.gas, `mean luminance of the gas behind ${r.selector}`).toBeGreaterThan(0.4);
-    expect(r.ratio, r.selector).toBeGreaterThanOrEqual(4.5);
+    // The rule is 4.5:1. The owner's ruling asks for more on Home: the text clearly apart from the gas behind it,
+    // between the first scrim (5.96 for the two links here, 9.5 for the wordmark) and the glass bar of the other
+    // pages (about 7.7 to 9.4 for the links on a GPU). So the weakest item, a link in the dust colour, holds 6.6.
+    expect(r.ratio, r.selector).toBeGreaterThanOrEqual(6.6);
   }
+  // Still a scrim, not a bar: nothing is blurred behind Home's header, and it has no background and no edge line.
+  expect(await page.locator('header.top').evaluate((el) => {
+    const [cs, b] = [getComputedStyle(el), getComputedStyle(el, '::before')];
+    return { filter: cs.backdropFilter, bg: cs.backgroundColor, edge: cs.borderBottomColor, scrimFilter: b.backdropFilter, scrimBlur: b.filter, scrimOpacity: b.opacity };
+  })).toEqual({ filter: 'none', bg: 'rgba(0, 0, 0, 0)', edge: 'rgba(0, 0, 0, 0)', scrimFilter: 'none', scrimBlur: 'none', scrimOpacity: '1' });
 });
 
 /** RGB of the screenshot pixel that holds each client point. `hide` is made fully see-through for the picture

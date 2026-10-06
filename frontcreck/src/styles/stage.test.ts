@@ -104,13 +104,16 @@ describe('the map behind the header', () => {
     // A plain gradient: no blur and no filter, so it costs nothing while the map moves under it.
     for (const p of ['backdrop-filter', '-webkit-backdrop-filter', 'filter', 'animation']) expect(scrim[p], p).toBeUndefined();
     expect(shell).not.toMatch(/\.top::before[^{]*,[^{]*\{[^}]*backdrop-filter/);
-    const g = /^linear-gradient\(rgba\(7, 6, 10, ([\d.]+)\) calc\(var\(--hdr\) - (\d+)px\), .*, rgba\(7, 6, 10, 0\)\)$/.exec(scrim.background);
-    expect(g, scrim.background).not.toBeNull();
-    // Full strength down to the bottom edge of the tallest thing in the bar (a 44 px link, centred), at both
-    // header heights; then it fades to nothing 40 px below the bar, with no edge.
-    for (const hdr of [HEADER_PX, HEADER_NARROW_PX]) expect(hdr - Number(g![2]), `${hdr} px header`).toBeGreaterThanOrEqual((hdr + 44) / 2);
+    // The owner's ruling: between the first, soft scrim (.76 to 8 px above the bar's bottom edge, gone 40 px below
+    // it) and the glass bar of the other pages. So it is stronger and taller: .82 over the whole bar, down to its
+    // bottom edge, at both header heights (the first one already covered the links' 44 px boxes: (hdr + 44) / 2),
+    // then fading to nothing 52 px below the bar, still with no edge and no hairline.
+    expect(scrim.background).toBe('linear-gradient(rgba(7, 6, 10, .82) var(--hdr), rgba(7, 6, 10, .55) calc(var(--hdr) + 14px), rgba(7, 6, 10, .22) calc(var(--hdr) + 32px), rgba(7, 6, 10, 0))');
+    expect(scrim.height).toBe('calc(var(--hdr) + 52px)');
+    for (const hdr of [HEADER_PX, HEADER_NARROW_PX]) expect(hdr, `${hdr} px header`).toBeGreaterThanOrEqual((hdr + 44) / 2);
     expect(rule(shell, '.navbtn, .icon-btn')['min-height']).toBe('44px');
-    expect(scrim.height).toBe('calc(var(--hdr) + 40px)');
+    // No bar: the header itself still has no background, no edge line and no blur on Home.
+    expect(rule(shell, '.top.top--home')['border-color']).toBe('transparent');
   });
 
   it('no text of the header is in the ash colour: it is 4.06:1 on the header glass over white', () => {

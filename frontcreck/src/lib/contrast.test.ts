@@ -126,18 +126,24 @@ describe('WCAG AA contrast', () => {
     expect(rule(shell, '.top').background).toBe('var(--top-bg)');
   });
 
-  it('the Home header, which is clear, keeps paper and dust at 4.5:1 over white through its scrim', () => {
+  it('the Home header, which is clear, keeps paper and dust well over 4.5:1 over white through its scrim', () => {
     // Home's header has no glass; a see-through scrim in the page colour sits behind its text (shell.css
-    // .top::before). Over pure white, with nothing else dimming the map, it is as dark as the header glass.
+    // .top::before). The owner's ruling puts it between the first scrim (.76: as dark as the header glass over
+    // pure white, dust 5.44) and the glass bar as it reads over real gas, where its blur spreads the bright peaks:
+    // over pure white, with nothing else dimming the map, the scrim alone is darker than the glass.
     const scrim = rule(css('styles/shell.css'), '.top::before');
     const m = /^linear-gradient\(rgba\((\d+), (\d+), (\d+), ([\d.]+)\) /.exec(scrim.background);
     expect(m, scrim.background).not.toBeNull();
     const tint: Tint = { rgb: [Number(m![1]), Number(m![2]), Number(m![3])], alpha: Number(m![4]) };
     expect(rgbToHex(tint.rgb)).toBe(tok('room'));
+    expect(tint.alpha).toBe(0.82);
     const bg = surfaceOver(WHITE, null, tint);
-    expect(bg).toBe('#434245');
+    expect(bg).toBe('#343336');
     for (const t of TEXT_ON['top-bg']) expect(contrastRatio(tok(t), bg), `${t} on the Home scrim over white (${bg})`).toBeGreaterThanOrEqual(4.5);
-    expect(contrastRatio(tok('dust'), bg)).toBeCloseTo(contrastRatio(tok('dust'), surfaceOver(WHITE, FILTER, GLASS['top-bg'])), 0);
+    const glass = contrastRatio(tok('dust'), surfaceOver(WHITE, FILTER, GLASS['top-bg']));
+    // Stronger than the first scrim, which matched the glass here (5.44), by a clear step: 6.5 or more for dust.
+    expect(contrastRatio(tok('dust'), bg)).toBeGreaterThanOrEqual(6.5);
+    expect(contrastRatio(tok('dust'), bg)).toBeGreaterThan(glass + 1);
   });
 
   it('every text token passes 4.5:1 on the solid fallback over an unfiltered white backdrop', () => {

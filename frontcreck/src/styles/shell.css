@@ -40,12 +40,15 @@ ol, ul { padding: 0; list-style: none; }
 .top.top--home { -webkit-backdrop-filter: none; backdrop-filter: none; }
 /* Home's header stays clear (no glass, no edge), but the map runs behind it and Home keeps a camera the visitor
    moved, so the brightest gas can sit behind the wordmark and the links. A still scrim in the page colour sits
-   behind them on Home only: full strength down to the bottom of the links' 44 px boxes, then fading to nothing
-   40 px below the bar. .76 over pure white is as dark as the header glass (lib/contrast.test.ts). No blur and no
-   filter: nothing is recomputed while the map moves. Over the dark sky of Home's own framing it does not show. */
+   behind them on Home only. It is the owner's middle between a soft scrim and the glass bar of the other pages:
+   .82 over the whole bar, down to its bottom edge, then fading to nothing 52 px below it, with no edge. The first
+   scrim was .76 to 8 px above the edge and gone 40 px below it: over pure white that is as dark as the header
+   glass, and a link measured 5.9:1 over the brightest gas; this one measures about 7 (the glass 7.7 to 9.4;
+   lib/contrast.test.ts, e2e/glass.spec.ts). No blur and no filter: nothing is recomputed while the map moves.
+   Over the dark sky of Home's own framing it does not show. */
 .top::before {
-  content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(var(--hdr) + 40px); z-index: -1; pointer-events: none; opacity: 0;
-  background: linear-gradient(rgba(7, 6, 10, .76) calc(var(--hdr) - 8px), rgba(7, 6, 10, .5) calc(var(--hdr) + 6px), rgba(7, 6, 10, .2) calc(var(--hdr) + 22px), rgba(7, 6, 10, 0));
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(var(--hdr) + 52px); z-index: -1; pointer-events: none; opacity: 0;
+  background: linear-gradient(rgba(7, 6, 10, .82) var(--hdr), rgba(7, 6, 10, .55) calc(var(--hdr) + 14px), rgba(7, 6, 10, .22) calc(var(--hdr) + 32px), rgba(7, 6, 10, 0));
   transition: opacity var(--dur) var(--out);
 }
 .top.top--home::before { opacity: 1; }
