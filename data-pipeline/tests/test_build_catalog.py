@@ -107,20 +107,38 @@ def test_require_sprites_stops_the_build_when_a_cover_has_no_sprite(deduped, tmp
     assert "--require-sprites: 1 new album(s)" in printed.err and not out.exists()
 
 
+def _covers_table(new_keys, sprite_dir):
+    """A covers table of the test's own: one new album per source, every sixth new album after them with a
+    Deezer cover, the others without a row. No sprite: the build is run without images."""
+    import rmr_pipeline.covers as cv
+
+    rows = dict(zip(new_keys, [("spotify", "ab67616d0000b273" + "1" * 24), ("deezer", "0f" * 16),
+                               ("apple", "Music118/v4/d4/10/5d/d4105dcd-73d6-d4cd-4168-ab63f8255340/00600753264645.rgb.jpg"),
+                               ("bandcamp", "2980782782"), ("youtube", "mnjH-ZYe59c")]))
+    rows |= {key: ("deezer", f"{i:032x}") for i, key in enumerate(new_keys[5::6])}
+    return cv.Covers(rows, sprite_dir)
+
+
 @pytest.fixture(scope="module")
 def catalog_build(deduped, tmp_path_factory):
-    """The whole catalog built without images (about a minute), with the committed covers table."""
+    """The whole catalog built without images (about a minute). The covers table is the test's own
+    (_covers_table), so the build does not depend on the committed covers.csv, on the sprites this machine
+    has fetched, or on their manifest; the committed table has its own test below."""
+    import rmr_pipeline.covers as cv
+
     tmp = tmp_path_factory.mktemp("catalog_build")
     root, out = _fake_map(tmp / "map", deduped[0]["URI"]), tmp / "out"
+    table = _covers_table(list(load_catalog()["rym_id"].iloc[len(deduped[0]):]), tmp / "96")
     stdout = io.StringIO()
-    with contextlib.redirect_stdout(stdout):
+    with pytest.MonkeyPatch.context() as patch, contextlib.redirect_stdout(stdout):
+        patch.setattr(cv, "_default_covers", lambda: table)
         assert main(["--map-root", str(root), "--catalog", "--skip-images", "--out", str(out)]) == 0
     read = {name: json.loads((out / f"{name}.json").read_text(encoding="utf-8")) for name in ("albums", "recs", "positions")}
-    return read["albums"], read["recs"], read["positions"], stdout.getvalue(), out
+    return read["albums"], read["recs"], read["positions"], stdout.getvalue(), out, table
 
 
 def test_the_catalog_build_validates_and_keeps_the_sites_albums_first(catalog_build, deduped):
-    albums, _, _, printed, out = catalog_build
+    albums, _, _, printed, out, _ = catalog_build
     catalog = load_catalog()
     assert len(albums) == len(catalog) > 10000
     summary = validate_dir(out, images=False)
@@ -132,7 +150,7 @@ def test_the_catalog_build_validates_and_keeps_the_sites_albums_first(catalog_bu
 
 
 def test_the_catalog_builds_albums_without_audio_are_mood_only(catalog_build, deduped):
-    albums, recs, positions, printed, _ = catalog_build
+    albums, recs, positions, printed, _, _ = catalog_build
     n_site = len(deduped[0])
     catalog = load_catalog()
     has_audio = load_store(store.STORES["effnet10k"]).rows(list(catalog["rym_id"])) >= 0
@@ -159,7 +177,7 @@ def test_the_catalog_builds_derived_positions_sit_among_their_mood_neighbours(ca
     from rmr_pipeline.catalog import catalog_frame
     from rmr_pipeline.layout import nearest_with_audio
 
-    albums, _, positions, _, _ = catalog_build
+    albums, _, positions, _, _, _ = catalog_build
     cat = catalog_frame(deduped[0], load_catalog())
     has_audio = np.array(["n" not in a for a in albums])
     near = nearest_with_audio(descriptors(cat.frame), has_audio)
@@ -171,10 +189,9 @@ def test_the_catalog_builds_derived_positions_sit_among_their_mood_neighbours(ca
 
 
 def test_the_catalog_builds_links_and_covers(catalog_build, deduped):
-    from rmr_pipeline.covers import cover_for
     from rmr_pipeline.links import LINK_COLUMNS, album_links
 
-    albums, _, _, printed, _ = catalog_build
+    albums, _, _, printed, _, table = catalog_build
     n_site = len(deduped[0])
     rows = load_catalog().to_dict("records")
     for a, row in zip(albums, rows):
@@ -184,9 +201,37 @@ def test_the_catalog_builds_links_and_covers(catalog_build, deduped):
         assert len(a["d"]) <= 8
     assert sum("l" in a for a in albums) > 500
     assert set().union(*(a["l"] for a in albums if "l" in a)) <= set(LINK_COLUMNS)
-    assert [a["c"] for a in albums[n_site:]] == [cover_for(row["rym_id"])[0] for row in rows[n_site:]]
-    assert any(a["c"].startswith(("dz:", "am:")) for a in albums[n_site:])
-    assert "links: " in printed and "covers: " in printed
+    assert [a["c"] for a in albums[n_site:]] == [table.cover_for(row["rym_id"])[0] for row in rows[n_site:]]
+    assert [a["c"].partition(":")[0] for a in albums[n_site:n_site + 5]] == ["ab67616d0000b273" + "1" * 24, "dz", "am", "bc", "yt"]
+    with_cover = sum(1 for a in albums[n_site:] if a["c"])
+    assert with_cover == len(table.rows) and 0 < with_cover < len(albums) - n_site  # some new albums have no cover
+    assert "links: " in printed
+    assert (f"covers: {len(albums) - n_site} new albums, {with_cover} with a cover, 0 with a sprite, {with_cover} with a "
+            "cover and no sprite yet") in printed
+    assert f"WARNING, covers: {with_cover} new album(s) have a cover and no sprite" in printed
+
+
+def test_the_committed_covers_table_parses_and_every_row_is_a_cover_id_the_validator_accepts():
+    """catalog/covers.csv itself (the build above does not read it): it parses, each row is a new album of
+    the catalog, at most one per album, and gives a `c` of the form validate.py accepts and a URL on an
+    allowed host. Nothing here depends on the sprites or on the network."""
+    import csv
+
+    import rmr_pipeline.covers as cv
+    from rmr_pipeline.validate import COVER_RE, PREFIXED_COVER_RE
+
+    with cv.DEFAULT_COVERS.open(encoding="utf-8", newline="") as f:
+        listed = [r["rym_id"] for r in csv.DictReader(f)]
+    rows = cv.read_covers(cv.DEFAULT_COVERS)
+    assert len(rows) == len(listed) > 0  # no album twice
+    new = [r["rym_id"] for r in cv.new_albums()]
+    assert set(rows) <= set(new) and list(rows) == [k for k in new if k in rows]  # new albums only, in catalog order
+    for key, (source, ref) in rows.items():
+        c = cv.c_field(source, ref)
+        assert (COVER_RE if source == "spotify" else PREFIXED_COVER_RE).fullmatch(c), (key, c)
+        assert cv.allowed(cv.sprite_url(source, ref)) and cv.allowed(cv.cover_url(c, 640)), key
+        assert cv.sprite_path(cv.DEFAULT_SPRITES, key).name == f"{key}.jpg"  # the key is a file name
+    assert cv.load_covers(cv.DEFAULT_COVERS, cv.DEFAULT_SPRITES.with_name("no-such-folder")).cover_for(listed[0])[0]
 
 
 def test_the_audio_block_takes_explicit_keys(deduped, audio):

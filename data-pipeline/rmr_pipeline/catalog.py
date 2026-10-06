@@ -31,7 +31,8 @@ from scipy.spatial.distance import cdist
 
 from .audio import DEFAULT_CATALOG
 from .constants import AUDIO, CATALOG_DESCRIPTORS, LYRIC_DROP, META, PIPELINE_DIR, VOCALS
-from .covers import cover_for
+from . import covers as _covers
+from .covers import Covers, cover_for
 
 DEFAULT_ALIASES = PIPELINE_DIR / "catalog" / "descriptor_aliases.json"
 EXISTING = ("table", "table-novocals", "sheet")
@@ -229,15 +230,24 @@ def catalog_frame(sub: pd.DataFrame, catalog: pd.DataFrame, *, weights: str = "r
         existing, weights, report)
 
 
-def neighbour_clusters(X: np.ndarray, clusters: list[int], k: int = CLUSTER_NEIGHBOURS) -> list[int]:
+def neighbour_clusters(X: np.ndarray, clusters: list[int], k: int = CLUSTER_NEIGHBOURS,
+                       voters: np.ndarray | None = None) -> list[int]:
     """A cluster for each row of `X` after the first len(clusters), which are the albums that have one: the
     cluster most of its `k` nearest of them have (euclidean; equal distances go to the earlier album). When
-    two clusters have as many, the one whose nearest album is nearer."""
+    two clusters have as many, the one whose nearest album is nearer. `voters` (one bool per album that has
+    a cluster) leaves out the albums whose row of `X` is not their own: on a matrix with the audio block, an
+    existing album with no audio sits at the mean block, near everything, and must not vote."""
     X = np.asarray(X, dtype=np.float64)
-    known, have = np.asarray(clusters, dtype=np.int64), X[:len(clusters)]
+    n = len(clusters)
+    known, have = np.asarray(clusters, dtype=np.int64), X[:n]
+    if voters is not None:
+        voters = np.asarray(voters)
+        if voters.dtype != bool or voters.shape != (n,) or not voters.any():
+            raise ValueError(f"voters must be one bool per album with a cluster ({n}), at least one True")
+        known, have = known[voters], have[voters]
     out: list[int] = []
     step = max(1, CHUNK // max(1, len(have)))
-    for a in range(len(have), len(X), step):
+    for a in range(n, len(X), step):
         near = np.argsort(cdist(X[a:a + step], have), axis=1, kind="stable")[:, :k]
         for row in known[near].tolist():
             votes = Counter(row)
@@ -245,10 +255,48 @@ def neighbour_clusters(X: np.ndarray, clusters: list[int], k: int = CLUSTER_NEIG
     return out
 
 
+def shared_spotify_ids(cat: CatalogAlbums) -> list[dict]:
+    """The albums that share their Spotify id with another album of the catalog, one dict per album (index:
+    its number in albums.json, rym_id, artist, title, spotify_id, side: `existing` or `new`), the albums of
+    one id together, in the order of each id's first album. An existing album's id is its URI's, a new one's
+    is its `spotify_url`'s. Two albums cannot both be that Spotify album: one link is wrong, or the two rows
+    are one release. The build lists them and goes on; which is right is for the owner."""
+    by_id: dict[str, list[int]] = {}
+    for i, s in enumerate(cat.spotify_ids):
+        if s:
+            by_id.setdefault(s, []).append(i)
+    titles, artists = list(cat.frame["Title"]), list(cat.frame["Artist"])
+    return [{"index": i, "rym_id": cat.keys[i], "artist": str(artists[i]), "title": str(titles[i]), "spotify_id": s,
+             "side": "new" if cat.is_new[i] else "existing"}
+            for s, rows in by_id.items() if len(rows) > 1 for i in rows]
+
+
+def shared_spotify_lines(rows: list[dict]) -> list[str]:
+    """shared_spotify_ids for the build's output: the count, then a line per id."""
+    by_id: dict[str, list[dict]] = {}
+    for r in rows:
+        by_id.setdefault(r["spotify_id"], []).append(r)
+    if not by_id:
+        return ["spotify ids: none shared by more than one album"]
+    mixed = sum(len({r["side"] for r in group}) > 1 for group in by_id.values())
+    lines = [f"spotify ids: {len(by_id)} shared by more than one album ({mixed} between an existing and a new album): "
+             "both albums open the same Spotify album, so one link is wrong or the rows are one release. Not changed "
+             "by the build; index, rym_id, artist - title [side]:"]
+    lines += [f"  {s}  " + "  |  ".join(f"{r['index']} {r['rym_id']} {r['artist']} - {r['title']} [{r['side']}]" for r in group)
+              for s, group in by_id.items()]
+    return lines
+
+
+def covers_table() -> Covers:
+    """catalog/covers.csv, the default sprite folder and its manifest, read once per process (what cover_for
+    answers from). `found` is False when there is no covers.csv."""
+    return _covers._default_covers()
+
+
 def new_album_cover(key: str) -> tuple[str, Path | None]:
     """The cover of a new album: (cover id for albums.json, image for its sprite), as covers.cover_for reads
     them from catalog/covers.csv and the sprite folder. ('', None) for an album with no row; (id, None) for
-    one whose sprite has not been fetched yet."""
+    one whose sprite has not been fetched yet, or was made from another image than its row's."""
     return cover_for(key)
 
 

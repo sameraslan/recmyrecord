@@ -9,6 +9,7 @@ covers of the new albums (rmr_pipeline.covers), listen links `l` for an album wi
 (rmr_pipeline.links), and the mood-only rule for an album with no audio (`n`; audio.mean_fill,
 recs.build_recs, layout.build_layouts)."""
 import argparse
+import json
 import sys
 import time
 from pathlib import Path
@@ -16,8 +17,8 @@ from pathlib import Path
 from .artists import clean_artist
 from .audio import DEFAULT_CATALOG, audio_block, descriptors, site_matrix
 from .audio_store import STORES, StoreError, site_store
-from .catalog import (EXISTING, WEIGHT_PROFILES, CatalogError, catalog_frame, load_catalog, neighbour_clusters,
-                      new_album_covers)
+from .catalog import (EXISTING, WEIGHT_PROFILES, CatalogError, catalog_frame, covers_table, load_catalog,
+                      neighbour_clusters, new_album_covers, shared_spotify_ids, shared_spotify_lines)
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS
 from .images import load_album_sprites, write_sheets
@@ -57,8 +58,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                    help="With --catalog: where an existing album's eight descriptors come from (default "
                         "table-novocals; see rmr_pipeline.catalog).")
     p.add_argument("--require-sprites", action="store_true",
-                   help="With --catalog: stop when a new album has a cover in catalog/covers.csv and no sprite in "
-                        ".cache/covers/96 yet (python -m rmr_pipeline.covers sprites). For the final build.")
+                   help="With --catalog: stop when catalog/covers.csv is missing, when a new album has a cover in it "
+                        "and no sprite of that image in .cache/covers/96 (python -m rmr_pipeline.covers sprites), or "
+                        "when a sprite has no entry in the manifest (covers adopt). For the final build.")
     p.add_argument("--hub-correction", default="", metavar="STOPS",
                    help="Comma-separated stops whose recommendations rank by mutual proximity instead of the raw "
                         "distance (for example: balanced). Off by default.")
@@ -114,6 +116,38 @@ def listen_links(catalog, spotify_ids: list[str]) -> tuple[dict[int, dict[str, s
     return links, line
 
 
+def cover_problems(table, new_keys: list[str], waiting: list[str]) -> list[str]:
+    """What is wrong with the covers of the new albums, a line each: an error with --require-sprites, a
+    warning without. `table`: catalog.covers_table(); `waiting`: the keys with a cover and no usable sprite
+    (new_album_covers)."""
+    if not table.found:
+        return [f"{table.path or 'catalog/covers.csv'}: covers.csv is missing, so NO new album has a cover (`c` is empty "
+                f"for all {len(new_keys)}). Restore the committed file, or run python -m rmr_pipeline.covers refs"]
+    problems = []
+    if waiting:
+        stale = len(table.stale(waiting))
+        problems.append(f"{len(waiting)} new album(s) have a cover and no sprite"
+                        + (f" ({stale} of them with a sprite of another image than their row's)" if stale else "")
+                        + ". Run python -m rmr_pipeline.covers sprites")
+    if unverified := table.unverified(new_keys):
+        problems.append(f"{len(unverified)} sprite(s) have no entry in the manifest, so nothing says which image they "
+                        f"were made from ({', '.join(unverified[:5])}{' ...' if len(unverified) > 5 else ''}). Once no "
+                        "`sprites` run is going, run python -m rmr_pipeline.covers adopt")
+    return problems
+
+
+def moved_site_slugs(slugs: list[str], site: Path = DEFAULT_OUT / "albums.json") -> list[str] | None:
+    """The albums of the committed site data whose slug this build would change, as `album <n>: 'old' -> 'new'`;
+    [] when every one keeps its slug, None when there is no `site` file to compare with. Read only. A slug is
+    the album's address on the site, so a catalog build must give the site's albums the slugs they have."""
+    if not site.exists():
+        return None
+    old = [a["slug"] for a in json.loads(site.read_text(encoding="utf-8"))]
+    moved = [f"album {i}: {a!r} -> {b!r}" for i, (a, b) in enumerate(zip(old, slugs)) if a != b]
+    return moved + [f"album {i}: {a!r} -> nothing (the build has {len(slugs)} album(s), the site {len(old)})"
+                    for i, a in enumerate(old[len(slugs):], start=len(slugs))]
+
+
 def ambient_colours(sprites: list, covers: list[str], uris: list[str], clusters: list[int],
                     override_images: dict) -> list[tuple[str, str, str]]:
     """Each album's ambient colours: from its sprite when that is its cover (its own file, or the map's
@@ -160,6 +194,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"catalog: {e}", file=sys.stderr)
             return 1
         print(cat.summary())
+        print("\n".join(shared_spotify_lines(shared_spotify_ids(cat))))
         # The site's albums keep their rows; the new albums follow them.
         sub, keys, places, spotify_ids = cat.frame, cat.keys, cat.places, cat.spotify_ids
         new_keys = keys[n_site:]
@@ -171,10 +206,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"covers: {len(new_keys)} new albums, {sum(1 for c in new_covers if c)} with a cover, "
               f"{len(new_images)} with a sprite, {len(waiting)} with a cover and no sprite yet (a flat tile on the "
               f"sheets): {', '.join(waiting[:5])}{' ...' if len(waiting) > 5 else ''}")
-        if waiting and args.require_sprites:
-            print(f"--require-sprites: {len(waiting)} new album(s) have a cover and no sprite. Run "
-                  "python -m rmr_pipeline.covers sprites", file=sys.stderr)
+        problems = cover_problems(covers_table(), new_keys, waiting)
+        if problems and args.require_sprites:
+            print("\n".join(f"--require-sprites: {p}" for p in problems), file=sys.stderr)
             return 1
+        for p in problems:
+            print(f"WARNING, covers: {p}")
 
     slugs = make_slugs(slug_titles, slug_artists)  # overrides.json is keyed by these
     overrides = load_overrides(args.overrides)
@@ -185,11 +222,13 @@ def main(argv: list[str] | None = None) -> int:
     slugs = slugs_after_overrides(slug_titles, [artists[i] if i in changed else a for i, a in enumerate(slug_artists)],
                                   slugs, changed)
     if args.catalog:
-        site_slugs = make_slugs(titles[:n_site], artists[:n_site])  # what the build without --catalog gives them
-        moved = [f"{a!r} -> {b!r}" for a, b in zip(site_slugs, slugs) if a != b]
+        moved = moved_site_slugs(slugs)
         if moved:
-            raise ValueError(f"the catalog build changes the slug of {len(moved)} album(s) of the site: "
-                             + ", ".join(moved[:5]))
+            print(f"slugs: the catalog build changes the slug of {len(moved)} album(s) of {DEFAULT_OUT / 'albums.json'}: "
+                  + ", ".join(moved[:5]), file=sys.stderr)
+            return 1
+        print(f"slugs: no {DEFAULT_OUT / 'albums.json'} to compare with" if moved is None
+              else "slugs: the site's albums keep the slugs of the committed albums.json")
     vocab, tops = build_vocab(sub, places)
     try:
         # The catalog build does not impute: an album with no audio is limited to the mood side.
@@ -208,7 +247,9 @@ def main(argv: list[str] | None = None) -> int:
         print(line)
         # Until the new albums have clusters of their own: the cluster of an album's nearest existing albums,
         # on the balanced matrix, or on the descriptors alone when the album has no audio.
-        by_balanced = neighbour_clusters(site_matrix(sub, audio.block, SLIDER["balanced"]), clusters)
+        # An existing album without audio has the mean block there, so it does not vote on that matrix.
+        by_balanced = neighbour_clusters(site_matrix(sub, audio.block, SLIDER["balanced"]), clusters,
+                                         voters=audio.has_audio[:n_site])
         by_mood = neighbour_clusters(descriptors(sub), clusters)
         clusters = clusters + [m if quiet else b for b, m, quiet in zip(by_balanced, by_mood, no_audio[n_site:])]
     t1 = time.time()

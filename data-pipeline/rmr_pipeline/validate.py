@@ -25,10 +25,12 @@ OPTIONAL_KEYS = ["l", "n"]  # after ALBUM_KEYS, in this order
 SLUG_RE = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 HEX_RE = re.compile(r"^#[0-9a-f]{6}$")
 SPOTIFY_RE = re.compile(r"^[0-9A-Za-z]{22}$")
-COVER_RE = re.compile(r"^[0-9a-f]{24,64}$")
+COVER_RE = re.compile(r"^[0-9a-f]{24,64}\Z")  # \Z: `$` would let a trailing newline through
 # The cover ids of the other sources (covers.c_field): Deezer's image md5, the path of Apple's artwork,
-# Bandcamp's image number, a YouTube video id.
-PREFIXED_COVER_RE = re.compile(r"^(?:dz:[0-9a-f]{32}|am:[A-Za-z0-9]+(?:[/._-]+[A-Za-z0-9]+)*|bc:[0-9]+|yt:[A-Za-z0-9_-]{11})$")
+# Bandcamp's image number, a YouTube video id. Apple's path goes into a URL as it is: its segments are
+# separated by one `/`, and each starts and ends with a letter or a digit, so there is no `.`, `..` or empty one.
+PREFIXED_COVER_RE = re.compile(r"^(?:dz:[0-9a-f]{32}|am:[A-Za-z0-9]+(?:(?:/|[._-]+)[A-Za-z0-9]+)*|bc:[0-9]+"
+                               r"|yt:[A-Za-z0-9_-]{11})\Z")
 
 
 class ContractError(Exception):
@@ -97,7 +99,7 @@ def _validate_links(a: dict, where: str, err) -> None:
         err(f"{where}: l must be an object with one or more of the keys {list(LINK_COLUMNS)} in that order")
         return
     for key, ref in links.items():
-        if not isinstance(ref, str) or not LINK_REF_RE[key].match(ref):
+        if not isinstance(ref, str) or not LINK_REF_RE[key].fullmatch(ref):
             err(f"{where}: bad {key} link {ref!r}")
 
 
@@ -159,7 +161,7 @@ def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
                 err(f"{where}: {key} must be a non-empty string")
         if not isinstance(a["s"], str) or not (a["s"] == "" or SPOTIFY_RE.match(a["s"])):
             err(f"{where}: bad Spotify id {a['s']!r}")
-        if not isinstance(a["c"], str) or not (a["c"] == "" or COVER_RE.match(a["c"]) or PREFIXED_COVER_RE.match(a["c"])):
+        if not isinstance(a["c"], str) or not (a["c"] == "" or COVER_RE.fullmatch(a["c"]) or PREFIXED_COVER_RE.fullmatch(a["c"])):
             err(f"{where}: bad cover id {a['c']!r}")
         elif a["c"] == "":
             no_cover += 1

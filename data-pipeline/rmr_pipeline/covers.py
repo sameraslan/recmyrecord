@@ -21,20 +21,31 @@ nothing: it gives every album it can a row at once, and the Spotify tier replace
     python -m rmr_pipeline.covers refs      # (re)writes catalog/covers.csv; resumable
     python -m rmr_pipeline.covers sprites   # one 96 px JPEG per row in .cache/covers/96/ (not committed)
     python -m rmr_pipeline.covers status
+    python -m rmr_pipeline.covers adopt     # record the sprites that have no entry in the manifest as made from their rows
+
+`sprites` records the `source:ref` each sprite was made from in .cache/covers/96.manifest.json. A sprite whose
+entry is not its row's image counts as missing: it is not used by the build and is made again. A sprite with
+no entry (made before the manifest existed, or by a run that was killed) is used, and counted by the build and
+by `status`, until `adopt` records it.
+
+One `refs` run and one `sprites` run at a time: each holds a lock file beside the state file (refs.lock,
+sprites.lock) and a second run exits with code 1. Reading (`status`, --dry-run, the build) takes no lock.
 
 The build calls cover_for(key) for a new album; cover_url(c, px) is the URL form of each kind of cover id,
 which the frontend mirrors.
 
 Requests go only to the hosts in ALLOWED_HOSTS and ALLOWED_SUFFIXES (never to rateyourmusic.com), spaced per
-host, with a User-Agent that names the project. HTTP 403 or 429 twice in a row from a host, or five times in a
-run, stops the run with exit code 2. An album whose lookup failed for a reason of its own (404, no image on
-the page) is written to .cache/covers/state.json and not asked again without --retry-failed; a refused or
-unanswered request is not written there, so the album is asked again by the next run.
+host, with a User-Agent that names the project. HTTP 403 or 429 (or Deezer's quota error) twice in a row from a
+host, or five times in a run, stops the run with exit code 2. An album whose lookup failed for a reason of its
+own (HTTP 404 or 410, no image on the page, a redirect to a host that is not allowed) is written to
+.cache/covers/state.json and not asked again without --retry-failed; a refused or unanswered request, or any
+other status, is not written there, so the album is asked again by the next run.
 
 This module imports nothing from the rest of the pipeline and uses the standard library and Pillow only.
 """
 import argparse
 import csv
+import fcntl
 import http.client
 import io
 import json
@@ -66,6 +77,7 @@ DEFAULT_HTTP_CACHE = PIPELINE_DIR / ".cache" / "audio" / "http.sqlite"  # the au
 DEFAULT_CACHE = PIPELINE_DIR / ".cache" / "covers"  # gitignored: the sprites and the state file
 DEFAULT_SPRITES = DEFAULT_CACHE / "96"
 DEFAULT_STATE = DEFAULT_CACHE / "state.json"
+GONE_STATUS = (404, 410)  # the only answers that say "this page will not come back"
 
 SOURCES = ("spotify", "deezer", "apple", "bandcamp", "youtube")
 TIERS = ("spotify", "cache", "store", "bandcamp", "youtube")  # in priority order; a run takes them in this order
@@ -94,14 +106,14 @@ IMAGE_BYTES = 4 * 1024 * 1024
 
 SPOTIFY_PREFIX = "ab67616d0000b273"  # 640 px, the form of nearly every `c` on the site; 1e02 is 300 px, 4851 64 px
 SPOTIFY_ALBUM = re.compile(r"open\.spotify\.com/(?:intl-[a-z]{2}/)?album/([A-Za-z0-9]{22})")
-SPOTIFY_IMAGE = re.compile(r"^https://(?:i\.scdn\.co|[a-z0-9-]+\.spotifycdn\.com)/image/([0-9a-f]{40})$")
+SPOTIFY_IMAGE = re.compile(r"^https://(?:i\.scdn\.co|[a-z0-9-]+\.spotifycdn\.com)/image/([0-9a-f]{40})\Z")
 DEEZER_LINK = re.compile(r"deezer\.com/(?:[a-z]{2}/)?album/(\d+)")  # as rmr_audio/catalog.py reads the links
 APPLE_LINK = re.compile(r"music\.apple\.com/([a-z]{2})/album/(?:[^/?#]+/)?(\d+)")
-APPLE_ART = re.compile(r"^https://is\d-ssl\.mzstatic\.com/image/thumb/(.+)/100x100bb\.jpg$")
+APPLE_ART = re.compile(r"^https://is\d-ssl\.mzstatic\.com/image/thumb/([^\s?#]+)/100x100bb\.jpg\Z")
 OG_IMAGE = re.compile(r"""<meta\b(?=[^>]*\bproperty=["']og:image["'])[^>]*\bcontent=["']([^"']+)["']""", re.I)
-BANDCAMP_ART = re.compile(r"^https://f\d\.bcbits\.com/img/a(\d+)_\d+\.(?:jpg|png)$")  # `a`: album art, not the band's photo
+BANDCAMP_ART = re.compile(r"^https://f\d\.bcbits\.com/img/a(\d+)_\d+\.(?:jpg|png)\Z")  # `a`: album art, not the band's photo
 YOUTUBE_ID = re.compile(r"(?:youtube\.com/watch\?(?:[^#]*&)?v=|youtu\.be/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])")
-SAFE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+SAFE_NAME = re.compile(r"[A-Za-z0-9_-]+")  # used with fullmatch: `$` would let a trailing newline through
 DEEZER_SIZES = (56, 250, 500, 1000)
 BANDCAMP_SIZES = ((100, 3), (210, 9), (350, 2), (700, 16), (1200, 10))  # px, the file name's suffix
 
@@ -127,9 +139,12 @@ def spotify_ref(image_url: str) -> str:
 
 
 def apple_ref(artwork_url: str) -> str:
-    """The artwork path of an iTunes `artworkUrl100` (between /image/thumb/ and /100x100bb.jpg), or ""."""
+    """The artwork path of an iTunes `artworkUrl100` (between /image/thumb/ and /100x100bb.jpg), or "" (also
+    for a path with an empty, `.` or `..` segment)."""
     m = APPLE_ART.match(artwork_url or "")
-    return m.group(1) if m else ""
+    if not m or any(part in ("", ".", "..") for part in m.group(1).split("/")):  # the path goes into a URL as it is
+        return ""
+    return m.group(1)
 
 
 def bandcamp_ref(html: str) -> str:
@@ -228,11 +243,13 @@ class HostNotAllowed(ValueError):
 
 
 class Gone(IOError):
-    """This lookup failed for a reason of the album's own (HTTP 404, no image on the page): recorded, not asked again."""
+    """This lookup failed for a reason of the album's own (HTTP 404 or 410, no image on the page, a redirect to
+    a host that is not allowed): recorded, not asked again."""
 
 
 class Transient(IOError):
-    """No usable answer (network error, 5xx) after one retry: not recorded, asked again by the next run."""
+    """No usable answer (network error, 5xx after one retry, a status other than 200, 404 and 410): not
+    recorded, asked again by the next run."""
 
 
 class RateLimited(Transient):
@@ -247,14 +264,19 @@ class Interrupted(Exception):
     """The run was asked to stop (SIGINT, SIGTERM)."""
 
 
+class Locked(RuntimeError):
+    """Another run holds the lock file."""
+
+
 def allowed(url: str) -> bool:
-    """Is the URL https, without credentials, on a host this module may ask?"""
+    """Is the URL https, without credentials, on the default port, on a host this module may ask?"""
     try:
         parts = urllib.parse.urlsplit(url)
         host = (parts.hostname or "").lower()
+        port = parts.port  # raises ValueError for a port that is not a number
     except ValueError:
         return False
-    if parts.scheme != "https" or parts.username is not None or not host:
+    if parts.scheme != "https" or parts.username is not None or not host or port not in (None, 443):
         return False
     return host in ALLOWED_HOSTS or any(host.endswith(s) and len(host) > len(s) for s in ALLOWED_SUFFIXES)
 
@@ -333,7 +355,11 @@ class Fetcher:
             raise StopRun(f"{key} answered {what}: {self.limited_run} refused requests in this run")
         raise RateLimited(what)
 
-    def get(self, url: str, max_bytes: int = IMAGE_BYTES) -> bytes:
+    def get(self, url: str, max_bytes: int = IMAGE_BYTES, refusal=None) -> bytes:
+        """The body of a 200. Raises HostNotAllowed for a URL that is not allowed (no request), Gone for HTTP
+        404 or 410 and for a redirect to a host that is not allowed, RateLimited or StopRun for a refusal,
+        Transient for anything else. `refusal(body)` names a refusal that a host sends as a 200 (Deezer's quota
+        error), or returns ""; it is asked before the 200 ends the host's row of refusals."""
         check_host(url)
         key, why = host_key(url), ""
         for attempt in range(2):
@@ -343,6 +369,10 @@ class Fetcher:
             self.requests += 1
             try:
                 status, body = self.fetch(url, max_bytes)
+            except HostNotAllowed as e:  # raised by the redirect handler: the host answered, with a way out
+                self.limited_row[key] = 0
+                self.unanswered = 0
+                raise Gone(f"redirected to a host that is {e}") from None
             except (OSError, http.client.HTTPException) as e:
                 why = f"{type(e).__name__}: {e}"[:120]
                 continue
@@ -351,10 +381,15 @@ class Fetcher:
             if status >= 500:
                 why = f"HTTP {status}"
                 continue
+            if status == 200 and refusal is not None and (what := refusal(body)):
+                self.unanswered = 0
+                self.refused(url, what)
             self.limited_row[key] = 0
             self.unanswered = 0
-            if status != 200:
+            if status in GONE_STATUS:
                 raise Gone(f"HTTP {status}")
+            if status != 200:
+                raise Transient(f"HTTP {status}")
             return body
         self.unanswered += 1
         if self.unanswered >= DOWN_AFTER:
@@ -379,8 +414,32 @@ def write_atomic(path: Path, data: bytes) -> None:
         raise
 
 
+def take_lock(path: Path):
+    """An exclusive, non-blocking flock on `path` (created if need be), held until the returned file is closed.
+    Raises Locked when another run holds it. As rmr_audio's locks: the file stays, the lock goes with the process."""
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    f = open(path, "a")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        f.close()
+        raise Locked(str(path)) from None
+    return f
+
+
+def lock_path(state_path: Path, command: str) -> Path:
+    """The lock file of `refs` or of `sprites`: beside the state file (.cache/covers/refs.lock, sprites.lock)."""
+    return Path(state_path).with_name(f"{command}.lock")
+
+
+def _held(lock: Path, command: str) -> str:
+    return (f"{lock} is held by another `{command}` run: not starting. Two runs would lose each other's work; "
+            "wait for it to end (status and --dry-run can be used meanwhile)")
+
+
 def read_covers(path: Path = DEFAULT_COVERS) -> dict[str, tuple[str, str]]:
-    """covers.csv as rym_id -> (source, ref), in file order; {} when there is no file yet."""
+    """covers.csv as rym_id -> (source, ref), in file order; {} when there is no file yet (load_covers says
+    whether there was one: Covers.found)."""
     path = Path(path)
     if not path.exists():
         return {}
@@ -394,11 +453,14 @@ def read_covers(path: Path = DEFAULT_COVERS) -> dict[str, tuple[str, str]]:
 
 
 def write_covers(path: Path, covers: dict[str, tuple[str, str]], order: list[str]) -> None:
-    """Write covers.csv with its rows in `order` (the catalog's); an album that is not in `order` is dropped."""
+    """Write covers.csv with its rows in `order` (the catalog's). A row of an album that is not in `order` is
+    kept, after the others, in the order `covers` has it: a run on another --albums file does not drop rows."""
     buf = io.StringIO(newline="")
     w = csv.writer(buf, lineterminator="\n")
     w.writerow(["rym_id", "source", "ref"])
     w.writerows([k, *covers[k]] for k in order if k in covers)
+    known = set(order)
+    w.writerows([k, *v] for k, v in covers.items() if k not in known)
     write_atomic(path, buf.getvalue().encode("utf-8"))
 
 
@@ -415,6 +477,36 @@ class State:
     def save(self) -> None:
         body = json.dumps({"refs": self.refs, "sprites": self.sprites}, ensure_ascii=False, indent=1, sort_keys=True)
         write_atomic(self.path, body.encode("utf-8"))
+
+
+def manifest_path(sprite_dir: Path) -> Path:
+    """The record of what the sprites of `sprite_dir` were made from: beside the folder (.cache/covers/96.manifest.json)."""
+    sprite_dir = Path(sprite_dir)
+    return sprite_dir.with_name(sprite_dir.name + ".manifest.json")
+
+
+class SpriteManifest:
+    """rym_id -> the `source:ref` its sprite was made from (`of`). Written by `sprites` and `adopt` only, under
+    the sprites lock; read by anyone."""
+
+    def __init__(self, path: Path):
+        self.path = Path(path)
+        try:
+            data = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
+        except ValueError as e:
+            raise ValueError(f"{self.path} is not valid JSON ({e}). Delete it and run `python -m rmr_pipeline.covers "
+                             "adopt`, or `sprites`, to write it again") from None
+        if not isinstance(data, dict) or not all(isinstance(v, str) for v in data.values()):
+            raise ValueError(f"{self.path} must be an object of rym_id: source:ref")
+        self.of: dict[str, str] = data
+
+    def save(self) -> None:
+        write_atomic(self.path, json.dumps(self.of, ensure_ascii=False, indent=0, sort_keys=True).encode("utf-8"))
+
+
+def made_from(cover: tuple[str, str]) -> str:
+    """A row of covers.csv as the manifest and the state file name an image: `source:ref`."""
+    return ":".join(cover)
 
 
 class ResponseCache:
@@ -543,6 +635,17 @@ def plan(inputs: Inputs, covers: dict, state: State, tiers: tuple[str, ...], ret
     return {"now": now, "final": final}
 
 
+def deezer_quota(body: bytes) -> str:
+    """"Deezer's quota error" when the body of a 200 is that error ({"error": {"code": 4}}), else "". Deezer
+    sends it with HTTP 200; Fetcher.get counts it as a refusal."""
+    try:
+        data = json.loads(body)
+    except ValueError:
+        return ""
+    error = data.get("error") if isinstance(data, dict) else None
+    return "Deezer's quota error" if isinstance(error, dict) and error.get("code") == 4 else ""
+
+
 def look_up(tier: str, row: dict, inputs: Inputs, fetcher: Fetcher) -> tuple[str, str]:
     """(source, ref) of the album's cover from one tier. Raises Gone when the tier has none for it."""
     if tier == "spotify":
@@ -559,13 +662,11 @@ def look_up(tier: str, row: dict, inputs: Inputs, fetcher: Fetcher) -> tuple[str
     if tier == "store":
         for source, url in inputs.uncached(row):
             try:
-                body = json.loads(fetcher.get(url, IMAGE_BYTES))
+                body = json.loads(fetcher.get(url, IMAGE_BYTES, refusal=deezer_quota))
             except Gone:
                 continue
             except ValueError:
                 continue
-            if isinstance(body, dict) and (body.get("error") or {}).get("code") == 4:  # Deezer's quota error, sent as 200
-                fetcher.refused(url, "Deezer's quota error")
             if got := listing_ref(source, body):
                 return got
         raise Gone("the store has no cover for the album's listings")
@@ -600,9 +701,25 @@ def run_refs(inputs: Inputs, covers_path: Path, state_path: Path, sprite_dir: Pa
              tiers: tuple[str, ...] = TIERS, limit: int | None = None, retry_failed: bool = False,
              stop=lambda: False, out=print) -> int:
     """Look the due albums up, tier by tier, and write covers.csv and the state file. Returns the exit code:
-    0, 2 when the stop rule ended the run, 130 when it was interrupted."""
+    0, 1 when another `refs` run holds the lock (nothing read or written), 2 when the stop rule ended the run,
+    130 when it was interrupted."""
+    try:
+        lock = take_lock(lock_path(state_path, "refs"))
+    except Locked as e:
+        out(_held(e, "refs"))
+        return 1
+    with lock:
+        return _run_refs(inputs, covers_path, state_path, sprite_dir, fetcher, tiers, limit, retry_failed, stop, out)
+
+
+def _run_refs(inputs: Inputs, covers_path: Path, state_path: Path, sprite_dir: Path, fetcher: Fetcher,
+              tiers: tuple[str, ...], limit: int | None, retry_failed: bool, stop, out) -> int:
     covers, state = read_covers(covers_path), State(state_path)
     order = [r["rym_id"] for r in inputs.albums]
+    known = set(order)
+    if others := sum(k not in known for k in covers):
+        out(f"{others} row(s) of {Path(covers_path).name} are of albums that are not new albums of this catalog: kept as "
+            "they are, after the others")
     unsaved = handled = 0
     code = 0
 
@@ -627,14 +744,14 @@ def run_refs(inputs: Inputs, covers_path: Path, state_path: Path, sprite_dir: Pa
                 key = row["rym_id"]
                 try:
                     got = look_up(tier, row, inputs, fetcher)
-                except Gone as e:
+                except (Gone, HostNotAllowed) as e:
                     state.refs.setdefault(key, {})[tier] = str(e)
                     failed += 1
                 except Transient as e:
                     out(f"  {key}: {tier}: {e} (not recorded, asked again next time)")
                 else:
                     if key in covers and covers[key] != got:
-                        (Path(sprite_dir) / f"{key}.jpg").unlink(missing_ok=True)  # made from the replaced source
+                        sprite_path(sprite_dir, key).unlink(missing_ok=True)  # made from the replaced source
                     covers[key] = got
                     if state.refs.get(key, {}).pop(tier, None) is not None and not state.refs[key]:
                         del state.refs[key]
@@ -693,19 +810,39 @@ def spread(keys: list[str], covers: dict[str, tuple[str, str]]) -> list[str]:
 
 
 def sprite_path(sprite_dir: Path, key: str) -> Path:
-    if not SAFE_NAME.match(key):
+    if not SAFE_NAME.fullmatch(key):
         raise ValueError(f"not a file name: {key!r}")
     return Path(sprite_dir) / f"{key}.jpg"
 
 
+def sprite_state(key: str, cover: tuple[str, str], sprite_dir: Path, of: dict[str, str]) -> str:
+    """What there is for the album's row `cover`, `of` being the manifest's entries:
+
+        missing      no file
+        current      a file made from this row's image
+        stale        a file made from another image (the row changed since): treated as missing everywhere
+        unverified   a file with no entry: used as it is, and counted, until `adopt` records it
+    """
+    if not sprite_path(sprite_dir, key).exists():
+        return "missing"
+    if key not in of:
+        return "unverified"
+    return "current" if of[key] == made_from(cover) else "stale"
+
+
 def missing_sprites(covers: dict, order: list[str], sprite_dir: Path, state: State, sources=None,
-                    retry_failed: bool = False) -> list[str]:
-    """The albums of covers.csv, in `order`, with no sprite and no recorded failure for their current image."""
+                    retry_failed: bool = False, manifest: SpriteManifest | None = None) -> list[str]:
+    """The albums of covers.csv, in `order`, with no sprite of their current image (none at all, or one the
+    manifest says was made from another image) and no recorded failure for that image. `manifest`: the one
+    beside `sprite_dir` when None."""
+    of = (manifest or SpriteManifest(manifest_path(sprite_dir))).of
     out = []
     for key in order:
-        if key not in covers or (sources and covers[key][0] not in sources) or sprite_path(sprite_dir, key).exists():
+        if key not in covers or (sources and covers[key][0] not in sources):
             continue
-        if not retry_failed and state.sprites.get(key, {}).get("of") == ":".join(covers[key]):
+        if sprite_state(key, covers[key], sprite_dir, of) in ("current", "unverified"):
+            continue
+        if not retry_failed and state.sprites.get(key, {}).get("of") == made_from(covers[key]):
             continue
         out.append(key)
     return out
@@ -714,14 +851,29 @@ def missing_sprites(covers: dict, order: list[str], sprite_dir: Path, state: Sta
 def run_sprites(covers: dict[str, tuple[str, str]], order: list[str], sprite_dir: Path, state_path: Path, fetcher: Fetcher,
                 limit: int | None = None, sources: tuple[str, ...] | None = None, retry_failed: bool = False,
                 spread_sources: bool = False, stop=lambda: False, out=print) -> int:
-    """Fetch the small image of each album that has no sprite yet and save its 96 px JPEG. The downloaded image
-    is never written to disk. Returns the exit code, as run_refs."""
-    state = State(state_path)
-    todo = missing_sprites(covers, order, sprite_dir, state, sources, retry_failed)
+    """Fetch the small image of each album that has no sprite of its current image and save its 96 px JPEG,
+    recording in the manifest what it was made from. The downloaded image is never written to disk. Returns the
+    exit code, as run_refs (1: another `sprites` run, or `adopt`, holds the lock)."""
+    try:
+        lock = take_lock(lock_path(state_path, "sprites"))
+    except Locked as e:
+        out(_held(e, "sprites"))
+        return 1
+    with lock:
+        return _run_sprites(covers, order, sprite_dir, state_path, fetcher, limit, sources, retry_failed, spread_sources,
+                            stop, out)
+
+
+def _run_sprites(covers: dict[str, tuple[str, str]], order: list[str], sprite_dir: Path, state_path: Path, fetcher: Fetcher,
+                 limit: int | None, sources: tuple[str, ...] | None, retry_failed: bool, spread_sources: bool, stop, out) -> int:
+    state, manifest = State(state_path), SpriteManifest(manifest_path(sprite_dir))
+    todo = missing_sprites(covers, order, sprite_dir, state, sources, retry_failed, manifest)
     if spread_sources:
         todo = spread(todo, covers)
     todo = todo[:limit] if limit is not None else todo
     progress, made, failed, unsaved, code = Progress("sprites", len(todo), out), 0, 0, 0, 0
+    recorded = 0  # manifest entries not saved yet. A sprite is written before its entry: a killed run leaves a
+    # sprite with no entry or with its old one (unverified, stale), never an entry for an image that is not there.
     try:
         for n, key in enumerate(todo):
             if stop():
@@ -732,19 +884,24 @@ def run_sprites(covers: dict[str, tuple[str, str]], order: list[str], sprite_dir
             except Transient as e:
                 out(f"  {key}: {e} (not recorded, asked again next time)")
             except (Gone, OSError, ValueError, Image.DecompressionBombError) as e:  # a 404, or not an image
-                state.sprites[key] = {"of": f"{source}:{ref}", "why": str(e)[:160]}
+                state.sprites[key] = {"of": made_from((source, ref)), "why": str(e)[:160]}
                 failed += 1
                 unsaved += 1
             else:
                 buf = io.BytesIO()
                 sprite.save(buf, "JPEG", quality=SPRITE_QUALITY)
                 write_atomic(sprite_path(sprite_dir, key), buf.getvalue())
+                manifest.of[key] = made_from((source, ref))
+                recorded += 1
                 if state.sprites.pop(key, None) is not None:
                     unsaved += 1
                 made += 1
             if unsaved >= SAVE_EVERY:
                 state.save()
                 unsaved = 0
+            if recorded >= SAVE_EVERY:
+                manifest.save()
+                recorded = 0
             progress.tick(n + 1, failed)
         out(f"sprites: {made} made, {failed} failed, {len(todo) - made - failed} to ask again, of {len(todo)}")
     except StopRun as e:
@@ -754,30 +911,96 @@ def run_sprites(covers: dict[str, tuple[str, str]], order: list[str], sprite_dir
         out("interrupted: progress saved")
         code = 130
     finally:
+        if recorded:
+            manifest.save()
         if unsaved or not state.path.exists():
             state.save()
     return code
+
+
+def adopt(covers: dict[str, tuple[str, str]], sprite_dir: Path, covers_path: Path, older_too: bool = False,
+          dry_run: bool = False, out=print, state_path: Path | None = None) -> int:
+    """Record every sprite that has no manifest entry as made from its row of covers.csv. That is true of a
+    sprite written after the table last changed, so one whose file is older than covers.csv is left alone
+    (and counted) unless `older_too`. An entry that exists is never changed: a stale sprite stays stale. Makes
+    no request. Returns 0, or 1 when a `sprites` run holds the lock (the manifest has one writer at a time;
+    the lock is beside `state_path`, which is beside the sprite folder when None)."""
+    lock = None
+    if not dry_run:
+        try:
+            lock = take_lock(lock_path(state_path or Path(sprite_dir).with_name("state.json"), "sprites"))
+        except Locked as e:
+            out(_held(e, "sprites"))
+            return 1
+    try:
+        manifest = SpriteManifest(manifest_path(sprite_dir))
+        since = Path(covers_path).stat().st_mtime if Path(covers_path).exists() else 0.0
+        states = Counter()
+        new, older = {}, []
+        for key, cover in covers.items():
+            state = sprite_state(key, cover, sprite_dir, manifest.of)
+            states[state] += 1
+            if state != "unverified":
+                continue
+            if older_too or sprite_path(sprite_dir, key).stat().st_mtime >= since:
+                new[key] = made_from(cover)
+            else:
+                older.append(key)
+        if new and not dry_run:
+            manifest.of.update(new)
+            manifest.save()
+        out(f"sprites: {states['current']} already recorded, {len(new)} {'would be adopted' if dry_run else 'adopted'} "
+            f"(recorded as made from their row of {Path(covers_path).name}), {states['stale']} of another image (made "
+            f"again by `sprites`), {states['missing']} missing")
+        if older:
+            out(f"{len(older)} older than {Path(covers_path).name} and left alone: the table may have changed since they "
+                f"were made ({', '.join(older[:5])}{' ...' if len(older) > 5 else ''}). Delete them and run `sprites` to "
+                "fetch them again, or adopt them as they are with --older-too")
+        return 0
+    finally:
+        if lock is not None:
+            lock.close()
 
 
 # --- what the build reads ----------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class Covers:
-    """covers.csv, read once, and the folder its sprites are in."""
+    """covers.csv, read once, the folder its sprites are in and what the manifest says they were made from.
+    `found`: there was a covers.csv to read (without one `rows` is empty and no album has a cover)."""
     rows: dict[str, tuple[str, str]]
     sprite_dir: Path
+    found: bool = True
+    made_from: dict[str, str] = field(default_factory=dict)
+    path: Path | None = None
+
+    def state(self, key: str) -> str:
+        return sprite_state(key, self.rows[key], self.sprite_dir, self.made_from)
 
     def cover_for(self, key: str) -> tuple[str, Path | None]:
-        """(the album's `c`, the path of its 96 px sprite or None when there is none yet). ("", None) for an
-        album with no cover source."""
+        """(the album's `c`, the path of its 96 px sprite or None when there is none of that image yet: no file,
+        or a file the manifest says was made from another image). ("", None) for an album with no cover source."""
         if key not in self.rows:
             return "", None
-        path = sprite_path(self.sprite_dir, key)
-        return c_field(*self.rows[key]), path if path.exists() else None
+        usable = self.state(key) in ("current", "unverified")
+        return c_field(*self.rows[key]), sprite_path(self.sprite_dir, key) if usable else None
+
+    def _in_state(self, state: str, keys) -> list[str]:
+        return [k for k in (self.rows if keys is None else keys) if k in self.rows and self.state(k) == state]
+
+    def unverified(self, keys=None) -> list[str]:
+        """The albums (of `keys`, or every row) whose sprite has no manifest entry: used, but nothing says which
+        image it was made from (`python -m rmr_pipeline.covers adopt`)."""
+        return self._in_state("unverified", keys)
+
+    def stale(self, keys=None) -> list[str]:
+        """The albums whose sprite was made from another image than their row's: cover_for gives them none."""
+        return self._in_state("stale", keys)
 
 
 def load_covers(path: Path = DEFAULT_COVERS, sprite_dir: Path = DEFAULT_SPRITES) -> Covers:
-    return Covers(read_covers(path), Path(sprite_dir))
+    return Covers(read_covers(path), Path(sprite_dir), Path(path).exists(), SpriteManifest(manifest_path(sprite_dir)).of,
+                  Path(path))
 
 
 @lru_cache(maxsize=1)
@@ -846,14 +1069,28 @@ def cmd_sprites(args) -> int:
                        args.spread, stop, _say)
 
 
+def cmd_adopt(args) -> int:
+    return adopt(read_covers(args.covers), args.sprites, args.covers, args.older_too, args.dry_run, _say, args.state)
+
+
 def cmd_status(args) -> int:
     inputs, covers, state = Inputs.load(args.albums), read_covers(args.covers), State(args.state)
     by_source = Counter(s for s, _ in covers.values())
-    have = sum(sprite_path(args.sprites, k).exists() for k in covers)
+    of = SpriteManifest(manifest_path(args.sprites)).of
+    states = Counter(sprite_state(k, v, args.sprites, of) for k, v in covers.items())
+    have = states["current"] + states["unverified"]
+    if not Path(args.covers).exists():
+        _say(f"{args.covers} is MISSING: no album has a cover source (python -m rmr_pipeline.covers refs, or restore the file)")
     _say(f"{len(inputs.albums)} new albums, {len(covers)} with a cover source")
     for s in SOURCES:
         _say(f"  {s:<9} {by_source[s]:>5}")
     _say(f"sprites: {have} present, {len(covers) - have} missing ({sum(k in covers for k in state.sprites)} of them failed)")
+    if states["stale"]:
+        _say(f"  {states['stale']} of the missing have a file made from another image than their row's: `sprites` makes them again")
+    if states["unverified"]:
+        _say(f"  {states['unverified']} of the present have no entry in {manifest_path(args.sprites).name} (made before the "
+             "manifest, or by a run that was killed): once no `sprites` run is going, `python -m rmr_pipeline.covers adopt` "
+             "records them as made from their rows")
     without = [r for r in inputs.albums if r["rym_id"] not in covers]
     waiting = Counter((inputs.wanted(r, state.refs.get(r["rym_id"], {})) or ["none"])[0] for r in without)
     _say(f"no cover source: {len(without)} (" + ", ".join(f"{n} {t}" for t, n in sorted(waiting.items())) + ")"
@@ -870,7 +1107,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="command", required=True)
     for name, fn, text in [("refs", cmd_refs, "find a cover source per new album and write covers.csv"),
                            ("sprites", cmd_sprites, "fetch the small image of each row and save its 96 px sprite"),
-                           ("status", cmd_status, "counts per source, sprites, albums without a cover")]:
+                           ("status", cmd_status, "counts per source, sprites, albums without a cover"),
+                           ("adopt", cmd_adopt, "record the sprites with no manifest entry as made from their rows; no request")]:
         p = sub.add_parser(name, help=text)
         p.set_defaults(fn=fn)
         p.add_argument("--albums", type=Path, default=DEFAULT_ALBUMS)
@@ -879,8 +1117,12 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--sprites", type=Path, default=DEFAULT_SPRITES, help="the sprite folder")
         if name == "status":
             continue
-        p.add_argument("--limit", type=int, help="albums looked up in this run, at most")
         p.add_argument("--dry-run", action="store_true", help="print the counts; no request, nothing written")
+        if name == "adopt":
+            p.add_argument("--older-too", action="store_true",
+                           help="also adopt the sprites whose file is older than covers.csv (the table may have changed since)")
+            continue
+        p.add_argument("--limit", type=int, help="albums looked up in this run, at most")
         p.add_argument("--retry-failed", action="store_true", help="ask again for the albums the state file lists")
     refs, sprites = sub.choices["refs"], sub.choices["sprites"]
     refs.add_argument("--tiers", type=lambda v: _names(v, TIERS), default=TIERS, help=f"comma-separated, of {', '.join(TIERS)}")

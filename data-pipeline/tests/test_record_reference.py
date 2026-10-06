@@ -106,7 +106,8 @@ def test_the_committed_catalog_reference():
     other clips, a refit), with
     `scripts/record_audio_reference.py --catalog --out tests/fixtures/catalog_audio_reference.npz`."""
     if not script.CATALOG_REFERENCE.exists():
-        pytest.skip("the catalog's audio reference is not recorded yet (docs/10k-switch.md)")
+        pytest.skip("tests/fixtures/catalog_audio_reference.npz is not committed yet: the catalog's audio reference is "
+                    "recorded at the switch to the 10k catalog (docs/10k-switch.md), and this test checks it from then on")
     with np.load(script.CATALOG_REFERENCE, allow_pickle=False) as z:
         ref = {name: z[name] for name in z.files}
     keys = catalog_keys()
