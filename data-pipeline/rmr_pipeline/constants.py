@@ -33,6 +33,11 @@ NON_MOOD = {
     "Descriptor Count",
 }
 
+# The three vocals descriptors. The catalog build can leave them out (rmr_pipeline.catalog).
+VOCALS = tuple(sorted(c for c in NON_MOOD if c.endswith(" vocals")))
+# The catalog build describes every album by this many descriptors, the first on its RYM page.
+CATALOG_DESCRIPTORS = 8
+
 STOPS = ("sonic", "balanced", "mood")
 SLIDER = {"sonic": 5.0, "balanced": 1.765, "mood": 0.5}  # balanced: the original site's tuned default (1.765 ** 3 ≈ 5.5)
 RECS_PER_STOP = 10

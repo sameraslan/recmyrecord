@@ -196,7 +196,8 @@ def finalize_layouts(raw: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
     raise RuntimeError(f"{bad}: stacked points remain after 10 passes")
 
 
-def build_layouts(sub: pd.DataFrame, block: np.ndarray) -> dict[str, np.ndarray]:
+def build_layouts(sub: pd.DataFrame, block: np.ndarray, has_audio: np.ndarray | None = None) -> dict[str, np.ndarray]:
+    """The three layouts. `has_audio` is not used yet (see recs.build_recs)."""
     return finalize_layouts({stop: umap_embed(site_matrix(sub, block, SLIDER[stop]), UMAP_MIN_DIST[stop])
                              for stop in STOPS})
 

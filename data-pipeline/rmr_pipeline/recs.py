@@ -105,8 +105,11 @@ def top_k_mutual(X: np.ndarray, k: int = RECS_PER_STOP) -> np.ndarray:
     return out
 
 
-def build_recs(sub: pd.DataFrame, block: np.ndarray, hub_correction: tuple[str, ...] = ()) -> dict[str, np.ndarray]:
+def build_recs(sub: pd.DataFrame, block: np.ndarray, hub_correction: tuple[str, ...] = (),
+               has_audio: np.ndarray | None = None) -> dict[str, np.ndarray]:
     """Top 10 per album at each stop over the whole deduped catalog, on the site matrix
-    [audio block | descriptors / slider**3]. The stops in `hub_correction` rank by mutual proximity."""
+    [audio block | descriptors / slider**3]. The stops in `hub_correction` rank by mutual proximity.
+    `has_audio` (AudioBlock.has_audio) says which albums' blocks are their own. It is not used yet: an
+    imputed album is a candidate at every stop. The mood-only rule for albums without audio starts here."""
     return {stop: (top_k_mutual if stop in hub_correction else top_k_neighbours)(site_matrix(sub, block, SLIDER[stop]))
             for stop in STOPS}

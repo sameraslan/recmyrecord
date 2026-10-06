@@ -185,16 +185,21 @@ def album_keys(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> list[str]:
     return load_keys(keys_csv(audio_dir)).keys_of(sub["URI"])
 
 
-def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO) -> AudioBlock:
-    """The audio block for the albums of `sub` (found in the store by their keys, see album_keys),
-    imputed where the store has no embedding. Raises StoreError when the store, the keys or the
-    transform are missing or malformed."""
+def audio_block(sub: pd.DataFrame, audio_dir: Path = DEFAULT_AUDIO, keys: list[str] | None = None) -> AudioBlock:
+    """The audio block for the albums of `sub`, imputed where the store has no embedding. The albums are
+    found in the store by `keys` (one per row of `sub`: the catalog build's, which has no URI for a new
+    album) or, without them, by the keys audio/keys.csv gives their URIs (album_keys). Raises StoreError
+    when the store, the keys or the transform are missing or malformed."""
     store = load_store(audio_dir)
     t = load_transform(audio_dir / "transform.npz", store.dim)
     if t.model != store.manifest["model"]:
         raise StoreError(f"transform.npz was fitted on {t.model!r} embeddings, the store holds "
                          f"{store.manifest['model']!r}")
-    rows = store.rows(album_keys(sub, audio_dir))
+    if keys is None:
+        keys = album_keys(sub, audio_dir)
+    elif len(keys) != len(sub):
+        raise ValueError(f"{len(keys)} keys for {len(sub)} albums")
+    rows = store.rows(keys)
     has_audio = rows >= 0
     if not has_audio.any():
         raise StoreError(f"no album of the feature table has an embedding in {audio_dir}")
