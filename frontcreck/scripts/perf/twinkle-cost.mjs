@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /**
- * node scripts/perf/twinkle-cost.mjs [--mode gpu|software] [--viewport desktop|phone] [--open whole] [--first on|off] [--no-warmup] [--no-flares] [--css <file>]
+ * node scripts/perf/twinkle-cost.mjs [--mode gpu|software] [--viewport desktop|phone|phone,desktop] [--open whole] [--first on|off|held] [--no-warmup] [--no-flares] [--css <file>]
  *
  * What the star glints cost in a real browser, against the production build (run `npm run build` first).
  * Per renderer and viewport: 20 s of the resting map with the glints on, then 20 s with them off; on desktop
  * the same again with the mouse moving over the map. Each run records the longest task, the longest gap
- * between animation frames, the frames the map canvas drew, and whether a long task began around a glint being
- * made. Writes scripts/perf/out/twinkle-cost-<time>.json, prints a Markdown table, and exits 1 when a rule is
- * broken. The budgets of perf.mjs are not touched: this script only adds measurements. (The hover path has its
- * own script: docs/design/trifid-theme/reviews/baseline/hover-measure.mjs.)
+ * between animation frames, every frame gap over 32 ms (when, how many glints were alive, how long since a glint
+ * was last made or removed), the frames the map canvas drew, and whether a long task began around a glint being
+ * made. Writes scripts/perf/out/twinkle-cost-<time>.json, prints a Markdown table and the long gaps, and exits 1
+ * when a rule is broken. The budgets of perf.mjs are not touched: this script only adds measurements. (The hover
+ * path has its own script: docs/design/trifid-theme/reviews/baseline/hover-measure.mjs.)
  *
  * The map is measured where /map opens (the Overview). --open whole measures it at the whole-cloud fit instead
  * (window.__rmrOpen), the framing of the baseline. The glints are switched through window.__rmrTwinkle, and each
@@ -19,12 +20,20 @@
  * forced by the switch ('on'), so the reason stays on record and a later change can be tried; they are marked
  * "no" under "Visitors get glints" and their timings are reported, not judged. What is judged there: that a
  * page loaded with no switch made no glint, that no canvas frame is drawn for a forced glint, and the cap.
+ * --viewport phone,desktop runs the phone first in the same browser process: the first runs always ran desktop
+ * first, so "the phone never stalled" could be an effect of the order.
  *
- * Order. Each pair runs with the glints on first, then off (--first off swaps that). The first time the mouse
- * moves over a freshly loaded map costs a long frame or two whatever the glints do (the hover label's first paint
- * and the first hover redraws; the prototype's README records the same), and whichever run comes first would be
- * charged for it. So the mouse wanders for 4 s before the two measured mouse runs. --no-warmup leaves that out;
- * with --first off it shows the first-hover cost landing on the run without glints.
+ * Order, and the first hover. Each pair runs with the glints on first, then off (--first off swaps that). The
+ * first time the mouse moves over a freshly loaded map costs a long frame or two whatever the glints do (the
+ * hover label's first paint and the first hover redraws). By default the mouse wanders for 4 s before the two
+ * measured mouse runs, so neither is charged for it: that judges hovering after the first seconds, not the first
+ * hover. --no-warmup leaves the wander out, and then the first measured mouse run IS the first hover: the watch
+ * is started, and seen to be running, before the mouse first moves. To judge the first hover, compare sessions
+ * of `--no-warmup --first on` with sessions of `--no-warmup --first off` (one browser launch each), interleaved.
+ *
+ * --first held is the third arm: in the mouse run the glints stay off until 1.5 s after the hover label first
+ * showed, and are then switched on (the stricter candidate fix; the app itself already makes no glint while an
+ * album is hovered or for 500 ms after). Its pair is held, then off. In the still runs "held" is the same as on.
  *
  * --no-flares hides the flares with an injected style rule, to measure the first fallback of the kill rule (no
  * flares) on the same build before any code is changed. --css <file> injects a stylesheet the same way, to try a
@@ -54,11 +63,17 @@ if (OPEN !== null && OPEN !== 'whole') {
   process.exit(2);
 }
 const FIRST = opt('--first') ?? 'on';
-if (FIRST !== 'on' && FIRST !== 'off') {
-  console.error('--first takes on or off');
+if (FIRST !== 'on' && FIRST !== 'off' && FIRST !== 'held') {
+  console.error('--first takes on, off or held');
   process.exit(2);
 }
-const ORDER = FIRST === 'on' ? [true, false] : [false, true];
+/** The two runs of a pair: 'on', 'off', or 'held' (on, but in a mouse run only from HELD_MS after the hover label
+ * first showed). */
+const ORDER = FIRST === 'on' ? ['on', 'off'] : FIRST === 'off' ? ['off', 'on'] : ['held', 'off'];
+/** The third arm: how long after the hover label first showed the glints are switched on, ms. */
+const HELD_MS = 1500;
+/** A frame gap longer than this is listed with what the glints were doing, ms (two frames at 60 Hz). */
+const GAP_LOG_MS = 32;
 const WARMUP = !args.includes('--no-warmup');
 const NO_FLARES = args.includes('--no-flares');
 const CSS = opt('--css') ? fs.readFileSync(opt('--css'), 'utf8') : null;
@@ -85,17 +100,43 @@ const IN_PAGE = () => {
     }).observe({ type: 'longtask', buffered: true });
   }
   window.__fx = {
-    /** Watches the page for `ms`: long tasks, the longest gap between animation frames, glints made, frames
-     * the map canvas drew. Counting animation frames does not make the map draw. */
-    async watch(ms) {
+    /** True from the moment a watch has taken its first time stamp until it ends: the script waits for it before
+     * it first moves the mouse, so the first hover is inside the watch. */
+    watching: false,
+    /** Watches the page for `ms`: long tasks, the longest gap between animation frames and every gap over
+     * `gapLogMs`, glints made, frames the map canvas drew. Counting animation frames does not make the map draw.
+     * With `heldMs` set, the glints are switched on that long after the hover label first shows. */
+    async watch(ms, gapLogMs, heldMs) {
       const layer = document.querySelector('.tw-layer');
       const made = [];
+      // Every time a glint was added to or removed from the layer.
+      const changed = [];
       const mo = new MutationObserver((records) => {
-        for (const r of records) if (r.addedNodes.length) made.push(performance.now());
+        const now = performance.now();
+        for (const r of records) {
+          if (r.addedNodes.length) made.push(now);
+          if (r.addedNodes.length || r.removedNodes.length) changed.push(now);
+        }
       });
       if (layer) mo.observe(layer, { childList: true });
       const f0 = window.__rmr?.frames ?? 0;
       const t0 = performance.now();
+      window.__fx.watching = true;
+      // When the hover label first showed in this watch (its opacity is written inline by the map's driver).
+      const tip = document.querySelector('.map-tip');
+      let labelAt = null;
+      let heldOnAt = null;
+      const tipMo = new MutationObserver(() => {
+        if (labelAt !== null || tip.style.opacity !== '1') return;
+        labelAt = performance.now();
+        if (heldMs !== null) {
+          setTimeout(() => {
+            window.__rmrTwinkle = 'on';
+            heldOnAt = performance.now();
+          }, heldMs);
+        }
+      });
+      if (tip) tipMo.observe(tip, { attributes: true, attributeFilter: ['style'] });
       let last = t0;
       let longestGap = 0;
       let mostAlive = 0;
@@ -104,19 +145,37 @@ const IN_PAGE = () => {
       let gapAt = 0;
       let gapAlive = 0;
       let gapSinceGlint = null;
+      const longGaps = [];
       while (performance.now() - t0 < ms) {
         const now = await new Promise((r) => requestAnimationFrame(() => r(performance.now())));
-        if (now - last > longestGap) {
-          longestGap = now - last;
-          gapAt = last - t0;
-          gapAlive = layer ? layer.childElementCount : 0;
-          const before = made.filter((m) => m <= now);
-          gapSinceGlint = before.length ? Math.round(last - before[before.length - 1]) : null;
+        const gap = now - last;
+        if (gap > longestGap || gap > gapLogMs) {
+          const alive = layer ? layer.childElementCount : 0;
+          const madeBefore = made.filter((m) => m <= now);
+          const changedBefore = changed.filter((m) => m <= now);
+          if (gap > longestGap) {
+            longestGap = gap;
+            gapAt = last - t0;
+            gapAlive = alive;
+            gapSinceGlint = madeBefore.length ? Math.round(last - madeBefore[madeBefore.length - 1]) : null;
+          }
+          if (gap > gapLogMs) {
+            longGaps.push({
+              atMs: Math.round(last - t0),
+              gapMs: Math.round(gap),
+              glintsAlive: alive,
+              // Negative: the glint was made or removed inside the gap, that long after it began.
+              msSinceGlintMadeOrRemoved: changedBefore.length ? Math.round(last - changedBefore[changedBefore.length - 1]) : null,
+              msSinceLabelFirstShown: labelAt === null ? null : Math.round(last - labelAt),
+            });
+          }
         }
         last = now;
         if (layer) mostAlive = Math.max(mostAlive, layer.childElementCount);
       }
       mo.disconnect();
+      tipMo.disconnect();
+      window.__fx.watching = false;
       await new Promise((r) => setTimeout(r, 150)); // the observer delivers long tasks a little late
       const tasks = lt.filter(([start]) => start >= t0 && start <= last);
       const atGlint = tasks.filter(([start, dur]) => made.some((m) => m >= start - 20 && m <= start + dur + 20));
@@ -127,6 +186,10 @@ const IN_PAGE = () => {
         longestGapAtMs: Math.round(gapAt),
         glintsAliveAtLongestGap: gapAlive,
         msFromLastGlintToLongestGap: gapSinceGlint,
+        longGaps,
+        labelFirstShownAtMs: labelAt === null ? null : Math.round(labelAt - t0),
+        heldOnAtMs: heldOnAt === null ? null : Math.round(heldOnAt - t0),
+        firstGlintAtMs: made.length ? Math.round(made[0] - t0) : null,
         glints: made.length,
         mostAlive,
         longTasksAtGlint: atGlint.length,
@@ -172,23 +235,40 @@ async function runs(browser, mode, vpName) {
     2500, // longer than GAS_SHARP_RETRY_MS (2000, shaders/gas.ts): a failed load goes back to 'waiting' and retries
     { polling: 50, timeout: 45000 },
   );
-  // As a visitor gets it, before any switch is set: does this renderer play glints, and has it made any so far?
-  const visitor = await page.evaluate(() => ({ software: window.__rmr?.gasLite === true, made: window.__rmr.twinkle.stats.spawned }));
-  const shown = !visitor.software;
-  const base = { mode, vp: vpName, shown, madeBeforeSwitch: visitor.made };
-  const watch = (on) =>
+  // As a visitor gets it, before any switch is set: does this renderer play glints (the app's own verdict on the
+  // renderer, state/renderer.ts, whatever gas shader was chosen), and has it made any so far?
+  const visitor = await page.evaluate(() => ({ software: window.__rmr.twinkle.software?.() ?? null, made: window.__rmr.twinkle.stats.spawned }));
+  const shown = visitor.software === false;
+  const base = { mode, vp: vpName, shown, softwareVerdict: visitor.software, madeBeforeSwitch: visitor.made };
+  /** Sets the switch for a run and lets it take: 1 s, in which nothing is measured and the mouse is still. A
+   * held run starts with the glints off. */
+  const arm = (kind, mouse) =>
     page.evaluate(
-      async ([enabled, ms]) => {
-        const tw = window.__rmr.twinkle;
-        window.__rmrTwinkle = enabled ? 'on' : 'off';
-        tw.stats.worstSpawnMs = 0;
+      async (v) => {
+        window.__rmrTwinkle = v;
+        window.__rmr.twinkle.stats.worstSpawnMs = 0;
         await new Promise((r) => setTimeout(r, 1000));
-        const r = await window.__fx.watch(ms);
-        return { ...r, worstSpawnMs: tw.stats.worstSpawnMs, enabled: tw.enabled() };
       },
-      [on, RUN_MS],
+      kind === 'off' || (kind === 'held' && mouse) ? 'off' : 'on',
     );
-  for (const on of ORDER) rows.push({ ...base, run: 'still', twinkle: on ? 'on' : 'off', ...(await watch(on)) });
+  /** Starts the watch and resolves once it is running in the page, with `done`, the promise of its result (in an
+   * object: an async function that returned the promise itself would wait for the whole watch). */
+  const startWatch = async (kind, mouse) => {
+    const done = page.evaluate(
+      async ([ms, gapLog, held]) => {
+        const r = await window.__fx.watch(ms, gapLog, held);
+        const tw = window.__rmr.twinkle;
+        return { ...r, worstSpawnMs: tw.stats.worstSpawnMs, hoverHeld: tw.stats.hoverHeld ?? null, enabled: tw.enabled() };
+      },
+      [RUN_MS, GAP_LOG_MS, kind === 'held' && mouse ? HELD_MS : null],
+    );
+    await page.waitForFunction(() => window.__fx.watching === true, null, { polling: 'raf', timeout: 10000 });
+    return { done };
+  };
+  for (const kind of ORDER) {
+    await arm(kind, false);
+    rows.push({ ...base, run: 'still', twinkle: kind, ...(await (await startWatch(kind, false)).done) });
+  }
   if (vpName === 'desktop') {
     // The mouse wanders over the map, rests, and wanders again: a hover redraws the map; the glints must add nothing to it.
     const wander = async (ms) => {
@@ -205,10 +285,15 @@ async function runs(browser, mode, vpName) {
       await page.mouse.move(5, 5);
       await page.waitForTimeout(600);
     }
-    for (const on of ORDER) {
-      const pending = watch(on);
+    let firstHover = !WARMUP;
+    for (const kind of ORDER) {
+      // The switch is set and has taken, and the watch is running in the page, before the mouse first moves:
+      // with --no-warmup the first measured run holds the first hover of this page load, from its first event.
+      await arm(kind, true);
+      const { done } = await startWatch(kind, true);
       await wander(RUN_MS);
-      rows.push({ ...base, run: 'mouse moving', twinkle: on ? 'on' : 'off', ...(await pending) });
+      rows.push({ ...base, run: 'mouse moving', twinkle: kind, firstHover, ...(await done) });
+      firstHover = false;
       await page.mouse.move(5, 5);
     }
   }
@@ -219,14 +304,21 @@ async function runs(browser, mode, vpName) {
 function check(rows) {
   const fails = [];
   for (const r of rows) {
-    if (r.enabled !== (r.twinkle === 'on')) fails.push(`${r.mode} ${r.vp} ${r.run}: the switch said ${r.twinkle} but the app's timer reads enabled ${r.enabled}`);
+    if (r.enabled !== (r.twinkle !== 'off') && !(r.twinkle === 'held' && r.run === 'mouse moving' && r.labelFirstShownAtMs === null)) fails.push(`${r.mode} ${r.vp} ${r.run}: the switch said ${r.twinkle} but the app's timer reads enabled ${r.enabled}`);
     if (r.twinkle === 'off' && r.glints > 0) fails.push(`${r.mode} ${r.vp} ${r.run}: ${r.glints} glints were made with the switch off, so the comparison is void`);
     if (!r.shown && r.madeBeforeSwitch > 0) fails.push(`${r.mode} ${r.vp} ${r.run}: ${r.madeBeforeSwitch} glints were made on a software renderer before the switch forced them`);
   }
-  for (const r of rows.filter((q) => q.twinkle === 'on')) {
+  for (const r of rows.filter((q) => q.twinkle === 'held' && q.run === 'mouse moving')) {
+    const where = `${r.mode} ${r.vp} ${r.run}`;
+    if (r.labelFirstShownAtMs === null) fails.push(`${where}: held run: the hover label never showed, so the glints were never switched on`);
+    else if (r.firstGlintAtMs !== null && r.firstGlintAtMs < r.labelFirstShownAtMs + HELD_MS) fails.push(`${where}: held run: a glint was made ${r.firstGlintAtMs - r.labelFirstShownAtMs} ms after the hover label first showed (held for ${HELD_MS} ms)`);
+  }
+  for (const r of rows.filter((q) => q.twinkle !== 'off')) {
     const where = `${r.mode} ${r.vp} ${r.run}`;
     const off = rows.find((q) => q.mode === r.mode && q.vp === r.vp && q.run === r.run && q.twinkle === 'off');
-    if (r.glints === 0) fails.push(`${where}: no glint was made in ${RUN_MS / 1000} s, so nothing was measured`);
+    // In a mouse run the app holds new glints back while an album is hovered and for 500 ms after: a run in which
+    // every tick was held made none, and says so in the notes below instead of failing.
+    if (r.glints === 0 && !(r.run === 'mouse moving' && r.hoverHeld > 0)) fails.push(`${where}: no glint was made in ${RUN_MS / 1000} s, so nothing was measured`);
     if (r.mostAlive > 3) fails.push(`${where}: ${r.mostAlive} glints alive at once (at most 3)`);
     if (r.run === 'still' && r.canvasFrames !== 0) fails.push(`${where}: the map canvas drew ${r.canvasFrames} frames while glints played (must be 0)`);
     // The timing rules judge what a visitor gets. Forced glints on a renderer that plays none are reported only.
@@ -242,8 +334,23 @@ function check(rows) {
 function table(rows) {
   const head = '| Renderer | Viewport | Visitors get glints | Run | Glints | Made | Most alive | Longest task (ms) | Long tasks | Long tasks at a glint | Longest frame gap (ms) | Canvas frames | Longest glint write (ms) |';
   const sep = '|---|---|---|---|---|---|---|---|---|---|---|---|---|';
-  const line = (r) => `| ${r.mode} | ${r.vp} | ${r.shown ? 'yes' : 'no (forced here)'} | ${r.run} | ${r.twinkle} | ${r.glints} | ${r.mostAlive} | ${r.longestTaskMs} | ${r.longTasks} | ${r.longTasksAtGlint} | ${r.longestGapMs} | ${r.canvasFrames} | ${r.worstSpawnMs} |`;
+  const line = (r) => `| ${r.mode} | ${r.vp} | ${r.shown ? 'yes' : 'no (forced here)'} | ${r.run}${r.firstHover ? ' (first hover)' : ''} | ${r.twinkle} | ${r.glints} | ${r.mostAlive} | ${r.longestTaskMs} | ${r.longTasks} | ${r.longTasksAtGlint} | ${r.longestGapMs} | ${r.canvasFrames} | ${r.worstSpawnMs} |`;
   return [head, sep, ...rows.map(line)].join('\n');
+}
+
+/** Every frame gap over GAP_LOG_MS, one line each: which run, when, how long, and what the glints were doing. */
+function gapLines(rows) {
+  const out = [];
+  for (const r of rows) {
+    for (const g of r.longGaps ?? []) {
+      out.push(
+        `  ${r.mode} ${r.vp} ${r.run}${r.firstHover ? ' (first hover)' : ''}, glints ${r.twinkle}: ${g.gapMs} ms at ${g.atMs} ms; ${g.glintsAlive} alive; ` +
+          `${g.msSinceGlintMadeOrRemoved === null ? 'no glint made or removed yet' : `${g.msSinceGlintMadeOrRemoved} ms after a glint was made or removed`}; ` +
+          `${g.msSinceLabelFirstShown === null ? 'hover label not shown yet' : `${g.msSinceLabelFirstShown} ms after the hover label first showed`}`,
+      );
+    }
+  }
+  return out;
 }
 
 async function main() {
@@ -255,7 +362,7 @@ async function main() {
       const browser = await chromium.launch({ channel: 'chrome', headless: true, args: MODES[mode] });
       await assertNativeChrome(browser); // a translated (x86_64) Chrome inflates every timing about 50x
       try {
-        for (const vp of opt('--viewport') ? [opt('--viewport')] : Object.keys(VIEWPORTS)) rows.push(...(await runs(browser, mode, vp)));
+        for (const vp of opt('--viewport') ? opt('--viewport').split(',') : Object.keys(VIEWPORTS)) rows.push(...(await runs(browser, mode, vp)));
       } finally {
         await browser.close();
       }
@@ -265,6 +372,12 @@ async function main() {
   }
   const fails = check(rows);
   console.log(`\nOpening framing: ${OPEN === 'whole' ? 'the whole map (--open whole)' : 'the Overview (the app\'s own)'}. Glints ${FIRST} first. Mouse warm-up: ${WARMUP ? `${WARMUP_MS / 1000} s` : 'none'}.${NO_FLARES ? ' Flares hidden (--no-flares).' : ''}${CSS ? ` Extra CSS: ${opt('--css')}.` : ''}\n\n${table(rows)}\n`);
+  const gaps = gapLines(rows);
+  console.log(gaps.length ? `Frame gaps over ${GAP_LOG_MS} ms (reported; the table's longest gap is what is judged):\n${gaps.join('\n')}\n` : `No frame gap over ${GAP_LOG_MS} ms in any run.\n`);
+  for (const r of rows.filter((q) => q.run === 'mouse moving' && q.twinkle !== 'off')) {
+    console.log(`${r.mode} ${r.vp} mouse moving, glints ${r.twinkle}: ${r.glints} glints made while the mouse moved; the hover hold has skipped ${r.hoverHeld ?? 'n/a'} ticks on this page so far.${r.glints === 0 ? ' No glint was made in this run: it measured the hover with no new glint, which is what a visitor gets while hovering.' : ''}`);
+  }
+  if (rows.some((r) => !r.shown && r.twinkle !== 'off')) console.log('Glints were forced on a software renderer for these rows (window.__rmrTwinkle = "on"): a state no visitor has.\n');
   const outDir = path.join(ROOT, 'scripts/perf/out');
   fs.mkdirSync(outDir, { recursive: true });
   const file = path.join(outDir, `twinkle-cost-${new Date().toISOString().replace(/[:.]/g, '-')}.json`);
@@ -274,14 +387,14 @@ async function main() {
     console.error(`FAIL\n${fails.join('\n')}`);
     process.exit(1);
   }
-  const forced = rows.filter((r) => !r.shown && r.twinkle === 'on');
+  const forced = rows.filter((r) => !r.shown && r.twinkle !== 'off');
   for (const r of forced) {
     const off = rows.find((q) => q.mode === r.mode && q.vp === r.vp && q.run === r.run && q.twinkle === 'off');
     if (off && (r.longestGapMs > off.longestGapMs + NOISE_MS || r.longestTaskMs > off.longestTaskMs + NOISE_MS)) {
       console.log(`Reported only (${r.mode} ${r.vp} ${r.run}, glints forced where visitors get none): longest frame gap ${r.longestGapMs} ms with glints, ${off.longestGapMs} ms without; longest task ${r.longestTaskMs} ms, ${off.longestTaskMs} ms.`);
     }
   }
-  console.log('The glints cost no responsiveness where visitors get them.');
+  console.log(`No rule of this script was broken where visitors get glints${WARMUP ? ' (the first hover was warmed up and is not in these numbers: see --no-warmup)' : ''}. One session is not a verdict: see docs/design/trifid-theme/reviews/app-twinkle-cost.md for the runs that are.`);
 }
 
 main().catch((e) => {
