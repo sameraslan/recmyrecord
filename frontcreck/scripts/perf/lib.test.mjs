@@ -4,7 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  checkBudgets, checkEffects, checkPages, checkRun, compareRuns, fillBaseline, formatTable, glassVars, isDpr2File, jsonExtras, judgeRows,
+  checkBudgets, checkDefaultGlints, checkEffects, checkPages, checkRun, compareRuns, fillBaseline, formatTable, glassVars, isDpr2File, jsonExtras, judgeRows,
   pagesFromText, parseEffectFlags, rowsOfRun, settingsFindings, sizeFindings, sortRunFiles, summarise,
 } from './lib.mjs';
 
@@ -641,5 +641,49 @@ describe('compare.mjs', () => {
     expect(x.stdout).toContain('| gpu desktop | deepDragGapMs | none (yardstick 50) | 18 (17 to 18), n=3 (extra) | n/a | n/a | MISSING |');
     expect(x.stdout).toContain('Findings (4):');
     expect(x.status).toBe(1);
+  });
+});
+
+describe('checkDefaultGlints: glints are on by default where visitors get them', () => {
+  const M1 = 'ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)';
+  const SWIFT = 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)';
+  const row = (over = {}) => ({ mode: 'gpu', vp: 'desktop', renderer: M1, reducedMotion: false, idleGlints: 2, twinkleSoftware: false, ...over });
+
+  it('passes a GPU run with no flag in which a glint was made while the map was idle', () => {
+    expect(checkDefaultGlints(row(), null)).toEqual([]);
+    expect(checkDefaultGlints(row({ idleGlints: 1, vp: 'phone' }), null)).toEqual([]);
+  });
+
+  it('fails a GPU run with no flag in which the idle map made no glint, and says what the app took the renderer for', () => {
+    expect(checkDefaultGlints(row({ idleGlints: 0 }), null)).toEqual([
+      'gpu desktop: no glint was made while the map was idle, on a GPU (' + M1 + ') with motion allowed and no --twinkle flag: visitors with a GPU get none. The app reads the renderer as software: false',
+    ]);
+    // The app never learned the renderer: unknown counts as no glints, and that is the failure this catches.
+    expect(checkDefaultGlints(row({ idleGlints: 0, twinkleSoftware: undefined }), null)[0]).toContain('The app reads the renderer as software: unknown');
+    // An app without the glints, or with its hook renamed, publishes no count: not "some", so it fails too.
+    expect(checkDefaultGlints(row({ idleGlints: null, twinkleSoftware: null }), null)).toHaveLength(1);
+    expect(checkDefaultGlints(row({ idleGlints: undefined }), null)).toHaveLength(1);
+  });
+
+  it('judges nothing when a --twinkle flag forced them on or off: checkEffects judges those runs', () => {
+    expect(checkDefaultGlints(row({ idleGlints: 0 }), 'off')).toEqual([]);
+    expect(checkDefaultGlints(row({ idleGlints: 0 }), 'on')).toEqual([]);
+  });
+
+  it('judges nothing on a software renderer, where visitors get none, whatever the mode was called', () => {
+    expect(checkDefaultGlints(row({ mode: 'software', renderer: SWIFT, idleGlints: 0, twinkleSoftware: true }), null)).toEqual([]);
+    expect(checkDefaultGlints(row({ mode: 'gpu', renderer: SWIFT, idleGlints: 0, twinkleSoftware: true }), null)).toEqual([]);
+    expect(checkDefaultGlints(row({ mode: 'gpu', renderer: 'llvmpipe (LLVM 15.0.7, 256 bits)', idleGlints: 0 }), null)).toEqual([]);
+    expect(checkDefaultGlints(row({ mode: 'gpu', renderer: 'n/a', idleGlints: 0 }), null)).toEqual([]);
+  });
+
+  it('judges nothing under reduced motion, where there are none by design', () => {
+    expect(checkDefaultGlints(row({ idleGlints: 0, reducedMotion: true }), null)).toEqual([]);
+  });
+
+  it('fails a software run with no flag that did make a glint: visitors there must get none', () => {
+    expect(checkDefaultGlints(row({ mode: 'software', renderer: SWIFT, idleGlints: 1, twinkleSoftware: true }), null)).toEqual([
+      'software desktop: 1 glints were made while the map was idle on a software renderer with no --twinkle flag: visitors there must get none',
+    ]);
   });
 });

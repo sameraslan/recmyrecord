@@ -7,7 +7,7 @@ import zlib from 'node:zlib';
 import { chromium } from '@playwright/test';
 import { assertNativeChrome } from '../check-native.mjs';
 import { startServer } from '../serve.mjs';
-import { checkBudgets, checkEffects, checkPages, formatTable, glassVars, jsonExtras, parseEffectFlags } from './lib.mjs';
+import { checkBudgets, checkDefaultGlints, checkEffects, checkPages, formatTable, glassVars, jsonExtras, parseEffectFlags } from './lib.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const BUDGETS = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/perf/budgets.json'), 'utf8'));
@@ -65,7 +65,9 @@ if (GLASS_WANT) {
 const NAMES = EFFECTS.names;
 // --twinkle: the glints, through the app's own switch for tests and measurements: window.__rmrTwinkle, set before
 // the page's scripts run ('off' = no glints; 'on' = glints on any renderer, also the software one, where a visitor
-// gets none: src/components/map/state/twinkle.ts twinkleShown and watchTwinkleSwitch). TWINKLE_READBACK reads what the app did with it, never the global this script
+// gets none: src/components/map/state/twinkle.ts twinkleShown and watchTwinkleSwitch; the run says so when it
+// measured that state). With no flag, a GPU run fails when the idle map made no glint (checkDefaultGlints in
+// lib.mjs): the only automated check that visitors with a GPU get them. TWINKLE_READBACK reads what the app did with it, never the global this script
 // set: whether the glints' own timer says it is enabled, how many glints it has made on this page, and how many
 // are in the DOM. An app that ignored the switch, or has no twinkle, reads back as that (checkEffects in lib.mjs).
 const TWINKLE = EFFECTS.twinkle;
@@ -471,9 +473,16 @@ async function exploreFlow(page, isPhone) {
     res.sharpFlag = String(window.__rmr?.gasSharp);
     window.__lt.length = 0;
     const f0 = window.__rmr.frames;
+    // The glints the app's timer makes in the idle window (null when the app publishes no count), for
+    // checkDefaultGlints: the timer waits under 3 s, so a resting map that plays glints makes at least one here.
+    const tw = window.__rmr.twinkle;
+    const g0 = tw?.stats?.spawned ?? null;
     await new Promise((r2) => setTimeout(r2, 3000));
     res.idleLongTasks = window.__lt.length;
     res.idleFrames = window.__rmr.frames - f0;
+    res.idleGlints = g0 === null ? null : tw.stats.spawned - g0;
+    res.twinkleSoftware = typeof tw?.software === 'function' ? (tw.software() ?? null) : null;
+    res.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     return res;
   }, isPhone);
 }
@@ -575,6 +584,8 @@ async function main() {
         if (vp !== 'desktop2x') fails.push(...checkBudgets(r, mode, BUDGETS, { allowSoftwareGpu: args.includes('--allow-software-gpu') }));
         // A forced effect the page did not have fails the run in every column: its numbers are not an A/B.
         if (ANY_EFFECT) fails.push(...checkEffects(`${mode} ${vp}`, [...r.effectsSeen, ...(r.openingEffectsSeen ? [r.openingEffectsSeen] : [])], EFFECTS, GLASS));
+        // With no --twinkle flag: a GPU must have made a glint while the map was idle, a software renderer none.
+        fails.push(...checkDefaultGlints(r, TWINKLE));
       }
     }
     console.log(`\n${formatTable(rows)}\n`);
@@ -584,9 +595,14 @@ async function main() {
     if (ANY_EFFECT) {
       console.log(`Run with${GLASS ? ` --glass ${GLASS_WANT}` : ''}${TWINKLE ? ` --twinkle ${TWINKLE}` : ''}${NAMES ? ` --names ${NAMES}` : ''}: an A/B run, not the site as a visitor gets it. Read back in the page:`);
       for (const r of rows) for (const e of [...r.effectsSeen, ...(r.openingEffectsSeen ? [r.openingEffectsSeen] : [])]) console.log(`  ${r.mode} ${r.vp}, ${e.at}: ${JSON.stringify(e)}`);
+      const forcedOnSoftware = TWINKLE === 'on' ? rows.filter((r) => r.twinkleSoftware === true || /swiftshader|llvmpipe|software|basic render/i.test(r.renderer ?? '')) : [];
+      if (forcedOnSoftware.length) {
+        console.log(`--twinkle on with a software renderer (${forcedOnSoftware.map((r) => `${r.mode} ${r.vp}`).join(', ')}): a forced state no visitor has. The app plays no glints on a software renderer; these columns show what glints would cost there, not the site.`);
+      }
       console.log('');
     }
     if (OPEN) console.log('Run with --open whole: the opening view rows were not measured (n/a). The budget rows are measured at the whole map in every run.\n');
+    if (!TWINKLE) console.log(`Glints made in the 3 s idle window, as a visitor gets the site: ${rows.map((r) => `${r.mode} ${r.vp} ${r.idleGlints ?? 'n/a'}`).join(', ')}\n`);
     for (const r of rows) {
       // settled() gives up after 6 s; the next step then measures a map that is still animating.
       if (r.settled?.includes(false)) console.warn(`WARNING ${r.mode} ${r.vp}: the map did not settle before a step (settled: ${JSON.stringify(r.settled)})`);

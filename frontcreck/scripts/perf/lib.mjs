@@ -175,6 +175,30 @@ export function checkEffects(where, seen, want, vars) {
 }
 
 /** The numbers perf.mjs reports per mode and viewport. Lower is better for every one. */
+/** The same test as src/components/map/state/renderer.ts isSoftwareRenderer, on the name perf.mjs reads from a
+ * canvas of its own. */
+const SOFTWARE_NAME = /swiftshader|llvmpipe|software|basic render/i;
+
+/** The backstop for "glints are on by default": the browser tests draw in software, where a visitor gets no
+ * glints, so nothing else would notice if they stopped appearing for everyone. `row` is one measured column of
+ * perf.mjs: `renderer` is the name the script read itself, `idleGlints` how many glints the app's timer made in
+ * the idle window (null when the app publishes no count), `reducedMotion` what the page's media query said and
+ * `twinkleSoftware` what the app took the renderer for (reported in the message). `flag` is --twinkle (null when
+ * absent: only then is the run the site as a visitor gets it). Returns the lines to add to the run's fails. */
+export function checkDefaultGlints(row, flag) {
+  if (flag) return [];
+  const where = `${row.mode} ${row.vp}`;
+  const software = SOFTWARE_NAME.test(row.renderer ?? '');
+  if (software) {
+    return row.idleGlints > 0 ? [`${where}: ${row.idleGlints} glints were made while the map was idle on a software renderer with no --twinkle flag: visitors there must get none`] : [];
+  }
+  // 'n/a': the script could not read a renderer at all (no WebGL): nothing to judge.
+  if (row.mode !== 'gpu' || !row.renderer || row.renderer === 'n/a' || row.reducedMotion) return [];
+  if (row.idleGlints > 0) return [];
+  const read = row.twinkleSoftware === true || row.twinkleSoftware === false ? String(row.twinkleSoftware) : 'unknown';
+  return [`${where}: no glint was made while the map was idle, on a GPU (${row.renderer}) with motion allowed and no --twinkle flag: visitors with a GPU get none. The app reads the renderer as software: ${read}`];
+}
+
 export const COMPARE_KEYS = [
   'searchUsableMs', 'startupLongTaskMs', 'mapFirstFrameMs', 'typeToSuggestionsMs', 'selectToAlbumMs', 'transitionGapMs',
   'sliderToListMs', 'morphGapMs', 'dragGapMs', 'zoomGapMs',
