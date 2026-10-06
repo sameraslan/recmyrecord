@@ -1535,7 +1535,8 @@ test('under reduced motion a fit press leaves no name with a running animation o
 /**
  * For every shown name: the gas and stars really on screen under its letters (their box and 8 px round it, read
  * from a screenshot with the names layer hidden), and the halo painted round them (the pixels 2 to 3 px outside
- * the letters themselves, read from a screenshot with the names showing).
+ * the letters themselves, read from a screenshot with the names showing; the letters are found in a third
+ * screenshot of the names alone, white on black).
  *
  * `under`: the contrast the product's own model gives the name's ink over its halo over the 99th percentile of
  * the luminance under it (state/namesLayout.ts nameContrast): at least 4.5. The brightest single pixel is a
@@ -1546,14 +1547,22 @@ test('under reduced motion a fit press leaves no name with a running animation o
  * is weaker than a pass on a GPU. The renderer's name and the worst numbers are attached to the test. To run it
  * on a real GPU (E2E_GPU=1, playwright.config.ts): see the comment at the foot of this file.
  */
-async function nameContrasts(page: Page): Promise<Array<{ name: string; halo: number; p99: number; max: number; ringMedian: number; letters: number; under: number; underMax: number; ring: number }>> {
+async function nameContrasts(page: Page): Promise<Array<{ name: string; halo: number; p99: number; max: number; ringMedian: number; ringPixels: number; letters: number; under: number; underMax: number; ring: number }>> {
   const names = await read(page);
   const shown = (await page.screenshot()).toString('base64');
   const style = await page.addStyleTag({ content: '.rn-layer { display: none !important; }' });
   const bare = (await page.screenshot()).toString('base64');
   await style.evaluate((el) => (el as Element).remove());
+  // Where the letters are: the names alone, white on black, with no halo. (Telling them from the two pictures
+  // above by their brightness loses most of a thin name that lies over gas nearly as bright as its ink.)
+  const alone = await page.addStyleTag({
+    content:
+      '.map-pane { background: #000 !important; } canvas.map-canvas, .tw-layer { visibility: hidden !important; } .rn b { color: #fff !important; opacity: 1 !important; text-shadow: none !important; -webkit-text-stroke: 0 transparent !important; }',
+  });
+  const mask = (await page.screenshot()).toString('base64');
+  await alone.evaluate((el) => (el as Element).remove());
   const px = await page.evaluate(
-    async ([withNames, without, list]) => {
+    async ([withNames, without, lettersOnly, list]) => {
       const load = async (data: string) => {
         const img = new Image();
         img.src = `data:image/png;base64,${data}`;
@@ -1567,10 +1576,11 @@ async function nameContrasts(page: Page): Promise<Array<{ name: string; halo: nu
       };
       const a = await load(withNames);
       const b = await load(without);
+      const m = await load(lettersOnly);
       const k = a.w / innerWidth;
       const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
       const lum = (d: Uint8ClampedArray, i: number) => 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
-      return list.map(({ box, inkLum }) => {
+      return list.map(({ box }) => {
         const under: number[] = [];
         const x0 = Math.max(0, Math.floor((box[0] - 8) * k));
         const y0 = Math.max(0, Math.floor((box[1] - 8) * k));
@@ -1578,9 +1588,9 @@ async function nameContrasts(page: Page): Promise<Array<{ name: string; halo: nu
         const y1 = Math.min(b.h, Math.ceil((box[3] + 8) * k));
         for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) under.push(lum(b.d, 4 * (y * b.w + x)));
         under.sort((p, q) => p - q);
-        // The letters: the pixels in the box that the names' screenshot shows much brighter than the same pixel
-        // without names is, and at least half as bright as the ink. The ring: 2 to 3 px outside them (the first
-        // pixel out is the letters' own soft edge).
+        // The letters: the pixels in the box that are at least half as bright as the ink where the names are
+        // painted alone in white (about three quarters covered by a letter). The ring: 2 to 3 px outside them
+        // (the first pixel out is the letters' own soft edge).
         const ring: number[] = [];
         const ix0 = Math.max(0, Math.floor((box[0] - 4) * k));
         const iy0 = Math.max(0, Math.floor((box[1] - 4) * k));
@@ -1592,9 +1602,7 @@ async function nameContrasts(page: Page): Promise<Array<{ name: string; halo: nu
         let letters = 0;
         for (let y = 0; y < h; y++) {
           for (let x = 0; x < w; x++) {
-            const i = 4 * ((y + iy0) * a.w + x + ix0);
-            const la = lum(a.d, i);
-            if (la >= 0.5 * inkLum && la > lum(b.d, i) + 0.1) {
+            if (lum(m.d, 4 * ((y + iy0) * a.w + x + ix0)) >= 0.5) {
               ink[y * w + x] = 1;
               letters += 1;
             }
@@ -1613,10 +1621,10 @@ async function nameContrasts(page: Page): Promise<Array<{ name: string; halo: nu
           }
         }
         ring.sort((p, q) => p - q);
-        return { p99: under[Math.min(under.length - 1, Math.floor(under.length * 0.99))], max: under[under.length - 1], ringMedian: ring.length ? ring[Math.floor(ring.length / 2)] : NaN, letters };
+        return { p99: under[Math.min(under.length - 1, Math.floor(under.length * 0.99))], max: under[under.length - 1], ringMedian: ring.length ? ring[Math.floor(ring.length / 2)] : NaN, ringPixels: ring.length, letters };
       });
     },
-    [shown, bare, names.map((n) => ({ box: n.box, inkLum: luminance(n.ink) * (n.fair ? 0.82 ** 2.2 : 1) }))] as const,
+    [shown, bare, mask, names.map((n) => ({ box: n.box }))] as const,
   );
   return names.map((n, i) => {
     const ink = luminance(n.ink);
@@ -1648,7 +1656,11 @@ async function expectContrast(page: Page, info: TestInfo, view: string, painted 
     expect(r.halo, `${view}: the halo of "${r.name}"`).toBeGreaterThanOrEqual(0.65);
     expect(r.under, `${view}: "${r.name}" over the 99th percentile of the gas under it (luminance ${r.p99.toFixed(3)}, halo ${r.halo})`).toBeGreaterThanOrEqual(4.5);
     if (!painted) continue;
-    expect(r.letters, `${view}: pixels of the letters of "${r.name}" found in the screenshot`).toBeGreaterThan(50);
+    // The letters were found, and the band round them is a sample worth a median. The smallest name at the Whole
+    // map (12 letters at 13 px, hairlines one device px wide) has fewer than 50 px as bright as half its ink, so
+    // the letters are counted per character, and the band itself is counted too.
+    expect(r.letters, `${view}: pixels of the letters of "${r.name}" found in the screenshot`).toBeGreaterThan(2 * r.name.replace(/\s/g, '').length);
+    expect(r.ringPixels, `${view}: pixels in the band round "${r.name}"`).toBeGreaterThan(150);
     expect(r.ring, `${view}: "${r.name}" against the halo painted round it (median luminance ${r.ringMedian.toFixed(3)} 2 to 3 px outside its letters)`).toBeGreaterThanOrEqual(4.5);
   }
 }
@@ -1685,6 +1697,14 @@ test('every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside
   // with the pixels under a name. This one measures the halo that was painted: the name's ink against the median
   // of the pixels 2 to 3 px outside its letters, with the names showing (part 2 Task 7 review, item 17).
   await contrastAtBothViews(page, info, isMobile, true);
+});
+
+test('1600 x 1000: every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside its letters, at the Overview and at the Whole map', async ({ page, isMobile }, info) => {
+  test.skip(isMobile, 'a desktop window');
+  // The same measure in the larger of the two desktop windows the review names (item 17): the names are larger
+  // there and lie over other gas.
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await contrastAtBothViews(page, info, false, true);
 });
 
 // Running the contrast tests on a real GPU (the numbers that count: the software renderer draws dimmer gas), by

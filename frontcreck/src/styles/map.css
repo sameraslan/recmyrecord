@@ -154,6 +154,11 @@
   --rn-ink: rgba(4, 4, 8, var(--h, .85)); --rn-ink-far: rgba(4, 4, 8, calc(var(--h, .85) * .85));
   --rn-shadow-full: 0 0 2px var(--rn-ink), 0 0 4px var(--rn-ink), 0 0 4px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 14px var(--rn-ink), 0 0 14px var(--rn-ink), 0 0 26px var(--rn-ink-far), 0 0 44px rgba(4, 4, 8, calc(var(--h, .85) * .6));
   --rn-shadow-lite: 0 0 2px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 26px var(--rn-ink-far);
+  /* A fair name's ink is at 0.82, so it needs a darker surround than a strong name does, and round thin letters
+   * the soft shadows leave too little of it 2 to 3 px out over bright gas (3.5:1 for one name at the Overview
+   * and 4.2:1 for two at the Whole map, e2e/names.spec.ts). A fair name gets a tight inner halo as well: four
+   * copies of its letters 3 px out on the diagonals, barely blurred, in the halo's ink. Strong names do not. */
+  --rn-shadow-fair: 2.1px 2.1px 1.5px var(--rn-ink), -2.1px 2.1px 1.5px var(--rn-ink), 2.1px -2.1px 1.5px var(--rn-ink), -2.1px -2.1px 1.5px var(--rn-ink), var(--rn-shadow-full);
 }
 /* A name that takes another spot when the map comes to rest (the driver sets the class, and takes it off when
  * the fade ends): gone from the old spot at once, it fades in on the new. Opacity only, on the layer the name
@@ -169,7 +174,7 @@
   -webkit-text-stroke: 2.1px var(--rn-ink-far); paint-order: stroke fill;
   text-shadow: var(--rn-shadow-full);
 }
-.rn.fair b { opacity: calc(var(--rn-a-ink) * .82); }
+.rn.fair b { opacity: calc(var(--rn-a-ink) * .82); text-shadow: var(--rn-shadow-fair); }
 /* While the slider is between stops (the driver sets the class on the first frame of the fade and takes it off
  * on the last) the fading letters are their own layer, so each frame of the fade changes a layer's opacity and
  * paints no stroke or shadow again. Same pixels. Not at rest: 17 more layers for nothing. */
