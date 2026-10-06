@@ -658,6 +658,8 @@ describe('checkDefaultGlints: glints are on by default where visitors get them',
     expect(checkDefaultGlints(row({ idleGlints: 0 }), null)).toEqual([
       'gpu desktop: no glint was made while the map was idle, on a GPU (' + M1 + ') with motion allowed and no --twinkle flag: visitors with a GPU get none. The app reads the renderer as software: false',
     ]);
+    // What the timer did in the window is added when the run has it, so a failure says why.
+    expect(checkDefaultGlints(row({ idleGlints: 0, idleTwinkle: { ticks: 2, notResting: 0, hoverHeld: 2, capped: 0, alive: 0 } }), null)[0]).toContain('; the timer\'s ticks in the window: {"ticks":2,"notResting":0,"hoverHeld":2,"capped":0,"alive":0}');
     // The app never learned the renderer: unknown counts as no glints, and that is the failure this catches.
     expect(checkDefaultGlints(row({ idleGlints: 0, twinkleSoftware: undefined }), null)[0]).toContain('The app reads the renderer as software: unknown');
     // An app without the glints, or with its hook renamed, publishes no count: not "some", so it fails too.

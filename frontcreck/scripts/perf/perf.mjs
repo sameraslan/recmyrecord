@@ -463,6 +463,12 @@ async function exploreFlow(page, isPhone) {
     window.__rmr.getState().setStop(stop0);
     await P.settled();
     api.setCamera(home, false);
+    // The script's own mouse is still where the drag ended, over the map, and may rest on an album: the app makes
+    // no glint while an album is hovered, so the idle window would then say nothing about glints. The pointer
+    // leaves the canvas here, before the settle, so the frame it draws is not in the idle window. What the hover
+    // was is kept for the report.
+    res.hoverBeforeIdle = document.querySelector('.map-tip')?.style.opacity === '1';
+    fire('pointerleave', cx, cy);
     // Full zoom makes the atlas fetch cover sheets; wait until the map has stopped drawing so a late sheet
     // cannot land in the idle window measured below.
     await P.settled();
@@ -477,10 +483,13 @@ async function exploreFlow(page, isPhone) {
     // checkDefaultGlints: the timer waits under 3 s, so a resting map that plays glints makes at least one here.
     const tw = window.__rmr.twinkle;
     const g0 = tw?.stats?.spawned ?? null;
+    const tw0 = tw?.stats ? { ...tw.stats } : null;
     await new Promise((r2) => setTimeout(r2, 3000));
     res.idleLongTasks = window.__lt.length;
     res.idleFrames = window.__rmr.frames - f0;
     res.idleGlints = g0 === null ? null : tw.stats.spawned - g0;
+    // Why none, if none: what the timer's ticks in the window were skipped for.
+    res.idleTwinkle = tw0 === null ? null : { ticks: tw.stats.ticks - tw0.ticks, notResting: tw.stats.notResting - tw0.notResting, hoverHeld: (tw.stats.hoverHeld ?? 0) - (tw0.hoverHeld ?? 0), capped: tw.stats.capped - tw0.capped, alive: tw.stats.alive };
     res.twinkleSoftware = typeof tw?.software === 'function' ? (tw.software() ?? null) : null;
     res.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     return res;

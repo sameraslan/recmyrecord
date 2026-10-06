@@ -196,7 +196,7 @@ export function checkDefaultGlints(row, flag) {
   if (row.mode !== 'gpu' || !row.renderer || row.renderer === 'n/a' || row.reducedMotion) return [];
   if (row.idleGlints > 0) return [];
   const read = row.twinkleSoftware === true || row.twinkleSoftware === false ? String(row.twinkleSoftware) : 'unknown';
-  return [`${where}: no glint was made while the map was idle, on a GPU (${row.renderer}) with motion allowed and no --twinkle flag: visitors with a GPU get none. The app reads the renderer as software: ${read}`];
+  return [`${where}: no glint was made while the map was idle, on a GPU (${row.renderer}) with motion allowed and no --twinkle flag: visitors with a GPU get none. The app reads the renderer as software: ${read}${row.idleTwinkle ? `; the timer's ticks in the window: ${JSON.stringify(row.idleTwinkle)}` : ''}`];
 }
 
 export const COMPARE_KEYS = [
