@@ -1,0 +1,2785 @@
+{
+ "n": 4081,
+ "audio_store": "data-pipeline/audio",
+ "baseline_matches_site": {
+  "sonic": 1.0,
+  "balanced": 1.0,
+  "mood": 1.0
+ },
+ "baseline": {
+  "sonic": {
+   "genre_primary": 0.272,
+   "desc_jaccard_full": 0.26,
+   "desc_jaccard_sheet": 0.2192,
+   "genre_n": 3614,
+   "desc_n_full": 3740,
+   "desc_n_sheet": 3540,
+   "never": 0.0115,
+   "max_n10": 41
+  },
+  "balanced": {
+   "genre_primary": 0.2896,
+   "desc_jaccard_full": 0.3993,
+   "desc_jaccard_sheet": 0.3034,
+   "genre_n": 3614,
+   "desc_n_full": 3719,
+   "desc_n_sheet": 3540,
+   "never": 0.0461,
+   "max_n10": 95
+  },
+  "mood": {
+   "genre_primary": 0.1734,
+   "desc_jaccard_full": 0.4266,
+   "desc_jaccard_sheet": 0.3048,
+   "genre_n": 3614,
+   "desc_n_full": 3705,
+   "desc_n_sheet": 3540,
+   "never": 0.0713,
+   "max_n10": 100
+  }
+ },
+ "baseline_total_variance": 14.8998,
+ "baseline_ties_at_10": 0.1218,
+ "counts": {
+  "descriptors_per_album_176": {
+   "5": 3.0,
+   "25": 9.0,
+   "50": 13.0,
+   "75": 18.0,
+   "95": 25.0
+  },
+  "mean_176": 13.35,
+  "le8_of_176": 983,
+  "mean_120": 10.77,
+  "le8_of_120": 1469,
+  "vocals_in_first8": 2772,
+  "sheet_list_present": 3613,
+  "sheet_names_without_column": 212
+ },
+ "variants": {
+  "T_today": {
+   "total_variance_raw": 10.3611,
+   "matched_factor": 1.1992,
+   "mean_kept_columns": 6.1,
+   "ties_at_10": 0.1529,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.941,
+      "unchanged": 0.9409,
+      "same_order": 0.7128,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2715,
+      "desc_jaccard_full": 0.2594,
+      "desc_jaccard_sheet": 0.219,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 5.213,
+      "unchanged": 0.0595,
+      "same_order": 0.0542,
+      "kept_le5": 0.5859,
+      "n": 4081,
+      "genre_primary": 0.2783,
+      "desc_jaccard_full": 0.3418,
+      "desc_jaccard_sheet": 0.3099,
+      "genre_n": 3614,
+      "desc_n_full": 3729,
+      "desc_n_sheet": 3540,
+      "never": 0.0436,
+      "max_n10": 117
+     },
+     "mood": {
+      "mean_overlap": 3.612,
+      "unchanged": 0.0551,
+      "same_order": 0.0542,
+      "kept_le5": 0.7684,
+      "n": 4081,
+      "genre_primary": 0.1466,
+      "desc_jaccard_full": 0.3353,
+      "desc_jaccard_sheet": 0.312,
+      "genre_n": 3614,
+      "desc_n_full": 3721,
+      "desc_n_sheet": 3540,
+      "never": 0.0676,
+      "max_n10": 93
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.935,
+      "unchanged": 0.9356,
+      "same_order": 0.6739,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2716,
+      "desc_jaccard_full": 0.2596,
+      "desc_jaccard_sheet": 0.2194,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 41
+     },
+     "balanced": {
+      "mean_overlap": 4.899,
+      "unchanged": 0.0238,
+      "same_order": 0.0061,
+      "kept_le5": 0.6263,
+      "n": 4081,
+      "genre_primary": 0.2629,
+      "desc_jaccard_full": 0.3457,
+      "desc_jaccard_sheet": 0.3156,
+      "genre_n": 3614,
+      "desc_n_full": 3724,
+      "desc_n_sheet": 3540,
+      "never": 0.0512,
+      "max_n10": 118
+     },
+     "mood": {
+      "mean_overlap": 3.602,
+      "unchanged": 0.0497,
+      "same_order": 0.0316,
+      "kept_le5": 0.7687,
+      "n": 4081,
+      "genre_primary": 0.1465,
+      "desc_jaccard_full": 0.3351,
+      "desc_jaccard_sheet": 0.3118,
+      "genre_n": 3614,
+      "desc_n_full": 3721,
+      "desc_n_sheet": 3540,
+      "never": 0.0676,
+      "max_n10": 93
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 6.984,
+    "unchanged": 0.2238,
+    "same_order": 0.2197,
+    "kept_le5": 0.2899,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.542,
+    "unchanged": 0.0016,
+    "same_order": 0.0016,
+    "kept_le5": 0.9203,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.19,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     111,
+     174,
+     320,
+     545,
+     833,
+     928,
+     925,
+     172,
+     0,
+     0
+    ]
+   }
+  },
+  "T_equal": {
+   "total_variance_raw": 10.3016,
+   "matched_factor": 1.2026,
+   "mean_kept_columns": 6.1,
+   "ties_at_10": 0.9272,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.94,
+      "unchanged": 0.9407,
+      "same_order": 0.7123,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2714,
+      "desc_jaccard_full": 0.2594,
+      "desc_jaccard_sheet": 0.219,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 5.207,
+      "unchanged": 0.0441,
+      "same_order": 0.0113,
+      "kept_le5": 0.5805,
+      "n": 4081,
+      "genre_primary": 0.2757,
+      "desc_jaccard_full": 0.3413,
+      "desc_jaccard_sheet": 0.3084,
+      "genre_n": 3614,
+      "desc_n_full": 3729,
+      "desc_n_sheet": 3540,
+      "never": 0.0458,
+      "max_n10": 115
+     },
+     "mood": {
+      "mean_overlap": 3.443,
+      "unchanged": 0.0221,
+      "same_order": 0.0061,
+      "kept_le5": 0.7993,
+      "n": 4081,
+      "genre_primary": 0.1737,
+      "desc_jaccard_full": 0.3429,
+      "desc_jaccard_sheet": 0.3153,
+      "genre_n": 3614,
+      "desc_n_full": 3722,
+      "desc_n_sheet": 3540,
+      "never": 0.0649,
+      "max_n10": 110
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.933,
+      "unchanged": 0.9336,
+      "same_order": 0.6724,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2715,
+      "desc_jaccard_full": 0.2596,
+      "desc_jaccard_sheet": 0.2194,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 41
+     },
+     "balanced": {
+      "mean_overlap": 4.914,
+      "unchanged": 0.0252,
+      "same_order": 0.0054,
+      "kept_le5": 0.6226,
+      "n": 4081,
+      "genre_primary": 0.2608,
+      "desc_jaccard_full": 0.3453,
+      "desc_jaccard_sheet": 0.3143,
+      "genre_n": 3614,
+      "desc_n_full": 3722,
+      "desc_n_sheet": 3540,
+      "never": 0.0512,
+      "max_n10": 118
+     },
+     "mood": {
+      "mean_overlap": 3.443,
+      "unchanged": 0.0221,
+      "same_order": 0.0061,
+      "kept_le5": 0.7993,
+      "n": 4081,
+      "genre_primary": 0.1737,
+      "desc_jaccard_full": 0.3429,
+      "desc_jaccard_sheet": 0.3153,
+      "genre_n": 3614,
+      "desc_n_full": 3722,
+      "desc_n_sheet": 3540,
+      "never": 0.0649,
+      "max_n10": 110
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 6.259,
+    "unchanged": 0.0905,
+    "same_order": 0.0254,
+    "kept_le5": 0.3744,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.549,
+    "unchanged": 0.0003,
+    "same_order": 0.0,
+    "kept_le5": 0.9342,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.19,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     111,
+     174,
+     320,
+     545,
+     833,
+     928,
+     925,
+     172,
+     0,
+     0
+    ]
+   }
+  },
+  "T_legacy": {
+   "total_variance_raw": 10.3623,
+   "matched_factor": 1.1991,
+   "mean_kept_columns": 6.1,
+   "ties_at_10": 0.1529,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.941,
+      "unchanged": 0.9409,
+      "same_order": 0.7128,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2715,
+      "desc_jaccard_full": 0.2594,
+      "desc_jaccard_sheet": 0.219,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 5.213,
+      "unchanged": 0.0593,
+      "same_order": 0.0539,
+      "kept_le5": 0.5864,
+      "n": 4081,
+      "genre_primary": 0.2783,
+      "desc_jaccard_full": 0.3418,
+      "desc_jaccard_sheet": 0.3099,
+      "genre_n": 3614,
+      "desc_n_full": 3729,
+      "desc_n_sheet": 3540,
+      "never": 0.0436,
+      "max_n10": 117
+     },
+     "mood": {
+      "mean_overlap": 3.611,
+      "unchanged": 0.0551,
+      "same_order": 0.0539,
+      "kept_le5": 0.7682,
+      "n": 4081,
+      "genre_primary": 0.1466,
+      "desc_jaccard_full": 0.3353,
+      "desc_jaccard_sheet": 0.312,
+      "genre_n": 3614,
+      "desc_n_full": 3721,
+      "desc_n_sheet": 3540,
+      "never": 0.0676,
+      "max_n10": 94
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.935,
+      "unchanged": 0.9356,
+      "same_order": 0.6739,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2716,
+      "desc_jaccard_full": 0.2596,
+      "desc_jaccard_sheet": 0.2194,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 41
+     },
+     "balanced": {
+      "mean_overlap": 4.899,
+      "unchanged": 0.0238,
+      "same_order": 0.0061,
+      "kept_le5": 0.6261,
+      "n": 4081,
+      "genre_primary": 0.263,
+      "desc_jaccard_full": 0.3457,
+      "desc_jaccard_sheet": 0.3156,
+      "genre_n": 3614,
+      "desc_n_full": 3724,
+      "desc_n_sheet": 3540,
+      "never": 0.0512,
+      "max_n10": 118
+     },
+     "mood": {
+      "mean_overlap": 3.602,
+      "unchanged": 0.05,
+      "same_order": 0.0319,
+      "kept_le5": 0.7684,
+      "n": 4081,
+      "genre_primary": 0.1465,
+      "desc_jaccard_full": 0.3352,
+      "desc_jaccard_sheet": 0.3118,
+      "genre_n": 3614,
+      "desc_n_full": 3721,
+      "desc_n_sheet": 3540,
+      "never": 0.0676,
+      "max_n10": 94
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 6.98,
+    "unchanged": 0.2238,
+    "same_order": 0.2187,
+    "kept_le5": 0.2899,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.542,
+    "unchanged": 0.0016,
+    "same_order": 0.0016,
+    "kept_le5": 0.9199,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.19,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     111,
+     174,
+     320,
+     545,
+     833,
+     928,
+     925,
+     172,
+     0,
+     0
+    ]
+   }
+  },
+  "T_half": {
+   "total_variance_raw": 10.694,
+   "matched_factor": 1.1804,
+   "mean_kept_columns": 6.1,
+   "ties_at_10": 0.1725,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.934,
+      "unchanged": 0.9343,
+      "same_order": 0.6864,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2714,
+      "desc_jaccard_full": 0.2595,
+      "desc_jaccard_sheet": 0.2192,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 4.77,
+      "unchanged": 0.0091,
+      "same_order": 0.0027,
+      "kept_le5": 0.6489,
+      "n": 4081,
+      "genre_primary": 0.2829,
+      "desc_jaccard_full": 0.3373,
+      "desc_jaccard_sheet": 0.3106,
+      "genre_n": 3614,
+      "desc_n_full": 3734,
+      "desc_n_sheet": 3540,
+      "never": 0.0382,
+      "max_n10": 98
+     },
+     "mood": {
+      "mean_overlap": 3.297,
+      "unchanged": 0.0245,
+      "same_order": 0.0132,
+      "kept_le5": 0.8079,
+      "n": 4081,
+      "genre_primary": 0.1519,
+      "desc_jaccard_full": 0.3295,
+      "desc_jaccard_sheet": 0.3103,
+      "genre_n": 3614,
+      "desc_n_full": 3724,
+      "desc_n_sheet": 3540,
+      "never": 0.064,
+      "max_n10": 91
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.926,
+      "unchanged": 0.927,
+      "same_order": 0.6535,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2717,
+      "desc_jaccard_full": 0.2597,
+      "desc_jaccard_sheet": 0.2195,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 4.514,
+      "unchanged": 0.0074,
+      "same_order": 0.002,
+      "kept_le5": 0.689,
+      "n": 4081,
+      "genre_primary": 0.271,
+      "desc_jaccard_full": 0.3408,
+      "desc_jaccard_sheet": 0.3159,
+      "genre_n": 3614,
+      "desc_n_full": 3732,
+      "desc_n_sheet": 3540,
+      "never": 0.0417,
+      "max_n10": 96
+     },
+     "mood": {
+      "mean_overlap": 3.297,
+      "unchanged": 0.0245,
+      "same_order": 0.0132,
+      "kept_le5": 0.8079,
+      "n": 4081,
+      "genre_primary": 0.1519,
+      "desc_jaccard_full": 0.3295,
+      "desc_jaccard_sheet": 0.3103,
+      "genre_n": 3614,
+      "desc_n_full": 3724,
+      "desc_n_sheet": 3540,
+      "never": 0.064,
+      "max_n10": 91
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 6.274,
+    "unchanged": 0.1007,
+    "same_order": 0.0549,
+    "kept_le5": 0.3876,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.353,
+    "unchanged": 0.0003,
+    "same_order": 0.0,
+    "kept_le5": 0.9413,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.19,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     111,
+     174,
+     320,
+     545,
+     833,
+     928,
+     925,
+     172,
+     0,
+     0
+    ]
+   }
+  },
+  "T_linear": {
+   "total_variance_raw": 11.2641,
+   "matched_factor": 1.1501,
+   "mean_kept_columns": 6.1,
+   "ties_at_10": 0.3242,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.921,
+      "unchanged": 0.9213,
+      "same_order": 0.6378,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2715,
+      "desc_jaccard_full": 0.2594,
+      "desc_jaccard_sheet": 0.2191,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.773,
+      "unchanged": 0.0044,
+      "same_order": 0.0012,
+      "kept_le5": 0.8216,
+      "n": 4081,
+      "genre_primary": 0.2729,
+      "desc_jaccard_full": 0.3194,
+      "desc_jaccard_sheet": 0.296,
+      "genre_n": 3614,
+      "desc_n_full": 3735,
+      "desc_n_sheet": 3540,
+      "never": 0.0363,
+      "max_n10": 85
+     },
+     "mood": {
+      "mean_overlap": 2.267,
+      "unchanged": 0.013,
+      "same_order": 0.0091,
+      "kept_le5": 0.9086,
+      "n": 4081,
+      "genre_primary": 0.1397,
+      "desc_jaccard_full": 0.3025,
+      "desc_jaccard_sheet": 0.2852,
+      "genre_n": 3614,
+      "desc_n_full": 3719,
+      "desc_n_sheet": 3540,
+      "never": 0.0559,
+      "max_n10": 88
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.912,
+      "unchanged": 0.9125,
+      "same_order": 0.5991,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2717,
+      "desc_jaccard_full": 0.2596,
+      "desc_jaccard_sheet": 0.2195,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.535,
+      "unchanged": 0.0037,
+      "same_order": 0.0012,
+      "kept_le5": 0.8559,
+      "n": 4081,
+      "genre_primary": 0.2613,
+      "desc_jaccard_full": 0.3206,
+      "desc_jaccard_sheet": 0.2986,
+      "genre_n": 3614,
+      "desc_n_full": 3735,
+      "desc_n_sheet": 3540,
+      "never": 0.037,
+      "max_n10": 85
+     },
+     "mood": {
+      "mean_overlap": 2.267,
+      "unchanged": 0.013,
+      "same_order": 0.0091,
+      "kept_le5": 0.9086,
+      "n": 4081,
+      "genre_primary": 0.1397,
+      "desc_jaccard_full": 0.3025,
+      "desc_jaccard_sheet": 0.2852,
+      "genre_n": 3614,
+      "desc_n_full": 3719,
+      "desc_n_sheet": 3540,
+      "never": 0.0559,
+      "max_n10": 88
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 4.439,
+    "unchanged": 0.0539,
+    "same_order": 0.0376,
+    "kept_le5": 0.6734,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 1.578,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9832,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.19,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     111,
+     174,
+     320,
+     545,
+     833,
+     928,
+     925,
+     172,
+     0,
+     0
+    ]
+   }
+  },
+  "Tnv_equal": {
+   "total_variance_raw": 10.2644,
+   "matched_factor": 1.2048,
+   "mean_kept_columns": 5.81,
+   "ties_at_10": 0.9446,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.945,
+      "unchanged": 0.9454,
+      "same_order": 0.7219,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2714,
+      "desc_jaccard_full": 0.2594,
+      "desc_jaccard_sheet": 0.2191,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 43
+     },
+     "balanced": {
+      "mean_overlap": 5.378,
+      "unchanged": 0.0348,
+      "same_order": 0.0093,
+      "kept_le5": 0.541,
+      "n": 4081,
+      "genre_primary": 0.2752,
+      "desc_jaccard_full": 0.3451,
+      "desc_jaccard_sheet": 0.3136,
+      "genre_n": 3614,
+      "desc_n_full": 3730,
+      "desc_n_sheet": 3540,
+      "never": 0.0488,
+      "max_n10": 123
+     },
+     "mood": {
+      "mean_overlap": 3.475,
+      "unchanged": 0.0118,
+      "same_order": 0.0044,
+      "kept_le5": 0.8003,
+      "n": 4081,
+      "genre_primary": 0.175,
+      "desc_jaccard_full": 0.3493,
+      "desc_jaccard_sheet": 0.3269,
+      "genre_n": 3614,
+      "desc_n_full": 3721,
+      "desc_n_sheet": 3540,
+      "never": 0.0698,
+      "max_n10": 111
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.938,
+      "unchanged": 0.9385,
+      "same_order": 0.6812,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2719,
+      "desc_jaccard_full": 0.2597,
+      "desc_jaccard_sheet": 0.2195,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0118,
+      "max_n10": 41
+     },
+     "balanced": {
+      "mean_overlap": 5.08,
+      "unchanged": 0.0201,
+      "same_order": 0.0051,
+      "kept_le5": 0.5802,
+      "n": 4081,
+      "genre_primary": 0.2602,
+      "desc_jaccard_full": 0.3498,
+      "desc_jaccard_sheet": 0.3201,
+      "genre_n": 3614,
+      "desc_n_full": 3722,
+      "desc_n_sheet": 3540,
+      "never": 0.0532,
+      "max_n10": 121
+     },
+     "mood": {
+      "mean_overlap": 3.475,
+      "unchanged": 0.0118,
+      "same_order": 0.0044,
+      "kept_le5": 0.8003,
+      "n": 4081,
+      "genre_primary": 0.175,
+      "desc_jaccard_full": 0.3493,
+      "desc_jaccard_sheet": 0.3269,
+      "genre_n": 3614,
+      "desc_n_full": 3721,
+      "desc_n_sheet": 3540,
+      "never": 0.0698,
+      "max_n10": 111
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 5.707,
+    "unchanged": 0.0488,
+    "same_order": 0.0183,
+    "kept_le5": 0.4486,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.767,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9119,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.59,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     101,
+     156,
+     255,
+     385,
+     636,
+     881,
+     1107,
+     487,
+     0,
+     0
+    ]
+   }
+  },
+  "Tnv_legacy": {
+   "total_variance_raw": 10.3351,
+   "matched_factor": 1.2007,
+   "mean_kept_columns": 5.81,
+   "ties_at_10": 0.1757,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.946,
+      "unchanged": 0.9461,
+      "same_order": 0.7202,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2715,
+      "desc_jaccard_full": 0.2594,
+      "desc_jaccard_sheet": 0.2191,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 43
+     },
+     "balanced": {
+      "mean_overlap": 5.381,
+      "unchanged": 0.0448,
+      "same_order": 0.0333,
+      "kept_le5": 0.5418,
+      "n": 4081,
+      "genre_primary": 0.2772,
+      "desc_jaccard_full": 0.3458,
+      "desc_jaccard_sheet": 0.316,
+      "genre_n": 3614,
+      "desc_n_full": 3728,
+      "desc_n_sheet": 3540,
+      "never": 0.047,
+      "max_n10": 117
+     },
+     "mood": {
+      "mean_overlap": 3.559,
+      "unchanged": 0.0274,
+      "same_order": 0.0233,
+      "kept_le5": 0.7834,
+      "n": 4081,
+      "genre_primary": 0.1477,
+      "desc_jaccard_full": 0.3412,
+      "desc_jaccard_sheet": 0.325,
+      "genre_n": 3614,
+      "desc_n_full": 3723,
+      "desc_n_sheet": 3540,
+      "never": 0.0686,
+      "max_n10": 99
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.938,
+      "unchanged": 0.938,
+      "same_order": 0.68,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2719,
+      "desc_jaccard_full": 0.2598,
+      "desc_jaccard_sheet": 0.2195,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 41
+     },
+     "balanced": {
+      "mean_overlap": 5.061,
+      "unchanged": 0.0201,
+      "same_order": 0.0054,
+      "kept_le5": 0.5864,
+      "n": 4081,
+      "genre_primary": 0.2627,
+      "desc_jaccard_full": 0.3504,
+      "desc_jaccard_sheet": 0.3224,
+      "genre_n": 3614,
+      "desc_n_full": 3725,
+      "desc_n_sheet": 3540,
+      "never": 0.0497,
+      "max_n10": 120
+     },
+     "mood": {
+      "mean_overlap": 3.556,
+      "unchanged": 0.0255,
+      "same_order": 0.0149,
+      "kept_le5": 0.7829,
+      "n": 4081,
+      "genre_primary": 0.1474,
+      "desc_jaccard_full": 0.341,
+      "desc_jaccard_sheet": 0.3249,
+      "genre_n": 3614,
+      "desc_n_full": 3723,
+      "desc_n_sheet": 3540,
+      "never": 0.0689,
+      "max_n10": 99
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 6.038,
+    "unchanged": 0.1139,
+    "same_order": 0.0966,
+    "kept_le5": 0.4181,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.772,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.8993,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.59,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     101,
+     156,
+     255,
+     385,
+     636,
+     881,
+     1107,
+     487,
+     0,
+     0
+    ]
+   }
+  },
+  "Tnv_half": {
+   "total_variance_raw": 10.6917,
+   "matched_factor": 1.1805,
+   "mean_kept_columns": 5.81,
+   "ties_at_10": 0.2073,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.938,
+      "unchanged": 0.938,
+      "same_order": 0.6993,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2715,
+      "desc_jaccard_full": 0.2595,
+      "desc_jaccard_sheet": 0.2192,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 43
+     },
+     "balanced": {
+      "mean_overlap": 4.93,
+      "unchanged": 0.0086,
+      "same_order": 0.0027,
+      "kept_le5": 0.6141,
+      "n": 4081,
+      "genre_primary": 0.2814,
+      "desc_jaccard_full": 0.3424,
+      "desc_jaccard_sheet": 0.3188,
+      "genre_n": 3614,
+      "desc_n_full": 3735,
+      "desc_n_sheet": 3540,
+      "never": 0.0424,
+      "max_n10": 118
+     },
+     "mood": {
+      "mean_overlap": 3.29,
+      "unchanged": 0.0164,
+      "same_order": 0.0074,
+      "kept_le5": 0.8216,
+      "n": 4081,
+      "genre_primary": 0.1531,
+      "desc_jaccard_full": 0.3356,
+      "desc_jaccard_sheet": 0.3252,
+      "genre_n": 3614,
+      "desc_n_full": 3728,
+      "desc_n_sheet": 3540,
+      "never": 0.0622,
+      "max_n10": 94
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.928,
+      "unchanged": 0.9284,
+      "same_order": 0.6611,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2718,
+      "desc_jaccard_full": 0.2598,
+      "desc_jaccard_sheet": 0.2196,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 41
+     },
+     "balanced": {
+      "mean_overlap": 4.644,
+      "unchanged": 0.0074,
+      "same_order": 0.002,
+      "kept_le5": 0.6609,
+      "n": 4081,
+      "genre_primary": 0.2686,
+      "desc_jaccard_full": 0.3461,
+      "desc_jaccard_sheet": 0.325,
+      "genre_n": 3614,
+      "desc_n_full": 3732,
+      "desc_n_sheet": 3540,
+      "never": 0.0458,
+      "max_n10": 109
+     },
+     "mood": {
+      "mean_overlap": 3.29,
+      "unchanged": 0.0164,
+      "same_order": 0.0074,
+      "kept_le5": 0.8216,
+      "n": 4081,
+      "genre_primary": 0.1531,
+      "desc_jaccard_full": 0.3356,
+      "desc_jaccard_sheet": 0.3252,
+      "genre_n": 3614,
+      "desc_n_full": 3728,
+      "desc_n_sheet": 3540,
+      "never": 0.0622,
+      "max_n10": 94
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 5.56,
+    "unchanged": 0.0682,
+    "same_order": 0.0305,
+    "kept_le5": 0.4975,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.569,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9245,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.59,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     101,
+     156,
+     255,
+     385,
+     636,
+     881,
+     1107,
+     487,
+     0,
+     0
+    ]
+   }
+  },
+  "Tnv_linear": {
+   "total_variance_raw": 11.2339,
+   "matched_factor": 1.1517,
+   "mean_kept_columns": 5.81,
+   "ties_at_10": 0.3359,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.924,
+      "unchanged": 0.9243,
+      "same_order": 0.644,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2714,
+      "desc_jaccard_full": 0.2595,
+      "desc_jaccard_sheet": 0.2193,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.896,
+      "unchanged": 0.0049,
+      "same_order": 0.0015,
+      "kept_le5": 0.8152,
+      "n": 4081,
+      "genre_primary": 0.2708,
+      "desc_jaccard_full": 0.3241,
+      "desc_jaccard_sheet": 0.3054,
+      "genre_n": 3614,
+      "desc_n_full": 3734,
+      "desc_n_sheet": 3540,
+      "never": 0.0397,
+      "max_n10": 99
+     },
+     "mood": {
+      "mean_overlap": 2.297,
+      "unchanged": 0.0091,
+      "same_order": 0.0051,
+      "kept_le5": 0.9184,
+      "n": 4081,
+      "genre_primary": 0.1437,
+      "desc_jaccard_full": 0.3091,
+      "desc_jaccard_sheet": 0.3012,
+      "genre_n": 3614,
+      "desc_n_full": 3715,
+      "desc_n_sheet": 3540,
+      "never": 0.0568,
+      "max_n10": 80
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.907,
+      "unchanged": 0.9081,
+      "same_order": 0.5974,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2717,
+      "desc_jaccard_full": 0.2597,
+      "desc_jaccard_sheet": 0.2195,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.659,
+      "unchanged": 0.0039,
+      "same_order": 0.0012,
+      "kept_le5": 0.8471,
+      "n": 4081,
+      "genre_primary": 0.2606,
+      "desc_jaccard_full": 0.3256,
+      "desc_jaccard_sheet": 0.3088,
+      "genre_n": 3614,
+      "desc_n_full": 3735,
+      "desc_n_sheet": 3540,
+      "never": 0.0397,
+      "max_n10": 99
+     },
+     "mood": {
+      "mean_overlap": 2.297,
+      "unchanged": 0.0091,
+      "same_order": 0.0051,
+      "kept_le5": 0.9184,
+      "n": 4081,
+      "genre_primary": 0.1437,
+      "desc_jaccard_full": 0.3091,
+      "desc_jaccard_sheet": 0.3012,
+      "genre_n": 3614,
+      "desc_n_full": 3715,
+      "desc_n_sheet": 3540,
+      "never": 0.0568,
+      "max_n10": 80
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 4.14,
+    "unchanged": 0.0376,
+    "same_order": 0.0214,
+    "kept_le5": 0.7172,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 1.713,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9822,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 112,
+    "mean_shown": 5.59,
+    "albums_showing_none": 73,
+    "shown_hist": [
+     73,
+     101,
+     156,
+     255,
+     385,
+     636,
+     881,
+     1107,
+     487,
+     0,
+     0
+    ]
+   }
+  },
+  "S_equal": {
+   "total_variance_raw": 10.8319,
+   "matched_factor": 1.1728,
+   "mean_kept_columns": 6.2,
+   "ties_at_10": 0.9311,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.929,
+      "unchanged": 0.9297,
+      "same_order": 0.6694,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2719,
+      "desc_jaccard_full": 0.2593,
+      "desc_jaccard_sheet": 0.2195,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.958,
+      "unchanged": 0.0012,
+      "same_order": 0.0,
+      "kept_le5": 0.7969,
+      "n": 4081,
+      "genre_primary": 0.2882,
+      "desc_jaccard_full": 0.3321,
+      "desc_jaccard_sheet": 0.3874,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.036,
+      "max_n10": 115
+     },
+     "mood": {
+      "mean_overlap": 2.044,
+      "unchanged": 0.0,
+      "same_order": 0.0,
+      "kept_le5": 0.9772,
+      "n": 4081,
+      "genre_primary": 0.1955,
+      "desc_jaccard_full": 0.3301,
+      "desc_jaccard_sheet": 0.4307,
+      "genre_n": 3608,
+      "desc_n_full": 3735,
+      "desc_n_sheet": 3532,
+      "never": 0.0617,
+      "max_n10": 120
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.922,
+      "unchanged": 0.9226,
+      "same_order": 0.6369,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2723,
+      "desc_jaccard_full": 0.2596,
+      "desc_jaccard_sheet": 0.22,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 41
+     },
+     "balanced": {
+      "mean_overlap": 3.705,
+      "unchanged": 0.0015,
+      "same_order": 0.0,
+      "kept_le5": 0.842,
+      "n": 4081,
+      "genre_primary": 0.277,
+      "desc_jaccard_full": 0.3343,
+      "desc_jaccard_sheet": 0.3996,
+      "genre_n": 3614,
+      "desc_n_full": 3739,
+      "desc_n_sheet": 3539,
+      "never": 0.0382,
+      "max_n10": 113
+     },
+     "mood": {
+      "mean_overlap": 2.044,
+      "unchanged": 0.0,
+      "same_order": 0.0,
+      "kept_le5": 0.9772,
+      "n": 4081,
+      "genre_primary": 0.1955,
+      "desc_jaccard_full": 0.3301,
+      "desc_jaccard_sheet": 0.4307,
+      "genre_n": 3608,
+      "desc_n_full": 3735,
+      "desc_n_sheet": 3532,
+      "never": 0.0617,
+      "max_n10": 120
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 1.881,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9756,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.096,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9777,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 109,
+    "mean_shown": 5.98,
+    "albums_showing_none": 22,
+    "shown_hist": [
+     22,
+     54,
+     79,
+     192,
+     335,
+     590,
+     917,
+     1321,
+     571,
+     0,
+     0
+    ]
+   }
+  },
+  "S_legacy": {
+   "total_variance_raw": 10.8789,
+   "matched_factor": 1.1703,
+   "mean_kept_columns": 6.2,
+   "ties_at_10": 0.0806,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.929,
+      "unchanged": 0.9299,
+      "same_order": 0.669,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2718,
+      "desc_jaccard_full": 0.2594,
+      "desc_jaccard_sheet": 0.2195,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.976,
+      "unchanged": 0.0017,
+      "same_order": 0.0,
+      "kept_le5": 0.7939,
+      "n": 4081,
+      "genre_primary": 0.2914,
+      "desc_jaccard_full": 0.3326,
+      "desc_jaccard_sheet": 0.3875,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0321,
+      "max_n10": 109
+     },
+     "mood": {
+      "mean_overlap": 2.03,
+      "unchanged": 0.0,
+      "same_order": 0.0,
+      "kept_le5": 0.9782,
+      "n": 4081,
+      "genre_primary": 0.1676,
+      "desc_jaccard_full": 0.3249,
+      "desc_jaccard_sheet": 0.4268,
+      "genre_n": 3608,
+      "desc_n_full": 3736,
+      "desc_n_sheet": 3532,
+      "never": 0.0588,
+      "max_n10": 114
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.921,
+      "unchanged": 0.9213,
+      "same_order": 0.6356,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2723,
+      "desc_jaccard_full": 0.2596,
+      "desc_jaccard_sheet": 0.22,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.738,
+      "unchanged": 0.0015,
+      "same_order": 0.0,
+      "kept_le5": 0.8344,
+      "n": 4081,
+      "genre_primary": 0.28,
+      "desc_jaccard_full": 0.3352,
+      "desc_jaccard_sheet": 0.3995,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0365,
+      "max_n10": 108
+     },
+     "mood": {
+      "mean_overlap": 2.029,
+      "unchanged": 0.0,
+      "same_order": 0.0,
+      "kept_le5": 0.9782,
+      "n": 4081,
+      "genre_primary": 0.1671,
+      "desc_jaccard_full": 0.3249,
+      "desc_jaccard_sheet": 0.4267,
+      "genre_n": 3608,
+      "desc_n_full": 3736,
+      "desc_n_sheet": 3532,
+      "never": 0.0588,
+      "max_n10": 115
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 1.898,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9766,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.072,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9787,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 109,
+    "mean_shown": 5.98,
+    "albums_showing_none": 22,
+    "shown_hist": [
+     22,
+     54,
+     79,
+     192,
+     335,
+     590,
+     917,
+     1321,
+     571,
+     0,
+     0
+    ]
+   }
+  },
+  "S_half": {
+   "total_variance_raw": 11.14,
+   "matched_factor": 1.1565,
+   "mean_kept_columns": 6.2,
+   "ties_at_10": 0.1296,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.926,
+      "unchanged": 0.926,
+      "same_order": 0.6611,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2718,
+      "desc_jaccard_full": 0.2595,
+      "desc_jaccard_sheet": 0.2196,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 43
+     },
+     "balanced": {
+      "mean_overlap": 3.841,
+      "unchanged": 0.0015,
+      "same_order": 0.0,
+      "kept_le5": 0.8219,
+      "n": 4081,
+      "genre_primary": 0.298,
+      "desc_jaccard_full": 0.332,
+      "desc_jaccard_sheet": 0.3779,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0331,
+      "max_n10": 85
+     },
+     "mood": {
+      "mean_overlap": 1.983,
+      "unchanged": 0.0,
+      "same_order": 0.0,
+      "kept_le5": 0.9787,
+      "n": 4081,
+      "genre_primary": 0.1724,
+      "desc_jaccard_full": 0.3239,
+      "desc_jaccard_sheet": 0.4135,
+      "genre_n": 3606,
+      "desc_n_full": 3737,
+      "desc_n_sheet": 3530,
+      "never": 0.0549,
+      "max_n10": 110
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.917,
+      "unchanged": 0.9177,
+      "same_order": 0.628,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2721,
+      "desc_jaccard_full": 0.2596,
+      "desc_jaccard_sheet": 0.2199,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0113,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.637,
+      "unchanged": 0.0015,
+      "same_order": 0.0,
+      "kept_le5": 0.8505,
+      "n": 4081,
+      "genre_primary": 0.2883,
+      "desc_jaccard_full": 0.3346,
+      "desc_jaccard_sheet": 0.388,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0355,
+      "max_n10": 89
+     },
+     "mood": {
+      "mean_overlap": 1.983,
+      "unchanged": 0.0,
+      "same_order": 0.0,
+      "kept_le5": 0.9787,
+      "n": 4081,
+      "genre_primary": 0.1724,
+      "desc_jaccard_full": 0.3239,
+      "desc_jaccard_sheet": 0.4135,
+      "genre_n": 3606,
+      "desc_n_full": 3737,
+      "desc_n_sheet": 3530,
+      "never": 0.0549,
+      "max_n10": 110
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 1.909,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9736,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 2.006,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9803,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 109,
+    "mean_shown": 5.98,
+    "albums_showing_none": 22,
+    "shown_hist": [
+     22,
+     54,
+     79,
+     192,
+     335,
+     590,
+     917,
+     1321,
+     571,
+     0,
+     0
+    ]
+   }
+  },
+  "S_linear": {
+   "total_variance_raw": 11.598,
+   "matched_factor": 1.1334,
+   "mean_kept_columns": 6.2,
+   "ties_at_10": 0.2676,
+   "scales": {
+    "raw": {
+     "sonic": {
+      "mean_overlap": 9.917,
+      "unchanged": 0.9179,
+      "same_order": 0.6244,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2718,
+      "desc_jaccard_full": 0.2594,
+      "desc_jaccard_sheet": 0.2195,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 43
+     },
+     "balanced": {
+      "mean_overlap": 3.28,
+      "unchanged": 0.0012,
+      "same_order": 0.0,
+      "kept_le5": 0.8978,
+      "n": 4081,
+      "genre_primary": 0.2877,
+      "desc_jaccard_full": 0.3196,
+      "desc_jaccard_sheet": 0.3428,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0304,
+      "max_n10": 81
+     },
+     "mood": {
+      "mean_overlap": 1.525,
+      "unchanged": 0.0,
+      "same_order": 0.0,
+      "kept_le5": 0.9902,
+      "n": 4081,
+      "genre_primary": 0.1625,
+      "desc_jaccard_full": 0.3043,
+      "desc_jaccard_sheet": 0.3547,
+      "genre_n": 3605,
+      "desc_n_full": 3737,
+      "desc_n_sheet": 3528,
+      "never": 0.0493,
+      "max_n10": 98
+     }
+    },
+    "matched": {
+     "sonic": {
+      "mean_overlap": 9.908,
+      "unchanged": 0.9088,
+      "same_order": 0.592,
+      "kept_le5": 0.0,
+      "n": 4081,
+      "genre_primary": 0.2721,
+      "desc_jaccard_full": 0.2596,
+      "desc_jaccard_sheet": 0.2198,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.0115,
+      "max_n10": 42
+     },
+     "balanced": {
+      "mean_overlap": 3.091,
+      "unchanged": 0.0012,
+      "same_order": 0.0,
+      "kept_le5": 0.9172,
+      "n": 4081,
+      "genre_primary": 0.2784,
+      "desc_jaccard_full": 0.321,
+      "desc_jaccard_sheet": 0.3478,
+      "genre_n": 3614,
+      "desc_n_full": 3740,
+      "desc_n_sheet": 3540,
+      "never": 0.035,
+      "max_n10": 88
+     },
+     "mood": {
+      "mean_overlap": 1.525,
+      "unchanged": 0.0,
+      "same_order": 0.0,
+      "kept_le5": 0.9902,
+      "n": 4081,
+      "genre_primary": 0.1625,
+      "desc_jaccard_full": 0.3043,
+      "desc_jaccard_sheet": 0.3547,
+      "genre_n": 3605,
+      "desc_n_full": 3737,
+      "desc_n_sheet": 3528,
+      "never": 0.0493,
+      "max_n10": 98
+     }
+    }
+   },
+   "mood_raw_albums_le8": {
+    "mean_overlap": 1.663,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9827,
+    "n": 983
+   },
+   "mood_raw_albums_gt8": {
+    "mean_overlap": 1.481,
+    "unchanged": 0.0,
+    "same_order": 0.0,
+    "kept_le5": 0.9926,
+    "n": 3098
+   },
+   "display": {
+    "vocab_words": 109,
+    "mean_shown": 5.98,
+    "albums_showing_none": 22,
+    "shown_hist": [
+     22,
+     54,
+     79,
+     192,
+     335,
+     590,
+     917,
+     1321,
+     571,
+     0,
+     0
+    ]
+   }
+  }
+ },
+ "display_today": {
+  "vocab_words": 114,
+  "mean_shown": 7.75,
+  "albums_showing_none": 73,
+  "shown_hist": [
+   73,
+   92,
+   127,
+   162,
+   187,
+   234,
+   293,
+   337,
+   353,
+   311,
+   1912
+  ]
+ },
+ "equal_vs_rank": {
+  "T_legacy": {
+   "sonic": {
+    "mean_overlap": 9.996,
+    "unchanged": 0.9956,
+    "same_order": 0.975,
+    "kept_le5": 0.0,
+    "n": 4081
+   },
+   "balanced": {
+    "mean_overlap": 9.471,
+    "unchanged": 0.5192,
+    "same_order": 0.0613,
+    "kept_le5": 0.0,
+    "n": 4081
+   },
+   "mood": {
+    "mean_overlap": 7.504,
+    "unchanged": 0.1073,
+    "same_order": 0.0064,
+    "kept_le5": 0.1174,
+    "n": 4081
+   }
+  },
+  "T_half": {
+   "sonic": {
+    "mean_overlap": 9.975,
+    "unchanged": 0.9748,
+    "same_order": 0.866,
+    "kept_le5": 0.0,
+    "n": 4081
+   },
+   "balanced": {
+    "mean_overlap": 7.452,
+    "unchanged": 0.0216,
+    "same_order": 0.0017,
+    "kept_le5": 0.0573,
+    "n": 4081
+   },
+   "mood": {
+    "mean_overlap": 6.019,
+    "unchanged": 0.0145,
+    "same_order": 0.0056,
+    "kept_le5": 0.3663,
+    "n": 4081
+   }
+  },
+  "T_linear": {
+   "sonic": {
+    "mean_overlap": 9.949,
+    "unchanged": 0.9493,
+    "same_order": 0.7461,
+    "kept_le5": 0.0,
+    "n": 4081
+   },
+   "balanced": {
+    "mean_overlap": 5.075,
+    "unchanged": 0.0047,
+    "same_order": 0.001,
+    "kept_le5": 0.6052,
+    "n": 4081
+   },
+   "mood": {
+    "mean_overlap": 3.229,
+    "unchanged": 0.0091,
+    "same_order": 0.0054,
+    "kept_le5": 0.8939,
+    "n": 4081
+   }
+  },
+  "S_legacy": {
+   "sonic": {
+    "mean_overlap": 9.995,
+    "unchanged": 0.9951,
+    "same_order": 0.9753,
+    "kept_le5": 0.0,
+    "n": 4081
+   },
+   "balanced": {
+    "mean_overlap": 9.452,
+    "unchanged": 0.5085,
+    "same_order": 0.0407,
+    "kept_le5": 0.0,
+    "n": 4081
+   },
+   "mood": {
+    "mean_overlap": 7.667,
+    "unchanged": 0.1068,
+    "same_order": 0.0093,
+    "kept_le5": 0.088,
+    "n": 4081
+   }
+  },
+  "S_half": {
+   "sonic": {
+    "mean_overlap": 9.976,
+    "unchanged": 0.9762,
+    "same_order": 0.8755,
+    "kept_le5": 0.0,
+    "n": 4081
+   },
+   "balanced": {
+    "mean_overlap": 7.414,
+    "unchanged": 0.0198,
+    "same_order": 0.0002,
+    "kept_le5": 0.0637,
+    "n": 4081
+   },
+   "mood": {
+    "mean_overlap": 6.101,
+    "unchanged": 0.013,
+    "same_order": 0.0074,
+    "kept_le5": 0.334,
+    "n": 4081
+   }
+  },
+  "S_linear": {
+   "sonic": {
+    "mean_overlap": 9.954,
+    "unchanged": 0.9544,
+    "same_order": 0.7569,
+    "kept_le5": 0.0,
+    "n": 4081
+   },
+   "balanced": {
+    "mean_overlap": 5.0,
+    "unchanged": 0.0015,
+    "same_order": 0.0,
+    "kept_le5": 0.6253,
+    "n": 4081
+   },
+   "mood": {
+    "mean_overlap": 3.155,
+    "unchanged": 0.0093,
+    "same_order": 0.0066,
+    "kept_le5": 0.9177,
+    "n": 4081
+   }
+  }
+ },
+ "two_readings": {
+  "equal": {
+   "sonic": {
+    "mean_overlap": 9.948,
+    "unchanged": 0.9482,
+    "same_order": 0.7645,
+    "kept_le5": 0.0,
+    "n": 3613
+   },
+   "balanced": {
+    "mean_overlap": 5.022,
+    "unchanged": 0.0047,
+    "same_order": 0.0003,
+    "kept_le5": 0.5644,
+    "n": 3613
+   },
+   "mood": {
+    "mean_overlap": 3.452,
+    "unchanged": 0.0006,
+    "same_order": 0.0003,
+    "kept_le5": 0.8029,
+    "n": 3613
+   }
+  },
+  "legacy": {
+   "sonic": {
+    "mean_overlap": 9.951,
+    "unchanged": 0.9518,
+    "same_order": 0.7703,
+    "kept_le5": 0.0,
+    "n": 3613
+   },
+   "balanced": {
+    "mean_overlap": 5.133,
+    "unchanged": 0.0047,
+    "same_order": 0.0,
+    "kept_le5": 0.54,
+    "n": 3613
+   },
+   "mood": {
+    "mean_overlap": 3.528,
+    "unchanged": 0.0003,
+    "same_order": 0.0,
+    "kept_le5": 0.8079,
+    "n": 3613
+   }
+  },
+  "half": {
+   "sonic": {
+    "mean_overlap": 9.952,
+    "unchanged": 0.9529,
+    "same_order": 0.7772,
+    "kept_le5": 0.0,
+    "n": 3613
+   },
+   "balanced": {
+    "mean_overlap": 5.501,
+    "unchanged": 0.0053,
+    "same_order": 0.0,
+    "kept_le5": 0.45,
+    "n": 3613
+   },
+   "mood": {
+    "mean_overlap": 3.834,
+    "unchanged": 0.0003,
+    "same_order": 0.0,
+    "kept_le5": 0.7617,
+    "n": 3613
+   }
+  },
+  "linear": {
+   "sonic": {
+    "mean_overlap": 9.952,
+    "unchanged": 0.9518,
+    "same_order": 0.7517,
+    "kept_le5": 0.0,
+    "n": 3613
+   },
+   "balanced": {
+    "mean_overlap": 5.359,
+    "unchanged": 0.0044,
+    "same_order": 0.0,
+    "kept_le5": 0.4857,
+    "n": 3613
+   },
+   "mood": {
+    "mean_overlap": 3.707,
+    "unchanged": 0.0003,
+    "same_order": 0.0,
+    "kept_le5": 0.7791,
+    "n": 3613
+   }
+  }
+ },
+ "paired": {
+  "S_half minus S_equal": {
+   "balanced": {
+    "genre_primary": {
+     "diff": 0.0098,
+     "se": 0.0016,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": -0.0001,
+     "se": 0.0004,
+     "n": 3740
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.0095,
+     "se": 0.0004,
+     "n": 3540
+    }
+   },
+   "mood": {
+    "genre_primary": {
+     "diff": -0.0231,
+     "se": 0.0019,
+     "n": 3605
+    },
+    "desc_jaccard_full": {
+     "diff": -0.006,
+     "se": 0.0006,
+     "n": 3734
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.0172,
+     "se": 0.0006,
+     "n": 3528
+    }
+   }
+  },
+  "S_legacy minus S_equal": {
+   "balanced": {
+    "genre_primary": {
+     "diff": 0.0032,
+     "se": 0.0007,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": 0.0005,
+     "se": 0.0002,
+     "n": 3740
+    },
+    "desc_jaccard_sheet": {
+     "diff": 0.0001,
+     "se": 0.0002,
+     "n": 3540
+    }
+   },
+   "mood": {
+    "genre_primary": {
+     "diff": -0.0279,
+     "se": 0.0014,
+     "n": 3607
+    },
+    "desc_jaccard_full": {
+     "diff": -0.0051,
+     "se": 0.0005,
+     "n": 3734
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.0038,
+     "se": 0.0004,
+     "n": 3530
+    }
+   }
+  },
+  "S_linear minus S_equal": {
+   "balanced": {
+    "genre_primary": {
+     "diff": -0.0005,
+     "se": 0.0024,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": -0.0125,
+     "se": 0.0006,
+     "n": 3740
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.0446,
+     "se": 0.0007,
+     "n": 3540
+    }
+   },
+   "mood": {
+    "genre_primary": {
+     "diff": -0.033,
+     "se": 0.0027,
+     "n": 3603
+    },
+    "desc_jaccard_full": {
+     "diff": -0.0256,
+     "se": 0.0009,
+     "n": 3734
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.0761,
+     "se": 0.001,
+     "n": 3525
+    }
+   }
+  },
+  "T_half minus T_equal": {
+   "balanced": {
+    "genre_primary": {
+     "diff": 0.0072,
+     "se": 0.0016,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": -0.0039,
+     "se": 0.0005,
+     "n": 3726
+    },
+    "desc_jaccard_sheet": {
+     "diff": 0.0022,
+     "se": 0.0005,
+     "n": 3540
+    }
+   },
+   "mood": {
+    "genre_primary": {
+     "diff": -0.0218,
+     "se": 0.0018,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": -0.0128,
+     "se": 0.0007,
+     "n": 3711
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.005,
+     "se": 0.0007,
+     "n": 3540
+    }
+   }
+  },
+  "T_legacy minus T_equal": {
+   "balanced": {
+    "genre_primary": {
+     "diff": 0.0026,
+     "se": 0.0007,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": 0.0005,
+     "se": 0.0002,
+     "n": 3728
+    },
+    "desc_jaccard_sheet": {
+     "diff": 0.0015,
+     "se": 0.0002,
+     "n": 3540
+    }
+   },
+   "mood": {
+    "genre_primary": {
+     "diff": -0.0271,
+     "se": 0.0014,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": -0.0074,
+     "se": 0.0005,
+     "n": 3713
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.0033,
+     "se": 0.0005,
+     "n": 3540
+    }
+   }
+  },
+  "T_linear minus T_equal": {
+   "balanced": {
+    "genre_primary": {
+     "diff": -0.0028,
+     "se": 0.0023,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": -0.0217,
+     "se": 0.0007,
+     "n": 3725
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.0124,
+     "se": 0.0008,
+     "n": 3540
+    }
+   },
+   "mood": {
+    "genre_primary": {
+     "diff": -0.034,
+     "se": 0.0024,
+     "n": 3614
+    },
+    "desc_jaccard_full": {
+     "diff": -0.04,
+     "se": 0.0009,
+     "n": 3703
+    },
+    "desc_jaccard_sheet": {
+     "diff": -0.0301,
+     "se": 0.0011,
+     "n": 3540
+    }
+   }
+  }
+ },
+ "two_readings_lists": {
+  "jaccard_first8": 0.73,
+  "same_set": 0.2336,
+  "same_order": 0.0127
+ },
+ "examples": [
+  {
+   "album": "OK Computer (Radiohead)",
+   "table_first8": [
+    "melancholic",
+    "anxious",
+    "futuristic",
+    "male vocals",
+    "existential",
+    "alienation",
+    "atmospheric",
+    "lonely"
+   ],
+   "table_all": 19,
+   "sheet": [
+    "melancholic",
+    "anxious",
+    "alienation",
+    "futuristic",
+    "existential",
+    "atmospheric",
+    "lonely",
+    "cold"
+   ],
+   "today": [
+    "Low (David Bowie)",
+    "Night on the Sun (Modest Mouse)",
+    "Judgement (Anathema)",
+    "Me Against the World (2Pac)",
+    "Station to Station (David Bowie)",
+    "Young Liars (TV on the Radio)",
+    "Fear of a Blank Planet (Porcupine Tree)",
+    "The Moon & Antarctica (Modest Mouse)",
+    "Blues From Laurel Canyon (John Mayall)",
+    "The Ideal Crash (dEUS)"
+   ],
+   "T_equal": [
+    "Low (David Bowie)",
+    "Without You I'm Nothing (Placebo)",
+    "The Moon & Antarctica (Modest Mouse)",
+    "Blues From Laurel Canyon (John Mayall)",
+    "Behaviour (Pet Shop Boys)",
+    "The Bends (Radiohead)",
+    "Field Songs (Mark Lanegan)",
+    "Nervous Young Man (Car Seat Headrest)",
+    "How to Leave Town (Car Seat Headrest)",
+    "Night on the Sun (Modest Mouse)"
+   ],
+   "T_equal_kept": 4,
+   "T_half": [
+    "White Pony (Deftones)",
+    "Low (David Bowie)",
+    "Fear of a Blank Planet (Porcupine Tree)",
+    "Actos inexplicables (Nacho Vegas)",
+    "Bubblegum (Mark Lanegan Band)",
+    "Transcendental Blues (Steve Earle)",
+    "El Corazón (Steve Earle)",
+    "Behaviour (Pet Shop Boys)",
+    "Without You I'm Nothing (Placebo)",
+    "Time Out of Mind (Bob Dylan)"
+   ],
+   "T_half_kept": 2,
+   "T_linear": [
+    "Actos inexplicables (Nacho Vegas)",
+    "Bubblegum (Mark Lanegan Band)",
+    "Transcendental Blues (Steve Earle)",
+    "El Corazón (Steve Earle)",
+    "City of Caterpillar (City of Caterpillar)",
+    "White Pony (Deftones)",
+    "The Silent Corner and the Empty Stage (Peter Hammill)",
+    "Time of the Last Persecution (Bill Fay)",
+    "Brilliant Trees (David Sylvian)",
+    "Kid A (Radiohead)"
+   ],
+   "T_linear_kept": 0,
+   "S_equal": [
+    "The Moon & Antarctica (Modest Mouse)",
+    "Kid A (Radiohead)",
+    "Night on the Sun (Modest Mouse)",
+    "Without You I'm Nothing (Placebo)",
+    "Is This Desire? (PJ Harvey)",
+    "Amnesiac (Radiohead)",
+    "The Sophtware Slump (Grandaddy)",
+    "Low (David Bowie)",
+    "Meat Is Murder (The Smiths)",
+    "The Pleasure Principle (Gary Numan)"
+   ],
+   "S_equal_kept": 3,
+   "S_linear": [
+    "Kid A (Radiohead)",
+    "Fear of a Blank Planet (Porcupine Tree)",
+    "Actos inexplicables (Nacho Vegas)",
+    "Without You I'm Nothing (Placebo)",
+    "The Moon & Antarctica (Modest Mouse)",
+    "Puberty 2 (Mitski)",
+    "This Is a Long Drive for Someone With Nothing to Think About (Modest Mouse)",
+    "Meat Is Murder (The Smiths)",
+    "Amnesiac (Radiohead)",
+    "Whatever and Ever Amen (Ben Folds Five)"
+   ],
+   "S_linear_kept": 2
+  },
+  {
+   "album": "To Pimp a Butterfly (Kendrick Lamar)",
+   "table_first8": [
+    "political",
+    "conscious",
+    "poetic",
+    "concept album",
+    "protest",
+    "introspective",
+    "urban",
+    "male vocals"
+   ],
+   "table_all": 21,
+   "sheet": [
+    "political",
+    "conscious",
+    "concept album",
+    "poetic",
+    "introspective",
+    "urban",
+    "protest",
+    "eclectic"
+   ],
+   "today": [
+    "Damn. (Kendrick Lamar)",
+    "Section.80 (Kendrick Lamar)",
+    "Black on Both Sides (Mos Def)",
+    "Curtis / Live! (Curtis Mayfield)",
+    "Lupe Fiasco's Food & Liquor (Lupe Fiasco)",
+    "In Camera (Peter Hammill)",
+    "good kid, m.A.A.d city (Kendrick Lamar)",
+    "Animals (Pink Floyd)",
+    "All the World's a Stage (Rush)",
+    "Epica Etica Etnica Pathos (CCCP Fedeli alla Linea)"
+   ],
+   "T_equal": [
+    "good kid, m.A.A.d city (Kendrick Lamar)",
+    "Rap é compromisso (Sabotage)",
+    "Sobrevivendo no inferno (Racionais MC's)",
+    "Manger on McNichols (Boldy James & Sterling Toles)",
+    "On Top of the World (Eightball & MJG)",
+    "The Album of the Soundtrack of the Trailer of the Film of Monty Python and the Holy Grail (Monty Python)",
+    "New York (Lou Reed)",
+    "The Minstrel Show (Little Brother)",
+    "Temps mort (Booba)",
+    "Hell Hath No Fury (Clipse)"
+   ],
+   "T_equal_kept": 1,
+   "T_half": [
+    "The Album of the Soundtrack of the Trailer of the Film of Monty Python and the Holy Grail (Monty Python)",
+    "good kid, m.A.A.d city (Kendrick Lamar)",
+    "Good Old Boys (Randy Newman)",
+    "On Top of the World (Eightball & MJG)",
+    "Animals (Pink Floyd)",
+    "Manger on McNichols (Boldy James & Sterling Toles)",
+    "Sobrevivendo no inferno (Racionais MC's)",
+    "New York (Lou Reed)",
+    "Doggystyle (Snoop Doggy Dogg)",
+    "Sos, ciuchy i borciuchy (Kaz Bałagane x Bel MondoKaz BałaganeBelmondawg)"
+   ],
+   "T_half_kept": 2,
+   "T_linear": [
+    "Animals (Pink Floyd)",
+    "Good Old Boys (Randy Newman)",
+    "Joe's Garage Act I (Frank Zappa)",
+    "Life After Death (The Notorious B.I.G.)",
+    "Doggystyle (Snoop Doggy Dogg)",
+    "Cold Fact (Rodriguez)",
+    "Jammin' in New York (George Carlin)",
+    "Shut Up, You Fucking Baby! (David Cross)",
+    "The Distant Future (Flight of the Conchords)",
+    "Relentless (Bill Hicks)"
+   ],
+   "T_linear_kept": 1,
+   "S_equal": [
+    "good kid, m.A.A.d city (Kendrick Lamar)",
+    "Section.80 (Kendrick Lamar)",
+    "Sos, ciuchy i borciuchy (Kaz Bałagane x Bel MondoKaz BałaganeBelmondawg)",
+    "Ready to Die (The Notorious B.I.G.)",
+    "Doggystyle (Snoop Doggy Dogg)",
+    "Demon Days (Gorillaz)",
+    "The Album of the Soundtrack of the Trailer of the Film of Monty Python and the Holy Grail (Monty Python)",
+    "Joe's Garage Act I (Frank Zappa)",
+    "New York (Lou Reed)",
+    "The Minstrel Show (Little Brother)"
+   ],
+   "S_equal_kept": 2,
+   "S_linear": [
+    "The Album of the Soundtrack of the Trailer of the Film of Monty Python and the Holy Grail (Monty Python)",
+    "Good Old Boys (Randy Newman)",
+    "Animals (Pink Floyd)",
+    "Joe's Garage Act I (Frank Zappa)",
+    "good kid, m.A.A.d city (Kendrick Lamar)",
+    "69 Love Songs (The Magnetic Fields)",
+    "Section.80 (Kendrick Lamar)",
+    "The Dirty South (Drive-By Truckers)",
+    "Doggystyle (Snoop Doggy Dogg)",
+    "2001 (Dr. Dre)"
+   ],
+   "S_linear_kept": 3
+  },
+  {
+   "album": "Kind of Blue (Miles Davis)",
+   "table_first8": [
+    "instrumental",
+    "mellow",
+    "improvisation",
+    "nocturnal",
+    "soothing",
+    "calm",
+    "acoustic",
+    "meditative"
+   ],
+   "table_all": 8,
+   "sheet": [
+    "instrumental",
+    "mellow",
+    "nocturnal",
+    "soothing",
+    "improvisation",
+    "calm",
+    "acoustic",
+    "progressive"
+   ],
+   "today": [
+    "Night Train (The Oscar Peterson Trio)",
+    "Concierto (Jim Hall)",
+    "Duke Ellington & John Coltrane (Duke Ellington & John Coltrane)",
+    "Sunday at the Village Vanguard (Bill Evans Trio)",
+    "Portrait in Jazz (Bill Evans Trio)",
+    "Idle Moments (Grant Green)",
+    "Ballads (John Coltrane Quartet)",
+    "Judgment! (Andrew Hill)",
+    "Coltrane's Sound (John Coltrane)",
+    "A Night at the Village Vanguard (Sonny Rollins)"
+   ],
+   "T_equal": [
+    "Portrait in Jazz (Bill Evans Trio)",
+    "Night Train (The Oscar Peterson Trio)",
+    "Sunday at the Village Vanguard (Bill Evans Trio)",
+    "Idle Moments (Grant Green)",
+    "Duke Ellington & John Coltrane (Duke Ellington & John Coltrane)",
+    "Concierto (Jim Hall)",
+    "Ballads (John Coltrane Quartet)",
+    "Somethin' Else (Cannonball Adderley)",
+    "Speak No Evil (Wayne Shorter)",
+    "In a Silent Way (Miles Davis)"
+   ],
+   "T_equal_kept": 7,
+   "T_half": [
+    "Sunday at the Village Vanguard (Bill Evans Trio)",
+    "Night Train (The Oscar Peterson Trio)",
+    "Portrait in Jazz (Bill Evans Trio)",
+    "Idle Moments (Grant Green)",
+    "Speak No Evil (Wayne Shorter)",
+    "Somethin' Else (Cannonball Adderley)",
+    "Ballads (John Coltrane Quartet)",
+    "In a Silent Way (Miles Davis)",
+    "Nocturnes (Maurizio Pollini)",
+    "Duke Ellington & John Coltrane (Duke Ellington & John Coltrane)"
+   ],
+   "T_half_kept": 6,
+   "T_linear": [
+    "Sunday at the Village Vanguard (Bill Evans Trio)",
+    "Night Train (The Oscar Peterson Trio)",
+    "Idle Moments (Grant Green)",
+    "Portrait in Jazz (Bill Evans Trio)",
+    "Judgment! (Andrew Hill)",
+    "Speak No Evil (Wayne Shorter)",
+    "In a Silent Way (Miles Davis)",
+    "Somethin' Else (Cannonball Adderley)",
+    "Ballads (John Coltrane Quartet)",
+    "Relaxin' With the Miles Davis Quintet (Miles Davis Quintet)"
+   ],
+   "T_linear_kept": 6,
+   "S_equal": [
+    "Night Dreamer (Wayne Shorter)",
+    "Suspended Night (Tomasz Stanko Quartet)",
+    "Portrait in Jazz (Bill Evans Trio)",
+    "Waltz for Debby (Bill Evans Trio)",
+    "Work Song (Nat Adderley)",
+    "Explorations (Bill Evans Trio)",
+    "'Round About Midnight (Miles Davis)",
+    "Sunday at the Village Vanguard (Bill Evans Trio)",
+    "Idle Moments (Grant Green)",
+    "Duke Ellington & John Coltrane (Duke Ellington & John Coltrane)"
+   ],
+   "S_equal_kept": 4,
+   "S_linear": [
+    "Idle Moments (Grant Green)",
+    "Waltz for Debby (Bill Evans Trio)",
+    "Moon Beams (The Bill Evans Trio)",
+    "Sunday at the Village Vanguard (Bill Evans Trio)",
+    "Portrait in Jazz (Bill Evans Trio)",
+    "Ballads (John Coltrane Quartet)",
+    "Everybody Digs Bill Evans (Bill Evans Trio)",
+    "Explorations (Bill Evans Trio)",
+    "Somethin' Else (Cannonball Adderley)",
+    "Night Train (The Oscar Peterson Trio)"
+   ],
+   "S_linear_kept": 5
+  },
+  {
+   "album": "Loveless (My Bloody Valentine)",
+   "table_first8": [
+    "noisy",
+    "ethereal",
+    "atmospheric",
+    "romantic",
+    "love",
+    "dense",
+    "hypnotic",
+    "psychedelic"
+   ],
+   "table_all": 21,
+   "sheet": [
+    "noisy",
+    "ethereal",
+    "atmospheric",
+    "dense",
+    "romantic",
+    "psychedelic",
+    "hypnotic",
+    "love"
+   ],
+   "today": [
+    "Winks & Kisses: Melted (Airiel)",
+    "Slowdive (Slowdive)",
+    "Glider (My Bloody Valentine)",
+    "Once Twice Melody (Beach House)",
+    "Souvlaki (Slowdive)",
+    "m b v (My Bloody Valentine)",
+    "Just for a Day (Slowdive)",
+    "Fall (Ride)",
+    "Nowhere (Ride)",
+    "Pushing Daisies (Julie)"
+   ],
+   "T_equal": [
+    "Glider (My Bloody Valentine)",
+    "m b v (My Bloody Valentine)",
+    "Flash Desire (Yabujin)",
+    "Dynamo (Soda Stereo)",
+    "Dopethrone (Electric Wizard)",
+    "Winks & Kisses: Melted (Airiel)",
+    "Once Twice Melody (Beach House)",
+    "Thousands on a Raft (Pete Brown & Piblokto!)",
+    "Bullitt (Lalo Schifrin)",
+    "Halfbreed (Keef Hartley Band)"
+   ],
+   "T_equal_kept": 4,
+   "T_half": [
+    "Glider (My Bloody Valentine)",
+    "m b v (My Bloody Valentine)",
+    "Flash Desire (Yabujin)",
+    "Going Places (Yellow Swans)",
+    "Once Twice Melody (Beach House)",
+    "Dynamo (Soda Stereo)",
+    "Absence (Dälek)",
+    "Winks & Kisses: Melted (Airiel)",
+    "Bullitt (Lalo Schifrin)",
+    "Split Personalities (12 Rods)"
+   ],
+   "T_half_kept": 4,
+   "T_linear": [
+    "Glider (My Bloody Valentine)",
+    "Absence (Dälek)",
+    "Going Places (Yellow Swans)",
+    "m b v (My Bloody Valentine)",
+    "Koi no yokan (Deftones)",
+    "Once Twice Melody (Beach House)",
+    "Bullitt (Lalo Schifrin)",
+    "Split Personalities (12 Rods)",
+    "Hole in the Heart (Ramleh)",
+    "OM (Negură Bunget)"
+   ],
+   "T_linear_kept": 3,
+   "S_equal": [
+    "m b v (My Bloody Valentine)",
+    "Glider (My Bloody Valentine)",
+    "Once Twice Melody (Beach House)",
+    "Flash Desire (Yabujin)",
+    "Today Is the Day! (Yo La Tengo)",
+    "Eureka (きのこ帝国 [Kinoko Teikoku])",
+    "7 (Beach House)",
+    "Amplifier Worship (Boris)",
+    "Dopethrone (Electric Wizard)",
+    "Royal Albert Hall October 10 1997 Live (Spiritualized®)"
+   ],
+   "S_equal_kept": 3,
+   "S_linear": [
+    "Glider (My Bloody Valentine)",
+    "m b v (My Bloody Valentine)",
+    "Going Places (Yellow Swans)",
+    "Absence (Dälek)",
+    "Once Twice Melody (Beach House)",
+    "Koi no yokan (Deftones)",
+    "7 (Beach House)",
+    "Royal Albert Hall October 10 1997 Live (Spiritualized®)",
+    "HEY WHAT (Low)",
+    "Nowhere (Ride)"
+   ],
+   "S_linear_kept": 4
+  },
+  {
+   "album": "Abbey Road (The Beatles)",
+   "table_first8": [
+    "melodic",
+    "warm",
+    "male vocals",
+    "summer",
+    "bittersweet",
+    "uplifting",
+    "love",
+    "romantic"
+   ],
+   "table_all": 20,
+   "sheet": [
+    "melodic",
+    "warm",
+    "medley",
+    "uplifting",
+    "bittersweet",
+    "love",
+    "summer",
+    "lush"
+   ],
+   "today": [
+    "Songs From Northern Britain (Teenage Fanclub)",
+    "Something / Anything? (Todd Rundgren)",
+    "White Pepper (Ween)",
+    "Spilt Milk (Jellyfish)",
+    "Re (Café Tacvba)",
+    "La voce del padrone (Franco Battiato)",
+    "The Kinks Are the Village Green Preservation Society (The Kinks)",
+    "#1 Record (Big Star)",
+    "Previsão do tempo (Marcos Valle)",
+    "Magical Mystery Tour (The Beatles)"
+   ],
+   "T_equal": [
+    "The Boy With the Arab Strap (Belle & Sebastian)",
+    "#1 Record (Big Star)",
+    "Tigermilk (Belle and Sebastian)",
+    "Radio City (Big Star)",
+    "Songs in the Key of Life (Stevie Wonder)",
+    "Songs From Northern Britain (Teenage Fanclub)",
+    "Chutes Too Narrow (The Shins)",
+    "Lavender Country (Lavender Country)",
+    "Keep It Like a Secret (Built to Spill)",
+    "In the Dark (Toots & The Maytals)"
+   ],
+   "T_equal_kept": 2,
+   "T_half": [
+    "Radio City (Big Star)",
+    "Keep It Like a Secret (Built to Spill)",
+    "Lavender Country (Lavender Country)",
+    "The Boy With the Arab Strap (Belle & Sebastian)",
+    "Chutes Too Narrow (The Shins)",
+    "In the Dark (Toots & The Maytals)",
+    "Loaded (The Velvet Underground)",
+    "The Kinks Are the Village Green Preservation Society (The Kinks)",
+    "Tigermilk (Belle and Sebastian)",
+    "I, Jonathan (Jonathan Richman)"
+   ],
+   "T_half_kept": 1,
+   "T_linear": [
+    "Radio City (Big Star)",
+    "Let It Be... Naked (The Beatles)",
+    "Keep It Like a Secret (Built to Spill)",
+    "The Kinks Are the Village Green Preservation Society (The Kinks)",
+    "Lavender Country (Lavender Country)",
+    "Loaded (The Velvet Underground)",
+    "Chutes Too Narrow (The Shins)",
+    "Di Melo (Di Melo)",
+    "Malibu (Anderson .Paak)",
+    "The Gilded Palace of Sin (The Flying Burrito Bros)"
+   ],
+   "T_linear_kept": 1,
+   "S_equal": [
+    "Loaded (The Velvet Underground)",
+    "Willy and the Poor Boys (Creedence Clearwater Revival)",
+    "Just as I Am (Bill Withers)",
+    "Forever Changes (Love)",
+    "Clube da Esquina (Milton Nascimento & Lô Borges)",
+    "This Is the Sea (The Waterboys)",
+    "Roots (Curtis Mayfield)",
+    "Meus caros amigos (Chico Buarque)",
+    "Fleet Foxes (Fleet Foxes)",
+    "Yoshimi Battles the Pink Robots (The Flaming Lips)"
+   ],
+   "S_equal_kept": 0,
+   "S_linear": [
+    "Willy and the Poor Boys (Creedence Clearwater Revival)",
+    "Garra (Marcos Valle)",
+    "Keep It Like a Secret (Built to Spill)",
+    "There's Nothing Wrong With Love (Built to Spill)",
+    "#1 Record (Big Star)",
+    "Uprising (Bob Marley & The WailersBob MarleyThe Wailers)",
+    "Rough Trade Session (Weyes Blood)",
+    "The Kinks Are the Village Green Preservation Society (The Kinks)",
+    "Samba esquema novo (Jorge Ben)",
+    "Going Blank Again (Ride)"
+   ],
+   "S_linear_kept": 2
+  }
+ ]
+}
