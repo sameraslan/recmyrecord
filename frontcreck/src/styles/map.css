@@ -101,11 +101,14 @@
 /* Inverted when hot: room-coloured digits on the lamp token (17:1 with the Trifid values). */
 .mk-n[data-hot] { background: var(--color-lamp); border-color: var(--color-room); color: var(--color-room); }
 
-/* names toggle: its own box 8 px above the zoom stack (the owner's option B). It is the first child of
- * .map-zoom, so it takes the zoom buttons' size and glass, and the phone rules that lift or hide the stack. */
+/* names toggle: its own box 8 px above the zoom stack (the owner's option B). The map's own chunk puts it in
+ * as the first child of .map-zoom (overlays/NamesToggle.tsx), so it takes the zoom buttons' size and glass, and
+ * the phone rules that lift or hide the stack. */
 .map-zoom .map-names { margin-bottom: 8px; }
 /* The zoom-in button under it gets its top border back (.map-zoom button + button removes it). */
 .map-zoom .map-names + button { border-top: 1px solid var(--color-rule); }
+/* Until it arrives its place is kept free (a button and the 8 px), so the zoom buttons never move. */
+.map-zoom > button:first-child:not(.map-names) { margin-top: 48px; }
 
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }

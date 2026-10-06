@@ -44,6 +44,8 @@
   .fab-map--on { top: 12px; bottom: auto; right: 12px; background: var(--color-float); color: var(--color-paper); border: 1px solid var(--color-rule-2); box-shadow: none; border-radius: 2px; }
 
   .map-zoom button { width: 44px; height: 44px; }
+  /* The names toggle's place until it arrives (styles/map.css): a 44 px button and the 8 px. */
+  .map-zoom > button:first-child:not(.map-names) { margin-top: 52px; }
 }
 
 /* Reduced motion: the global rule only shortens transitions to .01ms, which still leaves the panel's first frame at

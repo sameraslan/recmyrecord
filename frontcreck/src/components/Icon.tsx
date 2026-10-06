@@ -28,29 +28,6 @@ const PATHS = {
     </>
   ),
   list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.5M4.5 12h.5M4.5 18h.5" />,
-  // The names toggle (the Trifid prototype's namesToggle drawing): off is the letters at 42%, cut by a mask
-  // along a thin slash.
-  names: (
-    <g strokeLinecap="round" strokeLinejoin="round">
-      <path d="M2.5 18 7.5 6l5 12M4.4 13.6h6.2" />
-      <circle cx="17.6" cy="14.6" r="3.2" />
-      <path d="M20.8 11.2V18" />
-    </g>
-  ),
-  namesOff: (
-    <>
-      <mask id="rmr-names-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-        <rect width="24" height="24" fill="#fff" stroke="none" />
-        <path d="M1.5 22.5 22.5 1.5" stroke="#000" strokeWidth="4.4" strokeLinecap="butt" />
-      </mask>
-      <g mask="url(#rmr-names-cut)" opacity="0.42" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M2.5 18 7.5 6l5 12M4.4 13.6h6.2" />
-        <circle cx="17.6" cy="14.6" r="3.2" />
-        <path d="M20.8 11.2V18" />
-      </g>
-      <path d="M4 20 20 4" strokeWidth="1.2" strokeLinecap="round" opacity="0.95" />
-    </>
-  ),
 } satisfies Record<string, ReactNode>;
 
 export type IconName = keyof typeof PATHS;

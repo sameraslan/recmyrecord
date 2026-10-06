@@ -108,32 +108,16 @@ describe('app store', () => {
     expect(window.__rmr?.getState().stop).toBe('balanced');
   });
 
-  it('shows region names by default, and saves the choice when it changes', () => {
-    window.localStorage.clear();
+  // The names toggle's flag. Its setter, the saved choice and the read of it are in lib/namesPref.ts, which only
+  // the map's own chunk loads (see namesPref.test.ts); the store itself never touches storage for it.
+  it('shows region names by default, whatever is saved: the store does not read the choice itself', async () => {
     expect(useAppStore.getState().namesOn).toBe(true);
-    const calls = countNotifications(() => {
-      useAppStore.getState().setNamesOn(true);
-      useAppStore.getState().setNamesOn(false);
-      useAppStore.getState().setNamesOn(false);
-    });
-    expect(calls).toBe(1);
-    expect(useAppStore.getState().namesOn).toBe(false);
-    expect(window.localStorage.getItem('rmr-names')).toBe('0');
-  });
-
-  it('still switches names off for the page load when storage is blocked', () => {
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new DOMException('denied', 'SecurityError');
-    });
-    useAppStore.getState().setNamesOn(false);
-    expect(useAppStore.getState().namesOn).toBe(false);
-  });
-
-  it('starts from the saved choice in the browser', async () => {
     window.localStorage.setItem('rmr-names', '0');
+    const read = vi.spyOn(Storage.prototype, 'getItem');
     vi.resetModules();
     const fresh = await import('./store');
-    expect(fresh.useAppStore.getState().namesOn).toBe(false);
+    expect(fresh.useAppStore.getState().namesOn).toBe(true);
+    expect(read.mock.calls.filter(([key]) => key === 'rmr-names')).toHaveLength(0);
     window.localStorage.clear();
   });
 });

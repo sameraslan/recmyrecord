@@ -4,6 +4,7 @@ import { useLayoutEffect } from 'react';
 import { Scene } from './canvas/Scene';
 import { FocusMarkers } from './overlays/FocusMarkers';
 import { HoverLabel } from './overlays/HoverLabel';
+import { NamesToggle } from './overlays/NamesToggle';
 import { useMapStore } from './state/mapStore';
 import { setOverlayEl } from './state/overlayEls';
 import type { MusicMapProps } from './types';
@@ -42,6 +43,7 @@ export default function MusicMap({ data, theme, input, callbacks, initialCamera,
       <FocusMarkers albums={data.albums} />
       <HoverLabel albums={data.albums} />
       <SelectedRing />
+      <NamesToggle shown={input.interactive} />
     </>
   );
 }

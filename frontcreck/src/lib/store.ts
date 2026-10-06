@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { pushTrail, readTrail, writeTrail } from '@/lib/trail';
-import { readNamesOn, writeNamesOn } from '@/lib/namesPref';
 import { DEFAULT_STOP } from '@/lib/types';
 import type { AlbumId, Ambient, Focus, MapCamera, StopId, TrailItem } from '@/lib/types';
 
@@ -27,7 +26,7 @@ export interface AppState {
   ambient: Ambient | null;
   trail: TrailItem[];
   toast: { message: string; id: number } | null;
-  /** Whether the map's region names are shown (the names toggle; remembered on this device). */
+  /** Whether the map's region names are shown. lib/namesPref.ts sets and saves it (not first-load code). */
   namesOn: boolean;
   setStop: (stop: StopId) => void;
   setFocus: (focus: Focus | null) => void;
@@ -41,7 +40,6 @@ export interface AppState {
   visit: (item: TrailItem) => void;
   showToast: (message: string) => void;
   clearToast: () => void;
-  setNamesOn: (namesOn: boolean) => void;
 }
 
 function sameFocus(a: Focus | null, b: Focus | null): boolean {
@@ -69,7 +67,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
   ambient: null,
   trail: [],
   toast: null,
-  // On for the server render and the first client render; the saved choice is applied below, in the browser.
   namesOn: true,
   setStop: (stop) => set((s) => (s.stop === stop ? s : { stop })),
   setFocus: (focus) => set((s) => (sameFocus(s.focus, focus) ? s : { focus })),
@@ -91,17 +88,9 @@ export const useAppStore = create<AppState>()((set, get) => ({
   },
   showToast: (message) => set({ toast: { message, id: ++toastSeq } }),
   clearToast: () => set({ toast: null }),
-  setNamesOn: (namesOn) => {
-    if (get().namesOn === namesOn) return;
-    set({ namesOn });
-    writeNamesOn(namesOn);
-  },
 }));
 
+// Test hooks (Playwright, the perf script). getState includes the setters, so these can change state as well.
 if (typeof window !== 'undefined') {
-  // The saved names choice. Safe before hydration: nothing rendered on the server depends on it (the toggle
-  // and the names mount only on the client, once the map data has loaded).
-  useAppStore.setState({ namesOn: readNamesOn() });
-  // Test hooks (Playwright, the perf script). getState includes the setters, so these can change state as well.
   window.__rmr = { ...window.__rmr, getState: useAppStore.getState, subscribe: useAppStore.subscribe };
 }
