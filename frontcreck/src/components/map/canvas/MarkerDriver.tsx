@@ -27,21 +27,23 @@ export const MARKER_SETTLE_MS = 180;
  * later, say) is still part of the opening: the layout follows it to the new view. Later reframings settle. */
 const RETARGET_MS = 300;
 
-/** Puts a white core and the dark casing under it on the same segment. */
-function setLines(core: SVGLineElement, casing: SVGLineElement | undefined, x1: number, y1: number, x2: number, y2: number) {
-  const a = x1.toFixed(1);
-  const b = y1.toFixed(1);
-  const c = x2.toFixed(1);
-  const d = y2.toFixed(1);
-  core.setAttribute('x1', a);
-  core.setAttribute('y1', b);
-  core.setAttribute('x2', c);
-  core.setAttribute('y2', d);
-  if (!casing) return;
-  casing.setAttribute('x1', a);
-  casing.setAttribute('y1', b);
-  casing.setAttribute('x2', c);
-  casing.setAttribute('y2', d);
+/** Per line, what `paint` last wrote: x1, y1, x2, y2 in tenths of a px, then 1 shown or 0 hidden (leaders). */
+const LINE_SLOTS = 5;
+const LINE_ATTRS = ['x1', 'y1', 'x2', 'y2'] as const;
+
+/** Puts the j-th white core and the dark casing under it on the same segment, to a tenth of a px. An end that
+ * has not moved by a tenth is not written again, so a frame in which nothing moved writes nothing. */
+function setLines(w: Work, j: number, core: SVGLineElement, casing: SVGLineElement | undefined, x1: number, y1: number, x2: number, y2: number) {
+  const last = w.lineAt;
+  const o = LINE_SLOTS * j;
+  for (let a = 0; a < 4; a++) {
+    const tenths = Math.round((a === 0 ? x1 : a === 1 ? y1 : a === 2 ? x2 : y2) * 10);
+    if (last[o + a] === tenths) continue;
+    last[o + a] = tenths;
+    const v = String(tenths / 10);
+    core.setAttribute(LINE_ATTRS[a], v);
+    if (casing) casing.setAttribute(LINE_ATTRS[a], v);
+  }
 }
 
 /** The fraction of the step (dx, dy) at which it leaves a square of half side `half` centred on its start: the
@@ -76,6 +78,10 @@ interface Work {
   placed: readonly MarkerItem[];
   shown: Float64Array;
   drawn: PlacedMarker[];
+  /** What the lines were last given (LINE_SLOTS numbers a line) and the elements that got it (core, casing):
+   * NaN, and written afresh, for a line React has replaced. */
+  lineAt: Float64Array;
+  lineEls: (Element | undefined)[];
   /** What the hover label is kept inside, as of the last frame. */
   inset: number;
   width: number;
@@ -131,9 +137,21 @@ function paint(w: Work): void {
     // lies under the j-th core. The live child lists are walked in place (no query, no list built per frame).
     const cases = svg.children[0].children;
     const cores = svg.children[1].children;
+    // Resized only when the number of lines changes (ten albums in place of five).
+    if (w.lineAt.length !== LINE_SLOTS * cores.length) {
+      w.lineAt = new Float64Array(LINE_SLOTS * cores.length).fill(NaN);
+      w.lineEls.length = 0;
+    }
+    const last = w.lineAt;
+    const els = w.lineEls;
     for (let j = 0; j < cores.length; j++) {
       const core = cores[j] as SVGLineElement;
       const casing = cases[j] as SVGLineElement | undefined;
+      if (els[2 * j] !== core || els[2 * j + 1] !== casing) {
+        els[2 * j] = core;
+        els[2 * j + 1] = casing;
+        last.fill(NaN, LINE_SLOTS * j, LINE_SLOTS * (j + 1));
+      }
       const to = core.dataset.to;
       if (to !== undefined) {
         // From the edge of the seed's frame to the edge of the recommendation's frame, along the two centres.
@@ -143,7 +161,7 @@ function paint(w: Work): void {
         const dy = it.y - seed.y;
         const a = edgeT(dx, dy, seedHalf);
         const b = edgeT(dx, dy, frameHalf(it));
-        setLines(core, casing, seed.x + dx * a, seed.y + dy * a, it.x - dx * b, it.y - dy * b);
+        setLines(w, j, core, casing, seed.x + dx * a, seed.y + dy * a, it.x - dx * b, it.y - dy * b);
         continue;
       }
       // A thin leader from a moved cover's frame back to the album's true position (the shader draws a ring
@@ -153,12 +171,16 @@ function paint(w: Work): void {
       const dy = it ? it.ay - it.y : 0;
       const half = it ? frameHalf(it) : 0;
       const show = !!it && Math.hypot(dx, dy) > LEADER_MIN_PX && Math.max(Math.abs(dx), Math.abs(dy)) > half;
-      const display = show ? '' : 'none';
-      core.style.display = display;
-      if (casing) casing.style.display = display;
+      const flag = show ? 1 : 0;
+      if (last[LINE_SLOTS * j + 4] !== flag) {
+        last[LINE_SLOTS * j + 4] = flag;
+        const display = show ? '' : 'none';
+        core.style.display = display;
+        if (casing) casing.style.display = display;
+      }
       if (show && it) {
         const t = edgeT(dx, dy, half);
-        setLines(core, casing, it.x + dx * t, it.y + dy * t, it.ax, it.ay);
+        setLines(w, j, core, casing, it.x + dx * t, it.y + dy * t, it.ax, it.ay);
       }
     }
   }
@@ -287,6 +309,8 @@ export function MarkerDriver({ positionsRef }: { positionsRef: React.RefObject<F
       placed: [],
       shown: new Float64Array(0),
       drawn: [],
+      lineAt: new Float64Array(0),
+      lineEls: [],
       inset: 0,
       width: 0,
       height: 0,

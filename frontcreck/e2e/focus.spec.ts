@@ -43,6 +43,34 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
   // Every line is a dark casing under a white core, and all casings are drawn below all cores.
   await expect(page.locator('svg.mk-lines g.mk-case line[data-case]')).toHaveCount(5);
   expect(await page.locator('svg.mk-lines > g').evaluateAll((gs) => gs.map((g) => g.getAttribute('class')))).toEqual(['mk-case', 'mk-core']);
+  // The j-th casing lies under the j-th core (MarkerDriver pairs the two groups by their order): the same album,
+  // the same segment, and a leader's casing shown or hidden with its core. No casing among the cores or core
+  // among the casings.
+  const pairs = await page.locator('svg.mk-lines').evaluate((svg) => {
+    const read = (l: Element) => {
+      const d = (l as SVGLineElement).dataset;
+      return {
+        rec: d.to ?? d.case ?? null,
+        leader: d.leader ?? d.leaderCase ?? null,
+        role: d.to !== undefined || d.leader !== undefined ? 'core' : 'case',
+        at: ['x1', 'y1', 'x2', 'y2'].map((k) => l.getAttribute(k)),
+        display: (l as SVGLineElement).style.display,
+      };
+    };
+    const [cases, cores] = [...svg.children].map((g) => [...g.children].map(read));
+    return { cases, cores };
+  });
+  expect(pairs.cores.map((l) => l.role)).toEqual(Array(11).fill('core'));
+  expect(pairs.cases.map((l) => l.role)).toEqual(Array(11).fill('case'));
+  expect(pairs.cores.map((l) => l.rec).filter((id) => id !== null)).toEqual(recs.map(String));
+  expect(pairs.cores.map((l) => l.leader).filter((id) => id !== null)).toEqual([11, ...recs].map(String));
+  for (const [j, core] of pairs.cores.entries()) {
+    const casing = pairs.cases[j];
+    expect({ rec: casing.rec, leader: casing.leader }, `casing ${j} is its core's`).toEqual({ rec: core.rec, leader: core.leader });
+    expect(casing.display, `casing ${j} shows with its core`).toBe(core.display);
+    if (core.rec !== null) expect(core.at.every((v) => v !== null && Number.isFinite(Number(v))), `core ${j} is placed`).toBe(true);
+    if (core.rec !== null || core.display !== 'none') expect(casing.at, `casing ${j} lies under its core`).toEqual(core.at);
+  }
 
   // (a) recommendation markers in list order, each with its own rank badge
   expect(await page.locator('.mk--rec').evaluateAll((els) => els.map((e) => Number((e as HTMLElement).dataset.albumId)))).toEqual(recs);
@@ -107,6 +135,7 @@ test('hot album is highlighted and a hovered marker shows its label', async ({ p
   await page.evaluate((id) => window.__rmr!.getState().setHot(id), recs[1]);
   await expect(page.locator(`.mk[data-album-id="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator(`svg.mk-lines line[data-to="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
+  await expect(page.locator(`svg.mk-lines g.mk-case line[data-case="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator(`.mk-n[data-for="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
   await page.evaluate(() => window.__rmr!.getState().setHot(null));
   // The markers take no pointer events: the canvas under them hit-tests their boxes.
@@ -114,6 +143,7 @@ test('hot album is highlighted and a hovered marker shows its label', async ({ p
   await page.mouse.move(p.x, p.y);
   await expect(page.locator(`.mk[data-album-id="${recs[2]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator(`svg.mk-lines line[data-to="${recs[2]}"]`)).toHaveAttribute('data-hot', 'true');
+  await expect(page.locator(`svg.mk-lines g.mk-case line[data-case="${recs[2]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator('canvas.map-canvas')).toHaveCSS('cursor', 'pointer');
   await expect(page.locator('.map-tip')).toHaveCSS('opacity', '1');
   await page.mouse.move(p.x + 200, 20);
@@ -348,6 +378,40 @@ test('with an album open the map draws no frame at rest and its covers stay put'
   const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
   expect(f2 - f1, 'frames drawn at rest with an album open').toBe(0);
   expect(await where()).toEqual(before);
+});
+
+test('a frame in which no cover moved writes nothing to the lines', async ({ page }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(11);
+  await waitForGasSharpSettled(page);
+  await page.evaluate(() => {
+    const w = window as unknown as { __lineWrites: number };
+    w.__lineWrites = 0;
+    new MutationObserver((records) => (w.__lineWrites += records.length)).observe(document.querySelector('svg.mk-lines')!, { attributes: true, subtree: true });
+  });
+  const state = () => page.evaluate(() => ({ frames: window.__rmr!.frames ?? 0, writes: (window as unknown as { __lineWrites: number }).__lineWrites }));
+  // Marking the seed "hot" changes nothing on screen (the seed is never drawn hot) but asks for a frame.
+  const rest = await state();
+  await page.evaluate(() => window.__rmr!.getState().setHot(11));
+  await expect.poll(async () => (await state()).frames).toBeGreaterThan(rest.frames);
+  await page.evaluate(() => window.__rmr!.getState().setHot(null));
+  await page.waitForTimeout(300);
+  const still = await state();
+  expect(still.frames, 'frames drawn with nothing moved').toBeGreaterThan(rest.frames);
+  expect(still.writes, 'attribute writes to the lines with nothing moved').toBe(0);
+  // The observer does see the lines move: a zoom rewrites them, at most 8 attributes a line each frame (11 cores
+  // and casings, two style writes where a leader appears or goes).
+  await page.evaluate(() => window.__rmr!.map!.zoomBy(1.4));
+  await waitForCameraIdle(page);
+  const moved = await state();
+  const frames = moved.frames - still.frames;
+  const writes = moved.writes - still.writes;
+  console.log(`line writes while zooming: ${writes} in ${frames} frames (${(writes / frames).toFixed(1)} a frame)`);
+  expect(writes, 'the lines follow a zoom').toBeGreaterThan(0);
+  expect(writes).toBeLessThanOrEqual((frames + 12) * (10 * 8 + 11 * 10));
 });
 
 test('after a zoom with an album open the covers settle on the fresh layout and the map rests', async ({ page }) => {
