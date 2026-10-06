@@ -5,7 +5,7 @@ import { STOP_IDS } from '@/lib/types';
 import type { StopId } from '@/lib/types';
 import { STOP_T } from '../data';
 import { useMapStore } from './mapStore';
-import { inMotion } from './motion';
+import { inMotion, inStep, markStep, onStepEnd } from './motion';
 import { nameWidths, nameWidthsVersion } from './nameWidths';
 import { chromeBlockers, layoutNames, nameFades, nameKey, namesShown, nameZoomK, type NameCandidate, type PlacedName } from './namesLayout';
 import { getOverlayEl } from './overlayEls';
@@ -21,8 +21,9 @@ const PICK_CLEAR_PX = 22;
 const NAMES_SCALE_WITH_ZOOM = true;
 /** On the layer while the slider is between stops (styles/map.css gives the fading letters their own layer). */
 const FADING_CLASS = 'is-fading';
-/** On a name while it moves to another spot at rest (styles/map.css eases its transform; no canvas frame). */
-const EASE_CLASS = 'ease';
+/** On a name that took another spot when the map came to rest, while it fades in there (styles/map.css: opacity
+ * only, so its transform is the map's throughout; no canvas frame). Taken off when the fade ends. */
+const FADE_CLASS = 'moved';
 
 /** What was last written to an element, as numbers, so an unchanged value is neither formatted nor written. */
 interface Written {
@@ -33,7 +34,7 @@ interface Written {
   halo: number;
   off: boolean;
   spot: number;
-  ease: boolean;
+  fade: boolean;
 }
 const written = new WeakMap<Element, Written>();
 
@@ -41,19 +42,19 @@ function stateOf(el: Element): Written {
   let w = written.get(el);
   if (!w) {
     // As RegionNames renders it: hidden, nothing set.
-    w = { x: NaN, y: NaN, fontPx: 0, alpha: NaN, halo: NaN, off: true, spot: 0, ease: false };
+    w = { x: NaN, y: NaN, fontPx: 0, alpha: NaN, halo: NaN, off: true, spot: 0, fade: false };
     written.set(el, w);
   }
   return w;
 }
 
-/** `rest`: the placement the map comes to rest on. A name already showing that changes spot there eases over. */
+/** `rest`: the placement the map comes to rest on. A name already showing that takes another spot there leaves
+ * the old one at once and fades in on the new; one that keeps its spot is not touched. */
 function show(el: HTMLElement, p: PlacedName, rest: boolean): void {
   const w = stateOf(el);
-  const ease = rest && !w.off && w.spot !== p.spot;
-  if (w.ease !== ease) {
-    el.classList.toggle(EASE_CLASS, ease);
-    w.ease = ease;
+  if (rest && !w.off && w.spot !== p.spot && !w.fade) {
+    el.classList.add(FADE_CLASS);
+    w.fade = true;
   }
   w.spot = p.spot;
   // The layout rounds x and y to a tenth of a px.
@@ -86,6 +87,20 @@ function hide(el: HTMLElement | null): void {
   if (w.off) return;
   el.classList.add('off');
   w.off = true;
+  if (w.fade) {
+    el.classList.remove(FADE_CLASS);
+    w.fade = false;
+  }
+}
+
+/** A name's fade has run out (or was cut off): the class goes, so it never lingers on a name at rest. The one
+ * listener of each names layer; it runs once per name that faded, a quarter of a second after the map rested. */
+function fadeEnded(e: Event): void {
+  const el = e.target as Element;
+  const w = written.get(el);
+  if (!w?.fade) return;
+  el.classList.remove(FADE_CLASS);
+  w.fade = false;
 }
 
 interface WorldLabel {
@@ -125,17 +140,24 @@ export interface NamesPlacer {
   (world: NamesWorld | null, camera: OrthoCameraLike, width: number, height: number, positions: Float32Array): boolean;
   /** The last placement was made while the map moved: the names are owed one placement at rest. */
   pending: () => boolean;
+  /** Told when a rest placement becomes owed (true) and when it no longer is (false). watchNamesRest sets it. */
+  onOwed: ((owed: boolean) => void) | null;
 }
 
+/** The map is on its way somewhere: the covers' signal, or a run of steps that sets no flag (state/motion.ts). */
+const moving = (s: Parameters<typeof inMotion>[0]): boolean => inStep() || inMotion(s);
+
 /** The placement RegionNamesDriver runs on every drawn frame and when RegionNames asks: decides which region
- * names show and where (state/namesLayout.ts) and writes their transforms. It reads no layout, listens to
- * nothing and asks for no frame. It keeps what its last placement was made from (18 values) and returns at
- * once when none of them changed: a hover redraw (the pointer move path), a cover fading in or the sharper gas
- * image fading in costs those compares and nothing else, with no allocation and no DOM touched. No name shows
- * while an album is open, once the map is zoomed in, on the dimmed backdrop or while the names are off.
- * While the map moves (state/motion.ts inMotion) a name keeps the spot it has, so names do not hop between
- * spots under a pan. The first placement at rest forgets those spots and solves the view afresh, so a view
- * always rests on the same names in the same places however it was reached; it writes only what differs. */
+ * names show and where (state/namesLayout.ts) and writes their transforms. It reads no layout, asks for no
+ * frame and listens to nothing but the end of a name's fade (fadeEnded). It keeps what its last placement was
+ * made from (18 values) and returns at once when none of them changed: a hover redraw (the pointer move path),
+ * a cover fading in or the sharper gas image fading in costs those compares and nothing else, with no motion
+ * flag read, no allocation and no DOM touched. No name shows while an album is open, once the map is zoomed
+ * in, on the dimmed backdrop or while the names are off.
+ * While the map moves (state/motion.ts: inMotion, or a run of steps with no flag, which is a held arrow key, a
+ * wheel under reduced motion or a resize) a name keeps the spot it has, so names do not hop between spots
+ * under a pan. The first placement at rest forgets those spots and solves the view afresh, so a view always
+ * rests on the same names in the same places however it was reached; it writes only what differs. */
 export function createNamesPlacer(): NamesPlacer {
   // What the last placement was made from, written in place.
   let bLayer: Element | null = null;
@@ -166,26 +188,38 @@ export function createNamesPlacer(): NamesPlacer {
   let fading = false;
   // The last placement was made in motion (spots kept from earlier views).
   let unsettled = false;
+  const owe = (next: boolean): void => {
+    if (unsettled === next) return;
+    unsettled = next;
+    place.onOwed?.(next);
+  };
 
-  const place = (world: NamesWorld | null, camera: OrthoCameraLike, width: number, height: number, positions: Float32Array): boolean => {
-    // No theme data, or the names are switched off (RegionNames renders no layer): nothing to place.
+  const run = (world: NamesWorld | null, camera: OrthoCameraLike, width: number, height: number, positions: Float32Array): boolean => {
+    // No theme data, or the names are switched off (RegionNames renders no layer): nothing to place, and
+    // nothing owed. The next placement meets a new layer and solves it afresh.
     const layer = getOverlayEl('names');
     if (!world || !layer) {
       bLayer = null;
+      owe(false);
       return false;
     }
-    // A canvas with no size yet (or a collapsed one) has no map to place names on.
-    if (!(width > 0 && height > 0)) return false;
+    // A canvas with no size yet (or a collapsed one) has no map to place names on. Names placed in motion are
+    // solved afresh once it has a size again, whatever that size is.
+    if (!(width > 0 && height > 0)) {
+      if (unsettled) {
+        bLayer = null;
+        owe(false);
+      }
+      return false;
+    }
     const store = useMapStore.getState();
     const { input, sliderT, insetCurrent } = store;
-    const moving = inMotion(store);
     const namesOn = useAppStore.getState().namesOn;
     // CSS px of the canvas under the site header: 0 while the stage starts below it (state/stageTop.ts).
     const top = getStageTop();
     const widths = nameWidthsVersion();
     const { x, y } = camera.position;
     if (
-      (moving || !unsettled) &&
       bLayer === layer &&
       bWorld === world &&
       bx === x &&
@@ -203,13 +237,23 @@ export function createNamesPlacer(): NamesPlacer {
       bBottomCover === input.bottomCover &&
       bNamesOn === namesOn &&
       bTop === top &&
-      bWidths === widths
+      bWidths === widths &&
+      // Nothing changed. Only when the last placement was made in motion is there more to ask: has it ended?
+      (!unsettled || moving(store))
     ) {
       return true;
     }
-    // A new layer (the names were switched off and on) starts without the class; one that outlived the placer
-    // that marked it (a remount mid-fade) still has it, and loses it below.
-    if (bLayer !== layer) fading = layer.classList.contains(FADING_CLASS);
+    if (bLayer !== layer) {
+      // A new layer (the names were switched off and on) starts without the class; one that outlived the placer
+      // that marked it (a remount mid-fade) still has it, and loses it below.
+      fading = layer.classList.contains(FADING_CLASS);
+      layer.addEventListener('animationend', fadeEnded);
+      layer.addEventListener('animationcancel', fadeEnded);
+    } else if (bWidth !== width || bHeight !== height) {
+      // The window is being resized: a run of steps, like a held key.
+      markStep();
+    }
+    const inMove = moving(store);
     bLayer = layer;
     bWorld = world;
     bx = x;
@@ -230,9 +274,9 @@ export function createNamesPlacer(): NamesPlacer {
     bWidths = widths;
 
     // At rest every name is tried on its own point first, whatever spot it had on the way here.
-    const settling = !moving && unsettled;
-    if (!moving) sticky.clear();
-    unsettled = moving;
+    const settling = !inMove && unsettled;
+    if (!inMove) sticky.clear();
+    owe(inMove);
     if (sliderT === STOP_T[input.stop]) rest = input.stop;
     const coverPx = coverCssPx(camera.zoom, height);
     // An album is open from the moment its panel takes its place (insetLeft) or its focus is set, whichever
@@ -312,28 +356,47 @@ export function createNamesPlacer(): NamesPlacer {
     }
     return true;
   };
-  return Object.assign(place, { pending: () => unsettled });
+  const place: NamesPlacer = Object.assign(run, { pending: () => unsettled, onOwed: null });
+  return place;
 }
 
 /** Calls `place` once when the map's motion has ended and the names were last placed in motion (`pending`):
  * the rest placement. A motion that ends inside a drawn frame (a tween, wheel easing, a fling) has usually been
- * placed at rest by that frame; one that ends outside a frame (pointer up on a drag or a pinch) has not, and no
- * frame is drawn for it: the names are DOM. Checked once the current task is over, as MarkerDriver does for the
- * covers. While nothing is pending a store change costs one call and one compare. Returns the unsubscribe. */
-export function watchNamesRest(pending: () => boolean, place: () => void): () => void {
+ * placed at rest by that frame; one that ends outside a frame (pointer up on a drag or a pinch, a run of steps
+ * stopping) has not, and no frame is drawn for it: the names are DOM. Checked once the current task is over,
+ * as MarkerDriver does for the covers.
+ * It listens to the map store only while a rest placement is owed (the placer says when: onOwed), so at rest
+ * a store change, a hover included, runs no names code at all. While a drag or pinch has names owed, each of
+ * its pointer moves costs this listener one call and one or two flags. Returns the stop. */
+export function watchNamesRest(placer: Pick<NamesPlacer, 'pending' | 'onOwed'>, place: () => void): () => void {
   let asked = false;
   let on = true;
+  let unsubscribe: (() => void) | null = null;
   const check = () => {
     asked = false;
-    if (on && pending() && !inMotion(useMapStore.getState())) place();
+    if (on && placer.pending() && !moving(useMapStore.getState())) place();
   };
-  const unsubscribe = useMapStore.subscribe((s) => {
-    if (asked || !pending() || inMotion(s)) return;
+  const listen = (s: Parameters<typeof inMotion>[0]) => {
+    // The flags of a held map first: they are what a pointer move meets.
+    if (asked || s.dragging || s.pinching || moving(s)) return;
     asked = true;
     queueMicrotask(check);
-  });
+  };
+  const owed = (next: boolean) => {
+    if (next) unsubscribe ??= useMapStore.subscribe(listen);
+    else if (unsubscribe) {
+      unsubscribe();
+      unsubscribe = null;
+    }
+  };
+  placer.onOwed = owed;
+  // A run of steps ends on a timer, with no store change: placed from there, if no other motion has begun.
+  const offStep = onStepEnd(check);
+  if (placer.pending()) owed(true);
   return () => {
     on = false;
-    unsubscribe();
+    if (placer.onOwed === owed) placer.onOwed = null;
+    offStep();
+    owed(false);
   };
 }

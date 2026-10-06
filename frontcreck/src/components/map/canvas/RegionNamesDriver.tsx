@@ -9,8 +9,8 @@ import { buildNamesWorld, createNamesPlacer, watchNamesRest } from '../state/nam
 
 /** Places the region names (state/namesPlacer.ts) on every rendered frame, when RegionNames asks
  * (state/nameWidths.ts placeNamesNow), and once when a motion has ended without a frame that placed them at
- * rest (watchNamesRest: a DOM write, no frame). It never asks for a frame and reads no layout, so nothing
- * happens at rest. */
+ * rest (watchNamesRest: a DOM write, no frame). It never asks for a frame and reads no layout, and at rest it
+ * listens to nothing: nothing happens there, on a hover or otherwise. */
 export function RegionNamesDriver({ positionsRef }: { positionsRef: React.RefObject<Float32Array> }) {
   const camera = useThree((s) => s.camera) as THREE.OrthographicCamera;
   const get = useThree((s) => s.get);
@@ -31,7 +31,7 @@ export function RegionNamesDriver({ positionsRef }: { positionsRef: React.RefObj
     // The labels arrived or changed (the theme can load after the map): place them now. RegionNames, which
     // renders in another React root, may have asked just before this ran and been told there were none.
     place();
-    const unwatch = watchNamesRest(placer.pending, place);
+    const unwatch = watchNamesRest(placer, place);
     return () => {
       unwatch();
       clearNamesPlacer(place);
