@@ -180,7 +180,7 @@ def world(tmp_path):
     class World:
         opts = dict(catalog=tmp_path / "albums.csv", keys_csv=tmp_path / "keys.csv", matches=tmp_path / "matches.csv",
                     csv=tmp_path / "audio" / "fulllength.csv", out=tmp_path / "cache" / "onepass.sqlite",
-                    tmp=tmp_path / "cache" / "fulllength-tmp", pause=5.0)
+                    tmp=tmp_path / "cache" / "fulllength-tmp", pause=5.0, links=tmp_path / "audio" / "fulllength_links.csv")
         pages = {YT + "full": video("Artist0 - Title0 (full album)", 2400) | {"id": "full"},
                  YT + "short": video("Title1", 200, "Artist1 - Topic") | {"id": "short"},
                  YT + "gone": Unavailable("ERROR: Video unavailable"),
@@ -236,6 +236,11 @@ def world(tmp_path):
 
         def cache(self):
             return OnePassCache(self.opts["out"], readonly=True)
+
+        def link(self, *rows, header="key,url,note"):
+            """Write the file of hand-given links: (key, url) rows."""
+            self.opts["links"].parent.mkdir(parents=True, exist_ok=True)
+            self.opts["links"].write_text(header + "\n" + "".join(f"{k},{u},found by hand\n" for k, u in rows), encoding="utf-8")
 
     names = ["full", "short", "gone", "other", "mid"]
     lines = [f"Album{i},{i + 1},Artist{i},Title{i},,,Artist{i},Title{i},Album,,{YT}{n}" for i, n in enumerate(names)]
@@ -708,3 +713,214 @@ def test_full_length_windows_replace_the_previews_in_the_mean_and_a_failure_keep
     cache.close()
     assert all(not f.exists() for f in world.fetcher.folders) and len(world.fetcher.folders) == 2  # nothing left on disk
     assert "0 to do now" in world.run(edge_cases=True, search=True)[0]
+
+
+# --- links given by hand, and playlists --------------------------------------------------------------
+
+LIST = "https://www.youtube.com/playlist?list="
+
+
+def playlist(id: str, lengths, title="a fan's uploads", uploader="a fan") -> dict:
+    """A YouTube playlist as yt-dlp lists it flat; a length of None is a video that cannot be fetched."""
+    return {"_type": "playlist", "id": id, "title": title, "uploader": uploader,
+            "entries": [{"id": f"v{i}", "title": f"track {i}" if d else "[Private video]", "duration": d} for i, d in enumerate(lengths)]}
+
+
+@pytest.mark.parametrize("given, source, url", [
+    (YT + "abc_-1", "youtube", YT + "abc_-1"),
+    (YT + "abc&pp=ygUE&t=10s", "youtube", YT + "abc"),  # tracking and position are dropped
+    ("https://youtu.be/abc?si=xyz", "youtube", YT + "abc"),
+    (YT + "abc&list=PLx-1&index=3&pp=iAQB", "youtube", LIST + "PLx-1"),  # a video of a playlist: the playlist
+    ("https://music.youtube.com/playlist?list=OLAK5uy_k&si=x", "youtube", LIST + "OLAK5uy_k"),
+    (YT + "abc&list=RDabc", "youtube", YT + "abc"),  # a mix YouTube makes up is not an album
+    ("https://boris.bandcamp.com/album/flood?from=search", "bandcamp", "https://boris.bandcamp.com/album/flood"),
+])
+def test_a_hand_given_link_is_brought_to_one_form(given, source, url):
+    assert fulllength.hand_link(given) == (source, url)
+    assert fulllength.hand_link(url) == (source, url)
+
+
+@pytest.mark.parametrize("rows, header, error", [
+    ([("Nobody", YT + "a")], "key,url,note", "line 2: Nobody is not a key of the catalog"),
+    ([("Album1", YT + "a"), ("Album1", YT + "b")], "key,url,note", "line 3: Album1 has a link already"),
+    ([("Album1", "https://soundcloud.com/a/b")], "key,url,note", "line 2: .*neither a YouTube video or playlist nor a Bandcamp page"),
+    ([("Album1", "https://www.youtube.com/@channel")], "key,url,note", "line 2: .*neither"),
+    ([("Album1", YT + "a")], "key,link", "the header must be key,url,note"),
+])
+def test_the_links_file_is_checked_when_it_is_read(world, capsys, rows, header, error):
+    world.link(*rows, header=header)
+    with pytest.raises(ValueError, match=error):
+        fulllength.load_links(world.opts["links"], {f"Album{i}" for i in range(12)})
+    world.run(code=1)
+    assert "fulllength_links.csv" in capsys.readouterr().err and world.fetcher.asked == [] and not world.opts["csv"].exists()
+
+
+def test_no_links_file_is_no_links(world):
+    assert fulllength.load_links(world.opts["links"], set()) == {}
+
+
+def test_a_hand_given_link_comes_first_is_not_judged_and_is_recorded_as_manual(world):
+    world.run(search=True, keys=("Album3",))  # its sheet link is another video, and the search takes nothing
+    assert world.rows() == {("Album3", "youtube"): ("mismatch", "skipped", ""), ("Album3", "search"): ("", "search_none", "")}
+    world.fetcher.pages = {**world.pages, YT + "hand3": video("an upload with a name of its own", 1500, "a fan") | {"id": "hand3"}}
+    world.fetcher.lengths = {**world.lengths, YT + "hand3": [1500.0]}
+    world.link(("Album3", YT + "hand3&pp=ygUE"))
+    asked, searched = len(world.fetcher.asked), list(world.fetcher.searched)
+    lines = world.run(search=True, keys=("Album3",))
+    assert world.fetcher.asked[asked:] == [YT + "hand3"] and world.fetcher.searched == searched  # final rows do not stand in its way
+    assert "1 to do now ({'manual': 1})" in lines[0] and "1 hand-given link" in lines[0]
+    row = full_rows(world)[("Album3", "manual")]
+    assert (row["source"], row["url"], row["class"], row["status"], row["matched_by"], row["reason"], row["n_windows"]) == (
+        "youtube", YT + "hand3", "full_album", "embedded", "manual", "no_audio", "5")
+    assert (row["title"], row["uploader"], row["duration_s"]) == ("an upload with a name of its own", "a fan", "1500")
+    assert "hand-given" in row["note"] and "neither title nor artist" in row["note"]  # what was seen is still written down
+    assert full_rows(world)[("Album3", "youtube")]["status"] == "skipped"  # the other rows stay
+    cache = world.cache()
+    assert cache.listings()[("Album3", "youtube", "hand3")]["n_windows"] == 5
+    cache.close()
+    assert "0 to do now" in world.run(search=True, keys=("Album3",))[0]
+
+    world.link(("Album0", YT + "hand3"))  # before the sheet's link, which is not fetched while the hand-given one is open
+    world.fetcher.asked[:] = []
+    world.run(keys=("Album0",))
+    assert world.fetcher.asked == [YT + "hand3"] and set(world.rows()) >= {("Album0", "manual")} and ("Album0", "youtube") not in world.rows()
+
+    world.link(("Album3", YT + "mid"))  # the link was changed: it is fetched, and the windows of the old one go
+    world.run(links_only=True)
+    assert world.fetcher.asked[-1] == YT + "mid" and full_rows(world)[("Album3", "manual")]["url"] == YT + "mid"
+    cache = world.cache()
+    assert cache.con.execute("SELECT DISTINCT album_id FROM embeddings WHERE key = 'Album3' AND source = 'youtube'").fetchall() == [("mid",)]
+    cache.close()
+
+
+def test_a_hand_given_link_that_is_gone_fails_cleanly_and_the_albums_own_link_is_tried_next(world):
+    world.link(("Album4", YT + "gone"), ("Album1", YT + "live"))
+    world.fetcher.pages = {**world.pages, YT + "live": video(live_status="is_live") | {"id": "live"}}
+    world.run(keys=("Album4", "Album1"))
+    assert world.fetcher.asked == [YT + "live", YT + "gone"] and world.fetcher.downloaded == []
+    assert world.rows() == {("Album4", "manual"): ("unavailable", "skipped", ""), ("Album1", "manual"): ("unavailable", "skipped", "")}
+    world.run(keys=("Album4",))
+    assert world.fetcher.asked[2:] == [YT + "mid"] and world.rows()[("Album4", "youtube")] == ("full_album", "embedded", "5")
+    world.fetcher.asked[:] = []
+    world.link(("Album1", YT + "found1"))  # another link for the album: tried, whatever the row of the old one says
+    world.run(keys=("Album1",))
+    assert world.fetcher.asked == [YT + "found1"] and world.rows()[("Album1", "manual")] == ("full_album", "embedded", "8")
+
+
+def test_a_playlist_is_taken_only_from_a_hand_given_link(world):
+    page = playlist("PLhand", [600.0, 900.0])
+    assert classify(page, ROW, "youtube", LIST + "PLhand").cls == "mismatch"  # a sheet link or a search: refused, as before
+    v = classify(page, ROW, "youtube", LIST + "PLhand", trusted=True)
+    assert (v.cls, v.duration_s, v.album_id, v.title, v.uploader) == ("full_album", 1500.0, "PLhand", "a fan's uploads", "a fan")
+    many = playlist("PLmany", [60.0] * (fulllength.MAX_PLAYLIST_VIDEOS + 1))
+    assert classify(many, ROW, "youtube", LIST + "PLmany", trusted=True).cls == "mismatch"
+    assert classify(playlist("PLlong", [3600.0] * 7), ROW, "youtube", LIST + "PLlong", trusted=True).cls == "mismatch"  # over six hours
+    assert classify(playlist("PLnone", [None, None]), ROW, "youtube", LIST + "PLnone", trusted=True).cls == "unavailable"
+    assert classify(video(duration=7 * 3600), ROW, "youtube", YT + "vid", trusted=True).cls == "mismatch"
+    assert classify(video("Flood I", 410), ROW, "youtube", YT + "vid", trusted=True).cls == "full_album"  # its length is not judged
+
+    # the sheet's link to a playlist is still refused by a run
+    world.fetcher.pages = {**world.pages, YT + "full": page}
+    world.run(keys=("Album0",))
+    assert world.rows() == {("Album0", "youtube"): ("mismatch", "skipped", "")} and world.fetcher.downloaded == []
+
+
+def test_the_videos_of_a_hand_given_playlist_are_embedded_in_order_with_windows_across_the_files(world):
+    lengths = [20.0, 25.0, 100.0]  # short videos, one per track
+    world.fetcher.pages = {**world.pages, LIST + "PLhand": playlist("PLhand", [20.0, 25.0, None, 100.0])}  # one cannot be fetched
+    world.fetcher.lengths = {**world.lengths, LIST + "PLhand": lengths}
+    world.link(("Album2", YT + "v0&list=PLhand&index=1&pp=iAQB"))
+    world.run(keys=("Album2",))
+    assert world.fetcher.asked == [LIST + "PLhand"] and world.fetcher.downloaded == [LIST + "PLhand"]
+    row = full_rows(world)[("Album2", "manual")]
+    assert (row["url"], row["class"], row["status"], row["matched_by"], row["duration_s"], row["n_windows"]) == (
+        LIST + "PLhand", "full_album", "embedded", "manual", "145", "4")
+    assert "a playlist of 3 videos" in row["note"] and "1 that cannot be fetched left out" in row["note"] and "3 file(s)" in row["note"]
+    planned = windows.plan(lengths)
+    assert [(name, start) for name, start, _ in world.windows] == [(f"{w.file + 1:03d}.wav", round(w.start_s, 2)) for w in planned]
+    assert Counter(name for name, _, _ in world.windows) == {"001.wav": 1, "002.wav": 1, "003.wav": 2}
+    assert ("001.wav", 0.0, 20.0) in world.windows  # a video under 30 seconds is one window, whole
+    cache = world.cache()
+    assert cache.listings()[("Album2", "youtube", "PLhand")] == {"n_tracks": 3, "n_previews": 4, "runtime_s": 145.0, "n_windows": 4}
+    assert dict(zip(*[x.tolist() for x in (cache.means("clap", 4)[0], cache.means("clap", 4)[3])]))["Album2"] == "youtube"
+    cache.close()
+    assert all(not f.exists() for f in world.fetcher.folders)  # the files are deleted
+
+
+def test_the_files_of_a_playlist_are_deleted_when_its_download_breaks(world):
+    world.fetcher.pages = {**world.pages, LIST + "PLhand": playlist("PLhand", [600.0, 900.0])}
+    world.fetcher.lengths = {**world.lengths, LIST + "PLhand": Blocked("ERROR: [youtube] v1: Sign in to confirm you’re not a bot")}
+    world.link(("Album2", LIST + "PLhand"))
+    lines = world.run(code=2, keys=("Album2",))
+    assert world.rows() == {("Album2", "manual"): ("full_album", "blocked", "")} and any("stopping" in line for line in lines)
+    assert world.fetcher.folders and not world.fetcher.folders[0].exists()
+
+
+def test_links_only_takes_the_albums_of_the_file_and_its_dry_run_asks_for_their_metadata_alone(world):
+    world.fetcher.pages = {**world.pages, LIST + "PLhand": playlist("PLhand", [600.0, 900.0, None]),
+                           YT + "hand3": Unavailable("ERROR: Private video")}
+    world.link(("Album2", LIST + "PLhand"), ("Album3", YT + "hand3"), ("Album7", YT + "full"))  # Album7 has previews
+    lines = world.run(links_only=True, dry_run=True, search=True, bandcamp=True)
+    assert "2 to do now ({'manual': 2})" in lines[0] and "3 hand-given links" in lines[0] and "Album7" in lines[0]
+    assert world.fetcher.asked == [LIST + "PLhand", YT + "hand3"] and world.fetcher.downloaded == [] and world.fetcher.searched == []
+    assert not world.opts["csv"].exists() and len(world.slept) == 1
+    would = [line for line in lines if line.startswith("would fetch")]
+    assert len(would) == 2 and all(k in w for k, w in zip(("Album2", "Album3"), would))
+    assert "full_album" in would[0] and "25 min" in would[0] and "a playlist of 2 videos" in would[0] and "MB" in would[0]
+    assert "unavailable" in would[1] and "Private video" in would[1]
+    assert lines[-1] == "dry run: nothing downloaded or written"
+
+    world.fetcher.asked[:] = []
+    assert any(line.startswith("would fetch\tAlbum2") for line in world.run(keys=("Album2",), dry_run=True))
+    assert world.fetcher.asked == []  # a dry run of any other kind asks nothing
+
+    world.fetcher.pages = {**world.fetcher.pages, LIST + "PLhand": Blocked("ERROR: HTTP Error 429: Too Many Requests")}
+    lines = world.run(code=2, links_only=True, dry_run=True)
+    assert world.fetcher.asked == [LIST + "PLhand"] and any("stopping" in line for line in lines)  # nothing after a sign of blocking
+
+    world.fetcher.pages = {**world.pages, YT + "hand3": video("x", 1500) | {"id": "hand3"}}
+    world.fetcher.lengths = {**world.lengths, YT + "hand3": [1500.0]}
+    world.link(("Album3", YT + "hand3"))
+    world.fetcher.asked[:] = []
+    world.run(links_only=True, search=True, bandcamp=True)
+    assert world.fetcher.asked == [YT + "hand3"] and world.fetcher.searched == [] and set(world.rows()) == {("Album3", "manual")}
+
+
+def test_yt_dlp_downloads_a_playlist_video_by_video_and_passes_over_the_ones_that_are_gone(monkeypatch, tmp_path):
+    calls, answer = [], {}
+
+    def fake_run(argv, **kw):
+        calls.append(argv)
+        if "-J" in argv:
+            return subprocess.CompletedProcess(argv, 0, b'{"_type": "playlist", "id": "PLx", "entries": []}', b"")
+        for name in answer.get("files", ("002-b.webm", "001-a.webm")):
+            (tmp_path / name).write_bytes(b"x")
+        return subprocess.CompletedProcess(argv, answer.get("code", 1), b"", answer.get("stderr", b"ERROR: [youtube] c: Private video. Sign in if "
+                                                                                               b"you've been granted access to this video"))
+
+    monkeypatch.setattr(fulllength.subprocess, "run", fake_run)
+    yt = YtDlp(tmp_path / "python")
+    assert yt.info(LIST + "PLx", "youtube")["id"] == "PLx"
+    assert [p.name for p in yt.download(LIST + "PLx", "youtube", tmp_path)] == ["001-a.webm", "002-b.webm"]  # in playlist order
+    info, download = calls
+    for argv in calls:
+        assert argv[:5] == [str(tmp_path / "python"), "-m", "yt_dlp", "--ignore-config", "--no-cache-dir"]
+        assert "--yes-playlist" in argv and "--no-playlist" not in argv and not any("cookie" in a or "netrc" in a for a in argv)
+    assert "--flat-playlist" in info and "--skip-download" in info  # one request: the videos are listed, not opened
+    assert "--flat-playlist" not in download and download[download.index("-f") + 1] == "bestaudio[abr<=160]/bestaudio"
+    assert download[download.index("--max-filesize") + 1] == "600M" and download[download.index("--retries") + 1] == "2"
+    assert download[download.index("-o") + 1].endswith("%(playlist_index)03d-%(id)s.%(ext)s")
+    assert download[download.index("--playlist-end") + 1] == str(fulllength.MAX_PLAYLIST_VIDEOS)
+    for stderr, kind in ((b"ERROR: [youtube] c: Private video\nERROR: [youtube] d: Sign in to confirm you\xe2\x80\x99re not a bot", Blocked),
+                         (b"ERROR: [youtube] c: Private video\nERROR: unable to download video data: HTTP Error 403: Forbidden", FetchError)):
+        answer["stderr"] = stderr
+        with pytest.raises(kind) as e:
+            yt.download(LIST + "PLx", "youtube", tmp_path)
+        assert type(e.value) is kind  # a block, or a video that may come another day: the album is not embedded in part
+    answer.update(files=(), stderr=b"ERROR: [youtube] c: Private video")
+    for f in tmp_path.iterdir():
+        f.unlink()
+    with pytest.raises(Unavailable):
+        yt.download(LIST + "PLx", "youtube", tmp_path)
+    yt.info(YT + "vid&list=PLx", "youtube")  # a link that was not brought to the playlist is its one video, as before
+    assert "--no-playlist" in calls[-1] and "--flat-playlist" not in calls[-1]

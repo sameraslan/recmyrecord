@@ -58,6 +58,14 @@ NONE = {"effnet": 0, "clap": 0}
     (dict(used=NONE, has_youtube_url=True, fulllength="mismatch"), ("no_audio", "youtube_search")),
     (dict(used=NONE, has_youtube_url=True, fulllength="mismatch", youtube_search_tried=True), ("no_audio", "none_available")),
     (dict(used=NONE, youtube_search_tried=True), ("no_audio", "none_available")),
+    # a link the owner gave by hand is the next step while it is not tried, or failed
+    (dict(used=NONE, youtube_search_tried=True, manual_link="not_tried"), ("no_audio", "manual_link")),
+    (dict(used=NONE, has_youtube_url=True, manual_link="failed"), ("no_audio", "manual_link")),
+    (dict(used=NONE, previews_available=10, manual_link="not_tried"), ("no_audio", "embed")),
+    (dict(used=NONE, youtube_search_tried=True, manual_link="unavailable"), ("no_audio", "none_available")),
+    (dict(used={"effnet": 1, "clap": 1}, previews_available=1, edge_case=True, youtube_search_tried=True, manual_link="not_tried"),
+     ("partial", "manual_link")),
+    (dict(used={"effnet": 4, "clap": 4}, windowed=True, youtube_search_tried=True, manual_link="embedded"), ("done", "none")),
 ])
 def test_decide(kwargs, expected):
     assert decide(**kwargs) == expected
@@ -212,6 +220,31 @@ def test_columns(world):
     assert pick("A_none", "under_covered", "few_long_tracks", "wrong_listing_pending", "duplicate_listing") == ("0", "", "0", "0")
 
 
+def test_a_link_given_by_hand(world):
+    """fulllength_links.csv: the album is to fetch until its row of fulllength.csv (matched_by `manual`) says
+    embedded; then it is done on YouTube windows. The sheet link's and the search's columns are not its."""
+    pick = lambda key, *cols: tuple(_build(world)[1][key][c] for c in cols)  # noqa: E731
+    assert pick("A_searched", "manual_link", "next_step") == ("none", "none_available")  # no file of links
+    (world / "audio" / "fulllength_links.csv").write_text(
+        "key,url,note\nA_searched,https://www.youtube.com/playlist?list=PLx,by hand\nA_dead_link,https://www.youtube.com/watch?v=z,by hand\n")
+    assert pick("A_searched", "manual_link", "state", "next_step") == ("not_tried", "no_audio", "manual_link")
+    assert pick("A_none", "manual_link", "next_step") == ("none", "youtube_search")
+    with open(world / "audio" / "fulllength.csv", "a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["A_searched", "youtube", "https://www.youtube.com/playlist?list=PLx", "full_album", 2400, "t", "u", 8, "embedded",
+                    "manual", "no_audio", "", "", "", "14 file(s)"])
+        w.writerow(["A_dead_link", "youtube", "https://www.youtube.com/watch?v=z", "", "", "", "", "", "failed", "manual", "no_audio", "", "", "", ""])
+    cache = OnePassCache(world / "onepass.sqlite")
+    _put(cache, "A_searched", "youtube", "PLx", [(r, "ok") for r in range(8)])
+    cache.set_listing("A_searched", "youtube", "PLx", n_tracks=14, n_previews=8, runtime_s=2400.0, n_windows=8)
+    cache.close()
+    assert pick("A_searched", "manual_link", "state", "next_step", "audio_source", "clap_used", "fulllength", "youtube_search") == (
+        "embedded", "done", "none", "youtube", "8", "not_tried", "none")
+    assert pick("A_dead_link", "manual_link", "fulllength", "state", "next_step") == ("failed", "unavailable", "no_audio", "manual_link")
+    assert main(["--cache", str(world / "onepass.sqlite"), "--catalog", str(world / "albums.csv"), "--audio-dir", str(world / "audio"),
+                 "--dry-run"]) == 0
+
+
 def test_the_listing_and_count_are_the_album_means(world):
     """`<model>_source` and `<model>_used` are what OnePassCache.means pools, for every model."""
     columns, _, rows = _build(world)
@@ -304,3 +337,12 @@ def test_committed_table_covers_the_catalog():
     assert [r["key"] for r in rows] == catalog_keys(DEFAULT_CATALOG)
     assert {r["state"] for r in rows} <= set(STATES) and {r["next_step"] for r in rows} <= set(NEXT_STEPS)
     assert {r["existing_or_new"] for r in rows} == {"existing", "new"}
+
+
+def test_committed_links_are_of_catalog_albums():
+    """audio/fulllength_links.csv, the links given by hand: every row is a catalog album with a YouTube or
+    Bandcamp link, once."""
+    from rmr_audio.links import load_links
+
+    links = load_links(DEFAULT_AUDIO / "fulllength_links.csv", set(catalog_keys(DEFAULT_CATALOG)))
+    assert links and all(source in ("youtube", "bandcamp") for source, _ in links.values())

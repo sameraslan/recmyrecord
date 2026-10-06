@@ -3,7 +3,7 @@ chosen by the RateYourMusic community), its Bandcamp album page, or a video foun
 fetched with yt-dlp, sampled in 30-second windows, embedded by the models, and deleted. The audio is never kept.
 
   cd data-pipeline
-  nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength [--search] [--edge-cases] [--bandcamp]
+  nice -n 19 .venv-audio/bin/python -m rmr_audio.fulllength [--search] [--edge-cases] [--bandcamp] [--links-only]
         [--retry-failed] [--retry-search] [--sample N --seed S] [--limit N] [--keys K,...] [--pause 5]
         [--format F] [--models effnet,clap[,clap_mp3]] [--no-refetch] [--check-baseline] [--fetch-python PY]
         [--torch-python PY] [--dry-run]
@@ -20,6 +20,18 @@ Which albums. One of two sets, by the same steps:
 
 Where the audio comes from, in this order, the next only when the one before is not the album:
 
+  a link given by hand       audio/fulllength_links.csv (key, url, note): a YouTube video, a YouTube playlist
+                             of per-track videos, or a Bandcamp page the owner found for the album. The file
+                             is checked when it is read (a key the catalog does not have, two links for one
+                             album, a link that is neither YouTube's nor Bandcamp's: the run does not start).
+                             The link is brought to one form (hand_link): `watch?v=..&list=..` becomes the
+                             playlist, `pp=`, `si=` and the like are dropped. It is the album without being
+                             judged: its title, uploader and length are recorded and decide nothing. It is
+                             tried whatever the album's other rows say, and while it is not known to have
+                             nothing to fetch (unavailable, live, over six hours, over 200 videos) the
+                             album's other links and the search are left alone. A link changed in the file is
+                             a link not tried; once it is embedded the windows of the old one are forgotten.
+                             --links-only: only the albums of the file, and only these links.
   the sheet's YouTube link   always
   its Bandcamp page          with --bandcamp, when the album has no usable video (none, or recorded here
                              as unavailable, a mismatch or a single track)
@@ -38,8 +50,14 @@ Where the audio comes from, in this order, the next only when the one before is 
                              artist in the title, the artist's own channel, nearness to the listing's runtime,
                              few other words, several uploads of one length) and the best is taken when it
                              reaches 65 and no video of another length comes within 5 points of it.
-                             Not done: playlists of per-track videos (an official album playlist) are not
-                             used; when the video taken turns out unavailable the next best is not tried.
+                             Not done: when the video taken turns out unavailable the next best is not tried.
+
+A YouTube playlist is taken only from a hand-given link; the sheet's link or a search result that is a
+playlist is a mismatch, as before. Its videos are listed in one request (--flat-playlist), downloaded one
+file per video in playlist order with a pause of 2 to 5 seconds between two, and the windows are shared among
+the files by duration, as on Bandcamp: 8 windows, so at most 8 of the videos are embedded, and a video under
+30 seconds that gets a window is that window whole. A video that is gone (private, removed) is passed over;
+any other error fails the whole album and nothing of it is embedded. album_id: the list id.
 
 Per album, one at a time:
 
@@ -47,7 +65,7 @@ Per album, one at a time:
      classified (classify): nobody listens to it.
        full_album    long enough (15 minutes, or 60% of the album's runtime when one is known; 8 minutes
                      when the title says "full album") and the title or the uploader resembles the album
-                     or its artist
+                     or its artist; or given by hand
        single_track  shorter, and resembles them: one track of the album. Recorded, not embedded.
        mismatch      resembles neither, or is over six hours
        unavailable   removed, private, blocked in this country, age-restricted, live
@@ -59,13 +77,14 @@ Per album, one at a time:
      to the one-pass cache under the source `youtube` (album_id: the video id) or `bandcamp` (album_id: the
      page's host and path). The folder is deleted in a `finally`, whatever happened.
   3. The outcome is a row of audio/fulllength.csv, written after every album. An album has at most one row
-     for its video link, one for its Bandcamp page and one for its search (matched_by `search`):
+     for its video link, one for its Bandcamp page, one for its search (matched_by `search`) and one for its
+     hand-given link (matched_by `manual`; source: youtube or bandcamp, by its address):
        key, source, url, class, duration_s, title, uploader, n_windows, status
-       matched_by    link | search
+       matched_by    link | search | manual
        reason        no_audio | edge_case: which set the album was in
        query, score, runner_up   a search: the query that listed the video, its score, and the score of the
                      best video of another length (empty when there was none)
-       note          what the classification or the refusal rests on, or the error
+       note          what the classification or the refusal rests on, or the error; the number of files
      status: embedded | skipped (not a full album: final) | search_none (the search took nothing; url, title,
      uploader, duration_s and note are the video that came closest and why it was refused; final unless
      --retry-search) | failed | blocked (both tried again by the next run; a video a search took is fetched
@@ -81,6 +100,10 @@ not written. The top-up is refused, and nothing changed, when the link no longer
 was embedded, is no longer a full album, or a file's length differs by more than 2 seconds from the
 embedded one's. --check-baseline: the top-up also embeds each window for clap and prints its cosine with the
 stored clap vector (is it the same audio?); nothing of clap is written.
+
+--dry-run prints the counts and one line for each hand-given link it would fetch, and asks nothing of the
+network; with --links-only it asks yt-dlp for the metadata of each of those links (one request a link) and
+the line says what the link is, how long, and how many megabytes at most.
 
 Polite and easy to stop: no cookies, no account, no login, yt-dlp's own config files ignored
 (--ignore-config), a pause after every album, the lowest priority, the one-pass cache's lock held (so no
@@ -116,6 +139,7 @@ from rmr_pipeline.constants import PIPELINE_DIR
 from . import embed, onepass, textnorm, windows
 from .album_status import edge_case, listing_facts
 from .clips import FINAL
+from .links import hand_link, load_links
 from .onepass_cache import MODELS, VARIANT_OF, WINDOW_SOURCES, OnePassCache, read_only
 
 OLD_FIELDS = ["key", "source", "url", "class", "duration_s", "title", "uploader", "n_windows", "status"]
@@ -126,9 +150,11 @@ SEARCH_DONE = DONE + ("search_none",)  # a search row: final unless --retry-sear
 STATUSES = ("embedded", "skipped", "failed", "blocked", "topped_up", "search_none")
 SOURCES = {"youtube": "youtube_url", "bandcamp": "bandcamp_url"}  # source -> its column of the catalog
 SEARCH = "search"  # the slot of a row whose video was found by a search: (key, "search") beside (key, "youtube")
-MATCHED_BY = ("link", SEARCH)
+MANUAL = "manual"  # the slot of a row whose link the owner gave by hand (audio/fulllength_links.csv)
+MATCHED_BY = ("link", SEARCH, MANUAL)
 REASONS = ("no_audio", "edge_case")
 DEFAULT_CSV = DEFAULT_AUDIO / "fulllength.csv"
+DEFAULT_LINKS = DEFAULT_AUDIO / "fulllength_links.csv"
 DEFAULT_TMP = onepass.DEFAULT_CACHE / "fulllength-tmp"
 DEFAULT_FETCH_PYTHON = PIPELINE_DIR / ".venv-fetch" / "bin" / "python"
 # about 128 kbit/s, what the store previews are; never a video stream. Bandcamp's free stream is mp3-128.
@@ -136,6 +162,7 @@ FORMATS = {"youtube": "bestaudio[abr<=160]/bestaudio", "bandcamp": "mp3-128/best
 MIN_ALBUM_S = 15 * 60.0
 MIN_HINTED_S = 8 * 60.0  # a title that says "full album" is believed from eight minutes
 MAX_ALBUM_S = 6 * 3600.0
+MAX_PLAYLIST_VIDEOS = 200  # a hand-given playlist of more videos is not one album (a soundtrack of 82 tracks is)
 RUNTIME_SHARE = 0.6
 UNAVAILABLE_IN_A_ROW = 5
 # The search (see "searching for the album" below)
@@ -198,8 +225,9 @@ class YtDlp:
             raise FetchError(f"yt-dlp gave no answer in {timeout:.0f} s") from None
 
     def info(self, url: str, source: str) -> dict:
-        """The link's metadata; nothing is downloaded. A YouTube link is read as its one video."""
-        p = self._run(["--skip-download", "-J", *(["--no-playlist"] if source == "youtube" else []), url], 300)
+        """The link's metadata; nothing is downloaded. A YouTube link is read as its one video; a link to a
+        playlist itself as the list of its videos (--flat-playlist: one request, no video page is opened)."""
+        p = self._run(["--skip-download", "-J", *playlist_args(source, url, ["--flat-playlist"]), url], 300)
         if p.returncode:
             raise fetch_error(p.stderr.decode(errors="replace"))
         try:
@@ -219,15 +247,36 @@ class YtDlp:
             raise FetchError("yt-dlp's search result is not JSON") from None
 
     def download(self, url: str, source: str, folder: Path) -> list[Path]:
-        """The audio-only stream(s) of the link into `folder`, in track order. No video, no conversion."""
-        name = "%(id)s.%(ext)s" if source == "youtube" else "%(playlist_index)03d-%(id)s.%(ext)s"
-        p = self._run(["-f", self.formats[source], *(["--no-playlist"] if source == "youtube" else []), "--no-part",
-                       "--no-mtime", "--fixup", "never", "--no-progress", "--quiet", "--retries", "2",
-                       "--fragment-retries", "2", "--max-filesize", "600M", "-o", str(folder / name), url], 3600)
-        files = audio_files(folder)
-        if p.returncode or not files:
-            raise fetch_error(p.stderr.decode(errors="replace") or "yt-dlp wrote no file")
+        """The audio-only stream(s) of the link into `folder`, in track order. No video, no conversion. A
+        YouTube playlist: one file per video, a pause between two, and a video that is gone is passed over;
+        any other error (a block, a download refused) fails the whole album, so it is never embedded in part."""
+        several = is_playlist(source, url)
+        name = "%(id)s.%(ext)s" if source == "youtube" and not several else "%(playlist_index)03d-%(id)s.%(ext)s"
+        p = self._run(["-f", self.formats[source], *playlist_args(source, url, [
+                           "--playlist-end", str(MAX_PLAYLIST_VIDEOS), "--sleep-interval", "2", "--max-sleep-interval", "5"]),
+                       "--no-part", "--no-mtime", "--fixup", "never", "--no-progress", "--quiet", "--retries", "2",
+                       "--fragment-retries", "2", "--max-filesize", "600M", "-o", str(folder / name), url], 3 * 3600 if several else 3600)
+        files, said = audio_files(folder), p.stderr.decode(errors="replace")
+        if several and files and p.returncode:
+            errors = [fetch_error(line) for line in said.splitlines() if line.startswith("ERROR")] or [fetch_error(said)]
+            worst = next((e for e in errors if isinstance(e, Blocked)), next((e for e in errors if not isinstance(e, Unavailable)), None))
+            if worst is not None:
+                raise worst
+        elif p.returncode or not files:
+            raise fetch_error(said or "yt-dlp wrote no file")
         return files
+
+
+def is_playlist(source: str, url: str) -> bool:
+    """Is the link a YouTube playlist itself (not one video of it)?"""
+    return source == "youtube" and urlparse(url).path.rstrip("/") == "/playlist"
+
+
+def playlist_args(source: str, url: str, more: list[str]) -> list[str]:
+    """yt-dlp's arguments for what a YouTube link is: its one video, or every video of a playlist (and `more`)."""
+    if source != "youtube":
+        return []
+    return ["--yes-playlist", *more] if is_playlist(source, url) else ["--no-playlist"]
 
 
 def audio_files(folder: Path) -> list[Path]:
@@ -285,24 +334,36 @@ def describe(info: dict) -> tuple[float | None, str, str, int]:
 
 
 def link_id(source: str, url: str, info: dict | None = None) -> str:
-    """What the cache calls the link (album_id): the video id; a Bandcamp page's host and path."""
+    """What the cache calls the link (album_id): the video id (a playlist's: its list id); a Bandcamp page's
+    host and path."""
     u = urlparse(url)
     if source == "youtube":
-        return (info or {}).get("id") or (parse_qs(u.query).get("v") or [u.path.rsplit("/", 1)[-1]])[0]
+        q = parse_qs(u.query)
+        return (info or {}).get("id") or (q.get("list" if is_playlist(source, url) else "v") or [u.path.rsplit("/", 1)[-1]])[0]
     return (u.netloc + u.path).rstrip("/")
 
 
-def classify(info: dict, row: dict, source: str, url: str, runtime_s: float | None = None) -> Verdict:
+def classify(info: dict, row: dict, source: str, url: str, runtime_s: float | None = None, trusted: bool = False) -> Verdict:
     """What the link is, from its metadata alone (see the module docstring). `runtime_s`: the album's
-    runtime when something knows it."""
+    runtime when something knows it. `trusted`: the owner gave the link by hand. It is the album whatever its
+    title, uploader and length say (they are still recorded), and it may be a YouTube playlist: the videos
+    that have a length are its tracks. What cannot be fetched (live, no length) and what is no album by its
+    size (over six hours, over MAX_PLAYLIST_VIDEOS videos) is refused all the same."""
     duration, title, uploader, tracks = describe(info)
     album_id = link_id(source, url, info)
+    several, left_out = source == "youtube" and info.get("_type") == "playlist", 0
 
     def verdict(cls: str, reason: str) -> Verdict:
         return Verdict(cls, reason, float(duration) if duration else None, title, uploader, album_id)
 
-    if source == "youtube" and info.get("_type") == "playlist":
+    if several and not trusted:
         return verdict("mismatch", "a playlist, not one video")
+    if several:
+        lengths = [e.get("duration") for e in info.get("entries") or [] if e]
+        tracks, left_out = sum(bool(d) for d in lengths), sum(not d for d in lengths)
+        duration = float(sum(d for d in lengths if d)) or None
+        if tracks > MAX_PLAYLIST_VIDEOS:
+            return verdict("mismatch", f"a playlist of {tracks} videos: more than {MAX_PLAYLIST_VIDEOS}")
     if info.get("live_status") in ("is_live", "is_upcoming") or info.get("is_live"):
         return verdict("unavailable", "a live stream")
     if not duration:
@@ -314,6 +375,9 @@ def classify(info: dict, row: dict, source: str, url: str, runtime_s: float | No
     title_ok = any(resembles(t, text_t) for t in titles)
     artist_ok = any(resembles(a, text_a) for a in artists)
     seen = "+".join(k for k, ok in (("title", title_ok), ("artist", artist_ok)) if ok) or "neither title nor artist"
+    if trusted:
+        return verdict("full_album", f"hand-given, not judged (it shows {seen}); {duration / 60:.0f} min" + (
+            f"; a playlist of {tracks} videos" + (f", {left_out} that cannot be fetched left out" if left_out else "") if several else ""))
     hinted = bool(HINT.search(title)) or tracks > 1
     need = max(MIN_ALBUM_S, RUNTIME_SHARE * runtime_s) if runtime_s else MIN_ALBUM_S
     long = duration >= need or (hinted and duration >= MIN_HINTED_S and (not runtime_s or duration >= RUNTIME_SHARE * runtime_s))
@@ -554,13 +618,15 @@ def search_album(fetcher, row: dict, runtime_s: float | None, n: int = SEARCH_N,
 # --- the outcomes file -------------------------------------------------------------------------------
 
 def slot_of(row: dict) -> str:
-    """Where a row sits beside the album's other rows: its source, or `search` for a video a search found."""
-    return SEARCH if row.get("matched_by") == SEARCH else row["source"]
+    """Where a row sits beside the album's other rows: its source, `search` for a video a search found, or
+    `manual` for a link given by hand."""
+    return row["matched_by"] if row.get("matched_by") in (SEARCH, MANUAL) else row["source"]
 
 
-def source_of(slot: str) -> str:
-    """The source the windows of a slot are cached under: a searched video is a YouTube video."""
-    return "youtube" if slot == SEARCH else slot
+def source_of(slot: str, url: str = "") -> str:
+    """The source the windows of a slot are cached under: a searched video is a YouTube video; a hand-given
+    link is what its address says."""
+    return "youtube" if slot == SEARCH else hand_link(url)[0] if slot == MANUAL else slot
 
 
 def load_outcomes(path: Path) -> dict[tuple[str, str], dict]:
@@ -578,7 +644,7 @@ def load_outcomes(path: Path) -> dict[tuple[str, str], dict]:
             r["matched_by"], r["reason"] = r["matched_by"] or "link", r["reason"] or "no_audio"
             if (not SOURCE_RE.match(r["source"]) or r["source"] not in SOURCES or (r["class"] and r["class"] not in CLASSES)
                     or r["matched_by"] not in MATCHED_BY or r["reason"] not in REASONS or r["status"] not in STATUSES
-                    or (r["matched_by"] == SEARCH and r["source"] != "youtube")):
+                    or (r["matched_by"] == SEARCH and r["source"] != "youtube")):  # a hand-given link may be Bandcamp's
                 raise ValueError(f"{path} line {n}: unknown source, class, status, matched_by or reason")
             rows[(r["key"], slot_of(r))] = r
     return rows
@@ -674,13 +740,30 @@ def link_unusable(al: dict, outcomes: dict) -> bool:
     return video_unusable(al, outcomes) is True and outcomes.get((al["key"], "bandcamp"), {}).get("status") != "embedded"
 
 
-def targets(albums: list[dict], outcomes: dict, bandcamp: bool, search: bool = False) -> list[tuple[dict, str, str]]:
+def manual_row(outcomes: dict, key: str, url: str) -> dict:
+    """The album's row for this hand-given link; empty when there is none, or it is of a link the file no
+    longer has (a link that was changed is a link not tried)."""
+    row = outcomes.get((key, MANUAL), {})
+    return row if row.get("url") == url else {}
+
+
+def targets(albums: list[dict], outcomes: dict, bandcamp: bool, search: bool = False, links: dict | None = None,
+            links_only: bool = False) -> list[tuple[dict, str, str]]:
     """(album, slot, url) to consider, in catalog order: its YouTube link; with `bandcamp`, its Bandcamp
     page unless its video is already embedded; with `search`, a search (slot `search`; the url is the video
     an earlier search took, or empty) unless its video is already embedded. The run looks again once it
-    knows what the link is, and leaves the page alone unless video_unusable, the search unless link_unusable."""
+    knows what the link is, and leaves the page alone unless video_unusable, the search unless link_unusable.
+    An album with a hand-given link (`links`, slot `manual`): that link alone, and the rest only once it was
+    found to have nothing to fetch (its row says skipped), never with `links_only`."""
     out = []
     for al in albums:
+        hand = (links or {}).get(al["key"])
+        if hand:
+            out.append((al, MANUAL, hand[1]))
+            if manual_row(outcomes, al["key"], hand[1]).get("status") != "skipped":
+                continue
+        if links_only:
+            continue
         if al.get("youtube_url"):
             out.append((al, "youtube", al["youtube_url"]))
         if bandcamp and al.get("bandcamp_url") and video_unusable(al, outcomes) is not False:
@@ -759,6 +842,8 @@ class Options:
     retry_failed: bool = False  # only the rows whose last outcome is `failed`
     retry_search: bool = False  # search again for the albums a search gave nothing usable for
     search_n: int = SEARCH_N
+    links: Path = DEFAULT_LINKS  # the links given by hand
+    links_only: bool = False  # only the albums of that file, and only their hand-given links
 
 
 def lacking_variants(cache_db: Path, models) -> set[tuple[str, str]]:
@@ -784,12 +869,16 @@ def lacking_variants(cache_db: Path, models) -> set[tuple[str, str]]:
 def plan(opts: Options, outcomes: dict, lacking=frozenset()) -> tuple[list[tuple[dict, str, str]], Counter]:
     """The (album, source, url) with work to do, and counts of the rest. No network. `lacking`: the
     (key, source) already embedded that lack a variant the run was asked for (lacking_variants): they are
-    work too (a top-up) unless opts.refetch is off."""
+    work too (a top-up) unless opts.refetch is off. ValueError when the file of hand-given links is wrong."""
     albums = (edge_case_albums(opts.catalog, opts.matches, opts.out) if opts.edge_cases
               else no_audio_albums(opts.catalog, opts.keys_csv, opts.matches))
     counts = Counter(no_audio=len(albums), youtube=sum(bool(a.get("youtube_url")) for a in albums),
                      bandcamp_only=sum(bool(a.get("bandcamp_url")) and not a.get("youtube_url") for a in albums),
                      no_link=sum(not a.get("bandcamp_url") and not a.get("youtube_url") for a in albums))
+    links = load_links(opts.links, {r["rym_id"] for r in read_csv(opts.catalog)})
+    counts["links"], outside = len(links), sorted(set(links) - {a["key"] for a in albums})
+    if opts.links_only:
+        albums = [a for a in albums if a["key"] in links]
     if opts.keys:
         albums = [a for a in albums if a["key"] in set(opts.keys)]
     if opts.sample is not None:  # with a search every album can be worked on, not only the ones with a link
@@ -797,9 +886,9 @@ def plan(opts: Options, outcomes: dict, lacking=frozenset()) -> tuple[list[tuple
         albums = [a for a in albums if a["key"] in chosen]
     todo = []
     base_too = any(m not in VARIANT_OF for m in opts.models)
-    for al, slot, url in targets(albums, outcomes, opts.bandcamp, opts.search):
-        status = outcomes.get((al["key"], slot), {}).get("status")
-        top_up = status == "embedded" and opts.refetch and (al["key"], source_of(slot)) in lacking
+    for al, slot, url in targets(albums, outcomes, opts.bandcamp, opts.search, links, opts.links_only):
+        status = (manual_row(outcomes, al["key"], url) if slot == MANUAL else outcomes.get((al["key"], slot), {})).get("status")
+        top_up = status == "embedded" and opts.refetch and (al["key"], source_of(slot, url)) in lacking
         done = status in (SEARCH_DONE if slot == SEARCH else DONE) and not (
             slot == SEARCH and opts.retry_search and status != "embedded")
         if opts.retry_failed and status != "failed":
@@ -811,6 +900,7 @@ def plan(opts: Options, outcomes: dict, lacking=frozenset()) -> tuple[list[tuple
         else:
             todo.append((al, slot, url))
             counts["top_up"] += top_up
+    counts["links_outside"] = outside  # hand-given links of albums that are not in the set this run works on
     return todo, counts
 
 
@@ -824,7 +914,11 @@ def run(opts: Options, fetcher=None, embedder=None, out=print, stop=None, durati
         print(f"unknown model {unknown}: {', '.join(MODELS)}", file=sys.stderr)
         return 1
     outcomes = load_outcomes(opts.csv)
-    todo, counts = plan(opts, outcomes, lacking_variants(opts.out, opts.models))
+    try:
+        todo, counts = plan(opts, outcomes, lacking_variants(opts.out, opts.models))
+    except ValueError as e:  # the file of hand-given links
+        print(f"{e}: not starting", file=sys.stderr)
+        return 1
     out((f"{counts['no_audio']} albums under-covered by their store previews (1 to 3 previews of 15 minutes or more, or of "
          "unknown runtime)" if opts.edge_cases else f"{counts['no_audio']} albums without a preview")
         + f": {counts['youtube']} with a YouTube link, "
@@ -834,10 +928,12 @@ def run(opts: Options, fetcher=None, embedder=None, out=print, stop=None, durati
         + (f"; {counts['top_up']} of those to do are embedded albums fetched again for "
            f"{' + '.join(m for m in opts.models if m in VARIANT_OF)} alone" if counts["top_up"] else "")
         + (f"; {counts['not_embedded']} not embedded yet are left for a run with the base models" if counts["not_embedded"] else "")
-        + (f", {counts['beyond_limit']} left for a later run (--limit)" if counts["beyond_limit"] else ""))
+        + (f", {counts['beyond_limit']} left for a later run (--limit)" if counts["beyond_limit"] else "")
+        + (f"; {counts['links']} hand-given link{'s' * (counts['links'] != 1)} ({Path(opts.links).name})" if counts["links"] else "")
+        + (f", not used for {', '.join(counts['links_outside'])}: not "
+           f"{'under-covered by previews' if opts.edge_cases else 'without a preview'}" if counts["links_outside"] else ""))
     if opts.dry_run:
-        out("dry run: nothing fetched or written")
-        return 0
+        return dry_run(todo, opts, fetcher, out, sleep)
     if not todo:
         return 0
     try:
@@ -884,15 +980,50 @@ def run(opts: Options, fetcher=None, embedder=None, out=print, stop=None, durati
     return code
 
 
+def dry_run(todo, opts: Options, fetcher, out, sleep) -> int:
+    """What a run would fetch for the hand-given links, one line each; nothing is downloaded or written.
+    With --links-only yt-dlp is asked for each link's metadata (one request a link, a pause between two, no
+    second try) and the line says what the link is; any other dry run asks nothing. Returns 0; 1 when
+    yt-dlp is not there; 2 at a sign of blocking."""
+    asked = False
+    for al, slot, url in todo:
+        if slot != MANUAL:
+            continue
+        line = f"would fetch\t{al['key']}\trank {al.get('rank', '')}\t{url}\t{al.get('artist', '')} — {al.get('title', '')}"
+        if opts.links_only:
+            if fetcher is None:
+                if not Path(opts.fetch_python).exists():
+                    print(f"{opts.fetch_python}: no such interpreter (python -m venv .venv-fetch && .venv-fetch/bin/pip install yt-dlp)",
+                          file=sys.stderr)
+                    return 1
+                fetcher = YtDlp(opts.fetch_python, opts.formats)
+            if asked:
+                sleep(opts.pause * random.uniform(1.0, 1.5))
+            asked, source = True, source_of(slot, url)
+            try:
+                v = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s"), trusted=True)
+                line += (f" || {v.cls}\t{(v.duration_s or 0) / 60:.0f} min\t"  # 160 kbit/s: the most the format asked for gives
+                         f"at most about {(v.duration_s or 0) * 20e3 / 2 ** 20:.0f} MB\t{v.title} | {v.uploader} || {v.reason}")
+            except Blocked as e:
+                out(f"{line} || blocked\t{e}")
+                out("the site is refusing or rate-limiting us: stopping. Run again another day; nothing is retried now")
+                return 2
+            except FetchError as e:
+                line += f" || {'unavailable' if isinstance(e, Unavailable) else 'failed'}\t{e}"
+        out(line)
+    out("dry run: nothing downloaded or written")
+    return 0
+
+
 def top_up(al: dict, source: str, url: str, folder: Path, opts: Options, cache: OnePassCache, fetcher, embedder,
-           durations, decode_window, stop, out) -> tuple[str, str, int]:
+           durations, decode_window, stop, out, trusted: bool = False) -> tuple[str, str, int]:
     """An embedded album fetched again for the variants it lacks. (state, note, windows now ok): state is
     `topped_up`, or `failed` when the link is no longer what was embedded (nothing is changed then). Only
     rows of the variants are written: the base models' rows, the clip rows and the listing stay as they are.
     The windows are the cache's own (start and length), not laid out again."""
     key = al["key"]
     variants = [m for m in opts.models if m in VARIANT_OF]
-    verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s"))
+    verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s"), trusted)
     if verdict.cls != "full_album":
         return "failed", f"the link is now {verdict.cls} ({verdict.reason}): not what was embedded; nothing changed", 0
     cached = cache.album(key, source, verdict.album_id)
@@ -952,7 +1083,7 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
     for i, (al, slot, url) in enumerate(todo):
         if stop.asked:
             break
-        source, key = source_of(slot), al["key"]
+        source, key = source_of(slot, url), al["key"]
         if slot == "bandcamp" and not video_unusable(al, outcomes):
             continue  # its video is the album, or is not known yet (it failed just now): the page is left alone
         if slot == SEARCH and not link_unusable(al, outcomes):
@@ -960,9 +1091,9 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
         if asked:
             sleep(opts.pause * random.uniform(1.0, 1.5))
         asked = True
-        t, before = time.monotonic(), outcomes.get((key, slot), {})
+        t, before = time.monotonic(), manual_row(outcomes, key, url) if slot == MANUAL else outcomes.get((key, slot), {})
         row = {**dict.fromkeys(FIELDS, ""), "key": key, "source": source, "url": url, "status": "failed",
-               "matched_by": SEARCH if slot == SEARCH else "link", "reason": al.get("reason") or "no_audio"}
+               "matched_by": slot if slot in (SEARCH, MANUAL) else "link", "reason": al.get("reason") or "no_audio"}
         note, folder, blocked, gone = "", Path(opts.tmp) / hashlib.sha1(f"{slot}:{key}".encode()).hexdigest()[:12], False, False
         again = before.get("status") == "embedded"  # a top-up: its row is not rewritten
         try:
@@ -971,7 +1102,8 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
                     out("under 2 GB of free disk: stopping")
                     stop.asked, code = True, 2
                     break
-                state, note, ok = top_up(al, source, url, folder, opts, cache, fetcher, embedder, durations, decode_window, stop, out)
+                state, note, ok = top_up(al, source, url, folder, opts, cache, fetcher, embedder, durations, decode_window, stop, out,
+                                         slot == MANUAL)
                 if state == "stopped":
                     out(f"{key}\tstopped inside the album: it is finished by the next run")
                     break
@@ -993,7 +1125,7 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
                     if not found:
                         row["status"], note = "search_none", choice.why
                 url = row["url"]
-                verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s")) if found else None
+                verdict = classify(fetcher.info(url, source), al, source, url, al.get("runtime_s"), slot == MANUAL) if found else None
                 if verdict is not None:
                     row.update({"class": verdict.cls, "duration_s": f"{verdict.duration_s:.0f}" if verdict.duration_s else "",
                                 "title": verdict.title, "uploader": verdict.uploader, "status": "skipped"})
@@ -1017,6 +1149,10 @@ def _work(todo, outcomes, opts: Options, cache, fetcher, embedder, out, stop, du
                     if ok:
                         sizes.append(size)
                         n_embedded += ok
+                        old = outcomes.get((key, MANUAL), {}) if slot == MANUAL else {}
+                        if old.get("status") == "embedded" and old.get("url") != url:  # the link was changed: its windows go
+                            cache.forget(key, old["source"], link_id(old["source"], old["url"]))
+                            cache.commit()
                     else:
                         note += "; no window could be embedded"
         except Blocked as e:
@@ -1097,7 +1233,13 @@ def parser() -> argparse.ArgumentParser:
     p.add_argument("--fetch-python", type=Path, default=DEFAULT_FETCH_PYTHON, help="The python of the environment with yt-dlp.")
     p.add_argument("--torch-python", type=Path, default=None, help="The torch venv's python (or RMR_TORCH_PYTHON).")
     p.add_argument("--cache-dir", type=Path, default=onepass.DEFAULT_CACHE, help="Where models/ (the EffNet graph) is.")
-    p.add_argument("--dry-run", action="store_true", help="Print what would be done; no network, nothing written.")
+    p.add_argument("--links", type=Path, default=DEFAULT_LINKS,
+                   help="The links given by hand: key, url, note (default audio/fulllength_links.csv).")
+    p.add_argument("--links-only", action="store_true",
+                   help="Only the albums of the links file, and only their hand-given links (no sheet link, no Bandcamp page, no search).")
+    p.add_argument("--dry-run", action="store_true",
+                   help="Print what would be done; nothing downloaded or written. No network, except with --links-only: "
+                        "yt-dlp is asked for the metadata of each hand-given link.")
     p.add_argument("--no-refetch", action="store_true",
                    help="Leave alone the embedded albums that lack a variant asked for (default: fetch them again for it alone).")
     p.add_argument("--check-baseline", action="store_true",
@@ -1116,7 +1258,7 @@ def main(argv: list[str] | None = None) -> int:
                        a.bandcamp, a.sample, a.seed, a.limit, a.pause, a.max_failures, a.fetch_python, a.torch_python,
                        a.cache_dir, {"youtube": a.format} if a.format else None, a.dry_run, not a.no_refetch, a.check_baseline,
                        search=a.search, edge_cases=a.edge_cases, retry_failed=a.retry_failed, retry_search=a.retry_search,
-                       search_n=a.search_results))
+                       search_n=a.search_results, links=a.links, links_only=a.links_only))
 
 
 if __name__ == "__main__":

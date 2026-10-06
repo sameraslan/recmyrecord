@@ -8,8 +8,8 @@
  "pooling": "the plain mean (float64, not renormalised) of the album's first 4 ok clips in rank order, from one listing; windows of full-length audio (local, youtube, bandcamp) replace the previews and the mean then takes every window; stored as float16",
  "shards": [
   {
-   "file": "part-0003.npz",
-   "albums": 10235,
+   "file": "part-0004.npz",
+   "albums": 10240,
    "created": "2026-10-05",
    "note": "album means of the one-pass clip cache, 4 clips per album (rmr_audio.modelstore write)"
   }

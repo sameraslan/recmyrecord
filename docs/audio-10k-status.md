@@ -13,6 +13,8 @@
 - Every quality number is an RYM-based proxy on stored vectors. The listening is the owner's judgement of one page of lists, not a measurement.
 - The site still runs on `data-pipeline/audio/`, the EffNet store of its 3,980 albums. `SITE_MODEL`, the site data rebuild, the copy and the deploy wait for the owner's go-ahead.
 
+**Added later on 5 October.** The owner found YouTube links by hand for five top-1,000 albums with no audio (Rock Dream, Yanqui U.X.O., Ocarina of Time, Endless, Genesis Archive 1967-75). They are in `data-pipeline/audio/fulllength_links.csv`, four of them playlists of per-track videos, and were embedded with `rmr_audio.fulllength --links-only`. Both stores were written again: EffNet 10,242 albums, CLAP 10,240 (YouTube 874). 223 albums have no audio. Counts elsewhere in this document are from before these five; `results/sonic_measures.clap_mp3.md` and `data-pipeline/audio/album_status.md` are current.
+
 ## Goal
 
 Grow the site from 4,081 albums to the RYM top 10,000 with a sonic block built from preview clips. The similarity model was to be CLAP; since the listening of 5 October it is EffNet. Plan: the "Audio Pipeline Revamp Plan" document, steps 3 to 6.

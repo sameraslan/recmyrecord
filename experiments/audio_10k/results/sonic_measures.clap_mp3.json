@@ -2,8 +2,8 @@
  "generated": "2026-10-05",
  "note": "RYM-based proxies over the whole catalog with audio; descriptive, not a held-out evaluation. See measure.py's docstring for the definitions and for what is comparable.",
  "catalog_albums": 10467,
- "with_clap_audio": 10235,
- "with_both_models": 10235,
+ "with_clap_audio": 10240,
+ "with_both_models": 10240,
  "clips_per_album": {
   "1": 27,
   "2": 26,
@@ -12,12 +12,12 @@
   "5": 36,
   "6": 51,
   "7": 80,
-  "8": 662
+  "8": 667
  },
  "sources": {
   "deezer": 6473,
   "itunes": 2893,
-  "youtube": 869
+  "youtube": 874
  },
  "same_track_check": {
   "effnet": {
@@ -42,73 +42,73 @@
    "blocks": {
     "clap": {
      "name": "clap",
-     "albums": 10235,
-     "new_albums": 6198,
-     "share_new_in_pool": 0.6056,
-     "albums_with_genre": 9774,
-     "albums_with_5_descriptors": 9436,
+     "albums": 10240,
+     "new_albums": 6200,
+     "share_new_in_pool": 0.6055,
+     "albums_with_genre": 9779,
+     "albums_with_5_descriptors": 9440,
      "metrics": {
       "genre_primary": {
-       "mean": 0.1965,
-       "n": 9774
+       "mean": 0.1968,
+       "n": 9779
       },
       "genre_any": {
-       "mean": 0.3616,
-       "n": 9774
+       "mean": 0.3618,
+       "n": 9779
       },
       "genre_family": {
-       "mean": 0.6012,
-       "n": 9774
+       "mean": 0.6013,
+       "n": 9779
       },
       "desc_jaccard": {
-       "mean": 0.1944,
-       "n": 9436
+       "mean": 0.1945,
+       "n": 9440
       },
       "desc_shared": {
-       "mean": 2.3823,
-       "n": 9436
+       "mean": 2.3828,
+       "n": 9440
       },
       "genre_primary_xa": {
-       "mean": 0.1661,
-       "n": 9774
+       "mean": 0.1663,
+       "n": 9779
       },
       "genre_any_xa": {
-       "mean": 0.3282,
-       "n": 9774
+       "mean": 0.3283,
+       "n": 9779
       },
       "genre_family_xa": {
        "mean": 0.5834,
-       "n": 9774
+       "n": 9779
       },
       "desc_jaccard_xa": {
        "mean": 0.1851,
-       "n": 9436
+       "n": 9440
       },
       "desc_shared_xa": {
-       "mean": 2.2904,
-       "n": 9436
+       "mean": 2.2908,
+       "n": 9440
       }
      },
      "random": {
       "genre_primary": {
-       "mean": 0.0079,
-       "n": 9774
+       "mean": 0.0076,
+       "n": 9779
       },
       "genre_any": {
-       "mean": 0.0223,
-       "n": 9774
+       "mean": 0.0214,
+       "n": 9779
       },
       "genre_family": {
-       "mean": 0.1137,
-       "n": 9774
+       "mean": 0.1132,
+       "n": 9779
       },
       "desc_jaccard": {
-       "mean": 0.0642,
-       "n": 9436
+       "mean": 0.0644,
+       "n": 9440
       },
       "desc_shared": {
-       "mean": 0.8735,
-       "n": 9436
+       "mean": 0.8756,
+       "n": 9440
       }
      },
      "hubness": {
@@ -118,145 +118,145 @@
      },
      "groups": {
       "all": {
-       "albums": 10235,
+       "albums": 10240,
        "genre_primary": {
-        "mean": 0.1965,
-        "n": 9774
+        "mean": 0.1968,
+        "n": 9779
        },
        "genre_any": {
-        "mean": 0.3616,
-        "n": 9774
+        "mean": 0.3618,
+        "n": 9779
        },
        "genre_family": {
-        "mean": 0.6012,
-        "n": 9774
+        "mean": 0.6013,
+        "n": 9779
        },
        "desc_jaccard": {
-        "mean": 0.1944,
-        "n": 9436
+        "mean": 0.1945,
+        "n": 9440
        },
        "desc_shared": {
-        "mean": 2.3823,
-        "n": 9436
+        "mean": 2.3828,
+        "n": 9440
        },
        "genre_primary_xa": {
-        "mean": 0.1661,
-        "n": 9774
+        "mean": 0.1663,
+        "n": 9779
        },
        "genre_any_xa": {
-        "mean": 0.3282,
-        "n": 9774
+        "mean": 0.3283,
+        "n": 9779
        },
        "genre_family_xa": {
         "mean": 0.5834,
-        "n": 9774
+        "n": 9779
        },
        "desc_jaccard_xa": {
         "mean": 0.1851,
-        "n": 9436
+        "n": 9440
        },
        "desc_shared_xa": {
-        "mean": 2.2904,
-        "n": 9436
+        "mean": 2.2908,
+        "n": 9440
        },
        "share_of_neighbours_new": 0.5854,
-       "same_genre_share_new": 0.6293,
+       "same_genre_share_new": 0.6292,
        "mean_n10": 10.0,
        "never_recommended": 0.021,
        "max_n10": 62
       },
       "new": {
-       "albums": 6198,
+       "albums": 6200,
        "genre_primary": {
-        "mean": 0.1887,
-        "n": 6190
+        "mean": 0.189,
+        "n": 6192
        },
        "genre_any": {
-        "mean": 0.353,
-        "n": 6190
+        "mean": 0.3532,
+        "n": 6192
        },
        "genre_family": {
-        "mean": 0.5848,
-        "n": 6190
+        "mean": 0.5849,
+        "n": 6192
        },
        "desc_jaccard": {
-        "mean": 0.1887,
-        "n": 5925
+        "mean": 0.1888,
+        "n": 5926
        },
        "desc_shared": {
-        "mean": 2.3264,
-        "n": 5925
+        "mean": 2.327,
+        "n": 5926
        },
        "genre_primary_xa": {
-        "mean": 0.1629,
-        "n": 6190
+        "mean": 0.163,
+        "n": 6192
        },
        "genre_any_xa": {
-        "mean": 0.3241,
-        "n": 6190
+        "mean": 0.3242,
+        "n": 6192
        },
        "genre_family_xa": {
-        "mean": 0.5699,
-        "n": 6190
+        "mean": 0.57,
+        "n": 6192
        },
        "desc_jaccard_xa": {
         "mean": 0.1813,
-        "n": 5925
+        "n": 5926
        },
        "desc_shared_xa": {
-        "mean": 2.2528,
-        "n": 5925
+        "mean": 2.2534,
+        "n": 5926
        },
        "share_of_neighbours_new": 0.6354,
-       "same_genre_share_new": 0.666,
+       "same_genre_share_new": 0.6658,
        "mean_n10": 9.67,
        "never_recommended": 0.0218,
        "max_n10": 53
       },
       "existing": {
-       "albums": 4037,
+       "albums": 4040,
        "genre_primary": {
-        "mean": 0.21,
-        "n": 3584
+        "mean": 0.2103,
+        "n": 3587
        },
        "genre_any": {
-        "mean": 0.3764,
-        "n": 3584
+        "mean": 0.3766,
+        "n": 3587
        },
        "genre_family": {
-        "mean": 0.6297,
-        "n": 3584
+        "mean": 0.6296,
+        "n": 3587
        },
        "desc_jaccard": {
         "mean": 0.2041,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared": {
-        "mean": 2.4765,
-        "n": 3511
+        "mean": 2.4768,
+        "n": 3514
        },
        "genre_primary_xa": {
-        "mean": 0.1717,
-        "n": 3584
+        "mean": 0.1719,
+        "n": 3587
        },
        "genre_any_xa": {
-        "mean": 0.3352,
-        "n": 3584
+        "mean": 0.3354,
+        "n": 3587
        },
        "genre_family_xa": {
-        "mean": 0.6067,
-        "n": 3584
+        "mean": 0.6065,
+        "n": 3587
        },
        "desc_jaccard_xa": {
         "mean": 0.1914,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared_xa": {
-        "mean": 2.3537,
-        "n": 3511
+        "mean": 2.3538,
+        "n": 3514
        },
-       "share_of_neighbours_new": 0.5087,
-       "same_genre_share_new": 0.5671,
+       "share_of_neighbours_new": 0.5088,
+       "same_genre_share_new": 0.5672,
        "mean_n10": 10.51,
        "never_recommended": 0.0198,
        "max_n10": 62
@@ -304,23 +304,23 @@
         "n": 74
        },
        "share_of_neighbours_new": 0.6727,
-       "same_genre_share_new": 0.7,
-       "mean_n10": 5.11,
+       "same_genre_share_new": 0.6997,
+       "mean_n10": 5.1,
        "never_recommended": 0.1313,
        "max_n10": 28
       },
       "4_clips": {
        "albums": 9267,
        "genre_primary": {
-        "mean": 0.196,
+        "mean": 0.1961,
         "n": 8871
        },
        "genre_any": {
-        "mean": 0.3625,
+        "mean": 0.3626,
         "n": 8871
        },
        "genre_family": {
-        "mean": 0.6026,
+        "mean": 0.6027,
         "n": 8871
        },
        "desc_jaccard": {
@@ -328,7 +328,7 @@
         "n": 8552
        },
        "desc_shared": {
-        "mean": 2.3844,
+        "mean": 2.3847,
         "n": 8552
        },
        "genre_primary_xa": {
@@ -336,7 +336,7 @@
         "n": 8871
        },
        "genre_any_xa": {
-        "mean": 0.3288,
+        "mean": 0.3289,
         "n": 8871
        },
        "genre_family_xa": {
@@ -348,61 +348,61 @@
         "n": 8552
        },
        "desc_shared_xa": {
-        "mean": 2.291,
+        "mean": 2.2913,
         "n": 8552
        },
-       "share_of_neighbours_new": 0.5728,
-       "same_genre_share_new": 0.6203,
+       "share_of_neighbours_new": 0.5729,
+       "same_genre_share_new": 0.6202,
        "mean_n10": 10.08,
        "never_recommended": 0.0197,
        "max_n10": 62
       },
       "full_length_windows": {
-       "albums": 869,
+       "albums": 874,
        "genre_primary": {
-        "mean": 0.2063,
-        "n": 826
+        "mean": 0.2079,
+        "n": 831
        },
        "genre_any": {
-        "mean": 0.3616,
-        "n": 826
+        "mean": 0.3631,
+        "n": 831
        },
        "genre_family": {
-        "mean": 0.5918,
-        "n": 826
+        "mean": 0.5923,
+        "n": 831
        },
        "desc_jaccard": {
-        "mean": 0.1894,
-        "n": 810
+        "mean": 0.1897,
+        "n": 814
        },
        "desc_shared": {
-        "mean": 2.3608,
-        "n": 810
+        "mean": 2.3636,
+        "n": 814
        },
        "genre_primary_xa": {
-        "mean": 0.177,
-        "n": 826
+        "mean": 0.1779,
+        "n": 831
        },
        "genre_any_xa": {
-        "mean": 0.3297,
-        "n": 826
+        "mean": 0.3308,
+        "n": 831
        },
        "genre_family_xa": {
         "mean": 0.5747,
-        "n": 826
+        "n": 831
        },
        "desc_jaccard_xa": {
-        "mean": 0.1814,
-        "n": 810
+        "mean": 0.1816,
+        "n": 814
        },
        "desc_shared_xa": {
-        "mean": 2.2811,
-        "n": 810
+        "mean": 2.2825,
+        "n": 814
        },
-       "share_of_neighbours_new": 0.7094,
-       "same_genre_share_new": 0.7205,
-       "mean_n10": 9.72,
-       "never_recommended": 0.0219,
+       "share_of_neighbours_new": 0.7081,
+       "same_genre_share_new": 0.7201,
+       "mean_n10": 9.73,
+       "never_recommended": 0.0217,
        "max_n10": 38
       }
      },
@@ -453,7 +453,7 @@
        "new": false,
        "n_clips": 4,
        "source": "deezer",
-       "n10": 51
+       "n10": 52
       },
       {
        "key": "sp:5RTcg3hyd7ON4vBfYIx0Nl",
@@ -596,221 +596,221 @@
    "blocks": {
     "effnet": {
      "name": "effnet",
-     "albums": 10237,
-     "new_albums": 6198,
-     "share_new_in_pool": 0.6055,
-     "albums_with_genre": 9776,
-     "albums_with_5_descriptors": 9438,
+     "albums": 10242,
+     "new_albums": 6200,
+     "share_new_in_pool": 0.6054,
+     "albums_with_genre": 9781,
+     "albums_with_5_descriptors": 9442,
      "metrics": {
       "genre_primary": {
-       "mean": 0.2408,
-       "n": 9776
+       "mean": 0.2411,
+       "n": 9781
       },
       "genre_any": {
-       "mean": 0.4294,
-       "n": 9776
+       "mean": 0.4297,
+       "n": 9781
       },
       "genre_family": {
-       "mean": 0.6429,
-       "n": 9776
+       "mean": 0.643,
+       "n": 9781
       },
       "desc_jaccard": {
-       "mean": 0.2002,
-       "n": 9438
+       "mean": 0.2003,
+       "n": 9442
       },
       "desc_shared": {
-       "mean": 2.4447,
-       "n": 9438
+       "mean": 2.4453,
+       "n": 9442
       },
       "genre_primary_xa": {
-       "mean": 0.2116,
-       "n": 9776
+       "mean": 0.2118,
+       "n": 9781
       },
       "genre_any_xa": {
-       "mean": 0.3994,
-       "n": 9776
+       "mean": 0.3996,
+       "n": 9781
       },
       "genre_family_xa": {
        "mean": 0.6276,
-       "n": 9776
+       "n": 9781
       },
       "desc_jaccard_xa": {
-       "mean": 0.1913,
-       "n": 9438
+       "mean": 0.1914,
+       "n": 9442
       },
       "desc_shared_xa": {
-       "mean": 2.3585,
-       "n": 9438
+       "mean": 2.359,
+       "n": 9442
       }
      },
      "random": {
       "genre_primary": {
-       "mean": 0.0076,
-       "n": 9776
+       "mean": 0.0077,
+       "n": 9781
       },
       "genre_any": {
-       "mean": 0.0216,
-       "n": 9776
+       "mean": 0.0221,
+       "n": 9781
       },
       "genre_family": {
-       "mean": 0.1139,
-       "n": 9776
+       "mean": 0.1142,
+       "n": 9781
       },
       "desc_jaccard": {
-       "mean": 0.064,
-       "n": 9438
+       "mean": 0.0643,
+       "n": 9442
       },
       "desc_shared": {
-       "mean": 0.8713,
-       "n": 9438
+       "mean": 0.8755,
+       "n": 9442
       }
      },
      "hubness": {
-      "skew": 0.946,
+      "skew": 0.953,
       "never": 0.0083,
       "max": 48
      },
      "groups": {
       "all": {
-       "albums": 10237,
+       "albums": 10242,
        "genre_primary": {
-        "mean": 0.2408,
-        "n": 9776
+        "mean": 0.2411,
+        "n": 9781
        },
        "genre_any": {
-        "mean": 0.4294,
-        "n": 9776
+        "mean": 0.4297,
+        "n": 9781
        },
        "genre_family": {
-        "mean": 0.6429,
-        "n": 9776
+        "mean": 0.643,
+        "n": 9781
        },
        "desc_jaccard": {
-        "mean": 0.2002,
-        "n": 9438
+        "mean": 0.2003,
+        "n": 9442
        },
        "desc_shared": {
-        "mean": 2.4447,
-        "n": 9438
+        "mean": 2.4453,
+        "n": 9442
        },
        "genre_primary_xa": {
-        "mean": 0.2116,
-        "n": 9776
+        "mean": 0.2118,
+        "n": 9781
        },
        "genre_any_xa": {
-        "mean": 0.3994,
-        "n": 9776
+        "mean": 0.3996,
+        "n": 9781
        },
        "genre_family_xa": {
         "mean": 0.6276,
-        "n": 9776
+        "n": 9781
        },
        "desc_jaccard_xa": {
-        "mean": 0.1913,
-        "n": 9438
+        "mean": 0.1914,
+        "n": 9442
        },
        "desc_shared_xa": {
-        "mean": 2.3585,
-        "n": 9438
+        "mean": 2.359,
+        "n": 9442
        },
        "share_of_neighbours_new": 0.5872,
-       "same_genre_share_new": 0.6292,
+       "same_genre_share_new": 0.6291,
        "mean_n10": 10.0,
        "never_recommended": 0.0083,
        "max_n10": 48
       },
       "new": {
-       "albums": 6198,
+       "albums": 6200,
        "genre_primary": {
-        "mean": 0.2291,
-        "n": 6190
+        "mean": 0.2292,
+        "n": 6192
        },
        "genre_any": {
-        "mean": 0.4144,
-        "n": 6190
+        "mean": 0.4147,
+        "n": 6192
        },
        "genre_family": {
         "mean": 0.6269,
-        "n": 6190
+        "n": 6192
        },
        "desc_jaccard": {
         "mean": 0.1939,
-        "n": 5925
+        "n": 5926
        },
        "desc_shared": {
-        "mean": 2.3831,
-        "n": 5925
+        "mean": 2.3838,
+        "n": 5926
        },
        "genre_primary_xa": {
         "mean": 0.2042,
-        "n": 6190
+        "n": 6192
        },
        "genre_any_xa": {
-        "mean": 0.3879,
-        "n": 6190
+        "mean": 0.3881,
+        "n": 6192
        },
        "genre_family_xa": {
         "mean": 0.6137,
-        "n": 6190
+        "n": 6192
        },
        "desc_jaccard_xa": {
-        "mean": 0.1867,
-        "n": 5925
+        "mean": 0.1868,
+        "n": 5926
        },
        "desc_shared_xa": {
-        "mean": 2.3132,
-        "n": 5925
+        "mean": 2.3137,
+        "n": 5926
        },
        "share_of_neighbours_new": 0.6339,
-       "same_genre_share_new": 0.6659,
+       "same_genre_share_new": 0.6656,
        "mean_n10": 9.7,
        "never_recommended": 0.009,
        "max_n10": 47
       },
       "existing": {
-       "albums": 4039,
+       "albums": 4042,
        "genre_primary": {
-        "mean": 0.2611,
-        "n": 3586
+        "mean": 0.2615,
+        "n": 3589
        },
        "genre_any": {
-        "mean": 0.4553,
-        "n": 3586
+        "mean": 0.4557,
+        "n": 3589
        },
        "genre_family": {
         "mean": 0.6706,
-        "n": 3586
+        "n": 3589
        },
        "desc_jaccard": {
         "mean": 0.2109,
-        "n": 3513
+        "n": 3516
        },
        "desc_shared": {
-        "mean": 2.5486,
-        "n": 3513
+        "mean": 2.5488,
+        "n": 3516
        },
        "genre_primary_xa": {
-        "mean": 0.2243,
-        "n": 3586
+        "mean": 0.2248,
+        "n": 3589
        },
        "genre_any_xa": {
-        "mean": 0.4191,
-        "n": 3586
+        "mean": 0.4195,
+        "n": 3589
        },
        "genre_family_xa": {
-        "mean": 0.6515,
-        "n": 3586
+        "mean": 0.6517,
+        "n": 3589
        },
        "desc_jaccard_xa": {
         "mean": 0.1991,
-        "n": 3513
+        "n": 3516
        },
        "desc_shared_xa": {
-        "mean": 2.4349,
-        "n": 3513
+        "mean": 2.4353,
+        "n": 3516
        },
        "share_of_neighbours_new": 0.5155,
-       "same_genre_share_new": 0.567,
+       "same_genre_share_new": 0.5671,
        "mean_n10": 10.46,
        "never_recommended": 0.0072,
        "max_n10": 48
@@ -818,59 +818,59 @@
       "under_4_clips": {
        "albums": 99,
        "genre_primary": {
-        "mean": 0.1979,
+        "mean": 0.1995,
         "n": 77
        },
        "genre_any": {
-        "mean": 0.3436,
+        "mean": 0.3453,
         "n": 77
        },
        "genre_family": {
-        "mean": 0.5792,
+        "mean": 0.5808,
         "n": 77
        },
        "desc_jaccard": {
-        "mean": 0.1981,
+        "mean": 0.198,
         "n": 74
        },
        "desc_shared": {
-        "mean": 2.3941,
+        "mean": 2.3922,
         "n": 74
        },
        "genre_primary_xa": {
-        "mean": 0.1783,
+        "mean": 0.1799,
         "n": 77
        },
        "genre_any_xa": {
-        "mean": 0.3263,
+        "mean": 0.328,
         "n": 77
        },
        "genre_family_xa": {
-        "mean": 0.5648,
+        "mean": 0.5664,
         "n": 77
        },
        "desc_jaccard_xa": {
-        "mean": 0.1958,
+        "mean": 0.1956,
         "n": 74
        },
        "desc_shared_xa": {
-        "mean": 2.3737,
+        "mean": 2.3717,
         "n": 74
        },
-       "share_of_neighbours_new": 0.6576,
-       "same_genre_share_new": 0.7,
-       "mean_n10": 6.93,
+       "share_of_neighbours_new": 0.6556,
+       "same_genre_share_new": 0.6997,
+       "mean_n10": 6.94,
        "never_recommended": 0.0707,
        "max_n10": 26
       },
       "4_clips": {
        "albums": 9269,
        "genre_primary": {
-        "mean": 0.2386,
+        "mean": 0.2388,
         "n": 8873
        },
        "genre_any": {
-        "mean": 0.4293,
+        "mean": 0.4295,
         "n": 8873
        },
        "genre_family": {
@@ -882,15 +882,15 @@
         "n": 8554
        },
        "desc_shared": {
-        "mean": 2.4398,
+        "mean": 2.4401,
         "n": 8554
        },
        "genre_primary_xa": {
-        "mean": 0.2093,
+        "mean": 0.2094,
         "n": 8873
        },
        "genre_any_xa": {
-        "mean": 0.3992,
+        "mean": 0.3994,
         "n": 8873
        },
        "genre_family_xa": {
@@ -902,61 +902,61 @@
         "n": 8554
        },
        "desc_shared_xa": {
-        "mean": 2.3519,
+        "mean": 2.3523,
         "n": 8554
        },
-       "share_of_neighbours_new": 0.5774,
-       "same_genre_share_new": 0.6202,
+       "share_of_neighbours_new": 0.5775,
+       "same_genre_share_new": 0.62,
        "mean_n10": 9.95,
        "never_recommended": 0.0074,
        "max_n10": 47
       },
       "full_length_windows": {
-       "albums": 869,
+       "albums": 874,
        "genre_primary": {
-        "mean": 0.2685,
-        "n": 826
+        "mean": 0.2693,
+        "n": 831
        },
        "genre_any": {
-        "mean": 0.4385,
-        "n": 826
+        "mean": 0.4399,
+        "n": 831
        },
        "genre_family": {
-        "mean": 0.6462,
-        "n": 826
+        "mean": 0.6459,
+        "n": 831
        },
        "desc_jaccard": {
-        "mean": 0.2024,
-        "n": 810
+        "mean": 0.2026,
+        "n": 814
        },
        "desc_shared": {
-        "mean": 2.5015,
-        "n": 810
+        "mean": 2.504,
+        "n": 814
        },
        "genre_primary_xa": {
-        "mean": 0.2388,
-        "n": 826
+        "mean": 0.2395,
+        "n": 831
        },
        "genre_any_xa": {
-        "mean": 0.4079,
-        "n": 826
+        "mean": 0.4091,
+        "n": 831
        },
        "genre_family_xa": {
-        "mean": 0.6313,
-        "n": 826
+        "mean": 0.6311,
+        "n": 831
        },
        "desc_jaccard_xa": {
-        "mean": 0.1948,
-        "n": 810
+        "mean": 0.1949,
+        "n": 814
        },
        "desc_shared_xa": {
-        "mean": 2.4264,
-        "n": 810
+        "mean": 2.4282,
+        "n": 814
        },
-       "share_of_neighbours_new": 0.6832,
-       "same_genre_share_new": 0.7205,
-       "mean_n10": 10.91,
-       "never_recommended": 0.0104,
+       "share_of_neighbours_new": 0.6824,
+       "same_genre_share_new": 0.7201,
+       "mean_n10": 10.93,
+       "never_recommended": 0.0103,
        "max_n10": 48
       }
      },
@@ -1058,6 +1058,18 @@
        "n10": 39
       },
       {
+       "key": "Album1281",
+       "artist": "Brian Eno",
+       "title": "Ambient 4: On Land",
+       "year": "1982",
+       "rank": 3432,
+       "primary_genres": "Ambient",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 38
+      },
+      {
        "key": "Album94335",
        "artist": "Juno",
        "title": "A Future Lived in Past Tense",
@@ -1070,15 +1082,15 @@
        "n10": 38
       },
       {
-       "key": "Album1281",
-       "artist": "Brian Eno",
-       "title": "Ambient 4: On Land",
-       "year": "1982",
-       "rank": 3432,
-       "primary_genres": "Ambient",
-       "new": false,
-       "n_clips": 4,
-       "source": "deezer",
+       "key": "Album9676",
+       "artist": "Genesis",
+       "title": "Archive 1967-75",
+       "year": "1998",
+       "rank": 956,
+       "primary_genres": "Progressive Rock",
+       "new": true,
+       "n_clips": 8,
+       "source": "youtube",
        "n10": 37
       },
       {
@@ -1118,18 +1130,6 @@
        "n10": 36
       },
       {
-       "key": "Album4464978",
-       "artist": "Kayo Dot",
-       "title": "Hubardo",
-       "year": "2013",
-       "rank": 4151,
-       "primary_genres": "Avant-Garde Metal, Avant-Prog, Post-Metal",
-       "new": true,
-       "n_clips": 4,
-       "source": "deezer",
-       "n10": 36
-      },
-      {
        "key": "Album16944",
        "artist": "Popol Vuh",
        "title": "In den Gärten Pharaos",
@@ -1151,73 +1151,73 @@
    "blocks": {
     "clap": {
      "name": "clap",
-     "albums": 10235,
-     "new_albums": 6198,
-     "share_new_in_pool": 0.6056,
-     "albums_with_genre": 9774,
-     "albums_with_5_descriptors": 9436,
+     "albums": 10240,
+     "new_albums": 6200,
+     "share_new_in_pool": 0.6055,
+     "albums_with_genre": 9779,
+     "albums_with_5_descriptors": 9440,
      "metrics": {
       "genre_primary": {
-       "mean": 0.1965,
-       "n": 9774
+       "mean": 0.1968,
+       "n": 9779
       },
       "genre_any": {
-       "mean": 0.3616,
-       "n": 9774
+       "mean": 0.3618,
+       "n": 9779
       },
       "genre_family": {
-       "mean": 0.6012,
-       "n": 9774
+       "mean": 0.6013,
+       "n": 9779
       },
       "desc_jaccard": {
-       "mean": 0.1944,
-       "n": 9436
+       "mean": 0.1945,
+       "n": 9440
       },
       "desc_shared": {
-       "mean": 2.3823,
-       "n": 9436
+       "mean": 2.3828,
+       "n": 9440
       },
       "genre_primary_xa": {
-       "mean": 0.1661,
-       "n": 9774
+       "mean": 0.1663,
+       "n": 9779
       },
       "genre_any_xa": {
-       "mean": 0.3282,
-       "n": 9774
+       "mean": 0.3283,
+       "n": 9779
       },
       "genre_family_xa": {
        "mean": 0.5834,
-       "n": 9774
+       "n": 9779
       },
       "desc_jaccard_xa": {
        "mean": 0.1851,
-       "n": 9436
+       "n": 9440
       },
       "desc_shared_xa": {
-       "mean": 2.2904,
-       "n": 9436
+       "mean": 2.2908,
+       "n": 9440
       }
      },
      "random": {
       "genre_primary": {
-       "mean": 0.0079,
-       "n": 9774
+       "mean": 0.0076,
+       "n": 9779
       },
       "genre_any": {
-       "mean": 0.0223,
-       "n": 9774
+       "mean": 0.0214,
+       "n": 9779
       },
       "genre_family": {
-       "mean": 0.1137,
-       "n": 9774
+       "mean": 0.1132,
+       "n": 9779
       },
       "desc_jaccard": {
-       "mean": 0.0642,
-       "n": 9436
+       "mean": 0.0644,
+       "n": 9440
       },
       "desc_shared": {
-       "mean": 0.8735,
-       "n": 9436
+       "mean": 0.8756,
+       "n": 9440
       }
      },
      "hubness": {
@@ -1227,145 +1227,145 @@
      },
      "groups": {
       "all": {
-       "albums": 10235,
+       "albums": 10240,
        "genre_primary": {
-        "mean": 0.1965,
-        "n": 9774
+        "mean": 0.1968,
+        "n": 9779
        },
        "genre_any": {
-        "mean": 0.3616,
-        "n": 9774
+        "mean": 0.3618,
+        "n": 9779
        },
        "genre_family": {
-        "mean": 0.6012,
-        "n": 9774
+        "mean": 0.6013,
+        "n": 9779
        },
        "desc_jaccard": {
-        "mean": 0.1944,
-        "n": 9436
+        "mean": 0.1945,
+        "n": 9440
        },
        "desc_shared": {
-        "mean": 2.3823,
-        "n": 9436
+        "mean": 2.3828,
+        "n": 9440
        },
        "genre_primary_xa": {
-        "mean": 0.1661,
-        "n": 9774
+        "mean": 0.1663,
+        "n": 9779
        },
        "genre_any_xa": {
-        "mean": 0.3282,
-        "n": 9774
+        "mean": 0.3283,
+        "n": 9779
        },
        "genre_family_xa": {
         "mean": 0.5834,
-        "n": 9774
+        "n": 9779
        },
        "desc_jaccard_xa": {
         "mean": 0.1851,
-        "n": 9436
+        "n": 9440
        },
        "desc_shared_xa": {
-        "mean": 2.2904,
-        "n": 9436
+        "mean": 2.2908,
+        "n": 9440
        },
        "share_of_neighbours_new": 0.5854,
-       "same_genre_share_new": 0.6293,
+       "same_genre_share_new": 0.6292,
        "mean_n10": 10.0,
        "never_recommended": 0.021,
        "max_n10": 62
       },
       "new": {
-       "albums": 6198,
+       "albums": 6200,
        "genre_primary": {
-        "mean": 0.1887,
-        "n": 6190
+        "mean": 0.189,
+        "n": 6192
        },
        "genre_any": {
-        "mean": 0.353,
-        "n": 6190
+        "mean": 0.3532,
+        "n": 6192
        },
        "genre_family": {
-        "mean": 0.5848,
-        "n": 6190
+        "mean": 0.5849,
+        "n": 6192
        },
        "desc_jaccard": {
-        "mean": 0.1887,
-        "n": 5925
+        "mean": 0.1888,
+        "n": 5926
        },
        "desc_shared": {
-        "mean": 2.3264,
-        "n": 5925
+        "mean": 2.327,
+        "n": 5926
        },
        "genre_primary_xa": {
-        "mean": 0.1629,
-        "n": 6190
+        "mean": 0.163,
+        "n": 6192
        },
        "genre_any_xa": {
-        "mean": 0.3241,
-        "n": 6190
+        "mean": 0.3242,
+        "n": 6192
        },
        "genre_family_xa": {
-        "mean": 0.5699,
-        "n": 6190
+        "mean": 0.57,
+        "n": 6192
        },
        "desc_jaccard_xa": {
         "mean": 0.1813,
-        "n": 5925
+        "n": 5926
        },
        "desc_shared_xa": {
-        "mean": 2.2528,
-        "n": 5925
+        "mean": 2.2534,
+        "n": 5926
        },
        "share_of_neighbours_new": 0.6354,
-       "same_genre_share_new": 0.666,
+       "same_genre_share_new": 0.6658,
        "mean_n10": 9.67,
        "never_recommended": 0.0218,
        "max_n10": 53
       },
       "existing": {
-       "albums": 4037,
+       "albums": 4040,
        "genre_primary": {
-        "mean": 0.21,
-        "n": 3584
+        "mean": 0.2103,
+        "n": 3587
        },
        "genre_any": {
-        "mean": 0.3764,
-        "n": 3584
+        "mean": 0.3766,
+        "n": 3587
        },
        "genre_family": {
-        "mean": 0.6297,
-        "n": 3584
+        "mean": 0.6296,
+        "n": 3587
        },
        "desc_jaccard": {
         "mean": 0.2041,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared": {
-        "mean": 2.4765,
-        "n": 3511
+        "mean": 2.4768,
+        "n": 3514
        },
        "genre_primary_xa": {
-        "mean": 0.1717,
-        "n": 3584
+        "mean": 0.1719,
+        "n": 3587
        },
        "genre_any_xa": {
-        "mean": 0.3352,
-        "n": 3584
+        "mean": 0.3354,
+        "n": 3587
        },
        "genre_family_xa": {
-        "mean": 0.6067,
-        "n": 3584
+        "mean": 0.6065,
+        "n": 3587
        },
        "desc_jaccard_xa": {
         "mean": 0.1914,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared_xa": {
-        "mean": 2.3537,
-        "n": 3511
+        "mean": 2.3538,
+        "n": 3514
        },
-       "share_of_neighbours_new": 0.5087,
-       "same_genre_share_new": 0.5671,
+       "share_of_neighbours_new": 0.5088,
+       "same_genre_share_new": 0.5672,
        "mean_n10": 10.51,
        "never_recommended": 0.0198,
        "max_n10": 62
@@ -1413,23 +1413,23 @@
         "n": 74
        },
        "share_of_neighbours_new": 0.6727,
-       "same_genre_share_new": 0.7,
-       "mean_n10": 5.11,
+       "same_genre_share_new": 0.6997,
+       "mean_n10": 5.1,
        "never_recommended": 0.1313,
        "max_n10": 28
       },
       "4_clips": {
        "albums": 9267,
        "genre_primary": {
-        "mean": 0.196,
+        "mean": 0.1961,
         "n": 8871
        },
        "genre_any": {
-        "mean": 0.3625,
+        "mean": 0.3626,
         "n": 8871
        },
        "genre_family": {
-        "mean": 0.6026,
+        "mean": 0.6027,
         "n": 8871
        },
        "desc_jaccard": {
@@ -1437,7 +1437,7 @@
         "n": 8552
        },
        "desc_shared": {
-        "mean": 2.3844,
+        "mean": 2.3847,
         "n": 8552
        },
        "genre_primary_xa": {
@@ -1445,7 +1445,7 @@
         "n": 8871
        },
        "genre_any_xa": {
-        "mean": 0.3288,
+        "mean": 0.3289,
         "n": 8871
        },
        "genre_family_xa": {
@@ -1457,61 +1457,61 @@
         "n": 8552
        },
        "desc_shared_xa": {
-        "mean": 2.291,
+        "mean": 2.2913,
         "n": 8552
        },
-       "share_of_neighbours_new": 0.5728,
-       "same_genre_share_new": 0.6203,
+       "share_of_neighbours_new": 0.5729,
+       "same_genre_share_new": 0.6202,
        "mean_n10": 10.08,
        "never_recommended": 0.0197,
        "max_n10": 62
       },
       "full_length_windows": {
-       "albums": 869,
+       "albums": 874,
        "genre_primary": {
-        "mean": 0.2063,
-        "n": 826
+        "mean": 0.2079,
+        "n": 831
        },
        "genre_any": {
-        "mean": 0.3616,
-        "n": 826
+        "mean": 0.3631,
+        "n": 831
        },
        "genre_family": {
-        "mean": 0.5918,
-        "n": 826
+        "mean": 0.5923,
+        "n": 831
        },
        "desc_jaccard": {
-        "mean": 0.1894,
-        "n": 810
+        "mean": 0.1897,
+        "n": 814
        },
        "desc_shared": {
-        "mean": 2.3608,
-        "n": 810
+        "mean": 2.3636,
+        "n": 814
        },
        "genre_primary_xa": {
-        "mean": 0.177,
-        "n": 826
+        "mean": 0.1779,
+        "n": 831
        },
        "genre_any_xa": {
-        "mean": 0.3297,
-        "n": 826
+        "mean": 0.3308,
+        "n": 831
        },
        "genre_family_xa": {
         "mean": 0.5747,
-        "n": 826
+        "n": 831
        },
        "desc_jaccard_xa": {
-        "mean": 0.1814,
-        "n": 810
+        "mean": 0.1816,
+        "n": 814
        },
        "desc_shared_xa": {
-        "mean": 2.2811,
-        "n": 810
+        "mean": 2.2825,
+        "n": 814
        },
-       "share_of_neighbours_new": 0.7094,
-       "same_genre_share_new": 0.7205,
-       "mean_n10": 9.72,
-       "never_recommended": 0.0219,
+       "share_of_neighbours_new": 0.7081,
+       "same_genre_share_new": 0.7201,
+       "mean_n10": 9.73,
+       "never_recommended": 0.0217,
        "max_n10": 38
       }
      },
@@ -1562,7 +1562,7 @@
        "new": false,
        "n_clips": 4,
        "source": "deezer",
-       "n10": 51
+       "n10": 52
       },
       {
        "key": "sp:5RTcg3hyd7ON4vBfYIx0Nl",
@@ -1700,221 +1700,221 @@
     },
     "effnet": {
      "name": "effnet",
-     "albums": 10235,
-     "new_albums": 6198,
-     "share_new_in_pool": 0.6056,
-     "albums_with_genre": 9774,
-     "albums_with_5_descriptors": 9436,
+     "albums": 10240,
+     "new_albums": 6200,
+     "share_new_in_pool": 0.6055,
+     "albums_with_genre": 9779,
+     "albums_with_5_descriptors": 9440,
      "metrics": {
       "genre_primary": {
-       "mean": 0.2409,
-       "n": 9774
+       "mean": 0.2411,
+       "n": 9779
       },
       "genre_any": {
-       "mean": 0.4295,
-       "n": 9774
+       "mean": 0.4298,
+       "n": 9779
       },
       "genre_family": {
        "mean": 0.643,
-       "n": 9774
+       "n": 9779
       },
       "desc_jaccard": {
        "mean": 0.2002,
-       "n": 9436
+       "n": 9440
       },
       "desc_shared": {
-       "mean": 2.4442,
-       "n": 9436
+       "mean": 2.4447,
+       "n": 9440
       },
       "genre_primary_xa": {
-       "mean": 0.2116,
-       "n": 9774
+       "mean": 0.2118,
+       "n": 9779
       },
       "genre_any_xa": {
-       "mean": 0.3994,
-       "n": 9774
+       "mean": 0.3997,
+       "n": 9779
       },
       "genre_family_xa": {
        "mean": 0.6276,
-       "n": 9774
+       "n": 9779
       },
       "desc_jaccard_xa": {
        "mean": 0.1913,
-       "n": 9436
+       "n": 9440
       },
       "desc_shared_xa": {
-       "mean": 2.3578,
-       "n": 9436
+       "mean": 2.3584,
+       "n": 9440
       }
      },
      "random": {
       "genre_primary": {
-       "mean": 0.0079,
-       "n": 9774
+       "mean": 0.0076,
+       "n": 9779
       },
       "genre_any": {
-       "mean": 0.0223,
-       "n": 9774
+       "mean": 0.0214,
+       "n": 9779
       },
       "genre_family": {
-       "mean": 0.1137,
-       "n": 9774
+       "mean": 0.1132,
+       "n": 9779
       },
       "desc_jaccard": {
-       "mean": 0.0642,
-       "n": 9436
+       "mean": 0.0644,
+       "n": 9440
       },
       "desc_shared": {
-       "mean": 0.8735,
-       "n": 9436
+       "mean": 0.8756,
+       "n": 9440
       }
      },
      "hubness": {
-      "skew": 0.946,
+      "skew": 0.953,
       "never": 0.0083,
       "max": 48
      },
      "groups": {
       "all": {
-       "albums": 10235,
+       "albums": 10240,
        "genre_primary": {
-        "mean": 0.2409,
-        "n": 9774
+        "mean": 0.2411,
+        "n": 9779
        },
        "genre_any": {
-        "mean": 0.4295,
-        "n": 9774
+        "mean": 0.4298,
+        "n": 9779
        },
        "genre_family": {
         "mean": 0.643,
-        "n": 9774
+        "n": 9779
        },
        "desc_jaccard": {
         "mean": 0.2002,
-        "n": 9436
+        "n": 9440
        },
        "desc_shared": {
-        "mean": 2.4442,
-        "n": 9436
+        "mean": 2.4447,
+        "n": 9440
        },
        "genre_primary_xa": {
-        "mean": 0.2116,
-        "n": 9774
+        "mean": 0.2118,
+        "n": 9779
        },
        "genre_any_xa": {
-        "mean": 0.3994,
-        "n": 9774
+        "mean": 0.3997,
+        "n": 9779
        },
        "genre_family_xa": {
         "mean": 0.6276,
-        "n": 9774
+        "n": 9779
        },
        "desc_jaccard_xa": {
         "mean": 0.1913,
-        "n": 9436
+        "n": 9440
        },
        "desc_shared_xa": {
-        "mean": 2.3578,
-        "n": 9436
+        "mean": 2.3584,
+        "n": 9440
        },
-       "share_of_neighbours_new": 0.5873,
-       "same_genre_share_new": 0.6293,
+       "share_of_neighbours_new": 0.5874,
+       "same_genre_share_new": 0.6292,
        "mean_n10": 10.0,
        "never_recommended": 0.0083,
        "max_n10": 48
       },
       "new": {
-       "albums": 6198,
+       "albums": 6200,
        "genre_primary": {
-        "mean": 0.2291,
-        "n": 6190
+        "mean": 0.2292,
+        "n": 6192
        },
        "genre_any": {
-        "mean": 0.4145,
-        "n": 6190
+        "mean": 0.4147,
+        "n": 6192
        },
        "genre_family": {
         "mean": 0.627,
-        "n": 6190
+        "n": 6192
        },
        "desc_jaccard": {
-        "mean": 0.1938,
-        "n": 5925
+        "mean": 0.1939,
+        "n": 5926
        },
        "desc_shared": {
-        "mean": 2.3829,
-        "n": 5925
+        "mean": 2.3836,
+        "n": 5926
        },
        "genre_primary_xa": {
         "mean": 0.2042,
-        "n": 6190
+        "n": 6192
        },
        "genre_any_xa": {
-        "mean": 0.3879,
-        "n": 6190
+        "mean": 0.3881,
+        "n": 6192
        },
        "genre_family_xa": {
         "mean": 0.6138,
-        "n": 6190
+        "n": 6192
        },
        "desc_jaccard_xa": {
         "mean": 0.1867,
-        "n": 5925
+        "n": 5926
        },
        "desc_shared_xa": {
-        "mean": 2.313,
-        "n": 5925
+        "mean": 2.3135,
+        "n": 5926
        },
-       "share_of_neighbours_new": 0.6339,
-       "same_genre_share_new": 0.666,
+       "share_of_neighbours_new": 0.634,
+       "same_genre_share_new": 0.6658,
        "mean_n10": 9.7,
        "never_recommended": 0.009,
        "max_n10": 47
       },
       "existing": {
-       "albums": 4037,
+       "albums": 4040,
        "genre_primary": {
-        "mean": 0.2613,
-        "n": 3584
+        "mean": 0.2617,
+        "n": 3587
        },
        "genre_any": {
-        "mean": 0.4555,
-        "n": 3584
+        "mean": 0.4558,
+        "n": 3587
        },
        "genre_family": {
         "mean": 0.6706,
-        "n": 3584
+        "n": 3587
        },
        "desc_jaccard": {
         "mean": 0.2108,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared": {
-        "mean": 2.5476,
-        "n": 3511
+        "mean": 2.5477,
+        "n": 3514
        },
        "genre_primary_xa": {
-        "mean": 0.2245,
-        "n": 3584
+        "mean": 0.225,
+        "n": 3587
        },
        "genre_any_xa": {
-        "mean": 0.4192,
-        "n": 3584
+        "mean": 0.4196,
+        "n": 3587
        },
        "genre_family_xa": {
-        "mean": 0.6515,
-        "n": 3584
+        "mean": 0.6516,
+        "n": 3587
        },
        "desc_jaccard_xa": {
         "mean": 0.199,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared_xa": {
-        "mean": 2.4335,
-        "n": 3511
+        "mean": 2.434,
+        "n": 3514
        },
-       "share_of_neighbours_new": 0.5157,
-       "same_genre_share_new": 0.5671,
+       "share_of_neighbours_new": 0.5159,
+       "same_genre_share_new": 0.5672,
        "mean_n10": 10.46,
        "never_recommended": 0.0072,
        "max_n10": 48
@@ -1922,63 +1922,63 @@
       "under_4_clips": {
        "albums": 99,
        "genre_primary": {
-        "mean": 0.1979,
+        "mean": 0.1995,
         "n": 77
        },
        "genre_any": {
-        "mean": 0.3436,
+        "mean": 0.3453,
         "n": 77
        },
        "genre_family": {
-        "mean": 0.5792,
+        "mean": 0.5808,
         "n": 77
        },
        "desc_jaccard": {
-        "mean": 0.1981,
+        "mean": 0.198,
         "n": 74
        },
        "desc_shared": {
-        "mean": 2.3941,
+        "mean": 2.3922,
         "n": 74
        },
        "genre_primary_xa": {
-        "mean": 0.1783,
+        "mean": 0.1799,
         "n": 77
        },
        "genre_any_xa": {
-        "mean": 0.3263,
+        "mean": 0.328,
         "n": 77
        },
        "genre_family_xa": {
-        "mean": 0.5648,
+        "mean": 0.5664,
         "n": 77
        },
        "desc_jaccard_xa": {
-        "mean": 0.1954,
+        "mean": 0.1956,
         "n": 74
        },
        "desc_shared_xa": {
-        "mean": 2.371,
+        "mean": 2.3717,
         "n": 74
        },
-       "share_of_neighbours_new": 0.6576,
-       "same_genre_share_new": 0.7,
-       "mean_n10": 6.93,
+       "share_of_neighbours_new": 0.6556,
+       "same_genre_share_new": 0.6997,
+       "mean_n10": 6.94,
        "never_recommended": 0.0707,
        "max_n10": 26
       },
       "4_clips": {
        "albums": 9267,
        "genre_primary": {
-        "mean": 0.2387,
+        "mean": 0.2389,
         "n": 8871
        },
        "genre_any": {
-        "mean": 0.4294,
+        "mean": 0.4296,
         "n": 8871
        },
        "genre_family": {
-        "mean": 0.6432,
+        "mean": 0.6433,
         "n": 8871
        },
        "desc_jaccard": {
@@ -1986,19 +1986,19 @@
         "n": 8552
        },
        "desc_shared": {
-        "mean": 2.4392,
+        "mean": 2.4395,
         "n": 8552
        },
        "genre_primary_xa": {
-        "mean": 0.2094,
+        "mean": 0.2095,
         "n": 8871
        },
        "genre_any_xa": {
-        "mean": 0.3992,
+        "mean": 0.3994,
         "n": 8871
        },
        "genre_family_xa": {
-        "mean": 0.6278,
+        "mean": 0.6279,
         "n": 8871
        },
        "desc_jaccard_xa": {
@@ -2006,61 +2006,61 @@
         "n": 8552
        },
        "desc_shared_xa": {
-        "mean": 2.3512,
+        "mean": 2.3516,
         "n": 8552
        },
-       "share_of_neighbours_new": 0.5776,
-       "same_genre_share_new": 0.6203,
-       "mean_n10": 9.95,
+       "share_of_neighbours_new": 0.5777,
+       "same_genre_share_new": 0.6202,
+       "mean_n10": 9.94,
        "never_recommended": 0.0074,
        "max_n10": 47
       },
       "full_length_windows": {
-       "albums": 869,
+       "albums": 874,
        "genre_primary": {
-        "mean": 0.2685,
-        "n": 826
+        "mean": 0.2693,
+        "n": 831
        },
        "genre_any": {
-        "mean": 0.4385,
-        "n": 826
+        "mean": 0.4399,
+        "n": 831
        },
        "genre_family": {
-        "mean": 0.6462,
-        "n": 826
+        "mean": 0.6459,
+        "n": 831
        },
        "desc_jaccard": {
-        "mean": 0.2023,
-        "n": 810
+        "mean": 0.2026,
+        "n": 814
        },
        "desc_shared": {
-        "mean": 2.5013,
-        "n": 810
+        "mean": 2.504,
+        "n": 814
        },
        "genre_primary_xa": {
-        "mean": 0.2388,
-        "n": 826
+        "mean": 0.2395,
+        "n": 831
        },
        "genre_any_xa": {
-        "mean": 0.4079,
-        "n": 826
+        "mean": 0.4091,
+        "n": 831
        },
        "genre_family_xa": {
-        "mean": 0.6313,
-        "n": 826
+        "mean": 0.6311,
+        "n": 831
        },
        "desc_jaccard_xa": {
-        "mean": 0.1947,
-        "n": 810
+        "mean": 0.195,
+        "n": 814
        },
        "desc_shared_xa": {
-        "mean": 2.4263,
-        "n": 810
+        "mean": 2.4283,
+        "n": 814
        },
-       "share_of_neighbours_new": 0.6831,
-       "same_genre_share_new": 0.7205,
-       "mean_n10": 10.91,
-       "never_recommended": 0.0104,
+       "share_of_neighbours_new": 0.6824,
+       "same_genre_share_new": 0.7201,
+       "mean_n10": 10.93,
+       "never_recommended": 0.0103,
        "max_n10": 48
       }
      },
@@ -2162,6 +2162,18 @@
        "n10": 39
       },
       {
+       "key": "Album1281",
+       "artist": "Brian Eno",
+       "title": "Ambient 4: On Land",
+       "year": "1982",
+       "rank": 3432,
+       "primary_genres": "Ambient",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 38
+      },
+      {
        "key": "Album94335",
        "artist": "Juno",
        "title": "A Future Lived in Past Tense",
@@ -2174,18 +2186,6 @@
        "n10": 38
       },
       {
-       "key": "Album1281",
-       "artist": "Brian Eno",
-       "title": "Ambient 4: On Land",
-       "year": "1982",
-       "rank": 3432,
-       "primary_genres": "Ambient",
-       "new": false,
-       "n_clips": 4,
-       "source": "deezer",
-       "n10": 37
-      },
-      {
        "key": "Album47516",
        "artist": "J-Live",
        "title": "All of the Above",
@@ -2195,6 +2195,18 @@
        "new": false,
        "n_clips": 4,
        "source": "deezer",
+       "n10": 37
+      },
+      {
+       "key": "Album9676",
+       "artist": "Genesis",
+       "title": "Archive 1967-75",
+       "year": "1998",
+       "rank": 956,
+       "primary_genres": "Progressive Rock",
+       "new": true,
+       "n_clips": 8,
+       "source": "youtube",
        "n10": 37
       },
       {
@@ -2222,18 +2234,6 @@
        "n10": 36
       },
       {
-       "key": "Album4464978",
-       "artist": "Kayo Dot",
-       "title": "Hubardo",
-       "year": "2013",
-       "rank": 4151,
-       "primary_genres": "Avant-Garde Metal, Avant-Prog, Post-Metal",
-       "new": true,
-       "n_clips": 4,
-       "source": "deezer",
-       "n10": 36
-      },
-      {
        "key": "Album16944",
        "artist": "Popol Vuh",
        "title": "In den Gärten Pharaos",
@@ -2251,182 +2251,182 @@
   },
   "existing_only": {
    "what": "the site's albums only (seeds and candidates): the pool closest to the earlier reports'",
-   "overlap_at_10": 2.522,
+   "overlap_at_10": 2.524,
    "blocks": {
     "clap": {
      "name": "clap",
-     "albums": 4037,
+     "albums": 4040,
      "new_albums": 0,
      "share_new_in_pool": 0.0,
-     "albums_with_genre": 3584,
-     "albums_with_5_descriptors": 3511,
+     "albums_with_genre": 3587,
+     "albums_with_5_descriptors": 3514,
      "metrics": {
       "genre_primary": {
-       "mean": 0.1969,
-       "n": 3584
+       "mean": 0.1972,
+       "n": 3587
       },
       "genre_any": {
-       "mean": 0.3538,
-       "n": 3584
+       "mean": 0.354,
+       "n": 3587
       },
       "genre_family": {
-       "mean": 0.6242,
-       "n": 3584
+       "mean": 0.6243,
+       "n": 3587
       },
       "desc_jaccard": {
        "mean": 0.1997,
-       "n": 3511
+       "n": 3514
       },
       "desc_shared": {
-       "mean": 2.439,
-       "n": 3511
+       "mean": 2.4394,
+       "n": 3514
       },
       "genre_primary_xa": {
-       "mean": 0.1591,
-       "n": 3584
+       "mean": 0.1594,
+       "n": 3587
       },
       "genre_any_xa": {
-       "mean": 0.3139,
-       "n": 3584
+       "mean": 0.3141,
+       "n": 3587
       },
       "genre_family_xa": {
-       "mean": 0.6034,
-       "n": 3584
+       "mean": 0.6033,
+       "n": 3587
       },
       "desc_jaccard_xa": {
        "mean": 0.1879,
-       "n": 3511
+       "n": 3514
       },
       "desc_shared_xa": {
-       "mean": 2.3244,
-       "n": 3511
+       "mean": 2.3248,
+       "n": 3514
       }
      },
      "random": {
       "genre_primary": {
-       "mean": 0.0109,
-       "n": 3584
+       "mean": 0.0103,
+       "n": 3587
       },
       "genre_any": {
-       "mean": 0.0279,
-       "n": 3584
+       "mean": 0.0283,
+       "n": 3587
       },
       "genre_family": {
-       "mean": 0.1309,
-       "n": 3584
+       "mean": 0.1313,
+       "n": 3587
       },
       "desc_jaccard": {
-       "mean": 0.0694,
-       "n": 3511
+       "mean": 0.069,
+       "n": 3514
       },
       "desc_shared": {
-       "mean": 0.9416,
-       "n": 3511
+       "mean": 0.9367,
+       "n": 3514
       }
      },
      "hubness": {
-      "skew": 1.239,
-      "never": 0.0181,
+      "skew": 1.24,
+      "never": 0.0183,
       "max": 57
      },
      "groups": {
       "all": {
-       "albums": 4037,
+       "albums": 4040,
        "genre_primary": {
-        "mean": 0.1969,
-        "n": 3584
+        "mean": 0.1972,
+        "n": 3587
        },
        "genre_any": {
-        "mean": 0.3538,
-        "n": 3584
+        "mean": 0.354,
+        "n": 3587
        },
        "genre_family": {
-        "mean": 0.6242,
-        "n": 3584
+        "mean": 0.6243,
+        "n": 3587
        },
        "desc_jaccard": {
         "mean": 0.1997,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared": {
-        "mean": 2.439,
-        "n": 3511
+        "mean": 2.4394,
+        "n": 3514
        },
        "genre_primary_xa": {
-        "mean": 0.1591,
-        "n": 3584
+        "mean": 0.1594,
+        "n": 3587
        },
        "genre_any_xa": {
-        "mean": 0.3139,
-        "n": 3584
+        "mean": 0.3141,
+        "n": 3587
        },
        "genre_family_xa": {
-        "mean": 0.6034,
-        "n": 3584
+        "mean": 0.6033,
+        "n": 3587
        },
        "desc_jaccard_xa": {
         "mean": 0.1879,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared_xa": {
-        "mean": 2.3244,
-        "n": 3511
+        "mean": 2.3248,
+        "n": 3514
        },
        "share_of_neighbours_new": 0.0,
        "same_genre_share_new": 0.0,
        "mean_n10": 10.0,
-       "never_recommended": 0.0181,
+       "never_recommended": 0.0183,
        "max_n10": 57
       },
       "new": {
        "albums": 0
       },
       "existing": {
-       "albums": 4037,
+       "albums": 4040,
        "genre_primary": {
-        "mean": 0.1969,
-        "n": 3584
+        "mean": 0.1972,
+        "n": 3587
        },
        "genre_any": {
-        "mean": 0.3538,
-        "n": 3584
+        "mean": 0.354,
+        "n": 3587
        },
        "genre_family": {
-        "mean": 0.6242,
-        "n": 3584
+        "mean": 0.6243,
+        "n": 3587
        },
        "desc_jaccard": {
         "mean": 0.1997,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared": {
-        "mean": 2.439,
-        "n": 3511
+        "mean": 2.4394,
+        "n": 3514
        },
        "genre_primary_xa": {
-        "mean": 0.1591,
-        "n": 3584
+        "mean": 0.1594,
+        "n": 3587
        },
        "genre_any_xa": {
-        "mean": 0.3139,
-        "n": 3584
+        "mean": 0.3141,
+        "n": 3587
        },
        "genre_family_xa": {
-        "mean": 0.6034,
-        "n": 3584
+        "mean": 0.6033,
+        "n": 3587
        },
        "desc_jaccard_xa": {
         "mean": 0.1879,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared_xa": {
-        "mean": 2.3244,
-        "n": 3511
+        "mean": 2.3248,
+        "n": 3514
        },
        "share_of_neighbours_new": 0.0,
        "same_genre_share_new": 0.0,
        "mean_n10": 10.0,
-       "never_recommended": 0.0181,
+       "never_recommended": 0.0183,
        "max_n10": 57
       },
       "under_4_clips": {
@@ -2484,11 +2484,11 @@
         "n": 3444
        },
        "genre_any": {
-        "mean": 0.3541,
+        "mean": 0.3542,
         "n": 3444
        },
        "genre_family": {
-        "mean": 0.6226,
+        "mean": 0.6227,
         "n": 3444
        },
        "desc_jaccard": {
@@ -2496,11 +2496,11 @@
         "n": 3371
        },
        "desc_shared": {
-        "mean": 2.431,
+        "mean": 2.4312,
         "n": 3371
        },
        "genre_primary_xa": {
-        "mean": 0.1586,
+        "mean": 0.1587,
         "n": 3444
        },
        "genre_any_xa": {
@@ -2512,11 +2512,11 @@
         "n": 3444
        },
        "desc_jaccard_xa": {
-        "mean": 0.1871,
+        "mean": 0.1872,
         "n": 3371
        },
        "desc_shared_xa": {
-        "mean": 2.3157,
+        "mean": 2.3161,
         "n": 3371
        },
        "share_of_neighbours_new": 0.0,
@@ -2526,52 +2526,52 @@
        "max_n10": 57
       },
       "full_length_windows": {
-       "albums": 161,
+       "albums": 164,
        "genre_primary": {
-        "mean": 0.2162,
-        "n": 118
+        "mean": 0.2232,
+        "n": 121
        },
        "genre_any": {
-        "mean": 0.3578,
-        "n": 118
+        "mean": 0.364,
+        "n": 121
        },
        "genre_family": {
-        "mean": 0.6808,
-        "n": 118
+        "mean": 0.6807,
+        "n": 121
        },
        "desc_jaccard": {
-        "mean": 0.2193,
-        "n": 118
+        "mean": 0.219,
+        "n": 121
        },
        "desc_shared": {
-        "mean": 2.6659,
-        "n": 118
+        "mean": 2.6647,
+        "n": 121
        },
        "genre_primary_xa": {
-        "mean": 0.1751,
-        "n": 118
+        "mean": 0.1804,
+        "n": 121
        },
        "genre_any_xa": {
-        "mean": 0.3232,
-        "n": 118
+        "mean": 0.327,
+        "n": 121
        },
        "genre_family_xa": {
-        "mean": 0.6653,
-        "n": 118
+        "mean": 0.6632,
+        "n": 121
        },
        "desc_jaccard_xa": {
-        "mean": 0.2087,
-        "n": 118
+        "mean": 0.208,
+        "n": 121
        },
        "desc_shared_xa": {
-        "mean": 2.5581,
-        "n": 118
+        "mean": 2.5528,
+        "n": 121
        },
        "share_of_neighbours_new": 0.0,
        "same_genre_share_new": 0.0,
        "mean_n10": 8.24,
-       "never_recommended": 0.0621,
-       "max_n10": 30
+       "never_recommended": 0.0671,
+       "max_n10": 31
       }
      },
      "most_recommended": [
@@ -2759,122 +2759,122 @@
     },
     "effnet": {
      "name": "effnet",
-     "albums": 4037,
+     "albums": 4040,
      "new_albums": 0,
      "share_new_in_pool": 0.0,
-     "albums_with_genre": 3584,
-     "albums_with_5_descriptors": 3511,
+     "albums_with_genre": 3587,
+     "albums_with_5_descriptors": 3514,
      "metrics": {
       "genre_primary": {
-       "mean": 0.2447,
-       "n": 3584
+       "mean": 0.2449,
+       "n": 3587
       },
       "genre_any": {
        "mean": 0.427,
-       "n": 3584
+       "n": 3587
       },
       "genre_family": {
-       "mean": 0.6636,
-       "n": 3584
+       "mean": 0.6634,
+       "n": 3587
       },
       "desc_jaccard": {
        "mean": 0.2082,
-       "n": 3511
+       "n": 3514
       },
       "desc_shared": {
-       "mean": 2.5257,
-       "n": 3511
+       "mean": 2.5255,
+       "n": 3514
       },
       "genre_primary_xa": {
-       "mean": 0.2084,
-       "n": 3584
+       "mean": 0.2087,
+       "n": 3587
       },
       "genre_any_xa": {
-       "mean": 0.3894,
-       "n": 3584
+       "mean": 0.3895,
+       "n": 3587
       },
       "genre_family_xa": {
-       "mean": 0.6456,
-       "n": 3584
+       "mean": 0.6455,
+       "n": 3587
       },
       "desc_jaccard_xa": {
        "mean": 0.1961,
-       "n": 3511
+       "n": 3514
       },
       "desc_shared_xa": {
-       "mean": 2.4091,
-       "n": 3511
+       "mean": 2.4095,
+       "n": 3514
       }
      },
      "random": {
       "genre_primary": {
-       "mean": 0.0109,
-       "n": 3584
+       "mean": 0.0103,
+       "n": 3587
       },
       "genre_any": {
-       "mean": 0.0279,
-       "n": 3584
+       "mean": 0.0283,
+       "n": 3587
       },
       "genre_family": {
-       "mean": 0.1309,
-       "n": 3584
+       "mean": 0.1313,
+       "n": 3587
       },
       "desc_jaccard": {
-       "mean": 0.0694,
-       "n": 3511
+       "mean": 0.069,
+       "n": 3514
       },
       "desc_shared": {
-       "mean": 0.9416,
-       "n": 3511
+       "mean": 0.9367,
+       "n": 3514
       }
      },
      "hubness": {
-      "skew": 0.79,
+      "skew": 0.794,
       "never": 0.0059,
       "max": 37
      },
      "groups": {
       "all": {
-       "albums": 4037,
+       "albums": 4040,
        "genre_primary": {
-        "mean": 0.2447,
-        "n": 3584
+        "mean": 0.2449,
+        "n": 3587
        },
        "genre_any": {
         "mean": 0.427,
-        "n": 3584
+        "n": 3587
        },
        "genre_family": {
-        "mean": 0.6636,
-        "n": 3584
+        "mean": 0.6634,
+        "n": 3587
        },
        "desc_jaccard": {
         "mean": 0.2082,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared": {
-        "mean": 2.5257,
-        "n": 3511
+        "mean": 2.5255,
+        "n": 3514
        },
        "genre_primary_xa": {
-        "mean": 0.2084,
-        "n": 3584
+        "mean": 0.2087,
+        "n": 3587
        },
        "genre_any_xa": {
-        "mean": 0.3894,
-        "n": 3584
+        "mean": 0.3895,
+        "n": 3587
        },
        "genre_family_xa": {
-        "mean": 0.6456,
-        "n": 3584
+        "mean": 0.6455,
+        "n": 3587
        },
        "desc_jaccard_xa": {
         "mean": 0.1961,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared_xa": {
-        "mean": 2.4091,
-        "n": 3511
+        "mean": 2.4095,
+        "n": 3514
        },
        "share_of_neighbours_new": 0.0,
        "same_genre_share_new": 0.0,
@@ -2886,46 +2886,46 @@
        "albums": 0
       },
       "existing": {
-       "albums": 4037,
+       "albums": 4040,
        "genre_primary": {
-        "mean": 0.2447,
-        "n": 3584
+        "mean": 0.2449,
+        "n": 3587
        },
        "genre_any": {
         "mean": 0.427,
-        "n": 3584
+        "n": 3587
        },
        "genre_family": {
-        "mean": 0.6636,
-        "n": 3584
+        "mean": 0.6634,
+        "n": 3587
        },
        "desc_jaccard": {
         "mean": 0.2082,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared": {
-        "mean": 2.5257,
-        "n": 3511
+        "mean": 2.5255,
+        "n": 3514
        },
        "genre_primary_xa": {
-        "mean": 0.2084,
-        "n": 3584
+        "mean": 0.2087,
+        "n": 3587
        },
        "genre_any_xa": {
-        "mean": 0.3894,
-        "n": 3584
+        "mean": 0.3895,
+        "n": 3587
        },
        "genre_family_xa": {
-        "mean": 0.6456,
-        "n": 3584
+        "mean": 0.6455,
+        "n": 3587
        },
        "desc_jaccard_xa": {
         "mean": 0.1961,
-        "n": 3511
+        "n": 3514
        },
        "desc_shared_xa": {
-        "mean": 2.4091,
-        "n": 3511
+        "mean": 2.4095,
+        "n": 3514
        },
        "share_of_neighbours_new": 0.0,
        "same_genre_share_new": 0.0,
@@ -2984,15 +2984,15 @@
       "4_clips": {
        "albums": 3832,
        "genre_primary": {
-        "mean": 0.2441,
+        "mean": 0.2442,
         "n": 3444
        },
        "genre_any": {
-        "mean": 0.4264,
+        "mean": 0.4262,
         "n": 3444
        },
        "genre_family": {
-        "mean": 0.6624,
+        "mean": 0.6623,
         "n": 3444
        },
        "desc_jaccard": {
@@ -3000,11 +3000,11 @@
         "n": 3371
        },
        "desc_shared": {
-        "mean": 2.5163,
+        "mean": 2.5162,
         "n": 3371
        },
        "genre_primary_xa": {
-        "mean": 0.2077,
+        "mean": 0.2078,
         "n": 3444
        },
        "genre_any_xa": {
@@ -3012,15 +3012,15 @@
         "n": 3444
        },
        "genre_family_xa": {
-        "mean": 0.6442,
+        "mean": 0.644,
         "n": 3444
        },
        "desc_jaccard_xa": {
-        "mean": 0.195,
+        "mean": 0.1951,
         "n": 3371
        },
        "desc_shared_xa": {
-        "mean": 2.398,
+        "mean": 2.3984,
         "n": 3371
        },
        "share_of_neighbours_new": 0.0,
@@ -3030,52 +3030,52 @@
        "max_n10": 37
       },
       "full_length_windows": {
-       "albums": 161,
+       "albums": 164,
        "genre_primary": {
-        "mean": 0.2675,
-        "n": 118
+        "mean": 0.271,
+        "n": 121
        },
        "genre_any": {
-        "mean": 0.4568,
-        "n": 118
+        "mean": 0.4605,
+        "n": 121
        },
        "genre_family": {
-        "mean": 0.7228,
-        "n": 118
+        "mean": 0.7196,
+        "n": 121
        },
        "desc_jaccard": {
-        "mean": 0.2337,
-        "n": 118
+        "mean": 0.2326,
+        "n": 121
        },
        "desc_shared": {
-        "mean": 2.81,
-        "n": 118
+        "mean": 2.7995,
+        "n": 121
        },
        "genre_primary_xa": {
-        "mean": 0.2303,
-        "n": 118
+        "mean": 0.2344,
+        "n": 121
        },
        "genre_any_xa": {
-        "mean": 0.4247,
-        "n": 118
+        "mean": 0.4287,
+        "n": 121
        },
        "genre_family_xa": {
-        "mean": 0.7143,
-        "n": 118
+        "mean": 0.7109,
+        "n": 121
        },
        "desc_jaccard_xa": {
-        "mean": 0.2252,
-        "n": 118
+        "mean": 0.2246,
+        "n": 121
        },
        "desc_shared_xa": {
-        "mean": 2.7251,
-        "n": 118
+        "mean": 2.7182,
+        "n": 121
        },
        "share_of_neighbours_new": 0.0,
        "same_genre_share_new": 0.0,
-       "mean_n10": 9.67,
-       "never_recommended": 0.0124,
-       "max_n10": 35
+       "mean_n10": 9.71,
+       "never_recommended": 0.0122,
+       "max_n10": 36
       }
      },
      "most_recommended": [
@@ -3101,7 +3101,7 @@
        "new": false,
        "n_clips": 8,
        "source": "youtube",
-       "n10": 35
+       "n10": 36
       },
       {
        "key": "Album18246",
@@ -3116,12 +3116,12 @@
        "n10": 34
       },
       {
-       "key": "Album8236",
-       "artist": "Yes",
-       "title": "Yessongs",
-       "year": "1973",
-       "rank": 1497,
-       "primary_genres": "Symphonic Prog, Progressive Rock",
+       "key": "Album17385",
+       "artist": "Charlie Mingus",
+       "title": "Tijuana Moods",
+       "year": "1962",
+       "rank": 2168,
+       "primary_genres": "Post-Bop",
        "new": false,
        "n_clips": 4,
        "source": "deezer",
@@ -3152,12 +3152,12 @@
        "n10": 31
       },
       {
-       "key": "Album17385",
-       "artist": "Charlie Mingus",
-       "title": "Tijuana Moods",
-       "year": "1962",
-       "rank": 2168,
-       "primary_genres": "Post-Bop",
+       "key": "Album8236",
+       "artist": "Yes",
+       "title": "Yessongs",
+       "year": "1973",
+       "rank": 1497,
+       "primary_genres": "Symphonic Prog, Progressive Rock",
        "new": false,
        "n_clips": 4,
        "source": "deezer",
@@ -3266,7 +3266,7 @@
  },
  "effnet_store": {
   "model": "discogs-effnet-bs1-1",
-  "albums": 10237,
+  "albums": 10242,
   "clips_per_album": {
    "1": 27,
    "2": 26,
@@ -3275,12 +3275,12 @@
    "5": 36,
    "6": 51,
    "7": 80,
-   "8": 662
+   "8": 667
   },
   "sources": {
    "deezer": 6475,
    "itunes": 2893,
-   "youtube": 869
+   "youtube": 874
   }
  },
  "by_source": {
@@ -3292,35 +3292,35 @@
   "groups": {
    "deezer": {
     "albums": 6473,
-    "share_of_pool": 0.6324,
+    "share_of_pool": 0.6321,
     "mean_n10": 10.12,
     "never_recommended": 0.0219,
     "seeds_with_genre": 5999
    },
    "itunes": {
     "albums": 2893,
-    "share_of_pool": 0.2827,
+    "share_of_pool": 0.2825,
     "mean_n10": 9.81,
     "never_recommended": 0.0187,
     "seeds_with_genre": 2789
    },
    "youtube": {
-    "albums": 869,
-    "share_of_pool": 0.0849,
-    "mean_n10": 9.72,
-    "never_recommended": 0.0219,
-    "seeds_with_genre": 803
+    "albums": 874,
+    "share_of_pool": 0.0854,
+    "mean_n10": 9.73,
+    "never_recommended": 0.0217,
+    "seeds_with_genre": 808
    },
    "deezer, new": {
     "albums": 2815,
-    "share_of_pool": 0.275,
+    "share_of_pool": 0.2749,
     "mean_n10": 9.62,
     "never_recommended": 0.0263,
     "seeds_with_genre": 2739
    },
    "deezer, existing": {
     "albums": 3658,
-    "share_of_pool": 0.3574,
+    "share_of_pool": 0.3572,
     "mean_n10": 10.51,
     "never_recommended": 0.0186,
     "seeds_with_genre": 3260
@@ -3329,87 +3329,87 @@
   "neighbours": {
    "deezer": {
     "deezer": {
-     "share_of_neighbours": 0.695,
-     "share_of_neighbours_seeds_with_genre": 0.6938,
-     "same_genre_share": 0.6629
+     "share_of_neighbours": 0.6947,
+     "share_of_neighbours_seeds_with_genre": 0.6935,
+     "same_genre_share": 0.6626
     },
     "itunes": {
-     "share_of_neighbours": 0.2485,
-     "share_of_neighbours_seeds_with_genre": 0.2504,
-     "same_genre_share": 0.2671
+     "share_of_neighbours": 0.2484,
+     "share_of_neighbours_seeds_with_genre": 0.2503,
+     "same_genre_share": 0.267
     },
     "youtube": {
-     "share_of_neighbours": 0.0565,
-     "share_of_neighbours_seeds_with_genre": 0.0558,
-     "same_genre_share": 0.07
+     "share_of_neighbours": 0.0569,
+     "share_of_neighbours_seeds_with_genre": 0.0562,
+     "same_genre_share": 0.0705
     }
    },
    "itunes": {
     "deezer": {
-     "share_of_neighbours": 0.5777,
-     "share_of_neighbours_seeds_with_genre": 0.5782,
-     "same_genre_share": 0.5745
+     "share_of_neighbours": 0.5774,
+     "share_of_neighbours_seeds_with_genre": 0.5778,
+     "same_genre_share": 0.5742
     },
     "itunes": {
      "share_of_neighbours": 0.3505,
-     "share_of_neighbours_seeds_with_genre": 0.3508,
-     "same_genre_share": 0.3483
+     "share_of_neighbours_seeds_with_genre": 0.3507,
+     "same_genre_share": 0.3482
     },
     "youtube": {
-     "share_of_neighbours": 0.0717,
-     "share_of_neighbours_seeds_with_genre": 0.071,
-     "same_genre_share": 0.0772
+     "share_of_neighbours": 0.0722,
+     "share_of_neighbours_seeds_with_genre": 0.0715,
+     "same_genre_share": 0.0776
     }
    },
    "youtube": {
     "deezer": {
      "share_of_neighbours": 0.4412,
      "share_of_neighbours_seeds_with_genre": 0.4349,
-     "same_genre_share": 0.5229
+     "same_genre_share": 0.5233
     },
     "itunes": {
-     "share_of_neighbours": 0.2467,
-     "share_of_neighbours_seeds_with_genre": 0.2465,
-     "same_genre_share": 0.2682
+     "share_of_neighbours": 0.2461,
+     "share_of_neighbours_seeds_with_genre": 0.2458,
+     "same_genre_share": 0.2679
     },
     "youtube": {
-     "share_of_neighbours": 0.3121,
-     "share_of_neighbours_seeds_with_genre": 0.3187,
-     "same_genre_share": 0.2089
+     "share_of_neighbours": 0.3127,
+     "share_of_neighbours_seeds_with_genre": 0.3193,
+     "same_genre_share": 0.2088
     }
    },
    "deezer, new": {
     "deezer": {
-     "share_of_neighbours": 0.675,
-     "share_of_neighbours_seeds_with_genre": 0.6764,
-     "same_genre_share": 0.6527
+     "share_of_neighbours": 0.6748,
+     "share_of_neighbours_seeds_with_genre": 0.6762,
+     "same_genre_share": 0.6522
     },
     "itunes": {
-     "share_of_neighbours": 0.2543,
-     "share_of_neighbours_seeds_with_genre": 0.254,
-     "same_genre_share": 0.2633
+     "share_of_neighbours": 0.2542,
+     "share_of_neighbours_seeds_with_genre": 0.2539,
+     "same_genre_share": 0.2632
     },
     "youtube": {
-     "share_of_neighbours": 0.0707,
-     "share_of_neighbours_seeds_with_genre": 0.0696,
-     "same_genre_share": 0.084
+     "share_of_neighbours": 0.0709,
+     "share_of_neighbours_seeds_with_genre": 0.0698,
+     "same_genre_share": 0.0847
     }
    },
    "deezer, existing": {
     "deezer": {
-     "share_of_neighbours": 0.7104,
-     "share_of_neighbours_seeds_with_genre": 0.7084,
-     "same_genre_share": 0.6715
+     "share_of_neighbours": 0.7101,
+     "share_of_neighbours_seeds_with_genre": 0.7081,
+     "same_genre_share": 0.6713
     },
     "itunes": {
-     "share_of_neighbours": 0.244,
-     "share_of_neighbours_seeds_with_genre": 0.2473,
-     "same_genre_share": 0.2702
+     "share_of_neighbours": 0.2439,
+     "share_of_neighbours_seeds_with_genre": 0.2472,
+     "same_genre_share": 0.2701
     },
     "youtube": {
-     "share_of_neighbours": 0.0456,
-     "share_of_neighbours_seeds_with_genre": 0.0442,
-     "same_genre_share": 0.0582
+     "share_of_neighbours": 0.046,
+     "share_of_neighbours_seeds_with_genre": 0.0447,
+     "same_genre_share": 0.0586
     }
    }
   }
@@ -3423,35 +3423,35 @@
   "groups": {
    "deezer": {
     "albums": 6475,
-    "share_of_pool": 0.6325,
+    "share_of_pool": 0.6322,
     "mean_n10": 10.11,
     "never_recommended": 0.0066,
     "seeds_with_genre": 6001
    },
    "itunes": {
     "albums": 2893,
-    "share_of_pool": 0.2826,
+    "share_of_pool": 0.2825,
     "mean_n10": 9.48,
     "never_recommended": 0.0114,
     "seeds_with_genre": 2789
    },
    "youtube": {
-    "albums": 869,
-    "share_of_pool": 0.0849,
-    "mean_n10": 10.91,
-    "never_recommended": 0.0104,
-    "seeds_with_genre": 803
+    "albums": 874,
+    "share_of_pool": 0.0853,
+    "mean_n10": 10.93,
+    "never_recommended": 0.0103,
+    "seeds_with_genre": 808
    },
    "deezer, new": {
     "albums": 2815,
-    "share_of_pool": 0.275,
+    "share_of_pool": 0.2748,
     "mean_n10": 9.64,
     "never_recommended": 0.0075,
     "seeds_with_genre": 2739
    },
    "deezer, existing": {
     "albums": 3660,
-    "share_of_pool": 0.3575,
+    "share_of_pool": 0.3574,
     "mean_n10": 10.47,
     "never_recommended": 0.006,
     "seeds_with_genre": 3262
@@ -3460,87 +3460,87 @@
   "neighbours": {
    "deezer": {
     "deezer": {
-     "share_of_neighbours": 0.6795,
-     "share_of_neighbours_seeds_with_genre": 0.6791,
-     "same_genre_share": 0.663
+     "share_of_neighbours": 0.679,
+     "share_of_neighbours_seeds_with_genre": 0.6785,
+     "same_genre_share": 0.6627
     },
     "itunes": {
      "share_of_neighbours": 0.2435,
      "share_of_neighbours_seeds_with_genre": 0.2445,
-     "same_genre_share": 0.267
+     "same_genre_share": 0.2669
     },
     "youtube": {
-     "share_of_neighbours": 0.077,
-     "share_of_neighbours_seeds_with_genre": 0.0765,
-     "same_genre_share": 0.07
+     "share_of_neighbours": 0.0775,
+     "share_of_neighbours_seeds_with_genre": 0.077,
+     "same_genre_share": 0.0705
     }
    },
    "itunes": {
     "deezer": {
-     "share_of_neighbours": 0.588,
-     "share_of_neighbours_seeds_with_genre": 0.5881,
-     "same_genre_share": 0.5745
+     "share_of_neighbours": 0.5877,
+     "share_of_neighbours_seeds_with_genre": 0.5877,
+     "same_genre_share": 0.5742
     },
     "itunes": {
      "share_of_neighbours": 0.3298,
      "share_of_neighbours_seeds_with_genre": 0.3298,
-     "same_genre_share": 0.3483
+     "same_genre_share": 0.3482
     },
     "youtube": {
-     "share_of_neighbours": 0.0821,
-     "share_of_neighbours_seeds_with_genre": 0.0821,
-     "same_genre_share": 0.0772
+     "share_of_neighbours": 0.0825,
+     "share_of_neighbours_seeds_with_genre": 0.0824,
+     "same_genre_share": 0.0776
     }
    },
    "youtube": {
     "deezer": {
-     "share_of_neighbours": 0.5124,
-     "share_of_neighbours_seeds_with_genre": 0.508,
-     "same_genre_share": 0.5229
+     "share_of_neighbours": 0.5117,
+     "share_of_neighbours_seeds_with_genre": 0.5072,
+     "same_genre_share": 0.5233
     },
     "itunes": {
-     "share_of_neighbours": 0.2436,
-     "share_of_neighbours_seeds_with_genre": 0.2451,
-     "same_genre_share": 0.2682
+     "share_of_neighbours": 0.2428,
+     "share_of_neighbours_seeds_with_genre": 0.2442,
+     "same_genre_share": 0.2679
     },
     "youtube": {
-     "share_of_neighbours": 0.244,
-     "share_of_neighbours_seeds_with_genre": 0.2469,
-     "same_genre_share": 0.2089
+     "share_of_neighbours": 0.2455,
+     "share_of_neighbours_seeds_with_genre": 0.2486,
+     "same_genre_share": 0.2088
     }
    },
    "deezer, new": {
     "deezer": {
-     "share_of_neighbours": 0.6645,
-     "share_of_neighbours_seeds_with_genre": 0.6662,
-     "same_genre_share": 0.6527
+     "share_of_neighbours": 0.6639,
+     "share_of_neighbours_seeds_with_genre": 0.6656,
+     "same_genre_share": 0.6522
     },
     "itunes": {
-     "share_of_neighbours": 0.244,
-     "share_of_neighbours_seeds_with_genre": 0.2434,
-     "same_genre_share": 0.2633
+     "share_of_neighbours": 0.2441,
+     "share_of_neighbours_seeds_with_genre": 0.2436,
+     "same_genre_share": 0.2631
     },
     "youtube": {
-     "share_of_neighbours": 0.0915,
-     "share_of_neighbours_seeds_with_genre": 0.0904,
-     "same_genre_share": 0.084
+     "share_of_neighbours": 0.0919,
+     "share_of_neighbours_seeds_with_genre": 0.0908,
+     "same_genre_share": 0.0847
     }
    },
    "deezer, existing": {
     "deezer": {
-     "share_of_neighbours": 0.6911,
-     "share_of_neighbours_seeds_with_genre": 0.6899,
-     "same_genre_share": 0.6717
+     "share_of_neighbours": 0.6906,
+     "share_of_neighbours_seeds_with_genre": 0.6894,
+     "same_genre_share": 0.6714
     },
     "itunes": {
-     "share_of_neighbours": 0.2431,
-     "share_of_neighbours_seeds_with_genre": 0.2453,
-     "same_genre_share": 0.2701
+     "share_of_neighbours": 0.243,
+     "share_of_neighbours_seeds_with_genre": 0.2452,
+     "same_genre_share": 0.27
     },
     "youtube": {
-     "share_of_neighbours": 0.0658,
-     "share_of_neighbours_seeds_with_genre": 0.0648,
-     "same_genre_share": 0.0582
+     "share_of_neighbours": 0.0664,
+     "share_of_neighbours_seeds_with_genre": 0.0654,
+     "same_genre_share": 0.0586
     }
    }
   }

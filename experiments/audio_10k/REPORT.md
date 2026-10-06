@@ -17,6 +17,8 @@ The files call the Apple store `iTunes`. It is the same thing.
 - **What to ship.** The 10k EffNet store, `data-pipeline/audio/effnet10k/`: 10,237 of the 10,467 albums (Deezer 6,475, Apple 2,893, YouTube 869), four clips per album, written from the clip cache on 5 October. The CLAP store (from `clap_mp3`, 10,235 albums) stays on the branch and is not what the site will use. Nothing is shipped yet: the site data is still built from `data-pipeline/audio/` (3,980 albums), and pointing the build at the new store waits for the owner's go-ahead.
 - **Main caveat.** Every number is a probe on stored vectors or an RYM-based proxy, and there is no held-out test split. The listening was one pass by the owner over 38 seeds with the columns labelled: a judgement, not a measurement.
 
+**Added later on 5 October.** The owner found YouTube links by hand for five top-1,000 albums with no audio (Rock Dream, Yanqui U.X.O., Ocarina of Time, Endless, Genesis Archive 1967-75). They are in `data-pipeline/audio/fulllength_links.csv`, four of them playlists of per-track videos, and were embedded with `rmr_audio.fulllength --links-only`. Both stores were written again: EffNet 10,242 albums, CLAP 10,240 (YouTube 874). 223 albums have no audio. Counts elsewhere in this document are from before these five; `results/sonic_measures.clap_mp3.md` and `data-pipeline/audio/album_status.md` are current.
+
 ## 2. Data, split, metrics
 
 **Data.**

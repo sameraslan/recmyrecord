@@ -340,7 +340,7 @@ def videos(tmp_path):
     class World:
         opts = dict(catalog=tmp_path / "albums.csv", keys_csv=tmp_path / "keys.csv", matches=tmp_path / "matches.csv",
                     csv=tmp_path / "audio" / "fulllength.csv", out=tmp_path / "cache" / "onepass.sqlite",
-                    tmp=tmp_path / "cache" / "fulllength-tmp", pause=0.0)
+                    tmp=tmp_path / "cache" / "fulllength-tmp", pause=0.0, links=tmp_path / "audio" / "fulllength_links.csv")
         pages = {YT + "full": video("Artist0 - Title0 (full album)", 2400) | {"id": "full"},
                  YT + "mid": video("Artist1 - Title1", 1500) | {"id": "mid"}}
         lengths = {YT + "full": [2400.0], YT + "mid": [1500.0]}

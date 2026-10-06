@@ -6,26 +6,26 @@ Generated 2026-10-05 by `measure.py`. Provisional until the clip cache and the c
 
 **These are RYM-based proxies, computed over the whole catalog with audio. They describe the lists; they are not a held-out evaluation, and nobody listened.** Lists are the ten nearest albums by the 64-number audio block alone. Genres and descriptors are the sheet's columns in `catalog/albums.csv`. The earlier experiments' test splits are spent and are not used here. Definitions, and why the levels are not comparable with the earlier reports, are in the docstring of `measure.py`.
 
-Catalog: 10,467 albums; 10,235 have CLAP audio (6,198 new, 4,037 on the site); 10,235 have both models. 9,774 of those with CLAP audio have a genre in the sheet, 9,436 have five or more top descriptors (the site's off-chart albums have neither).
-Clips behind the CLAP mean: 1: 27, 2: 26, 3: 46, 4: 9,307, 5: 36, 6: 51, 7: 80, 8: 662.
-EffNet store (discogs-effnet-bs1-1): 10,237 albums (6,198 new). Clips behind its mean: 1: 27, 2: 26, 3: 46, 4: 9,309, 5: 36, 6: 51, 7: 80, 8: 662.
+Catalog: 10,467 albums; 10,240 have CLAP audio (6,200 new, 4,040 on the site); 10,240 have both models. 9,779 of those with CLAP audio have a genre in the sheet, 9,440 have five or more top descriptors (the site's off-chart albums have neither).
+Clips behind the CLAP mean: 1: 27, 2: 26, 3: 46, 4: 9,307, 5: 36, 6: 51, 7: 80, 8: 667.
+EffNet store (discogs-effnet-bs1-1): 10,242 albums (6,200 new). Clips behind its mean: 1: 27, 2: 26, 3: 46, 4: 9,309, 5: 36, 6: 51, 7: 80, 8: 667.
 
 ## Top 10 by the audio block alone
 
 | Pool | Block | Albums | genre_primary | genre_any | genre_family | desc_jaccard | desc_shared | genre_primary_xa | desc_jaccard_xa | Never recommended | Max N10 | N10 skew |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| catalog | clap | 10,235 | 0.197 | 0.362 | 0.601 | 0.194 | 2.38 | 0.166 | 0.185 | 2.1% | 62 | 1.24 |
-| catalog | random (floor) | 10,235 | 0.008 | 0.022 | 0.114 | 0.064 | 0.87 |  |  |  |  |  |
-| catalog_effnet | effnet | 10,237 | 0.241 | 0.429 | 0.643 | 0.200 | 2.44 | 0.212 | 0.191 | 0.8% | 48 | 0.95 |
-| catalog_effnet | random (floor) | 10,237 | 0.008 | 0.022 | 0.114 | 0.064 | 0.87 |  |  |  |  |  |
-| both_models | clap | 10,235 | 0.197 | 0.362 | 0.601 | 0.194 | 2.38 | 0.166 | 0.185 | 2.1% | 62 | 1.24 |
-| both_models | effnet | 10,235 | 0.241 | 0.429 | 0.643 | 0.200 | 2.44 | 0.212 | 0.191 | 0.8% | 48 | 0.95 |
-| both_models | random (floor) | 10,235 | 0.008 | 0.022 | 0.114 | 0.064 | 0.87 |  |  |  |  |  |
-| existing_only | clap | 4,037 | 0.197 | 0.354 | 0.624 | 0.200 | 2.44 | 0.159 | 0.188 | 1.8% | 57 | 1.24 |
-| existing_only | effnet | 4,037 | 0.245 | 0.427 | 0.664 | 0.208 | 2.53 | 0.208 | 0.196 | 0.6% | 37 | 0.79 |
-| existing_only | random (floor) | 4,037 | 0.011 | 0.028 | 0.131 | 0.069 | 0.94 |  |  |  |  |  |
+| catalog | clap | 10,240 | 0.197 | 0.362 | 0.601 | 0.195 | 2.38 | 0.166 | 0.185 | 2.1% | 62 | 1.24 |
+| catalog | random (floor) | 10,240 | 0.008 | 0.021 | 0.113 | 0.064 | 0.88 |  |  |  |  |  |
+| catalog_effnet | effnet | 10,242 | 0.241 | 0.430 | 0.643 | 0.200 | 2.45 | 0.212 | 0.191 | 0.8% | 48 | 0.95 |
+| catalog_effnet | random (floor) | 10,242 | 0.008 | 0.022 | 0.114 | 0.064 | 0.88 |  |  |  |  |  |
+| both_models | clap | 10,240 | 0.197 | 0.362 | 0.601 | 0.195 | 2.38 | 0.166 | 0.185 | 2.1% | 62 | 1.24 |
+| both_models | effnet | 10,240 | 0.241 | 0.430 | 0.643 | 0.200 | 2.44 | 0.212 | 0.191 | 0.8% | 48 | 0.95 |
+| both_models | random (floor) | 10,240 | 0.008 | 0.021 | 0.113 | 0.064 | 0.88 |  |  |  |  |  |
+| existing_only | clap | 4,040 | 0.197 | 0.354 | 0.624 | 0.200 | 2.44 | 0.159 | 0.188 | 1.8% | 57 | 1.24 |
+| existing_only | effnet | 4,040 | 0.245 | 0.427 | 0.663 | 0.208 | 2.53 | 0.209 | 0.196 | 0.6% | 37 | 0.79 |
+| existing_only | random (floor) | 4,040 | 0.010 | 0.028 | 0.131 | 0.069 | 0.94 |  |  |  |  |  |
 
-Pools: `catalog` = every catalog album with CLAP audio; `catalog_effnet` = every catalog album of the EffNet store; `both_models` = the albums with both models' audio: the same albums, labels and candidates for the two rows; `existing_only` = the site's albums only (seeds and candidates): the pool closest to the earlier reports'. `effnet` is the 10k catalog's EffNet store (`data-pipeline/audio/effnet10k`, four clips per album) through its own transform. It is not the site's current block, which is `data-pipeline/audio`: the site's albums only, at up to eight clips (see `sonic.py`). Mean shared neighbours between the CLAP and EffNet lists (of 10): both_models 2.142, existing_only 2.522.
+Pools: `catalog` = every catalog album with CLAP audio; `catalog_effnet` = every catalog album of the EffNet store; `both_models` = the albums with both models' audio: the same albums, labels and candidates for the two rows; `existing_only` = the site's albums only (seeds and candidates): the pool closest to the earlier reports'. `effnet` is the 10k catalog's EffNet store (`data-pipeline/audio/effnet10k`, four clips per album) through its own transform. It is not the site's current block, which is `data-pipeline/audio`: the site's albums only, at up to eight clips (see `sonic.py`). Mean shared neighbours between the CLAP and EffNet lists (of 10): both_models 2.142, existing_only 2.524.
 
 ## New and existing albums
 
@@ -33,16 +33,16 @@ New albums are 60.6% of the albums with CLAP audio: a list that ignored whether 
 
 | Seeds | Albums | genre_primary | desc_jaccard | Neighbours that are new | Same-genre albums that are new | Mean N10 | Never recommended | Max N10 | Seeds with a genre |
 |---|---|---|---|---|---|---|---|---|---|
-| clap, all | 10,235 | 0.197 | 0.194 | 58.5% | 62.9% | 10.0 | 2.1% | 62 | 9774 |
-| clap, new | 6,198 | 0.189 | 0.189 | 63.5% | 66.6% | 9.7 | 2.2% | 53 | 6190 |
-| clap, existing | 4,037 | 0.210 | 0.204 | 50.9% | 56.7% | 10.5 | 2.0% | 62 | 3584 |
-| effnet, all | 10,237 | 0.241 | 0.200 | 58.7% | 62.9% | 10.0 | 0.8% | 48 | 9776 |
-| effnet, new | 6,198 | 0.229 | 0.194 | 63.4% | 66.6% | 9.7 | 0.9% | 47 | 6190 |
-| effnet, existing | 4,039 | 0.261 | 0.211 | 51.5% | 56.7% | 10.5 | 0.7% | 48 | 3586 |
-| both models: clap, new | 6,198 | 0.189 | 0.189 | 63.5% | 66.6% | 9.7 | 2.2% | 53 | 6190 |
-| both models: clap, existing | 4,037 | 0.210 | 0.204 | 50.9% | 56.7% | 10.5 | 2.0% | 62 | 3584 |
-| both models: effnet, new | 6,198 | 0.229 | 0.194 | 63.4% | 66.6% | 9.7 | 0.9% | 47 | 6190 |
-| both models: effnet, existing | 4,037 | 0.261 | 0.211 | 51.6% | 56.7% | 10.5 | 0.7% | 48 | 3584 |
+| clap, all | 10,240 | 0.197 | 0.195 | 58.5% | 62.9% | 10.0 | 2.1% | 62 | 9779 |
+| clap, new | 6,200 | 0.189 | 0.189 | 63.5% | 66.6% | 9.7 | 2.2% | 53 | 6192 |
+| clap, existing | 4,040 | 0.210 | 0.204 | 50.9% | 56.7% | 10.5 | 2.0% | 62 | 3587 |
+| effnet, all | 10,242 | 0.241 | 0.200 | 58.7% | 62.9% | 10.0 | 0.8% | 48 | 9781 |
+| effnet, new | 6,200 | 0.229 | 0.194 | 63.4% | 66.6% | 9.7 | 0.9% | 47 | 6192 |
+| effnet, existing | 4,042 | 0.262 | 0.211 | 51.5% | 56.7% | 10.5 | 0.7% | 48 | 3589 |
+| both models: clap, new | 6,200 | 0.189 | 0.189 | 63.5% | 66.6% | 9.7 | 2.2% | 53 | 6192 |
+| both models: clap, existing | 4,040 | 0.210 | 0.204 | 50.9% | 56.7% | 10.5 | 2.0% | 62 | 3587 |
+| both models: effnet, new | 6,200 | 0.229 | 0.194 | 63.4% | 66.6% | 9.7 | 0.9% | 47 | 6192 |
+| both models: effnet, existing | 4,040 | 0.262 | 0.211 | 51.6% | 56.7% | 10.5 | 0.7% | 48 | 3587 |
 
 A block whose lists hold more new albums for new seeds than the same-genre share, and fewer for existing seeds, separates new from existing albums by something other than RYM genre. That can be the music (era, production, how well known the record is) or how the two batches were made (the existing albums' clips were embedded by an earlier run). On the second: 28 tracks are in the cache twice, embedded once by each run; the cosine between the two vectors is at least 1.0000 for CLAP and 1.0000 for EffNet (28 tracks). At 1.0 the two runs make the same vector from the same preview, and the difference is in the albums.
 
@@ -52,7 +52,7 @@ A block whose lists hold more new albums for new seeds than the same-genre share
 |---|---|---|---|---|---|---|---|---|---|
 | 4_clips | 9,267 | 0.196 | 0.195 | 57.3% | 62.0% | 10.1 | 2.0% | 62 | 8871 |
 | under_4_clips | 99 | 0.155 | 0.195 | 67.3% | 70.0% | 5.1 | 13.1% | 28 | 77 |
-| full_length_windows | 869 | 0.206 | 0.189 | 70.9% | 72.0% | 9.7 | 2.2% | 38 | 826 |
+| full_length_windows | 874 | 0.208 | 0.190 | 70.8% | 72.0% | 9.7 | 2.2% | 38 | 831 |
 
 `under_4_clips`: the listing has fewer than four previews. `full_length_windows`: windows of a full-length file (local, youtube, bandcamp), where the mean takes every window.
 
@@ -62,19 +62,19 @@ The source is where the clips behind an album's mean came from (the store's `sou
 
 | Seeds | Albums | Mean N10 | Never recommended | Neighbours from deezer (same-genre share) | Neighbours from itunes (same-genre share) | Neighbours from youtube (same-genre share) | Seeds with a genre |
 |---|---|---|---|---|---|---|---|
-| deezer | 6,473 | 10.1 | 2.2% | 69.5% (66.3%) | 24.9% (26.7%) | 5.7% (7.0%) | 5,999 |
-| itunes | 2,893 | 9.8 | 1.9% | 57.8% (57.5%) | 35.0% (34.8%) | 7.2% (7.7%) | 2,789 |
-| youtube | 869 | 9.7 | 2.2% | 44.1% (52.3%) | 24.7% (26.8%) | 31.2% (20.9%) | 803 |
-| deezer, new | 2,815 | 9.6 | 2.6% | 67.5% (65.3%) | 25.4% (26.3%) | 7.1% (8.4%) | 2,739 |
-| deezer, existing | 3,658 | 10.5 | 1.9% | 71.0% (67.2%) | 24.4% (27.0%) | 4.6% (5.8%) | 3,260 |
+| deezer | 6,473 | 10.1 | 2.2% | 69.5% (66.3%) | 24.8% (26.7%) | 5.7% (7.0%) | 5,999 |
+| itunes | 2,893 | 9.8 | 1.9% | 57.7% (57.4%) | 35.0% (34.8%) | 7.2% (7.8%) | 2,789 |
+| youtube | 874 | 9.7 | 2.2% | 44.1% (52.3%) | 24.6% (26.8%) | 31.3% (20.9%) | 808 |
+| deezer, new | 2,815 | 9.6 | 2.6% | 67.5% (65.2%) | 25.4% (26.3%) | 7.1% (8.5%) | 2,739 |
+| deezer, existing | 3,658 | 10.5 | 1.9% | 71.0% (67.1%) | 24.4% (27.0%) | 4.6% (5.9%) | 3,260 |
 
 ## By clips behind the mean (EffNet, whole catalog)
 
 | Seeds | Albums | genre_primary | desc_jaccard | Neighbours that are new | Same-genre albums that are new | Mean N10 | Never recommended | Max N10 | Seeds with a genre |
 |---|---|---|---|---|---|---|---|---|---|
-| 4_clips | 9,269 | 0.239 | 0.200 | 57.7% | 62.0% | 9.9 | 0.7% | 47 | 8873 |
-| under_4_clips | 99 | 0.198 | 0.198 | 65.8% | 70.0% | 6.9 | 7.1% | 26 | 77 |
-| full_length_windows | 869 | 0.269 | 0.202 | 68.3% | 72.0% | 10.9 | 1.0% | 48 | 826 |
+| 4_clips | 9,269 | 0.239 | 0.200 | 57.8% | 62.0% | 9.9 | 0.7% | 47 | 8873 |
+| under_4_clips | 99 | 0.200 | 0.198 | 65.6% | 70.0% | 6.9 | 7.1% | 26 | 77 |
+| full_length_windows | 874 | 0.269 | 0.203 | 68.2% | 72.0% | 10.9 | 1.0% | 48 | 831 |
 
 ## By audio source (EffNet, whole catalog)
 
@@ -82,11 +82,11 @@ The same table for the EffNet lists: every album of the EffNet store, grouped by
 
 | Seeds | Albums | Mean N10 | Never recommended | Neighbours from deezer (same-genre share) | Neighbours from itunes (same-genre share) | Neighbours from youtube (same-genre share) | Seeds with a genre |
 |---|---|---|---|---|---|---|---|
-| deezer | 6,475 | 10.1 | 0.7% | 68.0% (66.3%) | 24.3% (26.7%) | 7.7% (7.0%) | 6,001 |
-| itunes | 2,893 | 9.5 | 1.1% | 58.8% (57.5%) | 33.0% (34.8%) | 8.2% (7.7%) | 2,789 |
-| youtube | 869 | 10.9 | 1.0% | 51.2% (52.3%) | 24.4% (26.8%) | 24.4% (20.9%) | 803 |
-| deezer, new | 2,815 | 9.6 | 0.8% | 66.5% (65.3%) | 24.4% (26.3%) | 9.2% (8.4%) | 2,739 |
-| deezer, existing | 3,660 | 10.5 | 0.6% | 69.1% (67.2%) | 24.3% (27.0%) | 6.6% (5.8%) | 3,262 |
+| deezer | 6,475 | 10.1 | 0.7% | 67.9% (66.3%) | 24.3% (26.7%) | 7.8% (7.0%) | 6,001 |
+| itunes | 2,893 | 9.5 | 1.1% | 58.8% (57.4%) | 33.0% (34.8%) | 8.2% (7.8%) | 2,789 |
+| youtube | 874 | 10.9 | 1.0% | 51.2% (52.3%) | 24.3% (26.8%) | 24.6% (20.9%) | 808 |
+| deezer, new | 2,815 | 9.6 | 0.8% | 66.4% (65.2%) | 24.4% (26.3%) | 9.2% (8.5%) | 2,739 |
+| deezer, existing | 3,660 | 10.5 | 0.6% | 69.1% (67.1%) | 24.3% (27.0%) | 6.6% (5.9%) | 3,262 |
 
 ## Most-recommended albums (CLAP, whole catalog)
 
@@ -95,7 +95,7 @@ The same table for the EffNet lists: every album of the EffNet store, grouped by
 | 62 | Spirit, Twelve Dreams of Dr. Sardonicus | 1970 | 6222 | Psychedelic Rock |  | 4 |
 | 56 | Testament, The Legacy | 1987 | 2704 | Thrash Metal |  | 4 |
 | 53 | Various Artists, Boogiepop Phantom | 2000 | 7182 | Television Music, Downtempo, Electronic Dance Music | new | 4 |
-| 51 | Spring, Spring | 1971 | 5993 | Progressive Rock |  | 4 |
+| 52 | Spring, Spring | 1971 | 5993 | Progressive Rock |  | 4 |
 | 49 | The Dillinger Escape Plan, Under the Running Board | 1998 |  |  |  | 4 |
 | 46 | Nasum, Inhale / Exhale | 1998 | 4042 | Grindcore | new | 4 |
 | 46 | Blue Mitchell, The Thing to Do | 1965 | 8392 | Hard Bop | new | 4 |
@@ -120,12 +120,12 @@ The same table for the EffNet lists: every album of the EffNet store, grouped by
 | 40 | Biglietto per l'Inferno, Biglietto per l'Inferno | 1974 | 5191 | Progressive Rock | new | 4 |
 | 39 | Taint, The Ruin of Nová Roma | 2005 | 9536 | Post-Hardcore, Sludge Metal | new | 4 |
 | 39 | Michael Nesmith & The First National Band, Loose Salute | 1970 | 9618 | Country Rock, Singer-Songwriter, Progressive Country | new | 4 |
+| 38 | Brian Eno, Ambient 4: On Land | 1982 | 3432 | Ambient |  | 4 |
 | 38 | Juno, A Future Lived in Past Tense | 2001 | 5732 | Indie Rock, Post-Hardcore, Post-Rock | new | 8 |
-| 37 | Brian Eno, Ambient 4: On Land | 1982 | 3432 | Ambient |  | 4 |
+| 37 | Genesis, Archive 1967-75 | 1998 | 956 | Progressive Rock | new | 8 |
 | 37 | Ludwig Göransson, Sinners | 2025 | 4134 | Film Score, Blues, Post-Rock | new | 4 |
 | 36 | J-Live, All of the Above | 2002 | 7762 | Conscious Hip Hop, Boom Bap |  | 4 |
 | 36 | Sean Price, Monkey Barz | 2005 | 4866 | Boom Bap, Hardcore Hip Hop |  | 4 |
-| 36 | Kayo Dot, Hubardo | 2013 | 4151 | Avant-Garde Metal, Avant-Prog, Post-Metal | new | 4 |
 | 36 | Popol Vuh, In den Gärten Pharaos | 1971 | 4226 | Ambient, Krautrock | new | 4 |
 
 ## What these numbers can and cannot say
