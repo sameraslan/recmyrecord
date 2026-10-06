@@ -16,7 +16,6 @@ import type { AlbumRecord, Focus, StopId } from '@/lib/types';
 const rgba = ([r, g, b]: readonly number[], a: number) => `rgba(${r},${g},${b},${a})`;
 /** The map's empty sky, its stars and its off-white frames (components/map/theme.ts), plus two tokens of globals.css. */
 const SKY = rgba(SKY_RGB, 1);
-
 const FRAME = rgba(FRAME_RGB, 1);
 const FRAME_QUIET = rgba(FRAME_RGB, 0.6);
 const BADGE_EDGE = rgba(FRAME_RGB, 0.45);
@@ -219,7 +218,7 @@ export function drawStrip(
   ctx.fillStyle = STAR;
   ctx.fill();
   const placed = layoutMarkers(ids.map((id) => ({ id, x: sx(pos[2 * id]), y: sy(pos[2 * id + 1]) })), STRIP_SEED, STRIP_REC, {
-    // 6 px: room for the badges (4 px out, top-left) and the seed's frame (5 px out).
+    // 6 px: room for the badges (5 px out, top-left) and the seed's frame (5 px out).
     bounds: { left: 6, top: 6, right: w - 6, bottom: h - 6 },
     gap: MARKER_GAP,
     // The strip's covers are small: 10 px of visible line is enough (layoutMarkers defaults to more).
@@ -257,14 +256,16 @@ export function drawStrip(
     const o = it.seed ? 4 : 0.5;
     ctx.strokeRect(x - o, y - o, s + 2 * o, s + 2 * o);
   }
-  const b = 14;
+  // 15 px with 10 px numbers leaves "10" clear of the edge; 5 px out, so 10 px of a cover is under it each way.
+  const b = 15;
+  const out = 5;
   ctx.font = '600 10px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineWidth = 1;
   for (const it of placed.slice(1)) {
-    const bx = it.x - it.size / 2 - 4;
-    const by = it.y - it.size / 2 - 4;
+    const bx = it.x - it.size / 2 - out;
+    const by = it.y - it.size / 2 - out;
     ctx.fillStyle = ROOM;
     ctx.fillRect(bx, by, b, b);
     ctx.strokeStyle = BADGE_EDGE;

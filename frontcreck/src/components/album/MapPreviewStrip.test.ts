@@ -75,9 +75,14 @@ describe('drawStrip', () => {
     expect(count(calls, 'lineTo(')).toBe(2 * 3); // a dark casing and a white line per recommendation
     expect(count(calls, 'fillRect(')).toBe(1 + 1 + 4 + 3); // sky, the seed's backing, four tiles (no cover ids), three badges
     expect(calls.filter((c) => c.startsWith('fillText(')).map((c) => c.split(',')[0])).toEqual(['fillText(1', 'fillText(2', 'fillText(3']);
-    // Badge numbers: 10 px in a 14 px square ("10", the widest, measures 10.5 px against 12 px inside the edge).
+    // Badge numbers: 10 px in a 15 px square ("10", the widest, measures 10.5 px against 13 px inside the edge,
+    // the same room each side as the prototype's 11 px in 16 px).
     expect(calls).toContain('font=600 10px system-ui, sans-serif');
-    expect(calls.filter((c) => /^fillRect\(-?\d+,-?\d+,14,14\)$/.test(c))).toHaveLength(3);
+    const corner = (size: string) => calls.filter((c) => new RegExp(`^fillRect\\(-?\\d+,-?\\d+,${size}\\)$`).test(c)).map((c) => c.slice(9).split(',').slice(0, 2).map(Number));
+    const badges = corner('15,15');
+    expect(badges).toHaveLength(3);
+    // Each sits 5 px out from its cover's top-left corner, so it hides 10 px of a 28 px cover each way and no more.
+    expect(badges).toEqual(corner('28,28').map(([x, y]) => [x - 5, y - 5]));
   });
 
   it("draws the gas under the stars, placed by the stop's own rectangle in the strip's scale", () => {
