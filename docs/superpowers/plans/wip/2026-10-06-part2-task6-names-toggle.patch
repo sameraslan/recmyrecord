@@ -1,0 +1,356 @@
+From 96bdd220e13205801ac84d6500e5e591295e6231 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 6 Oct 2026 00:54:41 +0000
+Subject: [PATCH] feat(map): names toggle above the zoom stack, remembered on
+ the device
+
+Option B (detached box), approved 2026-10-04, as the prototype builds it.
+One fixed label with a pressed state; its wording still awaits the owner's
+approval.
+
+Refs #45
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018o5wEPKTzFy2Pafgts8FKM
+---
+ frontcreck/src/components/Icon.tsx            | 23 +++++++++
+ .../map/overlays/NamesToggle.test.tsx         | 47 +++++++++++++++++++
+ .../components/map/overlays/NamesToggle.tsx   | 18 +++++++
+ .../components/map/overlays/ZoomControls.tsx  |  3 ++
+ frontcreck/src/lib/copy.ts                    |  3 ++
+ frontcreck/src/lib/namesPref.test.ts          | 37 +++++++++++++++
+ frontcreck/src/lib/namesPref.ts               | 19 ++++++++
+ frontcreck/src/lib/store.test.ts              | 29 ++++++++++++
+ frontcreck/src/lib/store.ts                   | 16 ++++++-
+ frontcreck/src/styles/map.css                 |  6 +++
+ 10 files changed, 200 insertions(+), 1 deletion(-)
+ create mode 100644 frontcreck/src/components/map/overlays/NamesToggle.test.tsx
+ create mode 100644 frontcreck/src/components/map/overlays/NamesToggle.tsx
+ create mode 100644 frontcreck/src/lib/namesPref.test.ts
+ create mode 100644 frontcreck/src/lib/namesPref.ts
+
+diff --git a/frontcreck/src/components/Icon.tsx b/frontcreck/src/components/Icon.tsx
+index 47a4c5cc..e90702b4 100644
+--- a/frontcreck/src/components/Icon.tsx
++++ b/frontcreck/src/components/Icon.tsx
+@@ -28,6 +28,29 @@ const PATHS = {
+     </>
+   ),
+   list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.5M4.5 12h.5M4.5 18h.5" />,
++  // The names toggle (the Trifid prototype's namesToggle drawing): off is the letters at 42%, cut by a mask
++  // along a thin slash.
++  names: (
++    <g strokeLinecap="round" strokeLinejoin="round">
++      <path d="M2.5 18 7.5 6l5 12M4.4 13.6h6.2" />
++      <circle cx="17.6" cy="14.6" r="3.2" />
++      <path d="M20.8 11.2V18" />
++    </g>
++  ),
++  namesOff: (
++    <>
++      <mask id="rmr-names-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
++        <rect width="24" height="24" fill="#fff" stroke="none" />
++        <path d="M1.5 22.5 22.5 1.5" stroke="#000" strokeWidth="4.4" strokeLinecap="butt" />
++      </mask>
++      <g mask="url(#rmr-names-cut)" opacity="0.42" strokeLinecap="round" strokeLinejoin="round">
++        <path d="M2.5 18 7.5 6l5 12M4.4 13.6h6.2" />
++        <circle cx="17.6" cy="14.6" r="3.2" />
++        <path d="M20.8 11.2V18" />
++      </g>
++      <path d="M4 20 20 4" strokeWidth="1.2" strokeLinecap="round" opacity="0.95" />
++    </>
++  ),
+ } satisfies Record<string, ReactNode>;
+ 
+ export type IconName = keyof typeof PATHS;
+diff --git a/frontcreck/src/components/map/overlays/NamesToggle.test.tsx b/frontcreck/src/components/map/overlays/NamesToggle.test.tsx
+new file mode 100644
+index 00000000..a03b39e9
+--- /dev/null
++++ b/frontcreck/src/components/map/overlays/NamesToggle.test.tsx
+@@ -0,0 +1,47 @@
++import { fireEvent, render } from '@testing-library/react';
++import { afterEach, beforeEach, describe, expect, it } from 'vitest';
++import { COPY } from '@/lib/copy';
++import { useAppStore } from '@/lib/store';
++import { NamesToggle } from './NamesToggle';
++
++beforeEach(() => {
++  window.localStorage.clear();
++  useAppStore.setState({ namesOn: true });
++});
++afterEach(() => useAppStore.setState({ namesOn: true }));
++
++describe('NamesToggle', () => {
++  it('is an icon-only pressed button that switches the names off and on and saves the choice', () => {
++    const { getByRole, unmount } = render(<NamesToggle />);
++    const button = getByRole('button', { name: 'Place names' });
++    expect(COPY.map.names).toBe('Place names');
++    expect(button).toHaveAttribute('aria-pressed', 'true');
++    expect(button).toHaveAttribute('type', 'button');
++    expect(button.textContent).toBe('');
++    expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
++    expect(button.querySelector('svg')).toHaveAttribute('stroke-width', '1.6');
++    expect(button.querySelector('mask')).toBeNull();
++    fireEvent.click(button);
++    expect(useAppStore.getState().namesOn).toBe(false);
++    expect(button).toHaveAttribute('aria-pressed', 'false');
++    expect(button.querySelector('mask')).not.toBeNull();
++    expect(window.localStorage.getItem('rmr-names')).toBe('0');
++    fireEvent.click(button);
++    expect(useAppStore.getState().namesOn).toBe(true);
++    expect(button).toHaveAttribute('aria-pressed', 'true');
++    expect(window.localStorage.getItem('rmr-names')).toBe('1');
++    unmount();
++  });
++
++  it('keeps one fixed accessible name in both states: only the pressed state changes', () => {
++    const { getByRole, unmount } = render(<NamesToggle />);
++    const button = getByRole('button', { name: COPY.map.names });
++    fireEvent.click(button);
++    expect(button).toHaveAttribute('aria-label', COPY.map.names);
++    expect(getByRole('button', { name: COPY.map.names, pressed: false })).toBe(button);
++    fireEvent.click(button);
++    expect(button).toHaveAttribute('aria-label', COPY.map.names);
++    expect(getByRole('button', { name: COPY.map.names, pressed: true })).toBe(button);
++    unmount();
++  });
++});
+diff --git a/frontcreck/src/components/map/overlays/NamesToggle.tsx b/frontcreck/src/components/map/overlays/NamesToggle.tsx
+new file mode 100644
+index 00000000..cfe63c91
+--- /dev/null
++++ b/frontcreck/src/components/map/overlays/NamesToggle.tsx
+@@ -0,0 +1,18 @@
++'use client';
++
++import { Icon } from '@/components/Icon';
++import { COPY } from '@/lib/copy';
++import { useAppStore } from '@/lib/store';
++
++/** Region names on or off: a separate box 8 px above the zoom stack (the owner's option B, approved
++ * 2026-10-04, as the Trifid prototype's namesToggle builds it). Icon only; the choice is remembered on this
++ * device (lib/namesPref.ts). One fixed accessible label with a pressed state; the label never swaps.
++ * PENDING OWNER APPROVAL: the label's wording (COPY.map.names). */
++export function NamesToggle() {
++  const on = useAppStore((s) => s.namesOn);
++  return (
++    <button type="button" className="map-names" aria-pressed={on} aria-label={COPY.map.names} onClick={() => useAppStore.getState().setNamesOn(!on)}>
++      <Icon name={on ? 'names' : 'namesOff'} strokeWidth={1.6} />
++    </button>
++  );
++}
+diff --git a/frontcreck/src/components/map/overlays/ZoomControls.tsx b/frontcreck/src/components/map/overlays/ZoomControls.tsx
+index a0eb4e7c..1e498853 100644
+--- a/frontcreck/src/components/map/overlays/ZoomControls.tsx
++++ b/frontcreck/src/components/map/overlays/ZoomControls.tsx
+@@ -3,10 +3,13 @@
+ import { Icon } from '@/components/Icon';
+ import { COPY } from '@/lib/copy';
+ import type { MapApi } from '../types';
++import { NamesToggle } from './NamesToggle';
+ 
+ export function ZoomControls({ api }: { api: React.RefObject<MapApi | null> }) {
+   return (
+     <div className="map-zoom">
++      {/* First child, so the phone rules that lift or hide the zoom stack (styles/map.css) cover it too. */}
++      <NamesToggle />
+       <button type="button" aria-label={COPY.map.zoomIn} onClick={() => api.current?.zoomBy(1.6)}>
+         <Icon name="plus" />
+       </button>
+diff --git a/frontcreck/src/lib/copy.ts b/frontcreck/src/lib/copy.ts
+index bfc66efb..58cd2946 100644
+--- a/frontcreck/src/lib/copy.ts
++++ b/frontcreck/src/lib/copy.ts
+@@ -77,6 +77,9 @@ export const COPY = {
+     openMap: 'Open map',
+     /** Beside an album: leaves it for Explore with the map left where it is. */
+     exploreHere: 'Explore this area',
++    /** The names toggle's one fixed label; its on/off state is aria-pressed, the label never changes.
++     * PENDING OWNER APPROVAL (proposed wording, 2026-10-04). */
++    names: 'Place names',
+   },
+   phone: { map: 'Map', list: 'List', mapLabel: 'Open the map', listLabel: 'Back to the list' },
+   /** Typographic cover tile when the title has no letter or digit. */
+diff --git a/frontcreck/src/lib/namesPref.test.ts b/frontcreck/src/lib/namesPref.test.ts
+new file mode 100644
+index 00000000..b410ab4c
+--- /dev/null
++++ b/frontcreck/src/lib/namesPref.test.ts
+@@ -0,0 +1,37 @@
++import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
++import { NAMES_KEY, readNamesOn, writeNamesOn } from './namesPref';
++
++beforeEach(() => window.localStorage.clear());
++afterEach(() => vi.restoreAllMocks());
++
++describe('names preference', () => {
++  it('is on by default', () => {
++    expect(readNamesOn()).toBe(true);
++  });
++
++  it('round-trips off and on through localStorage', () => {
++    writeNamesOn(false);
++    expect(window.localStorage.getItem(NAMES_KEY)).toBe('0');
++    expect(readNamesOn()).toBe(false);
++    writeNamesOn(true);
++    expect(window.localStorage.getItem(NAMES_KEY)).toBe('1');
++    expect(readNamesOn()).toBe(true);
++  });
++
++  it('treats junk as on', () => {
++    for (const junk of ['', 'false', 'off', '{bad json', 'null', '00']) {
++      window.localStorage.setItem(NAMES_KEY, junk);
++      expect(readNamesOn(), junk).toBe(true);
++    }
++  });
++
++  it('survives storage throwing on read and on write', () => {
++    const denied = () => {
++      throw new DOMException('denied', 'SecurityError');
++    };
++    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(denied);
++    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(denied);
++    expect(readNamesOn()).toBe(true);
++    expect(() => writeNamesOn(false)).not.toThrow();
++  });
++});
+diff --git a/frontcreck/src/lib/namesPref.ts b/frontcreck/src/lib/namesPref.ts
+new file mode 100644
+index 00000000..f3f4d1a1
+--- /dev/null
++++ b/frontcreck/src/lib/namesPref.ts
+@@ -0,0 +1,19 @@
++/** Whether the map's region names are shown: remembered on this device, on by default. */
++export const NAMES_KEY = 'rmr-names';
++
++/** Only an exact '0' means off; a missing value, junk or blocked storage all mean on. */
++export function readNamesOn(): boolean {
++  try {
++    return window.localStorage.getItem(NAMES_KEY) !== '0';
++  } catch {
++    return true;
++  }
++}
++
++export function writeNamesOn(on: boolean): void {
++  try {
++    window.localStorage.setItem(NAMES_KEY, on ? '1' : '0');
++  } catch {
++    // storage can be blocked; the choice then lasts for this page load only
++  }
++}
+diff --git a/frontcreck/src/lib/store.test.ts b/frontcreck/src/lib/store.test.ts
+index eac62b3f..a2decdb6 100644
+--- a/frontcreck/src/lib/store.test.ts
++++ b/frontcreck/src/lib/store.test.ts
+@@ -107,4 +107,33 @@ describe('app store', () => {
+   it('exposes getState for end-to-end tests', () => {
+     expect(window.__rmr?.getState().stop).toBe('balanced');
+   });
++
++  it('shows region names by default, and saves the choice when it changes', () => {
++    window.localStorage.clear();
++    expect(useAppStore.getState().namesOn).toBe(true);
++    const calls = countNotifications(() => {
++      useAppStore.getState().setNamesOn(true);
++      useAppStore.getState().setNamesOn(false);
++      useAppStore.getState().setNamesOn(false);
++    });
++    expect(calls).toBe(1);
++    expect(useAppStore.getState().namesOn).toBe(false);
++    expect(window.localStorage.getItem('rmr-names')).toBe('0');
++  });
++
++  it('still switches names off for the page load when storage is blocked', () => {
++    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
++      throw new DOMException('denied', 'SecurityError');
++    });
++    useAppStore.getState().setNamesOn(false);
++    expect(useAppStore.getState().namesOn).toBe(false);
++  });
++
++  it('starts from the saved choice in the browser', async () => {
++    window.localStorage.setItem('rmr-names', '0');
++    vi.resetModules();
++    const fresh = await import('./store');
++    expect(fresh.useAppStore.getState().namesOn).toBe(false);
++    window.localStorage.clear();
++  });
+ });
+diff --git a/frontcreck/src/lib/store.ts b/frontcreck/src/lib/store.ts
+index 57480c1b..f3fd1148 100644
+--- a/frontcreck/src/lib/store.ts
++++ b/frontcreck/src/lib/store.ts
+@@ -1,5 +1,6 @@
+ import { create } from 'zustand';
+ import { pushTrail, readTrail, writeTrail } from '@/lib/trail';
++import { readNamesOn, writeNamesOn } from '@/lib/namesPref';
+ import { DEFAULT_STOP } from '@/lib/types';
+ import type { AlbumId, Ambient, Focus, MapCamera, StopId, TrailItem } from '@/lib/types';
+ 
+@@ -26,6 +27,8 @@ export interface AppState {
+   ambient: Ambient | null;
+   trail: TrailItem[];
+   toast: { message: string; id: number } | null;
++  /** Whether the map's region names are shown (the names toggle; remembered on this device). */
++  namesOn: boolean;
+   setStop: (stop: StopId) => void;
+   setFocus: (focus: Focus | null) => void;
+   setHot: (id: AlbumId | null) => void;
+@@ -38,6 +41,7 @@ export interface AppState {
+   visit: (item: TrailItem) => void;
+   showToast: (message: string) => void;
+   clearToast: () => void;
++  setNamesOn: (namesOn: boolean) => void;
+ }
+ 
+ function sameFocus(a: Focus | null, b: Focus | null): boolean {
+@@ -65,6 +69,8 @@ export const useAppStore = create<AppState>()((set, get) => ({
+   ambient: null,
+   trail: [],
+   toast: null,
++  // On for the server render and the first client render; the saved choice is applied below, in the browser.
++  namesOn: true,
+   setStop: (stop) => set((s) => (s.stop === stop ? s : { stop })),
+   setFocus: (focus) => set((s) => (sameFocus(s.focus, focus) ? s : { focus })),
+   setHot: (hot) => set((s) => (s.hot === hot ? s : { hot })),
+@@ -85,9 +91,17 @@ export const useAppStore = create<AppState>()((set, get) => ({
+   },
+   showToast: (message) => set({ toast: { message, id: ++toastSeq } }),
+   clearToast: () => set({ toast: null }),
++  setNamesOn: (namesOn) => {
++    if (get().namesOn === namesOn) return;
++    set({ namesOn });
++    writeNamesOn(namesOn);
++  },
+ }));
+ 
+-// Test hooks (Playwright, the perf script). getState includes the setters, so these can change state as well.
+ if (typeof window !== 'undefined') {
++  // The saved names choice. Safe before hydration: nothing rendered on the server depends on it (the toggle
++  // and the names mount only on the client, once the map data has loaded).
++  useAppStore.setState({ namesOn: readNamesOn() });
++  // Test hooks (Playwright, the perf script). getState includes the setters, so these can change state as well.
+   window.__rmr = { ...window.__rmr, getState: useAppStore.getState, subscribe: useAppStore.subscribe };
+ }
+diff --git a/frontcreck/src/styles/map.css b/frontcreck/src/styles/map.css
+index 58543323..8017dff0 100644
+--- a/frontcreck/src/styles/map.css
++++ b/frontcreck/src/styles/map.css
+@@ -94,6 +94,12 @@
+ /* Room-coloured digits: every album accent is at least 4.5:1 against the room colour (lamp ink is not). */
+ .mk-n[data-hot] { background: var(--acc); border-color: var(--acc); color: var(--color-room); }
+ 
++/* names toggle: its own box 8 px above the zoom stack (the owner's option B). It is the first child of
++ * .map-zoom, so it takes the zoom buttons' size and glass, and the phone rules that lift or hide the stack. */
++.map-zoom .map-names { margin-bottom: 8px; }
++/* The zoom-in button under it gets its top border back (.map-zoom button + button removes it). */
++.map-zoom .map-names + button { border-top: 1px solid var(--color-rule); }
++
+ @media (max-width: 899px) {
+   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
+   /* 8 px above the slider panel: --slider-cover is its measured cover of the pane (MapStage), safe-area inset
+-- 
+2.43.0
+
