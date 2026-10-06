@@ -240,8 +240,24 @@ describe('Home, About and 404 over the nebula', () => {
     );
     // These come after the phone block, whose .hero rule they override.
     expect(home.indexOf('(max-height: 699px)')).toBeGreaterThan(home.indexOf('\n  .hero { padding-top: 40px; --pad-top: 22px; }\n'));
-    // Nothing is removed in a short window: no rule there hides a cover.
-    expect(home).not.toMatch(/max-height[^{]*\{[^@]*display: none/);
+  });
+
+  it('short windows show one row of covers: the second row is hidden where the hero is compact, and nowhere else', () => {
+    // The owner's ruling: one row at 360 x 640 and in short desktop windows (1440 x 790, 1280 x 720). The heights
+    // are the compact hero's: 860 px or less in a desktop window, under 700 px on a phone. The row is as long as
+    // the grid has columns: 12 from 1180 px of width, 8 from 900, 4 below.
+    expect(home).toContain(
+      '\n@media (min-width: 1180px) and (max-height: 860px) {\n  .mosaic li:nth-child(n+13) { display: none; }\n}\n@media (min-width: 900px) and (max-width: 1179px) and (max-height: 860px) {\n  .mosaic li:nth-child(n+9) { display: none; }\n}\n@media (max-width: 899px) and (max-height: 699px) {\n  .mosaic li:nth-child(n+5) { display: none; }\n}\n',
+    );
+    // The columns those rows are counted from.
+    expect(rule(home, '.mosaic')['grid-template-columns']).toBe('repeat(12, minmax(0, 1fr))');
+    expect(home).toContain('@media (max-width: 1179px) {\n  .mosaic { grid-template-columns: repeat(8, minmax(0, 1fr)); }');
+    expect(home).toContain('  .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }');
+    // Nothing else is taken away in a short window: the only things hidden by a height rule are those covers.
+    const hidden = [...home.matchAll(/@media[^{]*max-height[^{]*\{([^@]*)\}/g)].flatMap((m) => [...m[1].matchAll(/([^{}]+)\{[^}]*display: none[^}]*\}/g)].map((r) => r[1].trim()));
+    expect(hidden.sort()).toEqual(['.mosaic li:nth-child(n+13)', '.mosaic li:nth-child(n+5)', '.mosaic li:nth-child(n+9)']);
+    // Taller windows keep two rows: without a height, only the columns that do not fit are hidden.
+    expect(home).not.toMatch(/\n\.mosaic li:nth-child\(n\+\d+\) \{ display: none/);
   });
 
   it('About and the 404 have the same light scrim; the 404 text sits on a blurred pad, as the hero does', () => {

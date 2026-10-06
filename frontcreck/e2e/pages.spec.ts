@@ -479,15 +479,17 @@ test('the shelf lets the gas glow behind its caption, down to the first row of c
 
 // A laptop window is about 790 px tall (1440 x 900 screen) or 720 (1280 x 800): with a full-size hero and two rows
 // of covers the links met the shelf there, and the nebula's core, which the whole-map view puts at about 0.63 of
-// the height, was behind the shelf. The compact hero (home.css) is the same hero with a smaller heading (on one
-// line in a desktop window) and less room above it. Nothing is taken away: both rows of covers, the lede, the field
-// and both links are there. Measured on the GPU with the compact hero: about 154, 90 and 31 px.
+// the height, was behind the shelf. Two things make the room (home.css). The compact hero: the same hero with a
+// smaller heading (on one line in a desktop window) and less room above it. And, by the owner's ruling, one row of
+// covers in short windows (a desktop window 860 px tall or less, a phone under 700 px): the lede, the field, both
+// links, the caption and the first row are all there; the second row of picks is not shown. Measured with both:
+// 259, 193 and 115 px (two rows with the compact hero gave 154, 90 and 31).
 for (const size of [
-  { width: 1440, height: 790, phone: false, gap: 140 },
-  { width: 1280, height: 720, phone: false, gap: 80 },
-  { width: 360, height: 640, phone: true, gap: 28 },
+  { width: 1440, height: 790, phone: false, gap: 240, covers: 12 },
+  { width: 1280, height: 720, phone: false, gap: 180, covers: 12 },
+  { width: 360, height: 640, phone: true, gap: 105, covers: 4 },
 ]) {
-  test(`Home at ${size.width} x ${size.height} keeps bare nebula between the links and the shelf, with nothing removed`, async ({ page, isMobile }) => {
+  test(`Home at ${size.width} x ${size.height} keeps bare nebula between the links and the shelf, with one row of covers`, async ({ page, isMobile }) => {
     test.skip(isMobile !== size.phone, size.phone ? 'a phone window' : 'a desktop window');
     await page.setViewportSize({ width: size.width, height: size.height });
     await page.goto('/');
@@ -497,6 +499,7 @@ for (const size of [
       const top = (sel: string) => document.querySelector(sel)!.getBoundingClientRect();
       const hero = document.querySelector('.hero')!;
       const home = document.querySelector('.home')!;
+      const shown = [...document.querySelectorAll('.mosaic a')].filter((a) => a.getClientRects().length > 0).map((a) => a.getBoundingClientRect());
       return {
         gap: top('.shelf').top - top('.hero-row').bottom,
         scroll: home.scrollHeight - home.clientHeight,
@@ -510,11 +513,17 @@ for (const size of [
         })(),
         // The pad's dark shape starts 80 px inside its box (the clear border that holds the blur's halo).
         padTop: hero.getBoundingClientRect().top + parseFloat(getComputedStyle(hero, '::before').top) + 80,
-        covers: [...document.querySelectorAll('.mosaic a')].filter((a) => a.getClientRects().length > 0).length,
+        covers: shown.length,
+        rows: new Set(shown.map((r) => Math.round(r.top))).size,
+        coverSide: Math.min(...shown.map((r) => Math.min(r.width, r.height))),
+        // No cover of the row that is shown is stepped back: the dimmed ones were the second row.
+        dimmed: [...document.querySelectorAll('.mosaic .cover')].filter((c) => c.getClientRects().length > 0 && Number(getComputedStyle(c).opacity) < 1).length,
+        inDom: document.querySelectorAll('.mosaic a').length,
       };
     });
-    console.log(`Home at ${size.width} x ${size.height}: ${g.gap.toFixed(0)} px between the links and the shelf, pad from ${g.padTop.toFixed(0)}, heading from ${g.headingTop.toFixed(0)} (${g.headingWidth.toFixed(0)} px wide), scrolls by ${g.scroll}`);
-    // Round 1 measured 29 px at 1440 x 790, none at 1280 x 720 (Home scrolled by 22 px) and 2 px at 360 x 640.
+    console.log(`Home at ${size.width} x ${size.height}: ${g.gap.toFixed(0)} px between the links and the shelf, pad from ${g.padTop.toFixed(0)}, heading from ${g.headingTop.toFixed(0)} (${g.headingWidth.toFixed(0)} px wide), ${g.covers} covers in ${g.rows} row(s) of ${g.coverSide.toFixed(0)} px, scrolls by ${g.scroll}`);
+    // Round 1 measured 29 px at 1440 x 790, none at 1280 x 720 (Home scrolled by 22 px) and 2 px at 360 x 640; the
+    // compact hero with two rows 154, 90 and 31.
     expect(g.gap).toBeGreaterThanOrEqual(size.gap);
     expect(g.scroll, 'Home fits without scrolling').toBe(0);
     expect(g.shelfBottom).toBeLessThanOrEqual(size.height);
@@ -523,8 +532,35 @@ for (const size of [
     // One line in a desktop window, inside the hero's 640 px; two on a phone (line-height .98).
     expect(Math.round(g.headingLines), 'lines of the heading').toBe(size.phone ? 2 : 1);
     if (!size.phone) expect(g.headingWidth).toBeLessThanOrEqual(640);
-    expect(g.covers, 'two rows of covers').toBe(size.phone ? 8 : 24);
-    for (const sel of ['.hero h1', '.hero .lede', '.hero .combo-field', ...HERO_LINKS, '.shelf-now .cap']) await expect(page.locator(sel).first(), sel).toBeInViewport({ ratio: 1 });
+    // One full row: every column of the grid has its cover, all at full strength, each a tap target of 44 px or more.
+    expect(g.covers, 'one row of covers').toBe(size.covers);
+    expect(g.rows, 'rows of covers').toBe(1);
+    expect(g.dimmed, 'covers stepped back').toBe(0);
+    expect(g.coverSide).toBeGreaterThanOrEqual(44);
+    expect(g.inDom).toBe(24);
+    for (const sel of ['.hero h1', '.hero .lede', '.hero .combo-field', ...HERO_LINKS, '.shelf-now .cap', '.mosaic li:first-child a']) await expect(page.locator(sel).first(), sel).toBeInViewport({ ratio: 1 });
+  });
+}
+
+// Where the one row begins and ends: exactly at the heights where the hero turns compact (860 px in a desktop
+// window, 699 px on a phone). One px taller and both rows are there, the second stepped back, as before.
+for (const size of [
+  { width: 1440, height: 860, phone: false, covers: 12, rows: 1 },
+  { width: 1440, height: 861, phone: false, covers: 24, rows: 2 },
+  { width: 1000, height: 700, phone: false, covers: 8, rows: 1 },
+  { width: 1000, height: 900, phone: false, covers: 16, rows: 2 },
+  { width: 360, height: 699, phone: true, covers: 4, rows: 1 },
+  { width: 360, height: 700, phone: true, covers: 8, rows: 2 },
+  { width: 390, height: 844, phone: true, covers: 8, rows: 2 },
+]) {
+  test(`Home at ${size.width} x ${size.height} shows ${size.rows === 1 ? 'one row' : 'two rows'} of covers`, async ({ page, isMobile }) => {
+    test.skip(isMobile !== size.phone, size.phone ? 'a phone window' : 'a desktop window');
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.goto('/');
+    await expect(page.locator('.mosaic a').first()).toBeVisible();
+    const shown = await page.locator('.mosaic a').evaluateAll((els) => els.filter((e) => e.getClientRects().length > 0).map((e) => Math.round(e.getBoundingClientRect().top)));
+    expect(shown.length, 'covers shown').toBe(size.covers);
+    expect(new Set(shown).size, 'rows').toBe(size.rows);
   });
 }
 

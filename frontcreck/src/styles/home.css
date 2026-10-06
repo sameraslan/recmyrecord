@@ -100,7 +100,7 @@
    begin. With the full-size hero the links met the shelf there and the core was behind the covers. So in a desktop
    window 860 px tall or less the heading is smaller and on one line (it fits the hero's 640 px at 56 px; the
    margins let a wider fallback font stay centred) with 3vh above it, and the pad's dark shape starts 16 px above
-   the heading. Nothing is removed. These rules come after the phone block, whose .hero rule the second overrides. */
+   the heading. The hero loses nothing. These rules come after the phone block, whose .hero rule the second overrides. */
 @media (min-width: 900px) and (max-height: 860px) {
   .hero { padding-top: clamp(20px, 3vh, 28px); --pad-top: clamp(4px, calc(3vh - 16px), 12px); }
   .hero h1 { margin: 0 -40px; font-size: clamp(42px, min(5.8vw, 8.1vh), 56px); white-space: nowrap; }
@@ -113,4 +113,17 @@
 }
 @media (max-width: 479px) and (max-height: 699px) {
   .hero h1 { max-width: 8.6em; margin-inline: auto; }
+}
+/* Short windows: one row of covers (the owner's ruling), at the same heights as the compact hero. The second row is
+   not shown, so the shelf is one row lower and the nebula's core stands clear between the links and the covers:
+   about 259 px of it at 1440 x 790, 193 at 1280 x 720 and 115 at 360 x 640 (with two rows: 154, 90 and 31). The
+   row is as long as the grid has columns. All 24 picks stay in the page; a taller window shows both rows. */
+@media (min-width: 1180px) and (max-height: 860px) {
+  .mosaic li:nth-child(n+13) { display: none; }
+}
+@media (min-width: 900px) and (max-width: 1179px) and (max-height: 860px) {
+  .mosaic li:nth-child(n+9) { display: none; }
+}
+@media (max-width: 899px) and (max-height: 699px) {
+  .mosaic li:nth-child(n+5) { display: none; }
 }
