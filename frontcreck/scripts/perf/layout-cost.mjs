@@ -17,6 +17,16 @@
 //
 //   node scripts/perf/layout-cost.mjs [--old path/to/focusLayout.ts ...] [--no-calls] [--sample N]
 //
+// --crowded runs one more part instead of the two above: bounds too small for a clean layout (a phone held
+// sideways leaves about 828x209 above the slider). Eleven markers, 20 seeded clusters per bounds, each panned
+// for 300 moving frames (out for 150, then most of the way back) and then settled by one frame at rest. Reported per bounds:
+// the moving frames that ran a fresh solve and those that returned a new items array (both exact, the same
+// on any machine), the cost of a moving frame and of the settle frame (3 runs, each frame's fastest kept),
+// the gap between the settled layout and a cold solve of the same view, and what the covers look like while
+// they move: pairs of covers closer than the gap, how far one cover lies over another (px along the axis of
+// least overlap), and the largest jump of a cover between two frames beyond its own album's move. With --old,
+// the same for each older file's MarkerLayout.
+//
 // Run from frontcreck/. An older focusLayout.ts (git show <rev>:frontcreck/src/components/map/state/focusLayout.ts)
 // must import zoomLimits by an absolute path when it lies outside src/.
 import { readFileSync } from 'node:fs';
@@ -29,6 +39,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 const args = process.argv.slice(2);
 const olds = args.flatMap((a, i) => (args[i - 1] === '--old' ? [path.resolve(a)] : []));
 const calls = !args.includes('--no-calls');
+const crowded = args.includes('--crowded');
 const sampleAt = args.indexOf('--sample');
 const SAMPLE = sampleAt >= 0 ? Number(args[sampleAt + 1]) : 300;
 
@@ -66,6 +77,103 @@ function seeded(seed) {
 // Warm up the JIT on a few hundred cases first.
 for (const mod of [current, ...older.map((o) => o.mod)]) {
   for (let i = 0; i < 300; i++) mod.layoutMarkers([{ id: 0, x: 300, y: 300 }, ...recs.balanced[i].slice(0, RECS_SHOWN).map((id, k) => ({ id, x: 300 + k * 7, y: 300 + (k % 3) }))], 64, 46);
+}
+
+if (crowded) {
+  const CASES = [[150, 150], [250, 200], [828, 209], [360, 684], [300, 500]];
+  const CLUSTERS = 20;
+  const FRAMES = 300;
+  const ms = (x) => `${x.toFixed(3)} ms`;
+  console.log(`\n## Crowded bounds: 11 markers, ${CLUSTERS} clusters per bounds, a ${FRAMES}-frame pan each (moving), then one frame at rest`);
+  console.log(`fresh solves and new arrays are counts over the ${CLUSTERS * FRAMES} moving frames (worst cluster of ${FRAMES} in brackets); 3 runs, each frame's fastest kept`);
+  for (const { name: label, mod } of [{ name: 'current', mod: current }, ...older]) {
+    if (!mod.MarkerLayout) continue;
+    console.log(`\n### ${label}`);
+    console.log(`| Bounds | Opens that overlap | Frames with a fresh solve | Frames with a new array | Mean per frame | Worst frame | Settle solves | Settle frame mean / worst | Gap to a cold solve | Pairs too close, mean per frame | Cover over cover, mean of each frame's worst / worst | Worst jump |`);
+    console.log(`|---|---|---|---|---|---|---|---|---|---|---|---|`);
+    for (const [w, h] of CASES) {
+      const bounds = { left: MARKER_EDGE, top: MARKER_EDGE, right: MARKER_EDGE + w, bottom: MARKER_EDGE + h };
+      const rand = seeded(4100 + w);
+      const spread = Math.min(w, h) * 0.9;
+      const t = [];
+      const settle = [];
+      let solves = 0;
+      let worstSolves = 0;
+      let arrays = 0;
+      let worstArrays = 0;
+      let settleSolves = 0;
+      let gap = 0;
+      let crowdedOpens = 0;
+      let pairs = 0;
+      let cover = 0;
+      let coverWorst = 0;
+      let jump = 0;
+      for (let c = 0; c < CLUSTERS; c++) {
+        const x0 = bounds.left + w / 2;
+        const y0 = bounds.top + h / 2;
+        const start = Array.from({ length: RECS_SHOWN + 1 }, (_, i) => ({ id: i, x: x0 + (i ? (rand() - 0.5) * spread : 0), y: y0 + (i ? (rand() - 0.5) * spread : 0) }));
+        const a = Math.PI * 2 * rand();
+        const frames = Array.from({ length: FRAMES + 1 }, (_, f) => {
+          const d = f <= FRAMES / 2 ? 2.5 * f : 1.25 * FRAMES - 2 * (f - FRAMES / 2);
+          return start.map((p) => ({ id: p.id, x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d }));
+        });
+        // The pan ends short of where it began, so the frame at rest settles a view that was never solved.
+        const rest = frames[FRAMES];
+        if (faults(mod.layoutMarkers(start, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds }), bounds)) crowdedOpens++;
+        const best = new Float64Array(FRAMES + 2).fill(Infinity);
+        for (let run = 0; run < 3; run++) {
+          const cache = new mod.MarkerLayout();
+          let prev = cache.layout(frames[0], MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+          let shot = run === 0 ? snap(prev) : null;
+          let s = 0;
+          let n = 0;
+          for (let f = 1; f <= FRAMES; f++) {
+            const before = cache.stats.solves;
+            const t0 = performance.now();
+            const got = cache.layout(frames[f], MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+            best[f] = Math.min(best[f], performance.now() - t0);
+            if (cache.stats.solves !== before) s++;
+            if (got !== prev) n++;
+            prev = got;
+            if (!shot) continue;
+            let deepest = 0;
+            for (let i = 0; i < got.length; i++) {
+              for (let j = i + 1; j < got.length; j++) {
+                const reach = (got[i].size + got[j].size) / 2;
+                const ox = reach - Math.abs(got[j].x - got[i].x);
+                const oy = reach - Math.abs(got[j].y - got[i].y);
+                if (ox + 10 > 1 && oy + 10 > 1) pairs++;
+                deepest = Math.max(deepest, Math.min(ox, oy));
+              }
+            }
+            cover += deepest;
+            coverWorst = Math.max(coverWorst, deepest);
+            jump = Math.max(jump, jumps(shot, got)[0]);
+            shot = snap(got);
+          }
+          const before = cache.stats.solves + cache.stats.settles;
+          const t0 = performance.now();
+          const got = cache.layout(rest, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+          best[FRAMES + 1] = Math.min(best[FRAMES + 1], performance.now() - t0);
+          if (run > 0) continue;
+          solves += s;
+          worstSolves = Math.max(worstSolves, s);
+          arrays += n;
+          worstArrays = Math.max(worstArrays, n);
+          settleSolves += cache.stats.solves + cache.stats.settles - before;
+          const cold = mod.layoutMarkers(rest, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+          got.forEach((m, i) => (gap = Math.max(gap, Math.abs(m.x - cold[i].x), Math.abs(m.y - cold[i].y))));
+        }
+        for (let f = 1; f <= FRAMES; f++) t.push(best[f]);
+        settle.push(best[FRAMES + 1]);
+      }
+      const mean = (xs) => xs.reduce((p, q) => p + q, 0) / xs.length;
+      console.log(
+        `| ${w}x${h} | ${crowdedOpens} of ${CLUSTERS} | ${solves} of ${t.length} (${worstSolves}) | ${arrays} of ${t.length} (${worstArrays}) | ${ms(mean(t))} | ${ms(Math.max(...t))} | ${settleSolves} in ${CLUSTERS} | ${ms(mean(settle))} / ${ms(Math.max(...settle))} | ${gap.toExponential(1)} px | ${(pairs / t.length).toFixed(2)} | ${(cover / t.length).toFixed(1)} / ${coverWorst.toFixed(1)} px | ${jump.toFixed(1)} px |`,
+      );
+    }
+  }
+  process.exit(0);
 }
 
 if (calls) {
@@ -167,7 +275,9 @@ function jumps(prev, cur) {
   });
   return [own, seed];
 }
-const snap = (items) => items.map((m) => ({ x: m.x, y: m.y, ax: m.ax, ay: m.ay }));
+function snap(items) {
+  return items.map((m) => ({ x: m.x, y: m.y, ax: m.ax, ay: m.ay }));
+}
 for (const [name, v] of Object.entries(VIEWS)) {
   const rand = seeded(2026);
   const picks = [v.worst, ...Array.from({ length: SAMPLE }, () => [STOPS[Math.floor(rand() * 3)], Math.floor(rand() * recs.balanced.length)])];

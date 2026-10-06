@@ -293,8 +293,11 @@ function startItems(anchors: readonly MarkerAnchor[], seedSize: number, recSize:
 }
 
 /** Shifts the laid-out group inside the bounds as a whole (which keeps every rule) and holds at the wall any
- * marker still outside. True when one was held: the group is larger than the bounds. Allocates nothing. */
-function shiftInside(items: MarkerItem[], bounds: MarkerBounds): boolean {
+ * marker still outside. True when one was held: the group is larger than the bounds. Allocates nothing.
+ * A group larger than the bounds is not shifted, unless `whole`: then it is shifted until it covers them, so
+ * that a group that fills the bounds from wall to wall stops at the walls as one body, and only what hangs
+ * over is held. */
+function shiftInside(items: MarkerItem[], bounds: MarkerBounds, whole = false): boolean {
   let x0 = Infinity;
   let x1 = -Infinity;
   let y0 = Infinity;
@@ -306,7 +309,8 @@ function shiftInside(items: MarkerItem[], bounds: MarkerBounds): boolean {
     y0 = Math.min(y0, it.y - h);
     y1 = Math.max(y1, it.y + h);
   }
-  const shift = (lo: number, hi: number, min: number, max: number) => (hi - lo > max - min ? 0 : lo < min ? min - lo : hi > max ? max - hi : 0);
+  const shift = (lo: number, hi: number, min: number, max: number) =>
+    hi - lo > max - min ? (!whole ? 0 : lo > min ? min - lo : hi < max ? max - hi : 0) : lo < min ? min - lo : hi > max ? max - hi : 0;
   const sx = shift(x0, x1, bounds.left, bounds.right);
   const sy = shift(y0, y1, bounds.top, bounds.bottom);
   let held = false;
@@ -400,7 +404,10 @@ function separateAtWalls(items: MarkerItem[], gap: number, walls: Walls): boolea
  *   exactly (what a fresh solve gives, up to the projection's rounding, while no marker meets a wall); a zoom, a
  *   slider morph, a fling, wheel easing, a camera tween or a pinch carries it rigidly. At the walls the group is
  *   shifted inside as a whole, and where it is larger than the bounds the markers are held there and the plain
- *   box separation makes room from where they were drawn, so the covers stay steady. No full solve per frame.
+ *   box separation makes room from where they were drawn, so the covers stay steady. Never a solve on a frame
+ *   that carries. Where the bounds have no room for the group (the separation has failed, at the end of the
+ *   solve or on one carried frame), nothing more is tried: the group rides as one body, with the overlaps the
+ *   separation left, stopped at the walls, until it settles.
  * - Back exactly at the view of the last solve (a tween landing on its target): that solve's layout.
  * - The first call that is not `moving` after the layout was carried (a ride or a pan) settles it: a fresh solve
  *   of that view, with `settledFrom` holding where the markers were when one moves SETTLE_EASE_PX or more, so the
@@ -408,7 +415,7 @@ function separateAtWalls(items: MarkerItem[], gap: number, walls: Walls): boolea
  *   changes the view (a keyboard pan, a resize) settles at once.
  *
  * The returned array is the layout's own: the next call rewrites it in place. Every path but a solve or a settle
- * allocates nothing. */
+ * allocates nothing, and a call that is `moving` solves only when its input set is new. */
 export class MarkerLayout {
   readonly stats: MarkerLayoutStats = { solves: 0, settles: 0, moves: 0, rides: 0, unchanged: 0 };
   /** Set by a call that settled: x, y of each marker just before (rank order). Null after any other call. */
@@ -423,6 +430,10 @@ export class MarkerLayout {
   /** True when the markers have been carried since the last solve (a pan, a motion), so that a call at rest
    * solves the view afresh. */
   private pending = false;
+  /** True once the box separation has failed inside the walls, at the end of the last solve or on a carried frame
+   * since: there is no room for the group, and until the next solve it is carried as it is, with no further
+   * attempt. */
+  private crowded = false;
   /** Each album's offset from the seed's album at the last solve. */
   private rel = new Float64Array(0);
   /** The anchors and bounds of the last call. */
@@ -502,8 +513,7 @@ export class MarkerLayout {
       // Carry the layout as last drawn with the seed, so every frame starts from the arrangement on screen: a pan
       // that meets no wall moves it exactly, a zoom or a morph carries it rigidly. Then the walls: the group is
       // shifted inside them as a whole when it fits; when it is larger, the markers outside are held at the wall
-      // and the old layout's box separation makes room, from where they were (the full rules inside the walls on
-      // the rare frame where that leaves an overlap).
+      // and the old layout's box separation makes room, from where they were.
       const dx = x0 - items[0].ax;
       const dy = y0 - items[0].ay;
       for (let i = 0; i < n; i++) {
@@ -513,12 +523,15 @@ export class MarkerLayout {
         it.x += dx;
         it.y += dy;
       }
-      // A layout carried from a crowded solve may also come with an overlap: the same separation clears it.
-      const held = !!bounds && shiftInside(items, bounds);
-      if ((held || overlapping(items, gap)) && !separateAtWalls(items, gap, bounds)) {
-        if (bounds) relaxHeld(items, gap, minLine, bounds);
-        // Still crowded: this one frame takes a fresh solve of the view, and later frames carry that.
-        if (overlapping(items, gap)) return this.carrySolve(anchors, seedSize, recSize, gap, minLine, bounds, moving);
+      if (this.crowded) {
+        // No room: the group rides as one body, stopped at the walls, with the overlaps it has.
+        if (bounds) shiftInside(items, bounds, true);
+      } else {
+        // A layout solved without walls may also come with an overlap: the same separation clears it.
+        const held = !!bounds && shiftInside(items, bounds);
+        // Or it cannot: there is no room for the boxes here. Nothing dearer is tried, on this frame or on a later
+        // one: the covers stay as the separation left them and ride so until the view is solved afresh.
+        if ((held || overlapping(items, gap)) && !separateAtWalls(items, gap, bounds)) this.crowded = true;
       }
     }
     if (moving) {
@@ -543,14 +556,6 @@ export class MarkerLayout {
     return out;
   }
 
-  /** A fresh solve in the middle of carrying: counted as a solve, and still waiting to settle while moving. */
-  private carrySolve(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, gap: number, minLine: number, bounds: MarkerBounds | null, moving: boolean): MarkerItem[] {
-    this.stats.solves++;
-    const out = this.solve(anchors, seedSize, recSize, gap, minLine, bounds);
-    this.pending = moving;
-    return out;
-  }
-
   private solve(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, gap: number, minLine: number, bounds: MarkerBounds | null): MarkerItem[] {
     const items = startItems(anchors, seedSize, recSize);
     const n = items.length;
@@ -560,6 +565,7 @@ export class MarkerLayout {
     this.gap = gap;
     this.minLine = minLine;
     this.pending = false;
+    this.crowded = false;
     if (this.rel.length !== 2 * n) {
       this.rel = new Float64Array(2 * n);
       this.last = new Float64Array(2 * n);
@@ -573,7 +579,11 @@ export class MarkerLayout {
         this.rel[2 * i] = items[i].ax - x0;
         this.rel[2 * i + 1] = items[i].ay - y0;
       }
-      if (bounds && shiftInside(items, bounds)) relaxHeld(items, gap, minLine, bounds);
+      if (bounds && shiftInside(items, bounds)) {
+        relaxHeld(items, gap, minLine, bounds);
+        // relaxHeld ends on the box separation: an overlap left here is one it cannot clear inside these walls.
+        this.crowded = overlapping(items, gap);
+      }
       this.solvedAt[0] = x0;
       this.solvedAt[1] = y0;
       for (let i = 0; i < n; i++) {

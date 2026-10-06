@@ -451,6 +451,137 @@ describe('MarkerLayout (layoutMarkers for every drawn frame, steady from frame t
     expect(worst).toBeLessThanOrEqual(30);
   });
 
+  describe('in bounds too small for a clean layout (a phone held sideways is about 828x209 above the slider)', () => {
+    const CROWDED: [number, number][] = [[150, 150], [250, 200], [828, 209], [360, 684], [300, 500]];
+    const FRAMES = 300;
+    const box = (w: number, h: number): MarkerBounds => ({ left: 8, top: 8, right: 8 + w, bottom: 8 + h });
+    /** Eleven albums about the middle of the bounds, and a pan of them: out for 150 frames, most of the way back. */
+    const pan = (rand: () => number, b: MarkerBounds): A[][] => {
+      const w = b.right - b.left;
+      const h = b.bottom - b.top;
+      const start = cluster(rand, b.left + w / 2, b.top + h / 2, 10, Math.min(w, h) * 0.9);
+      const angle = Math.PI * 2 * rand();
+      return Array.from({ length: FRAMES + 1 }, (_, f) => {
+        const d = f <= FRAMES / 2 ? 2.5 * f : 1.25 * FRAMES - 2 * (f - FRAMES / 2);
+        return moved(start, Math.cos(angle) * d, Math.sin(angle) * d);
+      });
+    };
+
+    it.each(CROWDED)('never solves afresh and makes no new array on the %i x %i frames of a pan', (w, h) => {
+      const b = box(w, h);
+      const rand = lcg(4100 + w);
+      for (let t = 0; t < 20; t++) {
+        const frames = pan(rand, b);
+        const cache = new MarkerLayout();
+        const array = cache.layout(frames[0], 64, 46, { bounds: b, moving: true });
+        const objects = [...array];
+        for (let f = 1; f <= FRAMES; f++) {
+          const out = cache.layout(frames[f], 64, 46, { bounds: b, moving: true });
+          // In place: the array and the marker objects of the album's opening, on every frame.
+          expect(out, `round ${t}, frame ${f}`).toBe(array);
+          expect(out.every((m, i) => m === objects[i]), `round ${t}, frame ${f}`).toBe(true);
+          expect(outside([...out], b), `round ${t}, frame ${f}`).toBe(0);
+          expect(out.map((m) => [m.ax, m.ay])).toEqual(frames[f].map((p) => [p.x, p.y]));
+          expect(cache.settledFrom).toBeNull();
+        }
+        // The opening is the only solve of the whole motion.
+        expect(cache.stats, `round ${t}`).toMatchObject({ solves: 1, settles: 0 });
+        expect(cache.stats.moves + cache.stats.rides).toBe(FRAMES);
+        expect(cache.unsettled).toBe(true);
+      }
+    });
+
+    it.each(CROWDED)('settles %i x %i once at the end of the pan, on the layout a cold solve gives', (w, h) => {
+      const b = box(w, h);
+      const rand = lcg(4100 + w);
+      for (let t = 0; t < 20; t++) {
+        const frames = pan(rand, b);
+        const cache = new MarkerLayout();
+        for (const a of frames) cache.layout(a, 64, 46, { bounds: b, moving: true });
+        const carried = cache.layout(frames[FRAMES], 64, 46, { bounds: b, moving: true }).map((m) => [m.x, m.y]);
+        const rest = cache.layout(frames[FRAMES], 64, 46, { bounds: b });
+        expect(cache.stats, `round ${t}`).toMatchObject({ solves: 1, settles: 1 });
+        expect(gapTo(rest, layoutMarkers(frames[FRAMES], 64, 46, { bounds: b }))).toBe(0);
+        expect(gapTo(rest, new MarkerLayout().layout(frames[FRAMES], 64, 46, { bounds: b }))).toBe(0);
+        if (cache.settledFrom) expect(Array.from(cache.settledFrom)).toEqual(carried.flat());
+        else expect(Math.max(...rest.map((m, i) => Math.max(Math.abs(m.x - carried[i][0]), Math.abs(m.y - carried[i][1]))))).toBeLessThan(0.5);
+        expect(cache.unsettled).toBe(false);
+        // Settled: a redraw of the same view does nothing more.
+        expect(cache.layout(frames[FRAMES], 64, 46, { bounds: b })).toBe(rest);
+        expect(cache.stats).toMatchObject({ solves: 1, settles: 1 });
+      }
+    });
+
+    it('carries a layout with overlaps as one rigid body, stopped at the walls and never squeezed', () => {
+      for (const [w, h] of CROWDED) {
+        const b = box(w, h);
+        const rand = lcg(4100 + w);
+        let crowded = 0;
+        for (let t = 0; t < 20; t++) {
+          const frames = pan(rand, b);
+          const cache = new MarkerLayout();
+          const opened = cache.layout(frames[0], 64, 46, { bounds: b, moving: true });
+          // The shape (every cover's offset from the seed's) of the opening when it has an overlap, or else of
+          // the first frame that shows one: the box separation has failed, and no later frame of the motion may
+          // change the shape.
+          let shape = overlaps([...opened]) ? offsets(opened) : null;
+          const fromOpening = !!shape;
+          for (let f = 1; f <= FRAMES; f++) {
+            const out = cache.layout(frames[f], 64, 46, { bounds: b, moving: true });
+            const now = offsets(out);
+            if (shape) expect(Math.max(...now.map((o, i) => Math.max(Math.abs(o[0] - shape![i][0]), Math.abs(o[1] - shape![i][1])))), `${w}x${h}, round ${t}, frame ${f}`).toBeLessThan(1e-6);
+            else if (overlaps([...out])) shape = now;
+          }
+          if (shape) crowded++;
+          // An opening with no overlap never gains one on the way: its group fits, and is shifted as a whole.
+          if (!fromOpening) expect(shape, `${w}x${h}, round ${t}`).toBeNull();
+        }
+        if (w === 150 || w === 250) expect(crowded).toBe(20);
+        if (w === 828) expect(crowded).toBe(13);
+        if (w === 360) expect(crowded).toBe(0);
+      }
+    });
+
+    it('tries the box separation once when walls close in on a clean layout, then carries what it left', () => {
+      const rand = lcg(31);
+      for (let t = 0; t < 20; t++) {
+        // Opened with no walls (a clean layout, wider than 150 px), then carried between walls it cannot fit.
+        const b = box(150, 150);
+        const frames = pan(rand, b);
+        const cache = new MarkerLayout();
+        const array = cache.layout(frames[0], 64, 46, { moving: true });
+        expect(overlaps([...array])).toBe(0);
+        const first = cache.layout(frames[1], 64, 46, { bounds: b, moving: true });
+        expect(first).toBe(array);
+        expect(outside([...first], b)).toBe(0);
+        expect(overlaps([...first]), `round ${t}`).toBeGreaterThan(0);
+        const shape = offsets(first);
+        for (let f = 2; f <= FRAMES; f++) {
+          const out = cache.layout(frames[f], 64, 46, { bounds: b, moving: true });
+          expect(out).toBe(array);
+          expect(outside([...out], b), `round ${t}, frame ${f}`).toBe(0);
+          expect(Math.max(...offsets(out).map((o, i) => Math.max(Math.abs(o[0] - shape[i][0]), Math.abs(o[1] - shape[i][1])))), `round ${t}, frame ${f}`).toBeLessThan(1e-6);
+        }
+        expect(cache.stats).toMatchObject({ solves: 1, settles: 0 });
+        const rest = cache.layout(frames[FRAMES], 64, 46, { bounds: b });
+        expect(gapTo(rest, layoutMarkers(frames[FRAMES], 64, 46, { bounds: b }))).toBe(0);
+        expect(cache.stats).toMatchObject({ solves: 1, settles: 1 });
+      }
+    });
+
+    it('settles at once, with an ease, when a frame at rest changes a crowded view (a keyboard pan)', () => {
+      const b = box(150, 150);
+      const frames = pan(lcg(77), b);
+      const cache = new MarkerLayout();
+      cache.layout(frames[0], 64, 46, { bounds: b });
+      const out = cache.layout(frames[40], 64, 46, { bounds: b });
+      expect(gapTo(out, layoutMarkers(frames[40], 64, 46, { bounds: b }))).toBe(0);
+      expect(cache.stats).toMatchObject({ solves: 1, settles: 1 });
+      expect(cache.settledFrom).not.toBeNull();
+      expect(cache.unsettled).toBe(false);
+    });
+  });
+
   it('solves again for other albums, sizes, gap or minimum line', () => {
     const cache = new MarkerLayout();
     const a = cluster(lcg(9), 300, 300, 5);
