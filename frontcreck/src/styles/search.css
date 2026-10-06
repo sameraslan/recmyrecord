@@ -41,8 +41,6 @@
 /* hero variant (Home) */
 .combo--hero { margin: 32px auto 0; max-width: 580px; text-align: left; }
 .combo--hero .combo-field { height: 58px; padding: 0 16px 0 18px; background: var(--color-float); }
-/* Focused it is opaque like every search field (the rule above would otherwise win over .combo-field:focus-within). */
-.combo--hero .combo-field:focus-within { background: var(--color-room-3); }
 .combo--hero input { font-size: 17px; }
 .combo--hero .combo-field svg { width: 20px; height: 20px; }
 

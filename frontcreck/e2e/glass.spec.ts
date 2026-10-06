@@ -29,7 +29,7 @@ test('panels are glass on wide screens and solid on phones; the Home header is c
   expect(await styleOf(page, 'section.album')).toEqual(isMobile ? { filter: 'none', bg: 'rgb(7, 6, 10)' } : { filter: GLASS, bg: 'rgba(8, 7, 11, 0.7)' });
   await page.goto('/');
   expect(await styleOf(page, 'header.top')).toEqual({ filter: 'none', bg: 'rgba(0, 0, 0, 0)' });
-  // The Home search field, when it does not hold the focus (on desktop it takes it on load; focused it is opaque).
+  // The Home search field, when it does not hold the focus (on desktop it takes it on load; the next test is that case).
   await page.locator('.combo--hero input').evaluate((el) => (el as HTMLElement).blur());
   // Polled: the field's background eases over .2 s (search.css .combo-field).
   await expect.poll(() => styleOf(page, '.combo--hero .combo-field')).toEqual(isMobile ? { filter: 'none', bg: SOLID } : { filter: GLASS, bg: 'rgba(10, 9, 14, 0.66)' });
@@ -37,12 +37,39 @@ test('panels are glass on wide screens and solid on phones; the Home header is c
   expect(await styleOf(page, '.about')).toEqual(isMobile ? { filter: 'none', bg: SOLID } : { filter: GLASS, bg: 'rgba(8, 7, 11, 0.7)' });
 });
 
-test('the focused Home search field is opaque, as every focused search field', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'a phone does not focus the field on load');
+test('the focused Home search field stays glass, and its text and placeholder keep 4.5:1 over the brightest gas', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'a phone does not focus the field on load, and its field is solid');
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off'; // the full shader: the test reads what the gas paints behind the field
+  });
   await page.goto('/');
-  await expect(page.locator('.combo--hero input')).toBeFocused();
-  // room-3, the focus background of .combo-field (search.css).
-  await expect.poll(async () => (await styleOf(page, '.combo--hero .combo-field')).bg).toBe('rgb(23, 22, 29)');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  const input = page.locator('.combo--hero input');
+  await expect(input).toBeFocused();
+  // See-through as in the approved picture (final-home.jpg), with the focus border of every search field (lamp).
+  await expect.poll(() => styleOf(page, '.combo--hero .combo-field')).toEqual({ filter: GLASS, bg: 'rgba(10, 9, 14, 0.66)' });
+  await expect(page.locator('.combo--hero .combo-field')).toHaveCSS('border-top-color', 'rgb(241, 236, 228)');
+  // The worst case: the brightest gas on screen moved under the field (found with the hero and its dark pad hidden).
+  const gas = await panBrightestGasUnder(page, '.combo--hero .combo-field', '.home, header.top');
+  // Gas, not sky (the veil of Home dims it: a window as wide as the field reaches about 0.2 here, the sky is under 0.02).
+  expect(gas, 'mean luminance of the gas moved under the field').toBeGreaterThan(0.15);
+  // Hiding the hero to look for the gas took the focus away: back in the field, and still glass with the lamp border.
+  await input.focus();
+  await expect(input).toBeFocused();
+  await expect.poll(() => styleOf(page, '.combo--hero .combo-field')).toEqual({ filter: GLASS, bg: 'rgba(10, 9, 14, 0.66)' });
+  await expect(page.locator('.combo--hero .combo-field')).toHaveCSS('border-top-color', 'rgb(241, 236, 228)');
+  const [typed] = await contrastOverBackdrop(page, '.home', ['.combo--hero input']);
+  // The placeholder is what an empty field shows: the same backdrop, measured with the placeholder's own colour.
+  const ash = await input.evaluate((el) => getComputedStyle(el, '::placeholder').color);
+  const style = await page.addStyleTag({ content: `.combo--hero input { color: ${ash} !important; }` });
+  const [placeholder] = await contrastOverBackdrop(page, '.home', ['.combo--hero input']);
+  await style.evaluate((el) => (el as Element).remove());
+  console.log(`focused Home field over the brightest gas (mean luminance ${gas.toFixed(2)}): text ${typed.ratio.toFixed(2)}, placeholder ${placeholder.ratio.toFixed(2)} (${ash})`);
+  expect(typed.ratio, 'typed text').toBeGreaterThanOrEqual(4.5);
+  expect(placeholder.ratio, 'placeholder').toBeGreaterThanOrEqual(4.5);
 });
 
 test('with reduced transparency the panels are solid and unblurred', async ({ page, isMobile }) => {

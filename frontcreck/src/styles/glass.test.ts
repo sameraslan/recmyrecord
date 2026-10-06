@@ -29,13 +29,17 @@ describe('glass', () => {
     expect(z(tip)).toBeGreaterThan(z(/\n\.map-ui \{([^}]*)\}/.exec(read('styles/map.css'))![1]));
   });
 
-  it('the focused Home search field takes the focus background of every search field', () => {
+  it('the focused Home search field stays see-through: only the hero rule sets its background', () => {
+    // It takes the focus on every desktop load of Home, and the approved picture (final-home.jpg) shows it as glass.
     const search = read('styles/search.css');
+    const focus = search.indexOf('.combo-field:focus-within {');
     const hero = search.indexOf('.combo--hero .combo-field { ');
-    const focused = search.indexOf('.combo--hero .combo-field:focus-within { background: var(--color-room-3); }');
-    expect(hero).toBeGreaterThan(-1);
-    // After the hero rule, and at least as specific: it wins.
-    expect(focused).toBeGreaterThan(hero);
+    expect(focus).toBeGreaterThan(-1);
+    // The hero rule is as specific as the focus rule of every search field and comes after it: its glass wins.
+    expect(hero).toBeGreaterThan(focus);
+    expect(/\n\.combo--hero \.combo-field \{([^}]*)\}/.exec(search)![1]).toContain('background: var(--color-float);');
+    // And no later rule gives the focused hero field a background of its own.
+    expect(search).not.toMatch(/\.combo--hero \.combo-field:focus-within/);
   });
 
   it('no surface sets a blur of its own, so --glass-blur switches all of them', () => {
