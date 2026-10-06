@@ -1,4 +1,5 @@
 import { act, fireEvent, render } from '@testing-library/react';
+import { StrictMode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { COPY } from '@/lib/copy';
 import { useAppStore } from '@/lib/store';
@@ -165,6 +166,38 @@ describe('NamesToggle', () => {
     expect(button).toHaveAttribute('aria-pressed', 'false');
     expect(button.querySelector('mask')).not.toBeNull();
     unmount();
+  });
+
+  it('makes exactly one button under Strict Mode (mount, unmount, mount again), and it is the one that works', () => {
+    const tree = (corner: boolean) => (
+      <StrictMode>
+        <Corner corner={corner} />
+      </StrictMode>
+    );
+    const { getByRole, rerender, unmount } = render(tree(true));
+    const check = () => {
+      expect(document.querySelectorAll('.map-names')).toHaveLength(1);
+      const button = getByRole('button', { name: COPY.map.names });
+      expect(button).toBe(document.querySelector('.map-zoom')!.firstElementChild);
+      expect(document.querySelector('.map-zoom')!.children).toHaveLength(4);
+      return button;
+    };
+    const button = check();
+    expect(button).toHaveAttribute('aria-pressed', 'true');
+    expect(button.querySelector('svg')).not.toBeNull();
+    fireEvent.click(button);
+    expect(useAppStore.getState().namesOn).toBe(false);
+    expect(check()).toBe(button);
+    expect(button).toHaveAttribute('aria-pressed', 'false');
+    // The corner goes and comes back, still under Strict Mode: one button again, drawn off.
+    rerender(tree(false));
+    expect(document.querySelectorAll('.map-names')).toHaveLength(0);
+    rerender(tree(true));
+    expect(check()).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(check());
+    expect(useAppStore.getState().namesOn).toBe(true);
+    unmount();
+    expect(document.querySelectorAll('.map-names')).toHaveLength(0);
   });
 
   it('draws nothing without the corner, even when told it is shown', () => {

@@ -116,7 +116,14 @@ test('a reload with names off comes back off, with no hydration or page error; o
 test('keyboard: it is the one Tab stop before Zoom in on every map view', async ({ page, isMobile }) => {
   const check = async (view: string) => {
     await expect(toggle(page), view).toBeVisible();
-    await toggle(page).focus();
+    // Reached with Tab from the stop before the corner: "Explore this area" beside an album, else the slider's
+    // last stop.
+    const explore = page.getByRole('button', { name: COPY.map.exploreHere, exact: true });
+    const before = (await explore.count()) ? explore : page.locator('.mode-stops button').last();
+    await before.focus();
+    await expect(before, view).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(toggle(page), view).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(zoomIn(page), view).toBeFocused();
     await page.keyboard.press('Shift+Tab');
@@ -169,6 +176,61 @@ test('it comes and goes with the zoom corner across views, one button each time,
   expect(await page.locator('.map-zoom').evaluate((el) => el.firstElementChild!.className)).toBe('map-names');
   await act(toggle(page), isMobile);
   await expect(toggle(page)).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('client-side moves between map views never lose or double it: one button, first in the corner, the choice kept', async ({ page, isMobile }) => {
+  await openMap(page);
+  await act(toggle(page), isMobile);
+  /** Exactly one toggle, the first child of the one zoom corner, still off and drawn off. */
+  const one = async (step: string) => {
+    await expect(page.locator('.map-names'), step).toHaveCount(1);
+    await expect(page.locator('.map-zoom'), step).toHaveCount(1);
+    expect(await page.locator('.map-zoom').evaluate((el) => [...el.children].map((c) => c.getAttribute('aria-label'))), step).toEqual([COPY.map.names, COPY.map.zoomIn, COPY.map.zoomOut, COPY.map.reset]);
+    await expect(toggle(page), step).toHaveAttribute('aria-pressed', 'false');
+    await expect(toggle(page).locator('mask'), step).toHaveCount(1);
+  };
+  await one('the map');
+  // No page.goto from here on: every step is a client-side route or state change, so the same React tree stays
+  // mounted and the corner is remounted (or kept) by React, which is what could lose the button.
+  const loads = await page.evaluate(() => ((window as unknown as { __sameDocument: boolean }).__sameDocument = true));
+  expect(loads).toBe(true);
+  const p = await visibleAlbumPoint(page);
+  await page.evaluate((id) => window.__rmr!.getState().setSelected(id), p.id);
+  await expect(page.locator('.card')).toBeVisible();
+  if (!isMobile) await one('with the Explore card');
+  await act(page.locator('.card').getByRole('link', { name: COPY.map.cardPrimary }), isMobile);
+  await expect(page).toHaveURL(/\/album\//);
+  const mapButton = page.getByRole('button', { name: COPY.phone.mapLabel });
+  const listButton = page.getByRole('button', { name: COPY.phone.listLabel });
+  if (isMobile) {
+    // The phone album list has no zoom corner; Map and List, twice.
+    for (const round of ['first', 'second']) {
+      await expect(page.locator('.map-zoom, .map-names'), round).toHaveCount(0);
+      await act(mapButton, true);
+      await expect(page.locator('section.album'), round).toBeHidden();
+      await one(`map mode, ${round} time`);
+      if (round === 'first') await act(listButton, true);
+    }
+  } else {
+    await expect(page.locator('.mk')).toHaveCount(6);
+    await one('beside the album');
+    // Album to album by a pick on the map: the corner stays mounted.
+    await waitForCameraIdle(page);
+    const from = page.url();
+    const mk = (await page.locator('.mk:not(.mk--seed)').first().boundingBox())!;
+    await page.mouse.click(mk.x + mk.width / 2, mk.y + mk.height / 2);
+    await expect(page).not.toHaveURL(from);
+    await expect(page).toHaveURL(/\/album\//);
+    await one('beside the next album');
+  }
+  await act(page.getByRole('button', { name: COPY.map.exploreHere, exact: true }), isMobile);
+  await expect(page).toHaveURL('/map');
+  await one('back on the map with "Explore this area"');
+  expect(await page.evaluate(() => (window as unknown as { __sameDocument?: boolean }).__sameDocument)).toBe(true);
+  // And it still works: the same single button switches the names back on.
+  await act(toggle(page), isMobile);
+  await expect(toggle(page)).toHaveAttribute('aria-pressed', 'true');
+  expect(await page.evaluate(() => [window.__rmr!.getState().namesOn, localStorage.getItem('rmr-names')])).toEqual([true, '1']);
 });
 
 test('the corner does not move when the toggle arrives: its place is kept free above Zoom in', async ({ page }) => {
@@ -236,13 +298,14 @@ test('toggling leaves the map at rest, and moving the pointer over the map touch
   await waitForMap(page);
   await waitForCameraIdle(page);
   await waitForGasSharpSettled(page);
-  // A press may cost the names layer (part 2 Task 7) one frame; it never starts a run of frames.
+  // A press draws no canvas frame: nothing on the canvas depends on the toggle yet. The names layer (part 2
+  // Task 7) sets this to the value it measures, with the reason in its report; it is not to be widened ahead.
   const f0 = await mapFrames(page);
   await act(toggle(page), isMobile);
   await act(toggle(page), isMobile);
   await page.waitForTimeout(400);
   const f1 = await mapFrames(page);
-  expect(f1 - f0).toBeLessThanOrEqual(2);
+  expect(f1 - f0).toBe(0);
   await page.waitForTimeout(600);
   expect(await mapFrames(page)).toBe(f1);
   if (isMobile) return;

@@ -269,7 +269,9 @@ export interface ChromeInput {
   card: boolean;
 }
 
-/** Height of the zoom corner: the names toggle, an 8 px gap, three zoom buttons (40 px each; 44 on a phone). */
+/** Height of the zoom corner: the names toggle, an 8 px gap, three zoom buttons (40 px each; 44 on a phone).
+ * The button side is `--zb` in styles/map.css and styles/phone.css. It is repeated here, not read: this runs per
+ * frame and reads no layout. Change the three together. */
 const ZOOM_CORNER_DESKTOP_PX = 40 + 8 + 3 * 40;
 const ZOOM_CORNER_PHONE_PX = 44 + 8 + 3 * 44;
 

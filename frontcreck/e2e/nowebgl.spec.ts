@@ -11,6 +11,11 @@ test('without WebGL the map shows a message, asks for no theme file, and search 
   await page.goto('/map');
   await expect(page.getByText(COPY.map.noWebgl)).toBeVisible();
   await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
+  // No map, so no map data and no zoom corner; the names toggle (which only the map's chunk makes) is not left
+  // behind on its own either.
+  await expect(page.locator('.map-names')).toHaveCount(0);
+  await expect(page.locator('.map-zoom')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: COPY.map.names, exact: true })).toHaveCount(0);
   expect(await page.evaluate(() => window.__rmr!.getState().webgl)).toBe('unavailable');
   const input = page.getByRole('combobox', { name: COPY.search.label });
   await input.click();

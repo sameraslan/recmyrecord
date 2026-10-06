@@ -23,8 +23,10 @@
 .map-explore { position: absolute; right: 20px; top: 20px; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 12px; font-size: 14px; color: var(--color-paper); }
 .map-explore svg { width: 16px; height: 16px; color: var(--color-dust); }
 .map-explore:hover svg { color: var(--color-lamp); }
-.map-zoom { position: absolute; right: 20px; bottom: 20px; display: grid; }
-.map-zoom button { width: 40px; height: 40px; display: grid; place-items: center; background: var(--color-float); border: 1px solid var(--color-rule); color: var(--color-dust); }
+/* --zb: the side of a button in the zoom corner (44 px on a phone, styles/phone.css). The place kept for the names
+ * toggle below follows it; state/namesLayout.ts repeats both numbers (it reads no layout). */
+.map-zoom { position: absolute; right: 20px; bottom: 20px; display: grid; --zb: 40px; }
+.map-zoom button { width: var(--zb); height: var(--zb); display: grid; place-items: center; background: var(--color-float); border: 1px solid var(--color-rule); color: var(--color-dust); }
 .map-zoom button + button { border-top: 0; }
 .map-zoom button:hover { color: var(--color-paper); }
 .map-zoom svg { width: 16px; height: 16px; }
@@ -108,7 +110,7 @@
 /* The zoom-in button under it gets its top border back (.map-zoom button + button removes it). */
 .map-zoom .map-names + button { border-top: 1px solid var(--color-rule); }
 /* Until it arrives its place is kept free (a button and the 8 px), so the zoom buttons never move. */
-.map-zoom > button:first-child:not(.map-names) { margin-top: 48px; }
+.map-zoom > button:first-child:not(.map-names) { margin-top: calc(var(--zb) + 8px); }
 
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
