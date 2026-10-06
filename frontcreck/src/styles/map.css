@@ -87,7 +87,9 @@
 /* 400 px, not the mockup's 380: "See closest albums" is longer than the mockup's label, and both actions stay on one row. */
 .card { position: absolute; left: 20px; bottom: 20px; width: 400px; padding: 14px; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; animation: rise .3s var(--out) both; }
 .card-text { min-width: 0; }
-.card .t { font-family: var(--font-serif); font-weight: 600; font-size: 26px; line-height: 1.02; padding-right: 28px; overflow-wrap: anywhere; }
+/* The title keeps clear of the close button and of its focus ring with the casing (7 px round the button): 4 + 40 +
+ * 7 px from the card's edge, less the card's 14 px padding, is 37 (contrast.test.ts). */
+.card .t { font-family: var(--font-serif); font-weight: 600; font-size: 26px; line-height: 1.02; padding-right: 40px; overflow-wrap: anywhere; }
 .card .a { font-size: 14.5px; color: var(--color-dust); margin-top: 4px; overflow-wrap: anywhere; }
 .card .row { display: flex; gap: 6px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
 .card .btn { min-height: 40px; padding: 0 13px; font-size: 14px; }
@@ -207,7 +209,7 @@
   /* A bottom sheet resting on the slider panel (their borders overlap into one line), as in the mockup; the zoom
    * controls step aside while it is open. */
   .card { left: 12px; right: 12px; bottom: calc(var(--slider-cover, calc(165px + env(safe-area-inset-bottom))) - 1px); width: auto; grid-template-columns: 72px minmax(0, 1fr); }
-  .card .t { font-size: 22px; }
+  .card .t { font-size: 22px; padding-right: 42px; }
   .card { padding: 12px; gap: 14px; }
   .card .btn { min-height: 44px; padding: 0 11px; font-size: 13.5px; }
   .card .x { width: 44px; height: 44px; right: 2px; top: 2px; }

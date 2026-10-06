@@ -284,4 +284,35 @@ describe('marks on the map', () => {
       expect(contrastRatio(dark, rgbToHex(backdrop)), `the casing against ${name}`).toBeGreaterThanOrEqual(3);
     }
   });
+
+  it("the card's title keeps clear of the close button's focus ring and its casing, on wide screens and on phones", () => {
+    const sheet = css('styles/map.css');
+    const at = sheet.indexOf('@media (max-width: 899px)');
+    expect(at).toBeGreaterThan(0);
+    /** Every declaration of the rules whose selector is exactly `selector`, later ones winning. */
+    const all = (part: string, selector: string): Record<string, string> => {
+      const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const out: Record<string, string> = {};
+      for (const m of part.matchAll(new RegExp(`(?:^|[}\\n])\\s*${esc}\\s*\\{([^}]*)\\}`, 'g'))) {
+        for (const d of m[1].split(';')) {
+          const [k, ...v] = d.split(':');
+          if (v.length) out[k.trim()] = v.join(':').trim();
+        }
+      }
+      return out;
+    };
+    const px = (v: string | undefined) => {
+      const m = /^(\d+(?:\.\d+)?)px/.exec(v ?? '');
+      if (!m) throw new Error(`not a px length: ${v}`);
+      return Number(m[1]);
+    };
+    const BAND = 7;
+    for (const [name, part] of [['wide', sheet.slice(0, at)], ['phone', sheet.slice(at)]] as const) {
+      const [card, x, t] = [all(part, '.card'), all(part, '.card .x'), all(part, '.card .t')];
+      // From the card's right edge: where the band ends, and where the title's text may begin.
+      const band = px(x.right) + px(x.width) + BAND;
+      const text = px(card.padding) + px(t['padding-right']);
+      expect(text, `${name}: the title stops ${text} px from the edge, the band reaches ${band}`).toBeGreaterThanOrEqual(band);
+    }
+  });
 });

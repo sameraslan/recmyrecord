@@ -399,24 +399,13 @@ const offLamp = ([r, g, b]: number[]) => Math.max(Math.abs(r - 241), Math.abs(g 
 /** Bright gas, not sky, as relative luminance: the same line the header and hint tests draw. */
 const BRIGHT_GAS = 0.4;
 
-test('the selected ring reads on the brightest gas', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'measured where the map has room; the ring is one CSS rule at every width');
-  await page.addInitScript(() => {
-    window.__rmrGasLite = 'off';
-  });
-  await page.goto('/map');
-  await waitForMap(page);
-  await waitForCameraIdle(page);
-  await waitForAnimations(page);
-  await waitForGasSharpSettled(page);
-  await twinkleOff(page);
-  const vp = page.viewportSize()!;
-  // The album with the brightest gas round it, among those on the canvas and clear of where the card opens
-  // (bottom left, 400 px wide): the darkest of eight points 8 and 10 px out is the measure, so a neighbouring star
-  // does not count as gas.
+/** The album with the brightest gas round it, among those on the canvas and clear of where the card opens (bottom
+ * left, 400 px wide). The measure is the darkest of the points `radii` px out on four sides, so a neighbouring star
+ * does not count as gas. */
+async function brightestGasAlbum(page: Page, radii: number[]): Promise<{ id: number; gas: number }> {
   const png = (await page.screenshot()).toString('base64');
-  const pick = await page.evaluate(
-    async ([data, w, h]) => {
+  return page.evaluate(
+    async ([data, rs]) => {
       const img = new Image();
       img.src = `data:image/png;base64,${data}`;
       await img.decode();
@@ -434,6 +423,7 @@ test('the selected ring reads on the brightest gas', async ({ page, isMobile }) 
       };
       const api = window.__rmr!.map!;
       const n: number = (await (await fetch('/data/albums.json')).json()).length;
+      const [w, h] = [innerWidth, innerHeight];
       let best = { id: -1, gas: -1 };
       for (let id = 0; id < n; id++) {
         const p = api.screenPoint(id);
@@ -441,13 +431,27 @@ test('the selected ring reads on the brightest gas', async ({ page, isMobile }) 
         if (p.x < 460 && p.y > h - 260) continue;
         if (!document.elementFromPoint(p.x, p.y)?.classList.contains('map-canvas')) continue;
         let gas = 1;
-        for (const r of [8, 10]) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) gas = Math.min(gas, lum(p.x + dx * r, p.y + dy * r));
+        for (const r of rs) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) gas = Math.min(gas, lum(p.x + dx * r, p.y + dy * r));
         if (gas > best.gas) best = { id, gas };
       }
       return best;
     },
-    [png, vp.width, vp.height] as const,
+    [png, radii] as const,
   );
+}
+
+test('the selected ring reads on the brightest gas', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'measured where the map has room; the ring is one CSS rule at every width');
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  await twinkleOff(page);
+  const pick = await brightestGasAlbum(page, [8, 10]);
   expect(pick.gas, 'an album stands on bright gas at the opening view').toBeGreaterThan(BRIGHT_GAS);
   // Selected without a fly: while albums are dots a pick is marked by the DOM ring.
   await page.evaluate((i) => window.__rmr!.getState().setSelected(i), pick.id);
@@ -552,5 +556,48 @@ test('the keyboard focus ring of the controls that stand on the map reads on the
     expect(offLamp(q.ring), `ring colour of ${name}`).toBeLessThanOrEqual(12);
     expect(over(q.ring, q.casing), `the focus ring against its casing, ${name}`).toBeGreaterThanOrEqual(3);
     expect(over(q.gas, q.casing), `the gas against the casing, ${name}`).toBeGreaterThanOrEqual(3);
+  }
+});
+
+test('the hover ring on a dot reads on the brightest gas', async ({ browser, baseURL, isMobile }) => {
+  test.skip(isMobile, 'hover is a pointer state; the ring is drawn by the same shader at every width');
+  // Two device pixels to the CSS pixel: the ring's 1.5 px stroke is then 3 device px, and the casing 1.25 px either
+  // side of it 2.5, so each can be read from a pixel that lies wholly inside it.
+  const context = await browser.newContext({ baseURL, viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+  const page = await context.newPage();
+  try {
+    await page.addInitScript(() => {
+      window.__rmrGasLite = 'off';
+    });
+    await page.goto('/map');
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    await waitForAnimations(page);
+    await waitForGasSharpSettled(page);
+    await twinkleOff(page);
+    const pick = await brightestGasAlbum(page, [7, 8.5]);
+    expect(pick.gas, 'an album stands on bright gas at the opening view').toBeGreaterThan(BRIGHT_GAS);
+    const p = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), pick.id))!;
+    // The shader's hover mark round a dot (shaders/album.ts): a 1.5 px off-white stroke of radius 7 on a dark band 4
+    // px wide. Read on four sides: the stroke on its middle line, the casing 1.5 px outside and inside that line.
+    const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+    const samples = sides.flatMap(([dx, dy]) => [5.5, 7, 8.5].map((r) => ({ x: p.x + dx * r, y: p.y + dy * r })));
+    // The same points before the pointer comes: the gas (and the star's own glow) the mark is drawn on.
+    const bare = await rgbAt(page, samples);
+    await page.mouse.move(p.x, p.y);
+    await expect(page.locator('.map-tip')).toHaveCSS('opacity', '1');
+    await waitForCameraIdle(page);
+    // The label is not what is measured: out of the picture, should it lie over a sample.
+    const rgb = await rgbAt(page, samples, '.map-tip');
+    const rows = sides.map((_, i) => ({ inner: rgb[3 * i], stroke: rgb[3 * i + 1], outer: rgb[3 * i + 2], gas: bare[3 * i + 2] }));
+    console.log(`hover ring on gas of luminance ${pick.gas.toFixed(2)}: ${rows.map((q) => `stroke/casing ${over(q.stroke, q.outer).toFixed(2)} out ${over(q.stroke, q.inner).toFixed(2)} in, gas/casing ${over(q.gas, q.outer).toFixed(2)} (gas ${lumOf(q.gas).toFixed(2)})`).join(', ')}`);
+    rows.forEach((q, i) => {
+      expect(lumOf(q.gas), `bright gas under the casing, side ${i}`).toBeGreaterThan(BRIGHT_GAS);
+      expect(over(q.stroke, q.outer), `the stroke against its casing outside, side ${i}`).toBeGreaterThanOrEqual(3);
+      expect(over(q.stroke, q.inner), `the stroke against its casing inside, side ${i}`).toBeGreaterThanOrEqual(3);
+      expect(over(q.gas, q.outer), `the gas against the casing, side ${i}`).toBeGreaterThanOrEqual(3);
+    });
+  } finally {
+    await context.close();
   }
 });

@@ -109,6 +109,31 @@ async function otherCoverBoxes(page: Page, picked: number): Promise<Box[]> {
   }, picked);
 }
 
+/** 20 px boxes at the centres of up to 12 covers on the canvas that lie in a pile: another album within 16 px both
+ * ways, so a 32 px neighbour covers at least a quarter of the box (or lies under it). Clear of the picked album
+ * and of every overlay, as otherCoverBoxes. What such a box shows is how stepped-back covers lie on each other. */
+async function pileCoverBoxes(page: Page, picked: number): Promise<Box[]> {
+  return page.evaluate(async (pickedId) => {
+    const api = window.__rmr!.map!;
+    const n: number = (await (await fetch('/data/albums.json')).json()).length;
+    const c = api.screenPoint(pickedId)!;
+    const pts: ({ x: number; y: number } | null)[] = [];
+    for (let id = 0; id < n; id++) pts.push(api.screenPoint(id));
+    const out: { x: number; y: number; w: number; h: number }[] = [];
+    for (let id = 0; id < n && out.length < 12; id++) {
+      const p = pts[id];
+      if (id === pickedId || !p || p.x < 10 || p.y < 10 || p.x > innerWidth - 10 || p.y > innerHeight - 10) continue;
+      if (Math.abs(p.x - c.x) < 70 && Math.abs(p.y - c.y) < 70) continue;
+      if (!pts.some((q, j) => j !== id && j !== pickedId && q !== null && Math.abs(q.x - p.x) < 16 && Math.abs(q.y - p.y) < 16)) continue;
+      // Not a box that overlaps one already taken: each pile is counted once.
+      if (out.some((b) => Math.abs(b.x + 10 - p.x) < 20 && Math.abs(b.y + 10 - p.y) < 20)) continue;
+      const onCanvas = [[-10, -10], [10, -10], [-10, 10], [10, 10]].every(([dx, dy]) => document.elementFromPoint(p.x + dx, p.y + dy)?.classList.contains('map-canvas'));
+      if (onCanvas) out.push({ x: p.x - 10, y: p.y - 10, w: 20, h: 20 });
+    }
+    return out;
+  }, picked);
+}
+
 /** The picked album's off-white frame (FRAME_RGB, rgb(241, 236, 228)). */
 const isFrame = ([r, g, b]: number[]) => Math.abs(r - 241) < 16 && Math.abs(g - 236) < 16 && Math.abs(b - 228) < 18;
 
@@ -330,6 +355,13 @@ test('leaving an album by the header nav leaves the album state clean and frames
   expect(again.zoom).toBeCloseTo(overview.zoom, 2);
 });
 
+/** Detail left in a cover that stepped back, as a fraction of its undimmed detail. A lone cover at half opacity
+ * (SELECTION_DIM) keeps half: measured 0.48 on desktop and 0.50 on the phone, three runs each. In a pile the upper
+ * cover's half-opaque picture lets the lower one through, so more is left: measured 0.57 (12 piles, desktop) and
+ * 0.60 (4 piles, phone). With the stepping back removed both are 1. */
+const LONE_LINE = 0.6;
+const PILE_LINE = 0.75;
+
 test('in cover mode the picked album is drawn large on top, framed in off-white, with the other covers dimmed', async ({ page, isMobile }, info) => {
   // The frame and the covers are read from screenshot pixels with gas behind them.
   await page.addInitScript(() => {
@@ -367,16 +399,27 @@ test('in cover mode the picked album is drawn large on top, framed in off-white,
   const boxes = await otherCoverBoxes(page, IN_RAINBOWS);
   expect(boxes.length, 'covers that stand alone, to compare').toBeGreaterThanOrEqual(4);
   const dimmed = await meanLumaStd(page, boxes);
+  // The piles too: covers that lie on each other step back together, each at half opacity, so a pile keeps a soft
+  // layered look and still loses detail.
+  const piles = await pileCoverBoxes(page, IN_RAINBOWS);
+  expect(piles.length, 'covers in piles, to compare').toBeGreaterThanOrEqual(4);
+  const pilesDimmed = await meanLumaStd(page, piles);
   await page.keyboard.press('Escape');
   await expect(page.locator('.card')).toHaveCount(0);
   await waitForCameraIdle(page);
   const plain = await meanLumaStd(page, boxes);
-  console.log(`picked cover: detail in ${boxes.length} lone covers ${dimmed.toFixed(2)} with the pick, ${plain.toFixed(2)} without (ratio ${(dimmed / plain).toFixed(2)})`);
+  const pilesPlain = await meanLumaStd(page, piles);
+  console.log(
+    `picked cover: detail in ${boxes.length} lone covers ${dimmed.toFixed(2)} with the pick, ${plain.toFixed(2)} without (ratio ${(dimmed / plain).toFixed(2)}); ` +
+      `in ${piles.length} piles ${pilesDimmed.toFixed(2)} with, ${pilesPlain.toFixed(2)} without (ratio ${(pilesDimmed / pilesPlain).toFixed(2)})`,
+  );
   expect(plain, 'the undimmed covers show detail').toBeGreaterThan(6);
-  expect(dimmed).toBeLessThan(plain * 0.7);
-  // With the pick gone the frame is gone: the same four points are no longer all frame-coloured, so the frame
-  // check above was not satisfied by pale gas.
-  expect((await pixels(page, framePoints)).every(isFrame)).toBe(false);
+  expect(dimmed).toBeLessThan(plain * LONE_LINE);
+  expect(pilesPlain, 'the undimmed piles show detail').toBeGreaterThan(6);
+  expect(pilesDimmed, 'covers in piles step back too').toBeLessThan(pilesPlain * PILE_LINE);
+  // With the pick gone the frame is gone: none of the same four points is frame-coloured, so the frame check
+  // above was not satisfied by pale gas or a pale cover at any of them.
+  expect((await pixels(page, framePoints)).map(isFrame)).toEqual([false, false, false, false]);
 });
 
 test('an album with no Spotify id shows the card without the Spotify action', async ({ page, isMobile }) => {

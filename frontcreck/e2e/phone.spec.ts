@@ -275,3 +275,29 @@ test('the zoom corner, with the names button, clears the slider below it and wha
   const explore = (await page.locator('.map-explore').boundingBox())!;
   expect(await check(Math.max(list.y + list.height, explore.y + explore.height), 'album map mode')).toBe(4);
 });
+
+test('the List button keeps its place and its layer under keyboard focus, with the dark casing round its ring', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone layout');
+  await page.goto(IR);
+  await waitForMap(page);
+  await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
+  const list = page.locator('.fab-map--on');
+  await expect(list).toBeVisible();
+  await expect(page.locator('.mode')).toBeVisible();
+  await waitForAnimations(page);
+  const before = (await list.boundingBox())!;
+  // The tap left the focus on the button without a ring. Away and back by keyboard, so :focus-visible holds.
+  await page.keyboard.press('Shift+Tab');
+  await expect(list).not.toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(list).toBeFocused();
+  expect(await list.evaluate((el) => el.matches(':focus-visible'))).toBe(true);
+  await waitForAnimations(page);
+  expect(await list.boundingBox(), 'the casing rule does not move or resize the List button').toEqual(before);
+  // Still above the album panel and the map (phone.css .fab-map), which a z-index in the casing rule would undo.
+  await expect(list).toHaveCSS('z-index', '12');
+  // The band from the button's edge to 7 px out, under the 2 px ring that starts 3 px out.
+  await expect(list).toHaveCSS('box-shadow', /^rgba\(4, 4, 8, 0\.8\) 0px 0px 0px 7px$/);
+  await expect(list).toHaveCSS('outline-width', '2px');
+  await expect(list).toHaveCSS('outline-offset', '3px');
+});
