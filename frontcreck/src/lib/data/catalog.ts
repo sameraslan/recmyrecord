@@ -110,17 +110,28 @@ const DEEZER_SIZES = [56, 250, 500, 1000] as const;
 /** [px, file-name suffix] */
 const BANDCAMP_SIZES = [[100, 3], [210, 9], [350, 2], [700, 16], [1200, 10]] as const;
 
-/** True for a cover that is a 4:3 video frame, shown as its centre square. */
+/** True for a cover that is a video frame (wider than tall), shown as its centre square. */
 export function isFrameCover(coverId: string): boolean {
   return coverId.startsWith('yt:');
 }
 
+/** The one size of a YouTube frame the pages use: `mqdefault.jpg`, the 16:9 picture with no bars around it. */
+export const FRAME_COVER = { file: 'mqdefault.jpg', width: 320, height: 180 } as const;
+
 /**
  * The URL of cover `coverId` at about `px` image pixels (the smallest size at least that wide where the host
- * has fixed sizes); null when the album has no cover id. Mirrors `cover_url` in the pipeline's covers.py:
+ * has fixed sizes); null when the album has no cover id. Mirrors `cover_url` in the pipeline's covers.py, but
+ * for the YouTube frame:
  *   <id>       Spotify, https://i.scdn.co/image/<id>, with the size prefix swapped for ids that carry one
  *   dz:<md5>   Deezer        am:<path>  Apple        bc:<number>  Bandcamp
- *   yt:<id>    YouTube: a 4:3 video frame in one size
+ *   yt:<id>    YouTube: a video frame in one size, mqdefault.jpg (320 x 180), at every `px`
+ *
+ * Why YouTube differs from the pipeline: `cover_url` there gives hqdefault.jpg, 480 x 360 with a black bar above
+ * and below a 16:9 picture, and the pipeline cuts those bars off before it takes the centre square for a sprite
+ * (crop_frame). A page can only show the centre of the file it is given (`.cover img` is `object-fit: cover`),
+ * and the centre 360 x 360 of hqdefault.jpg keeps both bars. mqdefault.jpg is the same picture without bars,
+ * so its centre 180 x 180 square is the square the sprite shows. 180 px is less than a large cover asks for;
+ * the larger files without bars (maxresdefault.jpg, hq720.jpg) do not exist for every video.
  */
 export function coverUrlAt(coverId: string, px: number): string | null {
   if (!coverId) return null;
@@ -139,7 +150,7 @@ export function coverUrlAt(coverId: string, px: number): string | null {
     const suffix = (BANDCAMP_SIZES.find(([size]) => size >= px) ?? BANDCAMP_SIZES[BANDCAMP_SIZES.length - 1])[1];
     return `https://f4.bcbits.com/img/a${ref}_${suffix}.jpg`;
   }
-  if (kind === 'yt') return `https://i.ytimg.com/vi/${ref}/hqdefault.jpg`;
+  if (kind === 'yt') return `https://i.ytimg.com/vi/${ref}/${FRAME_COVER.file}`;
   const prefix = px <= 64 ? 'ab67616d00004851' : px <= 300 ? 'ab67616d00001e02' : 'ab67616d0000b273';
   return COVER_BASE + (coverId.startsWith('ab67616d') && coverId.length > 16 ? prefix + coverId.slice(16) : coverId);
 }
@@ -153,7 +164,7 @@ export function coverUrl(coverId: string, px: number): string | null {
 export function ogCover(coverId: string): { url: string; width: number; height: number } | null {
   const url = coverUrlAt(coverId, 640);
   if (!url) return null;
-  if (isFrameCover(coverId)) return { url, width: 480, height: 360 };
+  if (isFrameCover(coverId)) return { url, width: FRAME_COVER.width, height: FRAME_COVER.height };
   const side = coverId.startsWith('dz:') ? 1000 : coverId.startsWith('bc:') ? 700 : 640;
   return { url, width: side, height: side };
 }

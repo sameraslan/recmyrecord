@@ -113,7 +113,7 @@ export function drawStrip(
     const url = coverUrl(a.c, s);
     const im = url ? readyImage(url, onReady) : null;
     if (im) {
-      // The centre square of the image: all of a square cover, the middle of a 4:3 video frame.
+      // The centre square of the image: all of a square cover, the middle of a video frame.
       const side = Math.min(im.naturalWidth, im.naturalHeight) || 0;
       if (side) ctx.drawImage(im, (im.naturalWidth - side) / 2, (im.naturalHeight - side) / 2, side, side, x, y, s, s);
       else ctx.drawImage(im, x, y, s, s);

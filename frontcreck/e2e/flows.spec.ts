@@ -1,5 +1,6 @@
 import { expect, test as base, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
+import { COVER_URL_RE } from './data';
 import { act, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 /** Every flow fails on a page error or a console error (remote cover failures excepted: covers fall back). */
@@ -11,7 +12,7 @@ const test = base.extend<{ errors: string[] }>({
       page.on('console', (m) => {
         if (m.type() !== 'error') return;
         // Chrome's text for a failed resource never contains its URL; the URL is in the message location.
-        const remoteCover = m.text().startsWith('Failed to load resource') && /^https:\/\/i\.scdn\.co\//.test(m.location().url);
+        const remoteCover = m.text().startsWith('Failed to load resource') && COVER_URL_RE.test(m.location().url);
         if (!remoteCover) errors.push(m.text());
       });
       await use(errors);
@@ -139,7 +140,7 @@ test('keyboard-only search, deeper and back to the map', async ({ page, isMobile
 });
 
 test('covers fall back to the thumbnail sprite, then to the lettered tile', async ({ page, isMobile }) => {
-  await page.route('https://i.scdn.co/**', (route) => route.abort());
+  await page.route(COVER_URL_RE, (route) => route.abort());
   await page.goto(IR);
   await expect(page.locator('.seed .cover')).toHaveAttribute('data-state', 'sprite');
   await expect(page.locator('li.rec .cover').first()).toHaveAttribute('data-state', 'sprite');

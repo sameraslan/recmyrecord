@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { recsOf } from './data';
+import { ATLAS_SHEET_RE, THUMB_SHEET_RE, recsOf } from './data';
 import { shot, waitForAnimations, waitForMap, waitForMapQuiet } from './helpers';
 
 // The owner's first and last name, stored encoded so this guard never spells them.
@@ -61,7 +61,7 @@ test.describe('Home', () => {
   test('the first load requests no thumbnail sprite and no map atlas, shelf included', async ({ page }) => {
     const heavy: string[] = [];
     page.on('request', (r) => {
-      if (/\/data\/(thumbs|atlas-\d)\.webp$/.test(r.url())) heavy.push(r.url());
+      if (THUMB_SHEET_RE.test(r.url()) || ATLAS_SHEET_RE.test(r.url())) heavy.push(r.url());
     });
     await page.goto('/');
     await waitForMap(page);

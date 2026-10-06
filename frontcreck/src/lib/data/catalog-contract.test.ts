@@ -7,7 +7,9 @@ import { buildAlbumPageData, buildCatalog, coverUrl, coverUrlAt, isFrameCover, l
 const W: [string, string, string] = ['#222222', '#333333', '#d9a066'];
 const base: Pick<AlbumRecord, 'k' | 'd' | 'w'> = { k: 0, d: [], w: W };
 
-// The same examples as data-pipeline/tests/test_covers.py (cover_url), so both sides build the same URLs.
+// The same examples as data-pipeline/tests/test_covers.py (cover_url), so both sides build the same URLs, except
+// for a YouTube frame: the pipeline downloads hqdefault.jpg and cuts its black bars off itself, a page cannot, so
+// it asks for mqdefault.jpg, which has none (see coverUrlAt).
 const SP_REF = 'ab67616d0000b273' + 'c8b444df094279e70d0ed856';
 const MD5 = '0123456789abcdef0123456789abcdef';
 const AM_PATH = 'Music115/v4/aa/bb/cc/aabbcc-dd/cover.jpg';
@@ -23,7 +25,7 @@ describe('cover URLs for every form of the cover id', () => {
     expect(coverUrlAt('am:' + AM_PATH, 200)).toBe(`https://is1-ssl.mzstatic.com/image/thumb/${AM_PATH}/200x200bb.jpg`);
     expect(coverUrlAt('bc:0123456789', 300)).toBe('https://f4.bcbits.com/img/a0123456789_2.jpg');
     expect(coverUrlAt('bc:0123456789', 640)).toBe('https://f4.bcbits.com/img/a0123456789_16.jpg');
-    expect(coverUrlAt('yt:AfChn_NjI9w', 300)).toBe('https://i.ytimg.com/vi/AfChn_NjI9w/hqdefault.jpg');
+    expect(coverUrlAt('yt:AfChn_NjI9w', 300)).toBe('https://i.ytimg.com/vi/AfChn_NjI9w/mqdefault.jpg');
     expect(coverUrlAt('', 300)).toBeNull();
   });
 
@@ -46,7 +48,7 @@ describe('cover URLs for every form of the cover id', () => {
     expect(coverUrl('am:' + AM_PATH, 37.5)).toBe(`https://is1-ssl.mzstatic.com/image/thumb/${AM_PATH}/75x75bb.jpg`);
     expect(coverUrl('bc:42', 60)).toBe('https://f4.bcbits.com/img/a42_9.jpg');
     expect(coverUrl('bc:42', 116)).toBe('https://f4.bcbits.com/img/a42_2.jpg');
-    expect(coverUrl('yt:abc', 60)).toBe('https://i.ytimg.com/vi/abc/hqdefault.jpg');
+    expect(coverUrl('yt:abc', 60)).toBe('https://i.ytimg.com/vi/abc/mqdefault.jpg');
     expect(coverUrl('', 60)).toBeNull();
   });
 });
@@ -61,7 +63,17 @@ describe('the link-preview image', () => {
     expect(ogCover('dz:' + MD5)).toEqual({ url: `https://cdn-images.dzcdn.net/images/cover/${MD5}/1000x1000-000000-80-0-0.jpg`, width: 1000, height: 1000 });
     expect(ogCover('am:' + AM_PATH)).toEqual({ url: `https://is1-ssl.mzstatic.com/image/thumb/${AM_PATH}/640x640bb.jpg`, width: 640, height: 640 });
     expect(ogCover('bc:7')).toEqual({ url: 'https://f4.bcbits.com/img/a7_16.jpg', width: 700, height: 700 });
-    expect(ogCover('yt:abc')).toEqual({ url: 'https://i.ytimg.com/vi/abc/hqdefault.jpg', width: 480, height: 360 });
+    expect(ogCover('yt:abc')).toEqual({ url: 'https://i.ytimg.com/vi/abc/mqdefault.jpg', width: 320, height: 180 });
+  });
+
+  it('is the cover as stored for a Spotify id without a size prefix', () => {
+    const bare = '8a403ef64b2939cd' + '0'.repeat(24);
+    expect(ogCover(bare)).toEqual({ url: 'https://i.scdn.co/image/' + bare, width: 640, height: 640 });
+  });
+
+  it('asks for the one YouTube frame that has no black bars, at every size', () => {
+    // hqdefault.jpg (480 x 360) letterboxes a 16:9 picture, and its centre square keeps both bars.
+    for (const px of [1, 64, 96, 300, 640, 2000]) expect(coverUrlAt('yt:abc', px)).toBe('https://i.ytimg.com/vi/abc/mqdefault.jpg');
   });
 
   it('knows which covers are video frames', () => {

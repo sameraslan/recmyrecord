@@ -23,7 +23,8 @@ export interface CoverProps {
  * sprite sheet fails too, a lettered tile. The tile is a failure state only: while the remote image (or the
  * sheet) loads, the box is empty. The sprite element, the only reference to a 2.3 MB thumbnail sheet, is
  * rendered only after the remote image failed and the sheet has loaded, so a normal page load never fetches
- * one. A cover that is a 4:3 video frame shows its centre square (`.cover img` is `object-fit: cover`). */
+ * one. A cover that is a video frame (16:9, without bars: see coverUrlAt) shows its centre square (`.cover img`
+ * is `object-fit: cover`). */
 export function Cover({ album, size, className = '', eager = false, fluid = false }: CoverProps) {
   const url = coverUrl(album.coverId, size);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);

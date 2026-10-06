@@ -82,6 +82,47 @@ describe('the list of an album without audio', () => {
     expect(useAppStore.getState().stop).toBe('mood');
   });
 
+  it('moves focus to the list heading when its control is used, since the control then goes away', () => {
+    useAppStore.getState().setStop('sonic');
+    const props = { seedId: 1, total: 0, expanded: false, onToggle: () => {} };
+    const { rerender } = render(<RecList {...props} rows={[]} stop="sonic" note />);
+    const button = screen.getByRole('button', { name: COPY.album.noAudioAction });
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    fireEvent.click(button);
+    const heading = screen.getByRole('heading', { name: COPY.album.listHeading });
+    expect(heading).toHaveAttribute('id', 'recs-h');
+    expect(document.activeElement).toBe(heading);
+    // The page then shows the mood list: the control is gone and focus is still on the heading, not on <body>.
+    rerender(<RecList {...props} rows={[row({ spotifyId: S })]} total={1} stop="mood" />);
+    expect(screen.queryByRole('button', { name: COPY.album.noAudioAction })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole('heading', { name: COPY.album.listHeading }));
+    expect(document.activeElement).not.toBe(document.body);
+  });
+
+  it('renders no empty list beside the note', () => {
+    const { container } = render(<RecList seedId={1} rows={[]} total={0} stop="sonic" expanded={false} onToggle={() => {}} note />);
+    expect(container.querySelector('ol')).toBeNull();
+    expect(screen.queryByRole('list')).toBeNull();
+  });
+
+  it('announces the note politely when the slider arrives at it: a status region that is there before the note', () => {
+    const props = { seedId: 1, expanded: false, onToggle: () => {} };
+    const { rerender } = render(<RecList {...props} rows={[row({ spotifyId: S })]} total={1} stop="mood" />);
+    const status = screen.getByRole('status');
+    expect(status).toBeEmptyDOMElement();
+    rerender(<RecList {...props} rows={[]} total={0} stop="sonic" note />);
+    // The same element, now with the note's sentence and nothing else (the control is not read out with it).
+    expect(screen.getByRole('status')).toBe(status);
+    expect(status).toHaveTextContent(COPY.album.noAudio, { normalizeWhitespace: true });
+    expect(status.textContent).toBe(COPY.album.noAudio);
+    expect(status.querySelector('button')).toBeNull();
+    expect(status.closest('.recs-note')).not.toBeNull();
+    rerender(<RecList {...props} rows={[row({ spotifyId: S })]} total={1} stop="mood" />);
+    expect(screen.getByRole('status')).toBe(status);
+    expect(status).toBeEmptyDOMElement();
+  });
+
   it('shows no note for any other list', () => {
     render(<RecList seedId={1} rows={[row({ spotifyId: S })]} total={1} stop="mood" expanded={false} onToggle={() => {}} />);
     expect(screen.queryByText(COPY.album.noAudio)).toBeNull();

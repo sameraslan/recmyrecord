@@ -7,6 +7,8 @@ import * as THREE from "three";
 import { atlasSheetOf } from "@/lib/data/sprites";
 import type { MapData } from "../data";
 import { requestRender } from "../state/invalidate";
+import { useMapStore } from "../state/mapStore";
+import { viewBounds, type OrthoCameraLike, type ViewBounds } from "../state/projection";
 import { ATLAS_LOAD_PX, zoomForCoverPx } from "../state/zoomLimits";
 
 // ImageBitmapLoader decodes off the main thread (a worker + createImageBitmap),
@@ -44,8 +46,12 @@ export function coversNear(zoom: number, canvasHeightCssPx: number): boolean {
   return zoom >= zoomForCoverPx(ATLAS_LOAD_PX, canvasHeightCssPx);
 }
 
-/** An empty texture of the sheet's size, allocated on the GPU with its mipmap levels and no pixels yet. */
-function createAtlasTexture(renderer: THREE.WebGLRenderer, width: number, height: number): THREE.Texture {
+/**
+ * An empty texture of the sheet's size, allocated on the GPU with every mipmap level and no pixels yet. Its
+ * mipmaps are not built here (there is nothing to build them from): uploadAtlas builds them once, with the
+ * last band.
+ */
+export function createAtlasTexture(renderer: THREE.WebGLRenderer, width: number, height: number): THREE.Texture {
   const tex = new THREE.DataTexture(null, width, height, THREE.RGBAFormat, THREE.UnsignedByteType);
   // Storage only: the pixels arrive band by band (uploadAtlas).
   tex.source.dataReady = false;
@@ -60,9 +66,16 @@ function createAtlasTexture(renderer: THREE.WebGLRenderer, width: number, height
   tex.colorSpace = THREE.NoColorSpace;
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.magFilter = THREE.LinearFilter;
-  tex.generateMipmaps = true;
+  // three.js allocates storage for all mipmap levels in two cases: when generateMipmaps is on, and then it also
+  // builds them at once (here from an empty level 0, a wasted pass over the whole sheet), or when the texture
+  // lists its own mipmaps. Listing them without data (dataReady is false, so none is uploaded) gets the storage
+  // and nothing else. The list is only read by this one upload, so it is cleared again.
+  const levels = Math.floor(Math.log2(Math.max(width, height))) + 1;
+  tex.mipmaps = Array.from({ length: levels }, (_, i) => ({ data: null, width: Math.max(1, width >> i), height: Math.max(1, height >> i) })) as unknown as THREE.Texture["mipmaps"];
+  tex.generateMipmaps = false;
   tex.needsUpdate = true;
   renderer.initTexture(tex);
+  tex.mipmaps = [];
   return tex;
 }
 
@@ -71,33 +84,37 @@ const nextFrame = (): Promise<void> => new Promise((resolve) => requestAnimation
 /**
  * Copies a decoded sheet into a new texture, a band per animation frame, building the mipmaps with the last
  * band, and releases the decoded image: the texture is the only copy kept (a decoded 3072 px sheet is 38 MB,
- * its texture with mipmaps 50 MB). Resolves with null, having released everything, when `current` turns false
- * on the way (the data set changed, the map unmounted or the WebGL context was lost).
+ * its texture with mipmaps 50 MB). Resolves with null, having released everything, when the load is no longer
+ * wanted on the way: `current` turned false (the data set changed, the map unmounted, or the WebGL context was
+ * lost or restored: the hook below moves its epoch on in those events) or the context reports itself lost (the
+ * event for a loss arrives later than the loss). The texture is allocated only after the first such check.
  */
-async function uploadAtlas(renderer: THREE.WebGLRenderer, bitmap: ImageBitmap, current: () => boolean): Promise<THREE.Texture | null> {
-  const { width, height } = bitmap;
-  const tex = createAtlasTexture(renderer, width, height);
-  // Never uploaded itself: only the source of the copies below.
-  const source = new THREE.Texture(bitmap as unknown as HTMLImageElement);
-  const bands = uploadBands(height);
-  const region = new THREE.Box2();
-  const at = new THREE.Vector2();
+export async function uploadAtlas(renderer: THREE.WebGLRenderer, bitmap: ImageBitmap, current: () => boolean): Promise<THREE.Texture | null> {
+  const wanted = () => current() && !renderer.getContext().isContextLost();
+  let tex: THREE.Texture | null = null;
   try {
-    // The mipmaps are built once, by the copy of the last band.
-    tex.generateMipmaps = false;
+    if (!wanted()) return null;
+    const { width, height } = bitmap;
+    tex = createAtlasTexture(renderer, width, height);
+    // Never uploaded itself: only the source of the copies below.
+    const source = new THREE.Texture(bitmap as unknown as HTMLImageElement);
+    const bands = uploadBands(height);
+    const region = new THREE.Box2();
+    const at = new THREE.Vector2();
     for (let i = 0; i < bands.length; i++) {
       await nextFrame();
-      if (!current()) {
+      if (!wanted()) {
         tex.dispose();
         return null;
       }
       const [y0, y1] = bands[i];
+      // The mipmaps are built once, by the copy of the last band.
       if (i === bands.length - 1) tex.generateMipmaps = true;
       renderer.copyTextureToTexture(source, tex, region.set(at.set(0, y0), new THREE.Vector2(width, y1)), at.set(0, y0));
     }
     return tex;
   } catch (err) {
-    tex.dispose();
+    tex?.dispose();
     throw err;
   } finally {
     bitmap.close();
@@ -117,49 +134,73 @@ function buildAtlasIndexByPosition(data: MapData): Int16Array {
   return out;
 }
 
+const view: ViewBounds = { left: 0, right: 0, top: 0, bottom: 0 };
+
 /**
- * Cheap O(n) pass over the current interpolated positions, counting how many
- * project inside the camera's NDC frustum (i.e. currently on screen) per
- * atlas index. Used to decide which not-yet-loaded sheet to fetch next, so
- * covers the user can actually see arrive before covers that are off-screen
- * .
+ * Cheap O(n) pass over the current interpolated positions, counting into `counts` (one entry per sheet) how
+ * many albums are inside the camera's view, i.e. on screen, per atlas sheet. It decides which not-yet-loaded
+ * sheet to fetch next, and whether any is needed at all. It allocates nothing, since it runs while the camera
+ * moves (at most once per RECHECK_MS). It reads the camera as it is now (viewBounds, the map's one mirror of
+ * the projection), not its matrices: those are only brought up to date when a frame is drawn, and a look made
+ * after a jump of the camera and before that frame would count the place the camera has left.
  */
-function countVisibleSpritesByAtlas(
+export function countVisibleSpritesByAtlas(
   atlasIndexByPosition: Int16Array,
-  positionsRef: React.RefObject<Float32Array>,
-  camera: THREE.OrthographicCamera,
-  atlasCount: number,
-): number[] {
-  const counts = new Array(atlasCount).fill(0);
-  const positions = positionsRef.current;
+  positions: Float32Array,
+  camera: OrthoCameraLike,
+  counts: Int32Array,
+): void {
+  counts.fill(0);
   const n = atlasIndexByPosition.length;
-  if (positions.length < n * 2) return counts;
-  const v = new THREE.Vector3();
+  if (positions.length < n * 2) return;
+  viewBounds(camera, view);
+  const left = camera.position.x + view.left;
+  const right = camera.position.x + view.right;
+  const bottom = camera.position.y + view.bottom;
+  const top = camera.position.y + view.top;
+  const sheets = counts.length;
   for (let i = 0; i < n; i++) {
-    const atlasIndex = atlasIndexByPosition[i];
-    if (atlasIndex < 0 || atlasIndex >= atlasCount) continue;
-    v.set(positions[i * 2], positions[i * 2 + 1], 0);
-    v.project(camera);
-    if (v.x >= -1 && v.x <= 1 && v.y >= -1 && v.y <= 1) {
-      counts[atlasIndex]++;
-    }
+    const sheet = atlasIndexByPosition[i];
+    if (sheet < 0 || sheet >= sheets) continue;
+    const x = positions[i * 2];
+    if (x < left || x > right) continue;
+    const y = positions[i * 2 + 1];
+    if (y < bottom || y > top) continue;
+    counts[sheet]++;
   }
-  return counts;
 }
 
 /**
- * Loads atlas-0 once covers are about to show (ATLAS_LOAD_PX), then the
- * remaining sheets one at a time, always picking whichever not-yet-loaded
- * sheet currently covers the most on-screen sprites (recomputed each time a
- * sheet finishes, since the camera may have moved during the load). The
- * queue waits while the camera is zoomed back out to where no covers show
- * and goes on at the next zoom in: a catalog of 10,467 albums has eleven
- * sheets (about 25 MB, 50 MB of texture each), which a glance in and out
- * should not fetch. Reads
- * camera.zoom directly off the live THREE camera inside useFrame (no React
- * state or prop feeds the zoom in), and only ever flips the `textures` state
- * array when a texture actually finishes loading or the threshold is crossed
- * for the first time, not once per frame.
+ * While no sheet that is still to load has an album on screen, the queue looks again at most this often, and
+ * only when the map has drawn a frame since (camera movement, the slider): each such frame makes sure one look
+ * is due after it, so the last frame of a movement is always followed by one.
+ */
+export const RECHECK_MS = 120;
+
+/** Where the queue is. Only LOADING has a request or an upload in flight. */
+const PAUSED = 0; // zoomed out to where no covers show (also the start): the next frame that is zoomed in starts it
+const LOADING = 1;
+const WAITING = 2; // zoomed in, and no sheet that is still to load has an album on screen
+const DONE = 3; // every sheet is loaded
+const HALTED = 4; // the WebGL context is lost: nothing happens until it is restored
+
+/**
+ * Loads the atlas sheets that are needed, one at a time, once covers are about to show (ATLAS_LOAD_PX):
+ * atlas-0 first when it has an album on screen, then always whichever not-yet-loaded sheet currently covers
+ * the most on-screen albums (recomputed each time a sheet finishes, since the camera may have moved during the
+ * load). A sheet with no album on screen is not loaded: a catalog of 10,467 albums has eleven sheets (about
+ * 25 MB to fetch, 50 MB of texture each), and zoomed in to a few dozen covers only some of them are in view.
+ * The queue then waits and looks again as the camera moves (RECHECK_MS, outside the frames). The sheet of the album picked in
+ * Explore counts as needed wherever that album is, since the map draws it large and framed. Sheets that were
+ * loaded stay loaded (nothing is evicted). The queue also waits while the camera is zoomed back out to where no
+ * covers show, and goes on at the next zoom in, so a glance in and out does not fetch every sheet.
+ *
+ * A lost WebGL context stops the queue and discards the sheet in flight; a restored one has empty textures (the
+ * decoded sheets are not kept), so every needed sheet is loaded again, from the browser's cache.
+ *
+ * Reads camera.zoom directly off the live THREE camera inside useFrame (no React state or prop feeds the zoom
+ * in), and only ever flips the `textures` state array when a texture actually finishes loading or the context
+ * is restored, not once per frame. The frame callback does no work while a sheet is loading or all are loaded.
  */
 export function useAtlasTextures(
   data: MapData,
@@ -188,26 +229,29 @@ export function useAtlasTextures(
     setTextures(urls.map(() => null));
   }
   const atlasIndexByPosition = useMemo(() => buildAtlasIndexByPosition(data), [data]);
+  // On-screen albums per sheet, refilled by every look (never reallocated while the data set stays).
+  const counts = useMemo(() => new Int32Array(urls.length), [urls]);
   const loadedRef = useRef<Set<number>>(new Set());
-  const loadingRef = useRef(false);
-  const startedRef = useRef(false);
+  const phaseRef = useRef(PAUSED);
+  // performance.now() of the last look at what is on screen, and the timer of the one look that is due.
+  const lastLookRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Every loaded texture, kept only for cleanup (the `textures` state array
   // above is what shader consumers read).
   const loadedAtlasesRef = useRef<Map<number, THREE.Texture>>(new Map());
-  // Bumped whenever the url set changes or the component unmounts. loadNext
-  // captures the epoch active when it starts a load; if the epoch has moved
-  // on by the time that load resolves (unmount, or a new MapData swapped
-  // in), the result is disposed instead of written into state, so neither
-  // an unmounted component nor a stale data set ever leaks a texture/bitmap.
+  // Bumped whenever the url set changes, the component unmounts, or the WebGL context is lost or restored (in
+  // the event itself, not in an effect after it: a band or a failed request may run in between). loadNext
+  // captures the epoch active when it starts a load; if the epoch has moved on by the time that load resolves,
+  // the result is disposed instead of written into state and the queue of the new epoch is left alone, so
+  // neither an unmounted component, a stale data set nor a dead context ever keeps a texture/bitmap.
   const epochRef = useRef(0);
 
-  // Reset per data load (a fresh MapData means fresh, empty atlas state),
+  // Reset per data load and per restored context (fresh, empty atlas state),
   // and dispose whatever the previous url set had already loaded.
   useEffect(() => {
     epochRef.current += 1;
     loadedRef.current = new Set();
-    loadingRef.current = false;
-    startedRef.current = false;
+    phaseRef.current = PAUSED;
     for (const texture of loadedAtlasesRef.current.values()) texture.dispose();
     loadedAtlasesRef.current = new Map();
     loadedSheets.clear();
@@ -215,6 +259,8 @@ export function useAtlasTextures(
     return () => {
       loadedSheets.clear();
       epochRef.current += 1;
+      if (timerRef.current !== null) clearTimeout(timerRef.current);
+      timerRef.current = null;
       for (const texture of loadedAtlasesRef.current.values()) texture.dispose();
       loadedAtlasesRef.current = new Map();
     };
@@ -222,12 +268,25 @@ export function useAtlasTextures(
 
   useEffect(() => {
     const canvas = gl.domElement;
+    const onLost = () => {
+      // In the event, so the sheet in flight is dropped at its next step whatever runs first.
+      epochRef.current += 1;
+      phaseRef.current = HALTED;
+    };
     const onRestored = () => {
+      // Also here: the effect above only runs after the next commit, and a band of a load that began while the
+      // context was being lost must not commit a texture after the reset below.
+      epochRef.current += 1;
+      phaseRef.current = HALTED;
       setTextures(urls.map(() => null));
       setRestores((n) => n + 1);
     };
+    canvas.addEventListener("webglcontextlost", onLost);
     canvas.addEventListener("webglcontextrestored", onRestored);
-    return () => canvas.removeEventListener("webglcontextrestored", onRestored);
+    return () => {
+      canvas.removeEventListener("webglcontextlost", onLost);
+      canvas.removeEventListener("webglcontextrestored", onRestored);
+    };
   }, [gl, urls]);
 
   // Declared before the useFrame below (which calls it) rather than relying
@@ -235,38 +294,48 @@ export function useAtlasTextures(
   // runtime either way, but keeping definition-before-use in source order
   // matches the static analysis the react-hooks lint plugin does.
   function loadNext() {
-    if (loadingRef.current) return;
-    if (!coversNear(camera.zoom, get().size.height)) {
-      // Zoomed back out: the frame callback below starts the queue again at the next zoom in.
-      startedRef.current = false;
+    if (phaseRef.current === LOADING || phaseRef.current === HALTED) return;
+    if (gl.getContext().isContextLost()) {
+      // Lost before its event arrived: the restore starts the queue again.
+      phaseRef.current = HALTED;
       return;
     }
-    const remaining: number[] = [];
+    if (!coversNear(camera.zoom, get().size.height)) {
+      // Zoomed back out: the frame callback below starts the queue again at the next zoom in.
+      phaseRef.current = PAUSED;
+      return;
+    }
+    lastLookRef.current = performance.now();
+    countVisibleSpritesByAtlas(atlasIndexByPosition, positionsRef.current, camera, counts);
+    // The album picked in Explore is drawn from its sheet wherever the camera is on its way to (the same
+    // condition as u_selectedIndex in AlbumField).
+    const { focus, selected } = useMapStore.getState().input;
+    if (!focus && selected !== null && selected >= 0 && selected < atlasIndexByPosition.length) {
+      const sheet = atlasIndexByPosition[selected];
+      if (sheet < counts.length) counts[sheet] += 1;
+    }
+    // The sheet still to load with the most albums on screen (the lowest sheet on a tie); -1 when none has any.
+    let nextIndex = -1;
+    let remaining = 0;
     for (let i = 0; i < urls.length; i++) {
-      if (!loadedRef.current.has(i)) remaining.push(i);
+      if (loadedRef.current.has(i)) continue;
+      remaining++;
+      if (counts[i] > 0 && (nextIndex < 0 || counts[i] > counts[nextIndex])) nextIndex = i;
     }
-    if (remaining.length === 0) return;
-
-    // Atlas-0 always goes first (it is the default/most common sheet and
-    // there is no "visible count" yet on the very first load). After that,
-    // load whichever remaining sheet currently covers the most on-screen
-    // sprites.
-    let nextIndex = remaining[0];
-    if (loadedRef.current.size > 0 || !remaining.includes(0)) {
-      const counts = countVisibleSpritesByAtlas(
-        atlasIndexByPosition,
-        positionsRef,
-        camera,
-        urls.length,
-      );
-      nextIndex = remaining.reduce(
-        (best, i) => (counts[i] > counts[best] ? i : best),
-        remaining[0],
-      );
+    if (remaining === 0) {
+      phaseRef.current = DONE;
+      return;
     }
+    if (nextIndex < 0) {
+      // Nothing on screen needs a sheet: the frame callback below has it looked at again as the camera moves.
+      phaseRef.current = WAITING;
+      return;
+    }
+    // Atlas-0 goes first when it is needed at all (it is the default/most common sheet).
+    if (loadedRef.current.size === 0 && counts[0] > 0) nextIndex = 0;
 
     const myEpoch = epochRef.current;
-    loadingRef.current = true;
+    phaseRef.current = LOADING;
     const current = () => epochRef.current === myEpoch;
     loadBitmap(urls[nextIndex])
       // The url set changed, the component unmounted or the context was lost
@@ -290,6 +359,9 @@ export function useAtlasTextures(
         requestRender();
       })
       .catch((err) => {
+        // A request that fails after its epoch ended says nothing about the sheet in the new one (a restored
+        // context, a new data set), which fetches it again.
+        if (!current()) return;
         console.error("atlas load failed", urls[nextIndex], err);
         // Mark it loaded anyway so a single bad sheet doesn't wedge the
         // queue; the corresponding sprites just stay unloaded (u_atlasLoaded
@@ -297,16 +369,30 @@ export function useAtlasTextures(
         loadedRef.current.add(nextIndex);
       })
       .finally(() => {
-        loadingRef.current = false;
-        if (epochRef.current === myEpoch) loadNext();
+        // The phase belongs to the queue of the current epoch.
+        if (!current()) return;
+        phaseRef.current = WAITING;
+        loadNext();
       });
   }
 
+  function lookAgain() {
+    timerRef.current = null;
+    if (phaseRef.current === WAITING) loadNext();
+  }
+
   useFrame((state) => {
-    if (startedRef.current) return;
-    if (!coversNear(camera.zoom, state.size.height)) return;
-    startedRef.current = true;
-    loadNext();
+    const phase = phaseRef.current;
+    if (phase === PAUSED) {
+      if (!coversNear(camera.zoom, state.size.height)) return;
+      loadNext();
+      if (phaseRef.current !== WAITING) return;
+    } else if (phase !== WAITING) return;
+    // Waiting for an album of a sheet that is not loaded to come into view. The look itself is never made in
+    // the frame: this only makes sure that one is due after it, RECHECK_MS after the last one at the earliest.
+    // Frames stop when the camera does, so the last movement would otherwise go unseen.
+    if (timerRef.current !== null) return;
+    timerRef.current = setTimeout(lookAgain, Math.max(0, RECHECK_MS - (performance.now() - lastLookRef.current)));
   });
 
   return textures;

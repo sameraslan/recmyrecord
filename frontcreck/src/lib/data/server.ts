@@ -2,8 +2,9 @@ import 'server-only';
 import fs from 'node:fs';
 import path from 'node:path';
 import { REC_MAX, SHELF_SIZE, buildAlbumPageData, buildCatalog, pickShelf, toSummary } from '@/lib/data/catalog';
+import { ATLAS_PER_SHEET, MAX_ATLAS_SHEETS, atlasCount } from '@/lib/data/sprites';
 import { STOP_IDS } from '@/lib/types';
-import type { AlbumPageData, AlbumRecord, AlbumSummary, Catalog, Positions, Recs, Vocab } from '@/lib/types';
+import type { AlbumPageData, AlbumRecord, AlbumSummary, Catalog, ListenLinks, Positions, Recs, Vocab } from '@/lib/types';
 
 /**
  * The folder under public/ that holds the data: `data` unless RMR_DATA_DIR names another one, for building
@@ -62,6 +63,48 @@ export function assertRecsConsistent(albums: readonly AlbumRecord[], recs: Recs,
   }
 }
 
+const LINK_NAME = '[A-Za-z0-9_-]+';
+/**
+ * What a listen-link reference (`l` in albums.json) looks like, per service: the mirror of LINK_REF_RE in
+ * data-pipeline/rmr_pipeline/links.py, which the pipeline's validator checks the same file against. The page
+ * builds a URL from a reference by putting it after a fixed prefix (`listenLink` in catalog.ts), so a reference
+ * of another form would be a broken or a misdirected link.
+ */
+export const LINK_REF_RE: Record<keyof ListenLinks, RegExp> = {
+  am: /^[a-z]{2}\/[0-9]+$/,
+  bc: /^(?:[a-z0-9-]+\.)+[a-z]{2,}\/(?:album|track)\/[A-Za-z0-9_.~%-]*[A-Za-z0-9_~%-]$/,
+  dz: /^[0-9]+$/,
+  yt: /^[A-Za-z0-9_-]{11}$/,
+  sc: new RegExp(`^${LINK_NAME}/(?:sets/)?${LINK_NAME}$`),
+};
+
+/** Fails the build when an album's listen links are not an object of known services with references of their form. */
+export function assertLinksValid(albums: readonly AlbumRecord[]): void {
+  for (const a of albums) {
+    if (a.l === undefined) continue;
+    const links: unknown = a.l;
+    if (links === null || typeof links !== 'object' || Array.isArray(links)) throw new Error(`albums.json: l of ${a.slug} must be an object of listen links`);
+    for (const [key, ref] of Object.entries(links)) {
+      if (!Object.hasOwn(LINK_REF_RE, key)) {
+        throw new Error(`albums.json: ${a.slug} has a link for "${key}", which is not a service (${Object.keys(LINK_REF_RE).join(', ')})`);
+      }
+      if (typeof ref !== 'string' || !LINK_REF_RE[key as keyof ListenLinks].test(ref)) {
+        throw new Error(`albums.json: ${a.slug} has a bad ${key} link ${JSON.stringify(ref)}`);
+      }
+    }
+  }
+}
+
+/** Fails the build when the albums need more atlas sheets than the map can draw (it would leave the rest as dots). */
+export function assertAtlasSheets(albumCount: number): void {
+  const sheets = atlasCount(albumCount);
+  if (sheets > MAX_ATLAS_SHEETS) {
+    throw new Error(
+      `albums.json: ${albumCount} albums need ${sheets} atlas sheets but the map draws at most ${MAX_ATLAS_SHEETS} (${MAX_ATLAS_SHEETS * ATLAS_PER_SHEET} albums)`,
+    );
+  }
+}
+
 /**
  * The album pages to prerender: all of them, unless RMR_PRERENDER asks for fewer (a test build of a large data
  * set on a small disk). Its value is a comma list of a count (that many leading albums) and slugs.
@@ -86,6 +129,8 @@ function load(): { catalog: Catalog; recs: Recs } {
     // positions.json is only read to check it; the client fetches it.
     assertDataConsistent(albums.length, recs, readJson<Positions>('positions.json'));
     assertRecsConsistent(albums, recs);
+    assertLinksValid(albums);
+    assertAtlasSheets(albums.length);
     cache = { catalog: buildCatalog(albums, readJson<Vocab>('vocab.json')), recs };
   }
   return cache;

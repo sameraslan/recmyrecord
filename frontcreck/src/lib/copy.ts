@@ -52,12 +52,12 @@ export const COPY = {
       `${title} by ${artist}${shared.length ? `. Shares ${shared.join(', ')}` : ''}`,
     rowSpotify: (title: string) => `Open ${title} in Spotify (opens in a new tab)`,
     regionLabel: (title: string) => `${title} and the closest albums`,
-    /** In place of the list at the sonic and balanced stops, for an album without audio. Working wording. */
-    noAudio: 'We couldn’t find audio for this album yet, so it only has mood matches.',
-    /** Under that note: moves the slider to Mood. Working wording. */
+    /** In place of the list at the sonic and balanced stops, for an album without audio. */
+    noAudio: 'Sound matches aren’t available for this album yet.',
+    /** Under that note: moves the slider to Mood. */
     noAudioAction: 'Show mood matches',
   },
-  /** Links to an album on a service other than Spotify, in the pattern of the Spotify strings. Working wording. */
+  /** Links to an album on a service other than Spotify, in the pattern of the Spotify strings. */
   listen: {
     services: { am: 'Apple Music', bc: 'Bandcamp', dz: 'Deezer', yt: 'YouTube', sc: 'SoundCloud' },
     openIn: (service: string) => `Open in ${service}`,

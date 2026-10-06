@@ -12,6 +12,18 @@ import type { AlbumRecord, Recs, StopId } from '../src/lib/types';
 const DATA_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public', process.env.RMR_DATA_DIR || 'data');
 const readJson = <T>(name: string): T => JSON.parse(fs.readFileSync(path.join(DATA_DIR, name), 'utf8')) as T;
 
+/**
+ * The hosts remote covers come from, one per form of the cover id (`coverUrlAt` in src/lib/data/catalog.ts; the
+ * same list as the img-src hosts of next.config.ts). Today's data only uses the first.
+ */
+export const COVER_HOSTS = ['i.scdn.co', 'cdn-images.dzcdn.net', 'is1-ssl.mzstatic.com', 'f4.bcbits.com', 'i.ytimg.com'] as const;
+/** Any URL on a cover host: for `page.route` (holding or failing every remote cover) and for telling a failed cover from another failed request. */
+export const COVER_URL_RE = new RegExp(`^https://(?:${COVER_HOSTS.map((h) => h.replaceAll('.', '\\.')).join('|')})/`);
+/** A thumbnail sheet: thumbs.webp, then thumbs-1.webp, ... (one per 4,096 albums). */
+export const THUMB_SHEET_RE = /\/data\/thumbs(-\d+)?\.webp$/;
+/** A map atlas sheet: atlas-0.webp, ... (one per 1,024 albums, so two digits from the eleventh). */
+export const ATLAS_SHEET_RE = /\/data\/atlas-\d+\.webp$/;
+
 let cache: { albums: AlbumRecord[]; recs: Recs } | null = null;
 function data(): { albums: AlbumRecord[]; recs: Recs } {
   cache ??= { albums: readJson<AlbumRecord[]>('albums.json'), recs: readJson<Recs>('recs.json') };
