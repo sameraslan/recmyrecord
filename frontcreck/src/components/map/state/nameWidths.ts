@@ -41,18 +41,22 @@ export function setNameFontFamily(next: string): void {
   clearNameWidths();
 }
 
-let placer: (() => void) | null = null;
+let placer: (() => boolean) | null = null;
 
-/** RegionNamesDriver registers its placement here while it is mounted. */
-export function setNamesPlacer(fn: (() => void) | null): void {
+/** RegionNamesDriver registers its placement here while it is mounted. The placement says whether it could
+ * place (false: it has no labels yet). */
+export function setNamesPlacer(fn: (() => boolean) | null): void {
   placer = fn;
+}
+
+/** A driver that leaves clears its own placement only: one mounted since keeps its own. */
+export function clearNamesPlacer(fn: () => boolean): void {
+  if (placer === fn) placer = null;
 }
 
 /** Places the names again from the camera as it stands, without drawing a map frame: the names are DOM, so
  * when only they changed (switched on, their face arrived) the canvas has nothing new to draw. False when no
- * driver is mounted yet; the caller then asks for one frame, and the driver places on it. */
+ * driver is mounted yet or it could not place; the caller then asks for one frame, and the driver places on it. */
 export function placeNamesNow(): boolean {
-  if (!placer) return false;
-  placer();
-  return true;
+  return placer ? placer() : false;
 }

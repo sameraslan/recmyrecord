@@ -23,7 +23,10 @@ export const NAME_EDGE_PX = 10;
 const NAME_AREA_PX = 160 * 90;
 export const NAME_CONTRAST = 4.5;
 /** The map scale, in CSS px per world unit, at which part 1's build measured ThemeLabel.lum under each name's
- * box. Under this scale a name covers more of the map than was measured, so its halo is at full strength. */
+ * box (scripts/theme/bake-core.js LABEL_REF_PPW; the box is the name at its full size plus 30 px each side).
+ * A name drawn at full size covers more of the map than was measured once the scale is under this, so its halo
+ * is then at full strength. Zoomed out, names are drawn smaller (nameZoomK, 0.85 at the least), and a name at
+ * k of its size stays inside the measured box down to k times this scale: see layoutNames. */
 export const NAME_LUM_PX_PER_WORLD = 600;
 /** Opacity of a name that is not `strong` (styles/map.css .rn.fair). */
 export const NAME_FAIR_ALPHA = 0.82;
@@ -132,7 +135,7 @@ export interface NamesInput {
   blockers: readonly ViewBounds[];
   phone: boolean;
   zoomK: number;
-  /** The map scale, CSS px per world unit: under NAME_LUM_PX_PER_WORLD every name gets the full halo. */
+  /** The map scale, CSS px per world unit: under NAME_LUM_PX_PER_WORLD times the smaller of 1 and zoomK every name gets the full halo. */
   pxPerWorld: number;
   /** Every name gets the full halo whatever the scale (during a slider morph and on a phone, when label.lum
    * does not describe the gas behind the name). */
@@ -152,8 +155,10 @@ function hitsAny(l: number, t: number, r: number, b: number, list: readonly View
   return false;
 }
 
-/** Boxes of the names placed so far in this call, four numbers each (left, top, right, bottom). */
-const taken = new Float64Array(4 * NAMES_MAX);
+/** Boxes of the names placed so far in this call, four numbers each (left, top, right, bottom). It holds
+ * TAKEN_MAX boxes and layoutNames never places more: a typed array drops writes past its end without a word. */
+const TAKEN_MAX = Math.max(NAMES_MAX, NAMES_MAX_PHONE);
+const taken = new Float64Array(4 * TAKEN_MAX);
 
 /** Does the box (l, t, r, b) touch any of the first `count` taken boxes? */
 function hitsTaken(l: number, t: number, r: number, b: number, count: number): boolean {
@@ -180,17 +185,20 @@ function haloOf(label: ThemeLabel): number {
 /** Scratch reused by every call (the layout runs on camera frames, so it allocates little beyond its result). */
 const order: NameCandidate[] = [];
 
-/** Places names in priority order. Returns only the names that found a spot; the caller hides the rest. */
+/** Places names in priority order. Returns only the names that found a spot; the caller hides the rest.
+ * Not reentrant: `order` and `taken` are shared by every call, so `input.widthOf` must not call layoutNames. */
 export function layoutNames(input: NamesInput): PlacedName[] {
   const { visible: v, blockers, phone, zoomK, sticky } = input;
-  // label.lum holds for the unmoved name at rest, at NAME_LUM_PX_PER_WORLD or closer in.
-  const fullHalo = input.fullHalo || input.pxPerWorld < NAME_LUM_PX_PER_WORLD;
+  // label.lum holds for the unmoved name at rest, at NAME_LUM_PX_PER_WORLD or closer in for a name at full size.
+  // A name drawn at zoomK of its size is zoomK as wide, so the measured box (30 px to spare each side) covers
+  // it down to zoomK times that scale: 510 px per world unit at the Whole map, where zoomK is 0.85.
+  const fullHalo = input.fullHalo || input.pxPerWorld < NAME_LUM_PX_PER_WORLD * Math.min(1, zoomK);
   let blocked = 0;
   for (const k of blockers) {
     blocked += Math.max(0, Math.min(k.right, v.right) - Math.max(k.left, v.left)) * Math.max(0, Math.min(k.bottom, v.bottom) - Math.max(k.top, v.top));
   }
   const area = Math.max(0, v.right - v.left) * Math.max(0, v.bottom - v.top);
-  const budget = Math.min(phone ? NAMES_MAX_PHONE : NAMES_MAX, Math.max(1, Math.floor((area - blocked) / NAME_AREA_PX)));
+  const budget = Math.min(TAKEN_MAX, phone ? NAMES_MAX_PHONE : NAMES_MAX, Math.max(1, Math.floor((area - blocked) / NAME_AREA_PX)));
   const minX = v.left + NAME_EDGE_PX;
   const maxX = v.right - NAME_EDGE_PX;
   const minY = v.top + NAME_EDGE_PX;

@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { ThemeLabel } from '@/lib/data/theme';
 import { NAMES_BAND_PX } from '../theme';
@@ -162,6 +164,8 @@ describe('layoutNames', () => {
     const blockers = chromeBlockers(DESKTOP);
     const cands = [cand('slider', 140, 80, 9), cand('zoom', 1410, 740, 8), cand('hint', 150, 825, 7), cand('edge', 30, 400, 6)];
     const out = layoutNames(input({ candidates: cands }));
+    // The hint candidate finds a spot above the hint line: the checks below run on at least one name.
+    expect(out.length).toBeGreaterThan(0);
     for (const p of out) {
       const w = widths.widthOf(label('x', 0), p.fontPx) / 2 + 6;
       const h = (p.fontPx * 1.05) / 2 + 4;
@@ -202,6 +206,43 @@ describe('layoutNames', () => {
     const bright = (pxPerWorld: number) => layoutNames(input({ candidates: [cand('b', 700, 400, 5, { lum: 0.9 })], pxPerWorld }))[0].halo;
     expect(bright(600)).toBe(0.75);
     expect(bright(599.99)).toBe(1);
+  });
+
+  it('keeps the solved halo below 600 for names drawn smaller than they were measured: down to 600 times their size factor', () => {
+    // Zoomed out, names are drawn at 0.85 of the size their gas was measured for (nameZoomK's floor), so the
+    // measured box still covers them down to 600 x 0.85 = 510 px per world unit.
+    const at = (pxPerWorld: number, zoomK: number) => layoutNames(input({ candidates: [cand('a', 700, 400, 5)], pxPerWorld, zoomK }))[0].halo;
+    for (const scale of [510, 510.01, 597, 600, 900]) expect(at(scale, 0.85), `${scale} px per world unit`).toBe(0.65);
+    for (const scale of [120, 468, 509.99]) expect(at(scale, 0.85), `${scale} px per world unit`).toBe(1);
+    // A name at full size or larger was measured at 600: nothing changes for it.
+    expect(at(599.99, 1)).toBe(1);
+    expect(at(599.99, 1.2)).toBe(1);
+    expect(at(600, 1.2)).toBe(0.65);
+  });
+
+  it('at that lowest scale every name of the real theme, with 8 px around it, lies inside the box its gas was measured in', () => {
+    const theme = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../../public/data/theme/theme.json'), 'utf8')) as { labels: Record<string, ThemeLabel[]> };
+    // Tenor Sans capitals run about 0.7 em; widthOf adds the tracking.
+    const real = createWidthCache((text) => text.length * 70);
+    const k = nameZoomK(0);
+    expect(k).toBe(0.85);
+    let checked = 0;
+    for (const stop of ['sonic', 'balanced', 'mood']) {
+      for (const l of theme.labels[stop]) {
+        // scripts/theme/bake-core.js labelFontPx and labelBox, in px at 600 px per world unit.
+        const fs0 = 0.88 * (l.strong ? 17 + 7 * Math.min(1, Math.sqrt(l.n / 346)) : 15 + 3 * Math.min(1, Math.sqrt(l.n / 346)));
+        const measuredW = (0.47 * fs0 * l.name.length + 30) / NAME_LUM_PX_PER_WORLD;
+        const measuredH = (0.525 * fs0 + 28) / NAME_LUM_PX_PER_WORLD;
+        // The name as layoutNames boxes it, in world units at 600 x 0.85.
+        const fontPx = nameFontPx(l, false, k);
+        const drawnW = (real.widthOf(l, fontPx) / 2 + 6 + 8) / (NAME_LUM_PX_PER_WORLD * k);
+        const drawnH = ((fontPx * 1.05) / 2 + 4 + 8) / (NAME_LUM_PX_PER_WORLD * k);
+        expect(drawnW, `${stop} ${l.name} width`).toBeLessThanOrEqual(measuredW);
+        expect(drawnH, `${stop} ${l.name} height`).toBeLessThanOrEqual(measuredH);
+        checked++;
+      }
+    }
+    expect(checked).toBe(30);
   });
 
   it('returns nothing for a stop with no labels', () => {

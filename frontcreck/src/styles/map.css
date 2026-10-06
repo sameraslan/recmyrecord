@@ -137,6 +137,10 @@
   text-shadow: var(--rn-shadow-full);
 }
 .rn.fair b { opacity: calc(var(--rn-a-ink) * .82); }
+/* While the slider is between stops (the driver sets the class on the first frame of the fade and takes it off
+ * on the last) the fading letters are their own layer, so each frame of the fade changes a layer's opacity and
+ * paints no stroke or shadow again. Same pixels. Not at rest: 17 more layers for nothing. */
+.rn-layer.is-fading .rn b { will-change: opacity; }
 
 @media (max-width: 899px) {
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }

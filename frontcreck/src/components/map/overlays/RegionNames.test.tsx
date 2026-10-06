@@ -1,10 +1,10 @@
 import { render } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ThemeData, ThemeLabel } from '@/lib/data/theme';
 import { useAppStore } from '@/lib/store';
 import { setInvalidate } from '../state/invalidate';
 import { useMapStore } from '../state/mapStore';
-import { setNamesPlacer } from '../state/nameWidths';
+import { nameWidthsVersion, setNamesPlacer } from '../state/nameWidths';
 import { RegionNames } from './RegionNames';
 
 const lab = (id: string, name: string, strong: boolean): ThemeLabel => ({ id, name, x: 0, y: 0, strong, n: 100, p: 1, rgb: [240, 236, 228], lum: 0.3 });
@@ -65,7 +65,7 @@ describe('RegionNames', () => {
 
   it('has the driver place the names when they appear, without drawing a map frame; switching them off draws none either', () => {
     const frame = vi.fn();
-    const place = vi.fn();
+    const place = vi.fn(() => true);
     setInvalidate(frame);
     setNamesPlacer(place);
     useMapStore.setState({ theme: THEME });
@@ -88,5 +88,102 @@ describe('RegionNames', () => {
     const { unmount } = render(<RegionNames />);
     expect(frame).toHaveBeenCalledTimes(1);
     unmount();
+  });
+
+  it('asks for one map frame when the driver is there but has no labels yet (the theme arrived after the map)', () => {
+    const frame = vi.fn();
+    const place = vi.fn(() => false);
+    setInvalidate(frame);
+    setNamesPlacer(place);
+    useMapStore.setState({ theme: THEME });
+    const { unmount } = render(<RegionNames />);
+    expect(place).toHaveBeenCalledTimes(1);
+    expect(frame).toHaveBeenCalledTimes(1);
+    unmount();
+  });
+
+  it('places again when the theme is replaced', () => {
+    const place = vi.fn(() => true);
+    setNamesPlacer(place);
+    useMapStore.setState({ theme: THEME });
+    const { rerender, unmount } = render(<RegionNames />);
+    useMapStore.setState({ theme: { ...THEME, labels: { ...THEME.labels, sonic: [lab('s', 'Raw Flare', true)] } } });
+    rerender(<RegionNames />);
+    expect(place).toHaveBeenCalledTimes(2);
+    unmount();
+  });
+
+  describe('when a font finishes loading late', () => {
+    let fonts: EventTarget;
+    let style: HTMLStyleElement;
+    const arrive = (families: string[] | null) => {
+      const e = new Event('loadingdone');
+      if (families) Object.assign(e, { fontfaces: families.map((family) => ({ family })) });
+      fonts.dispatchEvent(e);
+    };
+    beforeEach(() => {
+      fonts = new EventTarget();
+      Object.defineProperty(document, 'fonts', { configurable: true, value: fonts });
+      style = document.createElement('style');
+      style.textContent = '.rn-layer { font-family: "Tenor Sans", "Tenor Sans Fallback", sans-serif; }';
+      document.head.append(style);
+    });
+    afterEach(() => {
+      style.remove();
+      Reflect.deleteProperty(document, 'fonts');
+    });
+
+    it('measures and places the names again for their own face, without drawing a map frame', () => {
+      const frame = vi.fn();
+      const place = vi.fn(() => true);
+      setInvalidate(frame);
+      setNamesPlacer(place);
+      useMapStore.setState({ theme: THEME });
+      const { unmount } = render(<RegionNames />);
+      const v = nameWidthsVersion();
+      arrive(['"Tenor Sans"']);
+      expect(nameWidthsVersion()).toBe(v + 1);
+      expect(place).toHaveBeenCalledTimes(2);
+      // A browser that does not say which faces arrived: measure again to be safe.
+      arrive(null);
+      expect(nameWidthsVersion()).toBe(v + 2);
+      expect(place).toHaveBeenCalledTimes(3);
+      expect(frame).not.toHaveBeenCalled();
+      unmount();
+    });
+
+    it('ignores a face the names do not use', () => {
+      const place = vi.fn(() => true);
+      setNamesPlacer(place);
+      useMapStore.setState({ theme: THEME });
+      const { unmount } = render(<RegionNames />);
+      const v = nameWidthsVersion();
+      arrive(['Cormorant Garamond']);
+      expect(nameWidthsVersion()).toBe(v);
+      expect(place).toHaveBeenCalledTimes(1);
+      unmount();
+    });
+
+    it('stops listening once the names are switched off, and after it unmounts', () => {
+      const frame = vi.fn();
+      const place = vi.fn(() => true);
+      setInvalidate(frame);
+      setNamesPlacer(place);
+      useMapStore.setState({ theme: THEME });
+      const { rerender, unmount } = render(<RegionNames />);
+      useAppStore.setState({ namesOn: false });
+      rerender(<RegionNames />);
+      const v = nameWidthsVersion();
+      arrive(['Tenor Sans']);
+      expect(nameWidthsVersion()).toBe(v);
+      expect(place).toHaveBeenCalledTimes(1);
+      useAppStore.setState({ namesOn: true });
+      rerender(<RegionNames />);
+      unmount();
+      arrive(['Tenor Sans']);
+      expect(nameWidthsVersion()).toBe(v);
+      expect(place).toHaveBeenCalledTimes(2);
+      expect(frame).not.toHaveBeenCalled();
+    });
   });
 });
