@@ -10,7 +10,7 @@
  *   node ../docs/design/trifid-theme/reviews/baseline/capture.mjs \
  *        ../docs/design/trifid-theme/reviews/baseline/shots http://127.0.0.1:3400 --start
  *
- * Arguments: <outDir> <baseURL> [--start] [--viewport desktop|phone|both] [--mode gpu|software] [--only <text>]
+ * Arguments: <outDir> <baseURL> [--start] [--still] [--viewport desktop|phone|both] [--mode gpu|software] [--only <text>]
  *            [--gas full|lighter] [--open whole|app]
  *   --start      starts `next start` on the base URL's port for the run and stops it afterwards. Without it the
  *                script expects a server that is already answering at <baseURL> (`npx next start --port 3400`).
@@ -26,6 +26,12 @@
  *                captured, so every baseline-named shot keeps its framing; it sets window.__rmrOpen before the app
  *                loads and means nothing to a build from before part 2's Task 0) or app (the app's own opening
  *                view, the Overview since Task 0). The state `map-opening` always uses the app's own opening view.
+ *   --still      for builds with the Trifid theme: the same picture on every run. One fixed star deal (STILL_SEED
+ *                is put on window.__rmr before any page script runs), the star glints switched off (the app's own
+ *                switch, window.__rmrTwinkle, set before the app loads, after every page load and before every
+ *                settle), and the map counts as ready only once the gas has settled (every settle already waits
+ *                for the sharper gas image of a desktop GPU, since part 2's Task 0).
+ *                Without it the script behaves as it did for the baseline.
  *
  * Output: <outDir>/desktop/*.jpg|png, <outDir>/phone/*.jpg|png and <outDir>/capture-log-<viewport>.json (what was
  * captured, what failed, and the camera at each shot). JPEG quality 90; tight crops are PNG. An --only run writes
@@ -60,11 +66,12 @@ const positional = [];
 const flags = {};
 for (let i = 0; i < argv.length; i++) {
   if (argv[i] === '--start') flags.start = true;
+  else if (argv[i] === '--still') flags.still = true;
   else if (argv[i].startsWith('--')) flags[argv[i].slice(2)] = argv[++i];
   else positional.push(argv[i]);
 }
 if (positional.length < 2) {
-  console.error('usage: node capture.mjs <outDir> <baseURL> [--start] [--viewport desktop|phone|both] [--mode gpu|software] [--only text] [--gas full|lighter] [--open whole|app]');
+  console.error('usage: node capture.mjs <outDir> <baseURL> [--start] [--still] [--viewport desktop|phone|both] [--mode gpu|software] [--only text] [--gas full|lighter] [--open whole|app]');
   process.exit(2);
 }
 const OUT = path.resolve(positional[0]);
@@ -77,6 +84,9 @@ if (GAS !== 'full' && GAS !== 'lighter') {
   console.error('--gas takes full or lighter');
   process.exit(2);
 }
+const STILL = !!flags.still;
+/** --still: the seed of the page's star deal (frontcreck/src/components/map/state/stars.ts reads window.__rmr.starSeed). */
+const STILL_SEED = 20261004;
 const OPEN = flags.open ?? 'whole';
 if (OPEN !== 'whole' && OPEN !== 'app') {
   console.error('--open takes whole or app');
@@ -139,7 +149,25 @@ const SEL = {
 
 const warn = (name, what) => (e) => console.warn(`  [${name}] ${what}: ${String(e.message).split('\n')[0]}`);
 
-const mapReady = (p) => p.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 30000 });
+/** The map has drawn. With --still, also: the gas has settled ('ready' or 'off').
+ * A state whose gas never settles fails by name, as any state that cannot be reached does. */
+const mapReady = (p) =>
+  p.waitForFunction(
+    (still) => {
+      const r = window.__rmr;
+      if (!r?.map || (r.frames ?? 0) <= 0) return false;
+      // --still is for builds with the theme: the gas flag must say settled. (A site without the flag, such as
+      // the baseline's, is captured without --still.)
+      return !still || r.gas === 'ready' || r.gas === 'off';
+    },
+    STILL,
+    { timeout: 30000 },
+  );
+
+/** --still: no star glints (window.__rmrTwinkle, the app's only switch for them; frontcreck/e2e/helpers.ts
+ * twinkleOff does the same). A no-op on a build without them. It runs after every load (go) and before every
+ * settle, on top of the init script that sets it before the app loads. */
+const stillGlints = (p) => (STILL ? p.evaluate(() => { window.__rmrTwinkle = 'off'; }) : Promise.resolve());
 
 async function mapQuiet(p, quietMs = 250) {
   await p.waitForFunction(
@@ -210,6 +238,7 @@ const coversSettled = (p) =>
 
 /** Everything has stopped moving and loading. `map: false` for a state where the map never draws. */
 async function settle(p, name, { map = true } = {}) {
+  await stillGlints(p);
   await p.evaluate(() => document.fonts.ready);
   if (map) {
     await mapReady(p);
@@ -232,6 +261,7 @@ const cam = (p) => p.evaluate(() => (window.__rmr?.map ? window.__rmr.map.getCam
 async function go(p, url) {
   await p.goto(`${BASE}${url}`, { waitUntil: 'load' });
   await p.addStyleTag({ content: '* { caret-color: transparent !important; }' });
+  await stillGlints(p);
 }
 
 /** The fly-to a map pick uses (centres the album and zooms until covers show), without selecting it. */
@@ -951,6 +981,8 @@ async function runViewport(vp, assertNativeChrome) {
       const ctx = await browser.newContext({ ...VIEWPORTS[vp], ...(state.context ?? {}) });
       await ctx.addInitScript((v) => { window.__rmrGasLite = v; }, GAS === 'lighter' ? 'force' : 'off');
       if (OPEN === 'whole' && state.open !== 'app') await ctx.addInitScript(() => { window.__rmrOpen = 'whole'; });
+      // Before any page script: the store module spreads the object it finds (src/lib/store.ts), so the seed stays.
+      if (STILL) await ctx.addInitScript((seed) => { window.__rmr = { ...(window.__rmr || {}), starSeed: seed }; window.__rmrTwinkle = 'off'; }, STILL_SEED);
       const page = await ctx.newPage();
       const t0 = Date.now();
       const s = {
