@@ -126,6 +126,20 @@ describe('WCAG AA contrast', () => {
     expect(rule(shell, '.top').background).toBe('var(--top-bg)');
   });
 
+  it('the Home header, which is clear, keeps paper and dust at 4.5:1 over white through its scrim', () => {
+    // Home's header has no glass; a see-through scrim in the page colour sits behind its text (shell.css
+    // .top::before). Over pure white, with nothing else dimming the map, it is as dark as the header glass.
+    const scrim = rule(css('styles/shell.css'), '.top::before');
+    const m = /^linear-gradient\(rgba\((\d+), (\d+), (\d+), ([\d.]+)\) /.exec(scrim.background);
+    expect(m, scrim.background).not.toBeNull();
+    const tint: Tint = { rgb: [Number(m![1]), Number(m![2]), Number(m![3])], alpha: Number(m![4]) };
+    expect(rgbToHex(tint.rgb)).toBe(tok('room'));
+    const bg = surfaceOver(WHITE, null, tint);
+    expect(bg).toBe('#434245');
+    for (const t of TEXT_ON['top-bg']) expect(contrastRatio(tok(t), bg), `${t} on the Home scrim over white (${bg})`).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(tok('dust'), bg)).toBeCloseTo(contrastRatio(tok('dust'), surfaceOver(WHITE, FILTER, GLASS['top-bg'])), 0);
+  });
+
   it('every text token passes 4.5:1 on the solid fallback over an unfiltered white backdrop', () => {
     for (const s of SURFACES) {
       for (const tint of SOLID[s]) {

@@ -88,6 +88,31 @@ describe('the map behind the header', () => {
     expect(map).toContain('@supports not selector(:has(a))');
   });
 
+  it('the Home header stays clear, with a still scrim behind its text that fades out below the bar', () => {
+    // Home keeps a camera the visitor moved, so the brightest gas can sit behind its header, which is not glass.
+    expect(rule(shell, '.top.top--home').background).toBe('transparent');
+    expect(shell).toContain('.top.top--home { -webkit-backdrop-filter: none; backdrop-filter: none; }');
+    const scrim = rule(shell, '.top::before');
+    expect(scrim.content).toBe('""');
+    expect(scrim['pointer-events']).toBe('none');
+    // Over the bar's own (clear) background, behind its text.
+    expect(scrim['z-index']).toBe('-1');
+    // On Home only, eased in and out with the bar's own colour change.
+    expect(scrim.opacity).toBe('0');
+    expect(scrim.transition).toBe('opacity var(--dur) var(--out)');
+    expect(rule(shell, '.top.top--home::before').opacity).toBe('1');
+    // A plain gradient: no blur and no filter, so it costs nothing while the map moves under it.
+    for (const p of ['backdrop-filter', '-webkit-backdrop-filter', 'filter', 'animation']) expect(scrim[p], p).toBeUndefined();
+    expect(shell).not.toMatch(/\.top::before[^{]*,[^{]*\{[^}]*backdrop-filter/);
+    const g = /^linear-gradient\(rgba\(7, 6, 10, ([\d.]+)\) calc\(var\(--hdr\) - (\d+)px\), .*, rgba\(7, 6, 10, 0\)\)$/.exec(scrim.background);
+    expect(g, scrim.background).not.toBeNull();
+    // Full strength down to the bottom edge of the tallest thing in the bar (a 44 px link, centred), at both
+    // header heights; then it fades to nothing 40 px below the bar, with no edge.
+    for (const hdr of [HEADER_PX, HEADER_NARROW_PX]) expect(hdr - Number(g![2]), `${hdr} px header`).toBeGreaterThanOrEqual((hdr + 44) / 2);
+    expect(rule(shell, '.navbtn, .icon-btn')['min-height']).toBe('44px');
+    expect(scrim.height).toBe('calc(var(--hdr) + 40px)');
+  });
+
   it('no text of the header is in the ash colour: it is 4.06:1 on the header glass over white', () => {
     const globals = read('app/globals.css');
     const ash = /--color-ash:\s*(#[0-9a-f]{6})/i.exec(globals);

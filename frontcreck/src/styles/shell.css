@@ -38,6 +38,17 @@ ol, ul { padding: 0; list-style: none; }
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
 }
 .top.top--home { -webkit-backdrop-filter: none; backdrop-filter: none; }
+/* Home's header stays clear (no glass, no edge), but the map runs behind it and Home keeps a camera the visitor
+   moved, so the brightest gas can sit behind the wordmark and the links. A still scrim in the page colour sits
+   behind them on Home only: full strength down to the bottom of the links' 44 px boxes, then fading to nothing
+   40 px below the bar. .76 over pure white is as dark as the header glass (lib/contrast.test.ts). No blur and no
+   filter: nothing is recomputed while the map moves. Over the dark sky of Home's own framing it does not show. */
+.top::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: calc(var(--hdr) + 40px); z-index: -1; pointer-events: none; opacity: 0;
+  background: linear-gradient(rgba(7, 6, 10, .76) calc(var(--hdr) - 8px), rgba(7, 6, 10, .5) calc(var(--hdr) + 6px), rgba(7, 6, 10, .2) calc(var(--hdr) + 22px), rgba(7, 6, 10, 0));
+  transition: opacity var(--dur) var(--out);
+}
+.top.top--home::before { opacity: 1; }
 .wordmark {
   font-family: var(--font-serif); font-style: italic; font-weight: 600; font-size: 27px; line-height: 1;
   color: var(--color-paper); padding: 8px 0; white-space: nowrap; text-decoration: none;

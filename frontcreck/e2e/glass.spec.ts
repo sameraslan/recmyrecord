@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
-import { contrastOverBackdrop, mapFrames, panBrightestGasUnder, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
+import { COPY } from '../src/lib/copy';
+import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
 
 const GLASS = 'blur(22px) saturate(1.2) brightness(0.58)';
 /** Solid is fully solid; the browser reports rgba(10, 9, 14, 1) as rgb(10, 9, 14). */
@@ -291,6 +292,76 @@ test('header text keeps 4.5:1 with the brightest gas on screen behind the bar', 
   for (const r of results) {
     // Cream gas, not sky: otherwise this measures nothing.
     expect(r.gas, `mean luminance of the gas moved under ${r.selector}`).toBeGreaterThan(0.4);
+    expect(r.ratio, r.selector).toBeGreaterThanOrEqual(4.5);
+  }
+});
+
+/** Mean luminance of what the map paints behind `selector`'s words right now, with `hide` out of the picture. */
+async function gasBehind(page: Page, selector: string, hide: string): Promise<number> {
+  const style = await page.addStyleTag({ content: `${hide} { visibility: hidden !important; }` });
+  const png = (await page.screenshot()).toString('base64');
+  await style.evaluate((el) => (el as Element).remove());
+  return page.evaluate(
+    async ([data, sel]) => {
+      const range = document.createRange();
+      range.selectNodeContents(document.querySelector(sel)!);
+      const t = range.getBoundingClientRect();
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const k = img.width / innerWidth;
+      const d = ctx.getImageData(Math.floor(t.x * k), Math.floor(t.y * k), Math.max(1, Math.floor(t.width * k)), Math.max(1, Math.floor(t.height * k))).data;
+      const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
+      return sum / (d.length / 4);
+    },
+    [png, selector] as const,
+  );
+}
+
+test('on Home the header text keeps 4.5:1 over the brightest gas a moved map can put behind it', async ({ page, isMobile }) => {
+  // Home's header is not glass, and Home keeps a camera the visitor moved: zoom into the map, go Home, and the
+  // wordmark and the two links can sit over the cream gas.
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await act(page.getByRole('button', { name: COPY.map.zoomIn }), isMobile);
+  await waitForCameraIdle(page);
+  await act(page.locator('a.wordmark'), isMobile);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'home');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  // TODO(part2-task8): twinkleOff(page)
+  const HIDE = '.home, header.top';
+  const selectors = ['.wordmark', '.top nav .navbtn[href="/map"]', '.top nav .navbtn[href="/about"]'];
+  const results: Array<{ selector: string; ratio: number; gas: number }> = [];
+  for (const selector of selectors) {
+    // The brightest gas on screen (header and hero hidden to find it) slid behind this item's words.
+    await panBrightestGasUnder(page, selector, HIDE);
+    await page.evaluate(() => {
+      (window as unknown as { __hold: number }).__hold = window.setInterval(() => window.__rmr!.map!.panBy(0, 0), 150);
+    });
+    // Measured after the pan: what is really behind the words now, not what the search expected to bring there.
+    const gas = await gasBehind(page, selector, HIDE);
+    const [r] = await contrastOverBackdrop(page, 'header.top', [selector]);
+    await page.evaluate(() => window.clearInterval((window as unknown as { __hold: number }).__hold));
+    results.push({ ...r, gas });
+  }
+  console.log(`Home header over the brightest gas: ${results.map((r) => `${r.selector} ${r.ratio.toFixed(2)} (gas ${r.gas.toFixed(2)})`).join(', ')}`);
+  for (const r of results) {
+    // Bright gas, not sky: otherwise this measures nothing.
+    expect(r.gas, `mean luminance of the gas behind ${r.selector}`).toBeGreaterThan(0.4);
     expect(r.ratio, r.selector).toBeGreaterThanOrEqual(4.5);
   }
 });
