@@ -27,7 +27,7 @@ ol, ul { padding: 0; list-style: none; }
 .top {
   position: fixed; left: 0; right: 0; top: 0; z-index: 60; height: var(--hdr);
   display: flex; align-items: center; gap: 24px; padding: 0 var(--gut);
-  background: rgba(21, 17, 13, .96); border-bottom: 1px solid var(--color-rule);
+  background: var(--top-bg); border-bottom: 1px solid var(--color-rule);
   transition: background-color var(--dur) var(--out), border-color var(--dur) var(--out);
 }
 .top.top--home { background: transparent; border-color: transparent; }

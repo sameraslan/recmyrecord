@@ -11,7 +11,7 @@ test('home renders the dark shell with header and hero', async ({ page }, info) 
   await expect(nav.getByRole('link', { name: COPY.nav.about })).toHaveAttribute('href', '/about');
   await expect(page.getByRole('heading', { level: 1, name: COPY.hero })).toBeVisible();
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-  expect(bg).toBe('rgb(21, 17, 13)');
+  expect(bg).toBe('rgb(7, 6, 10)');
   const serif = await page.getByRole('heading', { level: 1 }).evaluate((el) => getComputedStyle(el).fontFamily);
   expect(serif).toMatch(/Cormorant/i);
   await shot(page, info, 'shell-home');

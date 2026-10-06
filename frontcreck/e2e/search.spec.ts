@@ -134,15 +134,15 @@ test.describe('desktop header search', () => {
     await expect(page.getByRole('listbox')).toBeHidden();
   });
 
-  test('the focused field shows a lamp border with a softer halo, without moving', async ({ page }) => {
+  test('the focused field shows an off-white border with a softer halo, without moving', async ({ page }) => {
     await page.goto('/nope');
     const field = page.locator('.top-search .combo-field');
     const before = await field.boundingBox();
     await field.locator('input').focus();
     // Retrying assertions: the border colour eases in over 0.2 s.
-    await expect(field).toHaveCSS('border-top-color', 'rgb(230, 168, 86)');
+    await expect(field).toHaveCSS('border-top-color', 'rgb(241, 236, 228)');
     await expect(field).toHaveCSS('border-top-width', '1px');
-    await expect(field).toHaveCSS('box-shadow', /^(color\(srgb 0\.90\d* 0\.65\d* 0\.33\d* \/ 0\.45\)|rgba\(230, 168, 86, 0\.45\)) 0px 0px 0px 1px$/);
+    await expect(field).toHaveCSS('box-shadow', /^(color\(srgb 0\.94\d* 0\.92\d* 0\.89\d* \/ 0\.45\)|rgba\(241, 236, 228, 0\.45\)) 0px 0px 0px 1px$/);
     expect(await field.boundingBox()).toEqual(before);
   });
 
@@ -224,7 +224,7 @@ test.describe('covers', () => {
     const cover = page.getByRole('option').first().locator('.cover');
     await expect(cover).toHaveAttribute('data-state', 'remote');
     await expect(cover.locator('.fb')).toHaveCount(0);
-    await expect(cover).toHaveCSS('background-color', 'rgb(38, 32, 25)');
+    await expect(cover).toHaveCSS('background-color', 'rgb(23, 22, 29)');
     release();
     await expect(cover.locator('img.ok')).toBeVisible();
   });
