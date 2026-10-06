@@ -11,7 +11,7 @@ import { setOverlayEl } from './state/overlayEls';
 import { setStageTop } from './state/stageTop';
 import type { MusicMapProps } from './types';
 
-/** Amber ring around the album selected in Explore; positioned by OverlayDriver. */
+/** Off-white ring (the lamp token) on a dark casing around the album selected in Explore; positioned by OverlayDriver. */
 function SelectedRing() {
   return (
     <div

@@ -242,3 +242,46 @@ describe('text over washes and bands', () => {
     expect(contrastRatio(tok('dust'), solid)).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe('marks on the map', () => {
+  it('the selected ring is the lamp token on a dark casing that holds 3:1 on the brightest backdrops', () => {
+    const sel = rule(css('styles/map.css'), '.map-sel');
+    expect(sel.border).toBe('2px solid var(--color-lamp)');
+    // 2 px of casing outside the ring and 1 px inside it, one colour.
+    const casing = /^0 0 0 2px rgba\(4, 4, 8, ([\d.]+)\), inset 0 0 0 1px rgba\(4, 4, 8, \1\)$/.exec(sel['box-shadow'] ?? '');
+    expect(casing, sel['box-shadow']).not.toBeNull();
+    const tint: Tint = { rgb: [4, 4, 8], alpha: Number(casing![1]) };
+    for (const [name, backdrop] of [['white', WHITE], ['cream gas', CREAM]] as const) {
+      const dark = surfaceOver(backdrop, null, tint);
+      expect(contrastRatio(tok('lamp'), dark), `the ring on its casing over ${name} (${dark})`).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(dark, rgbToHex(backdrop)), `the casing against ${name}`).toBeGreaterThanOrEqual(3);
+    }
+    // Without the casing the ring cannot be seen on bright gas: this is what the casing is for.
+    expect(contrastRatio(tok('lamp'), rgbToHex(CREAM))).toBeLessThan(1.5);
+    // On the empty sky the ring carries itself.
+    expect(contrastRatio(tok('lamp'), tok('pane'))).toBeGreaterThanOrEqual(3);
+  });
+
+  it('the focus ring of the controls that stand on the map has the same dark casing, out past the ring', () => {
+    // The site's one focus ring: a 2 px lamp outline that starts 3 px outside the control.
+    const ring = rule(css('styles/shell.css'), ':focus-visible');
+    expect(ring.outline).toBe('2px solid var(--color-lamp)');
+    expect(ring['outline-offset']).toBe('3px');
+    // Every focusable control in .map-ui: the zoom buttons, the names toggle and "Explore this area" stand on open
+    // nebula (e2e/glass.spec.ts measures those three). The phone's List button is outside .map-ui, so it is named.
+    const cased = rule(css('styles/map.css'), '.map-ui :focus-visible:not(input), .fab-map--on:focus-visible');
+    // One band from the control's edge to 7 px out: the 3 px gap, the 2 px ring and 2 px beyond it.
+    const casing = /^0 0 0 7px rgba\(4, 4, 8, ([\d.]+)\)$/.exec(cased['box-shadow'] ?? '');
+    expect(casing, cased['box-shadow']).not.toBeNull();
+    // Nothing but the shadow: the rule outranks .map-explore, .card .x and .fab-map, whose position and z-index
+    // (the List button's 12) it must keep. Only a focused button of the zoom stack is lifted, over its neighbour.
+    expect(Object.keys(cased)).toEqual(['box-shadow']);
+    expect(rule(css('styles/map.css'), '.map-zoom :focus-visible')).toEqual({ 'z-index': '1' });
+    const tint: Tint = { rgb: [4, 4, 8], alpha: Number(casing![1]) };
+    for (const [name, backdrop] of [['white', WHITE], ['cream gas', CREAM]] as const) {
+      const dark = surfaceOver(backdrop, null, tint);
+      expect(contrastRatio(tok('lamp'), dark), `the focus ring on its casing over ${name} (${dark})`).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(dark, rgbToHex(backdrop)), `the casing against ${name}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+});

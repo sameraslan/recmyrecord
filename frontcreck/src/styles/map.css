@@ -24,10 +24,22 @@
 .map-tip-text { min-width: 0; }
 .map-tip .t { font-family: var(--font-serif); font-weight: 600; font-size: 18px; line-height: 1.1; }
 .map-tip .a { font-size: 13px; color: var(--color-dust); }
-.map-sel { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; opacity: 0; border: 2px solid var(--color-lamp); border-radius: 50%; }
-.map-sel::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--color-lamp); }
+/* The ring of the picked album while albums are dots: off-white on a dark casing (2 px outside, 1 px inside, 1 px
+ * round the centre dot), so it reads on the brightest gas as well as on the empty sky. 10.2:1 against its casing
+ * over a white backdrop, 10.7:1 over the cream gas (contrast.test.ts). The shadows do not change its box. */
+.map-sel { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; opacity: 0; border: 2px solid var(--color-lamp); border-radius: 50%; box-shadow: 0 0 0 2px rgba(4, 4, 8, .8), inset 0 0 0 1px rgba(4, 4, 8, .8); }
+.map-sel::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--color-lamp); box-shadow: 0 0 0 1px rgba(4, 4, 8, .8); }
 .map-ui { position: absolute; left: 0; right: 0; top: var(--hdr); bottom: 0; z-index: 6; pointer-events: none; transition: left var(--dur) var(--out); }
 .map-ui > * { pointer-events: auto; }
+/* Keyboard focus on a control that stands on the map (the zoom buttons, the names toggle, "Explore this area",
+ * the phone's List button): the site's ring (shell.css :focus-visible, 2 px lamp, 3 px out) would lie on raw gas,
+ * so it gets the selected ring's dark casing: one band from the control's edge to 7 px out, under the gap, the
+ * ring and 2 px beyond. Not the slider's range input, whose thumb has its own ring. Nothing but the shadow here:
+ * the rule outranks .map-explore, .card .x and .fab-map, whose position and z-index it must leave alone. */
+.map-ui :focus-visible:not(input), .fab-map--on:focus-visible { box-shadow: 0 0 0 7px rgba(4, 4, 8, .8); }
+/* A focused button of the zoom stack is lifted (grid items take z-index without being positioned), so the next
+ * button does not cut its band. */
+.map-zoom :focus-visible { z-index: 1; }
 .panel { background: var(--color-float); border: 1px solid var(--color-rule); border-radius: 2px; box-shadow: 0 10px 30px -14px rgba(0, 0, 0, .8); }
 /* "Explore this area" (album view): top right of the visible map, clear of the slider card top left. */
 .map-explore { position: absolute; right: 20px; top: 20px; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 12px; font-size: 14px; color: var(--color-paper); }

@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
+import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, tabTo, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
 
 const GLASS = 'blur(22px) saturate(1.2) brightness(0.58)';
 /** Solid is fully solid; the browser reports rgba(10, 9, 14, 1) as rgb(10, 9, 14). */
@@ -363,5 +363,193 @@ test('on Home the header text keeps 4.5:1 over the brightest gas a moved map can
     // Bright gas, not sky: otherwise this measures nothing.
     expect(r.gas, `mean luminance of the gas behind ${r.selector}`).toBeGreaterThan(0.4);
     expect(r.ratio, r.selector).toBeGreaterThanOrEqual(4.5);
+  }
+});
+
+/** RGB of the screenshot pixel that holds each client point. `hide` is made fully see-through for the picture
+ * (opacity, not visibility: a hidden control would lose the keyboard focus). */
+async function rgbAt(page: Page, points: { x: number; y: number }[], hide?: string): Promise<number[][]> {
+  const style = hide ? await page.addStyleTag({ content: `${hide} { opacity: 0 !important; transition: none !important; }` }) : null;
+  const png = (await page.screenshot()).toString('base64');
+  await style?.evaluate((el) => (el as Element).remove());
+  return page.evaluate(
+    async ([data, list]) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const cv = document.createElement('canvas');
+      cv.width = img.width;
+      cv.height = img.height;
+      const ctx = cv.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const k = img.width / innerWidth;
+      return list.map((q) => [...ctx.getImageData(Math.floor(q.x * k), Math.floor(q.y * k), 1, 1).data.slice(0, 3)]);
+    },
+    [png, points] as const,
+  );
+}
+const linear = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+/** WCAG relative luminance of an 8-bit rgb. */
+const lumOf = ([r, g, b]: number[]) => 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
+/** WCAG contrast of a lighter mark against a darker ground: below 1 when the "mark" is in fact the darker one. */
+const over = (mark: number[], ground: number[]) => (lumOf(mark) + 0.05) / (lumOf(ground) + 0.05);
+/** How far a pixel is from the lamp token, rgb(241, 236, 228): the largest channel difference. */
+const offLamp = ([r, g, b]: number[]) => Math.max(Math.abs(r - 241), Math.abs(g - 236), Math.abs(b - 228));
+/** Bright gas, not sky, as relative luminance: the same line the header and hint tests draw. */
+const BRIGHT_GAS = 0.4;
+
+test('the selected ring reads on the brightest gas', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'measured where the map has room; the ring is one CSS rule at every width');
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  // TODO(part2-task8): twinkleOff(page)
+  const vp = page.viewportSize()!;
+  // The album with the brightest gas round it, among those on the canvas and clear of where the card opens
+  // (bottom left, 400 px wide): the darkest of eight points 8 and 10 px out is the measure, so a neighbouring star
+  // does not count as gas.
+  const png = (await page.screenshot()).toString('base64');
+  const pick = await page.evaluate(
+    async ([data, w, h]) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const cv = document.createElement('canvas');
+      cv.width = img.width;
+      cv.height = img.height;
+      const ctx = cv.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const d = ctx.getImageData(0, 0, img.width, img.height).data;
+      const k = img.width / innerWidth;
+      const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+      const lum = (x: number, y: number) => {
+        const i = (Math.floor(y * k) * img.width + Math.floor(x * k)) * 4;
+        return 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
+      };
+      const api = window.__rmr!.map!;
+      const n: number = (await (await fetch('/data/albums.json')).json()).length;
+      let best = { id: -1, gas: -1 };
+      for (let id = 0; id < n; id++) {
+        const p = api.screenPoint(id);
+        if (!p || p.x < 40 || p.x > w - 40 || p.y < 110 || p.y > h - 40) continue;
+        if (p.x < 460 && p.y > h - 260) continue;
+        if (!document.elementFromPoint(p.x, p.y)?.classList.contains('map-canvas')) continue;
+        let gas = 1;
+        for (const r of [8, 10]) for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) gas = Math.min(gas, lum(p.x + dx * r, p.y + dy * r));
+        if (gas > best.gas) best = { id, gas };
+      }
+      return best;
+    },
+    [png, vp.width, vp.height] as const,
+  );
+  expect(pick.gas, 'an album stands on bright gas at the opening view').toBeGreaterThan(BRIGHT_GAS);
+  // Selected without a fly: while albums are dots a pick is marked by the DOM ring.
+  await page.evaluate((i) => window.__rmr!.getState().setSelected(i), pick.id);
+  const ring = page.locator('.map-sel');
+  await expect(ring).toHaveCSS('opacity', '1');
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  const box = (await ring.boundingBox())!;
+  const c = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  const r = box.width / 2;
+  // The casing is a shadow: the ring's box is still the square OverlayDriver sets, centred on the album.
+  const at = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), pick.id))!;
+  expect(Math.hypot(c.x - at.x, c.y - at.y), 'the ring is centred on the album').toBeLessThan(0.51);
+  expect(box.width).toBeCloseTo(box.height, 3);
+  expect(box.width, 'the ring keeps its size (18 px or the dot plus 8)').toBeLessThan(21);
+  // The middle of the 2 px ring (1 px inside its outer edge) and of the 2 px casing outside it, on four sides. A
+  // band 2 px wide always holds the whole pixel under its middle line, so neither sample is a blend.
+  const sides = [[1, 0], [-1, 0], [0, 1], [0, -1]] as const;
+  const samples = sides.flatMap(([dx, dy]) => [
+    { x: c.x + dx * (r - 1), y: c.y + dy * (r - 1) },
+    { x: c.x + dx * (r + 1), y: c.y + dy * (r + 1) },
+  ]);
+  const rgb = await rgbAt(page, samples);
+  // The same points with the ring out of the picture: the gas the casing lies on.
+  const bare = await rgbAt(page, samples, '.map-sel');
+  const rows = sides.map((_, i) => ({ ring: rgb[2 * i], casing: rgb[2 * i + 1], gas: bare[2 * i + 1] }));
+  console.log(`selected ring on gas of luminance ${pick.gas.toFixed(2)}: ${rows.map((q) => `ring/casing ${over(q.ring, q.casing).toFixed(2)} gas/casing ${over(q.gas, q.casing).toFixed(2)} (gas ${lumOf(q.gas).toFixed(2)})`).join(', ')}`);
+  rows.forEach((q, i) => {
+    expect(lumOf(q.gas), `bright gas under the casing, side ${i}`).toBeGreaterThan(BRIGHT_GAS);
+    expect(offLamp(q.ring), `ring colour, side ${i}`).toBeLessThanOrEqual(12);
+    expect(over(q.ring, q.casing), `the ring against its casing, side ${i}`).toBeGreaterThanOrEqual(3);
+    expect(over(q.gas, q.casing), `the gas against the casing, side ${i}`).toBeGreaterThanOrEqual(3);
+  });
+});
+
+test('the keyboard focus ring of the controls that stand on the map reads on the brightest gas', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'keyboard focus; the casing is one CSS rule at every width');
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  const hold = () =>
+    page.evaluate(() => {
+      (window as unknown as { __hold: number }).__hold = window.setInterval(() => window.__rmr!.map!.panBy(0, 0), 150);
+    });
+  const release = () => page.evaluate(() => window.clearInterval((window as unknown as { __hold: number }).__hold));
+  /** Slides the brightest gas under `selector` (or, with `white`, puts white in place of the map), focuses it by
+   * keyboard (so :focus-visible holds) and reads its ring. */
+  const measure = async (selector: string, white = false) => {
+    const control = page.locator(selector);
+    await expect(control).toBeVisible();
+    if (white) await page.addStyleTag({ content: '.map-host { visibility: hidden !important; } .map-pane { background: #fff !important; }' });
+    else await panBrightestGasUnder(page, selector);
+    // A zero pan every 150 ms counts as the visitor's hand on the map and keeps the idle recentring away.
+    await hold();
+    const before = (await control.boundingBox())!;
+    await tabTo(page, (el, sel) => el.matches(sel), 80, selector);
+    await expect(control).toBeFocused();
+    await waitForAnimations(page);
+    const box = (await control.boundingBox())!;
+    expect(box, `${selector}: the casing rule does not move or resize the focused control`).toEqual(before);
+    // Left and right of the control, at its mid height: the ring is the band 3 to 5 px out, its casing shows in
+    // the band 5 to 7 px out. Each sample is on the middle line of its 2 px band, so neither is a blend.
+    const y = box.y + box.height / 2;
+    const samples = [
+      { x: box.x - 4, y },
+      { x: box.x - 6, y },
+      { x: box.x + box.width + 4, y },
+      { x: box.x + box.width + 6, y },
+    ];
+    const rgb = await rgbAt(page, samples);
+    // The same points with the controls and the header out of the picture: the gas the casing lies on.
+    const bare = await rgbAt(page, samples, '.map-ui, header.top');
+    await expect(control).toBeFocused();
+    await release();
+    return [0, 2].map((i) => ({ selector, side: i ? 'right' : 'left', ring: rgb[i], casing: rgb[i + 1], gas: bare[i + 1] }));
+  };
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  // TODO(part2-task8): twinkleOff(page)
+  // The names toggle arrives with the map's own chunk.
+  await expect(page.locator('.map-zoom .map-names')).toBeVisible();
+  const rows = [
+    ...(await measure(`.map-zoom button[aria-label="${COPY.map.zoomIn}"]`)),
+    ...(await measure('.map-zoom .map-names')),
+  ];
+  // "Explore this area" stands on the map beside an open album. There the gas has stepped back (covers show), so
+  // the brightest gas on screen is no test: the worst backdrop there is, white in place of the map, is.
+  await page.goto('/album/in-rainbows-radiohead');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  // TODO(part2-task8): twinkleOff(page)
+  rows.push(...(await measure('.map-explore', true)));
+  console.log(`focus rings over the brightest gas (white for .map-explore): ${rows.map((q) => `${q.selector} ${q.side} ring/casing ${over(q.ring, q.casing).toFixed(2)} gas/casing ${over(q.gas, q.casing).toFixed(2)} (gas ${lumOf(q.gas).toFixed(2)})`).join(', ')}`);
+  for (const q of rows) {
+    const name = `${q.selector}, ${q.side}`;
+    expect(lumOf(q.gas), `bright gas (or white) under the casing of ${name}`).toBeGreaterThan(BRIGHT_GAS);
+    expect(offLamp(q.ring), `ring colour of ${name}`).toBeLessThanOrEqual(12);
+    expect(over(q.ring, q.casing), `the focus ring against its casing, ${name}`).toBeGreaterThanOrEqual(3);
+    expect(over(q.gas, q.casing), `the gas against the casing, ${name}`).toBeGreaterThanOrEqual(3);
   }
 });
