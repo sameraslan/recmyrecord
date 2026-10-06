@@ -37,8 +37,10 @@ export const GAS_DEEP_LOD: [number, number] = [4.5, 6];
 export const GAS_QUAD_SCALE = 5;
 /** Share of the blurred gas added back as glow. */
 export const GAS_GLOW = 0.18;
-/** Strength factor on Home, About and 404, where the map is a backdrop. */
-export const GAS_DIMMED_STRENGTH = 0.6;
+/** Strength factor on Home, About and 404, where the map is a backdrop: 1, the gas as on the map (the approved Home
+ * is the prototype's render, which has no such factor). The veil, the hero's pad and the scrims in CSS do the dimming
+ * (styles/map.css, styles/home.css). */
+export const GAS_DIMMED_STRENGTH = 1;
 /** The pool around an open album's group: easing time, and its smallest radius on screen (CSS px). */
 export const POOL_MS = 400;
 export const POOL_MIN_PX = 170;

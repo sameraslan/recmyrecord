@@ -88,3 +88,49 @@ describe('glass', () => {
     expect(read('app/layout.tsx')).not.toContain('grain');
   });
 });
+
+/** The declarations of the first rule whose selector is exactly `selector` (as in lib/contrast.test.ts). */
+function rule(sheet: string, selector: string): Record<string, string> {
+  const esc = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = new RegExp(`(?:^|[}\\n])\\s*${esc}\\s*\\{([^}]*)\\}`).exec(sheet);
+  if (!m) throw new Error(`no rule ${selector}`);
+  return Object.fromEntries(
+    m[1].split(';').map((d) => d.split(':')).filter((p) => p.length > 1).map(([k, ...v]) => [k.trim(), v.join(':').trim()]),
+  );
+}
+
+// The gas runs at full strength behind these pages (shaders/gas.ts GAS_DIMMED_STRENGTH is 1), so everything that
+// darkens it is here. e2e/pages.spec.ts measures the text over it; these pin the values that measurement passed on.
+describe('Home, About and 404 over the nebula', () => {
+  const home = read('styles/home.css');
+
+  it('Home has one light even veil, the same on a phone', () => {
+    expect(rule(read('styles/map.css'), '.veil').background).toBe('rgba(7, 6, 10, .1)');
+    expect(read('styles/phone.css')).not.toMatch(/\.veil\b/);
+  });
+
+  it('the hero text sits on a blurred dark pad with no edge', () => {
+    const pad = rule(home, '.hero::before');
+    expect(pad.background).toBe('rgba(5, 4, 8, .78)');
+    expect(pad.filter).toBe('blur(26px)');
+    expect(pad['pointer-events']).toBe('none');
+    expect(pad['z-index']).toBe('-1');
+    // 28 px below the hero's last row, on wide screens and on phones: more than the blur's 26, so the row is on the full pad.
+    expect(pad.inset).toBe('clamp(18px, 8vh, 92px) -6px -28px');
+    expect(home).toContain('\n  .hero::before { inset: 22px 0 -28px; }\n');
+  });
+
+  it('the shelf has a full-width scrim, dark enough for its caption, clipped by the Home layer', () => {
+    const scrim = rule(home, '.shelf::before');
+    expect(scrim.background).toBe('linear-gradient(rgba(7, 6, 10, 0), rgba(7, 6, 10, .82) 30px)');
+    expect(scrim.inset).toBe('0 -50vw');
+    expect(scrim['pointer-events']).toBe('none');
+    expect(rule(home, '.shelf').position).toBe('relative');
+    expect(rule(home, '.home')['overflow-x']).toBe('hidden');
+  });
+
+  it('About has a light scrim round its glass card, the 404 a dark one under its bare text', () => {
+    expect(rule(home, '.about-page').background).toBe('rgba(5, 4, 8, .3)');
+    expect(rule(home, '.notfound, .page-msg').background).toBe('rgba(5, 4, 8, .73)');
+  });
+});

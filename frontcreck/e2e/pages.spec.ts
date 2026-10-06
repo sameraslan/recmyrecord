@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { shot, waitForAnimations, waitForMap, waitForMapQuiet } from './helpers';
+import { camera, contrastOverBackdrop, mapFrames, shot, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap, waitForMapQuiet } from './helpers';
 
 // The owner's first and last name, stored encoded so this guard never spells them.
 const OWNER_NAME_RE = new RegExp(Buffer.from('c2FtZXJ8YXNsYW4=', 'base64').toString('utf8'), 'i');
@@ -239,4 +239,113 @@ test.describe('album to album', () => {
     expect(samples.length).toBeGreaterThan(10);
     expect(samples.filter((s) => s.inset === 0)).toEqual([]);
   });
+});
+
+test('text over the nebula keeps 4.5:1 on Home, About and 404, and Home says nothing about regions', async ({ page }) => {
+  // The full gas shader also on the software test browser: the lighter one is dimmer, and would flatter the text.
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  const PAGES: Array<[string, string, string[]]> = [
+    ['/', '.home', ['.hero h1', '.hero .lede', '.hero-row a.textbtn', '.hero-row button.textbtn', '.shelf-now .cap']],
+    ['/about', '.about', ['.about h1', '.about p', '.about .about-h2', '.about .about-credits']],
+    ['/nothing-here', '.notfound', ['.notfound h1', '.notfound-sub', '.notfound .textbtn']],
+  ];
+  for (const [url, scope, selectors] of PAGES) {
+    await page.goto(url);
+    await waitForMap(page);
+    await waitForMapQuiet(page);
+    await waitForAnimations(page);
+    // Glints play on Home (part 2, as in the prototype); a bloom must not drift into the screenshot being measured.
+    // TODO(part2-task8): twinkleOff(page)
+    // One at a time, each scrolled into view first (the About card is taller than the screen; the map behind it does
+    // not scroll): the helper refuses a rectangle that is cut by the edge of the screenshot.
+    const ratios: Array<{ selector: string; ratio: number }> = [];
+    for (const selector of selectors) {
+      await page.locator(selector).first().scrollIntoViewIfNeeded();
+      ratios.push(...(await contrastOverBackdrop(page, scope, [selector])));
+    }
+    console.log(`contrast over the nebula ${url}: ${ratios.map((r) => `${r.selector} ${r.ratio.toFixed(2)}`).join(', ')}`);
+    for (const r of ratios) expect(r.ratio, `${url} ${r.selector}`).toBeGreaterThanOrEqual(4.5);
+  }
+  await page.goto('/');
+  await expect(page.locator('.home')).not.toContainText(/region/i);
+});
+
+test('the nebula behind Home, About and 404 costs no frame at rest', async ({ page }) => {
+  // The gas is at full strength on these pages (GAS_DIMMED_STRENGTH 1): the canvas must still stand still.
+  for (const url of ['/', '/about', '/nothing-here']) {
+    await page.goto(url);
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    await waitForAnimations(page);
+    await waitForGasSharpSettled(page);
+    const before = await mapFrames(page);
+    await page.waitForTimeout(3000);
+    expect((await mapFrames(page)) - before, `${url}: frames drawn in 3 idle seconds`).toBe(0);
+  }
+});
+
+test('Home shows the nebula nearly as bright as the map does: only the veil dims it', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'on a phone the hero pad and the shelf leave too little bare nebula to compare');
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+    window.__rmrOpen = 'whole';
+  });
+  /** Mean luma (0 to 255) of each 40 px cell of the screen. */
+  const cells = async (): Promise<number[]> => {
+    const png = (await page.screenshot()).toString('base64');
+    return page.evaluate(async (data) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const out: number[] = [];
+      for (let y = 0; y + 40 <= img.height; y += 40) {
+        for (let x = 0; x + 40 <= img.width; x += 40) {
+          const d = ctx.getImageData(x, y, 40, 40).data;
+          let sum = 0;
+          for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+          out.push(sum / 1600);
+        }
+      }
+      return out;
+    }, png);
+  };
+  const settle = async () => {
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    await waitForAnimations(page);
+    await waitForGasSharpSettled(page);
+  };
+
+  await page.goto('/map');
+  await settle();
+  const mapCamera = await camera(page);
+  await page.addStyleTag({ content: '.map-ui, .top { visibility: hidden !important; }' });
+  const onMap = await cells();
+
+  await page.goto('/');
+  await settle();
+  // Without the hero and the shelf (their pad and scrim are pinned in styles/glass.test.ts): the veil stays.
+  await page.addStyleTag({ content: '.home, .top { visibility: hidden !important; }' });
+  await expect(page.locator('.map-pane .veil')).toBeVisible();
+  const homeCamera = await camera(page);
+  // The same view of the same nebula, or the comparison means nothing.
+  expect(homeCamera.zoom).toBeCloseTo(mapCamera.zoom, 3);
+  expect(homeCamera.x).toBeCloseTo(mapCamera.x, 3);
+  expect(homeCamera.y).toBeCloseTo(mapCamera.y, 3);
+  const onHome = await cells();
+  // The twenty brightest cells of the map are gas, not sky: there a dimmer shader shows.
+  const brightest = onMap.map((_, i) => i).sort((a, b) => onMap[b] - onMap[a]).slice(0, 20);
+  expect(brightest.length).toBe(20);
+  const mean = (v: number[]) => brightest.reduce((s, i) => s + v[i], 0) / brightest.length;
+  console.log(`nebula on Home against the map: ${mean(onHome).toFixed(1)} / ${mean(onMap).toFixed(1)} = ${(mean(onHome) / mean(onMap)).toFixed(3)}`);
+  expect(mean(onMap), 'the compared cells are gas').toBeGreaterThan(40);
+  // The approved picture (final-home.jpg) has the lower core at 0.89 of the map's: the veil's .1 and nothing else.
+  expect(mean(onHome) / mean(onMap)).toBeGreaterThanOrEqual(0.8);
 });

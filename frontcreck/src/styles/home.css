@@ -1,14 +1,22 @@
 /* Home: the hero over the dimmed map (mockup Home A) with the cover shelf at the bottom (Home B).
    Mockup lines 218 to 252 and 360 to 399, adapted to the combined layout. */
-.home { position: absolute; inset: 0; z-index: 8; overflow-y: auto; pointer-events: none; display: flex; flex-direction: column; }
+.home { position: absolute; inset: 0; z-index: 8; overflow-x: hidden; overflow-y: auto; pointer-events: none; display: flex; flex-direction: column; }
 .home > * { pointer-events: auto; }
 .hero { position: relative; width: min(640px, calc(100% - 32px)); margin: 0 auto; padding: clamp(32px, 10vh, 112px) 0 0; text-align: center; }
+/* A soft dark pad behind the hero, so its text holds over the nebula (prototype pages.css line 22). Static. It runs
+ * 28 px below the two links, not the prototype's 4, and is .78 dark, not .72: the blur thins the pad towards its
+ * edge, and the links' dust text there measured 2.5:1 over the gas at full strength, and 3.6:1 with the pad at .9
+ * (e2e/pages.spec.ts measures it). */
+.hero::before { content: ""; position: absolute; inset: clamp(18px, 8vh, 92px) -6px -28px; z-index: -1; background: rgba(5, 4, 8, .78); border-radius: 40px; filter: blur(26px); pointer-events: none; }
 .hero h1 { font-family: var(--font-serif); font-weight: 500; font-size: clamp(42px, 5.8vw, 80px); line-height: .98; letter-spacing: -.015em; }
 .hero .lede { margin: 16px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
 .hero-row { margin-top: 14px; display: flex; justify-content: center; gap: 4px; align-items: center; flex-wrap: wrap; }
 .hero-row .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-ash); opacity: .6; }
 
-.shelf { margin: auto auto 0; width: 100%; max-width: calc(1240px + 2 * var(--gut)); padding: 36px var(--gut) 28px; }
+.shelf { position: relative; margin: auto auto 0; width: 100%; max-width: calc(1240px + 2 * var(--gut)); padding: 36px var(--gut) 28px; }
+/* A full-width scrim under the shelf's caption and covers (the .home layer clips its overhang). .82, not the
+ * prototype's .7: the caption is ash, which needs it once bright gas lies under it (e2e/pages.spec.ts). */
+.shelf::before { content: ""; position: absolute; inset: 0 -50vw; z-index: -1; pointer-events: none; background: linear-gradient(rgba(7, 6, 10, 0), rgba(7, 6, 10, .82) 30px); }
 .shelf-now { height: 30px; display: flex; align-items: baseline; justify-content: center; gap: 12px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; }
 .shelf-now .t { font-family: var(--font-serif); font-size: 21px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .shelf-now .a { font-size: 14px; color: var(--color-dust); }
@@ -20,7 +28,7 @@
 .mosaic a:hover .cover img, .mosaic a:focus-visible .cover img { filter: none; }
 .mosaic a:hover .cover, .mosaic a:focus-visible .cover { opacity: 1; }
 
-/* About: a short page over the dimmed map (mockup lines 326 to 340, without the data list and the axis figures). */
+/* About: a short page over the map as a backdrop (mockup lines 326 to 340, without the data list and the axis figures). */
 .about-page { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; place-items: center; padding: 24px; background: rgba(5, 4, 8, .3); }
 .about { position: relative; width: min(680px, 100%); background: var(--panel-bg); border: 1px solid var(--color-rule-2); border-radius: 2px; padding: 44px 48px 40px; box-shadow: 0 30px 80px -30px #000; }
 .about .x { position: absolute; right: 8px; top: 8px; width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-dust); }
@@ -32,8 +40,9 @@
 .about .about-signoff { margin-top: 24px; font-family: var(--font-serif); font-style: italic; font-size: 20px; line-height: 1.3; color: var(--color-lamp); }
 .about .about-credits { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--color-rule); font-size: 14.5px; color: var(--color-dust); }
 
-/* 404 and the route error boundary: a message over the dimmed map. */
-.notfound, .page-msg { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 24px; text-align: center; background: rgba(5, 4, 8, .55); }
+/* 404 and the route error boundary: a message over the map as a backdrop. The scrim is .73: its dust text needs it
+ * over the gas at full strength (.67 measured 4.44 on a fresh load; e2e/pages.spec.ts). */
+.notfound, .page-msg { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 24px; text-align: center; background: rgba(5, 4, 8, .73); }
 .notfound h1 { max-width: 20em; font-family: var(--font-serif); font-weight: 500; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; }
 .notfound .notfound-sub { margin: 14px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
 .notfound .combo { width: min(480px, 100%); text-align: left; }
@@ -52,6 +61,7 @@
 
 @media (max-width: 899px) {
   .hero { padding-top: 40px; }
+  .hero::before { inset: 22px 0 -28px; }
   .hero h1 { font-size: clamp(38px, 11vw, 52px); }
   .hero .lede, .notfound .notfound-sub { font-size: 15.5px; }
   .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }

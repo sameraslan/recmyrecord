@@ -607,9 +607,12 @@ describe("gas shader source", () => {
     }
   });
 
-  it("dims the gas on the dimmed pages", () => {
-    expect(GAS_DIMMED_STRENGTH).toBeGreaterThan(0.3);
-    expect(GAS_DIMMED_STRENGTH).toBeLessThan(1);
+  // Was "dims the gas on the dimmed pages" (0.3 < strength < 1). The owner's ruling reverses the upper bound: the
+  // approved Home is the prototype's render, which has no such factor. What dims these pages is now CSS (pinned in
+  // styles/glass.test.ts, "Home, About and 404 over the nebula"), and that the text still holds 4.5:1 is measured
+  // in the browser (e2e/pages.spec.ts, "text over the nebula keeps 4.5:1").
+  it("leaves the gas at full strength on Home, About and 404: the veil, pad and scrims in CSS do the dimming", () => {
+    expect(GAS_DIMMED_STRENGTH).toBe(1);
   });
 });
 
