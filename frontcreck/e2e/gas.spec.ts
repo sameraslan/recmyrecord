@@ -219,6 +219,8 @@ interface Gesture {
    * them) and every long task that began inside it or ran into it, for the message of a failed check and for the
    * test's attachments. */
   other: string[];
+  /** The texture uploads and long tasks that began inside the gesture (from its first task to its last frame). */
+  began: string[];
 }
 
 /**
@@ -239,9 +241,9 @@ async function installGestures(page: Page): Promise<void> {
       onStrip: (() => void) | null;
       /** Every texture upload and long task of the page, with when it began and how long it took. */
       seen: { at: number; ms: number; what: string }[];
-      run: { stop: boolean; done: Promise<void>; uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[]; from: number; to: number } | null;
+      run: { stop: boolean; done: Promise<void>; uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[]; began: string[]; from: number; to: number } | null;
       start: (kind: 'drag' | 'wheel') => void;
-      stop: () => Promise<{ uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[] }>;
+      stop: () => Promise<{ uploadsAtStart: number; uploadsAtEnd: number; gaps: number[]; other: string[]; began: string[] }>;
     }
     const g: G = {
       uploads: 0,
@@ -258,7 +260,7 @@ async function installGestures(page: Page): Promise<void> {
         const cy = r.top + r.height / 2;
         const fire = (t: string, x: number, y: number) =>
           c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerType: 'mouse', pointerId: 1, isPrimary: true, button: 0, buttons: t === 'pointerup' ? 0 : 1, clientX: x, clientY: y }));
-        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[], other: [] as string[], from: performance.now(), to: Infinity };
+        const run = { stop: false, done: Promise.resolve(), uploadsAtStart: g.uploads + g.strips, uploadsAtEnd: -1, gaps: [] as number[], other: [] as string[], began: [] as string[], from: performance.now(), to: Infinity };
         g.run = run;
         if (kind === 'drag') fire('pointerdown', cx, cy);
         run.done = (async () => {
@@ -290,7 +292,10 @@ async function installGestures(page: Page): Promise<void> {
           ...inside.map((e) => `${e.what} at ${Math.round(e.at)} ms, ${Math.round(e.ms)} ms`),
           ...(inside.length === 0 ? ['no texture upload and no long task'] : []),
         ];
-        return { uploadsAtStart: run.uploadsAtStart, uploadsAtEnd: run.uploadsAtEnd, gaps: run.gaps, other: run.other };
+        // What began inside the gesture. An upload or a task the gesture itself was begun inside of (the 'strip'
+        // case of the sharper image's test starts its drag from within a strip's upload call) began before it.
+        run.began = inside.filter((e) => e.at >= run.from).map((e) => `${e.what} at ${Math.round(e.at)} ms, ${Math.round(e.ms)} ms`);
+        return { uploadsAtStart: run.uploadsAtStart, uploadsAtEnd: run.uploadsAtEnd, gaps: run.gaps, other: run.other, began: run.began };
       },
     };
     (window as unknown as { __gesture: G }).__gesture = g;
@@ -363,10 +368,25 @@ async function controlGesture(page: Page, info: TestInfo, kind: 'drag' | 'wheel'
 /** The longest frame gap of a gesture, leaving out its first frame (which starts at a random point of a vsync). */
 const worstGap = (g: Gesture): number => Math.max(...g.gaps.slice(1));
 /** An upload inside a gesture would add its whole main-thread time to one frame: on the test browser's software
- * renderer 60 ms and more for a first image. A gesture with no upload in it has the control's frame gaps, give or
- * take what two runs of the same drag differ by on this renderer. */
-function expectGapsOfControl(got: Gesture, control: Gesture): void {
+ * renderer 60 ms and more for a first image. The proof that none did is the same on every renderer: no texture
+ * upload of any kind and no long task began inside the gesture (installGestures records every one of both).
+ * On a real GPU the gesture's frame gaps are compared with the control's as well, give or take what two runs of
+ * the same drag differ by. On a software renderer that comparison measures the machine's load (two drags with no
+ * upload and no long task in either have differed by 300 ms), so it is not made there, and the test says so. */
+async function expectGapsOfControl(page: Page, info: TestInfo, got: Gesture, control: Gesture): Promise<void> {
   expect(got.gaps.length, 'frames in the gesture').toBeGreaterThan(3);
+  expect(got.began, `texture uploads and long tasks that began inside the gesture. THE GESTURE: ${told(got)}. THE CONTROL: ${told(control)}`).toEqual([]);
+  // The renderer's name, by the map's own rule for a software renderer (shaders/gas.ts gasSoftwareRenderer; the
+  // map's flag for it, gasLite, is switched off for this file). Asked here, after the gestures.
+  const renderer = await page.evaluate(() => {
+    const gl = document.querySelector<HTMLCanvasElement>('canvas.map-canvas')!.getContext('webgl2');
+    const dbg = gl?.getExtension('WEBGL_debug_renderer_info');
+    return String(gl ? gl.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : gl.RENDERER) : '');
+  });
+  if (/swiftshader|llvmpipe|software|basic render/i.test(renderer)) {
+    info.annotations.push({ type: 'frame gaps not compared', description: `software renderer (${renderer}): the gaps of two drags differ with the machine's load. Longest gap ${Math.round(worstGap(got))} ms, control ${Math.round(worstGap(control))} ms` });
+    return;
+  }
   expect(worstGap(got), `longest frame gap with an image waiting. THE GESTURE: ${told(got)}. THE CONTROL: ${told(control)}`).toBeLessThanOrEqual(worstGap(control) * 1.25 + 17);
 }
 
@@ -524,6 +544,8 @@ test('gas images that arrive during a drag are not uploaded until the map is lef
   const uploads = () => gasUploads(page);
   await page.goto('/map');
   await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+  // The first image is in: said outright, not inferred from the map having been quiet for a while.
+  await expect.poll(() => gasUploads(page), 'the first gas image is uploaded').toBe(1);
   await waitForMapQuiet(page, 300);
   expect(await uploads(), 'only the stop on screen is uploaded so far').toBe(1);
   // A drag that goes on until told to stop: one pointer move per frame, as a hand on the map makes.
@@ -588,6 +610,8 @@ test('a slider move uploads only the waiting images its morph shows, after the c
   await countGasUploads(page);
   await page.goto('/map');
   await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+  // The first image is in: said outright, not inferred from the map having been quiet for a while.
+  await expect.poll(() => gasUploads(page), 'the first gas image is uploaded').toBe(1);
   await waitForMapQuiet(page, 300);
   // Both late images arrive while a drag keeps them waiting.
   await keepBusy(page, 'drag');
@@ -623,6 +647,8 @@ test('a visitor who never stops moving still gets the late images, one at a time
   await countGasUploads(page);
   await page.goto('/map');
   await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+  // The first image is in: said outright, not inferred from the map having been quiet for a while.
+  await expect.poll(() => gasUploads(page), 'the first gas image is uploaded').toBe(1);
   await waitForMapQuiet(page, 300);
   // A pointer that never rests (over the header, so the map itself draws nothing).
   await keepBusy(page, 'move');
@@ -909,6 +935,8 @@ test('a drag that begins while a late image waits behind the GPU fence gets no u
   await installGestures(page);
   await page.goto('/map');
   await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+  // The first image is in: said outright, not inferred from the map having been quiet for a while.
+  await expect.poll(async () => (await gestureCounts(page)).uploads, 'the first gas image is uploaded').toBe(1);
   await waitForMapQuiet(page, 400);
   expect((await gestureCounts(page)).uploads, 'only the stop on screen is uploaded so far').toBe(1);
   // The map is quiet, so a late image that arrives now is cleared for upload and waits only for the GPU fence
@@ -926,7 +954,7 @@ test('a drag that begins while a late image waits behind the GPU fence gets no u
   // Left alone, both go in.
   await waitForMap(page);
   expect((await gestureCounts(page)).uploads).toBe(3);
-  expectGapsOfControl(drag, await controlGesture(page, info, 'drag', 1200));
+  await expectGapsOfControl(page, info, drag, await controlGesture(page, info, 'drag', 1200));
   expect(errors).toEqual([]);
 });
 
@@ -940,6 +968,8 @@ test('a drag or a wheel zoom held longer than the longest wait gets no upload un
     await installGestures(page);
     await page.goto('/map');
     await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+    // The first image is in: said outright, not inferred from the map having been quiet for a while.
+    await expect.poll(async () => (await gestureCounts(page)).uploads, 'the first gas image is uploaded').toBe(1);
     await waitForMapQuiet(page, 400);
     await page.evaluate((k) => (window as unknown as GestureWindow).__gesture.start(k), kind);
     late.release();
@@ -952,7 +982,7 @@ test('a drag or a wheel zoom held longer than the longest wait gets no upload un
     expect(held.uploadsAtEnd - held.uploadsAtStart, `gas uploads inside the ${kind}. ${told(held)}`).toBe(0);
     await waitForMap(page);
     expect((await gestureCounts(page)).uploads).toBe(3);
-    expectGapsOfControl(held, await controlGesture(page, info, kind, 5500));
+    await expectGapsOfControl(page, info, held, await controlGesture(page, info, kind, 5500));
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   }
   expect(errors).toEqual([]);
@@ -1023,7 +1053,7 @@ test('a drag that begins between two strips of a sharper image, or inside one, g
     }
     expect((await gestureCounts(page)).strips).toBe(16);
     await waitForMapQuiet(page, 400);
-    expectGapsOfControl(drag, await controlGesture(page, info, 'drag', 1200));
+    await expectGapsOfControl(page, info, drag, await controlGesture(page, info, 'drag', 1200));
     await page.unrouteAll({ behavior: 'ignoreErrors' });
   }
   expect(errors).toEqual([]);
@@ -1567,6 +1597,8 @@ test('a finger whose release is never seen does not hold the late images back fo
   await countGasUploads(page);
   await page.goto('/map');
   await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && window.__rmr?.gas === 'loading', null, { timeout: 20_000 });
+  // The first image is in: said outright, not inferred from the map having been quiet for a while.
+  await expect.poll(() => gasUploads(page), 'the first gas image is uploaded').toBe(1);
   await waitForMapQuiet(page, 300);
   expect(await gasUploads(page)).toBe(1);
   // A finger goes down and neither its pointerup nor its pointercancel ever arrives. Sent to the page, not to the

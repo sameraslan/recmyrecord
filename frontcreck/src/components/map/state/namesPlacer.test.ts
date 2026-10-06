@@ -3,6 +3,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ThemeData, ThemeLabel } from '@/lib/data/theme';
 import { useAppStore } from '@/lib/store';
+import { gasFirstBegin, gasFirstEnd, NAMES_GAS_WAIT_MS } from './gasFirst';
 import { DEFAULT_INPUT, useMapStore } from './mapStore';
 import { inStep, markStep, STEP_HOLD_MS } from './motion';
 import { clearNameWidths, nameWidths } from './nameWidths';
@@ -167,6 +168,71 @@ describe('the names placer', () => {
     useAppStore.setState({ namesOn: false });
     place(world, cam(), W, H, POS);
     expect(shown()).toEqual([]);
+  });
+
+  describe('before the first gas image is on screen', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => {
+      gasFirstEnd();
+      vi.useRealTimers();
+    });
+
+    it('shows no name while the gas is still loading its first image, and all of them in the placement after it', () => {
+      const place = createNamesPlacer();
+      gasFirstBegin(() => {});
+      expect(place(world, cam(), W, H, POS)).toBe(true);
+      expect(shown()).toEqual([]);
+      // Nothing was written to a name: they are hidden as RegionNames rendered them.
+      expect(seen.takeRecords()).toHaveLength(0);
+      // Still waiting, a moving map: still none.
+      place(world, cam(0.1, 0), W, H, POS);
+      expect(shown()).toEqual([]);
+      // The image is in (or failed, or the gas is off): the frame that shows it places the names, though
+      // nothing else the placer reads has changed.
+      gasFirstEnd();
+      expect(place(world, cam(0.1, 0), W, H, POS)).toBe(true);
+      expect(shown()).toEqual(KEYS.slice(0, 2));
+      expect(els[KEYS[0]].style.transform).toBe('translate3d(644.0px, 266.0px, 0) translate(-50%, -50%)');
+      // No fade mark: they come in as hidden names do.
+      expect(els[KEYS[0]].className).toBe('rn');
+    });
+
+    it('never keeps them hidden for good: a slow image is given up on, and the names are placed without a frame', () => {
+      const place = createNamesPlacer();
+      const now = vi.fn(() => place(world, cam(), W, H, POS));
+      gasFirstBegin(now);
+      place(world, cam(), W, H, POS);
+      expect(shown()).toEqual([]);
+      vi.advanceTimersByTime(NAMES_GAS_WAIT_MS);
+      expect(now).toHaveBeenCalledTimes(1);
+      expect(shown()).toEqual(KEYS.slice(0, 2));
+    });
+
+    it('a map whose gas never begins (no WebGL gas) places the names at once', () => {
+      const place = createNamesPlacer();
+      place(world, cam(), W, H, POS);
+      expect(shown()).toEqual(KEYS.slice(0, 2));
+    });
+
+    it('hides names that were showing if the gas starts over, and owes no rest placement for it', () => {
+      const place = createNamesPlacer();
+      place(world, cam(), W, H, POS);
+      expect(shown()).toHaveLength(2);
+      gasFirstBegin(() => {});
+      place(world, cam(), W, H, POS);
+      expect(shown()).toEqual([]);
+      expect(place.pending()).toBe(false);
+    });
+
+    it('with the names switched off nothing is placed or awaited, as before', () => {
+      setOverlayEl('names', null);
+      const place = createNamesPlacer();
+      gasFirstBegin(() => {});
+      expect(place(world, cam(), W, H, POS)).toBe(false);
+      gasFirstEnd();
+      expect(place(world, cam(), W, H, POS)).toBe(false);
+      expect(seen.takeRecords()).toHaveLength(0);
+    });
   });
 
   it('lays the names out again when their widths were measured again (the face arrived)', () => {

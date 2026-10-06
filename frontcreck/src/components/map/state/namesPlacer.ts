@@ -4,6 +4,7 @@ import { useAppStore } from '@/lib/store';
 import { STOP_IDS } from '@/lib/types';
 import type { StopId } from '@/lib/types';
 import { STOP_T } from '../data';
+import { gasFirstPending } from './gasFirst';
 import { useMapStore } from './mapStore';
 import { inMotion, inStep, markStep, onStepEnd } from './motion';
 import { nameWidths, nameWidthsVersion } from './nameWidths';
@@ -150,10 +151,10 @@ const moving = (s: Parameters<typeof inMotion>[0]): boolean => inStep() || inMot
 /** The placement RegionNamesDriver runs on every drawn frame and when RegionNames asks: decides which region
  * names show and where (state/namesLayout.ts) and writes their transforms. It reads no layout, asks for no
  * frame and listens to nothing but the end of a name's fade (fadeEnded). It keeps what its last placement was
- * made from (18 values) and returns at once when none of them changed: a hover redraw (the pointer move path),
+ * made from (19 values) and returns at once when none of them changed: a hover redraw (the pointer move path),
  * a cover fading in or the sharper gas image fading in costs those compares and nothing else, with no motion
  * flag read, no allocation and no DOM touched. No name shows while an album is open, once the map is zoomed
- * in, on the dimmed backdrop or while the names are off.
+ * in, on the dimmed backdrop, while the names are off, or before the map's first gas image is on screen.
  * While the map moves (state/motion.ts: inMotion, or a run of steps with no flag, which is a held arrow key, a
  * wheel under reduced motion or a resize) a name keeps the spot it has, so names do not hop between spots
  * under a pan. The first placement at rest forgets those spots and solves the view afresh, so a view always
@@ -178,6 +179,7 @@ export function createNamesPlacer(): NamesPlacer {
   let bNamesOn = false;
   let bTop = 0;
   let bWidths = 0;
+  let bGasWait = false;
   // The stop the slider last rested on: a morph fades its names out and the target's in.
   let rest: StopId = useMapStore.getState().input.stop;
   const sticky = new Map<string, number>();
@@ -218,6 +220,8 @@ export function createNamesPlacer(): NamesPlacer {
     // CSS px of the canvas under the site header: 0 while the stage starts below it (state/stageTop.ts).
     const top = getStageTop();
     const widths = nameWidthsVersion();
+    // No name before the nebula: the map is still waiting for its first gas image (state/gasFirst.ts).
+    const gasWait = gasFirstPending();
     const { x, y } = camera.position;
     if (
       bLayer === layer &&
@@ -238,6 +242,7 @@ export function createNamesPlacer(): NamesPlacer {
       bNamesOn === namesOn &&
       bTop === top &&
       bWidths === widths &&
+      bGasWait === gasWait &&
       // Nothing changed. Only when the last placement was made in motion is there more to ask: has it ended?
       (!unsettled || moving(store))
     ) {
@@ -272,6 +277,7 @@ export function createNamesPlacer(): NamesPlacer {
     bNamesOn = namesOn;
     bTop = top;
     bWidths = widths;
+    bGasWait = gasWait;
 
     // At rest every name is tried on its own point first, whatever spot it had on the way here.
     const settling = !inMove && unsettled;
@@ -283,7 +289,7 @@ export function createNamesPlacer(): NamesPlacer {
     // comes first; on a phone only the focus says so.
     const albumOpen = input.focus !== null || input.insetLeft > 0;
     // Overview and Whole map only; never beside an open album, and never on the dimmed backdrop (Home, About, 404).
-    const on = namesOn && !input.dimmed && namesShown(coverPx, albumOpen);
+    const on = namesOn && !gasWait && !input.dimmed && namesShown(coverPx, albumOpen);
     const now = ++pass;
     let morph = false;
 
