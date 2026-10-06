@@ -52,6 +52,7 @@ import {
 import { gasFirstBegin, gasFirstEnd } from "../state/gasFirst";
 import { useMapStore } from "../state/mapStore";
 import { placeNamesNow } from "../state/nameWidths";
+import { rendererName } from "../state/renderer";
 import { coverCssPx, pxPerWorld } from "../state/zoomLimits";
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -374,18 +375,11 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
           noGas(stop);
         });
     }
-    // The renderer's name, asked once: the call needs an answer from the GPU process, so it is made only when the
-    // GPU has caught up (behind the fence: before the first upload, or before the first stop is given up as
+    // The renderer's name, asked once (state/renderer.ts keeps the answer, and its verdict, for the star glints
+    // too, whatever shader is chosen here): the call needs an answer from the GPU process, so it is made only when
+    // the GPU has caught up (behind the fence: before the first upload, or before the first stop is given up as
     // having no image) or the map is quiet (the sharper image's look).
-    let rendererName: string | null = null;
-    function renderer(): string {
-      if (rendererName === null) {
-        const ctx = gl.getContext();
-        const dbg = ctx.getExtension("WEBGL_debug_renderer_info");
-        rendererName = String(ctx.getParameter(dbg ? dbg.UNMASKED_RENDERER_WEBGL : ctx.RENDERER));
-      }
-      return rendererName;
-    }
+    const renderer = (): string => rendererName(gl.getContext());
     /** Chooses the lighter shader on a software renderer. Called before the gas first becomes visible, so the
      * material is compiled once, as what it will stay. */
     let shaderChosen = false;

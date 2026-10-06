@@ -1,4 +1,5 @@
 import { STOP_IDS, type StopId } from "@/lib/types";
+import { isSoftwareRenderer } from "../state/renderer";
 import { smoothstep } from "../state/zoomLimits";
 import { NAMES_BAND_PX } from "../theme";
 
@@ -281,10 +282,9 @@ export function gasSharpBlocked(d: GasSharpDevice): string | null {
   return null;
 }
 
-/** True when the renderer's name is a software renderer's: the CPU shades every pixel. */
-export function gasSoftwareRenderer(renderer: string): boolean {
-  return /swiftshader|llvmpipe|software|basic render/i.test(renderer);
-}
+/** True when the renderer's name is a software renderer's: the CPU shades every pixel. The test itself is
+ * state/renderer.ts isSoftwareRenderer, shared with the star glints. */
+export const gasSoftwareRenderer = isSoftwareRenderer;
 
 /**
  * The stop whose sharper image the view could use right now, or null: only on an interactive map, only while

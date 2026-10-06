@@ -5,6 +5,8 @@ import {
   TWINKLE_BLOOM,
   TWINKLE_DUR_MS,
   TWINKLE_FLARE,
+  TWINKLE_GLASS_CLEAR_PX,
+  TWINKLE_HOVER_HOLD_MS,
   TWINKLE_MAX,
   TWINKLE_SETTLE_MS,
   TWINKLE_WAIT_MS,
@@ -12,7 +14,11 @@ import {
   createTwinkle,
   glintBackground,
   glintFor,
+  glintArea,
+  glintBlockers,
+  glintReach,
   pickStar,
+  twinkleRuledOut,
   twinkleShown,
   watchTwinkleSwitch,
   worldToScreenMap,
@@ -21,13 +27,15 @@ import {
 
 /** A scheduler on vitest's fake timers, with a host whose answers the test sets. */
 function harness(random: () => number = () => 0) {
-  const state = { hidden: false, reduced: false, resting: true, durMs: 1500, noStar: false };
+  const state = { hidden: false, reduced: false, possible: true, resting: true, hovered: false, durMs: 1500, noStar: false };
   const glints: { ended: () => void; removed: boolean }[] = [];
   const delays: number[] = [];
   const host: TwinkleHost = {
     hidden: () => state.hidden,
     reducedMotion: () => state.reduced,
+    possible: () => state.possible,
     resting: () => state.resting,
+    hovered: () => state.hovered,
     spawn: (ended) => {
       if (state.noStar) return null;
       const g = { ended, removed: false };
@@ -241,6 +249,143 @@ describe('the timer', () => {
     expect(h.tw.stats.spawned).toBe(2);
   });
 
+  it('makes no glint while an album is hovered, nor for 500 ms after; the playing ones are left to finish', () => {
+    expect(TWINKLE_HOVER_HOLD_MS).toBe(500);
+    const h = harness();
+    h.state.durMs = 100_000;
+    h.tw.sync();
+    vi.advanceTimersByTime(1200);
+    expect(h.tw.stats.spawned).toBe(1);
+    h.state.hovered = true;
+    h.tw.hoverChanged(); // what the driver's frame callback reports
+    vi.advanceTimersByTime(6000); // five ticks under the hover
+    expect(h.tw.stats.spawned).toBe(1);
+    expect(h.tw.stats.hoverHeld).toBe(5);
+    // The glint that was playing is still there: a hover clears nothing.
+    expect(h.glints[0].removed).toBe(false);
+    expect(h.tw.stats.alive).toBe(1);
+    expect(h.tw.stats.cleared).toBe(0);
+    // The hover ends 499 ms before the next tick: still held. The tick after that makes one.
+    vi.advanceTimersByTime(701);
+    h.state.hovered = false;
+    h.tw.hoverChanged();
+    vi.advanceTimersByTime(499);
+    expect(h.tw.stats.spawned).toBe(1);
+    expect(h.tw.stats.hoverHeld).toBe(6);
+    vi.advanceTimersByTime(1200);
+    expect(h.tw.stats.spawned).toBe(2);
+  });
+
+  it('makes a glint on a tick exactly 500 ms after the hover ended', () => {
+    const h = harness();
+    h.tw.sync();
+    h.state.hovered = true;
+    h.tw.hoverChanged();
+    vi.advanceTimersByTime(700);
+    h.state.hovered = false;
+    h.tw.hoverChanged();
+    vi.advanceTimersByTime(500); // the tick at 1200
+    expect(h.tw.stats.spawned).toBe(1);
+    expect(h.tw.stats.hoverHeld).toBe(0);
+  });
+
+  it('holds for 500 ms from a tick that found an album hovered, even if no change was reported', () => {
+    const h = harness(() => 0);
+    h.tw.sync();
+    h.state.hovered = true;
+    vi.advanceTimersByTime(1200);
+    expect(h.tw.stats.hoverHeld).toBe(1);
+    expect(h.tw.stats.spawned).toBe(0);
+    h.state.hovered = false;
+    vi.advanceTimersByTime(1200);
+    expect(h.tw.stats.spawned).toBe(1);
+  });
+
+  it('has no timer at all while a glint cannot be made here (covers showing, a software renderer, About, the phone list)', () => {
+    const h = harness();
+    h.state.possible = false;
+    h.tw.sync();
+    expect(h.delays).toEqual([]);
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(60_000);
+    expect(h.tw.stats.ticks).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+    // The condition clears (the driver reports a change of view or of page): the timer starts.
+    h.state.possible = true;
+    h.tw.viewChanged();
+    expect(vi.getTimerCount()).toBe(1);
+    vi.advanceTimersByTime(1200);
+    expect(h.tw.stats.spawned).toBe(1);
+  });
+
+  it('stops the timer and clears the glints when a glint becomes impossible, leaving no timer pending', () => {
+    const h = harness();
+    h.tw.sync();
+    vi.advanceTimersByTime(2400);
+    expect(h.tw.stats.alive).toBe(2);
+    h.state.possible = false;
+    h.tw.viewChanged(); // zoomed in until covers show
+    expect(h.glints.every((g) => g.removed)).toBe(true);
+    // Not the wait, and not the two glints' fallback removals either.
+    expect(vi.getTimerCount()).toBe(0);
+    vi.advanceTimersByTime(60_000);
+    expect(h.tw.stats.ticks).toBe(2);
+    h.state.possible = true;
+    h.tw.sync();
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
+  it('stops on its own tick if a glint became impossible with no report (the renderer turned out to be software)', () => {
+    const h = harness();
+    h.tw.sync();
+    h.state.possible = false;
+    vi.advanceTimersByTime(1200);
+    expect(h.tw.stats.spawned).toBe(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('stops within the tick that learns it: resting() may find out that glints are impossible', () => {
+    const h = harness();
+    const resting = vi.fn(() => {
+      h.state.possible = false; // the renderer was asked for on this tick, and it is a software one
+      return false;
+    });
+    const tw = createTwinkle(
+      { hidden: () => false, reducedMotion: () => false, possible: () => h.state.possible, resting, hovered: () => false, spawn: () => null },
+      { setTimeout: (fn, ms) => setTimeout(fn, ms) as unknown as number, clearTimeout: (id) => clearTimeout(id), now: () => Date.now(), random: () => 0 },
+    );
+    tw.sync();
+    vi.advanceTimersByTime(1200);
+    expect(resting).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('leaves no timer behind in a hidden tab, under reduced motion, with the switch off, or after dispose', () => {
+    for (const stop of [
+      (h: ReturnType<typeof harness>) => { h.state.hidden = true; h.tw.sync(); },
+      (h: ReturnType<typeof harness>) => { h.state.reduced = true; h.tw.sync(); },
+      (h: ReturnType<typeof harness>) => h.tw.setEnabled(false),
+      (h: ReturnType<typeof harness>) => h.tw.dispose(),
+    ]) {
+      const h = harness();
+      h.tw.sync();
+      vi.advanceTimersByTime(2400); // two glints playing, each with a fallback removal pending
+      expect(vi.getTimerCount()).toBe(3);
+      stop(h);
+      expect(vi.getTimerCount()).toBe(0);
+    }
+  });
+
+  it('drops a glint\'s fallback removal when its animation ends', () => {
+    const h = harness();
+    h.state.durMs = 100_000;
+    h.tw.sync();
+    vi.advanceTimersByTime(1200);
+    expect(vi.getTimerCount()).toBe(2); // the wait and the fallback
+    h.glints[0].ended();
+    expect(vi.getTimerCount()).toBe(1);
+  });
+
   it('is finished by dispose: the timer is cleared, every glint removed, and sync cannot restart it', () => {
     const h = harness();
     h.tw.sync();
@@ -282,6 +427,52 @@ describe('pickStar', () => {
     expect([...seen].sort()).toEqual([0, 2]);
   });
 
+  it('picks only a star whose whole glint (bloom and flare, by its class) lies inside the area', () => {
+    // Reach by class: 30 px each way for the two brightest (their flare), 10 px for the others.
+    const reach = [30, 30, 10, 10];
+    const box = { left: 0, top: 64, right: 200, bottom: 200 };
+    //                                 A: bright, 20 px under the header   B: faint, same place   C: bright, clear   D: faint, 5 px from the right edge
+    const positions = new Float32Array([100, 84, 100, 84, 100, 130, 195, 130]);
+    const classes = new Uint8Array([0, 3, 1, 3]);
+    const random = seededRandom(7);
+    const seen = new Set<number>();
+    for (let k = 0; k < 500; k++) seen.add(pickStar(positions, classes, to, box, [], random, reach)!.index);
+    expect([...seen].sort()).toEqual([1, 2]);
+    // Exactly touching the edge is allowed; one hundredth over is not.
+    expect(pickStar(new Float32Array([100, 94]), new Uint8Array([0]), to, box, [], random, reach)).not.toBeNull();
+    expect(pickStar(new Float32Array([100, 93.99]), new Uint8Array([0]), to, box, [], random, reach)).toBeNull();
+  });
+
+  it('skips a star whose glint would reach under a glass surface, on any side of it', () => {
+    const reach = [30, 30, 10, 10];
+    const box = { left: 0, top: 0, right: 400, bottom: 400 };
+    const glass = [{ left: 100, top: 100, right: 200, bottom: 150 }];
+    const at = (x: number, y: number, cls: number) => pickStar(new Float32Array([x, y]), new Uint8Array([cls]), to, box, [], seededRandom(1), reach, glass);
+    // Inside the surface.
+    expect(at(150, 125, 3)).toBeNull();
+    // A faint star 9 px off each side: its bloom (10 px) reaches under. 10 px off: clear.
+    for (const [x, y] of [[91, 125], [209, 125], [150, 91], [150, 159]]) expect(at(x, y, 3), `${x},${y}`).toBeNull();
+    for (const [x, y] of [[90, 125], [210, 125], [150, 90], [150, 160]]) expect(at(x, y, 3), `${x},${y}`).not.toBeNull();
+    // A bright star at the same clear spots is not clear: its flare runs 30 px.
+    for (const [x, y] of [[90, 125], [210, 125], [150, 90], [150, 160]]) expect(at(x, y, 0), `${x},${y}`).toBeNull();
+    for (const [x, y] of [[70, 125], [230, 125], [150, 70], [150, 180]]) expect(at(x, y, 0), `${x},${y}`).not.toBeNull();
+    // Diagonally off a corner the glint's box still overlaps the surface's.
+    expect(at(95, 95, 3)).toBeNull();
+    expect(at(89, 89, 3)).not.toBeNull();
+  });
+
+  it('with several glass surfaces, a star must be clear of every one', () => {
+    const reach = [0, 0, 0, 0];
+    const box = { left: 0, top: 0, right: 100, bottom: 100 };
+    const glass = [{ left: 0, top: 0, right: 50, bottom: 100 }, { left: 50, top: 0, right: 100, bottom: 50 }];
+    const positions = new Float32Array([25, 25, 75, 25, 25, 75, 75, 75]);
+    const classes = new Uint8Array([3, 3, 3, 3]);
+    const random = seededRandom(2);
+    const seen = new Set<number>();
+    for (let k = 0; k < 200; k++) seen.add(pickStar(positions, classes, to, box, [], random, reach, glass)!.index);
+    expect([...seen]).toEqual([3]);
+  });
+
   it('returns nothing when no star is on screen', () => {
     expect(pickStar(new Float32Array([10, 10]), new Uint8Array([0]), to, { left: 200, top: 200, right: 300, bottom: 300 }, [], seededRandom(1))).toBeNull();
     expect(pickStar(new Float32Array(0), new Uint8Array(0), to, area, [], seededRandom(1))).toBeNull();
@@ -308,6 +499,33 @@ describe('pickStar', () => {
     // (41 * 12 + 367 * 7) / (41 * 12 + 367 * 7 + 1102 * 2.5 + 2571) = 0.365
     expect(flares / 3000).toBeGreaterThan(0.32);
     expect(flares / 3000).toBeLessThan(0.41);
+  });
+});
+
+describe('where a glint may be (glintArea, glintBlockers)', () => {
+  it('is the visible map, 22 px in from the header, the album panel, the phone slider panel and the edges', () => {
+    expect(glintArea({ width: 1440, height: 900, top: 64, inset: 0, bottomCover: 0 })).toEqual({ left: 22, top: 86, right: 1418, bottom: 878 });
+    expect(glintArea({ width: 1280, height: 720, top: 64, inset: 420, bottomCover: 0 })).toEqual({ left: 442, top: 86, right: 1258, bottom: 698 });
+    // The phone: a 60 px header and the slider panel across the bottom.
+    expect(glintArea({ width: 390, height: 844, top: 60, inset: 0, bottomCover: 165 })).toEqual({ left: 22, top: 82, right: 368, bottom: 657 });
+    // The panel's inset overshoots below 0 while it eases away: never left of the canvas.
+    expect(glintArea({ width: 1440, height: 900, top: 64, inset: -3, bottomCover: 0 }).left).toBe(22);
+  });
+
+  it('keeps the brightest glint (33.6 px each way) wholly below the header with the clearance to spare', () => {
+    const area = glintArea({ width: 1440, height: 900, top: 64, inset: 0, bottomCover: 0 });
+    const reach = [glintReach(0, 2.8), 0, 0, 0];
+    const at = (y: number) => pickStar(new Float32Array([700, y]), new Uint8Array([0]), { ox: 0, oy: 0, kx: 1, ky: -1 }, area, [], seededRandom(1), reach);
+    expect(at(64 + 22 + 33.5)).toBeNull();
+    expect(at(64 + 22 + 33.7)).not.toBeNull();
+  });
+
+  it('grows each glass surface by the clearance', () => {
+    expect(glintBlockers([{ left: 440, top: 84, right: 684, bottom: 214 }, { left: 1220, top: 532, right: 1260, bottom: 572 }])).toEqual([
+      { left: 418, top: 62, right: 706, bottom: 236 },
+      { left: 1198, top: 510, right: 1282, bottom: 594 },
+    ]);
+    expect(glintBlockers([])).toEqual([]);
   });
 });
 
@@ -346,6 +564,21 @@ describe('glintFor', () => {
     expect(2 * glintFor(pick, 0, 3.0, [255, 250, 244], false, () => 0).radius).toBeCloseTo(43, 6);
     // Zoomed out to the whole map, the shader draws no star smaller than 0.8 px.
     expect(2 * glintFor(pick, 3, 0.8, [255, 250, 244], false, () => 0).radius).toBeCloseTo(18.8, 6);
+  });
+
+  it('reaches as far from the star as its bloom or its flare, whichever is longer (glintReach)', () => {
+    expect(TWINKLE_GLASS_CLEAR_PX).toBe(22);
+    for (const cls of [0, 1, 2, 3]) {
+      for (const r of [0.8, 1.1, 1.9, 2.8, 3.5]) {
+        const g = glintFor(pick, cls, r, [255, 250, 244], false, () => 0);
+        expect(glintReach(cls, r), `class ${cls} radius ${r}`).toBeCloseTo(Math.max(g.radius, (g.flare ?? 0) / 2), 9);
+      }
+    }
+    // The brightest star at the Overview: bloom 20.4 px, flare 33.6 px each way.
+    expect(glintReach(0, 2.8)).toBeCloseTo(33.6, 6);
+    // A small bright star: the bloom (5.5 r + 5) is wider than the flare (12 r) under r = 0.77; the shader's floor is 0.8.
+    expect(glintReach(1, 0.5)).toBeCloseTo(7.75, 6);
+    expect(glintReach(3, 1.1)).toBeCloseTo(11.05, 6);
   });
 
   it('takes the star tint three quarters of the way to white, lasts 1.2 to 1.8 s, and is quieter beside an open album', () => {
@@ -422,19 +655,32 @@ describe('the switch for tests and measurements (window.__rmrTwinkle)', () => {
   });
 });
 
-describe('which devices get glints (twinkleShown)', () => {
-  it('none on a software renderer, where they cost long frames; all other devices do', () => {
+describe('which devices get glints (twinkleShown, twinkleRuledOut)', () => {
+  it('none on a software renderer, where they cost long frames; a renderer known to be a GPU gets them', () => {
     expect(twinkleShown(true, undefined)).toBe(false);
     expect(twinkleShown(false, undefined)).toBe(true);
-    // Not known yet (the gas has not chosen its shader) or no gas layer at all: not counted as software.
-    expect(twinkleShown(undefined, undefined)).toBe(true);
   });
 
-  it("an exact 'on' plays them on any renderer (browser tests and the cost measurement draw in software)", () => {
+  it('none while the renderer is not known (no answer from the graphics context yet): unknown is not a GPU', () => {
+    expect(twinkleShown(undefined, undefined)).toBe(false);
+    expect(twinkleShown(undefined, 'off')).toBe(false);
+  });
+
+  it("an exact 'on' plays them on any renderer, known or not (browser tests and the cost measurement draw in software)", () => {
     expect(twinkleShown(true, 'on')).toBe(true);
     expect(twinkleShown(false, 'on')).toBe(true);
+    expect(twinkleShown(undefined, 'on')).toBe(true);
     // 'off' is the timer's business (watchTwinkleSwitch); here it changes nothing.
     expect(twinkleShown(true, 'off')).toBe(false);
     expect(twinkleShown(false, 'off')).toBe(true);
+  });
+
+  it('are ruled out for good only by a renderer known to be software, unless forced: then there is no timer', () => {
+    expect(twinkleRuledOut(true, undefined)).toBe(true);
+    expect(twinkleRuledOut(true, 'off')).toBe(true);
+    expect(twinkleRuledOut(true, 'on')).toBe(false);
+    expect(twinkleRuledOut(false, undefined)).toBe(false);
+    // Not known yet: the timer runs, so that a quiet tick can ask; no glint is made until the answer is "a GPU".
+    expect(twinkleRuledOut(undefined, undefined)).toBe(false);
   });
 });
