@@ -22,7 +22,12 @@ describe('glass', () => {
   it('the hover label is solid and above the hint band: no blur on the element that moves with the pointer', () => {
     // Dropped for speed: glass on the hover label. It is moved on every hover frame (OverlayDriver).
     const tip = /\n\.map-tip \{([^}]*)\}/.exec(read('styles/map.css'))![1];
-    expect(tip).toContain('background: rgba(10, 9, 14, 1);');
+    // The solid panel colour, through the token that globals.css keeps equal to the three fallbacks' value.
+    expect(tip).toContain('background: var(--color-float-solid);');
+    expect(read('app/globals.css')).toContain('\n  --color-float-solid: rgba(10, 9, 14, 1);\n');
+    expect(SOLID).toContain('--color-float: rgba(10, 9, 14, 1);');
+    // No bare copy of it is left in the rules of the stylesheets (comments aside).
+    for (const f of SHEETS.filter((x) => x !== 'app/globals.css')) expect(read(f).replace(/\/\*[\s\S]*?\*\//g, ''), f).not.toContain('rgba(10, 9, 14, 1)');
     expect(tip).not.toContain('backdrop-filter');
     // Over .map-ui, whose hint band would otherwise paint on it.
     const z = (block: string) => Number(/z-index: (\d+)/.exec(block)![1]);
@@ -139,15 +144,31 @@ describe('Home, About and 404 over the nebula', () => {
     expect(read('styles/phone.css')).not.toMatch(/\.veil\b/);
   });
 
-  it('the hero text sits on a blurred dark pad with no edge', () => {
+  it('the hero text sits on a blurred dark pad with no edge, as in the prototype', () => {
     const pad = rule(home, '.hero::before');
-    expect(pad.background).toBe('rgba(5, 4, 8, .78)');
+    expect(pad.background).toBe('rgba(5, 4, 8, .72)');
     expect(pad.filter).toBe('blur(26px)');
     expect(pad['pointer-events']).toBe('none');
     expect(pad['z-index']).toBe('-1');
-    // 28 px below the hero's last row, on wide screens and on phones: more than the blur's 26, so the row is on the full pad.
-    expect(pad.inset).toBe('clamp(18px, 8vh, 92px) -6px -28px');
-    expect(home).toContain('\n  .hero::before { inset: 22px 0 -28px; }\n');
+    // 4 px below the hero's last row, on wide screens and on phones (prototype pages.css): the pad ends with the
+    // hero, so the brightest gas, just under the links, stays bright. The links have their own pad (next test).
+    expect(pad.inset).toBe('clamp(18px, 8vh, 92px) -6px -4px');
+    expect(home).toContain('\n  .hero::before { inset: 22px 0 -4px; }\n');
+  });
+
+  it('the two links under the search field have a small pad of their own, static and no wider than their row', () => {
+    expect(rule(home, '.hero-row').position).toBe('relative');
+    const pad = rule(home, '.hero-row::before');
+    expect(pad.background).toBe('rgba(5, 4, 8, .38)');
+    expect(pad.filter).toBe('blur(10px)');
+    // 280 px wide round the middle of the row (the two links are about 250), from 6 px inside the row's top to 2 px
+    // below it: the dimmed gas under the links is about 280 x 22 px, not the hero's width.
+    expect(pad.inset).toBe('6px calc(50% - 140px) -2px');
+    expect(pad['z-index']).toBe('-1');
+    expect(pad['pointer-events']).toBe('none');
+    // Static: rasterised once, never animated, no layer hint.
+    expect(home).not.toMatch(/will-change|animation|@keyframes/);
+    for (const sel of ['.hero::before', '.hero-row::before', '.notfound::before, .page-msg::before']) expect(rule(home, sel).transition, sel).toBeUndefined();
   });
 
   it('the shelf has a full-width scrim, dark enough for its caption, clipped by the Home layer', () => {
@@ -157,10 +178,23 @@ describe('Home, About and 404 over the nebula', () => {
     expect(scrim['pointer-events']).toBe('none');
     expect(rule(home, '.shelf').position).toBe('relative');
     expect(rule(home, '.home')['overflow-x']).toBe('hidden');
+    // In a tall window the same scrim starts 40 px above the shelf and ramps over 76 px: full (.82) at the same line,
+    // 36 px into the shelf where the caption starts (the shelf's top padding), with no floor line across the nebula.
+    expect(home).toContain('\n@media (min-height: 861px) {\n  .shelf::before { inset: -40px -50vw 0; background: linear-gradient(rgba(7, 6, 10, 0), rgba(7, 6, 10, .82) 76px); }\n}\n');
+    expect(rule(home, '.shelf').padding).toBe('36px var(--gut) 28px');
   });
 
-  it('About has a light scrim round its glass card, the 404 a dark one under its bare text', () => {
+  it('About and the 404 have the same light scrim; the 404 text sits on a blurred pad, as the hero does', () => {
     expect(rule(home, '.about-page').background).toBe('rgba(5, 4, 8, .3)');
-    expect(rule(home, '.notfound, .page-msg').background).toBe('rgba(5, 4, 8, .73)');
+    expect(rule(home, '.notfound, .page-msg').background).toBe('rgba(5, 4, 8, .3)');
+    const pad = rule(home, '.notfound::before, .page-msg::before');
+    expect(pad.background).toBe('rgba(5, 4, 8, .62)');
+    expect(pad.filter).toBe('blur(26px)');
+    expect(pad.width).toBe('min(600px, 100%)');
+    expect(pad.height).toBe('320px');
+    // Centred on the layer, where its grid centres the text.
+    expect([pad.position, pad.left, pad.top, pad.transform]).toEqual(['absolute', '50%', '50%', 'translate(-50%, -50%)']);
+    expect(pad['z-index']).toBe('-1');
+    expect(pad['pointer-events']).toBe('none');
   });
 });

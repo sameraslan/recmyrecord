@@ -31,7 +31,7 @@ ol, ul { padding: 0; list-style: none; }
    (phones, no backdrop-filter, reduced transparency: see globals.css). The prefixed line is for Safari before 18.
    The hover label (.map-tip) is not in the list: it is solid (map.css).
    Speed fallback 2, a solid header: add after this rule
-     .top { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(10, 9, 14, 1); }
+     .top { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--color-float-solid); }
    (.top.top--home stays clear by specificity). Pin that moves: e2e/glass.spec.ts, the header.top expectation of
    "panels are glass on wide screens". */
 .top, .panel, .album, .map-zoom button, .map-names, .map-msg, .about, .combo--hero .combo-field, .fab-map--on {

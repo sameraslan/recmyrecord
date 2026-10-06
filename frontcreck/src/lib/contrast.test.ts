@@ -231,8 +231,11 @@ describe('text over washes and bands', () => {
 
   it('the hover label is paper and dust on a solid surface', () => {
     const tip = rule(css('styles/map.css'), '.map-tip');
-    const bg = /^rgba\((\d+), (\d+), (\d+), 1\)$/.exec(tip.background);
-    expect(bg, tip.background).not.toBeNull();
+    // The label's background is the solid-surface token; its value in globals.css must be fully opaque.
+    expect(tip.background).toBe('var(--color-float-solid)');
+    const value = /--color-float-solid:\s*([^;]+);/.exec(GLOBALS)?.[1] ?? '';
+    const bg = /^rgba\((\d+), (\d+), (\d+), 1\)$/.exec(value);
+    expect(bg, value).not.toBeNull();
     const solid = rgbToHex([Number(bg![1]), Number(bg![2]), Number(bg![3])]);
     expect(contrastRatio(tok('paper'), solid)).toBeGreaterThanOrEqual(4.5);
     expect(rule(css('styles/map.css'), '.map-tip .a').color).toBe('var(--color-dust)');

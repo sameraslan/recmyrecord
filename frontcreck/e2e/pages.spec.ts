@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { camera, contrastOverBackdrop, mapFrames, shot, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap, waitForMapQuiet } from './helpers';
+import { camera, contrastOverBackdrop, mapFrames, panBrightestGasUnder, shot, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap, waitForMapQuiet } from './helpers';
 
 // The owner's first and last name, stored encoded so this guard never spells them.
 const OWNER_NAME_RE = new RegExp(Buffer.from('c2FtZXJ8YXNsYW4=', 'base64').toString('utf8'), 'i');
@@ -241,13 +241,24 @@ test.describe('album to album', () => {
   });
 });
 
+/**
+ * The two links under the Home search field are measured on the rectangle of their words (`{ box: 'text' }`), not
+ * on their content box as every other text is. Their content box is the 44 px tap target; the words are one 15 px
+ * line in the middle of it, and the 14 px or so below the words is behind no glyph. Sizing the dark pad to that
+ * empty strip is what dimmed the brightest gas of the approved Home (review of part 3 Task 6, I1 and option C;
+ * ruled by the orchestrator). The tap target itself stays 44 px: phone.spec.ts and a11y.spec.ts test that.
+ * Not measured for these two links: the backdrop above and below their line of words inside the tap target.
+ */
+const HERO_LINKS = ['.hero-row a.textbtn', '.hero-row button.textbtn'];
+const boxOf = (selector: string): 'content' | 'text' => (HERO_LINKS.includes(selector) ? 'text' : 'content');
+
 test('text over the nebula keeps 4.5:1 on Home, About and 404, and Home says nothing about regions', async ({ page }) => {
   // The full gas shader also on the software test browser: the lighter one is dimmer, and would flatter the text.
   await page.addInitScript(() => {
     window.__rmrGasLite = 'off';
   });
   const PAGES: Array<[string, string, string[]]> = [
-    ['/', '.home', ['.hero h1', '.hero .lede', '.hero-row a.textbtn', '.hero-row button.textbtn', '.shelf-now .cap']],
+    ['/', '.home', ['.hero h1', '.hero .lede', ...HERO_LINKS, '.shelf-now .cap']],
     ['/about', '.about', ['.about h1', '.about p', '.about .about-h2', '.about .about-credits']],
     ['/nothing-here', '.notfound', ['.notfound h1', '.notfound-sub', '.notfound .textbtn']],
   ];
@@ -263,7 +274,7 @@ test('text over the nebula keeps 4.5:1 on Home, About and 404, and Home says not
     const ratios: Array<{ selector: string; ratio: number }> = [];
     for (const selector of selectors) {
       await page.locator(selector).first().scrollIntoViewIfNeeded();
-      ratios.push(...(await contrastOverBackdrop(page, scope, [selector])));
+      ratios.push(...(await contrastOverBackdrop(page, scope, [selector], { box: boxOf(selector) })));
     }
     console.log(`contrast over the nebula ${url}: ${ratios.map((r) => `${r.selector} ${r.ratio.toFixed(2)}`).join(', ')}`);
     for (const r of ratios) expect(r.ratio, `${url} ${r.selector}`).toBeGreaterThanOrEqual(4.5);
@@ -274,6 +285,8 @@ test('text over the nebula keeps 4.5:1 on Home, About and 404, and Home says not
 
 test('the nebula behind Home, About and 404 costs no frame at rest', async ({ page }) => {
   // The gas is at full strength on these pages (GAS_DIMMED_STRENGTH 1): the canvas must still stand still.
+  // This counts draws of the map canvas only (window.__rmr.frames). What the compositor pays for the static blurred
+  // pads and the scrims is not counted here; nothing in home.css animates them.
   for (const url of ['/', '/about', '/nothing-here']) {
     await page.goto(url);
     await waitForMap(page);
@@ -284,6 +297,110 @@ test('the nebula behind Home, About and 404 costs no frame at rest', async ({ pa
     await page.waitForTimeout(3000);
     expect((await mapFrames(page)) - before, `${url}: frames drawn in 3 idle seconds`).toBe(0);
   }
+});
+
+/** The least mean luminance (0 to 1) of the gas under a text after the brightest gas on screen was moved there
+ * (panBrightestGasUnder itself throws when the pan stopped short). Sky is about 0.003. Measured, software renderer,
+ * desktop / phone: the wide blocks (heading, lede, 404 sub line) 0.15 to 0.26 at the page's zoom and 0.34 to 0.71 at
+ * three times it; the short lines (links, caption) 0.26 to 0.68 and 0.50 to 0.94. */
+const gasFloor = (selector: string, zoom: 1 | 3): number => (/h1|lede|notfound-sub/.test(selector) ? 0.1 : zoom === 1 ? 0.2 : 0.4);
+
+/** Moves the brightest gas on screen under each text in turn, at the page's own zoom and at three times it, and
+ * measures the text there. The gas under the words after the pan must be at least gasFloor: a pan that the camera
+ * clamp stopped short cannot pass on dark sky. */
+async function brightestGasContrast(page: Page, url: string, scope: string, selectors: string[]): Promise<void> {
+  await page.goto(url);
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  // TODO(part2-task8): twinkleOff(page)
+  const fresh = await camera(page);
+  for (const zoom of [1, 3] as const) {
+    if (zoom !== 1) {
+      // From the fresh view again, so the zoomed view does not depend on where the last pan ended.
+      await page.evaluate((c) => window.__rmr!.map!.setCamera(c, false), fresh);
+      await waitForMapQuiet(page, 300);
+      const since = await mapFrames(page);
+      await page.evaluate((z) => window.__rmr!.map!.zoomBy(z), zoom);
+      await waitForCameraIdle(page, { since });
+    }
+    const out: string[] = [];
+    for (const selector of selectors) {
+      const gas = await panBrightestGasUnder(page, selector, `${scope}, header.top`);
+      const [{ ratio }] = await contrastOverBackdrop(page, scope, [selector], { box: boxOf(selector) });
+      out.push(`${selector} ${ratio.toFixed(2)} (gas ${gas.toFixed(2)})`);
+      expect(gas, `${url} x${zoom} ${selector}: bright gas is under the words`).toBeGreaterThanOrEqual(gasFloor(selector, zoom));
+      expect(ratio, `${url} x${zoom} ${selector}`).toBeGreaterThanOrEqual(4.5);
+    }
+    console.log(`contrast with the brightest gas under the text ${url} x${zoom}: ${out.join(', ')}`);
+  }
+}
+
+// A fresh load at the project's window size puts one piece of the nebula under each text. Another window size, or
+// a moved map, puts another: these two tests put the worst there is (the pads and scrims of home.css were sized on
+// this measurement, not on the fresh load).
+test('Home text keeps 4.5:1 with the brightest gas on screen moved under it', async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await brightestGasContrast(page, '/', '.home', ['.hero h1', '.hero .lede', ...HERO_LINKS, '.shelf-now .cap']);
+});
+
+test('404 text keeps 4.5:1 with the brightest gas on screen moved under it', async ({ page }) => {
+  test.setTimeout(150_000);
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await brightestGasContrast(page, '/nothing-here', '.notfound', ['.notfound h1', '.notfound-sub', '.notfound .textbtn']);
+});
+
+test('the pads leave the gas under the hero links bright', async ({ page }) => {
+  await page.addInitScript(() => {
+    window.__rmrGasLite = 'off';
+  });
+  await page.goto('/');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  // The band of the nebula just under the two links: the hero's width, 60 px tall, from 4 px below the link row.
+  // In the approved picture (final-home.jpg) this is the upper edge of the bright core.
+  const band = await page.evaluate(() => {
+    const row = document.querySelector('.hero-row')!.getBoundingClientRect();
+    const hero = document.querySelector('.hero')!.getBoundingClientRect();
+    return { x: Math.round(hero.left), y: Math.round(row.bottom + 4), width: Math.round(hero.width), height: 60 };
+  });
+  // Nothing else is in the band: the shelf starts below it.
+  expect((await page.locator('.shelf').boundingBox())!.y).toBeGreaterThan(band.y + band.height);
+  /** Mean luma (0 to 255) of the band. */
+  const luma = async (): Promise<number> => {
+    const png = (await page.screenshot({ clip: band })).toString('base64');
+    return page.evaluate(async (data) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const d = ctx.getImageData(0, 0, img.width, img.height).data;
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+      return sum / (d.length / 4);
+    }, png);
+  };
+  const withPads = await luma();
+  const style = await page.addStyleTag({ content: '.hero::before, .hero-row::before { display: none !important; }' });
+  const without = await luma();
+  await style.evaluate((el) => (el as Element).remove());
+  console.log(`gas under the hero links: ${withPads.toFixed(1)} with the pads, ${without.toFixed(1)} without = ${(withPads / without).toFixed(3)}`);
+  expect(without, 'the band is gas, not sky').toBeGreaterThan(40);
+  // At least 0.8 of what is there without the pads. Measured: 0.87 with the prototype's hero pad plus the small pad
+  // behind the links (desktop and phone; 0.88 with the prototype's pad alone, which is the approved picture), and
+  // 0.68 when the hero pad was stretched to 28 px below the links at .78 to carry the links' contrast by itself.
+  expect(withPads / without).toBeGreaterThanOrEqual(0.8);
 });
 
 test('Home shows the nebula nearly as bright as the map does: only the veil dims it', async ({ page, isMobile }) => {

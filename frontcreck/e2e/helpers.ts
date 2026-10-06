@@ -344,47 +344,71 @@ export async function contrastOverBackdrop(
 /**
  * Pans the map so that the brightest gas on screen lies under the words of `selector` (the window of the size of
  * its text with the highest mean luminance, found with `hide` hidden), and waits for the map to settle. For
- * contrast checks of text that sits straight on the nebula. Returns that window's mean luminance (0 to 1).
+ * contrast checks of text that sits straight on the nebula.
+ *
+ * Returns the mean luminance (0 to 1) of the gas that is under the words AFTER the pan, read from a second
+ * screenshot with `hide` hidden: the camera is clamped to the cloud (state/bounds.ts), so a pan can stop short,
+ * and the brightness found before the pan would then describe gas that never arrived. Throws when less than 0.8 of
+ * the brightness found has arrived; assert on the return value that it is gas at all.
  */
 export async function panBrightestGasUnder(page: Page, selector: string, hide = '.map-ui, header.top'): Promise<number> {
-  const style = await page.addStyleTag({ content: `${hide} { visibility: hidden !important; }` });
-  const png = (await page.screenshot()).toString('base64');
-  await style.evaluate((el) => (el as Element).remove());
-  const move = await page.evaluate(
-    async ([data, sel]) => {
-      const range = document.createRange();
-      range.selectNodeContents(document.querySelector(sel)!);
-      const t = range.getBoundingClientRect();
-      const img = new Image();
-      img.src = `data:image/png;base64,${data}`;
-      await img.decode();
-      const c = document.createElement('canvas');
-      c.width = img.width;
-      c.height = img.height;
-      const ctx = c.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
-      const k = img.width / innerWidth;
-      const d = ctx.getImageData(0, 0, img.width, img.height).data;
-      const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
-      const lum = (i: number) => 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
-      const w = Math.floor(t.width * k);
-      const h = Math.floor(t.height * k);
-      let best = { m: -1, x: 0, y: 0 };
-      for (let y = 0; y + h <= img.height; y += 6) {
-        for (let x = 0; x + w <= img.width; x += 10) {
+  /** A screenshot without `hide`, and in the page: the words' rectangle and what `pick` makes of the pixels. */
+  const look = async (mode: 'find' | 'under'): Promise<{ dx: number; dy: number; m: number }> => {
+    const style = await page.addStyleTag({ content: `${hide} { visibility: hidden !important; }` });
+    const png = (await page.screenshot()).toString('base64');
+    await style.evaluate((el) => (el as Element).remove());
+    return page.evaluate(
+      async ([data, sel, how]) => {
+        const range = document.createRange();
+        range.selectNodeContents(document.querySelector(sel)!);
+        const t = range.getBoundingClientRect();
+        const img = new Image();
+        img.src = `data:image/png;base64,${data}`;
+        await img.decode();
+        const c = document.createElement('canvas');
+        c.width = img.width;
+        c.height = img.height;
+        const ctx = c.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+        const k = img.width / innerWidth;
+        const d = ctx.getImageData(0, 0, img.width, img.height).data;
+        const lin = (v: number) => (v / 255 <= 0.04045 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4);
+        const lum = (i: number) => 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
+        const w = Math.floor(t.width * k);
+        const h = Math.floor(t.height * k);
+        const mean = (x: number, y: number) => {
           let sum = 0;
           let n = 0;
           for (let j = 0; j < h; j += 4) for (let i = 0; i < w; i += 6, n++) sum += lum(((y + j) * img.width + x + i) * 4);
-          if (sum / n > best.m) best = { m: sum / n, x: x / k, y: y / k };
+          return sum / n;
+        };
+        if (how === 'under') {
+          const x = Math.max(0, Math.min(img.width - w, Math.round(t.x * k)));
+          const y = Math.max(0, Math.min(img.height - h, Math.round(t.y * k)));
+          return { dx: 0, dy: 0, m: mean(x, y) };
         }
-      }
-      // panBy: positive dx moves the view right (the gas left), positive dy moves the view up (the gas down).
-      return { dx: best.x - t.x, dy: t.y - best.y, m: best.m };
-    },
-    [png, selector] as const,
-  );
-  const since = await mapFrames(page);
-  await page.evaluate(([dx, dy]) => window.__rmr!.map!.panBy(dx, dy), [move.dx, move.dy]);
-  await waitForMapQuiet(page, 200, { since });
-  return move.m;
+        let best = { m: -1, x: 0, y: 0 };
+        for (let y = 0; y + h <= img.height; y += 6) {
+          for (let x = 0; x + w <= img.width; x += 10) {
+            const m = mean(x, y);
+            if (m > best.m) best = { m, x: x / k, y: y / k };
+          }
+        }
+        // panBy: positive dx moves the view right (the gas left), positive dy moves the view up (the gas down).
+        return { dx: best.x - t.x, dy: t.y - best.y, m: best.m };
+      },
+      [png, selector, mode] as const,
+    );
+  };
+  const move = await look('find');
+  // Already there (less than a pixel to go): nothing would draw, and waiting for a frame would time out.
+  if (Math.abs(move.dx) >= 1 || Math.abs(move.dy) >= 1) {
+    const since = await mapFrames(page);
+    await page.evaluate(([dx, dy]) => window.__rmr!.map!.panBy(dx, dy), [move.dx, move.dy]);
+    await waitForMapQuiet(page, 200, { since });
+  }
+  const under = (await look('under')).m;
+  // A pan that stopped short is an error here, not a number for the caller to interpret.
+  if (under < 0.8 * move.m) throw new Error(`panBrightestGasUnder: the pan stopped short under ${selector}: gas of luminance ${move.m.toFixed(3)} was found, ${under.toFixed(3)} arrived`);
+  return under;
 }

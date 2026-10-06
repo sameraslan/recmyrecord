@@ -38,6 +38,9 @@
      checked for 4.5:1 text contrast over a white backdrop in src/lib/contrast.test.ts. */
   --panel-bg: rgba(8, 7, 11, 0.7);
   --top-bg: rgba(7, 6, 10, 0.58);
+  /* A surface that is solid everywhere (the hover label, which moves with the pointer): the value the three solid
+     fallbacks below give the glass surfaces. styles/glass.test.ts keeps them equal. */
+  --color-float-solid: rgba(10, 9, 14, 1);
   /* Speed fallback 1, a lighter blur: blur(22px) to blur(14px) here. Pins that move: GLASS in e2e/glass.spec.ts and
      the FILTER regex in src/lib/contrast.test.ts. */
   --glass-blur: blur(22px) saturate(1.2) brightness(0.58);
