@@ -403,6 +403,68 @@ test('the pads leave the gas under the hero links bright', async ({ page }) => {
   expect(withPads / without).toBeGreaterThanOrEqual(0.8);
 });
 
+// The map runs behind Home's clear header, and the Home layer (a scroll container) is clipped at the header's bottom
+// edge. Anything of Home that still darkens the gas at that edge is cut there and shows as a horizontal line under
+// the bar: the hero pad's blur did, on phones (its top is 22 px below the edge). Phones only: in a desktop window
+// the pad starts 8vh below the edge, and the cut is under 3 % even at 560 px of height, less than the header
+// scrim's own ramp, so this measurement cannot tell it apart there (the same mask rule covers it; glass.test.ts).
+for (const size of [
+  { width: 390, height: 844 },
+  { width: 360, height: 640 },
+]) {
+  test(`Home draws no line under the header at ${size.width} x ${size.height}`, async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'a phone window');
+    await page.addInitScript(() => {
+      window.__rmrGasLite = 'off';
+    });
+    await page.setViewportSize({ width: size.width, height: size.height });
+    await page.goto('/');
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    await waitForAnimations(page);
+    // TODO(part2-task8): twinkleOff(page)
+    const edge = await page.evaluate(() => document.querySelector('#stage')!.getBoundingClientRect().top);
+    expect(edge).toBeGreaterThan(40);
+    // Bright gas across the edge, in the middle 60 % of the window (clear of the wordmark and the header links).
+    const strip = { x: Math.round(size.width * 0.2), y: edge - 16, width: Math.round(size.width * 0.6), height: 32 };
+    const gas = await panBrightestGasUnder(page, strip, '.home, header.top');
+    expect(gas, 'bright gas lies across the header edge').toBeGreaterThanOrEqual(0.1);
+    // Mean luma of each device pixel row of the strip, as the visitor sees it (header, its scrim and Home all on).
+    const png = (await page.screenshot({ clip: strip })).toString('base64');
+    const rows = await page.evaluate(async (data) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const out: number[] = [];
+      for (let y = 0; y < img.height; y++) {
+        const d = ctx.getImageData(0, y, img.width, 1).data;
+        let sum = 0;
+        for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+        out.push(sum / img.width);
+      }
+      return out;
+    }, png);
+    // The step between the last row above the edge and the first row below it, as a share of the brightness there,
+    // against the largest step between any other two neighbouring rows of the strip: the gas's own gradient together
+    // with the header scrim's (a smooth ramp across the edge). A cut is a step at the edge only. Allowed: one and a
+    // half times the largest other step plus 1 % (half a screenshot level at this brightness). Measured on the
+    // phone project: 13.6 % and 12.5 % at the edge before the fix against 5.7 % and 6.3 % elsewhere; 0.2 % and
+    // 1.3 % after it.
+    const at = rows.length / 2;
+    const step = (i: number) => Math.abs(rows[i] - rows[i - 1]) / Math.max(rows[i], rows[i - 1]);
+    const others = rows.map((_, i) => i).filter((i) => i > 0 && i !== at).map(step);
+    const largest = Math.max(...others);
+    console.log(`header edge at ${size.width} x ${size.height}: step ${(step(at) * 100).toFixed(1)} %, largest other ${(largest * 100).toFixed(1)} %, rows ${rows[at - 1].toFixed(1)} / ${rows[at].toFixed(1)}, gas ${gas.toFixed(2)}`);
+    expect(rows[at], 'the edge rows are lit').toBeGreaterThan(8);
+    expect(step(at)).toBeLessThanOrEqual(1.5 * largest + 0.01);
+  });
+}
+
 test('Home shows the nebula nearly as bright as the map does: only the veil dims it', async ({ page, isMobile }) => {
   test.skip(isMobile, 'on a phone the hero pad and the shelf leave too little bare nebula to compare');
   await page.addInitScript(() => {

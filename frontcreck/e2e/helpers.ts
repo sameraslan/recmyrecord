@@ -342,26 +342,34 @@ export async function contrastOverBackdrop(
 }
 
 /**
- * Pans the map so that the brightest gas on screen lies under the words of `selector` (the window of the size of
+ * Pans the map so that the brightest gas on screen lies under the words of `target` (the window of the size of
  * its text with the highest mean luminance, found with `hide` hidden), and waits for the map to settle. For
- * contrast checks of text that sits straight on the nebula.
+ * contrast checks of text that sits straight on the nebula. `target` may also be a rectangle in client px.
  *
  * Returns the mean luminance (0 to 1) of the gas that is under the words AFTER the pan, read from a second
  * screenshot with `hide` hidden: the camera is clamped to the cloud (state/bounds.ts), so a pan can stop short,
  * and the brightness found before the pan would then describe gas that never arrived. Throws when less than 0.8 of
  * the brightness found has arrived; assert on the return value that it is gas at all.
  */
-export async function panBrightestGasUnder(page: Page, selector: string, hide = '.map-ui, header.top'): Promise<number> {
+export async function panBrightestGasUnder(
+  page: Page,
+  target: string | { x: number; y: number; width: number; height: number },
+  hide = '.map-ui, header.top',
+): Promise<number> {
+  const selector = typeof target === 'string' ? target : `a ${target.width} x ${target.height} px rectangle`;
   /** A screenshot without `hide`, and in the page: the words' rectangle and what `pick` makes of the pixels. */
   const look = async (mode: 'find' | 'under'): Promise<{ dx: number; dy: number; m: number }> => {
     const style = await page.addStyleTag({ content: `${hide} { visibility: hidden !important; }` });
     const png = (await page.screenshot()).toString('base64');
     await style.evaluate((el) => (el as Element).remove());
     return page.evaluate(
-      async ([data, sel, how]) => {
-        const range = document.createRange();
-        range.selectNodeContents(document.querySelector(sel)!);
-        const t = range.getBoundingClientRect();
+      async ([data, where, how]) => {
+        let t: { x: number; y: number; width: number; height: number };
+        if (typeof where === 'string') {
+          const range = document.createRange();
+          range.selectNodeContents(document.querySelector(where)!);
+          t = range.getBoundingClientRect();
+        } else t = where;
         const img = new Image();
         img.src = `data:image/png;base64,${data}`;
         await img.decode();
@@ -397,7 +405,7 @@ export async function panBrightestGasUnder(page: Page, selector: string, hide = 
         // panBy: positive dx moves the view right (the gas left), positive dy moves the view up (the gas down).
         return { dx: best.x - t.x, dy: t.y - best.y, m: best.m };
       },
-      [png, selector, mode] as const,
+      [png, target, mode] as const,
     );
   };
   const move = await look('find');

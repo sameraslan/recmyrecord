@@ -2,10 +2,21 @@
    Mockup lines 218 to 252 and 360 to 399, adapted to the combined layout. */
 .home { position: absolute; inset: 0; z-index: 8; overflow-x: hidden; overflow-y: auto; pointer-events: none; display: flex; flex-direction: column; }
 .home > * { pointer-events: auto; }
-.hero { position: relative; width: min(640px, calc(100% - 32px)); margin: 0 auto; padding: clamp(32px, 10vh, 112px) 0 0; text-align: center; }
-/* A soft dark pad behind the hero, so its text holds over the nebula: the prototype's (pages.css line 22). Static.
- * It ends 4 px below the two links, so the brightest gas, just under them, stays bright. */
-.hero::before { content: ""; position: absolute; inset: clamp(18px, 8vh, 92px) -6px -4px; z-index: -1; background: rgba(5, 4, 8, .72); border-radius: 40px; filter: blur(26px); pointer-events: none; }
+.hero { position: relative; width: min(640px, calc(100% - 32px)); margin: 0 auto; padding: clamp(32px, 10vh, 112px) 0 0; text-align: center; --pad-top: clamp(18px, 8vh, 92px); }
+/* A soft dark pad behind the hero, so its text holds over the nebula: the prototype's (pages.css line 22), .72 dark,
+ * from --pad-top below the hero's top to 4 px below the two links, 6 px wider than the hero, corners 40 px, blurred
+ * 26 px. Static. It ends 4 px below the links, so the brightest gas, just under them, stays bright.
+ * The box is 80 px larger all round than the dark shape (a clear border; 120 - 80 = 40 px corners), so the mask has
+ * the blur's halo inside it. The mask takes the halo to nothing at the hero's top, which is where the Home layer is
+ * clipped under the header (the map runs on behind the clear header): without it the halo is cut there and draws a
+ * line under the bar wherever --pad-top is small (phones, short windows). It is full again 30 px lower, above the
+ * heading. */
+.hero::before {
+  content: ""; position: absolute; inset: calc(var(--pad-top) - 80px) -86px -84px; z-index: -1; pointer-events: none;
+  border: 80px solid transparent; border-radius: 120px; background: rgba(5, 4, 8, .72); background-clip: padding-box; filter: blur(26px);
+  -webkit-mask-image: linear-gradient(transparent calc(80px - var(--pad-top)), #000 calc(110px - var(--pad-top)));
+  mask-image: linear-gradient(transparent calc(80px - var(--pad-top)), #000 calc(110px - var(--pad-top)));
+}
 .hero h1 { font-family: var(--font-serif); font-weight: 500; font-size: clamp(42px, 5.8vw, 80px); line-height: .98; letter-spacing: -.015em; }
 .hero .lede { margin: 16px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
 .hero-row { position: relative; margin-top: 14px; display: flex; justify-content: center; gap: 4px; align-items: center; flex-wrap: wrap; }
@@ -70,8 +81,8 @@
 }
 
 @media (max-width: 899px) {
-  .hero { padding-top: 40px; }
-  .hero::before { inset: 22px 0 -4px; }
+  .hero { padding-top: 40px; --pad-top: 22px; }
+  .hero::before { inset: calc(var(--pad-top) - 80px) -80px -84px; }
   .hero h1 { font-size: clamp(38px, 11vw, 52px); }
   .hero .lede, .notfound .notfound-sub { font-size: 15.5px; }
   .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }

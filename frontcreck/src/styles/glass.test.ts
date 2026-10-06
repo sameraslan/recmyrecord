@@ -150,10 +150,28 @@ describe('Home, About and 404 over the nebula', () => {
     expect(pad.filter).toBe('blur(26px)');
     expect(pad['pointer-events']).toBe('none');
     expect(pad['z-index']).toBe('-1');
-    // 4 px below the hero's last row, on wide screens and on phones (prototype pages.css): the pad ends with the
-    // hero, so the brightest gas, just under the links, stays bright. The links have their own pad (next test).
-    expect(pad.inset).toBe('clamp(18px, 8vh, 92px) -6px -4px');
-    expect(home).toContain('\n  .hero::before { inset: 22px 0 -4px; }\n');
+    // The dark shape is the prototype's (pages.css): from --pad-top below the hero's top to 4 px below its last row,
+    // 6 px wider than the hero, 40 px corners. It ends with the hero, so the brightest gas, just under the links,
+    // stays bright; the links have their own pad (next test). The box is 80 px larger all round (a clear border),
+    // so each inset is the prototype's less 80 and the corner radius is 40 + 80.
+    expect(rule(home, '.hero')['--pad-top']).toBe('clamp(18px, 8vh, 92px)');
+    expect(pad.border).toBe('80px solid transparent');
+    expect(pad['background-clip']).toBe('padding-box');
+    expect(pad['border-radius']).toBe('120px');
+    expect(pad.inset).toBe('calc(var(--pad-top) - 80px) -86px -84px');
+    // Phones: 22 px below the hero's top, as wide as the hero.
+    expect(home).toContain('\n  .hero { padding-top: 40px; --pad-top: 22px; }\n  .hero::before { inset: calc(var(--pad-top) - 80px) -80px -84px; }\n');
+  });
+
+  it("the hero pad's halo is gone at the hero's top, where the Home layer is clipped under the header", () => {
+    // The mask's box starts 80 px - --pad-top above the hero's top: clear down to the hero's top, full 30 px lower.
+    const pad = rule(home, '.hero::before');
+    const mask = 'linear-gradient(transparent calc(80px - var(--pad-top)), #000 calc(110px - var(--pad-top)))';
+    expect(pad['mask-image']).toBe(mask);
+    expect(pad['-webkit-mask-image']).toBe(mask);
+    // The clip it answers: the Home layer scrolls, so it cuts its content at the stage's top, under the header.
+    expect(rule(home, '.home')['overflow-y']).toBe('auto');
+    expect(rule(home, '.home').inset).toBe('0');
   });
 
   it('the two links under the search field have a small pad of their own, static and no wider than their row', () => {
