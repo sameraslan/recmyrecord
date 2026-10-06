@@ -64,3 +64,15 @@ Balanced stop, raw: kept of 10 is 5.2 (today's weights and equal), 4.8 (1 to 0.5
     PYTHONDONTWRITEBYTECODE=1 nice -n 19 <build venv python> ../experiments/top8_descriptors/measure.py
 
 About 75 seconds, no network, no cache, nothing large. Files: `measure.py` (its docstring defines every variant), `results/top8.md`, `results/top8.json`.
+
+## 6. Added later on 6 October: the choice, on the 10k catalog
+
+The owner ruled out equal weights and dropped the vocals descriptors: only the old albums carry them, so with them kept the new albums (61% of the catalog) took 31.8% of the mood places of existing albums, and 14.4% for the 2,315 albums with "male vocals"; 49.2% with them left out.
+
+Rank weights (1.5 to 1.33) against the gentle slope (1 to 0.5), catalog build of 10,467 albums, vocals left out:
+
+- The two share 7.8 of 10 albums at mood, 7.6 at balanced, 10.0 at sonic.
+- Proxies, slope minus rank per seed: `genre_primary` +0.004 at mood and +0.006 at balanced (several standard errors), `desc_jaccard` -0.026 and -0.020. Slope has fewer albums never recommended (6.6% against 7.0% at mood) and more ties at the edge of a list (16% against 12%).
+- Two blind readings of 40 seeds' lists by language models, the weighting hidden and shuffled per seed (not listening, not people): at mood the slope's list was preferred for 20 and 20 seeds, the rank list for 11 and 13; at balanced 14 and 21 against 12 and 13. Of the verdicts given with high confidence, 26 were for the slope and 7 for rank. The rank lists lost mostly by letting in a record of an unrelated genre.
+
+The catalog build defaults to the slope. Seeds with three or fewer usable descriptors (To Pimp a Butterfly: concept album, urban, eclectic) get poor mood lists under either weighting.
