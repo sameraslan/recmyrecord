@@ -221,16 +221,20 @@ def test_status_counts_the_existing_albums_and_the_skipped_rows(tmp_path, capsys
 
 
 def test_the_committed_skip_list_names_rows_of_the_covers_table():
-    """The eleven frames the owner named on docs/review/youtube-covers.jpg (6 October 2026)."""
+    """The eleven frames the owner named on docs/review/youtube-covers.jpg (6 October 2026), and the one
+    last-resort match the first review of docs/review/caa-covers.jpg found wrong (West Side Story)."""
     skips = cv.read_skips(cv.DEFAULT_SKIP)
     rows = cv.read_covers(cv.DEFAULT_COVERS)
+    wrong = {(key, of) for key, of in skips if of.startswith("caa:")}
+    assert wrong == {("sp:3DCQhS6eII8WUExSzdN9sE", "caa:ccdcf53e-fe7b-4ee2-b820-0f8ae9436839")}
+    skips -= wrong
     assert len(skips) == 11 and all(key in rows and of == cv.made_from(rows[key]) for key, of in skips)
     assert {of.split(":")[0] for _, of in skips} == {"youtube"}
     table_ = cv.load_covers(cv.DEFAULT_COVERS, cv.DEFAULT_SPRITES, skip_path=cv.DEFAULT_SKIP)
     assert sorted(table_.skipped()) == sorted(k for k, _ in skips)
     with cv.DEFAULT_SKIP.open(encoding="utf-8", newline="") as f:
         assert all(r["note"].strip() for r in csv.DictReader(f))  # every line says why
-    assert cv._default_covers.__wrapped__().skip == frozenset(skips)  # the build reads it
+    assert cv._default_covers.__wrapped__().skip == frozenset(skips | wrong)  # the build reads it
 
 
 # --- titles --------------------------------------------------------------------------------------------------

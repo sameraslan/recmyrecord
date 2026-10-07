@@ -244,9 +244,9 @@ def test_a_found_album_is_recorded_with_what_it_matched(tmp_path):
     code, table, state, lines = run_caa(tmp_path, [row], net)
     assert code == 0 and net.asked == [urls(row)[0], cv.caa_listing_url(M1)]
     assert table == {"Album1": {"rym_id": "Album1", "mbid": M1, "mb_title": "Chill Out", "mb_artist": "The KLF",
-                                "mb_year": "1990", "mb_type": "Album", "score": "97"}}
+                                "mb_year": "1990", "mb_type": "Album", "score": "97", "matched_by": "auto"}}
     assert state["Album1"]["decision"] == "found" and state["Album1"]["mbid"] == M1 and state["Album1"]["score"] == 97
-    assert (tmp_path / "covers_caa.csv").read_text().splitlines()[0] == "rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score"
+    assert (tmp_path / "covers_caa.csv").read_text().splitlines()[0] == "rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by"
     assert any("1 found" in line for line in lines)
 
 
@@ -413,7 +413,7 @@ def test_the_existing_albums_without_a_cover_come_from_the_committed_lists(tmp_p
 def table(tmp_path, covers="", caa="", state=None, skip="", manifest=None, sprites=()):
     (tmp_path / "96").mkdir(exist_ok=True)
     (tmp_path / "covers.csv").write_text("rym_id,source,ref\n" + covers)
-    (tmp_path / "covers_caa.csv").write_text("rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score\n" + caa)
+    (tmp_path / "covers_caa.csv").write_text("rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by\n" + caa)
     (tmp_path / "skip.csv").write_text("rym_id,source,ref,note\n" + skip)
     (tmp_path / "state.json").write_text(json.dumps(state or {}))
     (tmp_path / "96.manifest.json").write_text(json.dumps(manifest or {}))
@@ -424,10 +424,21 @@ def table(tmp_path, covers="", caa="", state=None, skip="", manifest=None, sprit
 
 
 def test_the_table_is_checked_when_read(tmp_path):
-    (tmp_path / "caa.csv").write_text(f"rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score\nA,{M1},Chill Out,The KLF,1990,Album,100\n")
+    (tmp_path / "caa.csv").write_text(f"rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by\nA,{M1},Chill Out,The KLF,1990,Album,100,auto\n")
     assert cv.read_caa(tmp_path / "caa.csv")["A"]["mbid"] == M1 and cv.read_caa(tmp_path / "none.csv") == {}
-    (tmp_path / "caa.csv").write_text("rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score\nA,../../etc,x,y,1990,Album,100\n")
+    (tmp_path / "caa.csv").write_text("rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by\nA,../../etc,x,y,1990,Album,100,auto\n")
     with pytest.raises(ValueError, match="MBID"):
+        cv.read_caa(tmp_path / "caa.csv")
+    # who chose the release group: the lookup's rule, or a reader (docs/review/caa-covers-hand.md)
+    (tmp_path / "caa.csv").write_text(f"rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by\nA,{M1},,,,,,hand\n")
+    assert cv.read_caa(tmp_path / "caa.csv")["A"] == {"rym_id": "A", "mbid": M1, "mb_title": "", "mb_artist": "", "mb_year": "",
+                                                      "mb_type": "", "score": "", "matched_by": "hand"}
+    for bad in ("", "me"):
+        (tmp_path / "caa.csv").write_text(f"rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by\nA,{M1},t,a,1990,Album,100,{bad}\n")
+        with pytest.raises(ValueError, match="matched_by"):
+            cv.read_caa(tmp_path / "caa.csv")
+    (tmp_path / "caa.csv").write_text(f"rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score\nA,{M1},t,a,1990,Album,100\n")
+    with pytest.raises(ValueError, match="header"):  # the table of before the column
         cv.read_caa(tmp_path / "caa.csv")
     # covers.csv itself does not take the source: the tier never replaces a row
     (tmp_path / "covers.csv").write_text(f"rym_id,source,ref\nA,caa,{M1}\n")
@@ -443,7 +454,7 @@ def test_a_sprite_of_a_placeholder_key_has_a_safe_file_name(tmp_path):
 
 
 def test_the_last_resort_never_replaces_a_cover_an_album_has(tmp_path):
-    caa = f"Has,{M1},t,a,1990,Album,100\nNone,{M2},t,a,1990,Album,100\n"
+    caa = f"Has,{M1},t,a,1990,Album,100,auto\nNone,{M2},t,a,1990,Album,100,auto\n"
     t = table(tmp_path, covers="Has,bandcamp,5\n", caa=caa, manifest={"Has": "bandcamp:5", "None": f"caa:{M2}"}, sprites=["Has", "None"])
     assert t.cover_for("Has") == ("bc:5", tmp_path / "96" / "Has.jpg")
     assert t.cover_for("None") == (f"ca:{M2}", tmp_path / "96" / "None.jpg")
@@ -452,7 +463,7 @@ def test_the_last_resort_never_replaces_a_cover_an_album_has(tmp_path):
 
 
 def test_a_gone_or_skipped_row_gives_way_to_the_last_resort_and_stays_in_its_table(tmp_path):
-    caa = f"Gone,{M1},t,a,1990,Album,100\nSkipped,{M2},t,a,1990,Album,100\nWaiting,{M3},t,a,1990,Album,100\n"
+    caa = f"Gone,{M1},t,a,1990,Album,100,auto\nSkipped,{M2},t,a,1990,Album,100,auto\nWaiting,{M3},t,a,1990,Album,100,auto\n"
     t = table(tmp_path, covers="Gone,youtube,aaaaaaaaaaa\nSkipped,youtube,bbbbbbbbbbb\n", caa=caa,
               skip="Skipped,youtube,bbbbbbbbbbb,a track list\n",
               state={"sprites": {"Gone": {"of": "youtube:aaaaaaaaaaa", "why": "HTTP 404"}}},
@@ -469,7 +480,7 @@ def test_a_gone_or_skipped_row_gives_way_to_the_last_resort_and_stays_in_its_tab
 def test_a_last_resort_row_on_the_skip_list_gives_no_cover_and_is_not_asked_again(tmp_path):
     """How the owner takes a wrong cover out: `rym_id,caa,<mbid>,note` in covers_skip.csv. The row stays in
     covers_caa.csv, so the next run does not find the same release group again."""
-    t = table(tmp_path, caa=f"A,{M1},t,a,1990,Album,100\nB,{M2},t,a,1990,Album,100\n", skip=f"A,caa,{M1},another record's sleeve\n",
+    t = table(tmp_path, caa=f"A,{M1},t,a,1990,Album,100,auto\nB,{M2},t,a,1990,Album,100,auto\n", skip=f"A,caa,{M1},another record's sleeve\n",
               manifest={"A": f"caa:{M1}", "B": f"caa:{M2}"}, sprites=["A", "B"])
     assert t.cover_for("A") == ("", None) and t.caa_for("A") == ("", None) and t.cover_for("B")[0] == f"ca:{M2}"
     assert cv.effective_rows({}, t.skip, t.caa, {}, tmp_path / "96", t.made_from) == {"B": ("caa", M2)}
@@ -477,7 +488,7 @@ def test_a_last_resort_row_on_the_skip_list_gives_no_cover_and_is_not_asked_agai
     code, rows, _, _ = run_caa(tmp_path, [album("A"), album("B")], net)
     assert code == 0 and net.asked == [] and list(rows) == ["A", "B"]
     # another release group in the row is another image: the skip no longer applies
-    t = table(tmp_path, caa=f"A,{M3},t,a,1990,Album,100\n", skip=f"A,caa,{M1},another record's sleeve\n")
+    t = table(tmp_path, caa=f"A,{M3},t,a,1990,Album,100,auto\n", skip=f"A,caa,{M1},another record's sleeve\n")
     assert t.cover_for("A") == (f"ca:{M3}", None)
 
 
@@ -495,7 +506,7 @@ def jpeg(colour=(10, 120, 200)):
 
 
 def test_sprites_are_made_from_the_250_px_front_image(tmp_path):
-    caa = f"Gone,{M1},t,a,1990,Album,100\nSkipped,{M2},t,a,1990,Album,100\nsp:{'2' * 22},{M3},t,a,1990,Album,100\n"
+    caa = f"Gone,{M1},t,a,1990,Album,100,auto\nSkipped,{M2},t,a,1990,Album,100,auto\nsp:{'2' * 22},{M3},t,a,1990,Album,100,auto\n"
     kw = dict(covers="Gone,youtube,aaaaaaaaaaa\nSkipped,youtube,bbbbbbbbbbb\nHas,bandcamp,5\n", caa=caa,
               skip="Skipped,youtube,bbbbbbbbbbb,a track list\n",
               state={"sprites": {"Gone": {"of": "youtube:aaaaaaaaaaa", "why": "HTTP 404"}}},
@@ -518,7 +529,7 @@ def test_sprites_are_made_from_the_250_px_front_image(tmp_path):
 
 
 def test_an_archive_image_that_is_gone_gives_no_cover_and_keeps_the_rows_own_record(tmp_path):
-    t = table(tmp_path, covers="Gone,youtube,aaaaaaaaaaa\n", caa=f"Gone,{M1},t,a,1990,Album,100\nBare,{M2},t,a,1990,Album,100\n",
+    t = table(tmp_path, covers="Gone,youtube,aaaaaaaaaaa\n", caa=f"Gone,{M1},t,a,1990,Album,100,auto\nBare,{M2},t,a,1990,Album,100,auto\n",
               state={"sprites": {"Gone": {"of": "youtube:aaaaaaaaaaa", "why": "HTTP 404"}}})
     net = Net()  # 404 for everything
     code, _ = sprite_run(tmp_path, t, net, ["Gone", "Bare"])
@@ -535,14 +546,14 @@ def test_an_archive_image_that_is_gone_gives_no_cover_and_keeps_the_rows_own_rec
 # --- the build: the three groups of albums --------------------------------------------------------------
 
 def test_a_new_album_takes_the_cover_and_its_sprite(tmp_path):
-    t = table(tmp_path, caa=f"Album900,{M1},t,a,1990,Album,100\n", manifest={"Album900": f"caa:{M1}"}, sprites=["Album900"])
+    t = table(tmp_path, caa=f"Album900,{M1},t,a,1990,Album,100,auto\n", manifest={"Album900": f"caa:{M1}"}, sprites=["Album900"])
     covers, images, waiting = new_album_covers(["Album900", "Album901"], 4081, cover_of=t.cover_for)
     assert covers == [f"ca:{M1}", ""] and images == {4081: tmp_path / "96" / "Album900.jpg"} and waiting == []
 
 
 def test_an_unverified_link_album_takes_the_cover_and_its_sprite(tmp_path):
     """Its `c` is empty after the build's unverified-links step; `s` is not this function's and stays empty."""
-    t = table(tmp_path, caa=f"Album8,{M1},t,a,1990,Album,100\nAlbum9,{M2},t,a,1990,Album,100\n",
+    t = table(tmp_path, caa=f"Album8,{M1},t,a,1990,Album,100,auto\nAlbum9,{M2},t,a,1990,Album,100,auto\n",
               manifest={"Album8": f"caa:{M1}"}, sprites=["Album8"])
     keys, cover_ids = ["Album7", "Album8", "Album9", "Album10", "Album900"], ["ab" * 20, "", "", "", ""]
     got = last_resort_covers(keys, cover_ids, 4, set(), cover_of=t.caa_for)
@@ -556,11 +567,11 @@ def test_an_unverified_link_album_takes_the_cover_and_its_sprite(tmp_path):
 def test_an_album_with_an_override_image_takes_the_cover_id_and_keeps_its_sprite(tmp_path):
     """Chill Out, Gimix, Dark & Long: overrides.json gives `c` "" and an image. The row gives `c` for the album
     page, the sprite and the ambient colours stay the override image's, and no sprite file is needed."""
-    t = table(tmp_path, caa=f"Album14207,{M1},Chill Out,The KLF,1990,Album,100\n")
+    t = table(tmp_path, caa=f"Album14207,{M1},Chill Out,The KLF,1990,Album,100,auto\n")
     got = last_resort_covers(["Album14207", "Album2"], ["", "cd" * 20], 2, {0}, cover_of=t.caa_for)
     assert got.covers == {0: f"ca:{M1}"} and got.images == {} and got.waiting == [] and got.own_image == [0]
     # an album that has a cover id is never touched, whatever the table says
-    t = table(tmp_path, caa=f"Album2,{M1},t,a,1990,Album,100\n", manifest={"Album2": f"caa:{M1}"}, sprites=["Album2"])
+    t = table(tmp_path, caa=f"Album2,{M1},t,a,1990,Album,100,auto\n", manifest={"Album2": f"caa:{M1}"}, sprites=["Album2"])
     assert last_resort_covers(["Album14207", "Album2"], ["", "cd" * 20], 2, {0}, cover_of=t.caa_for).covers == {}
 
 

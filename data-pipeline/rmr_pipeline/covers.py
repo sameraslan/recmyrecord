@@ -29,8 +29,10 @@ catalog/covers_caa.csv (`rym_id,mbid` and what was matched), not in covers.csv: 
 album has, the row it stands in for stays where it is (so `refs` does not find the same image again and the
 skip list still names it), and cover_for answers from it only when covers.csv gives the album nothing. The
 release group is found by a search on title and artist and accepted by a strict rule (mb_accepts, mb_choose);
-what was decided for every album asked is in the state file (`caa`), so a rerun asks nothing twice. MusicBrainz
-is asked at most once a second and an HTTP 503 from it, twice, stops the run.
+a row a reader added for an album the rule refused has `hand` in its last column, `matched_by`, and its reason
+in docs/review/caa-covers-hand.md (the lookup's own rows have `auto`). What was decided for every album asked
+is in the state file (`caa`), so a rerun asks nothing twice. MusicBrainz is asked at most once a second and an
+HTTP 503 from it, twice, stops the run.
 
 catalog/covers_skip.csv (`rym_id,source,ref,note`, written by hand) names the rows whose image is not a cover
 (a video frame with a track list, a "FULL ALBUM" card). Such a row gives no cover (cover_for: no `c`, no
@@ -151,7 +153,8 @@ YOUTUBE_ID = re.compile(r"(?:youtube\.com/watch\?(?:[^#]*&)?v=|youtu\.be/)([A-Za
 SAFE_NAME = re.compile(r"[A-Za-z0-9_-]+")  # used with fullmatch: `$` would let a trailing newline through
 PLACEHOLDER_KEY = re.compile(r"sp:([A-Za-z0-9]{22})")  # an existing album with no RYM id yet (fullmatch)
 MBID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")  # fullmatch
-CAA_FIELDS = ("rym_id", "mbid", "mb_title", "mb_artist", "mb_year", "mb_type", "score")
+CAA_FIELDS = ("rym_id", "mbid", "mb_title", "mb_artist", "mb_year", "mb_type", "score", "matched_by")
+CAA_MATCHED_BY = ("auto", "hand")  # the lookup's rule (mb_accepts, mb_choose), or a reader who chose the release group
 DEEZER_SIZES = (56, 250, 500, 1000)
 BANDCAMP_SIZES = ((100, 3), (210, 9), (350, 2), (700, 16), (1200, 10))  # px, the file name's suffix
 
@@ -1318,7 +1321,9 @@ def look_up_caa(row: dict, fetcher: Fetcher) -> dict:
 
 
 def read_caa(path: Path = DEFAULT_CAA) -> dict[str, dict[str, str]]:
-    """covers_caa.csv as rym_id -> its row (CAA_FIELDS), in file order; {} when there is no file."""
+    """covers_caa.csv as rym_id -> its row (CAA_FIELDS), in file order; {} when there is no file. `matched_by`
+    says who chose the release group: `auto` (the lookup's rule) or `hand` (a reader, for an album the rule
+    refused; the reason is in docs/review/caa-covers-hand.md)."""
     path = Path(path)
     if not path.exists():
         return {}
@@ -1330,6 +1335,8 @@ def read_caa(path: Path = DEFAULT_CAA) -> dict[str, dict[str, str]]:
         for row in reader:
             if not row["rym_id"] or not MBID.fullmatch(row["mbid"] or ""):
                 raise ValueError(f"{path}: {row['rym_id']!r}: {row['mbid']!r} is not a release-group MBID")
+            if row["matched_by"] not in CAA_MATCHED_BY:
+                raise ValueError(f"{path}: {row['rym_id']!r}: matched_by must be {' or '.join(CAA_MATCHED_BY)}, not {row['matched_by']!r}")
             out[row["rym_id"]] = dict(row)
     return out
 
@@ -1432,7 +1439,7 @@ def run_caa(albums: list[dict], caa_path: Path, state_path: Path, fetcher: Fetch
                 state.caa[key] = got
                 counts[got["decision"]] += 1
                 if got["decision"] == "found":
-                    table[key] = {"rym_id": key, **{f: str(got[f]) for f in CAA_FIELDS[1:]}}
+                    table[key] = {"rym_id": key, **{f: str(got[f]) for f in CAA_FIELDS[1:-1]}, "matched_by": "auto"}
                 unsaved += 1
                 if unsaved >= CAA_SAVE_EVERY:
                     save()

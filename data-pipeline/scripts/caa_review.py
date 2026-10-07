@@ -2,14 +2,20 @@
 
     docs/review/caa-covers.jpg     every Cover Art Archive cover in use, as its 96 px sprite, numbered
     docs/review/caa-covers.md      number -> the album, and the MusicBrainz release group it was matched to
-    docs/review/still-no-cover.md  the albums that still have no cover, why, and the links the catalog has
+    docs/review/still-no-cover.md  the albums that still have no cover, why, and the links the catalog has;
+                                   at its top, what the owner could supply for each (still-no-cover-asks.csv)
 
     python scripts/caa_review.py            # from data-pipeline/, after `covers refs`, `covers sprites` and the build
 
 Reads catalog/albums.csv, catalog/covers.csv, covers_caa.csv, covers_skip.csv, the sprites and the state file
 of .cache/covers, and the site's albums.json (slugs, shown names, and which album has a cover). No network.
+
+docs/review/still-no-cover-asks.csv (`rym_id,supply,elsewhere`, written by hand after the hand-matching pass of
+docs/review/caa-covers-hand.md) says, for an album with no cover, the one thing the owner could supply and
+whether a cover exists somewhere the pipeline has no source for. A row of an album that has a cover is ignored.
 """
 import argparse
+import csv
 import io
 import json
 import sys
@@ -23,6 +29,8 @@ from rmr_pipeline import covers as cv  # noqa: E402
 from rmr_pipeline.images import TILE_FONT  # noqa: E402
 
 REVIEW = cv.PIPELINE_DIR.parent / "docs" / "review"
+ASKS = REVIEW / "still-no-cover-asks.csv"
+ASK_FIELDS = ["rym_id", "supply", "elsewhere"]
 CELL, LABEL, PER_ROW, GAP = 96, 16, 12, 4
 MAX_BYTES = 3 * 1024 * 1024
 LINKS = (("Apple Music", "apple_music_url"), ("Deezer", "deezer_url"), ("Bandcamp", "bandcamp_url"), ("YouTube", "youtube_url"),
@@ -34,6 +42,17 @@ WHY = {"no source": "no cover source in the catalog's links", "gone": "its image
 
 def cell(text: str) -> str:
     return str(text).replace("|", "\\|").replace("\n", " ")
+
+
+def read_asks(path: Path = ASKS) -> dict[str, dict[str, str]]:
+    """still-no-cover-asks.csv as rym_id -> its row; {} when there is no file."""
+    if not path.exists():
+        return {}
+    with path.open(encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames != ASK_FIELDS:
+            raise SystemExit(f"{path}: the header must be {','.join(ASK_FIELDS)}")
+        return {r["rym_id"]: r for r in reader}
 
 
 def sheet(sprites: list[Path]) -> Image.Image:
@@ -87,20 +106,23 @@ def main(argv=None) -> int:
              "Every album whose cover is the last resort's: the front image the Cover Art Archive has for the album's "
              "release group on MusicBrainz (`ca:<mbid>` in `albums.json`, a row of `data-pipeline/catalog/covers_caa.csv`), "
              f"in catalog order. Sheet: `caa-covers.jpg`, {PER_ROW} per row, each cell the 96 px sprite the build uses, with "
-             "its number under it. A release group was taken only when its title and one credited artist equal the album's "
-             "after folding and the years are at most one apart; the columns on the right say what it was matched to.", "",
+             "its number under it. The lookup took a release group only when its title and one credited artist equal the "
+             "album's after folding and the years are at most one apart (`auto` in the Matched column, "
+             f"{sum(1 for r, *_ in found if caa[r['rym_id']]['matched_by'] == 'auto')}); for the albums that rule refused, a reader "
+             f"chose the release group (`hand`, {sum(1 for r, *_ in found if caa[r['rym_id']]['matched_by'] == 'hand')}; the reason "
+             "for each is in `caa-covers-hand.md`). The columns on the right say what it was matched to.", "",
              "Why each album had no cover: " + "; ".join(f"{n} {WHY[g]}" for g, n in groups.items() if n) + ".", "",
              "To take a cover out: add the line `rym_id,caa,<mbid>,<what the image is>` to "
              "`data-pipeline/catalog/covers_skip.csv` and rebuild (the row stays in `covers_caa.csv`, so the lookup does "
              "not find the same release group again). To give an album another release group: put that group's MBID in "
              "its row of `covers_caa.csv`, run `python -m rmr_pipeline.covers sprites`, rebuild.", "",
-             "| # | Artist | Title | Year | MusicBrainz title | MusicBrainz artist | Year, type | Release group | Why no cover before | rym_id |",
-             "|---|---|---|---|---|---|---|---|---|---|"]
+             "| # | Artist | Title | Year | MusicBrainz title | MusicBrainz artist | Year, type | Release group | Matched | Why no cover before | rym_id |",
+             "|---|---|---|---|---|---|---|---|---|---|---|"]
     for n, (row, group, shown, _) in enumerate(found, start=1):
         m = caa[row["rym_id"]]
         lines.append(f"| {n} | {cell(shown['a'])} | {cell(shown['t'])} | {row['year']} | {cell(m['mb_title'])} | {cell(m['mb_artist'])} "
                      f"| {m['mb_year'] or 'no date'}, {m['mb_type'] or 'no type'} | [{m['mbid'][:8]}](https://musicbrainz.org/release-group/{m['mbid']}) "
-                     f"| {group} | {row['rym_id']} |")
+                     f"| {m['matched_by']} | {group} | {row['rym_id']} |")
     (args.out / "caa-covers.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
     decided = {}
@@ -114,11 +136,25 @@ def main(argv=None) -> int:
         else:
             decided[key] = (got.get("decision", "not asked"), got.get("why", ""))
     counts = {d: sum(1 for v in decided.values() if v[0] == d) for d in ("none", "ambiguous", "no art", "not asked", "skipped")}
+    asks = read_asks()
     lines = [f"# Albums that still have no cover ({len(without)})", "",
+             "## What would give each one a cover", "",
+             "The one most useful thing to supply for each album, after the automatic lookup and a search of MusicBrainz "
+             "by hand (`caa-covers-hand.md` has the reasoning). A Spotify link goes on the sheet; an image file goes "
+             "in `data-pipeline/overrides/` (way 2 below). The last column says whether a cover exists somewhere the "
+             "pipeline has no source for.", "",
+             "| Artist | Title | Year | Supply | A cover elsewhere? |", "|---|---|---|---|---|"]
+    for row, _, shown, _ in without:
+        ask = asks.get(row["rym_id"], {})
+        lines.append(f"| {cell(shown['a'])} | {cell(shown['t'])} | {row['year']} | {cell(ask.get('supply') or 'not looked at yet')} "
+                     f"| {cell(ask.get('elsewhere') or '')} |")
+    lines += ["", "## Why each has none", "",
              "These show the lettered tile. Each was asked from MusicBrainz and the Cover Art Archive (the last resort of "
              "`rmr_pipeline/covers.py`) and got nothing: "
              + ", ".join(f"{n} {d}" for d, n in counts.items() if n) + ".", "",
-             "- **none**: no release group with the album's title, one of its artists and its year (to within one).",
+             "- **none**: no release group with the album's title, one of its artists and its year (to within one). "
+             "A reader then searched MusicBrainz by hand for each of these (`caa-covers-hand.md`): the ones still here "
+             "have no release group that is this album, or one with no front image.",
              "- **ambiguous**: two release groups pass that look different (a studio and a live album, two years, two "
              "credits). The candidates are in the last column.",
              "- **no art**: the release group was found, and the archive has no front image for it.",
@@ -128,9 +164,10 @@ def main(argv=None) -> int:
              "- **skipped**: the image that was found is on the skip list (`covers_skip.csv`): not the album's cover.", "",
              "## Giving a cover by hand", "",
              "1. *The album is on MusicBrainz and its release group has a front image* (every ambiguous album, once you "
-             "have picked the right candidate): add a line `rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score` to "
-             "`data-pipeline/catalog/covers_caa.csv` with the release group's MBID (the last part of its "
-             "`musicbrainz.org/release-group/...` address; the other columns are for the reader and may be empty). "
+             "have picked the right candidate): add a line `rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by` "
+             "to `data-pipeline/catalog/covers_caa.csv` with the release group's MBID (the last part of its "
+             "`musicbrainz.org/release-group/...` address) and `hand` in the last column; the columns between are for "
+             "the reader and may be empty. "
              "Then `python -m rmr_pipeline.covers sprites`, rebuild, validate. The album page and the map both show it.",
              "2. *Any image you have*: an entry in `data-pipeline/overrides.json` under the album's slug (last column but "
              "one) with `image` (a file you put in `data-pipeline/overrides/`) and a `note`, as the README's Overrides "
