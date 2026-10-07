@@ -4,9 +4,13 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
 import { act, albumSpread, overviewMiss, visibleAlbumPoint, waitForAnimations, waitForCameraIdle, waitForMap, waitForMapQuiet, wholeMapMiss } from './helpers';
 
-/** Album positions on screen, recorded once while the map still started below the header (on the commit before
- * the change). Every "same place" test compares with it, so the framing is that commit's to the pixel. It can not
- * be recorded again: the code that wrote it is gone, since a record made now would be of the map under the header. */
+/** Album positions on screen. First recorded while the map still started below the header (on the commit before
+ * that change), which proved that running the map under the header moved nothing: 0.000 px on all 13 states.
+ * Recorded again on 7 October 2026 for the 10,467-album layouts (positions.json e3093d62c5e6), which put every
+ * album somewhere else: the framings were first checked by eye and by this file's other tests (below the header,
+ * inside the window), then written down as they were. So the record now pins the framing code on that data. It
+ * goes stale when positions.json changes, and only then is it recorded again: visit the states of the tests
+ * below and write `points` and `markers` as sameAsRecorded reads them. */
 const BASELINE = path.join(process.cwd(), 'e2e/fixtures/framing-baseline.json');
 const TOLERANCE_PX = 0.75;
 const IR = '/album/in-rainbows-radiohead';
@@ -43,7 +47,7 @@ async function sameAsRecorded(page: Page, info: TestInfo, state: string): Promis
   const now: Entry = { points: await points(page), markers: await markers(page) };
   const all: Record<string, Entry> = JSON.parse(fs.readFileSync(BASELINE, 'utf8'));
   const was = all[key];
-  expect(was, `no recorded framing for ${key}: it is recorded on the commit before the header change`).toBeTruthy();
+  expect(was, `no recorded framing for ${key}`).toBeTruthy();
   expect(now.points.length).toBe(was.points.length);
   // The largest distance from the record, for the run's log.
   let worst = 0;

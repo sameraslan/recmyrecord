@@ -34,13 +34,13 @@ All paths are under `frontcreck/`.
 | Surface styles | `src/styles/shell.css` (header), `map.css`, `album.css`, `home.css`, `phone.css` |
 | Phone strip | `src/components/album/MapPreviewStrip.tsx` (`STRIP_GAS_STRENGTH`) |
 | Contrast model | `src/lib/contrast.ts` and its test |
-| Framing record | `e2e/fixtures/framing-baseline.json`, read by `e2e/framing.spec.ts`. Never record it again. |
+| Framing record | `e2e/fixtures/framing-baseline.json`, read by `e2e/framing.spec.ts`. Last recorded on 2026-10-07 for the 10,467-album layouts; record it again only when `positions.json` changes. |
 
 `MapStage.tsx` must stay under about 20,000 bytes of source (19,705 now). Past that the bundler splits a first-load chunk and first-load JS grows for nothing. A module added to the first-load graph can do the same: measure, do not assume.
 
 ## Hard rules the theme keeps
 
-1. **Album positions never move.** The theme changes how albums are drawn, not where. `framing.spec.ts` holds every framing to the record made before the map ran under the header: 0.000 px on every line at the last full run. The opening view itself was changed on purpose (the map opens at the Overview, not the whole cloud), so the claim is "the same as before the map ran under the header", not "the same as the old site".
+1. **Album positions never move.** The theme changes how albums are drawn, not where. `framing.spec.ts` holds every framing to the record made before the map ran under the header: 0.000 px on every line at the last full run. (That proof is of the 4,081-album layouts. The record was made again on 2026-10-07 for the 10,467-album layouts, so from then on it pins the framing code on that data.) The opening view itself was changed on purpose (the map opens at the Overview, not the whole cloud), so the claim is "the same as before the map ran under the header", not "the same as the old site".
 2. **No redraw at rest.** The canvas draws 0 frames while nothing changes. Glints are DOM and add none.
 3. **Nothing on the pointer-move path.** Moving the mouse over empty map costs one frame per move and no layout work was added to it.
 4. **Text keeps 4.5:1**, on glass over the brightest backdrop and on the solid fallback. Computed in `contrast.test.ts`, measured on painted pixels in `e2e/glass.spec.ts` and `pages.spec.ts`.

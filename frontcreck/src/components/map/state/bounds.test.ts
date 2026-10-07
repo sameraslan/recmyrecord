@@ -498,11 +498,15 @@ const STOP_T = { sonic: 0, balanced: 0.5, mood: 1 } as const;
 const DESKTOP_FIT = { top: 55, right: 40, bottom: 115, left: 40 }; // MapStage DESKTOP_FIT_PADDING
 const PHONE_FIT = { top: 90, right: 40, bottom: 165 + 4, left: 40 }; // MapStage PHONE_FIT_PADDING with the fallback cover
 
+// The scales below were recorded again on 7 October 2026 for the 10,467-album layouts (positions.json e3093d62c5e6):
+// they are what these functions give on that data, pinned so that a change to the framing code shows. On the
+// 4,081-album layouts they were whole 596.653 / 708.479 / 618.156 and Overview 1639.476 / 1534.717 / 1838.235 on
+// desktop (balanced / sonic / mood). They go stale with positions.json, not with the theme.
 describe("the Overview on the real map (Task 0's recorded scales)", () => {
   const data = realData();
   const cases = [
-    { name: "desktop 1440 x 900", width: 1440, height: 836, pad: DESKTOP_FIT, cover: 0, whole: { balanced: 596.653, sonic: 708.479, mood: 618.156 }, overview: { balanced: 1639.476, sonic: 1534.717, mood: 1838.235 } },
-    { name: "phone 390 x 844", width: 390, height: 784, pad: PHONE_FIT, cover: 165, whole: { balanced: 267.847, sonic: 286.498, mood: 487.285 }, overview: { balanced: 402.802, sonic: 377.064, mood: 584.842 } },
+    { name: "desktop 1440 x 900", width: 1440, height: 836, pad: DESKTOP_FIT, cover: 0, whole: { balanced: 504.782, sonic: 440.556, mood: 563.14 }, overview: { balanced: 1717.834, sonic: 1415.559, mood: 1671.621 } },
+    { name: "phone 390 x 844", width: 390, height: 784, pad: PHONE_FIT, cover: 165, whole: { balanced: 283.21, sonic: 238.307, mood: 341.249 }, overview: { balanced: 422.054, sonic: 347.788, mood: 410.7 } },
   ] as const;
 
   for (const c of cases) {
@@ -522,11 +526,11 @@ describe("the Overview on the real map (Task 0's recorded scales)", () => {
   it("desktop Balanced: the camera the map opens at", () => {
     const whole = fitView(getCloudBounds(data, 0.5), { width: 1440, height: 836, insetLeft: 0, insetTop: 0, padding: DESKTOP_FIT });
     const ov = overviewView(data, 0.5, { width: 1440, height: 836, insetLeft: 0, insetTop: 0, bottomCover: 0 }, whole.zoom);
-    expect(ov.zoom).toBeCloseTo(2.15721, 4);
-    expect(ov.center.x).toBeCloseTo(0.033325, 5);
+    expect(ov.zoom).toBeCloseTo(2.26031, 4);
+    expect(ov.center.x).toBeCloseTo(0.138659, 5);
     expect(ov.center.y).toBeCloseTo(0, 6);
-    // the Whole map, unchanged from today (part 2 quotes 0.784 * 836 / 1.1 = 595.8, the zoom rounded)
-    expect(whole.zoom).toBeCloseTo(0.78507, 4);
+    // the Whole map (0.78507 on the 4,081-album layout, which part 2 quotes as 0.784 * 836 / 1.1 = 595.8)
+    expect(whole.zoom).toBeCloseTo(0.66419, 4);
   });
 
   it("is never nudged by CameraBounds: the opening view is inside the padded cloud box at every window checked", () => {
