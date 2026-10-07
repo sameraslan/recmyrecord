@@ -149,7 +149,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--check", action="store_true", help="Write nothing; fail when the files are not what this gives.")
     args = p.parse_args(argv)
     if not args.sheet.exists():
-        print(f"FAIL\nno sheet export at {args.sheet} (it is not committed; export the Top 10K Chart tab as CSV)",
+        print(f"FAIL\nno sheet export at {args.sheet} (export the Top 10K Chart tab as CSV, or pass --sheet)",
               file=sys.stderr)
         return 1
     files = build(args.sheet, args.table, args.overrides, args.keys)

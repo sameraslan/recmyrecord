@@ -280,6 +280,48 @@ def test_exclude_leaves_albums_out_of_the_store(world, capsys):
     assert load_store(world / "audio" / "clap").keys.tolist() == ["Album3", "Album1", "Album2", "Album5", "Album6"]
 
 
+def test_the_exclusions_file_is_read_by_every_write_and_the_flag_adds_to_it(world, capsys, monkeypatch):
+    """audio/store_exclusions.csv is what remembers the albums left out: a plain write leaves them out."""
+    listed = world / "audio" / "store_exclusions.csv"
+    listed.write_text("key,reason,date\nAlbum3,its only audio is of another record,2026-10-05\n"
+                      "Album7,\"no CLAP audio, so nothing of it to leave out\",2026-10-05\n", encoding="utf-8")
+    assert modelstore.load_exclusions(listed) == ("Album3", "Album7") and modelstore.load_exclusions(None) == ()
+    args = ["--cache", str(world / "onepass.sqlite"), "--catalog", str(world / "albums.csv"),
+            "--matches", str(world / "audio" / "matches.csv"), "--keys-csv", str(world / "audio" / "keys.csv"),
+            "--overrides", str(world / "audio" / "match_overrides.json"), "--audio-dir", str(world / "audio" / "clap")]
+    assert modelstore.main(["write", *args, "--exclusions", str(listed)]) == 0
+    assert "; 1 left out by store_exclusions.csv (Album3)" in capsys.readouterr().out
+    assert load_store(world / "audio" / "clap").keys.tolist() == ["Album1", "Album2", "Album5", "Album6"]
+    assert modelstore.main(["write", *args, "--exclusions", str(listed), "--exclude", "Album5,Album3"]) == 0
+    assert "; 2 left out by store_exclusions.csv and --exclude (Album3, Album5)" in capsys.readouterr().out
+    assert load_store(world / "audio" / "clap").keys.tolist() == ["Album1", "Album2", "Album6"]
+    status = ["status", "--audio-dir", str(world / "audio" / "clap"), "--catalog", str(world / "albums.csv")]
+    assert modelstore.main([*status, "--exclusions", str(listed), "--exclude", "Album1"]) == 0
+    out = capsys.readouterr().out
+    assert "store_exclusions.csv: none of the 2 album(s) is in the store" in out
+    assert "--exclude: 1 of the 1 album(s) is in the store: Album1" in out
+    monkeypatch.setattr(modelstore, "DEFAULT_EXCLUSIONS", listed)  # the default: no flag at all
+    assert _write(world, exclusions=modelstore.DEFAULT_EXCLUSIONS)[0] == 0
+    assert load_store(world / "audio" / "clap").keys.tolist() == ["Album1", "Album2", "Album5", "Album6"]
+    for text, said in (("key,why\nAlbum3,x\n", "the columns must be key, reason, date"),
+                       ("key,reason,date\nAlbum3,,2026-10-05\n", "Album3 has no reason"),
+                       ("key,reason,date\nthe third,x,2026-10-05\n", "is not an album key"),
+                       ("key,reason,date\nAlbum3,x,\nAlbum3,y,\n", "an album is there twice")):
+        listed.write_text(text, encoding="utf-8")
+        assert modelstore.main(["write", *args, "--exclusions", str(listed)]) == 1 and said in capsys.readouterr().err
+    listed.unlink()  # a write without the file would bring the albums back: it fails instead
+    assert modelstore.main(["write", *args, "--exclusions", str(listed)]) == 1 and "missing" in capsys.readouterr().err
+    assert load_store(world / "audio" / "clap").keys.tolist() == ["Album1", "Album2", "Album5", "Album6"]
+
+
+def test_the_committed_exclusions_are_not_in_the_committed_stores():
+    listed = modelstore.load_exclusions()
+    assert listed == ("Album999417", "Album739618")
+    assert set(listed) <= set(catalog_keys())
+    for name in ("clap", "effnet10k"):
+        assert not set(listed) & set(load_store(STORES[name]).keys.tolist()), name
+
+
 def test_the_effnet_rows_are_written_as_a_store_of_their_own_and_never_as_audio(world, capsys):
     """EffNet for the whole catalog: the cache's effnet rows, pooled, overridden and excluded as CLAP's are,
     in the folder --audio-dir names. audio/, the store the site data is built from, stays `rmr_audio sync`'s."""
