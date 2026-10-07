@@ -323,6 +323,57 @@ describe("nudgeVector under a bottom panel (phone: the slider panel and the pick
   });
 });
 
+describe("nudgeVector under a bottom panel in a short viewport (a phone on its side)", () => {
+  // 844 x 390 with 60 px under the header: 330 px of map, of which the slider panel covers 165 and the card 294.
+  const H = 390;
+  const VISIBLE = 330;
+  const cloud = { minX: -0.4219, maxX: 0.7355, minY: -0.6474, maxY: 0.4689 };
+  const MARGIN = 0.04;
+  /** Client y of the cloud's lowest album once a camera dragged far below the cloud has been pulled back. */
+  const lowestAtRest = (coverPx: number, coveredPx: number, viewH = H, visible = VISIBLE) => {
+    const ppw = pxPerWorld(zoomForPxPerWorld(coverPx / COVER_WORLD, viewH), viewH);
+    const viewport = { halfW: 844 / 2 / ppw, halfH: visible / 2 / ppw };
+    const from = cloud.minY - 5;
+    const camY = from + (nudgeVector({ x: 0, y: from }, viewport, cloud, MARGIN, 0.25, coveredPx / ppw)?.y ?? 0);
+    return 60 + visible / 2 + (camY - cloud.minY) * ppw;
+  };
+
+  it("above the slider panel the pull back leaves the cloud's lowest albums in view, not behind the header", () => {
+    // The margin is 188 px at 32 px covers, more than the 161 px band above the panel: resting the lowest album a
+    // margin above the panel would put every album behind the header and leave the band empty sky.
+    for (const coverPx of [24, 32]) {
+      const y = lowestAtRest(coverPx, 165 + 4);
+      expect(y, `${coverPx} px covers`).toBeGreaterThanOrEqual(60 + (VISIBLE - 169) / 2 - 1e-6);
+      expect(y, `${coverPx} px covers`).toBeLessThan(H - 165);
+    }
+    // Closer in, the margin alone already lets the camera rest lower than that: the panel adds nothing to it.
+    expect(lowestAtRest(48, 165 + 4)).toBeCloseTo(lowestAtRest(48, 0), 6);
+    expect(lowestAtRest(48, 165 + 4)).toBeGreaterThan(60);
+  });
+
+  it("above the card too: the lowest album rests in the strip between the header and the card", () => {
+    const y = lowestAtRest(32, 294 + 16);
+    expect(y).toBeGreaterThan(60);
+    expect(y).toBeLessThan(H - 294);
+  });
+
+  it("never holds the camera tighter than without a panel, at any zoom", () => {
+    for (const coverPx of [8, 16, 32, 64, 140]) {
+      for (const covered of [169, 310]) {
+        expect(lowestAtRest(coverPx, covered), `${coverPx} px covers, ${covered} px covered`).toBeLessThanOrEqual(lowestAtRest(coverPx, 0) + 1e-6);
+        expect(lowestAtRest(coverPx, covered, 844, 784)).toBeLessThanOrEqual(lowestAtRest(coverPx, 0, 844, 784) + 1e-6);
+      }
+    }
+  });
+
+  it("on an upright phone the lowest album still rests the margin above the panel, up to the middle of the band", () => {
+    // 32 px covers: the margin (188 px) is less than half the band (307 px), so it is the margin.
+    expect(lowestAtRest(32, 169, 844, 784)).toBeCloseTo(844 - 169 - (MARGIN * 32) / COVER_WORLD, 6);
+    // 64 px covers: the margin (376 px) is more than half the band, so the middle of the band.
+    expect(lowestAtRest(64, 169, 844, 784)).toBeCloseTo(60 + (784 - 169) / 2, 6);
+  });
+});
+
 describe("coveredBottomPx", () => {
   const pad = (bottom: number) => ({ top: 80, right: 60, bottom, left: 60 });
 

@@ -260,9 +260,10 @@ export function coveredBottomPx(input: Pick<MapInput, "bottomCover" | "framePadd
  * eases into it rather than snapping.
  *
  * `coveredBottom` (world units; `coveredBottomPx` in px) is the height of the viewport's bottom that a panel
- * covers. The camera may rest that much lower, so the cloud's lowest albums can stand above the panel: without it
- * the clamp holds them within `margin` of the viewport's bottom edge, under a panel taller than that. It only
- * widens the range a camera may rest in; the coverage test and the upper limit do not change.
+ * covers. The camera may rest up to that much lower, so the cloud's lowest albums can stand above the panel: without
+ * it the clamp holds them within `margin` of the viewport's bottom edge, under a panel taller than that. The lowest
+ * album rests no higher than the middle of the band above the panel, so the band never shows only empty sky because
+ * of the panel. It only widens the range a camera may rest in; the coverage test and the upper limit do not change.
  */
 export function nudgeVector(
   camPos: { x: number; y: number },
@@ -305,7 +306,12 @@ export function nudgeVector(
   const tx = loX <= hiX ? Math.max(loX, Math.min(hiX, camPos.x)) : (cloud.minX + cloud.maxX) / 2;
   const loY = cloud.minY - margin + halfH;
   const hiY = cloud.maxY + margin - halfH;
-  const ty = loY <= hiY ? Math.max(loY - Math.max(coveredBottom, 0), Math.min(hiY, camPos.y)) : (cloud.minY + cloud.maxY) / 2;
+  // Under a panel the lowest album may rest `margin` above the panel, but no higher than the middle of the band
+  // left above it: in a short viewport (a phone on its side) the margin is taller than the band, and the whole
+  // margin would put every album behind the header.
+  const band = 2 * halfH - coveredBottom;
+  const lower = coveredBottom > 0 && band > 0 ? Math.max(coveredBottom - Math.max(margin - band / 2, 0), 0) : 0;
+  const ty = loY <= hiY ? Math.max(loY - lower, Math.min(hiY, camPos.y)) : (cloud.minY + cloud.maxY) / 2;
 
   const dx = tx - camPos.x;
   const dy = ty - camPos.y;
