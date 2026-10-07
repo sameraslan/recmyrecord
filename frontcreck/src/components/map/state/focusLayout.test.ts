@@ -305,22 +305,52 @@ describe('MarkerLayout (layoutMarkers for every drawn frame, steady from frame t
     expect(eased).toBeLessThan(5);
   });
 
-  it('carries the group rigidly with the seed through a zoom or a morph, inside the bounds with no overlap', () => {
+  it('lays a zoom, a pinch or a morph out afresh on every frame: the covers never wait for the motion to end', () => {
+    // The map beside an album panel on a desktop, and a phone's map above its sheet: room for every group here.
+    const rand = lcg(6);
+    for (let t = 0; t < 100; t++) {
+      const desk = t % 2 === 0;
+      const b: MarkerBounds = desk ? { left: 428, top: 64, right: 1432, bottom: 836 } : bounds;
+      const cache = new MarkerLayout();
+      const a0 = desk ? cluster(rand, 930, 450, 10, 60 + rand() * 300) : cluster(rand, 195, 340, 5, 60 + rand() * 200);
+      cache.layout(a0, 64, 46, { bounds: b });
+      const grow = rand() < 0.5 ? 2.5 : 0.4;
+      let a = a0;
+      for (let f = 1; f <= 30; f++) {
+        a = moved(zoomed(a0, grow ** (f / 30)), f * 2, -f);
+        const out = cache.layout(a, 64, 46, { bounds: b, moving: true });
+        // Where a layout opened on this very view puts them (the site before the Trifid theme laid every frame
+        // out from scratch): no lag behind the hand, and nothing to catch up on later.
+        expect(cache.unsettled, `round ${t}, frame ${f}`).toBe(false);
+        expect(gapTo(out, layoutMarkers(a, 64, 46, { bounds: b })), `round ${t}, frame ${f}`).toBe(0);
+        expect(cache.settledFrom).toBeNull();
+      }
+      // The motion ends: the covers are already there. No settle, no ease, the same array.
+      const last = cache.layout(a, 64, 46, { bounds: b, moving: true });
+      const rest = cache.layout(a, 64, 46, { bounds: b });
+      expect(rest).toBe(last);
+      expect(cache.settledFrom).toBeNull();
+      expect(cache.stats).toMatchObject({ settles: 0, rides: 0 });
+    }
+  });
+
+  it('carries the group rigidly with the seed only while it rides an opening tween to its target, inside the bounds with no overlap', () => {
     const rand = lcg(6);
     for (let t = 0; t < 100; t++) {
       const cache = new MarkerLayout();
-      const a0 = cluster(rand, 195, 340, 10, 60 + rand() * 300);
-      const opened = offsets(cache.layout(a0, 64, 46, { bounds }));
+      const target = cluster(rand, 195, 340, 10, 60 + rand() * 300);
       const grow = rand() < 0.5 ? 2.5 : 0.4;
-      for (let f = 1; f <= 30; f++) {
-        const a = moved(zoomed(a0, grow ** (f / 30)), f * 2, -f);
+      const start = moved(zoomed(target, grow), 60, -30);
+      const opened = offsets(cache.layout(start, 64, 46, { bounds, moving: true, target: { anchors: target, bounds } }));
+      for (let f = 1; f < 30; f++) {
+        const a = moved(zoomed(target, grow ** (1 - f / 30)), 60 - f * 2, -30 + f);
         const out = cache.layout(a, 64, 46, { bounds, moving: true });
         expect(outside([...out], bounds), `round ${t}, frame ${f}`).toBe(0);
         expect(overlaps([...out]), `round ${t}, frame ${f}`).toBe(0);
         expect(out.map((m) => [m.ax, m.ay])).toEqual(a.map((p) => [p.x, p.y]));
         expect(cache.settledFrom).toBeNull();
         // Rigid: where no wall holds a marker, every cover keeps its offset from the seed's cover.
-        if (cache.stats.rides === f && opened.length) {
+        if (cache.stats.rides === f + 1 && opened.length) {
           const now = offsets(out);
           const free = now.every((o, i) => Math.abs(o[0] - opened[i][0]) < 1e-6 && Math.abs(o[1] - opened[i][1]) < 1e-6);
           const touches = out.some((m) => m.x - m.size / 2 <= bounds.left + 1e-6 || m.x + m.size / 2 >= bounds.right - 1e-6 || m.y - m.size / 2 <= bounds.top + 1e-6 || m.y + m.size / 2 >= bounds.bottom - 1e-6);
@@ -332,15 +362,39 @@ describe('MarkerLayout (layoutMarkers for every drawn frame, steady from frame t
     }
   });
 
+  it('stops riding when the tween is over or sent elsewhere (endRide): a zoom from then on is laid out afresh', () => {
+    const wide: MarkerBounds = { left: 428, top: 64, right: 1432, bottom: 836 };
+    const rand = lcg(16);
+    for (let t = 0; t < 50; t++) {
+      const cache = new MarkerLayout();
+      const target = cluster(rand, 930, 450, 10, 60 + rand() * 300);
+      const start = moved(zoomed(target, 0.4), 60, -30);
+      cache.layout(start, 64, 46, { bounds: wide, moving: true, target: { anchors: target, bounds: wide } });
+      cache.layout(zoomed(target, 0.5), 64, 46, { bounds: wide, moving: true });
+      expect(cache.stats).toMatchObject({ solves: 1, rides: 2 });
+      // The visitor turns the wheel during the opening: the tween is dropped, the covers follow the hand.
+      cache.endRide();
+      for (let f = 1; f <= 10; f++) {
+        const a = zoomed(target, 0.5 + f / 10);
+        expect(gapTo(cache.layout(a, 64, 46, { bounds: wide, moving: true }), layoutMarkers(a, 64, 46, { bounds: wide })), `round ${t}, frame ${f}`).toBe(0);
+        expect(cache.unsettled).toBe(false);
+      }
+      expect(cache.stats).toMatchObject({ solves: 11, rides: 2, settles: 0 });
+    }
+  });
+
   it('settles on the fresh layout of the view at rest, from where the group was carried, once', () => {
     const rand = lcg(7);
     for (let t = 0; t < 100; t++) {
       const cache = new MarkerLayout();
-      const a0 = cluster(rand, 195, 340, 10, 60 + rand() * 300);
-      cache.layout(a0, 64, 46, { bounds });
+      // Carried by an opening tween that stops short of its target (the visitor grabbed the map).
+      const target = cluster(rand, 195, 340, 10, 60 + rand() * 300);
+      const a0 = zoomed(target, 0.5);
+      cache.layout(a0, 64, 46, { bounds, moving: true, target: { anchors: target, bounds } });
       let a = a0;
-      for (let f = 1; f <= 10; f++) cache.layout((a = zoomed(a0, 1 + f / 10)), 64, 46, { bounds, moving: true });
+      for (let f = 1; f <= 10; f++) cache.layout((a = zoomed(target, 0.5 + f / 25)), 64, 46, { bounds, moving: true });
       const carried = cache.layout(a, 64, 46, { bounds, moving: true }).map((m) => [m.x, m.y]);
+      expect(cache.stats.solves).toBe(1);
       // The motion has ended (the flags cleared, or pointerup): the same view, not moving.
       const rest = cache.layout(a, 64, 46, { bounds });
       expect(gapTo(rest, layoutMarkers(a, 64, 46, { bounds }))).toBe(0);

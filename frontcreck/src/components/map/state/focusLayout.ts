@@ -408,9 +408,14 @@ function separateAtWalls(items: MarkerItem[], gap: number, walls: Walls): boolea
  *   taking the view somewhere known (`target`), the solve is of that view and the group rides there with the
  *   seed, so it lands on its settled layout with nothing to ease.
  * - Nothing moved (a hover redraw, a cover or gas fade): the same array, untouched, no work.
- * - Otherwise the layout as last drawn is carried with the seed: a pan or the album panel sliding moves it
- *   exactly (what a fresh solve gives, up to the projection's rounding, while no marker meets a wall); a zoom, a
- *   slider morph, a fling, wheel easing, a camera tween or a pinch carries it rigidly. At the walls the group is
+ * - A frame that changes the group's shape (a wheel zoom, a pinch, a zoom tween, a slider morph): a fresh solve
+ *   of that view, on that frame, as the site laid every frame out before the Trifid theme. The covers are where
+ *   the view at rest would show them, with no lag behind the hand and nothing to settle when the motion ends.
+ *   Two exceptions carry instead (below): the tween an album opens with, which rides to the layout already
+ *   solved for the view it lands on (until `endRide`), and bounds with no room for the group.
+ * - Otherwise the layout as last drawn is carried with the seed: a pan, a fling or the album panel sliding moves
+ *   it exactly (what a fresh solve gives, up to the projection's rounding, while no marker meets a wall); the
+ *   opening tween carries it rigidly. At the walls the group is
  *   shifted inside as a whole, and where it is larger than the bounds the markers are held there and the plain
  *   box separation makes room from where they were drawn, so the covers stay steady. Never a solve on a frame
  *   that carries. Where the bounds have no room for the group (the separation has failed, at the end of the
@@ -423,8 +428,8 @@ function separateAtWalls(items: MarkerItem[], gap: number, walls: Walls): boolea
  *   driver can ease them over. So a view at rest always shows the fresh layout of that view. A frame at rest that
  *   changes the view (a keyboard pan, a resize) settles at once.
  *
- * The returned array is the layout's own: the next call rewrites it in place. Every path but a solve or a settle
- * allocates nothing, and a call that is `moving` solves only when its input set is new. */
+ * The returned array is the layout's own: the next call rewrites it in place (a solve replaces it). Every path
+ * but a solve or a settle allocates nothing. */
 export class MarkerLayout {
   readonly stats: MarkerLayoutStats = { solves: 0, settles: 0, moves: 0, rides: 0, unchanged: 0 };
   /** Set by a call that settled: x, y of each marker just before (rank order). Null after any other call. */
@@ -446,6 +451,10 @@ export class MarkerLayout {
   private crowdedIn: MarkerBounds | null = null;
   private readonly crowdedInCopy: MarkerBounds = { left: 0, top: 0, right: 0, bottom: 0 };
   private solvedCrowded = false;
+  /** True while the group rides to the layout solved for a camera tween's target (an album opening): frames
+   * that change its shape carry it there and do not solve. Cleared by any other solve, on landing, and by
+   * `endRide`. */
+  private toTarget = false;
   /** Each album's offset from the seed's album at the last solve. */
   private rel = new Float64Array(0);
   /** The anchors and bounds of the last call. */
@@ -464,6 +473,12 @@ export class MarkerLayout {
     return this.pending;
   }
 
+  /** The camera tween the group was riding with is over or was sent elsewhere (the visitor zoomed during an
+   * opening): from the next frame a change of shape is laid out afresh again. */
+  endRide(): void {
+    this.toTarget = false;
+  }
+
   layout(anchors: readonly MarkerAnchor[], seedSize: number, recSize: number, options: MarkerLayoutOptions = {}): readonly MarkerItem[] {
     const gap = options.gap ?? MARKER_GAP;
     const minLine = options.minLine ?? MIN_LINE_PX;
@@ -475,6 +490,7 @@ export class MarkerLayout {
       // A camera tween is under way to a known view: lay out that view, and carry it there with the seed.
       this.stats.solves++;
       this.solve(target.anchors, seedSize, recSize, gap, minLine, target.bounds);
+      this.toTarget = true;
       return this.layout(anchors, seedSize, recSize, { gap, minLine, bounds: bounds ?? undefined, moving: true });
     }
     const items = this.items;
@@ -518,9 +534,16 @@ export class MarkerLayout {
       }
       this.record(bounds);
       this.pending = false;
+      this.toTarget = false;
       this.setCrowded(this.solvedCrowded, bounds);
       this.stats.moves++;
       return items;
+    }
+    // The group's shape changed (a zoom, a pinch, a morph): this view's own layout, now. Carrying the old one
+    // rigidly and solving once the motion had ended left the covers behind the hand, to catch up afterwards.
+    if (!still && !shapeSame && !this.toTarget && !(this.crowded && sameBounds(bounds, this.crowdedIn))) {
+      this.stats.solves++;
+      return this.solve(anchors, seedSize, recSize, gap, minLine, bounds);
     }
     if (!still) {
       // Carry the layout as last drawn with the seed, so every frame starts from the arrangement on screen: a pan
@@ -579,6 +602,7 @@ export class MarkerLayout {
     this.gap = gap;
     this.minLine = minLine;
     this.pending = false;
+    this.toTarget = false;
     this.setCrowded(false, null);
     if (this.rel.length !== 2 * n) {
       this.rel = new Float64Array(2 * n);

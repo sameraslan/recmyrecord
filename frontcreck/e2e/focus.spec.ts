@@ -461,11 +461,110 @@ test('an album opens with its covers laid out for the framed view: nothing eases
   expect(open!.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
 });
 
-test('a pinch with an album open carries the covers and settles them once, after the fingers lift', async ({ page, isMobile }) => {
+/** One row per animation frame while a zoom runs: how far the covers on screen are from the layout of the very
+ * view on screen (`gap`, px; null while an ease moves them), the camera, and each cover's place. */
+type CoverRow = { gap: number | null; cam: string; drawn: number; at: number[] };
+type CoverWindow = Window & { __covers?: { rows: CoverRow[]; on: boolean } };
+
+async function sampleCovers(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const s = ((window as CoverWindow).__covers = { rows: [] as CoverRow[], on: true });
+    const tick = () => {
+      const h = window.__rmr!.markerLayout?.() ?? null;
+      const c = window.__rmr!.map!.getCamera();
+      const at: number[] = [];
+      for (const el of document.querySelectorAll<HTMLElement>('.mk')) {
+        const m = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(el.style.transform);
+        const w = parseFloat(el.style.width);
+        at.push(m ? Number(m[1]) + w / 2 : NaN, m ? Number(m[2]) + w / 2 : NaN);
+      }
+      s.rows.push({ gap: h ? h.freshGap : null, cam: `${c.x},${c.y},${c.zoom}`, drawn: window.__rmr!.frames ?? 0, at });
+      if (s.on) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+/** Stops the sampler and reports what the owner's eye sees: the covers behind the map while it zooms (`behind`,
+ * the largest gap in px on a frame where the camera moved), frames where an ease was moving them (`easing`), and
+ * how far any cover still moves once the map has drawn the view the camera stopped at (`after`, px, and
+ * `afterFrames`). A pinch moves the camera in its pointer event and the map draws it on the next frame, covers
+ * and stars together: that one frame is the view arriving, not a cover catching up, so `after` counts from it. */
+async function coverLag(page: Page) {
+  const rows = await page.evaluate(() => {
+    const s = (window as CoverWindow).__covers!;
+    s.on = false;
+    return s.rows;
+  });
+  let moving = 0;
+  let behind = 0;
+  let easing = 0;
+  let last = 0;
+  for (let k = 1; k < rows.length; k++) {
+    if (rows[k].gap === null) easing++;
+    if (rows[k].cam === rows[k - 1].cam) continue;
+    moving++;
+    last = k;
+    behind = Math.max(behind, rows[k].gap ?? Infinity);
+  }
+  // The first sample at which the map has drawn the camera's last move (the same sample, when a frame made it).
+  let shown = last;
+  if (last > 0 && rows[last].drawn === rows[last - 1].drawn) while (shown < rows.length - 1 && rows[shown].drawn === rows[last].drawn) shown++;
+  let after = 0;
+  let afterFrames = 0;
+  for (let k = shown + 1; k < rows.length; k++) {
+    const d = Math.max(...rows[k].at.map((v, i) => Math.abs(v - rows[shown].at[i])));
+    after = Math.max(after, d);
+    if (Math.max(...rows[k].at.map((v, i) => Math.abs(v - rows[k - 1].at[i]))) > 0.05) afterFrames++;
+  }
+  return { frames: rows.length, moving, behind, easing, after, afterFrames, framesAfterStop: rows.length - 1 - shown };
+}
+
+// The site before the Trifid theme laid the covers out on every drawn frame. The theme first carried them rigidly
+// through a zoom and laid them out once it had ended, easing them over: they lagged behind the hand and then
+// caught up. Five recommendations, as an album opens, and ten.
+for (const n of [5, 10]) {
+  test(`a wheel zoom with an album open keeps every cover in its place for the view on screen, frame by frame, and nothing moves once it stops (${n} recommendations)`, async ({ page, isMobile }) => {
+    test.skip(isMobile, 'a mouse wheel');
+    await page.goto('/map');
+    await waitForMap(page);
+    await setFocus(page, 11, await recsOf(page, 11, 'balanced', n));
+    await waitForCameraIdle(page);
+    await expect(page.locator('.mk')).toHaveCount(n + 1);
+    const box = (await page.locator('canvas.map-canvas').boundingBox())!;
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    await page.waitForTimeout(300);
+    const before = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+    await sampleCovers(page);
+    // Notches a hand's pace apart, out and back in, then a run of small steps as a trackpad sends them.
+    for (const dy of [150, 150, 150, -150, -150, -150]) {
+      await page.mouse.wheel(0, dy);
+      await page.waitForTimeout(260);
+    }
+    for (let i = 0; i < 30; i++) {
+      await page.mouse.wheel(0, i < 15 ? 14 : -14);
+      await page.waitForTimeout(16);
+    }
+    await waitForCameraIdle(page);
+    await page.waitForTimeout(500);
+    const lag = await coverLag(page);
+    const after = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+    console.log(`wheel zoom, ${n} recs: ${JSON.stringify(lag)}`);
+    expect(lag.moving, 'frames on which the camera moved').toBeGreaterThan(30);
+    expect(lag.framesAfterStop, 'frames watched after the zoom stopped').toBeGreaterThan(10);
+    expect(lag.behind, 'px a cover was from its place for the view on screen, on a frame of the zoom').toBeLessThan(1);
+    expect(lag.easing, 'frames on which covers were easing over').toBe(0);
+    expect(after.eases - before.eases, 'eases run').toBe(0);
+    expect(lag.after, 'px a cover moved after the camera had stopped').toBeLessThan(0.5);
+    expect(after.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
+  });
+}
+
+test('a pinch with an album open keeps every cover in its place for the view on screen, frame by frame, with nothing to catch up on after the fingers lift', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'a two-finger pinch is a touch gesture');
   await page.goto('/map');
   await waitForMap(page);
-  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 5));
   await waitForCameraIdle(page);
   await waitForGasSharpSettled(page);
   const canvas = page.locator('canvas.map-canvas');
@@ -486,6 +585,7 @@ test('a pinch with an album open carries the covers and settles them once, after
   const before = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
   const z0 = (await camera(page)).zoom;
   const f0 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await sampleCovers(page);
   await touch('pointerdown', 1, cx - 40);
   await touch('pointerdown', 2, cx + 40);
   for (let i = 1; i <= 20; i++) {
@@ -495,17 +595,23 @@ test('a pinch with an album open carries the covers and settles them once, after
   }
   const pinchFrames = (await page.evaluate(() => window.__rmr!.frames ?? 0)) - f0;
   expect(pinchFrames, 'the pinch drew frames').toBeGreaterThan(10);
-  const during = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+  const during = await page.evaluate(() => window.__rmr!.markerLayout!());
   expect(during, 'no ease runs during the pinch').not.toBeNull();
-  expect(during.settles - before.settles, 'settles during the pinch').toBe(0);
+  expect(during!.freshGap, 'px from the layout of the view on screen, fingers still down').toBeLessThan(1);
   await touch('pointerup', 1, cx - 140);
   await touch('pointerup', 2, cx + 140);
   await waitForCameraIdle(page);
   await page.waitForTimeout(400);
+  const lag = await coverLag(page);
   const after = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+  console.log(`pinch: ${JSON.stringify(lag)}`);
   expect((await camera(page)).zoom, 'the pinch zoomed in').toBeGreaterThan(z0 * 1.5);
-  expect(after.settles - before.settles, 'settles for the whole pinch').toBe(1);
-  expect(after.eases - before.eases, 'eases for the whole pinch').toBeLessThanOrEqual(1);
+  expect(lag.moving, 'frames on which the camera moved').toBeGreaterThan(10);
+  expect(lag.behind, 'px a cover was from its place for the view on screen, on a frame of the pinch').toBeLessThan(1);
+  expect(lag.easing, 'frames on which covers were easing over').toBe(0);
+  expect(lag.after, 'px a cover moved after the camera had stopped').toBeLessThan(0.5);
+  expect(after.settles - before.settles, 'settles for the whole pinch').toBeLessThanOrEqual(1);
+  expect(after.eases - before.eases, 'eases for the whole pinch').toBe(0);
   expect(after.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
 });
 

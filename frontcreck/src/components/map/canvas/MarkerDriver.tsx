@@ -218,14 +218,21 @@ function tweenTarget(w: Work, store: MapStore, width: number, height: number): {
     w.focusAt = now;
   }
   if (!to || !f || !data) {
+    // No tween under way (it landed, or the visitor took over): the covers no longer ride to its target.
     w.hasTarget = false;
+    w.layout.endRide();
     return null;
   }
   const stop = STOP_T[input.stop];
   // Compared first, so the key is always the latest target, whether or not one was held before.
   const moved = retargeted(w.target, to, input.insetLeft, stop, width, height, input.bottomCover, input.insetTop) || !w.hasTarget;
   w.hasTarget = true;
-  if (!newFocus && !(moved && now - w.focusAt < RETARGET_MS)) return null;
+  if (!newFocus && !(moved && now - w.focusAt < RETARGET_MS)) {
+    // Sent elsewhere later (a zoom button during the opening): the layout solved for the old target is not
+    // where this tween goes.
+    if (moved) w.layout.endRide();
+    return null;
+  }
   const cam = frustumCamera(to, width, height, input.insetLeft, input.insetTop);
   const pos = interpolated(data, stop);
   const rect = canvasRect(width, height);
