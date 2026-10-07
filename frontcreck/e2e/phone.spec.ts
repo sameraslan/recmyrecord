@@ -48,6 +48,28 @@ test.describe('phone album', () => {
     await expect(page).toHaveURL(IR);
   });
 
+  test('"Open in Spotify" and the link button sit above the mood tags, as in the approved picture, and the page reads in that order', async ({ page }) => {
+    await page.goto('/album/the-stone-roses-the-stone-roses');
+    const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
+    const cover = await box('section.album .seed .cover');
+    const title = await box('#seed-title');
+    const actions = await box('.seed-actions');
+    const tags = await box('.seed .tags');
+    // final-phone-list.jpg: the cover and the title, then the buttons across the page, then the tags.
+    expect(actions.y).toBeGreaterThanOrEqual(Math.max(cover.y + cover.height, title.y + title.height));
+    expect(tags.y).toBeGreaterThanOrEqual(actions.y + actions.height);
+    // The buttons 6 px under the cover and the tags 14 px under the buttons (the prototype's phone rules).
+    expect(actions.y - (cover.y + cover.height)).toBe(6);
+    expect(tags.y - (actions.y + actions.height)).toBe(14);
+    // The button row is as wide as the page's text column, and both controls are still 44 px tall.
+    expect(actions.x).toBe(cover.x);
+    expect(actions.width).toBe(tags.width);
+    for (const control of await page.locator('.seed-actions > *').all()) expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // What is seen is what is read and tabbed: in the document the buttons come before the tags too.
+    expect(await page.locator('.seed').evaluate((el) => [...el.children].map((c) => c.className.split(' ')[0]))).toEqual(['cover', 'seed-artist', 'seed-title', 'seed-actions', 'tags']);
+    await noHorizontalScroll(page);
+  });
+
   test('an album entered from Home still slides away for the map', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('list', { name: COPY.home.shelfListLabel }).locator('a').first().tap();

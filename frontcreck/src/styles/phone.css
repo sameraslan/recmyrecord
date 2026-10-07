@@ -19,7 +19,9 @@
   .seed-title { font-size: clamp(32px, 9vw, 40px); }
   .seed-title.len-m { font-size: clamp(28px, 7.8vw, 34px); }
   .seed-title.len-l { font-size: clamp(24px, 6.6vw, 28px); }
-  .seed-actions { grid-area: auto; grid-column: 1 / -1; grid-row: 5; margin-top: 14px; }
+  /* The buttons across the page under the cover, then the tags (approved final-phone-list.jpg): the order of the document. */
+  .seed-actions { grid-area: auto; grid-column: 1 / -1; grid-row: 4; margin-top: 6px; }
+  .tags { grid-area: auto; grid-column: 1 / -1; grid-row: 5; }
   .seed-actions .btn { flex: 1; min-height: 44px; }
   .icon-quiet { width: 44px; height: 44px; }
   .rec-main { grid-template-columns: 16px 56px minmax(0, 1fr); gap: 12px; padding: 12px 52px 12px 2px; }
