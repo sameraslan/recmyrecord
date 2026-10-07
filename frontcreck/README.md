@@ -52,7 +52,7 @@ The gas behind the albums is painted once, at build time, not in the visitor's b
 
 - `gas-sonic.<hash>.webp`, `gas-balanced.<hash>.webp`, `gas-mood.<hash>.webp`: the gas of each slider stop, 2048 px on its longer side. This is the image every map visit loads first (250 to 370 KB), and the only one Home, About, the 404 page and phones and tablets used by touch ever load.
 - `gas-sonic-sharp.<hash>.webp`, `gas-balanced-sharp.<hash>.webp`, `gas-mood-sharp.<hash>.webp`: the same gas at the resolution of the approved design (about 3300 by 3700 px, 600 to 820 KB). A desktop or laptop with a real GPU fetches the one for the stop on screen once the map is idle and frees it when the slider comes to rest at another stop. The test is a main pointer that is a mouse or a trackpad and can hover, so a laptop with a touch screen gets it too.
-- `theme.json`: for every album its colour family and the gas brightness under it at each stop, the region names and where they sit, and for each stop the rectangle its two gas images cover, their sizes and their hashes.
+- `theme.json`: for every album its colour family and the gas brightness under it at each stop, the region names and where they sit (left over: the map no longer shows names), and for each stop the rectangle its two gas images cover, their sizes and their hashes.
 
 `<hash>` is the first 10 hex characters of the SHA-256 of the image's own bytes. Browsers keep everything under `/data` for a day, so an image whose content changes must change its name: `theme.json` names the images it was baked with, and the map draws no others. It also refuses an image whose size is not the one `theme.json` gives, and shows plain sky for that stop. A bake that changes nothing writes the same names again. One that changes an image writes a new name and deletes the old file.
 
@@ -71,6 +71,18 @@ To bake again:
 3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit `public/data/theme/` as it now is: the seven files, and the removal of any image the bake replaced. `src/lib/data/theme.data.test.ts` also checks the file sizes (under 400 KB for a first image, under 1 MB for a sharper one) and the GPU memory the images need, so a bake that outgrows those limits fails there.
 
 A stale or missing theme never breaks the map for a visitor: the map checks the album count, and without a matching theme it shows plain sky.
+
+## Theme
+
+The look is the Trifid nebula theme. The decisions behind it are in [`../docs/design/trifid-theme/HANDOFF.md`](../docs/design/trifid-theme/HANDOFF.md), and what was built is in [`../docs/design/trifid-theme/IMPLEMENTATION-NOTES.md`](../docs/design/trifid-theme/IMPLEMENTATION-NOTES.md). The colour tokens are in `src/app/globals.css`.
+
+Every star on the map is an album. Star size and brightness are picked at random on each page load. A few bright stars glint while the map is still. The glints are off on software renderers and wait while an album is hovered.
+
+Panels over the map are see-through glass on wide screens. On phones, in browsers without `backdrop-filter`, and when the system asks for reduced transparency, they are fully solid instead: three one-line rules next to the tokens do this. The first of them is the phone glass switch: removing that one line gives phones glass.
+
+The map canvas starts at the top of the window, behind the header, and the header is glass over it. The camera knows the header's height as `MapInput.insetTop` (`HEADER_PX`, and `HEADER_NARROW_PX` under 900 px wide, in `src/lib/media.ts`: the two values of `--hdr`), so albums are framed in the area below the header. `e2e/framing.spec.ts` holds every framing to positions recorded before that change (`e2e/fixtures/framing-baseline.json`). Do not record that file again.
+
+`npm run perf -- --glass on` and `--glass off` force glass or solid panels, and `--twinkle on` and `--twinkle off` the glints, to measure what each costs. `node scripts/perf/compare.mjs <baselineDir> <currentDir>` sets one set of runs beside another. `src/lib/contrast.test.ts` checks that every text colour keeps 4.5:1 on glass over a white backdrop and on the solid fallback.
 
 ## Deployment
 
