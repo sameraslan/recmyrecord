@@ -6,20 +6,30 @@ export function isStopId(v: unknown): v is StopId {
   return typeof v === 'string' && (STOP_IDS as readonly string[]).includes(v);
 }
 
-/** `?by=` value to a stop; absent or unknown means balanced. */
+/** What the address bar says for each stop. The first stop is named "Sound" on the slider, so its address is
+ * `?by=sound`; the stop's id in the code, the data keys and the file names stays `sonic`. Only this file
+ * translates, on the way in (parseBy) and on the way out (byParam). */
+const BY_PARAM: Record<StopId, string> = { sonic: 'sound', balanced: 'balanced', mood: 'mood' };
+
+/** The `?by=` value of a stop. */
+export function byParam(stop: StopId): string {
+  return BY_PARAM[stop];
+}
+
+/** `?by=` value to a stop; absent or unknown means balanced (`sonic` is unknown: it was never released). */
 export function parseBy(value: string | null | undefined): StopId {
-  return isStopId(value) ? value : DEFAULT_STOP;
+  return STOP_IDS.find((s) => BY_PARAM[s] === value) ?? DEFAULT_STOP;
 }
 
 export function albumHref(slug: string, by: StopId = DEFAULT_STOP): string {
   const base = `/album/${encodeURIComponent(slug)}`;
-  return by === DEFAULT_STOP ? base : `${base}?by=${by}`;
+  return by === DEFAULT_STOP ? base : `${base}?by=${byParam(by)}`;
 }
 
 export function hrefWithBy(href: string, by: StopId): string {
   const u = new URL(href, 'http://x.invalid');
   if (by === DEFAULT_STOP) u.searchParams.delete('by');
-  else u.searchParams.set('by', by);
+  else u.searchParams.set('by', byParam(by));
   return u.pathname + u.search + u.hash;
 }
 

@@ -51,7 +51,7 @@ Routes:
 
 - `/`: search, "Explore the map", "Surprise me" and a shelf of albums to start from, over the dimmed map.
 - `/map`: the map to explore. Hovering an album shows its title and artist; clicking it opens a card with a link to its closest albums.
-- `/album/[slug]`: the album, its closest albums and the map framed around them. "Explore this area" on the map drops the album and opens Explore with the map left where it is. `?by=sonic`, `?by=balanced` (the default) or `?by=mood` picks the slider stop.
+- `/album/[slug]`: the album, its closest albums and the map framed around them. "Explore this area" on the map drops the album and opens Explore with the map left where it is. `?by=sound`, `?by=balanced` (the default) or `?by=mood` picks the slider stop. `sound` is the address of the stop the code and the data files call `sonic`; `src/lib/url-state.ts` is the one place that translates.
 - `/about`: how the recommendations work, and the credits.
 
 One map stays mounted in the root layout for every route (`src/components/map/`). It is a WebGL point-sprite map ported from an earlier map of the same catalog. three.js loads on the client after first paint, cover sheets load only when zoom reaches the point where covers show, and the canvas draws only when something changes. Without WebGL the map shows a short message while search, lists and links keep working.

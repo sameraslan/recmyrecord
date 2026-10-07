@@ -101,7 +101,7 @@ test.describe('desktop split view', () => {
     await waitForMap(page);
     const historyBefore = await page.evaluate(() => history.length);
     await page.getByRole('button', { name: COPY.slider.stops.sonic, exact: true }).click();
-    await expect(page).toHaveURL(`${IR}?by=sonic`);
+    await expect(page).toHaveURL(`${IR}?by=sound`);
     expect(IR_SONIC.slice(0, 5), 'the data gives the sonic stop its own list').not.toEqual(IR_BALANCED.slice(0, 5));
     await expect.poll(() => titles(page)).toEqual(IR_SONIC.slice(0, 5));
     expect(await page.evaluate(() => history.length)).toBe(historyBefore);
@@ -131,7 +131,7 @@ test.describe('desktop split view', () => {
       };
     });
     await page.keyboard.press('ArrowRight'); // balanced -> mood, and at once mood -> sonic
-    await expect(page).toHaveURL(`${IR}?by=sonic`);
+    await expect(page).toHaveURL(`${IR}?by=sound`);
     await expect(range).toHaveValue('0');
     await expect(page.getByRole('button', { name: COPY.slider.stops.sonic, exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(() => titles(page)).toEqual(IR_SONIC.slice(0, 5));
@@ -374,7 +374,7 @@ test('an album without audio says so at the sonic and balanced stops, and its bu
   expect(recsOf(quiet.slug, 'balanced')).toEqual([]);
   expect(recsOf(quiet.slug, 'sonic')).toEqual([]);
   expect(mood).toHaveLength(10);
-  for (const by of ['', '?by=sonic']) {
+  for (const by of ['', '?by=sound']) {
     const res = await page.goto(url + by);
     expect(res?.status()).toBe(200);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(quiet.title);
@@ -385,7 +385,7 @@ test('an album without audio says so at the sonic and balanced stops, and its bu
     await expect(page.getByRole('button', { name: COPY.album.showMore })).toHaveCount(0);
     await expect(page.getByRole('button', { name: COPY.album.noAudioAction })).toBeVisible();
   }
-  // The page is live before the tap: the client has read ?by=sonic into the store and the panel's effects have
+  // The page is live before the tap: the client has read ?by=sound into the store and the panel's effects have
   // run (the accent is set). A tap on the server-rendered button before that would do nothing.
   await expect.poll(() => page.evaluate(() => window.__rmr?.getState().stop)).toBe('sonic');
   await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--acc'))).not.toBe('');

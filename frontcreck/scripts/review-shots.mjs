@@ -59,7 +59,7 @@ const STATES = {
     if (pt) await p.mouse.move(pt.x, pt.y);
   },
   'd1-album': async (p) => p.goto(`${BASE}${IR}`),
-  'd2-album-sonic': async (p) => p.goto(`${BASE}${IR}?by=sonic`),
+  'd2-album-sonic': async (p) => p.goto(`${BASE}${IR}?by=sound`),
   'd3-album-mood': async (p) => p.goto(`${BASE}${IR}?by=mood`),
   'd4-album-deeper': async (p) => {
     await p.goto(`${BASE}${IR}`);
