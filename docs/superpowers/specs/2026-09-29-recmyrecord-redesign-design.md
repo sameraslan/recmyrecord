@@ -127,10 +127,13 @@ Tokens (Tailwind v4 `@theme` in `globals.css`), dark only:
 | `--color-moss` | `#97a077` | Map dots |
 | `--color-ochre` | `#c8a560` | Map dots |
 
+Note, 2026-10-04: the table above is the original warm theme and is kept as the record of it. The Trifid theme keeps these token names and changes their values; the current values are in `frontcreck/src/app/globals.css`.
+
 - Fonts via `next/font/google`: Cormorant Garamond (500, 600, italic) for the wordmark, album titles and headings; Schibsted Grotesk for interface text. Small uppercase captions with letter-spacing only for real labels.
 - Covers: 2 px radius, no glow. One soft shadow at most on floating cards.
 - Static film grain via CSS, subtle.
 - Never: pure black, blue-black, purple, neon, glassmorphism, starfields.
+- Exception, 2026-10-04: for the Trifid theme the owner knowingly set aside three items of the line above (blue-black, glassmorphism and starfields), and the film grain is removed. The decisions and the reasons are in `docs/design/trifid-theme/HANDOFF.md`, section "Current state: decisions made on 2026-10-04", and in `docs/superpowers/plans/2026-10-04-trifid-theme.md`, section "Decisions made on 2026-10-04". What was built is described in `docs/design/trifid-theme/IMPLEMENTATION-NOTES.md`.
 - Motion: 180 to 450 ms, ease-out. Nothing moves under a resting cursor. `prefers-reduced-motion` makes all transitions instant.
 - The mockup's `design/mockups/final/src.html` is the visual reference for spacing, sizes and states.
 
