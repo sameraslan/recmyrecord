@@ -5,9 +5,9 @@ manifest.json; the transform.npz is fitted afterwards by
 
   python -m rmr_audio.modelstore write  [--model clap|clap_mp3|effnet] [--clips 4] [--cache SQLITE] [--catalog CSV]
                                         [--matches CSV] [--overrides JSON] [--keys-csv CSV] [--audio-dir DIR]
-                                        [--exclude KEY[,KEY...]] [--dry-run]
+                                        [--exclusions CSV] [--exclude KEY[,KEY...]] [--dry-run]
   python -m rmr_audio.modelstore status [--model clap|clap_mp3|effnet] [--audio-dir DIR] [--catalog CSV]
-                                        [--exclude KEY[,KEY...]]
+                                        [--exclusions CSV] [--exclude KEY[,KEY...]]
 
 --model clap_mp3 writes the store from the cache's `clap_mp3` rows (the variant of rmr_audio.mp3trip; its
 Deezer clips are the clap vectors, copied by `rmr_audio.onepass copy`). It has no committed store of its
@@ -20,9 +20,11 @@ to look at it first); its manifest names the variant as the model.
 
 `write` reads the cache strictly read-only (`mode=ro`; another job may be writing to it), the catalog
 table, matches.csv and match_overrides.json as they are when it runs, and makes the store exactly the
-catalog's albums that have an ok clip for the model, in catalog order. `--exclude` leaves the albums it
-names out of the store (an album whose only audio is of another record); the summary line names them, and
-`status --exclude` says whether they are in a store. It can be run again at any time: a store that already
+catalog's albums that have an ok clip for the model, in catalog order, without the albums of
+audio/store_exclusions.csv (key, reason, date: an album whose only audio is of another record). That file
+is read by every `write`, so a plain `write` gives the committed store again; `--exclusions` names another
+file, and `--exclude` leaves out more albums for one run. The summary line names the albums left out, and
+`status` says whether any of them is in a store. It can be run again at any time: a store that already
 holds exactly that is not touched, anything else is replaced whole (audio_store.replace_store). It never
 writes audio/ itself (the site's EffNet store), matches.csv or keys.csv. No model is loaded and nothing is downloaded: numpy only,
 so it runs in the build venv as well as the audio venv.
@@ -61,11 +63,14 @@ from rmr_pipeline.audio import DEFAULT_CATALOG, catalog_keys
 from rmr_pipeline.audio_store import (DEFAULT_AUDIO, STORES, StoreError, load_match_overrides, load_store,
                                       replace_store)
 from rmr_pipeline.constants import PIPELINE_DIR
-from rmr_pipeline.keys import KeyMap, load_keys
+from rmr_pipeline.keys import RYM_ID_RE, KeyMap, is_placeholder, load_keys
 
 from .onepass_cache import MODELS, WINDOW_SOURCES, OnePassCache
 
 DEFAULT_CACHE_DB = PIPELINE_DIR / ".cache" / "audio" / "onepass.sqlite"  # as rmr_audio.onepass.DEFAULT_OUT
+# The albums every store write leaves out, with the reason and the day it was decided: hand-edited.
+DEFAULT_EXCLUSIONS = DEFAULT_AUDIO / "store_exclusions.csv"
+EXCLUSION_FIELDS = ["key", "reason", "date"]
 CLIPS = 4  # the standard: four clips per album, no top-up
 POOL = "rank"
 ORDER = ("the first track, then tracks spread evenly through the album (bit-reversal order), so fewer clips are a "
@@ -73,6 +78,36 @@ ORDER = ("the first track, then tracks spread evenly through the album (bit-reve
 POOLING = ("the plain mean (float64, not renormalised) of the album's first {clips} ok clips in rank order, from one "
            "listing; windows of full-length audio (local, youtube, bandcamp) replace the previews and the mean then "
            "takes every window; stored as float16")
+
+
+def load_exclusions(path: Path | None = DEFAULT_EXCLUSIONS) -> tuple[str, ...]:
+    """The keys of store_exclusions.csv, in its order. None: no file, no album left out. A file that is
+    missing or not of this shape is an error: a write without it would bring the albums back."""
+    if path is None:
+        return ()
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+    except FileNotFoundError:
+        raise StoreError(f"missing {path}: the albums every store write leaves out (key, reason, date)") from None
+    if reader.fieldnames != EXCLUSION_FIELDS:
+        raise StoreError(f"{path}: the columns must be {', '.join(EXCLUSION_FIELDS)}")
+    keys = [r["key"] for r in rows]
+    for n, r in enumerate(rows, start=2):
+        if not (RYM_ID_RE.match(r["key"] or "") or is_placeholder(r["key"] or "")):
+            raise StoreError(f"{path}, line {n}: {r['key']!r} is not an album key")
+        if not (r["reason"] or "").strip():
+            raise StoreError(f"{path}, line {n}: {r['key']} has no reason")
+    if len(set(keys)) != len(keys):
+        raise StoreError(f"{path}: an album is there twice")
+    return tuple(keys)
+
+
+def _left_out(excluded: list[str], listed: tuple[str, ...], name: str) -> str:
+    """What left the albums out, for the summary line: the file, the flag, or both."""
+    by = [name] * any(k in listed for k in excluded) + ["--exclude"] * any(k not in listed for k in excluded)
+    return " and ".join(by)
 
 
 def forced_listings(overrides: Path | None) -> dict[str, tuple[str, str]]:
@@ -147,8 +182,11 @@ def album_means(cache: OnePassCache, model: str, catalog: list[str], matches: Pa
 def write(model: str = "clap", clips: int = CLIPS, cache_db: Path = DEFAULT_CACHE_DB, catalog: Path = DEFAULT_CATALOG,
           matches: Path | None = DEFAULT_AUDIO / "matches.csv", audio_dir: Path | None = None, dry_run: bool = False,
           out=print, keys_csv: Path | None = DEFAULT_AUDIO / "keys.csv",
-          overrides: Path | None = DEFAULT_AUDIO / "match_overrides.json", exclude: tuple[str, ...] = ()) -> int:
+          overrides: Path | None = DEFAULT_AUDIO / "match_overrides.json", exclude: tuple[str, ...] = (),
+          exclusions: Path | None = DEFAULT_EXCLUSIONS) -> int:
     spec = MODELS[model]
+    listed = load_exclusions(exclusions)
+    exclude = tuple(dict.fromkeys((*listed, *exclude)))
     audio_dir = store_dir(model, audio_dir)
     if audio_dir.resolve() == DEFAULT_AUDIO.resolve():
         raise StoreError(f"{audio_dir} is the EffNet store, which `rmr_audio sync` writes; give another --audio-dir")
@@ -163,7 +201,8 @@ def write(model: str = "clap", clips: int = CLIPS, cache_db: Path = DEFAULT_CACH
     out(f"{model} ({spec.model_id}, {spec.dim} numbers): {counts['written']} of the catalog's {counts['catalog']} albums "
         f"have audio ({counts['followed']} found under an older key through keys.csv); {counts['not_in_catalog']} "
         f"album(s) of the cache are not in the catalog and are left out"
-        + (f"; {len(counts['excluded'])} left out by --exclude ({', '.join(counts['excluded'])})" if counts["excluded"] else ""))
+        + (f"; {len(counts['excluded'])} left out by {_left_out(counts['excluded'], listed, Path(exclusions or '').name)} "
+           f"({', '.join(counts['excluded'])})" if counts["excluded"] else ""))
     out("clips per album: " + ", ".join(f"{c}: {k}" for c, k in sorted(Counter(n.tolist()).items())))
     out("source: " + ", ".join(f"{s}: {k}" for s, k in sorted(Counter(x.split(':')[0] for x in source.tolist()).items())))
     if counts["off_override"]:
@@ -191,7 +230,9 @@ def store_dir(model: str, audio_dir: Path | None) -> Path:
     return STORES[model]
 
 
-def status(model: str, audio_dir: Path | None, catalog: Path, out=print, exclude: tuple[str, ...] = ()) -> int:
+def status(model: str, audio_dir: Path | None, catalog: Path, out=print, exclude: tuple[str, ...] = (),
+           exclusions: Path | None = DEFAULT_EXCLUSIONS) -> int:
+    listed = load_exclusions(exclusions)
     audio_dir = store_dir(model, audio_dir)
     store = load_store(audio_dir)
     cat = catalog_keys(catalog)
@@ -202,10 +243,11 @@ def status(model: str, audio_dir: Path | None, catalog: Path, out=print, exclude
     out("clips per album: " + ", ".join(f"{c}: {k}" for c, k in sorted(Counter(store.n_clips.tolist()).items())))
     out("source: " + ", ".join(f"{s}: {k}" for s, k in sorted(Counter(x.split(':')[0] for x in store.source.tolist()).items())))
     out(f"transform.npz: {'there' if (audio_dir / 'transform.npz').exists() else 'not fitted yet'}")
-    if exclude:
-        there = [k for k in exclude if k in set(store.keys.tolist())]
-        out(f"--exclude: {len(there) or 'none'} of the {len(exclude)} album(s) is in the store"
-            + (f": {', '.join(there)}" if there else ""))
+    for name, keys in ((Path(exclusions or "").name, listed), ("--exclude", exclude)):
+        if keys:
+            there = [k for k in keys if k in set(store.keys.tolist())]
+            out(f"{name}: {len(there) or 'none'} of the {len(keys)} album(s) is in the store"
+                + (f": {', '.join(there)}" if there else ""))
     return 0
 
 
@@ -224,18 +266,20 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--keys-csv", type=Path, default=DEFAULT_AUDIO / "keys.csv",
                    help="Follows a cache key the catalog no longer has to the album's current key.")
     p.add_argument("--audio-dir", type=Path, default=None, help="The store to write (default: audio/clap for clap; the others have none).")
+    p.add_argument("--exclusions", type=Path, default=DEFAULT_EXCLUSIONS,
+                   help="The albums every write leaves out (default audio/store_exclusions.csv: key, reason, date).")
     p.add_argument("--exclude", default="", metavar="KEY[,KEY...]",
-                   help="write: albums to leave out of the store. status: say whether they are in it.")
+                   help="write: more albums to leave out of the store, for this run. status: say whether they are in it.")
     p.add_argument("--dry-run", action="store_true", help="Print what would be written; write nothing.")
     args = p.parse_args(argv)
     exclude = tuple(dict.fromkeys(k.strip() for k in args.exclude.split(",") if k.strip()))
     try:
         if args.cmd == "status":
-            return status(args.model, args.audio_dir, args.catalog, exclude=exclude)
+            return status(args.model, args.audio_dir, args.catalog, exclude=exclude, exclusions=args.exclusions)
         if args.clips < 1:
             p.error("--clips must be at least 1")
         return write(args.model, args.clips, args.cache, args.catalog, args.matches, args.audio_dir, args.dry_run,
-                     keys_csv=args.keys_csv, overrides=args.overrides, exclude=exclude)
+                     keys_csv=args.keys_csv, overrides=args.overrides, exclude=exclude, exclusions=args.exclusions)
     except (StoreError, FileNotFoundError) as e:
         print(f"FAIL\n{e}", file=sys.stderr)
         return 1
