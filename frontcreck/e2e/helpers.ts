@@ -1,4 +1,4 @@
-import type { Locator, Page, TestInfo } from '@playwright/test';
+import type { Locator, Page, Route, TestInfo } from '@playwright/test';
 
 /** Saves a viewport screenshot to test-results/shots/<project>-<name>.png and returns the path. */
 export async function shot(page: Page, info: TestInfo, name: string): Promise<string> {
@@ -102,4 +102,20 @@ export async function tabTo<A = undefined>(page: Page, predicate: (el: Element, 
     if (await page.evaluate(`(${predicate.toString()})(document.activeElement, ${JSON.stringify(arg ?? null)})`)) return;
   }
   throw new Error('element not reachable with Tab');
+}
+
+/** A 1 x 1 PNG. */
+const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+/** A Cover Art Archive cover's first request (it redirects to archive.org's file hosts, which can take many seconds). */
+export const ARCHIVE_COVER_RE = /^https:\/\/coverartarchive\.org\//;
+
+/**
+ * Answers every Cover Art Archive cover with a tiny picture at once. For tests that open an album chosen from
+ * the data, which may have such a cover: a page's load event waits for its header cover, and the archive's file
+ * hosts are sometimes slow enough to run a test out of time. Returns the function that removes the answer.
+ */
+export async function answerArchiveCovers(page: Page): Promise<() => Promise<void>> {
+  const handler = (route: Route) => route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL });
+  await page.route(ARCHIVE_COVER_RE, handler);
+  return () => page.unroute(ARCHIVE_COVER_RE, handler);
 }

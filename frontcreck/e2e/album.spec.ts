@@ -1,14 +1,23 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Route } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { albumWhoseFirstRecHasNoSpotify, recsOf } from './data';
-import { shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { THUMB_SHEET_RE, albumOnAnotherService, albumWithArchiveCover, albumWhoseFirstRecHasNoLink, albumWhoseFirstRecIsOnAnotherService, albumWithBracketedTitle, albumWithNoLink, albumWithoutAudio, recsOf } from './data';
+import { ARCHIVE_COVER_RE, act, answerArchiveCovers, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 const IR_SLUG = 'in-rainbows-radiohead';
 const IR = `/album/${IR_SLUG}`;
 // Sonic and balanced lists follow the audio features: expected from the data, never a pinned title.
 const IR_BALANCED = recsOf(IR_SLUG, 'balanced').map((r) => r.title);
 const IR_SONIC = recsOf(IR_SLUG, 'sonic').map((r) => r.title);
+// The mood list barely depends on audio, so its first five are pinned by title (and checked against the data).
+const IR_MOOD = ['Glitter', 'Have You in My Wilderness', 'Carrie & Lowell Live', 'Bon Iver, Bon Iver', 'Takk...'];
 const titles = (page: Page) => page.locator('ol.rec-list .rec-title').allTextContents();
+
+// Albums chosen from the data can have a Cover Art Archive cover, whose hosts are sometimes very slow: every
+// test here gets a quick answer for them, but for the one that lets the real hosts answer.
+let realArchive: () => Promise<void> = async () => {};
+test.beforeEach(async ({ page }) => {
+  realArchive = await answerArchiveCovers(page);
+});
 
 /** The accent colour of an album, read from the served data. */
 async function accentOf(page: Page, slug: string): Promise<string> {
@@ -45,9 +54,10 @@ test('the map beside an album shows the hint line on desktop, as in the mockup',
   await expect(page.locator('.map-hint')).toBeVisible();
 });
 
-test('?by=mood shows the mood list, which matches the live site', async ({ page }) => {
+test('?by=mood shows the mood list', async ({ page }) => {
+  expect(recsOf(IR_SLUG, 'mood').slice(0, 5).map((r) => r.title), 'the pinned mood titles are the data\u2019s').toEqual(IR_MOOD);
   await page.goto(`${IR}?by=mood`);
-  await expect.poll(() => titles(page)).toEqual(['Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom']);
+  await expect.poll(() => titles(page)).toEqual(IR_MOOD);
   expect(await page.evaluate(() => window.__rmr!.getState().stop)).toBe('mood');
 });
 
@@ -184,15 +194,15 @@ test.describe('desktop split view', () => {
 
 test('going deeper keeps by, fills the trail, and the trail goes back', async ({ page }, info) => {
   await page.goto(`${IR}?by=mood`);
-  await expect(page.locator('li.rec').first()).toContainText('Tindersticks');
+  await expect(page.locator('li.rec').first()).toContainText('Glitter');
   await page.locator('li.rec').first().locator('a.rec-main').click();
-  await expect(page).toHaveURL(/\/album\/tindersticks-.+\?by=mood$/);
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Tindersticks');
+  await expect(page).toHaveURL('/album/glitter-pasteboard?by=mood');
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Glitter');
   await expect(page.locator('#seed-title')).toBeFocused();
   const trail = page.getByRole('navigation', { name: COPY.album.trailNav });
   await expect(trail).toContainText(COPY.album.trailLabel);
   await expect(trail.getByRole('link', { name: 'In Rainbows' })).toBeVisible();
-  await expect(trail.locator('[aria-current="page"]')).toHaveText('Tindersticks');
+  await expect(trail.locator('[aria-current="page"]')).toHaveText('Glitter');
   await waitForMap(page);
   await waitForCameraIdle(page);
   await shot(page, info, 'album-deeper');
@@ -242,7 +252,7 @@ test('a direct ?by=mood load renders the mood list at once: no row animation, on
     });
   });
   await page.goto(`${IR}?by=mood`);
-  await expect.poll(() => titles(page)).toEqual(['Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom']);
+  await expect.poll(() => titles(page)).toEqual(IR_MOOD);
   await waitForMap(page);
   await waitForCameraIdle(page);
   const seen = await page.evaluate(() => {
@@ -294,22 +304,222 @@ test('Escape inside the search popover or the phone search sheet keeps the album
   await expect(page.locator('section.album')).toBeVisible();
 });
 
-test('an album with no Spotify release shows no Spotify links', async ({ page }) => {
-  // The KLF's Chill Out has no Spotify release: no "Open in Spotify", never a search link.
-  await page.goto('/album/chill-out-the-klf');
-  await expect(page.getByRole('heading', { level: 1, name: 'Chill Out' })).toBeVisible();
+test('an album with no place to listen shows no listen link, in its header or as a row', async ({ page }) => {
+  // An album (found in the data) with no Spotify release and no other link: no button to a service, never a search link.
+  const none = albumWithNoLink();
+  await page.goto(`/album/${encodeURIComponent(none.slug)}`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(none.title);
   await expect(page.locator('.seed-actions a')).toHaveCount(0);
   await expect(page.getByRole('button', { name: COPY.album.copyLinkLabel })).toBeVisible();
   await expect(page.locator('a[href*="open.spotify.com/search"]')).toHaveCount(0);
-  // An album (found in the data) whose closest balanced album has no Spotify release, and whose second has one.
-  const off = albumWhoseFirstRecHasNoSpotify('balanced');
+  // An album (found in the data) whose closest balanced album has no link at all, and whose second has a Spotify release.
+  const off = albumWhoseFirstRecHasNoLink('balanced');
+  expect(off.first.spotifyId).toBe('');
   await page.goto(`/album/${encodeURIComponent(off.slug)}`);
   const row = page.locator('li.rec').first();
   await expect(row.locator('.rec-title')).toHaveText(off.first.title);
   await expect(row.locator('a.rec-main')).toBeVisible();
   await expect(row.locator('a.rec-sp')).toHaveCount(0);
+  await expect(row.locator('a[target="_blank"]')).toHaveCount(0);
   await expect(page.locator('li.rec').nth(1).locator('a.rec-sp')).toHaveAttribute('href', `https://open.spotify.com/album/${off.second.spotifyId}`);
   await expect(page.locator('a[href*="open.spotify.com/search"]')).toHaveCount(0);
+});
+
+test('an album that is not on Spotify links to its other service, in its header and as a row', async ({ page }) => {
+  // An album (found in the data) with no Spotify release and a link to another service.
+  const other = albumOnAnotherService();
+  expect(other.listen.url).not.toContain('spotify');
+  await page.goto(`/album/${encodeURIComponent(other.slug)}`);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(other.title);
+  const link = page.locator('.seed-actions a');
+  await expect(link).toHaveCount(1);
+  await expect(link).toHaveAccessibleName(`${other.listen.open} ${COPY.album.newTab}`);
+  await expect(link).toHaveAttribute('href', other.listen.url);
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(page.locator('.seed-actions').getByText(COPY.album.openInSpotify)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: COPY.album.copyLinkLabel })).toBeVisible();
+  // And as a row: an album (found in the data) whose closest balanced album is on another service only.
+  const off = albumWhoseFirstRecIsOnAnotherService('balanced');
+  await page.goto(`/album/${encodeURIComponent(off.slug)}`);
+  const row = page.locator('li.rec').first();
+  await expect(row.locator('.rec-title')).toHaveText(off.first.title);
+  await expect(row.locator('a.rec-sp')).toHaveAttribute('href', off.listen.url);
+  await expect(row.locator('a.rec-sp')).toHaveAttribute('target', '_blank');
+  await expect(row.locator('a.rec-sp')).toHaveAccessibleName(COPY.listen.rowOpenIn(off.first.title, off.listen.name));
+  await expect(page.locator('a[href*="open.spotify.com/search"]')).toHaveCount(0);
+});
+
+test('an album without audio says so at the sonic and balanced stops, and its button shows the mood list', async ({ page, isMobile }) => {
+  const quiet = albumWithoutAudio();
+  const url = `/album/${encodeURIComponent(quiet.slug)}`;
+  const mood = recsOf(quiet.slug, 'mood').map((r) => r.title);
+  expect(recsOf(quiet.slug, 'balanced')).toEqual([]);
+  expect(recsOf(quiet.slug, 'sonic')).toEqual([]);
+  expect(mood).toHaveLength(10);
+  for (const by of ['', '?by=sonic']) {
+    const res = await page.goto(url + by);
+    expect(res?.status()).toBe(200);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(quiet.title);
+    await expect(page.getByRole('heading', { level: 2, name: COPY.album.listHeading })).toBeVisible();
+    // The note stands where the list would be, with one control; there is no list and nothing to show more of.
+    await expect(page.locator('.recs-note [role="status"]')).toHaveText(COPY.album.noAudio);
+    await expect(page.locator('li.rec')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: COPY.album.showMore })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: COPY.album.noAudioAction })).toBeVisible();
+  }
+  // The page is live before the tap: the client has read ?by=sonic into the store and the panel's effects have
+  // run (the accent is set). A tap on the server-rendered button before that would do nothing.
+  await expect.poll(() => page.evaluate(() => window.__rmr?.getState().stop)).toBe('sonic');
+  await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--acc'))).not.toBe('');
+  await act(page.getByRole('button', { name: COPY.album.noAudioAction }), isMobile);
+  await expect(page).toHaveURL(`${url}?by=mood`);
+  await expect.poll(() => titles(page)).toEqual(mood.slice(0, 5));
+  await expect(page.locator('.recs-note')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: COPY.album.noAudioAction })).toHaveCount(0);
+  // Focus is not left on the removed button: the heading of the list has it.
+  await expect(page.locator('#recs-h')).toBeFocused();
+  expect(await page.evaluate(() => window.__rmr!.getState().stop)).toBe('mood');
+  await act(page.getByRole('button', { name: COPY.album.showMore }), isMobile);
+  await expect.poll(() => titles(page)).toEqual(mood);
+  // A direct load at Mood shows the list at once, without the note.
+  await page.goto(`${url}?by=mood`);
+  await expect.poll(() => titles(page)).toEqual(mood.slice(0, 5));
+  await expect(page.locator('.recs-note')).toHaveCount(0);
+});
+
+test('a title in another script with a Latin form in brackets shows both, the bracketed form in one piece', async ({ page }) => {
+  const album = albumWithBracketedTitle();
+  expect(album.bracket).toMatch(/^\[.+\]$/);
+  expect(`${album.native} ${album.bracket}`).toBe(album.title);
+  const res = await page.goto(`/album/${encodeURIComponent(album.slug)}`);
+  expect(res?.status()).toBe(200);
+  await expect(page).toHaveTitle(`${COPY.titles.album(album.title, album.artist)} · recmyrecord`);
+  const h1 = page.getByRole('heading', { level: 1 });
+  // The same characters in the same order: nothing is dropped or replaced.
+  await expect(h1).toHaveText(album.title);
+  await expect(h1).toBeVisible();
+  await expect(h1.locator('.bk')).toHaveText(album.bracket);
+  await expect(page.locator('.seed-artist')).toHaveText(album.artist);
+  // The native script is drawn with real glyphs: its text takes up room, and the title is not cut off sideways.
+  const box = await h1.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return { width: r.width, height: r.height, overflow: el.scrollWidth - el.clientWidth };
+  });
+  expect(box.width).toBeGreaterThan(40);
+  expect(box.height).toBeGreaterThan(20);
+  expect(box.overflow).toBeLessThanOrEqual(1);
+  // The bracketed form is one piece on one line where it fits (a short one does).
+  const bk = await h1.locator('.bk').evaluate((el) => ({ rects: el.getClientRects().length, nowrap: getComputedStyle(el).whiteSpace }));
+  if (bk.nowrap === 'nowrap') expect(bk.rects).toBe(1);
+  await expect(page.locator('li.rec').first()).toBeVisible();
+});
+
+/**
+ * A Cover Art Archive cover is asked for at coverartarchive.org, which answers with a redirect to archive.org,
+ * which redirects to one of its file hosts (`*.archive.org`); those now and then answer 500. Playwright cannot
+ * play a redirect chain itself (a request that follows a redirect is not routed), so the first test lets the
+ * real hosts answer and the others answer the first request themselves.
+ */
+test.describe('a Cover Art Archive cover', () => {
+  const album = albumWithArchiveCover();
+  const url = `/album/${encodeURIComponent(album.slug)}`;
+  const FIRST = `https://coverartarchive.org/release-group/${album.mbid}/front-250`;
+  const ARCHIVE_RE = ARCHIVE_COVER_RE;
+  // A 1 x 1 PNG.
+  const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const sheetOf = (id: number) => (id < 4096 ? 'thumbs.webp' : `thumbs-${Math.floor(id / 4096)}.webp`);
+
+  /** Console messages about the Content-Security-Policy. */
+  function cspMessages(page: Page): string[] {
+    const found: string[] = [];
+    page.on('console', (m) => {
+      if (/content security policy|refused to (load|connect)/i.test(m.text())) found.push(m.text());
+    });
+    return found;
+  }
+
+  test('comes through the real redirects with nothing refused by the Content-Security-Policy, and ends as the picture or the sprite', async ({ page }) => {
+    test.setTimeout(120_000);
+    await realArchive();
+    const csp = cspMessages(page);
+    // Every answer on the way: the two redirects and the file host's own.
+    const hops: { host: string; status: number }[] = [];
+    page.on('response', (r) => {
+      const host = new URL(r.url()).host;
+      if (host === 'coverartarchive.org' || host === 'archive.org' || host.endsWith('.archive.org')) hops.push({ host, status: r.status() });
+    });
+    // Not the load event: it waits for this very cover.
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(album.title);
+    const cover = page.locator('.seed .cover');
+    // The archive can be slow: the cover settles as the loaded picture, or (a 500, or no network) as the sprite.
+    await expect(cover.locator('img.ok, .spr')).toBeVisible({ timeout: 90_000 });
+    const state = await cover.getAttribute('data-state');
+    const file = hops.find((h) => h.host.endsWith('.archive.org'));
+    if (file?.status === 200) {
+      // The file host answered with the picture: it is shown, so no hop was blocked.
+      expect(state).toBe('remote');
+      await expect(cover.locator('img')).toHaveAttribute('src', FIRST);
+      expect(await cover.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(100);
+      expect(hops.map((h) => h.host).slice(0, 2)).toEqual(['coverartarchive.org', 'archive.org']);
+    } else {
+      expect(state).toBe('sprite');
+    }
+    expect(csp).toEqual([]);
+  });
+
+  test('shows the picture the archive answers with, and fetches no thumbnail sheet', async ({ page }) => {
+    const csp = cspMessages(page);
+    const sheets: string[] = [];
+    page.on('request', (r) => {
+      if (THUMB_SHEET_RE.test(r.url())) sheets.push(r.url());
+    });
+    const asked: string[] = [];
+    await page.route(ARCHIVE_RE, (route) => {
+      asked.push(route.request().url());
+      return route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL });
+    });
+    await page.goto(url);
+    const cover = page.locator('.seed .cover');
+    await expect(cover.locator('img')).toHaveAttribute('src', FIRST);
+    await expect(cover.locator('img.ok')).toBeVisible();
+    await expect(cover).toHaveAttribute('data-state', 'remote');
+    await expect(cover).not.toHaveAttribute('data-frame', '');
+    // The same URL can be asked for twice (the phone's map strip draws the same cover), never another one.
+    expect([...new Set(asked)]).toEqual([FIRST]);
+    expect(csp).toEqual([]);
+    expect(sheets).toEqual([]);
+  });
+
+  for (const [what, answer] of [
+    ['answers 500', (route: Route) => route.fulfill({ status: 500, body: 'error' })],
+    ['cannot be reached', (route: Route) => route.abort('connectionfailed')],
+    ['answers with something that is no picture', (route: Route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Internal Server Error</h1>' })],
+  ] as const) {
+    test(`falls back to the thumbnail sprite when the archive ${what}`, async ({ page }) => {
+      await page.route(ARCHIVE_RE, answer);
+      await page.goto(url);
+      const cover = page.locator('.seed .cover');
+      await expect(cover).toHaveAttribute('data-state', 'sprite');
+      await expect(cover.locator('.spr')).toBeVisible();
+      await expect(cover.locator('img')).toHaveCount(0);
+      await expect(cover.locator('.fb')).toHaveCount(0);
+      // The sprite is the album's own cell of its own sheet.
+      expect(await cover.locator('.spr').evaluate((el) => getComputedStyle(el).backgroundImage)).toContain(`/data/${sheetOf(album.id)}`);
+      // The rest of the page is unharmed.
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText(album.title);
+      await expect(page.getByRole('button', { name: COPY.album.copyLinkLabel })).toBeVisible();
+    });
+  }
+
+  test('falls back to the lettered tile when the archive and the thumbnail sheet both fail', async ({ page }) => {
+    await page.route(ARCHIVE_RE, (route) => route.fulfill({ status: 500, body: 'error' }));
+    await page.route(THUMB_SHEET_RE, (route) => route.abort());
+    await page.goto(url);
+    await expect(page.locator('.seed .cover')).toHaveAttribute('data-state', 'tile');
+    await expect(page.locator('.seed .cover .fb')).toBeVisible();
+  });
 });
 
 test('unknown album slugs are 404s', async ({ page }) => {

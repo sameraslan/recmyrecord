@@ -1,6 +1,6 @@
 # recmyrecord web app
 
-Pick an album and the site lists the albums closest to it, by sound and by mood. A slider leans the comparison toward sound or toward mood. A map places 4,000+ albums so that ones that sound or feel alike sit close together.
+Pick an album and the site lists the albums closest to it, by sound and by mood. A slider leans the comparison toward sound or toward mood. A map places 10,000+ albums so that ones that sound or feel alike sit close together.
 
 ## Requirements
 
@@ -35,12 +35,12 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
 `public/data/` is the committed data. To build, run or test against another build of the data without touching it, put that build in a folder beside it whose name starts with `data-` (those are ignored by git; a symlink works) and name the folder in `RMR_DATA_DIR`:
 
 ```bash
-ln -s ../../data-pipeline/.cache/site10k public/data-10k
-RMR_DATA_DIR=data-10k npm run build && RMR_DATA_DIR=data-10k npm start
-RMR_DATA_DIR=data-10k npm run perf
+ln -s ../../data-pipeline/.cache/site-try public/data-try   # a build the pipeline wrote with --out
+RMR_DATA_DIR=data-try npm run build && RMR_DATA_DIR=data-try npm start
+RMR_DATA_DIR=data-try npm run perf
 ```
 
-The pages still ask for `/data/...`; the server answers from the named folder. `RMR_PRERENDER` limits which album pages a build prerenders, for a large data set on a small disk: a comma list of a count (that many leading albums) and slugs, for example `RMR_PRERENDER=300,in-rainbows-radiohead`. Albums left out answer 404, so this is for test builds only. Without these variables nothing changes.
+The pages still ask for `/data/...`; the server answers from the named folder. `RMR_PRERENDER` limits which album pages a build prerenders, for a quick build or a small disk (a full build of the 10,467 album pages takes about 1.1 GB in `.next`): a comma list of a count (that many leading albums) and slugs, for example `RMR_PRERENDER=300,in-rainbows-radiohead`. Albums left out answer 404, so this is for test builds only. Without these variables nothing changes.
 
 ## How it works
 

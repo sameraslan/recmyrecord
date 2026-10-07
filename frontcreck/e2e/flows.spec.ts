@@ -1,7 +1,7 @@
 import { expect, test as base, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { COVER_URL_RE } from './data';
-import { act, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { COVER_URL_RE, albumWithoutCover, recsOf } from './data';
+import { act, answerArchiveCovers, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 /** Every flow fails on a page error or a console error (remote cover failures excepted: covers fall back). */
 const test = base.extend<{ errors: string[] }>({
@@ -20,6 +20,11 @@ const test = base.extend<{ errors: string[] }>({
     },
     { auto: true },
   ],
+});
+
+// An album chosen from the data can have a Cover Art Archive cover, whose hosts are sometimes very slow.
+test.beforeEach(async ({ page }) => {
+  await answerArchiveCovers(page);
 });
 
 const IR = '/album/in-rainbows-radiohead';
@@ -60,7 +65,8 @@ test('slider change', async ({ page, isMobile }) => {
   await act(page.getByRole('button', { name: COPY.slider.stops.mood, exact: true }), isMobile);
   await expect(page).toHaveURL(`${IR}?by=mood`);
   if (isMobile) await act(page.getByRole('button', { name: COPY.phone.listLabel }), true);
-  await expect.poll(() => titles(page)).toEqual(['Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom']);
+  await expect.poll(() => titles(page)).toEqual(['Glitter', 'Have You in My Wilderness', 'Carrie & Lowell Live', 'Bon Iver, Bon Iver', 'Takk...']);
+  expect(await titles(page)).toEqual(recsOf('in-rainbows-radiohead', 'mood').slice(0, 5).map((r) => r.title));
 });
 
 test('show more', async ({ page, isMobile }) => {
@@ -144,17 +150,28 @@ test('covers fall back to the thumbnail sprite, then to the lettered tile', asyn
   await page.goto(IR);
   await expect(page.locator('.seed .cover')).toHaveAttribute('data-state', 'sprite');
   await expect(page.locator('li.rec .cover').first()).toHaveAttribute('data-state', 'sprite');
-  // "Spiritual Unity" is the one album without a cover id: its tile shows at once, with no request at all.
+  // An album without a cover id, found in the data (the pipeline keeps adding covers, so none is named here):
+  // its tile shows at once, with no request at all.
+  const bare = albumWithoutCover();
+  test.skip(!bare, 'every album in public/data has a cover id: there is no lettered tile without a failed request');
   const input = page.locator('.top-search').getByRole('combobox');
   if (isMobile) {
     await page.getByRole('button', { name: COPY.search.open, exact: true }).tap();
-    await page.getByRole('dialog').getByRole('combobox').pressSequentially('spiritual unity');
+    await page.getByRole('dialog').getByRole('combobox').pressSequentially(bare!.query);
   } else {
     await input.click();
-    await input.pressSequentially('spiritual unity');
+    await input.pressSequentially(bare!.query);
   }
-  const option = page.getByRole('option').filter({ hasText: 'Spiritual Unity' }).first();
+  const option = page.locator(`[role="option"][data-album="${bare!.slug}"]`);
+  await expect(option).toContainText(bare!.title);
   await expect(option.locator('.cover')).toHaveAttribute('data-state', 'tile');
+  await expect(option.locator('.cover img')).toHaveCount(0);
+  await expect(option.locator('.cover .fb')).toBeVisible();
+  // Its own page shows the tile in the header too.
+  await act(option, isMobile);
+  await expect(page).toHaveURL(`/album/${bare!.slug}`);
+  await expect(page.locator('.seed .cover')).toHaveAttribute('data-state', 'tile');
+  await expect(page.locator('.seed .cover img')).toHaveCount(0);
 });
 
 test('works with web storage blocked', async ({ page, isMobile }) => {

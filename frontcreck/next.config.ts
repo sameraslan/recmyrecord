@@ -13,6 +13,10 @@ const COVER_HOSTS = [
   'https://is1-ssl.mzstatic.com',
   'https://f4.bcbits.com',
   'https://i.ytimg.com',
+  // The Cover Art Archive answers with a redirect to archive.org, which redirects to one of its file hosts.
+  'https://coverartarchive.org',
+  'https://archive.org',
+  'https://*.archive.org',
 ];
 
 // RMR_DATA_DIR=<folder under public/> serves that folder at /data instead of the committed public/data, for
@@ -24,8 +28,8 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ''}${live}`,
   `style-src 'self' 'unsafe-inline'${live}`,
-  // Covers come from the CDNs of Spotify, Deezer, Apple, Bandcamp and YouTube (coverUrlAt in
-  // src/lib/data/catalog.ts); data: is the grain SVG in shell.css.
+  // Covers come from the CDNs of Spotify, Deezer, Apple, Bandcamp and YouTube and from the Cover Art Archive
+  // (coverUrlAt in src/lib/data/catalog.ts); data: is the grain SVG in shell.css.
   `img-src 'self' data: blob: ${COVER_HOSTS.join(' ')}${preview ? ' https://vercel.live https://vercel.com' : ''}`,
   `font-src 'self'${preview ? ' https://vercel.live https://assets.vercel.com' : ''}`,
   `connect-src 'self'${dev ? ' ws:' : ''}${preview ? ' https://vercel.live wss://ws-us3.pusher.com' : ''}`,
@@ -85,7 +89,7 @@ const nextConfig: NextConfig = {
         source: '/data/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
-          // Only this site's pages load /data (OG images point at i.scdn.co): blocks hotlinking the atlases.
+          // Only this site's pages load /data (OG images point at the cover hosts): blocks hotlinking the atlases.
           { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
         ],
       },

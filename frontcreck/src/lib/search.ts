@@ -130,6 +130,10 @@ interface Entry {
 export interface SearchIndex {
   entries: Entry[];
   fuse: Fuse<Entry>;
+  /** Every folded word of a title or an artist, once, sorted (by UTF-16 code unit, the order `<` compares in). */
+  words: string[];
+  /** posts[i]: the ids of the albums that have words[i] in their title or artist, ascending. */
+  posts: AlbumId[][];
 }
 
 export interface SearchHit {
@@ -155,7 +159,59 @@ export function buildSearchIndex(albums: readonly AlbumRecord[]): SearchIndex {
     ignoreLocation: true,
     minMatchCharLength: 2,
   });
-  return { entries, fuse };
+  const byWord = new Map<string, AlbumId[]>();
+  for (const e of entries) {
+    for (const list of [e.tw, e.aw]) {
+      for (const w of list) {
+        const ids = byWord.get(w);
+        if (!ids) byWord.set(w, [e.id]);
+        else if (ids[ids.length - 1] !== e.id) ids.push(e.id);
+      }
+    }
+  }
+  const words = [...byWord.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  return { entries, fuse, words, posts: words.map((w) => byWord.get(w)!) };
+}
+
+/** Index of the first of `words` that is not below `w`. */
+function lowerBound(words: readonly string[], w: string): number {
+  let lo = 0;
+  let hi = words.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (words[mid] < w) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+/** A scan of every album costs less than gathering candidates once they are this share of the catalog. */
+const CANDIDATE_SHARE = 0.25;
+
+/**
+ * The albums that can match: those with a word starting with the rarest required word. The words starting
+ * with a prefix are one run of the sorted word list. [] when some required word starts no word at all (no album
+ * can match), null when the rarest word still starts a word of a large share of the albums (a one- or two-letter
+ * query): the caller then looks at every album, which costs no more.
+ */
+function candidates(index: SearchIndex, required: Iterable<string>): AlbumId[] | null {
+  let best: [number, number] | null = null;
+  let bestSize = Infinity;
+  for (const w of required) {
+    const lo = lowerBound(index.words, w);
+    let hi = lo;
+    let size = 0;
+    while (hi < index.words.length && index.words[hi].startsWith(w) && size <= bestSize) size += index.posts[hi++].length;
+    if (hi === lo) return [];
+    if (size < bestSize) {
+      bestSize = size;
+      best = [lo, hi];
+    }
+  }
+  if (!best || bestSize > index.entries.length * CANDIDATE_SHARE) return null;
+  const ids = new Set<AlbumId>();
+  for (let i = best[0]; i < best[1]; i++) for (const id of index.posts[i]) ids.add(id);
+  return [...ids];
 }
 
 /** Number of words in `list` starting with `w`, counting no further than `need`. */
@@ -186,9 +242,11 @@ function tierOf(e: Entry, need: ReadonlyMap<string, number>, q: string): number 
 /**
  * The keystroke path: every required query word must start a word of the title or artist
  * (accent-folded, case-insensitive, apostrophes ignored, "and" and "&" optional). Ranked by tierOf,
- * ties in catalog order. Never runs Fuse, so it stays well under a millisecond.
+ * ties in catalog order. Never runs Fuse. Only the albums that have a word starting with the rarest query word
+ * are looked at (`candidates`), so a query that matches nothing, or little, costs microseconds whatever the size
+ * of the catalog; a one- or two-letter query looks at every album, about a millisecond for 10,467.
  */
-export function prefixSearch(index: SearchIndex, query: string, limit = SEARCH_LIMIT): SearchHit[] {
+export function prefixSearch(index: SearchIndex, query: string, limit = SEARCH_LIMIT, scanAll = false): SearchHit[] {
   if (!HAS_WORD_CHAR.test(query)) return [];
   const words = queryWords(query);
   if (!words.length) return [];
@@ -197,9 +255,18 @@ export function prefixSearch(index: SearchIndex, query: string, limit = SEARCH_L
   const need = new Map<string, number>();
   for (const w of req) need.set(w, (need.get(w) ?? 0) + 1);
   const ranked: [number, AlbumId][] = [];
-  for (const e of index.entries) {
-    const tier = tierOf(e, need, q);
-    if (tier !== null) ranked.push([tier, e.id]);
+  // `scanAll` is for the test that checks the two ways against each other.
+  const among = scanAll ? null : candidates(index, need.keys());
+  if (among) {
+    for (const id of among) {
+      const tier = tierOf(index.entries[id], need, q);
+      if (tier !== null) ranked.push([tier, id]);
+    }
+  } else {
+    for (const e of index.entries) {
+      const tier = tierOf(e, need, q);
+      if (tier !== null) ranked.push([tier, e.id]);
+    }
   }
   ranked.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
   return ranked.slice(0, limit).map(([, id]) => {

@@ -32,11 +32,11 @@ export interface AlbumRecord {
   a: string;
   /** Spotify album id, 22 characters, or '' */
   s: string;
-  /** cover id: '', a Spotify image id, or `dz:`, `am:`, `bc:`, `yt:` plus that host's reference (`coverUrl`) */
+  /** cover id: '', a Spotify image id, or `dz:`, `am:`, `bc:`, `yt:`, `ca:` plus that host's reference (`coverUrl`) */
   c: string;
   /** cluster 0..7 */
   k: number;
-  /** vocab indexes, strongest first (up to 10 in the first data set, up to 8 in the catalog build) */
+  /** vocab indexes, strongest first (up to 8) */
   d: number[];
   w: Ambient;
   /** listen links beyond Spotify; present only when `s` is empty */

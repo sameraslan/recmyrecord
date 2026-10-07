@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { COPY } from '@/lib/copy';
 import type { AlbumRecord, Recs } from '@/lib/types';
@@ -13,6 +15,9 @@ const base: Pick<AlbumRecord, 'k' | 'd' | 'w'> = { k: 0, d: [], w: W };
 const SP_REF = 'ab67616d0000b273' + 'c8b444df094279e70d0ed856';
 const MD5 = '0123456789abcdef0123456789abcdef';
 const AM_PATH = 'Music115/v4/aa/bb/cc/aabbcc-dd/cover.jpg';
+// A MusicBrainz release-group id: 36 characters with hyphens.
+const MBID = '6c4d9b9b-0b6f-3d0a-9a2e-2f2a0a3a7d11';
+const CAA = `https://coverartarchive.org/release-group/${MBID}`;
 
 describe('cover URLs for every form of the cover id', () => {
   it('builds the same URLs as the pipeline', () => {
@@ -26,7 +31,18 @@ describe('cover URLs for every form of the cover id', () => {
     expect(coverUrlAt('bc:0123456789', 300)).toBe('https://f4.bcbits.com/img/a0123456789_2.jpg');
     expect(coverUrlAt('bc:0123456789', 640)).toBe('https://f4.bcbits.com/img/a0123456789_16.jpg');
     expect(coverUrlAt('yt:AfChn_NjI9w', 300)).toBe('https://i.ytimg.com/vi/AfChn_NjI9w/mqdefault.jpg');
+    expect(coverUrlAt('ca:' + MBID, 200)).toBe(`${CAA}/front-250`);
+    expect(coverUrlAt('ca:' + MBID, 640)).toBe(`${CAA}/front-500`);
     expect(coverUrlAt('', 300)).toBeNull();
+  });
+
+  it('asks the Cover Art Archive for front-250 up to 250 px and for front-500 above, by release group', () => {
+    expect(MBID).toHaveLength(36);
+    for (const px of [1, 44, 96, 249, 250]) expect(coverUrlAt('ca:' + MBID, px), String(px)).toBe(`${CAA}/front-250`);
+    for (const px of [250.5, 251, 500, 640, 5000]) expect(coverUrlAt('ca:' + MBID, px), String(px)).toBe(`${CAA}/front-500`);
+    // The id is used whole: its hyphens are not taken for anything else.
+    expect(coverUrlAt('ca:' + MBID, 96)).toContain(`/release-group/${MBID}/`);
+    expect(isFrameCover('ca:' + MBID)).toBe(false);
   });
 
   it('picks the smallest fixed size that covers the request, and the largest when none does', () => {
@@ -49,6 +65,11 @@ describe('cover URLs for every form of the cover id', () => {
     expect(coverUrl('bc:42', 60)).toBe('https://f4.bcbits.com/img/a42_9.jpg');
     expect(coverUrl('bc:42', 116)).toBe('https://f4.bcbits.com/img/a42_2.jpg');
     expect(coverUrl('yt:abc', 60)).toBe('https://i.ytimg.com/vi/abc/mqdefault.jpg');
+    // 116 CSS px (the album header) is 232 image px, 160 (the shelf) is 320.
+    expect(coverUrl('ca:' + MBID, 22)).toBe(`${CAA}/front-250`);
+    expect(coverUrl('ca:' + MBID, 116)).toBe(`${CAA}/front-250`);
+    expect(coverUrl('ca:' + MBID, 125)).toBe(`${CAA}/front-250`);
+    expect(coverUrl('ca:' + MBID, 160)).toBe(`${CAA}/front-500`);
     expect(coverUrl('', 60)).toBeNull();
   });
 });
@@ -64,6 +85,7 @@ describe('the link-preview image', () => {
     expect(ogCover('am:' + AM_PATH)).toEqual({ url: `https://is1-ssl.mzstatic.com/image/thumb/${AM_PATH}/640x640bb.jpg`, width: 640, height: 640 });
     expect(ogCover('bc:7')).toEqual({ url: 'https://f4.bcbits.com/img/a7_16.jpg', width: 700, height: 700 });
     expect(ogCover('yt:abc')).toEqual({ url: 'https://i.ytimg.com/vi/abc/mqdefault.jpg', width: 320, height: 180 });
+    expect(ogCover('ca:' + MBID)).toEqual({ url: `${CAA}/front-500`, width: 500, height: 500 });
   });
 
   it('is the cover as stored for a Spotify id without a size prefix', () => {
@@ -151,5 +173,53 @@ describe('album rows with the optional keys', () => {
   it('assumes no particular number of descriptors', () => {
     expect(moodTags(albums[0], vocab)).toHaveLength(6);
     expect(moodTags(albums[0], vocab, 20)).toHaveLength(8);
+  });
+});
+
+describe('the cover ids of the committed data (real public/data)', () => {
+  const real = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'data', 'albums.json'), 'utf8')) as AlbumRecord[];
+  // One pattern per form of the cover id (coverUrlAt). The pipeline still adds covers, so no count is pinned.
+  const FORMS: [string, RegExp][] = [
+    ['none', /^$/],
+    ['spotify', /^[0-9a-f]{40}$/],
+    ['dz', /^dz:[0-9a-f]{32}$/],
+    ['am', /^am:[A-Za-z0-9._/-]+$/],
+    ['bc', /^bc:[0-9]+$/],
+    ['yt', /^yt:[A-Za-z0-9_-]{11}$/],
+    ['ca', /^ca:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/],
+  ];
+  // The first host of each cover; the same list as COVER_HOSTS in next.config.ts.
+  const HOSTS = ['i.scdn.co', 'cdn-images.dzcdn.net', 'is1-ssl.mzstatic.com', 'f4.bcbits.com', 'i.ytimg.com', 'coverartarchive.org'];
+
+  it('are each of a form the pages can turn into a URL on a host the CSP allows', () => {
+    const bad: string[] = [];
+    for (const a of real) {
+      const form = FORMS.find(([, re]) => re.test(a.c));
+      if (!form) {
+        bad.push(`${a.slug}: unknown cover id ${a.c}`);
+        continue;
+      }
+      for (const px of [44, 96, 232, 640]) {
+        const url = coverUrlAt(a.c, px);
+        if (form[0] === 'none') {
+          if (url !== null) bad.push(`${a.slug}: a URL without a cover id`);
+        } else if (!url || !HOSTS.includes(new URL(url).host) || new URL(url).protocol !== 'https:' || /\s/.test(url)) {
+          bad.push(`${a.slug}: ${a.c} gives ${url}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  it('lists in next.config.ts every host a cover can come from, with the two a Cover Art Archive cover redirects through', () => {
+    const config = fs.readFileSync(path.join(process.cwd(), 'next.config.ts'), 'utf8');
+    for (const host of [...HOSTS, 'archive.org', '*.archive.org']) expect(config, host).toContain(`'https://${host}'`);
+  });
+
+  it('gives an ambient colour triple to every album, with or without a cover', () => {
+    for (const a of real) {
+      expect(a.w, a.slug).toHaveLength(3);
+      for (const c of a.w) expect(c, a.slug).toMatch(/^#[0-9a-f]{6}$/);
+    }
   });
 });

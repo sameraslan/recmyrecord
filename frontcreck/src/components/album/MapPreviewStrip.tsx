@@ -19,8 +19,9 @@ const STRIP_REC = 28;
 const images = new Map<string, { im: HTMLImageElement; decoded: boolean; failed: boolean; waiting: Set<() => void> }>();
 
 /** A cover is drawn only after img.decode() resolved (off the main thread); until then the tile is drawn.
- * The image is requested without CORS, which every cover host allows; the canvas is only drawn to, never read
- * back, so a cross-origin cover cannot make anything fail. A cover that does not load keeps its tile. */
+ * The image is requested without CORS (no `crossOrigin`), which every cover host allows, the Cover Art Archive
+ * and the archive.org hosts it redirects to included; the canvas is only drawn to, never read back, so a
+ * cross-origin cover cannot make anything fail. A cover that does not load keeps its tile. */
 function readyImage(url: string, onReady: () => void): HTMLImageElement | null {
   let entry = images.get(url);
   if (!entry) {

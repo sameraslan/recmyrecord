@@ -34,9 +34,20 @@ describe('recommendation rows per album', () => {
     );
   });
 
-  it('holds for the committed data: ten rows everywhere, no album without audio', () => {
+  it('holds for the committed data: ten rows everywhere, but none at sonic and balanced for the albums without audio', () => {
     const raw = <T>(name: string): T => JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'data', name), 'utf8')) as T;
-    expect(() => assertRecsConsistent(raw<AlbumRecord[]>('albums.json'), raw<Recs>('recs.json'))).not.toThrow();
+    const real = raw<AlbumRecord[]>('albums.json');
+    const recs = raw<Recs>('recs.json');
+    expect(() => assertRecsConsistent(real, recs)).not.toThrow();
+    // The data has albums without audio (225 of 10,467 on 6 October 2026): exactly the ones with an empty sonic row.
+    const noAudio = real.flatMap((a, id) => (a.n ? [id] : []));
+    expect(noAudio.length).toBeGreaterThan(0);
+    expect(noAudio.length).toBeLessThan(real.length / 20);
+    expect(real.flatMap((_, id) => (recs.sonic[id].length === 0 ? [id] : []))).toEqual(noAudio);
+    expect(real.flatMap((_, id) => (recs.balanced[id].length === 0 ? [id] : []))).toEqual(noAudio);
+    for (const id of noAudio) expect(recs.mood[id], real[id].slug).toHaveLength(10);
+    // n is 1 or absent, never another value.
+    expect(real.filter((a) => a.n !== undefined && a.n !== 1)).toEqual([]);
   });
 });
 

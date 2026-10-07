@@ -11,19 +11,29 @@
 export const FRUSTUM_HALF_HEIGHT = 0.55;
 
 /** Absolute zoom range. MIN is only a safety floor: the camera's real floor is 0.8x the fitted overview
- * (a phone fits the whole cloud at about 0.35). MAX puts the median gap between neighbouring albums at
- * about 100 px on a 1440 x 900 window, room for 64 px covers (see COVER_WORLD). */
+ * (a phone fits the whole cloud at about 0.4).
+ *
+ * MAX is set by the map of 10,467 albums. Its positions lie on a grid of 0.001 layout units, about 0.00077
+ * world units, and no two albums share a point (data-pipeline layout.py); the median distance from an album
+ * to its nearest neighbour is about 0.0032 (0.0049 with 4,081 albums). Covers stop growing at COVER_MAX_PX
+ * (zoom 12.4 on an 836 px canvas), so past that only the gaps grow. Two albums one grid step apart, side by
+ * side or one above the other, are fully clear of each other once a step is at least a cover, 64 px: zoom 109
+ * on a 1440 x 900 window (836 px canvas) and 116 on a 390 x 844 phone (784 px canvas). At 120 a step is 70 px
+ * on that window and 66 px on that phone, so every album is clear of its nearest neighbour on both (the owner
+ * asked for this after trying the map on his phone). The densest part of the map then shows two or three
+ * covers on a phone. At 80 a step was 47 px and 89% of albums were clear; at the first 28, 53%. */
 export const MIN_ZOOM = 0.2;
-export const MAX_ZOOM = 28;
+export const MAX_ZOOM = 120;
 /** The fitted overview zoom is clamped to this range. */
 export const FIT_ZOOM_MIN = MIN_ZOOM;
 export const FIT_ZOOM_MAX = 5;
 /** The visitor can zoom out to 0.8x the fitted overview, not further. */
 export const MIN_ZOOM_FIT_MULTIPLE = 0.8;
 
-/** Cover edge in world units: about 1.4x the median distance between an album and its nearest
- * neighbour (0.0049 in the sonic and balanced layouts), so covers sit apart as in the mockup, where the
- * cover size is linear in the map scale. */
+/** Cover edge in world units, linear in the map scale up to COVER_MAX_PX as in the mockup. It was set as
+ * 1.4x the median distance between an album and its nearest neighbour on the map of 4,081 albums (0.0049 in
+ * the sonic and balanced layouts). With 10,467 albums that distance is about 0.0032, so a cover is about 2.1x
+ * it: covers overlap while they grow and come apart past COVER_MAX_PX (see MAX_ZOOM). */
 export const COVER_WORLD = 0.0068;
 /** Cover cross-fade: covers start to show at 16 CSS px and are fully shown at 32. */
 export const COVER_FADE_START_PX = 16;

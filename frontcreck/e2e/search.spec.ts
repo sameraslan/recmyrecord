@@ -1,7 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { COVER_URL_RE, THUMB_SHEET_RE } from './data';
-import { coversSettled, isPhone, shot } from './helpers';
+import { tileLetter } from '../src/lib/data/catalog';
+import { COVER_URL_RE, THUMB_SHEET_RE, albumWithoutCover } from './data';
+import { answerArchiveCovers, coversSettled, isPhone, shot } from './helpers';
+
+// An album chosen from the data can have a Cover Art Archive cover, whose hosts are sometimes very slow.
+test.beforeEach(async ({ page }) => {
+  await answerArchiveCovers(page);
+});
 
 const BODY_SPOT = { x: 700, y: 600 };
 
@@ -258,12 +264,14 @@ test.describe('covers', () => {
     page.on('request', (r) => {
       if (/^https:\/\/i\.scdn\.co\/image\/(ab67616d[0-9a-f]{8})?$/.test(r.url()) || THUMB_SHEET_RE.test(r.url())) requests.push(r.url());
     });
+    // An album without a cover id, found in the data (the pipeline keeps adding covers, so none is named here).
+    const bare = albumWithoutCover();
+    test.skip(!bare, 'every album in public/data has a cover id');
     await page.goto('/nope');
-    await searchFor(page, 'spiritual unity albert');
-    await expect(page.getByRole('option')).toHaveCount(1);
-    const cover = page.getByRole('option').first().locator('.cover');
+    await searchFor(page, bare!.query);
+    const cover = page.locator(`[role="option"][data-album="${bare!.slug}"] .cover`);
     await expect(cover).toHaveAttribute('data-state', 'tile');
-    await expect(cover.locator('.fb')).toHaveText('S');
+    await expect(cover.locator('.fb')).toHaveText(tileLetter(bare!.title));
     await expect(cover.locator('img, .spr')).toHaveCount(0);
     await page.waitForTimeout(300); // nothing should happen: no cover request for a tile
     expect(requests).toEqual([]);
