@@ -9,7 +9,7 @@ import { useMapStore } from "../state/mapStore";
 import { screenToWorld } from "../state/projection";
 import { getOverviewFraming, getVisibleScale } from "../state/view";
 import { MAX_ZOOM, MIN_ZOOM_FIT_MULTIPLE } from "../state/zoomLimits";
-import { anchoredZoom, pinchZoom } from "../state/zoomMath";
+import { anchoredZoom, flingStopSpeedSq, pinchZoom } from "../state/zoomMath";
 import { getCameraControl } from "./CameraTween";
 
 export { MAX_ZOOM };
@@ -31,10 +31,9 @@ const ZOOM_SETTLE_EPSILON = 1e-4;
 // Fling decay per 60 Hz frame. Applied per elapsed time (FRICTION ** (delta * 60)), so a fling lasts
 // as long and travels as far on a slow renderer as on a 60 fps one.
 const FRICTION = 0.92;
-// Below this squared speed (world units/frame, squared) inertia is treated as
-// settled: stop nudging the camera and stop re-invalidating every frame, or
-// frameloop="demand" would never go idle after a pan.
-const VELOCITY_EPSILON_SQ = 1e-10;
+// Below flingStopSpeedSq(zoom) (a squared speed in world units/frame, 1e-10 up to zoom 28 and the same speed on
+// screen past it) inertia is treated as settled: stop nudging the camera and stop re-invalidating every frame,
+// or frameloop="demand" would never go idle after a pan.
 // Fling velocity averages the last 3 move deltas.
 const VELOCITY_HISTORY_LEN = 3;
 // A release this long after the last move is a hold-then-let-go, not a
@@ -340,7 +339,7 @@ export function CameraRig() {
   useFrame((_state, delta) => {
     if (!dragging.current) {
       const speedSq = velocity.current.x * velocity.current.x + velocity.current.y * velocity.current.y;
-      if (speedSq > VELOCITY_EPSILON_SQ) {
+      if (speedSq > flingStopSpeedSq(camera.zoom)) {
         // velocity is in world units per 60 Hz frame; scale by the real frame time.
         const frames = Math.min(delta, 0.1) * 60;
         // eslint-disable-next-line react-hooks/immutability -- see the useFrame-level comment above.
@@ -395,7 +394,7 @@ export function CameraRig() {
 
     const moving =
       zooming.current ||
-      velocity.current.x * velocity.current.x + velocity.current.y * velocity.current.y > VELOCITY_EPSILON_SQ;
+      velocity.current.x * velocity.current.x + velocity.current.y * velocity.current.y > flingStopSpeedSq(camera.zoom);
     if (moving !== useMapStore.getState().rigMoving) useMapStore.getState().setRigMoving(moving);
   });
 

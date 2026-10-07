@@ -1,12 +1,16 @@
 node_modules
 .vercel
 data-pipeline/.venv/
+data-pipeline/.venv-audio/
 **/__pycache__/
 .pytest_cache/
 
 # preview-features experiment: caches, models and venv are never committed
 experiments/preview_features/cache/
+experiments/preview_features/cache_clap/
 experiments/preview_features/.venv/
+experiments/preview_features/scratch/
+
 # Secrets must never be committed. Keep credentials in local .env files
 # (ignored below) and document variable names in a committed .env.example.
 .env
@@ -29,3 +33,6 @@ venv/
 .DS_Store
 *.log
 .idea/
+
+# yt-dlp, for rmr_audio.fulllength only
+data-pipeline/.venv-fetch/

@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 
 import { DURATION } from "@/lib/media";
-import { ATLAS_PER_SHEET } from "@/lib/data/sprites";
+import { atlasSheetOf } from "@/lib/data/sprites";
 import { SELECTED_FRAME_GAP_PX, SELECTED_FRAME_PX, renderedSpriteCssSize, selectedIsProminent, selectedSpriteCssSize } from "../shaders/album";
 import { markerAt } from "../state/focusLayout";
 import { cssPxToWorld, pickAlbum, spriteHitRadiusCssPx } from "../state/hitTest";
@@ -44,7 +44,7 @@ export function albumAt(
   const drawnRadius = (loaded: boolean) => renderedSpriteCssSize(camera.zoom, viewportHeightCssPx, visibleHeightCssPx, pixelRatio, 1, loaded) / 2;
   const coverR = drawnRadius(true);
   const dotR = drawnRadius(false);
-  const loadedAt = (i: number) => isAtlasSheetLoaded(Math.floor(i / ATLAS_PER_SHEET));
+  const loadedAt = (i: number) => isAtlasSheetLoaded(atlasSheetOf(i));
   const hitCover = toWorld(spriteHitRadiusCssPx(pointerType, coverR * 2));
   const hitDot = toWorld(spriteHitRadiusCssPx(pointerType, dotR * 2));
   const focusedIndex = input.focus?.seed ?? -1;

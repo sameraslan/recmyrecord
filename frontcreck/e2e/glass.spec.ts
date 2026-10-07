@@ -5,8 +5,8 @@ import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, tabTo, twin
 const GLASS = 'blur(22px) saturate(1.2) brightness(0.58)';
 /** Solid is fully solid; the browser reports rgba(10, 9, 14, 1) as rgb(10, 9, 14). */
 const SOLID = 'rgb(10, 9, 14)';
-/** The album whose accent has the lowest contrast in the catalog (#d44f4f). */
-const WEAKEST = '/album/making-movies-dire-straits';
+/** The album whose accent has the lowest contrast on the page colour in the catalog of 10,467 (#d84b4c, 4.84:1). */
+const WEAKEST = '/album/introducing-hedzoleh-soundz-hugh-masekela';
 
 const styleOf = (page: Page, selector: string) =>
   page.locator(selector).first().evaluate((el) => {

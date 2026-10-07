@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
+import { albumOnAnotherService, albumWithNoLink } from './data';
 import { camera, shot, twinkleOff, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 async function albumTitle(page: Page, id: number): Promise<string> {
@@ -14,9 +15,8 @@ async function pick(page: Page, isMobile: boolean): Promise<number> {
   return (await page.evaluate(() => window.__rmr!.getState().selected))!;
 }
 
-/** In Rainbows and The KLF's Chill Out (no Spotify id) in albums.json. */
+/** In Rainbows in albums.json. */
 const IN_RAINBOWS = 11;
-const CHILL_OUT = 2348;
 
 /** Flies to a known album, then clicks or taps it for real, so the card shows a known album. */
 async function pickKnown(page: Page, isMobile: boolean, id: number): Promise<void> {
@@ -137,9 +137,22 @@ async function pileCoverBoxes(page: Page, picked: number): Promise<Box[]> {
 /** The picked album's off-white frame (FRAME_RGB, rgb(241, 236, 228)). */
 const isFrame = ([r, g, b]: number[]) => Math.abs(r - 241) < 16 && Math.abs(g - 236) < 16 && Math.abs(b - 228) < 18;
 
-/** Client coordinates on the canvas at least 40 px from every album. */
+/**
+ * Client coordinates on the canvas at least 40 px from every album. Where the map is too dense for that at the
+ * current zoom (a phone, beside a picked album among 10,467), it zooms in a step at a time until there is one.
+ */
 async function emptyMapPoint(page: Page): Promise<{ x: number; y: number }> {
-  const p = await page.evaluate(async () => {
+  for (let step = 0; step < 8; step++) {
+    const p = await emptyMapPointNow(page);
+    if (p) return p;
+    await page.evaluate(() => window.__rmr!.map!.zoomBy(1.6));
+    await waitForCameraIdle(page);
+  }
+  throw new Error('no empty map point');
+}
+
+async function emptyMapPointNow(page: Page): Promise<{ x: number; y: number } | null> {
+  return page.evaluate(async () => {
     const n: number = (await (await fetch('/data/albums.json')).json()).length;
     const api = window.__rmr!.map!;
     const pts: { x: number; y: number }[] = [];
@@ -156,8 +169,6 @@ async function emptyMapPoint(page: Page): Promise<{ x: number; y: number }> {
     }
     return null;
   });
-  if (!p) throw new Error('no empty map point');
-  return p;
 }
 
 test('a direct load of /map leaves focus alone, so the first Tab reaches the skip link', async ({ page }) => {
@@ -355,10 +366,12 @@ test('leaving an album by the header nav leaves the album state clean and frames
   expect(again.zoom).toBeCloseTo(overview.zoom, 2);
 });
 
-/** Detail left in a cover that stepped back, as a fraction of its undimmed detail. A lone cover at half opacity
- * (SELECTION_DIM) keeps half: measured 0.48 on desktop and 0.50 on the phone, three runs each. In a pile the upper
- * cover's half-opaque picture lets the lower one through, so more is left: measured 0.57 (12 piles, desktop) and
- * 0.60 (4 piles, phone). With the stepping back removed both are 1. */
+/** Detail left in a cover that stepped back, as a fraction of its undimmed detail. A lone cover at half strength
+ * (SELECTION_DIM) keeps half: measured 0.48 on desktop and 0.50 on the phone, three runs each, when the stepping
+ * back was by alpha. In a pile the upper cover's half-opaque picture then let the lower one through, so more was
+ * left: measured 0.57 (12 piles, desktop) and 0.60 (4 piles, phone). Since the 10k catalog a stepped-back cover
+ * keeps its alpha and moves to the page colour, so a pile should keep about half too (not measured again).
+ * With the stepping back removed both are 1. */
 const LONE_LINE = 0.6;
 const PILE_LINE = 0.75;
 
@@ -422,14 +435,34 @@ test('in cover mode the picked album is drawn large on top, framed in off-white,
   expect((await pixels(page, framePoints)).map(isFrame)).toEqual([false, false, false, false]);
 });
 
-test('an album with no Spotify id shows the card without the Spotify action', async ({ page, isMobile }) => {
+test('an album with no place to listen shows the card without a listen action', async ({ page, isMobile }) => {
+  // Found in the data: no Spotify release and no other link.
+  const none = albumWithNoLink({ onMap: true });
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);
-  await pickKnown(page, isMobile, CHILL_OUT);
+  await pickKnown(page, isMobile, none.id);
   const card = page.locator('.card');
-  await expect(card.locator('.t')).toHaveText('Chill Out');
-  await expect(card.getByRole('link', { name: COPY.map.cardPrimary })).toHaveAttribute('href', '/album/chill-out-the-klf');
+  await expect(card.locator('.t')).toHaveText(none.title);
+  await expect(card.getByRole('link', { name: COPY.map.cardPrimary })).toHaveAttribute('href', `/album/${none.slug}`);
+  await expect(card.getByRole('link')).toHaveCount(1);
+  await expect(card.locator('a[target="_blank"]')).toHaveCount(0);
+});
+
+test('an album that is not on Spotify shows the card with its other service', async ({ page, isMobile }) => {
+  // Found in the data: no Spotify release, a link to another service.
+  const other = albumOnAnotherService({ onMap: true });
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await pickKnown(page, isMobile, other.id);
+  const card = page.locator('.card');
+  await expect(card.locator('.t')).toHaveText(other.title);
+  await expect(card.getByRole('link', { name: COPY.map.cardPrimary })).toHaveAttribute('href', `/album/${other.slug}`);
+  const listen = card.locator('a[target="_blank"]');
+  await expect(listen).toHaveCount(1);
+  await expect(listen).toHaveAccessibleName(`${other.listen.name} ${COPY.album.newTab}`);
+  await expect(listen).toHaveAttribute('href', other.listen.url);
   await expect(card.getByRole('link', { name: new RegExp(`^${COPY.map.cardSpotify}`) })).toHaveCount(0);
 });
 

@@ -51,3 +51,20 @@ export function pinchZoom(startDist: number, currDist: number, startZoom: number
   const factor = currDist / startDist;
   return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, startZoom * factor));
 }
+
+/** Speed, in world units per 60 Hz frame, below which a fling counts as settled, up to FLING_STOP_REF_ZOOM. */
+export const FLING_STOP_SPEED = 1e-5;
+/** The zoom up to which FLING_STOP_SPEED is used as it is (the maximum zoom it was set for). */
+export const FLING_STOP_REF_ZOOM = 28;
+
+/**
+ * The squared speed (world units per 60 Hz frame) below which a fling has settled at `zoom`. A world speed is
+ * `zoom` times as fast on screen: 1e-5 is 0.2 px per frame at zoom 28 on an 836 px canvas, but 0.9 px at the
+ * maximum zoom of 120, where the map would stop while still visibly gliding. Past FLING_STOP_REF_ZOOM the
+ * threshold shrinks with the zoom, so a fling ends at the same speed on screen as it does at 28. Up to that zoom
+ * it is the constant it always was.
+ */
+export function flingStopSpeedSq(zoom: number): number {
+  const speed = zoom > FLING_STOP_REF_ZOOM ? (FLING_STOP_SPEED * FLING_STOP_REF_ZOOM) / zoom : FLING_STOP_SPEED;
+  return speed * speed;
+}

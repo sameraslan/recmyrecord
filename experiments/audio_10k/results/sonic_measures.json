@@ -1,0 +1,2618 @@
+{
+ "generated": "2026-10-04",
+ "note": "RYM-based proxies over the whole catalog with audio; descriptive, not a held-out evaluation. See measure.py's docstring for the definitions and for what is comparable.",
+ "catalog_albums": 10467,
+ "with_clap_audio": 9603,
+ "with_both_models": 9599,
+ "clips_per_album": {
+  "1": 68,
+  "2": 104,
+  "3": 145,
+  "4": 9267,
+  "5": 1,
+  "6": 1,
+  "7": 2,
+  "8": 15
+ },
+ "sources": {
+  "deezer": 6611,
+  "itunes": 2973,
+  "youtube": 19
+ },
+ "same_track_check": {
+  "effnet": {
+   "tracks": 80,
+   "min_cosine": 1.0,
+   "mean_cosine": 1.0
+  },
+  "clap": {
+   "tracks": 80,
+   "min_cosine": 1.0,
+   "mean_cosine": 1.0
+  }
+ },
+ "pools": {
+  "catalog": {
+   "what": "every catalog album with CLAP audio",
+   "blocks": {
+    "clap": {
+     "name": "clap",
+     "albums": 9603,
+     "new_albums": 5625,
+     "share_new_in_pool": 0.5858,
+     "albums_with_genre": 9163,
+     "albums_with_5_descriptors": 8837,
+     "metrics": {
+      "genre_primary": {
+       "mean": 0.1826,
+       "n": 9163
+      },
+      "genre_any": {
+       "mean": 0.341,
+       "n": 9163
+      },
+      "genre_family": {
+       "mean": 0.5915,
+       "n": 9163
+      },
+      "desc_jaccard": {
+       "mean": 0.1909,
+       "n": 8837
+      },
+      "desc_shared": {
+       "mean": 2.3412,
+       "n": 8837
+      },
+      "genre_primary_xa": {
+       "mean": 0.1547,
+       "n": 9163
+      },
+      "genre_any_xa": {
+       "mean": 0.3096,
+       "n": 9163
+      },
+      "genre_family_xa": {
+       "mean": 0.5748,
+       "n": 9163
+      },
+      "desc_jaccard_xa": {
+       "mean": 0.1821,
+       "n": 8837
+      },
+      "desc_shared_xa": {
+       "mean": 2.2542,
+       "n": 8837
+      }
+     },
+     "random": {
+      "genre_primary": {
+       "mean": 0.0079,
+       "n": 9163
+      },
+      "genre_any": {
+       "mean": 0.023,
+       "n": 9163
+      },
+      "genre_family": {
+       "mean": 0.1157,
+       "n": 9163
+      },
+      "desc_jaccard": {
+       "mean": 0.0648,
+       "n": 8837
+      },
+      "desc_shared": {
+       "mean": 0.8822,
+       "n": 8837
+      }
+     },
+     "hubness": {
+      "skew": 1.236,
+      "never": 0.016,
+      "max": 59
+     },
+     "groups": {
+      "all": {
+       "albums": 9603,
+       "genre_primary": {
+        "mean": 0.1826,
+        "n": 9163
+       },
+       "genre_any": {
+        "mean": 0.341,
+        "n": 9163
+       },
+       "genre_family": {
+        "mean": 0.5915,
+        "n": 9163
+       },
+       "desc_jaccard": {
+        "mean": 0.1909,
+        "n": 8837
+       },
+       "desc_shared": {
+        "mean": 2.3412,
+        "n": 8837
+       },
+       "genre_primary_xa": {
+        "mean": 0.1547,
+        "n": 9163
+       },
+       "genre_any_xa": {
+        "mean": 0.3096,
+        "n": 9163
+       },
+       "genre_family_xa": {
+        "mean": 0.5748,
+        "n": 9163
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1821,
+        "n": 8837
+       },
+       "desc_shared_xa": {
+        "mean": 2.2542,
+        "n": 8837
+       },
+       "share_of_neighbours_new": 0.5644,
+       "same_genre_share_new": 0.6088,
+       "mean_n10": 10.0,
+       "never_recommended": 0.016,
+       "max_n10": 59
+      },
+      "new": {
+       "albums": 5625,
+       "genre_primary": {
+        "mean": 0.1718,
+        "n": 5617
+       },
+       "genre_any": {
+        "mean": 0.3285,
+        "n": 5617
+       },
+       "genre_family": {
+        "mean": 0.5733,
+        "n": 5617
+       },
+       "desc_jaccard": {
+        "mean": 0.1844,
+        "n": 5364
+       },
+       "desc_shared": {
+        "mean": 2.2731,
+        "n": 5364
+       },
+       "genre_primary_xa": {
+        "mean": 0.1492,
+        "n": 5617
+       },
+       "genre_any_xa": {
+        "mean": 0.302,
+        "n": 5617
+       },
+       "genre_family_xa": {
+        "mean": 0.5601,
+        "n": 5617
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1776,
+        "n": 5364
+       },
+       "desc_shared_xa": {
+        "mean": 2.206,
+        "n": 5364
+       },
+       "share_of_neighbours_new": 0.6821,
+       "same_genre_share_new": 0.6444,
+       "mean_n10": 9.63,
+       "never_recommended": 0.0171,
+       "max_n10": 50
+      },
+      "existing": {
+       "albums": 3978,
+       "genre_primary": {
+        "mean": 0.1996,
+        "n": 3546
+       },
+       "genre_any": {
+        "mean": 0.3609,
+        "n": 3546
+       },
+       "genre_family": {
+        "mean": 0.6204,
+        "n": 3546
+       },
+       "desc_jaccard": {
+        "mean": 0.201,
+        "n": 3473
+       },
+       "desc_shared": {
+        "mean": 2.4464,
+        "n": 3473
+       },
+       "genre_primary_xa": {
+        "mean": 0.1634,
+        "n": 3546
+       },
+       "genre_any_xa": {
+        "mean": 0.3217,
+        "n": 3546
+       },
+       "genre_family_xa": {
+        "mean": 0.5982,
+        "n": 3546
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.189,
+        "n": 3473
+       },
+       "desc_shared_xa": {
+        "mean": 2.3286,
+        "n": 3473
+       },
+       "share_of_neighbours_new": 0.3978,
+       "same_genre_share_new": 0.5533,
+       "mean_n10": 10.52,
+       "never_recommended": 0.0146,
+       "max_n10": 59
+      },
+      "under_4_clips": {
+       "albums": 317,
+       "genre_primary": {
+        "mean": 0.1672,
+        "n": 273
+       },
+       "genre_any": {
+        "mean": 0.2763,
+        "n": 273
+       },
+       "genre_family": {
+        "mean": 0.5442,
+        "n": 273
+       },
+       "desc_jaccard": {
+        "mean": 0.1945,
+        "n": 267
+       },
+       "desc_shared": {
+        "mean": 2.3675,
+        "n": 267
+       },
+       "genre_primary_xa": {
+        "mean": 0.1491,
+        "n": 273
+       },
+       "genre_any_xa": {
+        "mean": 0.2579,
+        "n": 273
+       },
+       "genre_family_xa": {
+        "mean": 0.532,
+        "n": 273
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1897,
+        "n": 267
+       },
+       "desc_shared_xa": {
+        "mean": 2.323,
+        "n": 267
+       },
+       "share_of_neighbours_new": 0.611,
+       "same_genre_share_new": 0.6552,
+       "mean_n10": 6.19,
+       "never_recommended": 0.0726,
+       "max_n10": 32
+      },
+      "4_clips": {
+       "albums": 9267,
+       "genre_primary": {
+        "mean": 0.183,
+        "n": 8871
+       },
+       "genre_any": {
+        "mean": 0.343,
+        "n": 8871
+       },
+       "genre_family": {
+        "mean": 0.5931,
+        "n": 8871
+       },
+       "desc_jaccard": {
+        "mean": 0.1908,
+        "n": 8551
+       },
+       "desc_shared": {
+        "mean": 2.3405,
+        "n": 8551
+       },
+       "genre_primary_xa": {
+        "mean": 0.1547,
+        "n": 8871
+       },
+       "genre_any_xa": {
+        "mean": 0.3111,
+        "n": 8871
+       },
+       "genre_family_xa": {
+        "mean": 0.5763,
+        "n": 8871
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1818,
+        "n": 8551
+       },
+       "desc_shared_xa": {
+        "mean": 2.252,
+        "n": 8551
+       },
+       "share_of_neighbours_new": 0.5625,
+       "same_genre_share_new": 0.6072,
+       "mean_n10": 10.14,
+       "never_recommended": 0.0141,
+       "max_n10": 59
+      },
+      "full_length_windows": {
+       "albums": 19,
+       "genre_primary": {
+        "mean": 0.2209,
+        "n": 19
+       },
+       "genre_any": {
+        "mean": 0.3655,
+        "n": 19
+       },
+       "genre_family": {
+        "mean": 0.5363,
+        "n": 19
+       },
+       "desc_jaccard": {
+        "mean": 0.1831,
+        "n": 19
+       },
+       "desc_shared": {
+        "mean": 2.302,
+        "n": 19
+       },
+       "genre_primary_xa": {
+        "mean": 0.2051,
+        "n": 19
+       },
+       "genre_any_xa": {
+        "mean": 0.3602,
+        "n": 19
+       },
+       "genre_family_xa": {
+        "mean": 0.5257,
+        "n": 19
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1779,
+        "n": 19
+       },
+       "desc_shared_xa": {
+        "mean": 2.2629,
+        "n": 19
+       },
+       "share_of_neighbours_new": 0.6789,
+       "same_genre_share_new": 0.6963,
+       "mean_n10": 5.74,
+       "never_recommended": 0.0,
+       "max_n10": 16
+      }
+     },
+     "most_recommended": [
+      {
+       "key": "Album11263",
+       "artist": "Spirit",
+       "title": "Twelve Dreams of Dr. Sardonicus",
+       "year": "1970",
+       "rank": 6222,
+       "primary_genres": "Psychedelic Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 59
+      },
+      {
+       "key": "Album10688",
+       "artist": "Testament",
+       "title": "The Legacy",
+       "year": "1987",
+       "rank": 2704,
+       "primary_genres": "Thrash Metal",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 57
+      },
+      {
+       "key": "Album28752",
+       "artist": "Spring",
+       "title": "Spring",
+       "year": "1971",
+       "rank": 5993,
+       "primary_genres": "Progressive Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 52
+      },
+      {
+       "key": "Album174516",
+       "artist": "Blue Mitchell",
+       "title": "The Thing to Do",
+       "year": "1965",
+       "rank": 8392,
+       "primary_genres": "Hard Bop",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 50
+      },
+      {
+       "key": "Album2733",
+       "artist": "Buffalo Springfield",
+       "title": "Buffalo Springfield Again",
+       "year": "1967",
+       "rank": 6989,
+       "primary_genres": "Folk Rock, Psychedelic Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 49
+      },
+      {
+       "key": "Album22860",
+       "artist": "Nasum",
+       "title": "Inhale / Exhale",
+       "year": "1998",
+       "rank": 4042,
+       "primary_genres": "Grindcore",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 46
+      },
+      {
+       "key": "Album624",
+       "artist": "David Bowie",
+       "title": "Aladdin Sane",
+       "year": "1973",
+       "rank": 884,
+       "primary_genres": "Glam Rock, Art Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 45
+      },
+      {
+       "key": "Album13",
+       "artist": "The Beatles",
+       "title": "Let It Be",
+       "year": "1970",
+       "rank": 5285,
+       "primary_genres": "Pop Rock, Blues Rock",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 45
+      },
+      {
+       "key": "Album1417775",
+       "artist": "Various Artists",
+       "title": "Boogiepop Phantom",
+       "year": "2000",
+       "rank": 7182,
+       "primary_genres": "Television Music, Downtempo, Electronic Dance Music",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 44
+      },
+      {
+       "key": "Album696226",
+       "artist": "Clifford Brown and Max Roach",
+       "title": "Clifford Brown and Max Roach",
+       "year": "1954",
+       "rank": 1579,
+       "primary_genres": "Hard Bop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 43
+      },
+      {
+       "key": "Album6440",
+       "artist": "Thin Lizzy",
+       "title": "Jailbreak",
+       "year": "1976",
+       "rank": 1122,
+       "primary_genres": "Hard Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 42
+      },
+      {
+       "key": "Album11802",
+       "artist": "Ten Years After",
+       "title": "A Space in Time",
+       "year": "1971",
+       "rank": 7341,
+       "primary_genres": "Blues Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 42
+      },
+      {
+       "key": "Album130213",
+       "artist": "Massacra",
+       "title": "Enjoy the Violence",
+       "year": "1991",
+       "rank": 7574,
+       "primary_genres": "Death Metal",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 42
+      },
+      {
+       "key": "Album12132",
+       "artist": "Quicksilver Messenger Service",
+       "title": "Quicksilver Messenger Service",
+       "year": "1968",
+       "rank": 9696,
+       "primary_genres": "Psychedelic Rock, Acid Rock",
+       "new": true,
+       "n_clips": 4,
+       "source": "itunes:us",
+       "n10": 42
+      },
+      {
+       "key": "Album21482",
+       "artist": "Samla Mammas Manna",
+       "title": "Måltid",
+       "year": "1973",
+       "rank": 6077,
+       "primary_genres": "Avant-Prog",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 41
+      }
+     ]
+    }
+   }
+  },
+  "both_models": {
+   "what": "the albums with both models' clips: the same albums, labels and candidates for the two rows",
+   "overlap_at_10": 1.835,
+   "blocks": {
+    "clap": {
+     "name": "clap",
+     "albums": 9599,
+     "new_albums": 5625,
+     "share_new_in_pool": 0.586,
+     "albums_with_genre": 9159,
+     "albums_with_5_descriptors": 8833,
+     "metrics": {
+      "genre_primary": {
+       "mean": 0.1826,
+       "n": 9159
+      },
+      "genre_any": {
+       "mean": 0.3412,
+       "n": 9159
+      },
+      "genre_family": {
+       "mean": 0.5916,
+       "n": 9159
+      },
+      "desc_jaccard": {
+       "mean": 0.1909,
+       "n": 8833
+      },
+      "desc_shared": {
+       "mean": 2.3409,
+       "n": 8833
+      },
+      "genre_primary_xa": {
+       "mean": 0.1547,
+       "n": 9159
+      },
+      "genre_any_xa": {
+       "mean": 0.3098,
+       "n": 9159
+      },
+      "genre_family_xa": {
+       "mean": 0.5749,
+       "n": 9159
+      },
+      "desc_jaccard_xa": {
+       "mean": 0.182,
+       "n": 8833
+      },
+      "desc_shared_xa": {
+       "mean": 2.2539,
+       "n": 8833
+      }
+     },
+     "random": {
+      "genre_primary": {
+       "mean": 0.0076,
+       "n": 9159
+      },
+      "genre_any": {
+       "mean": 0.0223,
+       "n": 9159
+      },
+      "genre_family": {
+       "mean": 0.1148,
+       "n": 9159
+      },
+      "desc_jaccard": {
+       "mean": 0.065,
+       "n": 8833
+      },
+      "desc_shared": {
+       "mean": 0.8844,
+       "n": 8833
+      }
+     },
+     "hubness": {
+      "skew": 1.236,
+      "never": 0.016,
+      "max": 59
+     },
+     "groups": {
+      "all": {
+       "albums": 9599,
+       "genre_primary": {
+        "mean": 0.1826,
+        "n": 9159
+       },
+       "genre_any": {
+        "mean": 0.3412,
+        "n": 9159
+       },
+       "genre_family": {
+        "mean": 0.5916,
+        "n": 9159
+       },
+       "desc_jaccard": {
+        "mean": 0.1909,
+        "n": 8833
+       },
+       "desc_shared": {
+        "mean": 2.3409,
+        "n": 8833
+       },
+       "genre_primary_xa": {
+        "mean": 0.1547,
+        "n": 9159
+       },
+       "genre_any_xa": {
+        "mean": 0.3098,
+        "n": 9159
+       },
+       "genre_family_xa": {
+        "mean": 0.5749,
+        "n": 9159
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.182,
+        "n": 8833
+       },
+       "desc_shared_xa": {
+        "mean": 2.2539,
+        "n": 8833
+       },
+       "share_of_neighbours_new": 0.5647,
+       "same_genre_share_new": 0.609,
+       "mean_n10": 10.0,
+       "never_recommended": 0.016,
+       "max_n10": 59
+      },
+      "new": {
+       "albums": 5625,
+       "genre_primary": {
+        "mean": 0.1718,
+        "n": 5617
+       },
+       "genre_any": {
+        "mean": 0.3287,
+        "n": 5617
+       },
+       "genre_family": {
+        "mean": 0.5733,
+        "n": 5617
+       },
+       "desc_jaccard": {
+        "mean": 0.1843,
+        "n": 5364
+       },
+       "desc_shared": {
+        "mean": 2.2725,
+        "n": 5364
+       },
+       "genre_primary_xa": {
+        "mean": 0.1492,
+        "n": 5617
+       },
+       "genre_any_xa": {
+        "mean": 0.3022,
+        "n": 5617
+       },
+       "genre_family_xa": {
+        "mean": 0.56,
+        "n": 5617
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1775,
+        "n": 5364
+       },
+       "desc_shared_xa": {
+        "mean": 2.2055,
+        "n": 5364
+       },
+       "share_of_neighbours_new": 0.6826,
+       "same_genre_share_new": 0.6448,
+       "mean_n10": 9.64,
+       "never_recommended": 0.0171,
+       "max_n10": 50
+      },
+      "existing": {
+       "albums": 3974,
+       "genre_primary": {
+        "mean": 0.1997,
+        "n": 3542
+       },
+       "genre_any": {
+        "mean": 0.361,
+        "n": 3542
+       },
+       "genre_family": {
+        "mean": 0.6207,
+        "n": 3542
+       },
+       "desc_jaccard": {
+        "mean": 0.201,
+        "n": 3469
+       },
+       "desc_shared": {
+        "mean": 2.4466,
+        "n": 3469
+       },
+       "genre_primary_xa": {
+        "mean": 0.1635,
+        "n": 3542
+       },
+       "genre_any_xa": {
+        "mean": 0.3218,
+        "n": 3542
+       },
+       "genre_family_xa": {
+        "mean": 0.5985,
+        "n": 3542
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.189,
+        "n": 3469
+       },
+       "desc_shared_xa": {
+        "mean": 2.3288,
+        "n": 3469
+       },
+       "share_of_neighbours_new": 0.3978,
+       "same_genre_share_new": 0.5533,
+       "mean_n10": 10.51,
+       "never_recommended": 0.0146,
+       "max_n10": 59
+      },
+      "under_4_clips": {
+       "albums": 315,
+       "genre_primary": {
+        "mean": 0.1666,
+        "n": 271
+       },
+       "genre_any": {
+        "mean": 0.2754,
+        "n": 271
+       },
+       "genre_family": {
+        "mean": 0.5445,
+        "n": 271
+       },
+       "desc_jaccard": {
+        "mean": 0.1943,
+        "n": 265
+       },
+       "desc_shared": {
+        "mean": 2.3659,
+        "n": 265
+       },
+       "genre_primary_xa": {
+        "mean": 0.1484,
+        "n": 271
+       },
+       "genre_any_xa": {
+        "mean": 0.2569,
+        "n": 271
+       },
+       "genre_family_xa": {
+        "mean": 0.5322,
+        "n": 271
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1895,
+        "n": 265
+       },
+       "desc_shared_xa": {
+        "mean": 2.321,
+        "n": 265
+       },
+       "share_of_neighbours_new": 0.6124,
+       "same_genre_share_new": 0.6576,
+       "mean_n10": 6.2,
+       "never_recommended": 0.073,
+       "max_n10": 32
+      },
+      "4_clips": {
+       "albums": 9265,
+       "genre_primary": {
+        "mean": 0.183,
+        "n": 8869
+       },
+       "genre_any": {
+        "mean": 0.3432,
+        "n": 8869
+       },
+       "genre_family": {
+        "mean": 0.5932,
+        "n": 8869
+       },
+       "desc_jaccard": {
+        "mean": 0.1908,
+        "n": 8549
+       },
+       "desc_shared": {
+        "mean": 2.3402,
+        "n": 8549
+       },
+       "genre_primary_xa": {
+        "mean": 0.1548,
+        "n": 8869
+       },
+       "genre_any_xa": {
+        "mean": 0.3113,
+        "n": 8869
+       },
+       "genre_family_xa": {
+        "mean": 0.5763,
+        "n": 8869
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1818,
+        "n": 8549
+       },
+       "desc_shared_xa": {
+        "mean": 2.2518,
+        "n": 8549
+       },
+       "share_of_neighbours_new": 0.5628,
+       "same_genre_share_new": 0.6074,
+       "mean_n10": 10.14,
+       "never_recommended": 0.0141,
+       "max_n10": 59
+      },
+      "full_length_windows": {
+       "albums": 19,
+       "genre_primary": {
+        "mean": 0.2209,
+        "n": 19
+       },
+       "genre_any": {
+        "mean": 0.3655,
+        "n": 19
+       },
+       "genre_family": {
+        "mean": 0.5363,
+        "n": 19
+       },
+       "desc_jaccard": {
+        "mean": 0.1831,
+        "n": 19
+       },
+       "desc_shared": {
+        "mean": 2.302,
+        "n": 19
+       },
+       "genre_primary_xa": {
+        "mean": 0.2051,
+        "n": 19
+       },
+       "genre_any_xa": {
+        "mean": 0.3602,
+        "n": 19
+       },
+       "genre_family_xa": {
+        "mean": 0.5257,
+        "n": 19
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1779,
+        "n": 19
+       },
+       "desc_shared_xa": {
+        "mean": 2.2629,
+        "n": 19
+       },
+       "share_of_neighbours_new": 0.6789,
+       "same_genre_share_new": 0.6963,
+       "mean_n10": 5.74,
+       "never_recommended": 0.0,
+       "max_n10": 16
+      }
+     },
+     "most_recommended": [
+      {
+       "key": "Album11263",
+       "artist": "Spirit",
+       "title": "Twelve Dreams of Dr. Sardonicus",
+       "year": "1970",
+       "rank": 6222,
+       "primary_genres": "Psychedelic Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 59
+      },
+      {
+       "key": "Album10688",
+       "artist": "Testament",
+       "title": "The Legacy",
+       "year": "1987",
+       "rank": 2704,
+       "primary_genres": "Thrash Metal",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 57
+      },
+      {
+       "key": "Album28752",
+       "artist": "Spring",
+       "title": "Spring",
+       "year": "1971",
+       "rank": 5993,
+       "primary_genres": "Progressive Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 52
+      },
+      {
+       "key": "Album174516",
+       "artist": "Blue Mitchell",
+       "title": "The Thing to Do",
+       "year": "1965",
+       "rank": 8392,
+       "primary_genres": "Hard Bop",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 50
+      },
+      {
+       "key": "Album2733",
+       "artist": "Buffalo Springfield",
+       "title": "Buffalo Springfield Again",
+       "year": "1967",
+       "rank": 6989,
+       "primary_genres": "Folk Rock, Psychedelic Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 49
+      },
+      {
+       "key": "Album22860",
+       "artist": "Nasum",
+       "title": "Inhale / Exhale",
+       "year": "1998",
+       "rank": 4042,
+       "primary_genres": "Grindcore",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 46
+      },
+      {
+       "key": "Album624",
+       "artist": "David Bowie",
+       "title": "Aladdin Sane",
+       "year": "1973",
+       "rank": 884,
+       "primary_genres": "Glam Rock, Art Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 45
+      },
+      {
+       "key": "Album13",
+       "artist": "The Beatles",
+       "title": "Let It Be",
+       "year": "1970",
+       "rank": 5285,
+       "primary_genres": "Pop Rock, Blues Rock",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 45
+      },
+      {
+       "key": "Album1417775",
+       "artist": "Various Artists",
+       "title": "Boogiepop Phantom",
+       "year": "2000",
+       "rank": 7182,
+       "primary_genres": "Television Music, Downtempo, Electronic Dance Music",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 44
+      },
+      {
+       "key": "Album696226",
+       "artist": "Clifford Brown and Max Roach",
+       "title": "Clifford Brown and Max Roach",
+       "year": "1954",
+       "rank": 1579,
+       "primary_genres": "Hard Bop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 43
+      },
+      {
+       "key": "Album6440",
+       "artist": "Thin Lizzy",
+       "title": "Jailbreak",
+       "year": "1976",
+       "rank": 1122,
+       "primary_genres": "Hard Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 42
+      },
+      {
+       "key": "Album11802",
+       "artist": "Ten Years After",
+       "title": "A Space in Time",
+       "year": "1971",
+       "rank": 7341,
+       "primary_genres": "Blues Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 42
+      },
+      {
+       "key": "Album130213",
+       "artist": "Massacra",
+       "title": "Enjoy the Violence",
+       "year": "1991",
+       "rank": 7574,
+       "primary_genres": "Death Metal",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 42
+      },
+      {
+       "key": "Album12132",
+       "artist": "Quicksilver Messenger Service",
+       "title": "Quicksilver Messenger Service",
+       "year": "1968",
+       "rank": 9696,
+       "primary_genres": "Psychedelic Rock, Acid Rock",
+       "new": true,
+       "n_clips": 4,
+       "source": "itunes:us",
+       "n10": 42
+      },
+      {
+       "key": "Album21482",
+       "artist": "Samla Mammas Manna",
+       "title": "Måltid",
+       "year": "1973",
+       "rank": 6077,
+       "primary_genres": "Avant-Prog",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 41
+      }
+     ]
+    },
+    "effnet_4clip": {
+     "name": "effnet_4clip",
+     "albums": 9599,
+     "new_albums": 5625,
+     "share_new_in_pool": 0.586,
+     "albums_with_genre": 9159,
+     "albums_with_5_descriptors": 8833,
+     "metrics": {
+      "genre_primary": {
+       "mean": 0.2345,
+       "n": 9159
+      },
+      "genre_any": {
+       "mean": 0.4226,
+       "n": 9159
+      },
+      "genre_family": {
+       "mean": 0.6385,
+       "n": 9159
+      },
+      "desc_jaccard": {
+       "mean": 0.1999,
+       "n": 8833
+      },
+      "desc_shared": {
+       "mean": 2.4372,
+       "n": 8833
+      },
+      "genre_primary_xa": {
+       "mean": 0.2054,
+       "n": 9159
+      },
+      "genre_any_xa": {
+       "mean": 0.3922,
+       "n": 9159
+      },
+      "genre_family_xa": {
+       "mean": 0.623,
+       "n": 9159
+      },
+      "desc_jaccard_xa": {
+       "mean": 0.1909,
+       "n": 8833
+      },
+      "desc_shared_xa": {
+       "mean": 2.3504,
+       "n": 8833
+      }
+     },
+     "random": {
+      "genre_primary": {
+       "mean": 0.0076,
+       "n": 9159
+      },
+      "genre_any": {
+       "mean": 0.0223,
+       "n": 9159
+      },
+      "genre_family": {
+       "mean": 0.1148,
+       "n": 9159
+      },
+      "desc_jaccard": {
+       "mean": 0.065,
+       "n": 8833
+      },
+      "desc_shared": {
+       "mean": 0.8844,
+       "n": 8833
+      }
+     },
+     "hubness": {
+      "skew": 0.905,
+      "never": 0.0089,
+      "max": 45
+     },
+     "groups": {
+      "all": {
+       "albums": 9599,
+       "genre_primary": {
+        "mean": 0.2345,
+        "n": 9159
+       },
+       "genre_any": {
+        "mean": 0.4226,
+        "n": 9159
+       },
+       "genre_family": {
+        "mean": 0.6385,
+        "n": 9159
+       },
+       "desc_jaccard": {
+        "mean": 0.1999,
+        "n": 8833
+       },
+       "desc_shared": {
+        "mean": 2.4372,
+        "n": 8833
+       },
+       "genre_primary_xa": {
+        "mean": 0.2054,
+        "n": 9159
+       },
+       "genre_any_xa": {
+        "mean": 0.3922,
+        "n": 9159
+       },
+       "genre_family_xa": {
+        "mean": 0.623,
+        "n": 9159
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1909,
+        "n": 8833
+       },
+       "desc_shared_xa": {
+        "mean": 2.3504,
+        "n": 8833
+       },
+       "share_of_neighbours_new": 0.5659,
+       "same_genre_share_new": 0.609,
+       "mean_n10": 10.0,
+       "never_recommended": 0.0089,
+       "max_n10": 45
+      },
+      "new": {
+       "albums": 5625,
+       "genre_primary": {
+        "mean": 0.2195,
+        "n": 5617
+       },
+       "genre_any": {
+        "mean": 0.405,
+        "n": 5617
+       },
+       "genre_family": {
+        "mean": 0.6216,
+        "n": 5617
+       },
+       "desc_jaccard": {
+        "mean": 0.1929,
+        "n": 5364
+       },
+       "desc_shared": {
+        "mean": 2.3675,
+        "n": 5364
+       },
+       "genre_primary_xa": {
+        "mean": 0.1955,
+        "n": 5617
+       },
+       "genre_any_xa": {
+        "mean": 0.3789,
+        "n": 5617
+       },
+       "genre_family_xa": {
+        "mean": 0.609,
+        "n": 5617
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1859,
+        "n": 5364
+       },
+       "desc_shared_xa": {
+        "mean": 2.299,
+        "n": 5364
+       },
+       "share_of_neighbours_new": 0.6116,
+       "same_genre_share_new": 0.6448,
+       "mean_n10": 9.66,
+       "never_recommended": 0.0096,
+       "max_n10": 45
+      },
+      "existing": {
+       "albums": 3974,
+       "genre_primary": {
+        "mean": 0.2583,
+        "n": 3542
+       },
+       "genre_any": {
+        "mean": 0.4505,
+        "n": 3542
+       },
+       "genre_family": {
+        "mean": 0.6653,
+        "n": 3542
+       },
+       "desc_jaccard": {
+        "mean": 0.2107,
+        "n": 3469
+       },
+       "desc_shared": {
+        "mean": 2.5451,
+        "n": 3469
+       },
+       "genre_primary_xa": {
+        "mean": 0.2211,
+        "n": 3542
+       },
+       "genre_any_xa": {
+        "mean": 0.4133,
+        "n": 3542
+       },
+       "genre_family_xa": {
+        "mean": 0.6452,
+        "n": 3542
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1987,
+        "n": 3469
+       },
+       "desc_shared_xa": {
+        "mean": 2.4298,
+        "n": 3469
+       },
+       "share_of_neighbours_new": 0.5012,
+       "same_genre_share_new": 0.5533,
+       "mean_n10": 10.49,
+       "never_recommended": 0.0078,
+       "max_n10": 40
+      },
+      "under_4_clips": {
+       "albums": 315,
+       "genre_primary": {
+        "mean": 0.2134,
+        "n": 271
+       },
+       "genre_any": {
+        "mean": 0.3508,
+        "n": 271
+       },
+       "genre_family": {
+        "mean": 0.5934,
+        "n": 271
+       },
+       "desc_jaccard": {
+        "mean": 0.2054,
+        "n": 265
+       },
+       "desc_shared": {
+        "mean": 2.4871,
+        "n": 265
+       },
+       "genre_primary_xa": {
+        "mean": 0.1896,
+        "n": 271
+       },
+       "genre_any_xa": {
+        "mean": 0.3249,
+        "n": 271
+       },
+       "genre_family_xa": {
+        "mean": 0.582,
+        "n": 271
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1999,
+        "n": 265
+       },
+       "desc_shared_xa": {
+        "mean": 2.4329,
+        "n": 265
+       },
+       "share_of_neighbours_new": 0.6368,
+       "same_genre_share_new": 0.6576,
+       "mean_n10": 7.17,
+       "never_recommended": 0.054,
+       "max_n10": 33
+      },
+      "4_clips": {
+       "albums": 9265,
+       "genre_primary": {
+        "mean": 0.2351,
+        "n": 8869
+       },
+       "genre_any": {
+        "mean": 0.4249,
+        "n": 8869
+       },
+       "genre_family": {
+        "mean": 0.64,
+        "n": 8869
+       },
+       "desc_jaccard": {
+        "mean": 0.1997,
+        "n": 8549
+       },
+       "desc_shared": {
+        "mean": 2.4359,
+        "n": 8549
+       },
+       "genre_primary_xa": {
+        "mean": 0.2058,
+        "n": 8869
+       },
+       "genre_any_xa": {
+        "mean": 0.3944,
+        "n": 8869
+       },
+       "genre_family_xa": {
+        "mean": 0.6245,
+        "n": 8869
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1907,
+        "n": 8549
+       },
+       "desc_shared_xa": {
+        "mean": 2.3479,
+        "n": 8549
+       },
+       "share_of_neighbours_new": 0.5633,
+       "same_genre_share_new": 0.6074,
+       "mean_n10": 10.1,
+       "never_recommended": 0.0073,
+       "max_n10": 45
+      },
+      "full_length_windows": {
+       "albums": 19,
+       "genre_primary": {
+        "mean": 0.2512,
+        "n": 19
+       },
+       "genre_any": {
+        "mean": 0.3682,
+        "n": 19
+       },
+       "genre_family": {
+        "mean": 0.5538,
+        "n": 19
+       },
+       "desc_jaccard": {
+        "mean": 0.1898,
+        "n": 19
+       },
+       "desc_shared": {
+        "mean": 2.3684,
+        "n": 19
+       },
+       "genre_primary_xa": {
+        "mean": 0.2302,
+        "n": 19
+       },
+       "genre_any_xa": {
+        "mean": 0.3419,
+        "n": 19
+       },
+       "genre_family_xa": {
+        "mean": 0.5327,
+        "n": 19
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1826,
+        "n": 19
+       },
+       "desc_shared_xa": {
+        "mean": 2.2947,
+        "n": 19
+       },
+       "share_of_neighbours_new": 0.6474,
+       "same_genre_share_new": 0.6963,
+       "mean_n10": 9.37,
+       "never_recommended": 0.0,
+       "max_n10": 22
+      }
+     },
+     "most_recommended": [
+      {
+       "key": "Album4798",
+       "artist": "Utopia",
+       "title": "Todd Rundgren's Utopia",
+       "year": "1974",
+       "rank": 8413,
+       "primary_genres": "Progressive Rock",
+       "new": true,
+       "n_clips": 4,
+       "source": "itunes:us",
+       "n10": 45
+      },
+      {
+       "key": "Album82287",
+       "artist": "All Out War",
+       "title": "Truth in the Age of Lies",
+       "year": "1997",
+       "rank": 5906,
+       "primary_genres": "Metalcore, Hardcore Punk",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 44
+      },
+      {
+       "key": "Album36411",
+       "artist": "Biglietto per l'Inferno",
+       "title": "Biglietto per l'Inferno",
+       "year": "1974",
+       "rank": 5191,
+       "primary_genres": "Progressive Rock",
+       "new": true,
+       "n_clips": 4,
+       "source": "itunes:lk",
+       "n10": 41
+      },
+      {
+       "key": "Album459995",
+       "artist": "Taint",
+       "title": "The Ruin of Nová Roma",
+       "year": "2005",
+       "rank": 9536,
+       "primary_genres": "Post-Hardcore, Sludge Metal",
+       "new": true,
+       "n_clips": 4,
+       "source": "itunes:ca",
+       "n10": 41
+      },
+      {
+       "key": "Album7673858",
+       "artist": "Jeff Rosenstock",
+       "title": "WORRY.",
+       "year": "2016",
+       "rank": 546,
+       "primary_genres": "Pop Punk, Power Pop, Indie Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 40
+      },
+      {
+       "key": "Album46601",
+       "artist": "Michael Nesmith & The First National Band",
+       "title": "Loose Salute",
+       "year": "1970",
+       "rank": 9618,
+       "primary_genres": "Country Rock, Singer-Songwriter, Progressive Country",
+       "new": true,
+       "n_clips": 4,
+       "source": "itunes:es",
+       "n10": 38
+      },
+      {
+       "key": "Album16944",
+       "artist": "Popol Vuh",
+       "title": "In den Gärten Pharaos",
+       "year": "1971",
+       "rank": 4226,
+       "primary_genres": "Ambient, Krautrock",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 37
+      },
+      {
+       "key": "Album17385",
+       "artist": "Charlie Mingus",
+       "title": "Tijuana Moods",
+       "year": "1962",
+       "rank": 2168,
+       "primary_genres": "Post-Bop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 36
+      },
+      {
+       "key": "Album16430904",
+       "artist": "Ludwig Göransson",
+       "title": "Sinners",
+       "year": "2025",
+       "rank": 4134,
+       "primary_genres": "Film Score, Blues, Post-Rock",
+       "new": true,
+       "n_clips": 4,
+       "source": "itunes:us",
+       "n10": 36
+      },
+      {
+       "key": "Album47970",
+       "artist": "J-Live",
+       "title": "The Best Part",
+       "year": "2001",
+       "rank": 5194,
+       "primary_genres": "Boom Bap, Conscious Hip Hop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 35
+      },
+      {
+       "key": "Album314183",
+       "artist": "Sean Price",
+       "title": "Monkey Barz",
+       "year": "2005",
+       "rank": 4866,
+       "primary_genres": "Boom Bap, Hardcore Hip Hop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 35
+      },
+      {
+       "key": "Album4464978",
+       "artist": "Kayo Dot",
+       "title": "Hubardo",
+       "year": "2013",
+       "rank": 4151,
+       "primary_genres": "Avant-Garde Metal, Avant-Prog, Post-Metal",
+       "new": true,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 35
+      },
+      {
+       "key": "Album697211",
+       "artist": "Attomica",
+       "title": "Disturbing the Noise",
+       "year": "1991",
+       "rank": 9553,
+       "primary_genres": "Thrash Metal",
+       "new": true,
+       "n_clips": 4,
+       "source": "itunes:us",
+       "n10": 35
+      },
+      {
+       "key": "Album4625",
+       "artist": "Trees",
+       "title": "On the Shore",
+       "year": "1971",
+       "rank": 5887,
+       "primary_genres": "British Folk Rock, Progressive Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 34
+      },
+      {
+       "key": "sp:0aXp4vn3w3SSQ4ypDIcVrG",
+       "artist": "Eddie and the Hot Rods",
+       "title": "Life on the Line",
+       "year": "1977",
+       "rank": null,
+       "primary_genres": "",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 34
+      }
+     ]
+    }
+   }
+  },
+  "existing_only": {
+   "what": "the site's albums only (seeds and candidates): the pool closest to the earlier reports'",
+   "overlap_at_10": 2.432,
+   "blocks": {
+    "clap": {
+     "name": "clap",
+     "albums": 3974,
+     "new_albums": 0,
+     "share_new_in_pool": 0.0,
+     "albums_with_genre": 3542,
+     "albums_with_5_descriptors": 3469,
+     "metrics": {
+      "genre_primary": {
+       "mean": 0.1924,
+       "n": 3542
+      },
+      "genre_any": {
+       "mean": 0.3459,
+       "n": 3542
+      },
+      "genre_family": {
+       "mean": 0.6184,
+       "n": 3542
+      },
+      "desc_jaccard": {
+       "mean": 0.1975,
+       "n": 3469
+      },
+      "desc_shared": {
+       "mean": 2.4161,
+       "n": 3469
+      },
+      "genre_primary_xa": {
+       "mean": 0.1562,
+       "n": 3542
+      },
+      "genre_any_xa": {
+       "mean": 0.307,
+       "n": 3542
+      },
+      "genre_family_xa": {
+       "mean": 0.598,
+       "n": 3542
+      },
+      "desc_jaccard_xa": {
+       "mean": 0.1857,
+       "n": 3469
+      },
+      "desc_shared_xa": {
+       "mean": 2.3013,
+       "n": 3469
+      }
+     },
+     "random": {
+      "genre_primary": {
+       "mean": 0.0109,
+       "n": 3542
+      },
+      "genre_any": {
+       "mean": 0.0293,
+       "n": 3542
+      },
+      "genre_family": {
+       "mean": 0.1348,
+       "n": 3542
+      },
+      "desc_jaccard": {
+       "mean": 0.0693,
+       "n": 3469
+      },
+      "desc_shared": {
+       "mean": 0.9391,
+       "n": 3469
+      }
+     },
+     "hubness": {
+      "skew": 1.248,
+      "never": 0.0146,
+      "max": 56
+     },
+     "groups": {
+      "all": {
+       "albums": 3974,
+       "genre_primary": {
+        "mean": 0.1924,
+        "n": 3542
+       },
+       "genre_any": {
+        "mean": 0.3459,
+        "n": 3542
+       },
+       "genre_family": {
+        "mean": 0.6184,
+        "n": 3542
+       },
+       "desc_jaccard": {
+        "mean": 0.1975,
+        "n": 3469
+       },
+       "desc_shared": {
+        "mean": 2.4161,
+        "n": 3469
+       },
+       "genre_primary_xa": {
+        "mean": 0.1562,
+        "n": 3542
+       },
+       "genre_any_xa": {
+        "mean": 0.307,
+        "n": 3542
+       },
+       "genre_family_xa": {
+        "mean": 0.598,
+        "n": 3542
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1857,
+        "n": 3469
+       },
+       "desc_shared_xa": {
+        "mean": 2.3013,
+        "n": 3469
+       },
+       "share_of_neighbours_new": 0.0,
+       "same_genre_share_new": 0.0,
+       "mean_n10": 10.0,
+       "never_recommended": 0.0146,
+       "max_n10": 56
+      },
+      "new": {
+       "albums": 0
+      },
+      "existing": {
+       "albums": 3974,
+       "genre_primary": {
+        "mean": 0.1924,
+        "n": 3542
+       },
+       "genre_any": {
+        "mean": 0.3459,
+        "n": 3542
+       },
+       "genre_family": {
+        "mean": 0.6184,
+        "n": 3542
+       },
+       "desc_jaccard": {
+        "mean": 0.1975,
+        "n": 3469
+       },
+       "desc_shared": {
+        "mean": 2.4161,
+        "n": 3469
+       },
+       "genre_primary_xa": {
+        "mean": 0.1562,
+        "n": 3542
+       },
+       "genre_any_xa": {
+        "mean": 0.307,
+        "n": 3542
+       },
+       "genre_family_xa": {
+        "mean": 0.598,
+        "n": 3542
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1857,
+        "n": 3469
+       },
+       "desc_shared_xa": {
+        "mean": 2.3013,
+        "n": 3469
+       },
+       "share_of_neighbours_new": 0.0,
+       "same_genre_share_new": 0.0,
+       "mean_n10": 10.0,
+       "never_recommended": 0.0146,
+       "max_n10": 56
+      },
+      "under_4_clips": {
+       "albums": 147,
+       "genre_primary": {
+        "mean": 0.1598,
+        "n": 103
+       },
+       "genre_any": {
+        "mean": 0.2635,
+        "n": 103
+       },
+       "genre_family": {
+        "mean": 0.5724,
+        "n": 103
+       },
+       "desc_jaccard": {
+        "mean": 0.1967,
+        "n": 103
+       },
+       "desc_shared": {
+        "mean": 2.417,
+        "n": 103
+       },
+       "genre_primary_xa": {
+        "mean": 0.1433,
+        "n": 103
+       },
+       "genre_any_xa": {
+        "mean": 0.2457,
+        "n": 103
+       },
+       "genre_family_xa": {
+        "mean": 0.5603,
+        "n": 103
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1925,
+        "n": 103
+       },
+       "desc_shared_xa": {
+        "mean": 2.3722,
+        "n": 103
+       },
+       "share_of_neighbours_new": 0.0,
+       "same_genre_share_new": 0.0,
+       "mean_n10": 6.18,
+       "never_recommended": 0.068,
+       "max_n10": 26
+      },
+      "4_clips": {
+       "albums": 3827,
+       "genre_primary": {
+        "mean": 0.1934,
+        "n": 3439
+       },
+       "genre_any": {
+        "mean": 0.3484,
+        "n": 3439
+       },
+       "genre_family": {
+        "mean": 0.6197,
+        "n": 3439
+       },
+       "desc_jaccard": {
+        "mean": 0.1976,
+        "n": 3366
+       },
+       "desc_shared": {
+        "mean": 2.4161,
+        "n": 3366
+       },
+       "genre_primary_xa": {
+        "mean": 0.1566,
+        "n": 3439
+       },
+       "genre_any_xa": {
+        "mean": 0.3088,
+        "n": 3439
+       },
+       "genre_family_xa": {
+        "mean": 0.5991,
+        "n": 3439
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1855,
+        "n": 3366
+       },
+       "desc_shared_xa": {
+        "mean": 2.2991,
+        "n": 3366
+       },
+       "share_of_neighbours_new": 0.0,
+       "same_genre_share_new": 0.0,
+       "mean_n10": 10.15,
+       "never_recommended": 0.0125,
+       "max_n10": 56
+      },
+      "full_length_windows": {
+       "albums": 0
+      }
+     },
+     "most_recommended": [
+      {
+       "key": "Album11263",
+       "artist": "Spirit",
+       "title": "Twelve Dreams of Dr. Sardonicus",
+       "year": "1970",
+       "rank": 6222,
+       "primary_genres": "Psychedelic Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 56
+      },
+      {
+       "key": "Album28752",
+       "artist": "Spring",
+       "title": "Spring",
+       "year": "1971",
+       "rank": 5993,
+       "primary_genres": "Progressive Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 52
+      },
+      {
+       "key": "Album10688",
+       "artist": "Testament",
+       "title": "The Legacy",
+       "year": "1987",
+       "rank": 2704,
+       "primary_genres": "Thrash Metal",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 48
+      },
+      {
+       "key": "Album5640",
+       "artist": "Manfred Mann's Earth Band",
+       "title": "Nightingales & Bombers",
+       "year": "1975",
+       "rank": 5610,
+       "primary_genres": "Progressive Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 43
+      },
+      {
+       "key": "Album47516",
+       "artist": "J-Live",
+       "title": "All of the Above",
+       "year": "2002",
+       "rank": 7762,
+       "primary_genres": "Conscious Hip Hop, Boom Bap",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 43
+      },
+      {
+       "key": "Album2733",
+       "artist": "Buffalo Springfield",
+       "title": "Buffalo Springfield Again",
+       "year": "1967",
+       "rank": 6989,
+       "primary_genres": "Folk Rock, Psychedelic Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 41
+      },
+      {
+       "key": "Album3800",
+       "artist": "Soundgarden",
+       "title": "Badmotorfinger",
+       "year": "1991",
+       "rank": 1538,
+       "primary_genres": "Grunge, Alternative Metal",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 40
+      },
+      {
+       "key": "Album974",
+       "artist": "Pink Floyd",
+       "title": "Wish You Were Here",
+       "year": "1975",
+       "rank": 4,
+       "primary_genres": "Progressive Rock, Art Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 39
+      },
+      {
+       "key": "Album624",
+       "artist": "David Bowie",
+       "title": "Aladdin Sane",
+       "year": "1973",
+       "rank": 884,
+       "primary_genres": "Glam Rock, Art Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 39
+      },
+      {
+       "key": "Album6440",
+       "artist": "Thin Lizzy",
+       "title": "Jailbreak",
+       "year": "1976",
+       "rank": 1122,
+       "primary_genres": "Hard Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 39
+      },
+      {
+       "key": "sp:5RTcg3hyd7ON4vBfYIx0Nl",
+       "artist": "The Dillinger Escape Plan",
+       "title": "Under the Running Board",
+       "year": "1998",
+       "rank": null,
+       "primary_genres": "",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 39
+      },
+      {
+       "key": "Album2574",
+       "artist": "The Replacements",
+       "title": "Tim",
+       "year": "1985",
+       "rank": 811,
+       "primary_genres": "Alternative Rock, Power Pop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 38
+      },
+      {
+       "key": "Album19601",
+       "artist": "Khan",
+       "title": "Space Shanty",
+       "year": "1972",
+       "rank": 2491,
+       "primary_genres": "Canterbury Scene, Progressive Rock, Space Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 38
+      },
+      {
+       "key": "Album330",
+       "artist": "Blur",
+       "title": "Parklife",
+       "year": "1994",
+       "rank": 4099,
+       "primary_genres": "Britpop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 38
+      },
+      {
+       "key": "sp:4dkPMU6yIGsMW7oyhexxg0",
+       "artist": "Charles Mingus",
+       "title": "Jazz Portraits: Mingus in Wonderland",
+       "year": "1959",
+       "rank": null,
+       "primary_genres": "",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 38
+      }
+     ]
+    },
+    "effnet_4clip": {
+     "name": "effnet_4clip",
+     "albums": 3974,
+     "new_albums": 0,
+     "share_new_in_pool": 0.0,
+     "albums_with_genre": 3542,
+     "albums_with_5_descriptors": 3469,
+     "metrics": {
+      "genre_primary": {
+       "mean": 0.2425,
+       "n": 3542
+      },
+      "genre_any": {
+       "mean": 0.4237,
+       "n": 3542
+      },
+      "genre_family": {
+       "mean": 0.6591,
+       "n": 3542
+      },
+      "desc_jaccard": {
+       "mean": 0.2066,
+       "n": 3469
+      },
+      "desc_shared": {
+       "mean": 2.5091,
+       "n": 3469
+      },
+      "genre_primary_xa": {
+       "mean": 0.2068,
+       "n": 3542
+      },
+      "genre_any_xa": {
+       "mean": 0.3871,
+       "n": 3542
+      },
+      "genre_family_xa": {
+       "mean": 0.6412,
+       "n": 3542
+      },
+      "desc_jaccard_xa": {
+       "mean": 0.1947,
+       "n": 3469
+      },
+      "desc_shared_xa": {
+       "mean": 2.3945,
+       "n": 3469
+      }
+     },
+     "random": {
+      "genre_primary": {
+       "mean": 0.0109,
+       "n": 3542
+      },
+      "genre_any": {
+       "mean": 0.0293,
+       "n": 3542
+      },
+      "genre_family": {
+       "mean": 0.1348,
+       "n": 3542
+      },
+      "desc_jaccard": {
+       "mean": 0.0693,
+       "n": 3469
+      },
+      "desc_shared": {
+       "mean": 0.9391,
+       "n": 3469
+      }
+     },
+     "hubness": {
+      "skew": 0.785,
+      "never": 0.0063,
+      "max": 37
+     },
+     "groups": {
+      "all": {
+       "albums": 3974,
+       "genre_primary": {
+        "mean": 0.2425,
+        "n": 3542
+       },
+       "genre_any": {
+        "mean": 0.4237,
+        "n": 3542
+       },
+       "genre_family": {
+        "mean": 0.6591,
+        "n": 3542
+       },
+       "desc_jaccard": {
+        "mean": 0.2066,
+        "n": 3469
+       },
+       "desc_shared": {
+        "mean": 2.5091,
+        "n": 3469
+       },
+       "genre_primary_xa": {
+        "mean": 0.2068,
+        "n": 3542
+       },
+       "genre_any_xa": {
+        "mean": 0.3871,
+        "n": 3542
+       },
+       "genre_family_xa": {
+        "mean": 0.6412,
+        "n": 3542
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1947,
+        "n": 3469
+       },
+       "desc_shared_xa": {
+        "mean": 2.3945,
+        "n": 3469
+       },
+       "share_of_neighbours_new": 0.0,
+       "same_genre_share_new": 0.0,
+       "mean_n10": 10.0,
+       "never_recommended": 0.0063,
+       "max_n10": 37
+      },
+      "new": {
+       "albums": 0
+      },
+      "existing": {
+       "albums": 3974,
+       "genre_primary": {
+        "mean": 0.2425,
+        "n": 3542
+       },
+       "genre_any": {
+        "mean": 0.4237,
+        "n": 3542
+       },
+       "genre_family": {
+        "mean": 0.6591,
+        "n": 3542
+       },
+       "desc_jaccard": {
+        "mean": 0.2066,
+        "n": 3469
+       },
+       "desc_shared": {
+        "mean": 2.5091,
+        "n": 3469
+       },
+       "genre_primary_xa": {
+        "mean": 0.2068,
+        "n": 3542
+       },
+       "genre_any_xa": {
+        "mean": 0.3871,
+        "n": 3542
+       },
+       "genre_family_xa": {
+        "mean": 0.6412,
+        "n": 3542
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1947,
+        "n": 3469
+       },
+       "desc_shared_xa": {
+        "mean": 2.3945,
+        "n": 3469
+       },
+       "share_of_neighbours_new": 0.0,
+       "same_genre_share_new": 0.0,
+       "mean_n10": 10.0,
+       "never_recommended": 0.0063,
+       "max_n10": 37
+      },
+      "under_4_clips": {
+       "albums": 147,
+       "genre_primary": {
+        "mean": 0.2191,
+        "n": 103
+       },
+       "genre_any": {
+        "mean": 0.3731,
+        "n": 103
+       },
+       "genre_family": {
+        "mean": 0.5937,
+        "n": 103
+       },
+       "desc_jaccard": {
+        "mean": 0.21,
+        "n": 103
+       },
+       "desc_shared": {
+        "mean": 2.5467,
+        "n": 103
+       },
+       "genre_primary_xa": {
+        "mean": 0.2028,
+        "n": 103
+       },
+       "genre_any_xa": {
+        "mean": 0.3517,
+        "n": 103
+       },
+       "genre_family_xa": {
+        "mean": 0.5887,
+        "n": 103
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.2057,
+        "n": 103
+       },
+       "desc_shared_xa": {
+        "mean": 2.5049,
+        "n": 103
+       },
+       "share_of_neighbours_new": 0.0,
+       "same_genre_share_new": 0.0,
+       "mean_n10": 7.31,
+       "never_recommended": 0.034,
+       "max_n10": 30
+      },
+      "4_clips": {
+       "albums": 3827,
+       "genre_primary": {
+        "mean": 0.2432,
+        "n": 3439
+       },
+       "genre_any": {
+        "mean": 0.4252,
+        "n": 3439
+       },
+       "genre_family": {
+        "mean": 0.6611,
+        "n": 3439
+       },
+       "desc_jaccard": {
+        "mean": 0.2065,
+        "n": 3366
+       },
+       "desc_shared": {
+        "mean": 2.5079,
+        "n": 3366
+       },
+       "genre_primary_xa": {
+        "mean": 0.2069,
+        "n": 3439
+       },
+       "genre_any_xa": {
+        "mean": 0.3882,
+        "n": 3439
+       },
+       "genre_family_xa": {
+        "mean": 0.6428,
+        "n": 3439
+       },
+       "desc_jaccard_xa": {
+        "mean": 0.1943,
+        "n": 3366
+       },
+       "desc_shared_xa": {
+        "mean": 2.3911,
+        "n": 3366
+       },
+       "share_of_neighbours_new": 0.0,
+       "same_genre_share_new": 0.0,
+       "mean_n10": 10.1,
+       "never_recommended": 0.0052,
+       "max_n10": 37
+      },
+      "full_length_windows": {
+       "albums": 0
+      }
+     },
+     "most_recommended": [
+      {
+       "key": "sp:0aXp4vn3w3SSQ4ypDIcVrG",
+       "artist": "Eddie and the Hot Rods",
+       "title": "Life on the Line",
+       "year": "1977",
+       "rank": null,
+       "primary_genres": "",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 37
+      },
+      {
+       "key": "Album8236",
+       "artist": "Yes",
+       "title": "Yessongs",
+       "year": "1973",
+       "rank": 1497,
+       "primary_genres": "Symphonic Prog, Progressive Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 36
+      },
+      {
+       "key": "Album18246",
+       "artist": "Wayne Shorter",
+       "title": "Speak No Evil",
+       "year": "1966",
+       "rank": 714,
+       "primary_genres": "Post-Bop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 34
+      },
+      {
+       "key": "Album17385",
+       "artist": "Charlie Mingus",
+       "title": "Tijuana Moods",
+       "year": "1962",
+       "rank": 2168,
+       "primary_genres": "Post-Bop",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 33
+      },
+      {
+       "key": "Album1421",
+       "artist": "X",
+       "title": "Los Angeles",
+       "year": "1980",
+       "rank": 4553,
+       "primary_genres": "Punk Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 32
+      },
+      {
+       "key": "Album2689",
+       "artist": "Wilco",
+       "title": "Yankee Hotel Foxtrot",
+       "year": "2002",
+       "rank": 256,
+       "primary_genres": "Indie Rock, Art Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 31
+      },
+      {
+       "key": "Album7673858",
+       "artist": "Jeff Rosenstock",
+       "title": "WORRY.",
+       "year": "2016",
+       "rank": 546,
+       "primary_genres": "Pop Punk, Power Pop, Indie Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 31
+      },
+      {
+       "key": "Album28662",
+       "artist": "Albert King",
+       "title": "Born Under a Bad Sign",
+       "year": "1967",
+       "rank": 3654,
+       "primary_genres": "Electric Blues, Soul Blues",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 31
+      },
+      {
+       "key": "Album3243",
+       "artist": "Pretenders",
+       "title": "Pretenders",
+       "year": "1980",
+       "rank": 7360,
+       "primary_genres": "New Wave",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 31
+      },
+      {
+       "key": "Album49254",
+       "artist": "12 Rods",
+       "title": "Split Personalities",
+       "year": "1998",
+       "rank": 1982,
+       "primary_genres": "Indie Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 30
+      },
+      {
+       "key": "sp:7eB8a0ypQTeibu0w3nG1o3",
+       "artist": "Deathspell Omega",
+       "title": "Kénôse",
+       "year": "2005",
+       "rank": null,
+       "primary_genres": "",
+       "new": false,
+       "n_clips": 3,
+       "source": "deezer",
+       "n10": 30
+      },
+      {
+       "key": "Album1593",
+       "artist": "Metallica",
+       "title": "Master of Puppets",
+       "year": "1986",
+       "rank": 100,
+       "primary_genres": "Thrash Metal",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 29
+      },
+      {
+       "key": "Album5917",
+       "artist": "Genesis",
+       "title": "Foxtrot",
+       "year": "1972",
+       "rank": 351,
+       "primary_genres": "Symphonic Prog, Progressive Rock",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 29
+      },
+      {
+       "key": "Album7819",
+       "artist": "Judas Priest",
+       "title": "Screaming for Vengeance",
+       "year": "1982",
+       "rank": 626,
+       "primary_genres": "Heavy Metal",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 29
+      },
+      {
+       "key": "Album46453",
+       "artist": "Autopsy",
+       "title": "Mental Funeral",
+       "year": "1991",
+       "rank": 843,
+       "primary_genres": "Death Metal, Death Doom Metal",
+       "new": false,
+       "n_clips": 4,
+       "source": "deezer",
+       "n10": 29
+      }
+     ]
+    }
+   }
+  }
+ }
+}

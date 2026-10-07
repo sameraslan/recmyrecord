@@ -11,6 +11,7 @@ test('without WebGL the map shows a message, asks for no theme file, and search 
   });
   await page.goto('/map');
   await expect(page.getByText(COPY.map.noWebgl)).toBeVisible();
+  await expect(page.getByText(COPY.map.noWebglHint)).toBeVisible();
   await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
   // No map, so no map data and no zoom corner.
   await expect(page.locator('.map-zoom')).toHaveCount(0);
@@ -30,7 +31,7 @@ test('without WebGL the album list, the similarity slider and links still work',
   await expect(page.locator('li.rec')).toHaveCount(5);
   // The slider (Task 7) is rendered without the map, so the list still switches stops.
   await page.getByRole('button', { name: COPY.slider.stops.mood, exact: true }).click();
-  await expect(page.locator('li.rec').first()).toContainText('Tindersticks');
+  await expect(page.locator('li.rec').first()).toContainText('Glitter');
   await page.locator('li.rec').first().locator('a.rec-main').click();
   await expect(page.getByRole('heading', { level: 1 })).not.toHaveText('In Rainbows');
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   COVER_FADE_END_PX,
+  COVER_MAX_PX,
   COVER_WORLD,
   MAX_ZOOM,
   coverCssPx,
@@ -14,7 +15,10 @@ import {
 } from "./zoomLimits";
 
 const H = 836;
-const MEDIAN_NEIGHBOUR_GAP = 0.0049; // world units, balanced and sonic layouts
+// The map of 10,467 albums, in world units (all three layouts).
+const MEDIAN_NEIGHBOUR_GAP = 0.0032;
+const GRID_STEP = 0.00077; // 0.001 layout units: the least distance between two albums
+const PHONE_H = 784; // canvas of a 390 x 844 phone
 
 describe("zoom limits", () => {
   it("converts between zoom and map scale both ways", () => {
@@ -23,9 +27,9 @@ describe("zoom limits", () => {
     expect(coverCssPx(zoomForCoverPx(24, H), H)).toBeCloseTo(24, 10);
   });
 
-  it("sizes covers at about 1.4x the median neighbour gap", () => {
-    expect(COVER_WORLD / MEDIAN_NEIGHBOUR_GAP).toBeGreaterThan(1.3);
-    expect(COVER_WORLD / MEDIAN_NEIGHBOUR_GAP).toBeLessThan(1.5);
+  it("sizes covers at about 2.1x the median neighbour gap", () => {
+    expect(COVER_WORLD / MEDIAN_NEIGHBOUR_GAP).toBeGreaterThan(2);
+    expect(COVER_WORLD / MEDIAN_NEIGHBOUR_GAP).toBeLessThan(2.3);
   });
 
   it("cross-fades between 16 and 32 px", () => {
@@ -34,10 +38,16 @@ describe("zoom limits", () => {
     expect(coverFade(zoomForCoverPx(COVER_FADE_END_PX, H), H)).toBe(1);
   });
 
-  it("leaves about 100 px between median neighbours at the maximum zoom", () => {
-    const gap = MEDIAN_NEIGHBOUR_GAP * pxPerWorld(MAX_ZOOM, H);
-    expect(gap).toBeGreaterThan(95);
-    expect(gap).toBeLessThan(130);
+  it("at the maximum zoom one grid step clears a full cover, on a desktop and on a phone canvas", () => {
+    expect(MAX_ZOOM).toBe(120);
+    for (const h of [H, PHONE_H]) {
+      expect(coverCssPx(MAX_ZOOM, h)).toBe(COVER_MAX_PX);
+      // Two albums one step apart (the closest any two are) do not overlap at all.
+      const step = GRID_STEP * pxPerWorld(MAX_ZOOM, h);
+      expect(step).toBeGreaterThanOrEqual(COVER_MAX_PX);
+      // And not much further in than that needs: under 10 px between the two covers.
+      expect(step - COVER_MAX_PX).toBeLessThan(10);
+    }
   });
 
   it("grows dots gently with the map scale, from 3 px to about 7 px as covers start, at most 7.2", () => {

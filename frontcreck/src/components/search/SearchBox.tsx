@@ -2,7 +2,6 @@
 
 import { useRouter } from 'next/navigation';
 import {
-  Fragment,
   useCallback,
   useEffect,
   useId,
@@ -13,6 +12,7 @@ import {
   type KeyboardEvent,
   type MouseEvent as ReactMouseEvent,
 } from 'react';
+import { BracketText } from '@/components/BracketText';
 import { Cover } from '@/components/Cover';
 import { Icon } from '@/components/Icon';
 import { getSearch, type LoadedSearch } from '@/components/search/searchIndex';
@@ -22,7 +22,6 @@ import { toSummary } from '@/lib/data/catalog';
 import { DataLoadError } from '@/lib/data/client';
 import { useCatalog } from '@/lib/data/useData';
 import { suppressGhostClick } from '@/lib/ghost-click';
-import { splitHighlights, type HighlightRange } from '@/lib/highlight';
 import { isNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
 import type { SearchHit } from '@/lib/search';
@@ -56,14 +55,6 @@ export interface SearchBoxProps {
   onChosen?: (id: AlbumId) => void;
   /** Escape pressed on an empty, closed field. */
   onEscapeEmpty?: () => void;
-}
-
-function Marked({ text, ranges }: { text: string; ranges: HighlightRange[] }) {
-  return (
-    <>
-      {splitHighlights(text, ranges).map((p, i) => (p.mark ? <mark key={i}>{p.text}</mark> : <Fragment key={i}>{p.text}</Fragment>))}
-    </>
-  );
 }
 
 /** The no-match sentence with the query in bold. The copy is split on a sentinel, not searched for the
@@ -377,10 +368,10 @@ export function SearchBox({ variant, label = COPY.search.label, autoFocus = fals
                     <Cover album={a} size={44} />
                     <div className="opt-text">
                       <div className="opt-t">
-                        <Marked text={a.title} ranges={h.title} />
+                        <BracketText text={a.title} ranges={h.title} />
                       </div>
                       <div className="opt-a">
-                        <Marked text={a.artist} ranges={h.artist} />
+                        <BracketText text={a.artist} ranges={h.artist} />
                       </div>
                     </div>
                   </li>

@@ -32,6 +32,8 @@
 .opt-text { min-width: 0; }
 .opt-t { font-family: var(--font-serif); font-weight: 600; font-size: 19px; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .opt-a { font-size: 13.5px; color: var(--color-dust); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* One line with an ellipsis: the bracketed form is plain text here. */
+.opt .bk, .opt .bh { display: inline; }
 .opt mark { background: none; color: var(--color-paper); box-shadow: inset 0 -1px 0 var(--color-lamp); }
 .combo-empty { padding: 14px 12px; font-size: 14.5px; color: var(--color-dust); overflow-wrap: anywhere; }
 .combo-empty b { color: var(--color-paper); font-weight: 500; }
@@ -48,6 +50,8 @@
 /* While the remote image or the sprite loads the box is empty; only the tile (a failure state) is coloured and lettered. */
 .cover { position: relative; aspect-ratio: 1 / 1; overflow: hidden; border-radius: 2px; background-color: var(--color-room-3); flex: none; }
 .cover[data-state="tile"] { background-color: var(--fb, #2c241c); }
+/* A hairline inside the tile's edge, so a dark tile still has a shape on the album header's wash. */
+.cover[data-state="tile"]::after { content: ""; position: absolute; inset: 0; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(243, 238, 231, .16); pointer-events: none; }
 .cover .fb {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-family: var(--font-serif); font-weight: 500; line-height: 1; color: rgba(243, 238, 231, .78); font-size: var(--fs, 20px);
@@ -55,6 +59,9 @@
 .cover .spr { position: absolute; inset: 0; background-repeat: no-repeat; filter: saturate(.92) contrast(.96); }
 .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .35s var(--out); }
 .cover img.ok { opacity: 1; }
+/* A video frame (Cover's data-frame): slightly enlarged in the clipped box, which cuts the slivers of the frame's
+ * own border at its left and right. */
+.cover[data-frame] img { transform: scale(var(--zoom, 1.06)); }
 
 /* header search toggle (phone) and sheet */
 .search-toggle { display: none; }

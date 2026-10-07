@@ -1,0 +1,152 @@
+{
+ "album": {
+  "key": "Album2402",
+  "title": "On the Beach",
+  "artist": "Neil Young",
+  "slug": "on-the-beach-neil-young",
+  "mean_s": 0.0,
+  "means": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "override": true,
+  "legacy_uri": "",
+  "artist_latin": "",
+  "title_latin": "",
+  "deezer_url": "https://www.deezer.com/album/14459694",
+  "apple_url": "https://music.apple.com/us/album/on-the-beach/1015732002",
+  "rank": 178,
+  "year": "1974",
+  "new": true
+ },
+ "expected": {
+  "key": "Album2402",
+  "source": "deezer",
+  "source_album_id": "14459694",
+  "matched_title": "On the Beach",
+  "matched_artist": "Neil Young",
+  "score": "0.9450",
+  "ambiguous": 0,
+  "n_tracks": 8,
+  "n_clips_available": 8,
+  "matched_by": "deezer_id",
+  "edition": "",
+  "runtime_s": 2369,
+  "under_covered": 0,
+  "short_preview": ""
+ },
+ "responses": {
+  "https://api.deezer.com/album/14459694": {
+   "id": 14459694,
+   "title": "On the Beach",
+   "nb_tracks": 8,
+   "duration": 2369,
+   "record_type": "album",
+   "artist": {
+    "id": 1379,
+    "name": "Neil Young"
+   }
+  },
+  "https://api.deezer.com/album/14459694/tracks?limit=200": {
+   "data": [
+    {
+     "id": 135376822,
+     "title": "Walk On (2016 Remaster)",
+     "duration": 162,
+     "track_position": 1,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/135376822",
+     "artist": {
+      "id": 1379,
+      "name": "Neil Young"
+     }
+    },
+    {
+     "id": 135376824,
+     "title": "See the Sky About to Rain (2016 Remaster)",
+     "duration": 302,
+     "track_position": 2,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/135376824",
+     "artist": {
+      "id": 1379,
+      "name": "Neil Young"
+     }
+    },
+    {
+     "id": 135376826,
+     "title": "Revolution Blues (2016 Remaster)",
+     "duration": 243,
+     "track_position": 3,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/135376826",
+     "artist": {
+      "id": 1379,
+      "name": "Neil Young"
+     }
+    },
+    {
+     "id": 135376828,
+     "title": "For the Turnstiles (2016 Remaster)",
+     "duration": 194,
+     "track_position": 4,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/135376828",
+     "artist": {
+      "id": 1379,
+      "name": "Neil Young"
+     }
+    },
+    {
+     "id": 135376830,
+     "title": "Vampire Blues (2016 Remaster)",
+     "duration": 250,
+     "track_position": 5,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/135376830",
+     "artist": {
+      "id": 1379,
+      "name": "Neil Young"
+     }
+    },
+    {
+     "id": 135376832,
+     "title": "On the Beach (2016 Remaster)",
+     "duration": 419,
+     "track_position": 6,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/135376832",
+     "artist": {
+      "id": 1379,
+      "name": "Neil Young"
+     }
+    },
+    {
+     "id": 135376834,
+     "title": "Motion Pictures (For Carrie) (2016 Remaster)",
+     "duration": 263,
+     "track_position": 7,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/135376834",
+     "artist": {
+      "id": 1379,
+      "name": "Neil Young"
+     }
+    },
+    {
+     "id": 135376836,
+     "title": "Ambulance Blues (2016 Remaster)",
+     "duration": 536,
+     "track_position": 8,
+     "disk_number": 1,
+     "preview": "https://previews.invalid/135376836",
+     "artist": {
+      "id": 1379,
+      "name": "Neil Young"
+     }
+    }
+   ]
+  }
+ }
+}

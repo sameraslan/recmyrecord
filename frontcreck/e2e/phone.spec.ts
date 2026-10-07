@@ -25,6 +25,11 @@ test.describe('phone album', () => {
     await shot(page, info, 'album-list');
     await waitForMap(page);
     const fab = page.getByRole('button', { name: COPY.phone.mapLabel });
+    // While the strip (with its own "Open map") is on screen the floating Map button is away (mapPill.ts);
+    // back at the top of the list, with the strip out of view, it shows.
+    await expect(page.locator('.fab-map')).toBeHidden();
+    await page.locator('#seed-title').scrollIntoViewIfNeeded();
+    await expect(strip).not.toBeInViewport();
     await expect(fab).toBeVisible();
     await expect(page.locator('.mode')).toBeHidden();
     await fab.tap();

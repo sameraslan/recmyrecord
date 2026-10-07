@@ -27,8 +27,9 @@ export interface ViewBounds {
   bottom: number;
 }
 
-/** The camera-space rectangle three.js projects onto the whole canvas (same steps as updateProjectionMatrix). */
-export function viewBounds(c: OrthoCameraLike): ViewBounds {
+/** The camera-space rectangle three.js projects onto the whole canvas (same steps as updateProjectionMatrix).
+ * `out`: an object to fill instead of a new one, for a caller that must not allocate. */
+export function viewBounds(c: OrthoCameraLike, out?: ViewBounds): ViewBounds {
   const dx = (c.right - c.left) / (2 * c.zoom);
   const dy = (c.top - c.bottom) / (2 * c.zoom);
   const cx = (c.right + c.left) / 2;
@@ -46,7 +47,12 @@ export function viewBounds(c: OrthoCameraLike): ViewBounds {
     top -= scaleH * v.offsetY;
     bottom = top - scaleH * v.height;
   }
-  return { left, right, top, bottom };
+  if (!out) return { left, right, top, bottom };
+  out.left = left;
+  out.right = right;
+  out.top = top;
+  out.bottom = bottom;
+  return out;
 }
 
 /** Client (or canvas-local, with `canvasRect`) pixel position of a world point. */

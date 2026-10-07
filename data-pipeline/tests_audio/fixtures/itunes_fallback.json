@@ -1,0 +1,671 @@
+{
+ "album": {
+  "key": "spotify:album:22ZgHorVJzcZ4m8YBZCw4w",
+  "title": "Future Days",
+  "artist": "Can",
+  "slug": "future-days-can",
+  "mean_s": 613.39625,
+  "means": [
+   5.75,
+   0.75,
+   4.0
+  ],
+  "override": false
+ },
+ "expected": {
+  "key": "spotify:album:22ZgHorVJzcZ4m8YBZCw4w",
+  "source": "itunes:us",
+  "source_album_id": "826492492",
+  "matched_title": "Future Days (Remastered)",
+  "matched_artist": "Can",
+  "score": "1.0000",
+  "ambiguous": 0,
+  "n_tracks": 4,
+  "n_clips_available": 4
+ },
+ "responses": {
+  "https://api.deezer.com/search/album?q=artist%3A%22Can%22+album%3A%22Future+Days%22&limit=25": {
+   "data": []
+  },
+  "https://api.deezer.com/search/album?q=Can+Future+Days&limit=25": {
+   "data": [
+    {
+     "id": 906144932,
+     "title": "California (Deluxe Edition)",
+     "nb_tracks": 28,
+     "artist": {
+      "id": 409,
+      "name": "blink-182"
+     }
+    },
+    {
+     "id": 79886802,
+     "title": "50th Anniversary Collector's Edition",
+     "nb_tracks": 115,
+     "artist": {
+      "id": 3094,
+      "name": "Neil Diamond"
+     }
+    },
+    {
+     "id": 49841122,
+     "title": "Ecca Vandal",
+     "nb_tracks": 12,
+     "artist": {
+      "id": 5895611,
+      "name": "Ecca Vandal"
+     }
+    },
+    {
+     "id": 807400321,
+     "title": "I Can't Give Everything Away (2002 - 2016)",
+     "nb_tracks": 163,
+     "artist": {
+      "id": 997,
+      "name": "David Bowie"
+     }
+    },
+    {
+     "id": 380003347,
+     "title": "The 7” Singles",
+     "nb_tracks": 159,
+     "artist": {
+      "id": 1446,
+      "name": "Paul McCartney"
+     }
+    }
+   ]
+  },
+  "https://api.deezer.com/search/album?q=artist%3A%22Can%22&limit=50": {
+   "data": [
+    {
+     "id": 946412211,
+     "title": "SANTIAGO CAÑETE / Enganchado En Vivo en LA JUNTADA DE LOS ARTISTAS",
+     "nb_tracks": 6,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 904402482,
+     "title": "CANDU DOMINGUEZ x G SONY / Enganchado en Vivo en LA JUNTADA DE LOS ARTISTAS",
+     "nb_tracks": 8,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 1108306,
+     "title": "Canta Como Tu Artista Preferido Con Pista Musical De Los Bukis",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 13408,
+      "name": "Los Bukis"
+     }
+    },
+    {
+     "id": 216360,
+     "title": "JUST STAND UP!",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 133185,
+      "name": "Artists Stand Up To Cancer"
+     }
+    },
+    {
+     "id": 75024862,
+     "title": "Can You Ever Forgive Me? (Original Motion Picture Soundtrack)",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 551852772,
+     "title": "Out Where I Can Wander",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 220217335,
+      "name": "Escape Artist Lovers"
+     }
+    },
+    {
+     "id": 911421811,
+     "title": "Tu Falta De Querer (Live)",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 137051342,
+     "title": "Canal Street (Original Motion Picture Soundtrack)",
+     "nb_tracks": 14,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 15094219,
+     "title": "Rojo y Negro - Canciones Republicanas de la Guerra Civil Española y de la Resistencia al Franquismo",
+     "nb_tracks": 12,
+     "artist": {
+      "id": 11710319,
+      "name": "Club Artístico Libertad"
+     }
+    },
+    {
+     "id": 5473611,
+     "title": "Ole Iles Canaries! La Musique des Vacances",
+     "nb_tracks": 12,
+     "artist": {
+      "id": 3793571,
+      "name": "Quelques Artistes"
+     }
+    },
+    {
+     "id": 13161602,
+     "title": "Música de Spa: Canciones Relajantes New Age para Centro de Bienestar y Salón de Belleza con Sonidos de la Naturaleza",
+     "nb_tracks": 35,
+     "artist": {
+      "id": 10399322,
+      "name": "Best Relaxing SPA Music & Rest & Relax Nature Sounds Artists & Christian Grey"
+     }
+    },
+    {
+     "id": 925494,
+     "title": "Le canzoni che hanno fatto l'Italia",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 1198283,
+      "name": "Artisti per l'Italia"
+     }
+    },
+    {
+     "id": 911391671,
+     "title": "Devuélvete (Live)",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 998771211,
+     "title": "Tu Falta De Querer / La Gata Bajo La Lluvia (En Vivo en C Art Media)",
+     "nb_tracks": 2,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 1070155972,
+     "title": "CANDU DOMÍNGUEZ / Enganchado En Vivo en LA JUNTADA DE LOS ARTISTAS",
+     "nb_tracks": 3,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 423360907,
+     "title": "Grandi Classici Italiani – Relax Con Le Più Belle Canzoni Italiane",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 199842387,
+      "name": "Artisti Vari Italiani"
+     }
+    },
+    {
+     "id": 1070155922,
+     "title": "Recuérdame",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 1070156002,
+     "title": "Todo lo Perdí Por Ti / Lost On You",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 965850481,
+     "title": "Hoy Tengo Ganas De Ti",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 666953881,
+     "title": "Não Sufoque o Artista",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 10426250,
+      "name": "Zé Cantor"
+     }
+    },
+    {
+     "id": 6273531,
+     "title": "Canta Como Tu Artista Preferido Con Pista Musical De Los Bukis y Los Broncos",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 13408,
+      "name": "Los Bukis"
+     }
+    },
+    {
+     "id": 6711901,
+     "title": "Artists Against Cancer Volume One",
+     "nb_tracks": 13,
+     "artist": {
+      "id": 4919461,
+      "name": "Artists Against Cancer"
+     }
+    },
+    {
+     "id": 896830922,
+     "title": "Canto a un Príncipe (Various Artists)",
+     "nb_tracks": 8,
+     "artist": {
+      "id": 366644522,
+      "name": "BLUESAUCE LABEL"
+     }
+    },
+    {
+     "id": 535120,
+     "title": "La Cantante de Tango (Original Motion Picture Soundtrack)",
+     "nb_tracks": 17,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 1004432801,
+     "title": "Hoy Tengo Ganas De Ti (En Vivo en C Art Media)",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 893544602,
+     "title": "Kid Cannabis (Original Motion Picture Soundtrack)",
+     "nb_tracks": 21,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 973189191,
+     "title": "Tu Falta De Querer / Devuélvete (Live)",
+     "nb_tracks": 2,
+     "artist": {
+      "id": 211587517,
+      "name": "Candu DomÍnguez"
+     }
+    },
+    {
+     "id": 1060702,
+     "title": "I Can't Think Straight (Original Motion Picture Soundtrack)",
+     "nb_tracks": 14,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 378973587,
+     "title": "Heaven Can Wait (Acapella)",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 122420852,
+      "name": "Webb the Artist"
+     }
+    },
+    {
+     "id": 1004534011,
+     "title": "Todo Lo Perdí Por Ti / Lost on You (En Vivo en C Art Media)",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 435675927,
+     "title": "Anni 80 Italiani: Ricordi Di Gioventù Con Le Più Belle Canzoni",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 199842387,
+      "name": "Artisti Vari Italiani"
+     }
+    },
+    {
+     "id": 130363242,
+     "title": "Simón Díaz Cuenta Y Canta 50 Años De Vida Artística (En Vivo)",
+     "nb_tracks": 20,
+     "artist": {
+      "id": 321122,
+      "name": "Simon Diaz"
+     }
+    },
+    {
+     "id": 461615845,
+     "title": "FERRAGOSTO ITALIANO: Le Migliori Canzoni Dell’Estate 2023 | Festa, Aperitivo, Amicizia",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 199842387,
+      "name": "Artisti Vari Italiani"
+     }
+    },
+    {
+     "id": 539341942,
+     "title": "Canciones De Amor",
+     "nb_tracks": 4,
+     "artist": {
+      "id": 110197332,
+      "name": "Latin Artist Collective"
+     }
+    },
+    {
+     "id": 426161587,
+     "title": "Cantautorato Italiano – Le Più Belle Canzoni Per Rilassarsi",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 199842387,
+      "name": "Artisti Vari Italiani"
+     }
+    },
+    {
+     "id": 241306512,
+     "title": "Portrait Of The Artist As A Young Trash Can",
+     "nb_tracks": 27,
+     "artist": {
+      "id": 430270,
+      "name": "Hallelujah the Hills"
+     }
+    },
+    {
+     "id": 441772547,
+     "title": "ESTATE ITALIANA – Le Migliori Canzoni Di Sempre Per Un’Estate Indimenticabile",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 207550077,
+      "name": "I Più Grandi Successi"
+     }
+    },
+    {
+     "id": 348703,
+     "title": "Canciones Infantiles - Los Gnomos",
+     "nb_tracks": 25,
+     "artist": {
+      "id": 255266,
+      "name": "Various Artists - Infantil"
+     }
+    },
+    {
+     "id": 81481882,
+     "title": "Los 30 Mejores Cantos Catolicos, Vol. 3",
+     "nb_tracks": 30,
+     "artist": {
+      "id": 139243522,
+      "name": "Variouas Artists"
+     }
+    },
+    {
+     "id": 1003731721,
+     "title": "Cosas del Amor (En Vivo en C Art Media)",
+     "nb_tracks": 1,
+     "artist": {
+      "id": 358288952,
+      "name": "La Juntada De Los Artistas"
+     }
+    },
+    {
+     "id": 591102832,
+     "title": "Arequipa y el Cantor",
+     "nb_tracks": 12,
+     "artist": {
+      "id": 65382392,
+      "name": "Yamil Quiere Ser Artista"
+     }
+    },
+    {
+     "id": 399317567,
+     "title": "Música para Dibujar: Canciones Inspiradoras para la Creación Artística",
+     "nb_tracks": 20,
+     "artist": {
+      "id": 3841011,
+      "name": "Music on Hold"
+     }
+    },
+    {
+     "id": 123938842,
+     "title": "Various Artists #1",
+     "nb_tracks": 20,
+     "artist": {
+      "id": 301181,
+      "name": "Bayt"
+     }
+    },
+    {
+     "id": 9078065,
+     "title": "Annie (Original Motion Picture Soundtrack)",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 587557,
+     "title": "Greedy: A West Coast Crime Story Soundtrack",
+     "nb_tracks": 18,
+     "artist": {
+      "id": 505176,
+      "name": "Chopah, Cilla Caine, Bad Credit, K5, E-40, Keak Da Sneak and other various artists"
+     }
+    },
+    {
+     "id": 39369351,
+     "title": "The Lincoln Lawyer (Original Motion Picture Soundtrack)",
+     "nb_tracks": 14,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 13526241,
+     "title": "Cafe Society (Original Motion Picture Soundtrack)",
+     "nb_tracks": 15,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 81336192,
+     "title": "Camp (Original Motion Picture Soundtrack)",
+     "nb_tracks": 14,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    },
+    {
+     "id": 615297992,
+     "title": "Camp Fire",
+     "nb_tracks": 20,
+     "artist": {
+      "id": 273245732,
+      "name": "Various Artists (Naturgeräusche)"
+     }
+    },
+    {
+     "id": 7472228,
+     "title": "American Dream Cali's Prop 215 (Original Motion Picture Soundtrack)",
+     "nb_tracks": 28,
+     "artist": {
+      "id": 5080,
+      "name": "Various Artists"
+     }
+    }
+   ],
+   "next": "https://api.deezer.com/search/album?q=artist%3A%22Can%22&limit=50&index=50"
+  },
+  "https://itunes.apple.com/search?term=Can+Future+Days&entity=album&limit=25&country=us": {
+   "results": [
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 826492492,
+     "artistName": "Can",
+     "collectionName": "Future Days (Remastered)",
+     "trackCount": 4
+    },
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 1525933483,
+     "artistName": "Oasis",
+     "collectionName": "(What's The Story) Morning Glory? [Deluxe Remastered Edition]",
+     "trackCount": 40
+    },
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 1772797314,
+     "artistName": "Boyz II Men",
+     "collectionName": "Christmas Interpretations (Remastered 2024)",
+     "trackCount": 10
+    },
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 725784933,
+     "artistName": "Huey Lewis & The News",
+     "collectionName": "Greatest Hits (Remastered)",
+     "trackCount": 21
+    },
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 1134092126,
+     "artistName": "The Chainsmokers",
+     "collectionName": "Don't Let Me Down (feat. Daya) [Remixes] - EP",
+     "trackCount": 6
+    },
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 1107820371,
+     "artistName": "Phil Collins",
+     "collectionName": "...But Seriously (Remastered)",
+     "trackCount": 12
+    },
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 1689489652,
+     "artistName": "Erich Kunzel & Cincinnati Pops Orchestra",
+     "collectionName": "The Ultimate Movie Music Collection",
+     "trackCount": 60
+    },
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 6778941152,
+     "artistName": "Fabrizio Paterlini",
+     "collectionName": "Live Layers",
+     "trackCount": 22
+    }
+   ]
+  },
+  "https://itunes.apple.com/lookup?id=826492492&entity=song&limit=200&country=us": {
+   "results": [
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "collectionId": 826492492,
+     "artistName": "Can",
+     "collectionName": "Future Days (Remastered)",
+     "trackCount": 4
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "collectionId": 826492492,
+     "trackId": 826492498,
+     "artistName": "Can",
+     "collectionName": "Future Days (Remastered)",
+     "trackName": "Future Days",
+     "previewUrl": "https://previews.invalid/826492498",
+     "discNumber": 1,
+     "trackCount": 4,
+     "trackNumber": 1,
+     "trackTimeMillis": 569573
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "collectionId": 826492492,
+     "trackId": 826492499,
+     "artistName": "Can",
+     "collectionName": "Future Days (Remastered)",
+     "trackName": "Spray",
+     "previewUrl": "https://previews.invalid/826492499",
+     "discNumber": 1,
+     "trackCount": 4,
+     "trackNumber": 2,
+     "trackTimeMillis": 509066
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "collectionId": 826492492,
+     "trackId": 826492500,
+     "artistName": "Can",
+     "collectionName": "Future Days (Remastered)",
+     "trackName": "Moonshake",
+     "previewUrl": "https://previews.invalid/826492500",
+     "discNumber": 1,
+     "trackCount": 4,
+     "trackNumber": 3,
+     "trackTimeMillis": 182186
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "collectionId": 826492492,
+     "trackId": 826492501,
+     "artistName": "Can",
+     "collectionName": "Future Days (Remastered)",
+     "trackName": "Bel Air",
+     "previewUrl": "https://previews.invalid/826492501",
+     "discNumber": 1,
+     "trackCount": 4,
+     "trackNumber": 4,
+     "trackTimeMillis": 1192760
+    }
+   ]
+  }
+ }
+}

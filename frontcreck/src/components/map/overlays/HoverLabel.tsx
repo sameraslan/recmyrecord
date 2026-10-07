@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect } from 'react';
+import { BracketText } from '@/components/BracketText';
 import { Cover } from '@/components/Cover';
 import { toSummary } from '@/lib/data/catalog';
 import type { AlbumRecord } from '@/lib/types';
@@ -35,8 +36,12 @@ export function HoverLabel({ albums }: { albums: AlbumRecord[] }) {
         <>
           <Cover album={a} size={40} />
           <div className="map-tip-text">
-            <div className="t">{a.title}</div>
-            <div className="a">{a.artist}</div>
+            <div className="t">
+              <BracketText text={a.title} />
+            </div>
+            <div className="a">
+              <BracketText text={a.artist} />
+            </div>
           </div>
         </>
       ) : null}

@@ -30,10 +30,10 @@ export default defineConfig({
     launchOptions: { args: gpu ? GPU_ARGS : WEBGL_ARGS },
   },
   projects: [
-    { name: 'desktop', testIgnore: /nowebgl\.spec\.ts/, use: { viewport: { width: 1440, height: 900 } } },
+    { name: 'desktop', testIgnore: /(nowebgl|webgl1)\.spec\.ts/, use: { viewport: { width: 1440, height: 900 } } },
     {
       name: 'phone',
-      testIgnore: /nowebgl\.spec\.ts/,
+      testIgnore: /(nowebgl|webgl1)\.spec\.ts/,
       use: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
     },
     {
@@ -41,6 +41,8 @@ export default defineConfig({
       testMatch: /nowebgl\.spec\.ts/,
       use: { viewport: { width: 1440, height: 900 }, launchOptions: { args: ['--disable-3d-apis'] } },
     },
+    // WebGL1 without WebGL2: the page stubs getContext('webgl2') to return null (e2e/webgl1.spec.ts).
+    { name: 'webgl1', testMatch: /webgl1\.spec\.ts/, use: { viewport: { width: 1440, height: 900 } } },
   ],
   webServer: {
     command: dev ? `npx next dev --port ${PORT}` : `npm run build && npx next start --port ${PORT}`,

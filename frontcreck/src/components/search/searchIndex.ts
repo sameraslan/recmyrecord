@@ -7,7 +7,7 @@ export interface LoadedSearch {
   catalog: Catalog;
   index: SearchIndex;
   search: (index: SearchIndex, query: string) => SearchHit[];
-  /** The keystroke path: prefix matches only, well under a millisecond. */
+  /** The keystroke path: prefix matches only, a millisecond at most. */
   prefix: (index: SearchIndex, query: string) => SearchHit[];
   /** Typo matches (Fuse, tens of milliseconds): run off the keystroke path, after a pause. */
   fuzzy: (index: SearchIndex, query: string) => SearchHit[];

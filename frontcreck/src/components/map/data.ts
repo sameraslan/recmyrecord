@@ -1,4 +1,4 @@
-import { atlasCount, atlasUrl } from '@/lib/data/sprites';
+import { MAX_ATLAS_SHEETS, atlasCount, atlasUrl } from '@/lib/data/sprites';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumRecord, Positions, StopId } from '@/lib/types';
 
@@ -76,7 +76,8 @@ export function buildMapData(albums: AlbumRecord[], positions: Positions): MapDa
     n: albums.length,
     albums,
     pos: normalizePositions(positions, tx),
-    atlasUrls: Array.from({ length: atlasCount(albums.length) }, (_, i) => atlasUrl(i)),
+    // Sheets the map could not draw (shaders/album.ts) are not downloaded; their albums stay stars.
+    atlasUrls: Array.from({ length: Math.min(atlasCount(albums.length), MAX_ATLAS_SHEETS) }, (_, i) => atlasUrl(i)),
     tx,
   };
 }

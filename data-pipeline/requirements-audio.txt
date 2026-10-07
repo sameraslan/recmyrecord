@@ -1,0 +1,7 @@
+# The audio stage (rmr_audio). Python 3.11: the arm64 Essentia wheel needs numpy<2.
+essentia-tensorflow==2.1b6.dev1177
+numpy==1.26.4
+pandas==3.0.6
+requests==2.34.2
+rapidfuzz==3.14.6
+pytest==9.1.1

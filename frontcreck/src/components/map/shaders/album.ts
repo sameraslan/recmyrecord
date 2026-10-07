@@ -14,6 +14,7 @@ import {
   coverFade,
   dotCssPx,
 } from "../state/zoomLimits";
+import { MAX_ATLAS_SHEETS } from "@/lib/data/sprites";
 
 /**
  * Sprite sizes (see state/zoomLimits.ts): the album's body is a dot of 3 to 7 CSS px that grows gently with the
@@ -77,7 +78,9 @@ export const DOT_ALPHA_DIMMED = 0.34;
 /** The dimmed map draws its dots this much larger (mockup `muted`: radius * 1.35), easing with the alpha. */
 export const MUTED_DOT_SCALE = 1.35;
 
-/** Alpha factor of the other covers while an album is picked (mockup coverA * .5); dots are unaffected. */
+/** How much of the other covers' own colour is left while an album is picked (mockup coverA * .5): the rest is
+ * the page colour (the map's background under the gas), mixed in by the fragment shader. The covers stay opaque, so where they overlap
+ * the one on top hides the one under it instead of both showing through. Stars are unaffected. */
 export const SELECTION_DIM = 0.5;
 
 /** True when the picked album is drawn large and framed by the shader (else OverlayDriver's DOM ring marks it). */
@@ -100,7 +103,20 @@ const BACKING_RGB = [7, 6, 10] as const;
 /** The dark casing under white marks, the same as the focus lines' casing (rgb 6, 6, 10). */
 const CASING_RGB = [6, 6, 10] as const;
 
-export const ALBUM_VERTEX_SHADER = /* glsl */ `
+/**
+ * Atlas sheets the shader is written for: one texture unit per sheet the data has, at least one, at most
+ * MAX_ATLAS_SHEETS and what the device offers (`maxTextureUnits`, 16 or more under WebGL2). Albums on a sheet
+ * beyond that stay dots. Measured (headless Chrome, M1 Pro, 10,467 albums, 11 sheets): a frame costs the same
+ * as with one array texture, and a sheet upload about a third of an array layer's in software rendering, where
+ * mipmaps are rebuilt for the whole array; larger 4096 px sheets upload more slowly per sheet.
+ */
+export function shaderSheetCount(sheets: number, maxTextureUnits = MAX_ATLAS_SHEETS): number {
+  return Math.max(1, Math.min(sheets, MAX_ATLAS_SHEETS, maxTextureUnits));
+}
+
+export const albumVertexShader = (sheetCount: number): string => {
+  const sheets = shaderSheetCount(sheetCount);
+  return /* glsl */ `
   attribute vec2 a_pos_sonic;
   attribute vec2 a_pos_balanced;
   attribute vec2 a_pos_mood;
@@ -119,7 +135,7 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   uniform float u_hoverIndex;   // -1 = no hover target
   uniform float u_selectedIndex; // album picked in Explore, -1 = none (always -1 in album view)
   uniform float u_maxSpritePx;  // device px cap, 0.18 of the visible map's height (below the header) * dpr
-  uniform float u_atlasLoaded[5];
+  uniform float u_atlasLoaded[${sheets}];
   uniform float u_dotAlpha;     // eases from DOT_ALPHA to DOT_ALPHA_DIMMED as the map dims
 
   varying vec4 v_atlasRect;     // atlas cell: origin.xy, size.zw
@@ -162,12 +178,8 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   }
 
   float atlasLoaded(int idx) {
-    if (idx == 0) return u_atlasLoaded[0];
-    if (idx == 1) return u_atlasLoaded[1];
-    if (idx == 2) return u_atlasLoaded[2];
-    if (idx == 3) return u_atlasLoaded[3];
-    if (idx == 4) return u_atlasLoaded[4];
-    return 0.0;
+    if (idx < 0 || idx >= ${sheets}) return 0.0;
+    return u_atlasLoaded[idx];
   }
 
   void main() {
@@ -265,19 +277,21 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
     v_under = under;
   }
 `;
+};
 
-export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
+export const albumFragmentShader = (sheetCount: number): string => {
+  const sheets = shaderSheetCount(sheetCount);
+  const ids = Array.from({ length: sheets }, (_, i) => i);
+  // A sampler cannot be picked by a computed index in GLSL ES, so the choice is spelled out per sheet.
+  const pick = ids.map((i) => (i < sheets - 1 ? `if (idx == ${i}) return texture2D(u_atlas${i}, uv).rgb;` : `return texture2D(u_atlas${i}, uv).rgb;`));
+  return /* glsl */ `
   precision highp float;
 
-  uniform sampler2D u_atlas0;
-  uniform sampler2D u_atlas1;
-  uniform sampler2D u_atlas2;
-  uniform sampler2D u_atlas3;
-  uniform sampler2D u_atlas4;
+  ${ids.map((i) => `uniform sampler2D u_atlas${i};`).join("\n  ")}
   uniform float u_pixelRatio;
   uniform float u_dotAlpha;   // 0.78, 0.34 when the map is dimmed (the tile's alpha at the start of the cross-fade, as before the theme)
   uniform float u_focusDim;   // alpha factor of stars and covers outside the focus
-  uniform float u_selDim;     // alpha factor of the other covers while an album is picked
+  uniform float u_selDim;     // share of their own colour the other covers keep while an album is picked
 
   const vec3 FRAME = ${v3(FRAME_RGB)};
   const vec3 BACKING = ${v3(BACKING_RGB)};
@@ -303,11 +317,7 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
   }
 
   vec3 sampleAtlas(int idx, vec2 uv) {
-    if (idx == 0) return texture2D(u_atlas0, uv).rgb;
-    if (idx == 1) return texture2D(u_atlas1, uv).rgb;
-    if (idx == 2) return texture2D(u_atlas2, uv).rgb;
-    if (idx == 3) return texture2D(u_atlas3, uv).rgb;
-    return texture2D(u_atlas4, uv).rgb;
+    ${pick.join("\n    ")}
   }
 
   /** 1 inside a band of width w centred on d = 0, with a one-device-pixel soft edge. */
@@ -365,14 +375,16 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
       col = mix(col, CASING, 0.9 * v_coverT * smoothstep(-1.0 - 0.5 * aa, -1.0 + 0.5 * aa, sd));
       // Today's alpha, eased in over the first eighth of the fade: the star under it is smaller than the old dot.
       alpha = mask * mix(u_dotAlpha, 1.0, v_coverT) * smoothstep(0.0, 0.125, v_coverT);
-      // A cover that steps back turns see-through, exactly as before the theme: outside an open album's focus,
-      // and (the cover part only) while another album is picked. Where two such covers overlap, the lower one
-      // shows through the upper.
+      // Outside an open album's focus a cover that steps back turns see-through, exactly as before the theme.
+      // Where two such covers overlap, the lower one shows through the upper.
       if (v_dim > 0.5) alpha *= u_focusDim;
       // Beside an open album the tile also comes in with the fade (it is whole once the cover is). At the start
       // of the fade it is a flat disc of the star colour, which at a close framing hid every star behind one.
       if (v_dim > 0.5) alpha *= v_coverT;
-      if (v_selDim > 0.5) alpha *= mix(1.0, u_selDim, v_coverT);
+      // While another album is picked, only the cover part dims, so stars stay as they are. The colour moves
+      // toward the page colour (the map's background under the gas) and the alpha stays, so an opaque dimmed
+      // cover does not show the covers under it.
+      if (v_selDim > 0.5) col = mix(BACKING, col, mix(1.0, u_selDim, v_coverT));
     }
     if (v_sel > 0.5) {
       // As before the theme: a 1 px page-coloured backing round the cover, then a 2 px frame 4 px outside it.
@@ -413,3 +425,8 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
     gl_FragColor = vec4(rgb, a);
   }
 `;
+};
+
+/** The sources for the five sheets the map had before the shader followed the data (kept for tests). */
+export const ALBUM_VERTEX_SHADER = albumVertexShader(5);
+export const ALBUM_FRAGMENT_SHADER = albumFragmentShader(5);

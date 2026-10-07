@@ -1,25 +1,54 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { Positions, Recs } from '@/lib/types';
-import { assertDataConsistent, getAlbumPageData, getAllSlugs, getServerCatalog, getShelf } from './server';
+import { STOP_IDS } from '@/lib/types';
+import type { AlbumRecord, Positions, Recs } from '@/lib/types';
+import { CATALOG_SIZE_LABEL } from '@/lib/copy';
+import { TAGS_MAX } from './catalog';
+import { assertDataConsistent, getAlbumPageData, getAllSlugs, getServerCatalog, getShelf, hostedCoverSize } from './server';
+
+const raw = <T>(name: string): T => JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'data', name), 'utf8')) as T;
 
 describe('build-time data access (real public/data)', () => {
   it('lists every slug once', () => {
     const slugs = getAllSlugs();
-    expect(slugs.length).toBe(4081);
+    // One slug per row of albums.json, in its order.
+    expect(slugs).toEqual(raw<AlbumRecord[]>('albums.json').map((a) => a.slug));
     expect(new Set(slugs).size).toBe(slugs.length);
     expect(slugs[11]).toBe('in-rainbows-radiohead');
   });
 
-  it('builds In Rainbows with the fixed recommendations', () => {
+  it('holds at least as many albums as the site says it does', () => {
+    // CATALOG_SIZE_LABEL is "10,000+": the rounded figure the About page states.
+    const stated = Number(CATALOG_SIZE_LABEL.replace(/[,+]/g, ''));
+    expect(stated).toBe(10000);
+    expect(getAllSlugs().length).toBeGreaterThanOrEqual(stated);
+    // And it is the rounded figure, not one far below the real count.
+    expect(getAllSlugs().length).toBeLessThan(stated + 1000);
+  });
+
+  it('builds In Rainbows with the recommendations of recs.json', () => {
     const page = getAlbumPageData('in-rainbows-radiohead');
     expect(page).not.toBeNull();
     expect(page!.seed.title).toBe('In Rainbows');
+    // The album carries seven descriptors; the page shows the first TAGS_MAX (six), so "ethereal", the last, is cut.
+    const vocab = raw<string[]>('vocab.json');
+    expect(raw<AlbumRecord[]>('albums.json')[page!.seed.id].d.map((k) => vocab[k])).toEqual([
+      'lush', 'melancholic', 'bittersweet', 'mellow', 'atmospheric', 'warm', 'ethereal',
+    ]);
+    expect(TAGS_MAX).toBe(6);
     expect(page!.seed.tags).toEqual(['lush', 'melancholic', 'bittersweet', 'mellow', 'atmospheric', 'warm']);
     expect(page!.recs.mood.slice(0, 5).map((r) => r.title)).toEqual([
-      'Tindersticks', 'Avalon', 'So', 'You Will Never Know Why', 'Imperial Bedroom',
+      'Glitter', 'Have You in My Wilderness', 'Carrie & Lowell Live', 'Bon Iver, Bon Iver', 'Takk...',
     ]);
-    expect(page!.recs.balanced[0].title).toBe('You Will Never Know Why');
-    for (const stop of ['sonic', 'balanced', 'mood'] as const) {
+    expect(page!.recs.mood[0].slug).toBe('glitter-pasteboard');
+    // The mood list barely depends on audio, so it is pinned above. Sonic and balanced change with every rebuild
+    // of the audio features: each stop must be the row of recs.json, in order, with the titles of albums.json.
+    const albums = raw<AlbumRecord[]>('albums.json');
+    const recs = raw<Recs>('recs.json');
+    for (const stop of STOP_IDS) {
+      expect(page!.recs[stop].map((r) => r.id)).toEqual(recs[stop][page!.seed.id]);
+      expect(page!.recs[stop].map((r) => r.title)).toEqual(recs[stop][page!.seed.id].map((id) => albums[id].t));
       expect(page!.recs[stop]).toHaveLength(10);
       expect(page!.recs[stop].map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }
@@ -41,7 +70,26 @@ describe('build-time data access (real public/data)', () => {
   });
 
   it('exposes the vocabulary', () => {
-    expect(getServerCatalog().vocab).toHaveLength(114);
+    expect(getServerCatalog().vocab).toHaveLength(113);
+    expect(new Set(getServerCatalog().vocab).size).toBe(113);
+    // Every descriptor index of every album names a word.
+    for (const a of getServerCatalog().albums) for (const k of a.d) expect(k, a.slug).toBeLessThan(113);
+  });
+});
+
+describe("the size of the site's own copy of a cover (real public/covers)", () => {
+  it('is the width and height the pipeline recorded for a Cover Art Archive cover', () => {
+    const sizes = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'covers', 'index.json'), 'utf8')) as Record<string, [number, number]>;
+    const album = getServerCatalog().albums.find((a) => a.c.startsWith('ca:'))!;
+    const [width, height] = sizes[album.c.slice(3)];
+    expect(hostedCoverSize(album.c)).toEqual({ width, height });
+    expect(Math.max(width, height)).toBeLessThanOrEqual(500);
+  });
+
+  it('is unknown for any other cover, and for a copy the folder does not have', () => {
+    expect(hostedCoverSize('')).toBeUndefined();
+    expect(hostedCoverSize('dz:0123456789abcdef0123456789abcdef')).toBeUndefined();
+    expect(hostedCoverSize('ca:00000000-0000-0000-0000-000000000000')).toBeUndefined();
   });
 });
 

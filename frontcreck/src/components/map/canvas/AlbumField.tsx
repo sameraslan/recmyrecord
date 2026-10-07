@@ -8,7 +8,7 @@ import { atlasSlot } from "@/lib/data/sprites";
 import { prefersReducedMotion } from "@/lib/media";
 import { interpolateInto, type MapData } from "../data";
 import { buildStarAttributes, pageStarClasses } from "../state/stars";
-import { ALBUM_FRAGMENT_SHADER, ALBUM_VERTEX_SHADER, DOT_ALPHA, DOT_ALPHA_DIMMED, SELECTION_DIM, spriteCapDevicePx } from "../shaders/album";
+import { DOT_ALPHA, DOT_ALPHA_DIMMED, SELECTION_DIM, albumFragmentShader, albumVertexShader, shaderSheetCount, spriteCapDevicePx } from "../shaders/album";
 import { useMapStore } from "../state/mapStore";
 
 interface AlbumFieldProps {
@@ -22,7 +22,6 @@ interface AlbumFieldProps {
   positionsRef: React.RefObject<Float32Array>;
 }
 
-const MAX_ATLASES = 5;
 /** Alpha factor of albums outside the focus in album view. */
 const FOCUS_DIM = 0.45;
 /** Slots in u_neighborMask: the seed, then the focus recommendations, padded with -1. */
@@ -40,7 +39,11 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
   // The dot alpha eases between the dimmed (Home, About, 404) and the full map; -1 until the first frame.
   const dotAlpha = useRef(-1);
 
-  const { geometry, material, classes } = useMemo(() => {
+  const { geometry, material, classes, sheets } = useMemo(() => {
+    // One texture unit per atlas sheet of this data set (eleven for 10,467 albums).
+    const sheets = shaderSheetCount(data.atlasUrls.length, gl.capabilities.maxTextures);
+    const atlasUniforms: Record<string, { value: THREE.Texture | null }> = {};
+    for (let i = 0; i < sheets; i++) atlasUniforms[`u_atlas${i}`] = { value: null };
     const pointsGeom = new THREE.InstancedBufferGeometry();
     // A single 0-position vertex; the rest comes from instanced attributes
     pointsGeom.setAttribute("position", new THREE.Float32BufferAttribute([0, 0, 0], 3));
@@ -73,8 +76,8 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     pointsGeom.instanceCount = n;
 
     const mat = new THREE.ShaderMaterial({
-      vertexShader: ALBUM_VERTEX_SHADER,
-      fragmentShader: ALBUM_FRAGMENT_SHADER,
+      vertexShader: albumVertexShader(sheets),
+      fragmentShader: albumFragmentShader(sheets),
       transparent: true,
       // The fragment shader writes premultiplied colour: a star adds its light and darkens with its
       // under-disc in one fragment (rgb = light, a = under-disc), a cover is ordinary alpha (rgb * a, a).
@@ -105,15 +108,11 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
         u_maxSpritePx: { value: 240 },
         u_dotAlpha: { value: DOT_ALPHA },
         u_focusDim: { value: FOCUS_DIM },
-        u_atlas0: { value: null },
-        u_atlas1: { value: null },
-        u_atlas2: { value: null },
-        u_atlas3: { value: null },
-        u_atlas4: { value: null },
-        u_atlasLoaded: { value: new Float32Array(MAX_ATLASES) },
+        ...atlasUniforms,
+        u_atlasLoaded: { value: new Float32Array(sheets) },
       },
     });
-    return { geometry: pointsGeom, material: mat, classes };
+    return { geometry: pointsGeom, material: mat, classes, sheets };
   }, [data, gl]);
 
   // Interpolated positions used for hit-testing and overlay placement: a
@@ -134,7 +133,7 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
 
   // Push texture changes into uniforms
   useEffect(() => {
-    for (let i = 0; i < MAX_ATLASES; i++) {
+    for (let i = 0; i < sheets; i++) {
       const tex = atlasTextures[i] ?? null;
       // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
       material.uniforms[`u_atlas${i}`].value = tex;
@@ -145,7 +144,7 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     // frameloop="demand": a texture arriving is not an input event, so
     // request the frame that actually draws the new covers.
     invalidate();
-  }, [atlasTextures, material, invalidate]);
+  }, [atlasTextures, material, sheets, invalidate]);
 
   // The theme data arrives after the albums (or not at all): rewrite the tint and gas attributes in place.
   // The star sizes are not touched: they were dealt once for this page load.

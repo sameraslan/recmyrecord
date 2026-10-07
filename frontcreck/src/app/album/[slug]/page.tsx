@@ -4,13 +4,13 @@ import { Suspense } from 'react';
 import { AlbumPanel } from '@/components/album/AlbumPanel';
 import { AlbumView } from '@/components/album/AlbumView';
 import { COPY } from '@/lib/copy';
-import { coverUrl } from '@/lib/data/catalog';
-import { getAlbumPageData, getAllSlugs } from '@/lib/data/server';
+import { ogCover } from '@/lib/data/catalog';
+import { getAlbumPageData, getPrerenderSlugs, hostedCoverSize } from '@/lib/data/server';
 
 export const dynamicParams = false;
 
 export function generateStaticParams(): { slug: string }[] {
-  return getAllSlugs().map((slug) => ({ slug }));
+  return getPrerenderSlugs().map((slug) => ({ slug }));
 }
 
 type Props = { params: Promise<{ slug: string }> };
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = getAlbumPageData(slug);
   if (!data) return {};
   const title = COPY.titles.album(data.seed.title, data.seed.artist);
-  const image = coverUrl(data.seed.coverId, 320);
+  const image = ogCover(data.seed.coverId, hostedCoverSize(data.seed.coverId));
   return {
     title,
     description: COPY.metaDescription,
@@ -30,7 +30,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: COPY.metaDescription,
       siteName: COPY.wordmark,
       type: 'website',
-      images: image ? [{ url: image, width: 640, height: 640 }] : [],
+      images: image ? [image] : [],
     },
   };
 }

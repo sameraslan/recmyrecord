@@ -22,7 +22,10 @@
   --color-lamp-ink: #121016;
   --color-pane: #07060a;
   --color-float: rgba(10, 9, 14, 0.66);
-  --font-serif: var(--font-serif-face), "Iowan Old Style", "Palatino Linotype", Palatino, serif;
+  /* After the Latin fallbacks, so Latin and Cyrillic fall back as before: serif faces for Japanese, Chinese and
+   * Korean that the systems ship (no download), so that text is not set in the system's heavy sans beside the
+   * light display serif. */
+  --font-serif: var(--font-serif-face), "Iowan Old Style", "Palatino Linotype", Palatino, "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", "Songti SC", "Noto Serif SC", "AppleMyungjo", "Noto Serif KR", serif;
   --font-sans: var(--font-sans-face), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 

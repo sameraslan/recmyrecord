@@ -135,9 +135,10 @@ describe("albums outside the focus in album view", () => {
     const cover = ALBUM_FRAGMENT_SHADER.slice(ALBUM_FRAGMENT_SHADER.indexOf("if (v_coverT > 0.0) {"), ALBUM_FRAGMENT_SHADER.indexOf("if (v_sel > 0.5) {"));
     expect(cover).toMatch(/if \(v_dim > 0\.5\) alpha \*= u_focusDim;/);
     expect(cover).toMatch(/if \(v_dim > 0\.5\) alpha \*= v_coverT;/);
-    // Only outside an open album's focus: the Explore cross-fade and the picked album's dimming are as they were.
+    // Only outside an open album's focus: the Explore cross-fade and the picked album's dimming are as they were
+    // (the dimming around a pick as the 10k catalog made it: by colour, see album-dim.test.ts).
     expect(cover).toMatch(/alpha = mask \* mix\(u_dotAlpha, 1\.0, v_coverT\) \* smoothstep\(0\.0, 0\.125, v_coverT\);/);
-    expect(cover).toMatch(/if \(v_selDim > 0\.5\) alpha \*= mix\(1\.0, u_selDim, v_coverT\);/);
+    expect(cover).toMatch(/if \(v_selDim > 0\.5\) col = mix\(BACKING, col, mix\(1\.0, u_selDim, v_coverT\)\);/);
     // The star under the tile is untouched: same size rule, same fade, same 45%.
     expect(ALBUM_FRAGMENT_SHADER).toMatch(/float starA = v_tint\.a \* \(v_dim > 0\.5 \? u_focusDim : 1\.0\);/);
   });
@@ -195,13 +196,14 @@ describe("stars in the album draw", () => {
 });
 
 describe("overlapping covers are handled as before the theme", () => {
-  it("keeps today's handling of overlapping covers: a cover that steps back turns see-through, it is not darkened", () => {
-    // Outside an open album's focus (0.45) and, for the cover part only, while another album is picked (0.5).
+  it("keeps today's handling of overlapping covers: outside an open album's focus a cover turns see-through, and around a pick it keeps its alpha and moves to the page colour", () => {
+    // Outside an open album's focus (0.45): see-through, not darkened.
     expect(ALBUM_FRAGMENT_SHADER).toMatch(/if \(v_dim > 0\.5\) alpha \*= u_focusDim;/);
-    expect(ALBUM_FRAGMENT_SHADER).toMatch(/if \(v_selDim > 0\.5\) alpha \*= mix\(1\.0, u_selDim, v_coverT\);/);
+    expect(ALBUM_FRAGMENT_SHADER).not.toMatch(/mix\((col, BACKING|BACKING, col), [^;]*u_focusDim/);
+    // While another album is picked (0.5), the cover part only: "today" is the 10k catalog's handling, where a
+    // dimmed cover stays opaque and hides the covers under it (album-dim.test.ts pins the alpha staying).
+    expect(ALBUM_FRAGMENT_SHADER).toMatch(/if \(v_selDim > 0\.5\) col = mix\(BACKING, col, mix\(1\.0, u_selDim, v_coverT\)\);/);
     expect(SELECTION_DIM).toBe(0.5);
-    // No opaque darkening towards the page colour in place of the fade.
-    expect(ALBUM_FRAGMENT_SHADER).not.toMatch(/mix\(col, BACKING, [^)]*(u_selDim|0\.6)/);
   });
 
   it("still lifts the hovered, the focused and the picked album above the covers they overlap", () => {
