@@ -82,7 +82,7 @@ Full write-up: `reviews/app-perf-part2.md` (conditions, old against new, glints)
 
 None blocks the owner's trial. From the final review (`440d2073`) and the ledger:
 
-- **Phone, album at the cloud's lower edge** (checklist 16.11): the idle camera pull-back can rest a picked album under the card. The old site does the same. A fix is written and awaits landing (see `reviews/app-part2/REGRESSION-RESULTS.md`).
+- **Phone, album at the cloud's lower edge** (checklist 16.11): fixed on this branch for phones (`136ed758`, `80eca19f`; `state/bounds.ts`, `canvas/CameraBounds.tsx`). The idle camera pull-back used to rest a picked album under the card. Now, on a phone, the camera may rest lower by the height of the panels covering the bottom of the screen, capped so the lowest album rests no higher than the middle of the visible band; the cap protects a phone on its side. Desktop is unchanged. The old site (`main`) still has the fault. See `reviews/app-part2/REGRESSION-RESULTS.md`.
 - A zoom while the covers round an open album are crowded against the map's edge still has one code path that carries and then eases them. Not reproduced in a browser; no unit test pins it.
 - Arrow-key pan at a wall with an album open: covers ease 14 to 17 px after the stop.
 - Window resize with an album open: covers trail the map by up to 79 px for about 24 frames. Not compared with the old site.
