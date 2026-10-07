@@ -2,27 +2,6 @@ import { fetchJson, idle, load, registerReset, type DataState } from '@/lib/data
 import { STOP_IDS } from '@/lib/types';
 import type { StopId } from '@/lib/types';
 
-/** A region name on the map, in the raw units of positions.json (components/map/data.ts rawToWorld). */
-export interface ThemeLabel {
-  id: string;
-  name: string;
-  x: number;
-  y: number;
-  strong: boolean;
-  /** Albums in the region. */
-  n: number;
-  /** Priority: higher shows first. */
-  p: number;
-  /** Ink: near white with a breath of the gas colour under the name. */
-  rgb: [number, number, number];
-  /** Brightest gas luminance (0..1) in the name's box at Overview, at full gas strength. */
-  lum: number;
-  /** The same in a wider box, for the map zoomed out further (the Whole map in a short window): the name's box
-   * at 400 px per world unit, where `lum`'s is at 600. Never under `lum`. Missing in a theme baked before it. The loader does not check it (this
-   * file is in the first-load JS); state/namesLayout.ts takes anything but a number as missing. */
-  lumWide?: number;
-}
-
 /** The baked gas of one stop. */
 export interface ThemeGas {
   /** The raw rectangle both images cover: west, south, east, north. Outside it the stop is plain sky. */
@@ -54,31 +33,12 @@ export interface ThemeData {
     /** Per album, three bytes (sonic, balanced, mood): gas luminance 0..GAS_LUM_MAX at the album. */
     bg: number[];
   };
-  labels: Record<StopId, ThemeLabel[]>;
 }
 
 export const THEME_URL = '/data/theme/theme.json';
 
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isInt = (v: unknown, lo: number, hi: number): boolean => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
-
-function isLabel(v: unknown): v is ThemeLabel {
-  if (!v || typeof v !== 'object') return false;
-  const l = v as Record<string, unknown>;
-  return (
-    typeof l.id === 'string' &&
-    typeof l.name === 'string' &&
-    isNum(l.x) &&
-    isNum(l.y) &&
-    typeof l.strong === 'boolean' &&
-    isNum(l.n) &&
-    isNum(l.p) &&
-    Array.isArray(l.rgb) &&
-    l.rgb.length === 3 &&
-    l.rgb.every((c) => isInt(c, 0, 255)) &&
-    isNum(l.lum)
-  );
-}
 
 function isGas(v: unknown, half: number): v is ThemeGas {
   if (!v || typeof v !== 'object') return false;
@@ -101,9 +61,7 @@ export function isTheme(x: unknown): x is ThemeData {
   const stars = t.stars as { lead?: unknown; bg?: unknown } | null | undefined;
   if (!stars || !Array.isArray(stars.lead) || !Array.isArray(stars.bg)) return false;
   if (stars.lead.length !== n || stars.bg.length !== 3 * n) return false;
-  if (!stars.lead.every((v) => isInt(v, -1, 4)) || !stars.bg.every((v) => isInt(v, 0, 255))) return false;
-  const labels = t.labels as Record<string, unknown> | null | undefined;
-  return !!labels && STOP_IDS.every((s) => Array.isArray(labels[s]) && (labels[s] as unknown[]).every(isLabel));
+  return stars.lead.every((v) => isInt(v, -1, 4)) && stars.bg.every((v) => isInt(v, 0, 255));
 }
 
 let theme = idle<ThemeData>();

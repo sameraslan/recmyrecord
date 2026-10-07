@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Cormorant_Garamond, Schibsted_Grotesk, Tenor_Sans } from 'next/font/google';
+import { Cormorant_Garamond, Schibsted_Grotesk } from 'next/font/google';
 import { MapStage } from '@/components/map/MapStage';
 import { Header } from '@/components/shell/Header';
 import { RouteTracker } from '@/components/shell/RouteTracker';
@@ -20,14 +20,6 @@ const sans = Schibsted_Grotesk({
   variable: '--font-sans-face',
   display: 'swap',
 });
-// The map's region names. Not preloaded: it is fetched when the names first render, after the map has loaded.
-const names = Tenor_Sans({
-  subsets: ['latin'],
-  weight: '400',
-  variable: '--font-names-face',
-  display: 'swap',
-  preload: false,
-});
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://recmyrecord.com'),
@@ -46,7 +38,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable} ${names.variable}`}>
+    <html lang="en" className={`${serif.variable} ${sans.variable}`}>
       <body>
         <a className="skip" href="#main">
           {COPY.skip}

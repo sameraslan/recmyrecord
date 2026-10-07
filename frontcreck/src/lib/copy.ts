@@ -75,9 +75,6 @@ export const COPY = {
     openMap: 'Open map',
     /** Beside an album: leaves it for Explore with the map left where it is. */
     exploreHere: 'Explore this area',
-    /** The names toggle's one fixed label; its on/off state is aria-pressed, the label never changes.
-     * PENDING OWNER APPROVAL (proposed wording, 2026-10-04). */
-    names: 'Place names',
   },
   phone: { map: 'Map', list: 'List', mapLabel: 'Open the map', listLabel: 'Back to the list' },
   /** Typographic cover tile when the title has no letter or digit. */

@@ -70,8 +70,7 @@ export function screenToWorld(clientX: number, clientY: number, rect: ScreenRect
 export const canvasRect = (width: number, height: number): ScreenRect => ({ left: 0, top: 0, width, height });
 
 /** The part of the canvas that shows the map (right of the album panel inset, below the header's `insetTop`), less
- * `edge` CSS px on every side: the one area the hover label, the focus markers and the region names are kept
- * inside. */
+ * `edge` CSS px on every side: the one area the hover label and the focus markers are kept inside. */
 export function visibleArea(insetLeft: number, width: number, height: number, edge: number, insetTop: number): ViewBounds {
   return { left: insetLeft + edge, top: insetTop + edge, right: width - edge, bottom: height - edge };
 }

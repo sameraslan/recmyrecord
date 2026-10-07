@@ -31,7 +31,7 @@
 .map-sel::after { content: ""; position: absolute; left: 50%; top: 50%; width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; border-radius: 50%; background: var(--color-lamp); box-shadow: 0 0 0 1px rgba(4, 4, 8, .8); }
 .map-ui { position: absolute; left: 0; right: 0; top: var(--hdr); bottom: 0; z-index: 6; pointer-events: none; transition: left var(--dur) var(--out); }
 .map-ui > * { pointer-events: auto; }
-/* Keyboard focus on a control that stands on the map (the zoom buttons, the names toggle, "Explore this area",
+/* Keyboard focus on a control that stands on the map (the zoom buttons, "Explore this area",
  * the phone's List button): the site's ring (shell.css :focus-visible, 2 px lamp, 3 px out) would lie on raw gas,
  * so it gets the selected ring's dark casing: one band from the control's edge to 7 px out, under the gap, the
  * ring and 2 px beyond. Not the slider's range input, whose thumb has its own ring. Nothing but the shadow here:
@@ -45,8 +45,7 @@
 .map-explore { position: absolute; right: 20px; top: 20px; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px 0 12px; font-size: 14px; color: var(--color-paper); }
 .map-explore svg { width: 16px; height: 16px; color: var(--color-dust); }
 .map-explore:hover svg { color: var(--color-lamp); }
-/* --zb: the side of a button in the zoom corner (44 px on a phone, styles/phone.css). The place kept for the names
- * toggle below follows it; state/namesLayout.ts repeats both numbers (it reads no layout). */
+/* --zb: the side of a button in the zoom corner (44 px on a phone, styles/phone.css). */
 .map-zoom { position: absolute; right: 20px; bottom: 20px; display: grid; --zb: 40px; }
 .map-zoom button { width: var(--zb); height: var(--zb); display: grid; place-items: center; background: var(--color-float); border: 1px solid var(--color-rule); color: var(--color-dust); }
 .map-zoom button + button { border-top: 0; }
@@ -130,60 +129,7 @@
 /* Inverted when hot: room-coloured digits on the lamp token (17:1 with the Trifid values). */
 .mk-n[data-hot] { background: var(--color-lamp); border-color: var(--color-room); color: var(--color-room); }
 
-/* names toggle: its own box 8 px above the zoom stack (the owner's option B). The map's own chunk puts it in
- * as the first child of .map-zoom (overlays/NamesToggle.tsx), so it takes the zoom buttons' size and glass, and
- * the phone rules that lift or hide the stack. */
-.map-zoom .map-names { margin-bottom: 8px; }
-/* The zoom-in button under it gets its top border back (.map-zoom button + button removes it). */
-.map-zoom .map-names + button { border-top: 1px solid var(--color-rule); }
-/* Until it arrives its place is kept free (a button and the 8 px), so the zoom buttons never move. */
-.map-zoom > button:first-child:not(.map-names) { margin-top: calc(var(--zb) + 8px); }
-
-/* region names: plain lettering over the map (RegionNamesDriver places them). Nothing to hover, focus or
- * click; hidden from assistive technology. Tenor Sans, wide capitals. */
-.rn-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; font-family: var(--font-names-face), var(--font-sans); }
-.map-pane.is-dimmed .rn-layer { display: none; }
-.rn {
-  position: absolute; left: 0; top: 0; padding: 4px 8px; text-align: center; white-space: nowrap; font-size: 16px; pointer-events: none; will-change: transform; contain: layout style; transition: opacity .2s var(--out), visibility 0s;
-  /* The slider's fade (--a, written by the driver) is on the letters. The cheaper version for the morph moves
-   * it to the name's own layer, which the compositor fades without painting: `--rn-a-ink: 1; --rn-a-box: var(--a, 1);`. */
-  --rn-a-ink: var(--a, 1); --rn-a-box: 1;
-  opacity: var(--rn-a-box);
-  /* The halo's ink, as strong as the gas behind needs (--h, written by the driver), and its soft shadows. The
-   * cheaper version of the shadows is the 2, 8 and 26 px entries only: text-shadow: var(--rn-shadow-lite) below. */
-  --rn-ink: rgba(4, 4, 8, var(--h, .85)); --rn-ink-far: rgba(4, 4, 8, calc(var(--h, .85) * .85));
-  --rn-shadow-full: 0 0 2px var(--rn-ink), 0 0 4px var(--rn-ink), 0 0 4px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 14px var(--rn-ink), 0 0 14px var(--rn-ink), 0 0 26px var(--rn-ink-far), 0 0 44px rgba(4, 4, 8, calc(var(--h, .85) * .6));
-  --rn-shadow-lite: 0 0 2px var(--rn-ink), 0 0 8px var(--rn-ink), 0 0 26px var(--rn-ink-far);
-  /* A fair name's ink is at 0.82, so it needs a darker surround than a strong name does, and round thin letters
-   * the soft shadows leave too little of it 2 to 3 px out over bright gas (3.5:1 for one name at the Overview
-   * and 4.2:1 for two at the Whole map, e2e/names.spec.ts). A fair name gets a tight inner halo as well: four
-   * copies of its letters 3 px out on the diagonals, barely blurred, in the halo's ink. So does a strong name
-   * in a wide window (below): one was at 4.50:1 at the Overview in a 1366 x 768 window, and under it on one
-   * load in six. On a phone a strong name is painted without it, as before. */
-  --rn-shadow-fair: 2.1px 2.1px 1.5px var(--rn-ink), -2.1px 2.1px 1.5px var(--rn-ink), 2.1px -2.1px 1.5px var(--rn-ink), -2.1px -2.1px 1.5px var(--rn-ink), var(--rn-shadow-full);
-}
-/* A name that takes another spot when the map comes to rest (the driver sets the class, and takes it off when
- * the fade ends): gone from the old spot at once, it fades in on the new. Opacity only, on the layer the name
- * already has: its transform is the map's throughout and nothing is painted. Reduced motion: instant
- * (styles/shell.css). */
-.rn.moved { animation: rn-moved .25s var(--out); }
-@keyframes rn-moved { from { opacity: 0; } }
-.rn.off { opacity: 0; visibility: hidden; transition: opacity .2s var(--out), visibility 0s linear .2s; }
-.rn b {
-  display: block; font-weight: 400; font-style: normal; letter-spacing: .26em; padding-left: .26em; text-transform: uppercase; line-height: 1.05; color: var(--lc); opacity: var(--rn-a-ink);
-  /* The halo: a dark stroke under the fill and soft stacked shadows, as strong as the gas behind needs (--h,
-   * solved by state/namesLayout.ts haloFor so the ink is 4.5:1 against it). */
-  -webkit-text-stroke: 2.1px var(--rn-ink-far); paint-order: stroke fill;
-  text-shadow: var(--rn-shadow-full);
-}
-.rn.fair b { opacity: calc(var(--rn-a-ink) * .82); text-shadow: var(--rn-shadow-fair); }
-@media (min-width: 900px) { .rn b { text-shadow: var(--rn-shadow-fair); } }
-/* While the slider is between stops (the driver sets the class on the first frame of the fade and takes it off
- * on the last) the fading letters are their own layer, so each frame of the fade changes a layer's opacity and
- * paints no stroke or shadow again. Same pixels. Not at rest: 17 more layers for nothing. */
-.rn-layer.is-fading .rn b { will-change: opacity; }
-
-/* twinkle (canvas/TwinkleDriver.tsx): star glints in a layer over the map canvas and under the region names.
+/* twinkle (canvas/TwinkleDriver.tsx): star glints in a layer over the map canvas.
  * Only opacity and transform animate. Decoration: nothing here takes pointer events. */
 .tw-layer { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
 .map-pane[data-view="about"] .tw-layer, .map-pane[data-view="other"] .tw-layer { display: none; }

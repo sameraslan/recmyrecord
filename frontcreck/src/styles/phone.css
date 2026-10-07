@@ -40,7 +40,7 @@
   .fab-map svg { width: 17px; height: 17px; }
   .fab-map--on { top: 12px; bottom: auto; right: 12px; background: var(--color-float); color: var(--color-paper); border: 1px solid var(--color-rule-2); box-shadow: none; border-radius: 2px; }
 
-  /* The zoom buttons, the names toggle and the place kept for it (styles/map.css) all follow this. */
+  /* The zoom buttons (styles/map.css) follow this. */
   .map-zoom { --zb: 44px; }
 }
 

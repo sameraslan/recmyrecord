@@ -4,7 +4,7 @@ import { setOverlayEl } from '../state/overlayEls';
 import type { ViewBounds } from '../state/projection';
 import { glintBackground, type Glint, type GlintHandle } from '../state/twinkle';
 
-/** The star glints' layer: over the map canvas and under the region names. Empty as far as React knows;
+/** The star glints' layer: over the map canvas. Empty as far as React knows;
  * TwinkleDriver adds and removes the glints itself (two nodes each, at most three glints at once). Decoration
  * only: hidden from assistive technology, and nothing in it takes pointer events (styles/map.css). */
 export function TwinkleLayer() {
@@ -22,7 +22,7 @@ export function TwinkleLayer() {
 /** Every surface the stylesheet makes glass (a blur of what is behind it): the selector list of the one rule
  * that uses --glass-blur, in styles/shell.css. overlays/Twinkle.test.tsx fails when the two differ. On a phone
  * the same surfaces are solid; a glint is kept from under them all the same. */
-export const TWINKLE_GLASS = '.top, .panel, .album, .map-zoom button, .map-names, .map-msg, .about, .combo--hero .combo-field, .fab-map--on';
+export const TWINKLE_GLASS = '.top, .panel, .album, .map-zoom button, .map-msg, .about, .combo--hero .combo-field, .fab-map--on';
 
 /** The glass surfaces that lie over the glint layer, as rectangles in the layer's own CSS px (the map canvas's:
  * the layer covers it exactly). This reads layout (one box per surface, about ten), so it is called only when a

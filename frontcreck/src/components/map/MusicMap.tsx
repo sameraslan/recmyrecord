@@ -4,8 +4,6 @@ import { useLayoutEffect } from 'react';
 import { Scene } from './canvas/Scene';
 import { FocusMarkers } from './overlays/FocusMarkers';
 import { HoverLabel } from './overlays/HoverLabel';
-import { NamesToggle } from './overlays/NamesToggle';
-import { RegionNames } from './overlays/RegionNames';
 import { TwinkleLayer } from './overlays/Twinkle';
 import { useMapStore } from './state/mapStore';
 import { setOverlayEl } from './state/overlayEls';
@@ -34,8 +32,8 @@ export default function MusicMap({ data, theme, input, callbacks, initialCamera,
     useMapStore.getState().setTheme(theme);
   }, [theme]);
   useLayoutEffect(() => {
-    // The region names (and the glints) read the header's height from state/stageTop.ts: the same number as the
-    // camera's, set before setInput asks for the frame that places them.
+    // The glints read the header's height from state/stageTop.ts: the same number as the camera's, set before
+    // setInput asks for the frame that places them.
     setStageTop(input.insetTop);
     useMapStore.getState().setInput(input);
   }, [input]);
@@ -46,14 +44,11 @@ export default function MusicMap({ data, theme, input, callbacks, initialCamera,
   return (
     <>
       <Scene initialCamera={initialCamera} onApi={onApi} />
-      {/* Star glints: over the canvas, under the region names (z-index 1). */}
+      {/* Star glints: over the canvas (z-index 1), under the focus markers, the hover label and the map's controls. */}
       <TwinkleLayer />
-      {/* Under the focus markers, the hover label and the map's controls (z-index 2). */}
-      <RegionNames />
       <FocusMarkers albums={data.albums} />
       <HoverLabel albums={data.albums} />
       <SelectedRing />
-      <NamesToggle shown={input.interactive} />
     </>
   );
 }

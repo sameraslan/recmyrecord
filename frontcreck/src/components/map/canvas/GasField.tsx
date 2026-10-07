@@ -49,9 +49,7 @@ import {
   stopsOnPath,
   stopsShown,
 } from "../shaders/gas";
-import { gasFirstBegin, gasFirstEnd } from "../state/gasFirst";
 import { useMapStore } from "../state/mapStore";
-import { placeNamesNow } from "../state/nameWidths";
 import { rendererName } from "../state/renderer";
 import { coverCssPx, pxPerWorld } from "../state/zoomLimits";
 
@@ -257,9 +255,6 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       return;
     }
     let alive = true;
-    // The region names wait for the first image (state/gasFirst.ts): until settle() below, or a bound of time,
-    // after which they are placed with no map frame. A map with no gas (the return above) never makes them wait.
-    gasFirstBegin(placeNamesNow);
     const store: Partial<Record<StopId, THREE.Texture>> = {};
     loaded.current = store;
     const noImage = new Set<StopId>();
@@ -420,9 +415,6 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       flag();
       if (!firstIn) {
         firstIn = true;
-        // The names may show: take() and takeEmpty() have asked for the frame that shows the gas (the quad is not
-        // visible before the first image), and that frame places them.
-        gasFirstEnd();
         queueRest();
       }
       sharpPoke();
@@ -908,7 +900,6 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     sharpFlag();
     return () => {
       alive = false;
-      gasFirstEnd();
       setSharpFlag(undefined);
       if (window.__rmr) {
         delete window.__rmr.gasLite;

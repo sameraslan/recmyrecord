@@ -1,5 +1,5 @@
 import { interpolated, type MapData } from "../data";
-import { NAMES_BAND_PX } from "../theme";
+import { GAS_BAND_FULL_PX } from "../theme";
 import type { MapPadding } from "../types";
 import { COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, MAX_ZOOM, pxPerWorld, visibleScale, zoomForPxPerWorld } from "./zoomLimits";
 
@@ -114,9 +114,9 @@ export function fitView(cloud: Bounds, area: FitArea): { zoom: number; center: {
 
 /** Overview: CSS px kept clear at each side of the 1st..99th percentile span (prototype camera.js L31, `- 48`). */
 export const OVERVIEW_SIDE_PAD_PX = 24;
-/** Overview: the closest it frames, half a pixel under the covers at which names go (prototype `BAND_B - 0.5`),
- * so the opening view always shows names and never loads a cover sheet (ATLAS_LOAD_PX is 13). */
-export const OVERVIEW_COVER_MAX_PX = NAMES_BAND_PX - 0.5;
+/** Overview: the closest it frames, half a pixel under the covers at which the gas starts to thin (prototype
+ * `BAND_B - 0.5`), so the opening view always has the full gas and never loads a cover sheet (ATLAS_LOAD_PX is 13). */
+export const OVERVIEW_COVER_MAX_PX = GAS_BAND_FULL_PX - 0.5;
 
 export interface OverviewExtent {
   /** 1st and 99th percentile of x, and the median of y, of one layout (world units). */

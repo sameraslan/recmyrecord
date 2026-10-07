@@ -1,5 +1,5 @@
 /**
- * Constants of the nebula theme shared by the gas, the stars, the region names and the chrome.
+ * Constants of the nebula theme shared by the gas, the stars and the chrome.
  * Colours are sRGB bytes. The gas itself is baked with the same palette (scripts/theme/bake-core.js).
  */
 
@@ -12,7 +12,7 @@ export const NEUTRAL_RGB: [number, number, number] = [138, 138, 146];
 export const STAR_WHITE: [number, number, number] = [255, 250, 244];
 /** The off-white accent (frames, focus rings); equals --color-lamp once the theme's CSS tokens are in. */
 export const FRAME_RGB: [number, number, number] = [241, 236, 228];
-/** Region names show, and the gas is at full strength, while covers are smaller than this (CSS px). */
-export const NAMES_BAND_PX = 13;
+/** The gas is at full strength while covers are smaller than this (CSS px). */
+export const GAS_BAND_FULL_PX = 13;
 /** Gas luminance that a byte of 255 in ThemeData.stars.bg stands for. */
 export const GAS_LUM_MAX = 0.6;

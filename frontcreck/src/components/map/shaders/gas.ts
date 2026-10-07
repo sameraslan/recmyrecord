@@ -1,7 +1,7 @@
 import { STOP_IDS, type StopId } from "@/lib/types";
 import { isSoftwareRenderer } from "../state/renderer";
 import { smoothstep } from "../state/zoomLimits";
-import { NAMES_BAND_PX } from "../theme";
+import { GAS_BAND_FULL_PX } from "../theme";
 
 /**
  * The nebula gas behind the album points. Each slider stop's gas is baked at build time (npm run theme:
@@ -85,13 +85,13 @@ const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 /**
  * Gas strength for a cover size in CSS px, and how far into deep zoom the view is (0 to 1). A port of the
  * prototype's RMR.gasCurve with its default floor.
- * strength: 1 while region names show; a straight line to 0.6 at 22 px covers; a straight line to 0.3 at 32 px;
+ * strength: 1 under 13 px covers; a straight line to 0.6 at 22 px covers; a straight line to 0.3 at 32 px;
  * then 0.3 + (floor - 0.3) * e, with u = (coverPx - 32) / (56 - 32) clamped to 0..1 and e = 1 - (1 - u)^2.
  * deep: e. The shader applies strength as 1 - (1 - c)^strength and uses deep for colour, detail and focus.
  */
 export function gasCurve(coverPx: number): { strength: number; deep: number } {
-  if (coverPx < NAMES_BAND_PX) return { strength: 1, deep: 0 };
-  if (coverPx < GAS_BAND_MID_PX) return { strength: lerp(1, 0.6, (coverPx - NAMES_BAND_PX) / (GAS_BAND_MID_PX - NAMES_BAND_PX)), deep: 0 };
+  if (coverPx < GAS_BAND_FULL_PX) return { strength: 1, deep: 0 };
+  if (coverPx < GAS_BAND_MID_PX) return { strength: lerp(1, 0.6, (coverPx - GAS_BAND_FULL_PX) / (GAS_BAND_MID_PX - GAS_BAND_FULL_PX)), deep: 0 };
   if (coverPx < GAS_BAND_COVERS_PX) return { strength: lerp(0.6, 0.3, (coverPx - GAS_BAND_MID_PX) / (GAS_BAND_COVERS_PX - GAS_BAND_MID_PX)), deep: 0 };
   const u = Math.min(1, Math.max(0, (coverPx - GAS_BAND_COVERS_PX) / (GAS_DEEP_END_PX - GAS_BAND_COVERS_PX)));
   const e = 1 - (1 - u) * (1 - u);
@@ -100,7 +100,7 @@ export function gasCurve(coverPx: number): { strength: number; deep: number } {
 
 /** How much of the dust shows: all of it at the overview, none once covers approach. */
 export function gasDust(coverPx: number): number {
-  return 1 - smoothstep(NAMES_BAND_PX, GAS_BAND_MID_PX, coverPx);
+  return 1 - smoothstep(GAS_BAND_FULL_PX, GAS_BAND_MID_PX, coverPx);
 }
 
 /** The two stops the slider is between and how far towards the second (the rule of album.ts interpolatePos). */

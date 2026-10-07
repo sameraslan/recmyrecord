@@ -34,7 +34,7 @@ ol, ul { padding: 0; list-style: none; }
      .top { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--color-float-solid); }
    (.top.top--home stays clear by specificity). Pin that moves: e2e/glass.spec.ts, the header.top expectation of
    "panels are glass on wide screens". */
-.top, .panel, .album, .map-zoom button, .map-names, .map-msg, .about, .combo--hero .combo-field, .fab-map--on {
+.top, .panel, .album, .map-zoom button, .map-msg, .about, .combo--hero .combo-field, .fab-map--on {
   -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
 }
 .top.top--home { -webkit-backdrop-filter: none; backdrop-filter: none; }

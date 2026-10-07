@@ -26,8 +26,6 @@ export interface AppState {
   ambient: Ambient | null;
   trail: TrailItem[];
   toast: { message: string; id: number } | null;
-  /** Whether the map's region names are shown. lib/namesPref.ts sets and saves it (not first-load code). */
-  namesOn: boolean;
   setStop: (stop: StopId) => void;
   setFocus: (focus: Focus | null) => void;
   setHot: (id: AlbumId | null) => void;
@@ -67,7 +65,6 @@ export const useAppStore = create<AppState>()((set, get) => ({
   ambient: null,
   trail: [],
   toast: null,
-  namesOn: true,
   setStop: (stop) => set((s) => (s.stop === stop ? s : { stop })),
   setFocus: (focus) => set((s) => (sameFocus(s.focus, focus) ? s : { focus })),
   setHot: (hot) => set((s) => (s.hot === hot ? s : { hot })),

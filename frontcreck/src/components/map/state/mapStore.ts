@@ -23,7 +23,7 @@ const NO_CALLBACKS: MapCallbacks = { onHover: () => {}, onPick: () => {}, onEmpt
 
 export interface MapStore {
   data: MapData | null;
-  /** Gas, star colours and region names; null while it loads and when there is none (plain sky, white stars). */
+  /** Gas and star colours; null while it loads and when there is none (plain sky, white stars). */
   theme: ThemeData | null;
   input: MapInput;
   callbacks: MapCallbacks;

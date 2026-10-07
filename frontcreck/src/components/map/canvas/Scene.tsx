@@ -25,7 +25,6 @@ import { MarkerDriver } from "./MarkerDriver";
 import { MorphDriver } from "./MorphDriver";
 import { OverlayDriver } from "./OverlayDriver";
 import { PickController } from "./PickController";
-import { RegionNamesDriver } from "./RegionNamesDriver";
 import { TwinkleDriver } from "./TwinkleDriver";
 
 // Bridges R3F's demand-mode invalidate() out to state/invalidate.ts, so DOM
@@ -176,8 +175,6 @@ function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null;
       <AlbumField data={data} atlasTextures={textures} positionsRef={positionsRef} />
       <OverlayDriver positionsRef={positionsRef} />
       <MarkerDriver positionsRef={positionsRef} />
-      {/* Region names: placed on every drawn frame, hidden while an album is open or the map is zoomed in. */}
-      <RegionNamesDriver positionsRef={positionsRef} />
       {/* After MarkerDriver: a glint keeps clear of the covers it placed. It never asks for a frame. */}
       <TwinkleDriver positionsRef={positionsRef} />
       <FrameCounter />

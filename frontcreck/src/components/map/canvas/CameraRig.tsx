@@ -6,7 +6,6 @@ import * as THREE from "three";
 
 import { prefersReducedMotion } from "@/lib/media";
 import { useMapStore } from "../state/mapStore";
-import { markStep } from "../state/motion";
 import { screenToWorld } from "../state/projection";
 import { getOverviewFraming, getVisibleScale } from "../state/view";
 import { MAX_ZOOM, MIN_ZOOM_FIT_MULTIPLE } from "../state/zoomLimits";
@@ -274,8 +273,6 @@ export function CameraRig() {
         camera.updateProjectionMatrix();
         zooming.current = false;
         zoomAnchor.current = null;
-        // One step of a run with no flag in the store: the region names keep their spots until it stops.
-        markStep();
       } else {
         zooming.current = true;
         useMapStore.getState().setRigMoving(true);
@@ -286,9 +283,6 @@ export function CameraRig() {
       if (!interactive() || e.altKey || e.ctrlKey || e.metaKey) return;
       const api = getCameraControl();
       if (!api) return;
-      // An arrow's pan is applied at once, and so is a zoom step under reduced motion: a held key is a run of
-      // such steps with no flag in the store. The region names keep their spots until it stops.
-      let step = true;
       switch (e.key) {
         case "ArrowLeft":
           api.panBy(-KEY_PAN_PX, 0);
@@ -305,21 +299,17 @@ export function CameraRig() {
         case "+":
         case "=":
           api.zoomBy(KEY_ZOOM_FACTOR);
-          step = prefersReducedMotion();
           break;
         case "-":
         case "_":
           api.zoomBy(1 / KEY_ZOOM_FACTOR);
-          step = prefersReducedMotion();
           break;
         case "0":
           api.reset();
-          step = false;
           break;
         default:
           return;
       }
-      if (step) markStep();
       e.preventDefault();
     };
 
