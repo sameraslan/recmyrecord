@@ -1,6 +1,6 @@
 import { interpolated, type MapData } from "../data";
 import { GAS_BAND_FULL_PX } from "../theme";
-import type { MapPadding } from "../types";
+import type { MapInput, MapPadding } from "../types";
 import { COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, MAX_ZOOM, pxPerWorld, visibleScale, zoomForPxPerWorld } from "./zoomLimits";
 
 export interface Bounds {
@@ -241,6 +241,16 @@ export function visibleFractionThreshold(zoom: number, fitZoom: number): number 
 }
 
 /**
+ * CSS px along the bottom of the visible map where a full-width panel hides the albums, for `nudgeVector`'s
+ * `coveredBottom`. On a phone that is the slider panel (`bottomCover`), or the picked album's card on top of it:
+ * `framePadding.bottom`, the same line a pick's fly-to keeps the album above (canvas/CameraTween.tsx flyTarget).
+ * 0 on desktop, where no panel spans the map (`bottomCover` is 0 there).
+ */
+export function coveredBottomPx(input: Pick<MapInput, "bottomCover" | "framePadding">): number {
+  return input.bottomCover > 0 ? Math.max(input.bottomCover, input.framePadding.bottom) : 0;
+}
+
+/**
  * Decides whether the idle camera should be nudged back toward the album
  * cloud, and by how much. Returns `null` when no correction is needed: the
  * cloud's bounding box is at least `threshold` visible in the viewport (by
@@ -248,6 +258,11 @@ export function visibleFractionThreshold(zoom: number, fitZoom: number): number 
  * `visibleFractionThreshold(zoom, fitZoom)`), or the camera is already sitting at the clamp
  * target. Otherwise returns the raw (un-eased) correction vector; the caller
  * eases into it rather than snapping.
+ *
+ * `coveredBottom` (world units; `coveredBottomPx` in px) is the height of the viewport's bottom that a panel
+ * covers. The camera may rest that much lower, so the cloud's lowest albums can stand above the panel: without it
+ * the clamp holds them within `margin` of the viewport's bottom edge, under a panel taller than that. It only
+ * widens the range a camera may rest in; the coverage test and the upper limit do not change.
  */
 export function nudgeVector(
   camPos: { x: number; y: number },
@@ -255,6 +270,7 @@ export function nudgeVector(
   cloud: Bounds,
   margin: number,
   threshold: number = VISIBLE_FRACTION_THRESHOLD,
+  coveredBottom = 0,
 ): { x: number; y: number } | null {
   const { halfW, halfH } = viewport;
   const cloudW = cloud.maxX - cloud.minX;
@@ -289,7 +305,7 @@ export function nudgeVector(
   const tx = loX <= hiX ? Math.max(loX, Math.min(hiX, camPos.x)) : (cloud.minX + cloud.maxX) / 2;
   const loY = cloud.minY - margin + halfH;
   const hiY = cloud.maxY + margin - halfH;
-  const ty = loY <= hiY ? Math.max(loY, Math.min(hiY, camPos.y)) : (cloud.minY + cloud.maxY) / 2;
+  const ty = loY <= hiY ? Math.max(loY - Math.max(coveredBottom, 0), Math.min(hiY, camPos.y)) : (cloud.minY + cloud.maxY) / 2;
 
   const dx = tx - camPos.x;
   const dy = ty - camPos.y;

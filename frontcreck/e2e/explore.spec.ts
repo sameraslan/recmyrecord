@@ -493,3 +493,85 @@ test('the hint stays hidden over covers after a trip to About and back', async (
   await page.waitForFunction(() => (window as unknown as { __hintDone: boolean }).__hintDone, null, { timeout: 5000 });
   expect(await page.evaluate(() => (window as unknown as { __hintMax: number }).__hintMax)).toBeLessThan(0.05);
 });
+
+/** Albums at the edges of the balanced layout (indices into albums.json): Milestones, which sits just above the
+ * cloud's lower edge in a dense spot, then the lowest, the highest, the leftmost and the rightmost album. */
+const EDGE_ALBUMS = [
+  ['Milestones, near the lower edge', 1158],
+  ['the lowest album', 408],
+  ['the highest album', 3595],
+  ['the leftmost album', 3684],
+  ['the rightmost album', 557],
+] as const;
+/** Half the picked cover with its frame: 64 px cover, 4 px gap, 2 px frame (shaders/album.ts SELECTED_*). */
+const PICKED_HALF_PX = 64 / 2 + 4 + 2;
+/** Clear space asked for round the picked cover. */
+const SPARE_PX = 4;
+
+/** The map at rest: the camera has stopped, and the pull back onto the cloud, which starts half a second after the
+ * last camera move (CameraBounds RELEASE_MS), has had its turn and has stopped too. */
+async function mapAtRest(page: Page): Promise<void> {
+  await waitForCameraIdle(page);
+  await page.waitForTimeout(800);
+  await waitForCameraIdle(page);
+}
+
+for (const [name, id] of EDGE_ALBUMS) {
+  test(`on a phone a picked album at the edge of the cloud rests whole between the header and the card: ${name}`, async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'the card is a bottom sheet on phones only');
+    await page.goto('/map');
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    await page.evaluate((i) => window.__rmr!.map!.flyTo(i), id);
+    await mapAtRest(page);
+    const at = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), id))!;
+    await page.touchscreen.tap(at.x, at.y);
+    // In a pile the tap may take a neighbour a few px away: whichever album was picked must land clear.
+    await expect.poll(() => page.evaluate(() => window.__rmr!.getState().selected)).not.toBeNull();
+    const picked = (await page.evaluate(() => window.__rmr!.getState().selected))!;
+    await expect(page.locator('.card')).toBeVisible();
+    await mapAtRest(page);
+    const p = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), picked))!;
+    const cardTop = await page.locator('.card').evaluate((el) => el.getBoundingClientRect().top);
+    const headerBottom = await page.locator('header.top').evaluate((el) => el.getBoundingClientRect().bottom);
+    const width = page.viewportSize()!.width;
+    expect(p.y + PICKED_HALF_PX + SPARE_PX, `album ${picked}: bottom of the picked cover against the card's top edge (${cardTop})`).toBeLessThanOrEqual(cardTop);
+    expect(p.y - PICKED_HALF_PX - SPARE_PX, `album ${picked}: top of the picked cover against the header's bottom edge (${headerBottom})`).toBeGreaterThanOrEqual(headerBottom);
+    expect(p.x - PICKED_HALF_PX - SPARE_PX, `album ${picked}: left side of the picked cover`).toBeGreaterThanOrEqual(0);
+    expect(p.x + PICKED_HALF_PX + SPARE_PX, `album ${picked}: right side of the picked cover`).toBeLessThanOrEqual(width);
+    // It stays there: no later pull moves it.
+    await page.waitForTimeout(1200);
+    const later = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), picked))!;
+    expect(Math.abs(later.y - p.y)).toBeLessThan(0.5);
+    expect(Math.abs(later.x - p.x)).toBeLessThan(0.5);
+  });
+}
+
+// The slider panel covers the bottom 165 px of a phone's map. One zoom step out from covers, the pull back onto the
+// cloud used to leave these albums under it, where a tap lands on the slider and picks nothing (the review capture's
+// tap on Milestones: flyTo, "-", "+", tap).
+for (const [name, id] of [EDGE_ALBUMS[0], EDGE_ALBUMS[1]]) {
+  test(`on a phone an album at the lower edge rests above the slider panel one zoom step out from covers and back in, and a tap picks it: ${name}`, async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'the slider panel covers the bottom of the map on phones only');
+    await page.goto('/map');
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    await page.evaluate((i) => window.__rmr!.map!.flyTo(i), id);
+    await mapAtRest(page);
+    await page.locator('canvas.map-canvas').focus();
+    await page.keyboard.press('-');
+    await mapAtRest(page);
+    const sliderTop = await page.locator('.mode').evaluate((el) => el.getBoundingClientRect().top);
+    const out = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), id))!;
+    // Covers are about 23 px here; 16 px is half of the largest they can be before the next step in.
+    expect(out.y + 16 + SPARE_PX, `album ${id}, one step out, against the slider panel's top edge (${sliderTop})`).toBeLessThanOrEqual(sliderTop);
+    await page.keyboard.press('+');
+    await mapAtRest(page);
+    const p = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), id))!;
+    expect(p.y + 16 + SPARE_PX, `album ${id}, back at covers, against the slider panel's top edge (${sliderTop})`).toBeLessThanOrEqual(sliderTop);
+    // The tap reaches the map, not the slider: an album is picked (in a pile, maybe a neighbour a few px away).
+    expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x, y)?.tagName, p)).toBe('CANVAS');
+    await page.touchscreen.tap(p.x, p.y);
+    await expect.poll(() => page.evaluate(() => window.__rmr!.getState().selected)).not.toBeNull();
+  });
+}

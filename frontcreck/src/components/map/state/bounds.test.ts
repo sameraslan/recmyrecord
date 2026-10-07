@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { buildMapData, type MapData } from "../data";
 import { GAS_BAND_FULL_PX } from "../theme";
 import {
+  coveredBottomPx,
   OVERVIEW_COVER_MAX_PX,
   OVERVIEW_SIDE_PAD_PX,
   cloudCenter,
@@ -264,6 +265,76 @@ describe("nudgeVector", () => {
     // the box midpoint (0, 0): the correction points back toward it.
     expect(delta!.x).toBeCloseTo(-0.3, 10);
     expect(delta!.y).toBeCloseTo(-0.3, 10);
+  });
+});
+
+describe("nudgeVector under a bottom panel (phone: the slider panel and the picked album's card)", () => {
+  // The real phone numbers: a 390 x 844 canvas with 60 px under the header, covers at 32 px.
+  const H = 844;
+  const VISIBLE = 784;
+  const zoom = zoomForPxPerWorld(32 / COVER_WORLD, H);
+  const ppw = pxPerWorld(zoom, H);
+  const viewport = { halfW: 390 / 2 / ppw, halfH: VISIBLE / 2 / ppw };
+  const cloud = { minX: -0.4219, maxX: 0.7355, minY: -0.6474, maxY: 0.4689 };
+  const MARGIN = 0.04;
+  /** Client y of a world y with the camera at `camY`: the camera is drawn at the middle of the visible map. */
+  const screenY = (worldY: number, camY: number) => 60 + VISIBLE / 2 + (camY - worldY) * ppw;
+  /** Where the camera comes to rest from `camY`. */
+  const rest = (camY: number, coveredPx: number) => camY + (nudgeVector({ x: 0, y: camY }, viewport, cloud, MARGIN, 0.25, coveredPx / ppw)?.y ?? 0);
+
+  it("without a panel an album at the lower edge is pulled to within the margin of the bottom edge (the fault)", () => {
+    // Milestones (y -0.6271), centred by its fly-to: the pull leaves it 560 px down, under a card whose top is at 550.
+    const y = screenY(-0.6271, rest(-0.6271, 0));
+    expect(y).toBeGreaterThan(550);
+  });
+
+  it("with the card's cover the camera stays where the fly-to put it: Milestones and the lowest album stay centred", () => {
+    const cover = 294 + 16; // the card and the slider under it, and the fly-to's 16 px
+    for (const albumY of [-0.6271, cloud.minY]) {
+      expect(rest(albumY, cover), `album at ${albumY}`).toBe(albumY);
+      // 38 px is half the picked cover with its frame; the card's top is at 844 - 294.
+      expect(screenY(albumY, rest(albumY, cover)) + 38).toBeLessThan(844 - 294);
+    }
+  });
+
+  it("with the slider panel's cover the lowest album rests above the panel", () => {
+    const cover = 165 + 4;
+    expect(screenY(cloud.minY, rest(cloud.minY, cover)) + 16).toBeLessThan(844 - 165);
+    // Still held: the camera can not leave the cloud downwards by more than the cover.
+    const far = rest(cloud.minY - 1, cover);
+    expect(far).toBeCloseTo(cloud.minY - MARGIN + viewport.halfH - cover / ppw, 10);
+  });
+
+  it("only widens the range: a camera at rest without a cover is at rest with one, and the upper limit is the same", () => {
+    const loY = cloud.minY - MARGIN + viewport.halfH;
+    const hiY = cloud.maxY + MARGIN - viewport.halfH;
+    for (const camY of [loY, (loY + hiY) / 2, hiY]) expect(rest(camY, 310), `camera at ${camY}`).toBe(camY);
+    expect(rest(cloud.maxY, 310)).toBeCloseTo(hiY, 10);
+    expect(rest(cloud.maxY, 0)).toBeCloseTo(hiY, 10);
+  });
+
+  it("leaves the centring of a viewport taller than the cloud alone, and the coverage test too", () => {
+    const tall = { halfW: 0.1, halfH: 2 };
+    const a = nudgeVector({ x: 3, y: 0.5 }, tall, cloud, MARGIN, 0.25, 0);
+    const b = nudgeVector({ x: 3, y: 0.5 }, tall, cloud, MARGIN, 0.25, 0.5);
+    expect(b).toEqual(a);
+    // Mostly in view: no nudge, with or without a cover.
+    expect(nudgeVector({ x: 0.15, y: -0.09 }, { halfW: 0.6, halfH: 0.6 }, cloud, MARGIN, 0.25, 0.5)).toBeNull();
+  });
+});
+
+describe("coveredBottomPx", () => {
+  const pad = (bottom: number) => ({ top: 80, right: 60, bottom, left: 60 });
+
+  it("is 0 on desktop, where no panel spans the map", () => {
+    expect(coveredBottomPx({ bottomCover: 0, framePadding: pad(90) })).toBe(0);
+  });
+
+  it("on a phone is the line a pick's fly-to keeps an album above: the slider panel, or the card on it", () => {
+    expect(coveredBottomPx({ bottomCover: 165, framePadding: pad(169) })).toBe(169);
+    expect(coveredBottomPx({ bottomCover: 165, framePadding: pad(310) })).toBe(310);
+    // Never less than the panel itself.
+    expect(coveredBottomPx({ bottomCover: 165, framePadding: pad(96) })).toBe(165);
   });
 });
 

@@ -110,4 +110,8 @@ describe('the idle camera is kept on the cloud by what is in view below the head
     expect(src).toContain('const viewport = visibleWorldRect(cam, getVisibleScale());');
     expect(src).not.toMatch(/viewportWorldRect\(/);
   });
+
+  it('CameraBounds lets the camera rest lower by what a bottom panel covers', () => {
+    expect(read('CameraBounds.tsx')).toContain('(coveredBottomPx(input) * (cam.top - cam.bottom)) / (state.size.height * cam.zoom),');
+  });
 });
