@@ -4,12 +4,16 @@ agree on how the music feels?
 CLI (reads the caches named by RMR_PREVIEW_CACHE read-only; writes only under results/ and scratch/):
   python crossgenre.py run --pool bakeoff|full [--only REGEX]   score the candidate lists (cached per name in scratch/)
   python crossgenre.py holdout --pool full --names a,b,c        new-album test (transform fitted on 80% of artists)
-  python crossgenre.py anchor --names a,b,c                     Bitches Brew lists on the full pool
+  python crossgenre.py anchor --names a,b,c [--pool fullclap]   Bitches Brew lists on the full pool
+  python crossgenre.py balanced --pool fullclap --names a,b     balanced stop, its hubness, artist retrieval, stability
   python crossgenre.py report                                   -> results/crossgenre.{md,json}
 
 `build(name, pool) -> (rows, X)` returns the album-level matrix of any named candidate; `xscore`
 measures any matrix. Pools: `bakeoff` = the 1,000 bake-off albums, 2 clips each, the same clips for
-every model; `full` = the 3,944-album pool, 4 clips each (EffNet, MusiCNN and the Essentia scalars only).
+every model; `full` = the 3,944-album pool, 4 clips each (EffNet, MusiCNN and the Essentia scalars only);
+`fullclap` = the albums of `full` that clap_catalog.py has a CLAP vector for (all but two), 4 clips each, with
+`clap_music` next to EffNet and MusiCNN: the like-for-like set for CLAP at catalog scale (`fullclap2`: the
+same albums from 2 clips, for simbench's stability only).
 
 Measures (euclidean top 10 on the audio block alone, as the recommender ranks; the seed artist's
 other albums are never candidates here; descriptor cosine as simbench: albums with MIN_DESC+ descriptors):
@@ -42,7 +46,8 @@ family predicted from the candidate's own embedding for seed and candidates alik
   <emb>[-op...]/<k>   album mean -> L2 -> ops -> L2 -> PCA k. emb: effnet, musicnn, clap_music (the
                       working laion/larger_clap_music_and_speech), clap (laion/clap-htsat-unfused),
                       mert_l0..mert_l12, mert_mid (4-7), mert_early (1-3), mert_late (9-12), mert_mean,
-                      mert_earlycat (unit layers 1-3 side by side). The last three groups: bakeoff pool only.
+                      mert_earlycat (unit layers 1-3 side by side). clap_music: bakeoff and fullclap pools;
+                      clap and mert_*: bakeoff pool only.
   ops                 head<r>      project out the top-r right singular directions of the Discogs-400
                                    layer (graphdef.discogs_head); no RYM label involved. headonly<r> keeps
                                    only them (control: the genre part).
@@ -88,13 +93,14 @@ from sklearn.preprocessing import StandardScaler
 
 import simbench
 from common import HERE, RESULTS
-from evaluate import _table, overlap, row_nanmean
+from evaluate import _table, matrix, overlap, row_nanmean
 from genres import family, load_genres
 from simbench import K, MIN_DESC, distances, hubness, nearest, summarise
-from variants import ALPHAS, total_var
+from variants import ALPHAS, match_var, total_var
 
 SCRATCH = HERE / "scratch"  # gitignored: per-candidate results, so a rerun only computes new names
-POOLS = {"bakeoff": (RESULTS / "bakeoff_rows.txt", 2), "full": (RESULTS / "pool_rows.txt", 4)}
+POOLS = {"bakeoff": (RESULTS / "bakeoff_rows.txt", 2), "full": (RESULTS / "pool_rows.txt", 4),
+         "fullclap": (RESULTS / "pool_rows.txt", 4), "fullclap2": (RESULTS / "pool_rows.txt", 2)}  # fullclap*: see source
 SCOPES = ("family", "primary", "strict", "disjoint")
 KMAX = 64
 PRE = 128  # leading PCs the supervised removals work in (learned.py's PRE)
@@ -290,13 +296,31 @@ class Source:
     tests: list[np.ndarray]
 
 
-@lru_cache(maxsize=2)
+def clap_means(clips: int) -> tuple[np.ndarray, np.ndarray]:
+    """(rows ascending, album-mean CLAP vectors): the catalog albums clap_catalog.py holds at least one
+    embedded clip for, each the plain mean of its clips ranked below `clips` (clap_catalog.load)."""
+    import clap_catalog
+    from common import load_albums
+    keys, X = clap_catalog.load(clips)
+    al = load_albums()
+    row_of = dict(zip(al["URI"], al["row"]))
+    r = np.array([row_of.get(k, -1) for k in keys], dtype=np.int64)
+    order = np.argsort(r)[(r < 0).sum():]
+    return r[order], X[order].astype(np.float64)
+
+
+@lru_cache(maxsize=3)
 def source(pool: str) -> Source:
     from aggregate import aggregate
     from rmr_pipeline.constants import AUDIO
     from variants import make_inputs
     path, clips = POOLS[pool]
     rows = np.sort(np.loadtxt(path, dtype=np.int64))  # bakeoff_rows.txt is in sampling order
+    clap = None
+    if pool.startswith("fullclap"):  # the full pool's albums with a CLAP vector: every model on the same albums
+        have, clap = clap_means(clips)
+        rows = rows[np.isin(rows, have)]
+        clap = clap[np.searchsorted(have, rows)]
     inp = make_inputs(*aggregate(prio_below=clips), rows)
     assert np.array_equal(inp.albums["row"], rows), "pool albums missing from the cache"
     emb = {k: inp.emb[k].astype(np.float64) for k in ("effnet", "musicnn")}
@@ -307,6 +331,8 @@ def source(pool: str) -> Source:
         layers = X.pop("mert").reshape(len(rows), 13, 768)
         emb |= {k: X[k] for k in ("clap_music", "clap")} | {k: layers[:, list(i)].mean(axis=1) for k, i in MERT.items()}
         emb["mert_earlycat"] = np.hstack([unit(layers[:, i]) for i in MERT["mert_early"]])
+    if clap is not None:
+        emb["clap_music"] = clap
     xb = xbench(rows)
     folds = list(GroupKFold(FOLDS).split(rows, groups=xb.b.artist))
     return Source(pool, rows, emb, inp.scalars, inp.albums[AUDIO].to_numpy(dtype=np.float64), inp.fit, xb.fam, xb.b.desc,
@@ -546,6 +572,9 @@ def blends(emb: str, kinds=("feel", "ridge", "ball")) -> list[str]:
 
 def candidates(pool: str) -> dict[str, list[str]]:
     """Section -> names. `effnet/64` is the reference everywhere."""
+    if pool.startswith("fullclap"):
+        return {"models": ["effnet/64", "effnet/24", "clap_music/64", "clap_music/24"],
+                "combos": ["clap_music-inlp1/64"], "noise": [f"effnet/64+random@{w}" for w in SHARES]}
     removal = ["effnet-famoracle/64", "effnet-fampred/64", *(f"effnet-inlp{t}/64" for t in (1, 2, 4, 6)),
                *(f"effnet-bcs{r}/64" for r in (4, 8, 16)), "effnet-leace/64"]
     head = [*(f"effnet-head{r}/64" for r in HEAD_R), "effnet-headonly400/64", "effnet-head64-noren/64"]
@@ -668,12 +697,47 @@ def anchor(names: list[str], pool: str = "full", seed=ANCHOR, targets=ANCHOR_TAR
         rank[np.argsort(D)] = np.arange(1, len(D) + 1)
         prog = [bool(re.search(r"prog", " ".join(g["genres"][i]), re.I)) and "rock" in " ".join(g["genres"][i]).lower()
                 for i in top]
-        out["lists"][name] = {
-            "top": [f"{al['Artist'][i]} — {al['Title'][i]} [{g['primary'][i]}]" for i in top],
+        label = lambda i: f"{al['Artist'][i]} — {al['Title'][i]} [{g['primary'][i]}]"  # noqa: E731
+        cosine = lambda idx: [None if np.isnan(c) else round(float(c), 3) for c in xb.b.pair["desc_cos"][s, idx]]  # noqa: E731
+        fam = g["family"].to_numpy()[np.argsort(D)[:len(D) - 1]]  # nearest first, the seed (inf) dropped
+        first = lambda m: int(np.flatnonzero(m)[0]) + 1 if m.any() else None  # noqa: E731
+        out["lists"][name] = l = {
+            "top": [label(i) for i in top],
             "families": [g["family"][i] for i in top],
+            "desc_cos": cosine(top),
             "prog_rock": [f"{al['Artist'][i]} — {al['Title'][i]}" for i, p in zip(top, prog) if p],
-            "ranks": {f"{a} — {t}": int(rank[find(a, t)[0]]) for a, t in targets if len(find(a, t))}}
+            "ranks": {f"{a} — {t}": int(rank[find(a, t)[0]]) for a, t in targets if len(find(a, t))},
+            "first": {"rock_family": first(fam == "rock"),
+                      "non_jazz_family": first((fam != "jazz") & g["joined"].to_numpy()[np.argsort(D)[:len(D) - 1]])}}
+        if reranker(name, pool) is None:  # the balanced stop, as simbench.score builds it
+            Db = distances(matrix(match_var(X, total_var(xb.b.A)), xb.b.desc, "balanced"))[s]
+            tb = np.argsort(Db)[:k]
+            l["balanced"] = {"top": [label(i) for i in tb], "families": [g["family"][i] for i in tb], "desc_cos": cosine(tb)}
     return out
+
+
+BAL = ("bal_genre_primary", "bal_genre_family", "bal_overlap_A", "artist_share", "artist_mrr", "stability",
+       "genre_primary", "genre_family", "desc_cos")
+
+
+def balanced(names: list[str], pool: str) -> dict:
+    """simbench.score per candidate on `pool`: the balanced stop (the block scaled to the Spotify block's
+    total variance and joined to the descriptors, as the site does), hubness on the block alone and at
+    that stop, artist retrieval, and stability (overlap@10 of the lists from 2 and from 4 clips, where
+    POOLS has a `<pool>2`). Differences are paired against the first name."""
+    rows, two = source(pool).rows, pool + "2" if pool + "2" in POOLS else None
+    assert two is None or np.array_equal(source(two).rows, rows)
+    res = {}
+    for n in names:
+        refit = (lambda k, n=n: build(n, pool if k == simbench.TRACKS[1] else two)[1]) if two else None
+        res[n] = simbench.score(build(n, pool)[1], rows, name=n, build=refit)
+        print(f"{n}: done", flush=True)
+    b, ref = xbench(rows).b, res[names[0]]["seeds"]
+    return {"pool": pool, "albums": len(rows), "ref": names[0],
+            "candidates": {n: {"metrics": {m: r["metrics"][m] for m in BAL if m in r["metrics"]}, "hubness": r["hubness"]}
+                           for n, r in res.items()},
+            "diff": {n: {m: summarise(r["seeds"][m] - ref[m], b) for m in BAL if m in r["metrics"]}
+                     for n, r in res.items() if n != names[0]}}
 
 
 def head_check(pool: str = "full") -> dict:
@@ -810,7 +874,8 @@ def report() -> None:
     if notes.exists():
         out += [notes.read_text(encoding="utf-8")]
     titles = {"bakeoff": "1,000 bake-off albums, 2 clips per album, the same clips for every model",
-              "full": "Full pool: 3,944 albums, 4 clips per album (EffNet, MusiCNN, Essentia scalars)"}
+              "full": "Full pool: 3,944 albums, 4 clips per album (EffNet, MusiCNN, Essentia scalars)",
+              "fullclap": "CLAP on the full pool: the albums with a CLAP vector, 4 clips per album, EffNet on the same albums"}
     for pool in POOLS:
         res = load_results(pool)
         if not res:
@@ -828,7 +893,7 @@ def report() -> None:
                                          for n, r in res.items() if n != "effnet/64"}}
         curve = noise_curve(res, sec["noise"])
         js[pool]["predicted_family_accuracy"] = {e: predicted_family(pool, e.split("/")[0])[1] for e in dict.fromkeys(
-            f.partition("~")[0] for f in sec["forced"] if f in res and f.endswith("p"))}
+            f.partition("~")[0] for f in sec.get("forced", []) if f in res and f.endswith("p"))}
         wide = lambda names: table(res, names, WIDE, curve)  # noqa: E731
         short = lambda names: table(res, names, SHORT, curve)  # noqa: E731
         out += [f"## {titles[pool]}", "",
@@ -836,8 +901,22 @@ def report() -> None:
                 f"cosine: family {js[pool]['floor']['family']:.3f}, primary {js[pool]['floor']['primary']:.3f}, strict "
                 f"{js[pool]['floor']['strict']:.3f}, disjoint {js[pool]['floor']['disjoint']:.3f}. Largest family: "
                 f"{share.max():.3f} of the albums (the probe's majority-class accuracy). A random list has "
-                f"{1 - (share ** 2).sum():.3f} of its members outside the seed's family.", "",
-                "### Models and controls", "", *wide(CONTROLS + sec["models"]),
+                f"{1 - (share ** 2).sum():.3f} of its members outside the seed's family.", ""]
+        if pool == "fullclap":
+            left = np.setdiff1d(source("full").rows, source(pool).rows)
+            js[pool]["not_covered_rows"] = left.tolist()
+            out += [f"`clap_music` = laion/larger_clap_music_and_speech over the catalog's clips (clap_catalog.py), the same "
+                    f"recipe as every embedding: album mean over the clips, L2, PCA. {len(left)} of the full pool's "
+                    f"{len(source('full').rows)} albums have no CLAP vector (their previews were gone from the store's "
+                    "listing when CLAP was run) and are left out for every model here, so `effnet/64` below is refitted "
+                    "and scored on these albums only: the like-for-like reference. `clap_music-inlp1/64` is fitted with "
+                    "RYM families, out of fold by artist. The noise curve is this pool's own.", "",
+                    "### Models and controls", "", *wide(CONTROLS + sec["models"] + sec["combos"]),
+                    "Paired difference against effnet/64:", "",
+                    *diff_table(res, sec["models"] + sec["combos"], "effnet/64", xb.b),
+                    "### Noise control on these albums", "", *short(["effnet/64"] + sec["noise"] + ["random"])]
+            continue
+        out += ["### Models and controls", "", *wide(CONTROLS + sec["models"]),
                 "Paired difference against effnet/64:", "",
                 *diff_table(res, sec["models"] + sec["removal"] + sec["head"], "effnet/64", xb.b)]
         js[pool]["head_check"] = hc = head_check(pool)
@@ -914,6 +993,43 @@ def report() -> None:
             out += [f"**{name}** — ranks: " + "; ".join(f"{t.split(' — ')[1]} {r}" for t, r in l["ranks"].items())
                     + f". Prog rock in the top 10: {', '.join(l['prog_rock']) or 'none'}.", "",
                     *[f"{i + 1}. {t}" for i, t in enumerate(l["top"])], ""]
+    bal = SCRATCH / "balanced.json"
+    if bal.exists():
+        js["balanced"] = bl = json.loads(bal.read_text())
+        cols = [m for m in BAL if all(m in c["metrics"] for c in bl["candidates"].values())]
+        hub = [f"{c} {k}" for c in ("audio", "balanced") for k in ("skew", "never", "max")]
+        out += [f"## Balanced stop, hubness and artist retrieval ({bl['pool']} pool, {bl['albums']} albums)", "",
+                "simbench.score on the same blocks. `bal_*`: the block scaled to the Spotify block's total variance and "
+                "joined to the descriptors as the site's balanced stop does; `bal_overlap_A`: overlap@10 with the "
+                "Spotify block's balanced lists. Hubness: skew of N10, share of albums in no list and the largest N10, "
+                "on the block alone and at the balanced stop. `artist_mrr`, `artist_share`: same artist kept. "
+                "`stability`: overlap@10 of the lists built from 2 and from 4 clips per album.", "",
+                *_table(["candidate", *cols, *hub], [
+                    [n, *(_pm(c["metrics"][m]) for m in cols),
+                     *(f"{c['hubness'][a][k]:.3g}" for a in ("audio", "balanced") for k in ("skew", "never", "max"))]
+                    for n, c in bl["candidates"].items()]),
+                f"Paired difference against {bl['ref']}:", "",
+                *_table(["candidate", *cols], [[n, *(_star(d[m]) for m in cols)] for n, d in bl["diff"].items()])]
+    for pool in POOLS:
+        anc = SCRATCH / f"anchor_{pool}.json"
+        if not anc.exists():
+            continue
+        js[f"anchor_{pool}"] = a = json.loads(anc.read_text())
+        n = len(source(pool).rows)
+        out += [f"## Anchor on the {pool} pool: Miles Davis — Bitches Brew", "",
+                f"Sonic = the block alone; balanced = the block joined to the descriptors at the site's balanced stop. "
+                f"Both keep the seed's artist. Each entry: [primary genre; family; descriptor cosine with the seed]. "
+                f"Rank = position among the {n - 1:,} other albums by the block alone.", ""]
+        for name, l in a["lists"].items():
+            item = lambda t, f, c: f"{t[:-1]}; {f}; {'–' if c is None else f'{c:.2f}'}]"  # noqa: E731
+            out += [f"**{name}, sonic** — ranks: " + "; ".join(f"{t.split(' — ')[1]} {r}" for t, r in l["ranks"].items())
+                    + f"; first rock-family album {l['first']['rock_family']}; first outside the jazz family "
+                    f"{l['first']['non_jazz_family']}. Prog rock in the top 10: {', '.join(l['prog_rock']) or 'none'}.", "",
+                    *[f"{i + 1}. {item(*x)}" for i, x in enumerate(zip(l["top"], l["families"], l["desc_cos"]))], ""]
+            if "balanced" in l:
+                lb = l["balanced"]
+                out += [f"**{name}, balanced stop**", "",
+                        *[f"{i + 1}. {item(*x)}" for i, x in enumerate(zip(lb["top"], lb["families"], lb["desc_cos"]))], ""]
     (RESULTS / "crossgenre.md").write_text("\n".join(out) + "\n", encoding="utf-8")
     (RESULTS / "crossgenre.json").write_text(json.dumps(js) + "\n", encoding="utf-8")
     print(f"wrote {RESULTS / 'crossgenre.md'}")
@@ -921,10 +1037,10 @@ def report() -> None:
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("cmd", choices=["run", "holdout", "anchor", "report"])
+    p.add_argument("cmd", choices=["run", "holdout", "anchor", "balanced", "report"])
     p.add_argument("--pool", default="bakeoff", choices=list(POOLS))
     p.add_argument("--only", help="regex on candidate names")
-    p.add_argument("--names", default="", help="comma-separated candidate names (holdout, anchor)")
+    p.add_argument("--names", default="", help="comma-separated candidate names (holdout, anchor, balanced)")
     args = p.parse_args()
     names = [n for n in args.names.split(",") if n]
     SCRATCH.mkdir(exist_ok=True)
@@ -936,11 +1052,19 @@ def main() -> None:
         for n in names:
             done[n, args.pool] = holdout(n, args.pool)
             path.write_text(json.dumps(list(done.values()), indent=1))
+    elif args.cmd == "anchor" and args.pool.startswith("fullclap"):
+        a = anchor(names, args.pool)
+        (SCRATCH / f"anchor_{args.pool}.json").write_text(json.dumps(a, indent=1))
+        print(json.dumps(a, indent=1, ensure_ascii=False))
     elif args.cmd == "anchor":
         a = anchor(names, "full")
         a["bakeoff_present"] = anchor([], "bakeoff")["present"]
         (SCRATCH / "anchor.json").write_text(json.dumps(a, indent=1))
         print(json.dumps(a, indent=1, ensure_ascii=False))
+    elif args.cmd == "balanced":
+        res = balanced(names, args.pool)
+        (SCRATCH / "balanced.json").write_text(json.dumps(res, indent=1))
+        print(json.dumps(res, indent=1))
     else:
         report()
 

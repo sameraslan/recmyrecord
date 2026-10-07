@@ -9,7 +9,9 @@ genres is fitted on every album (`oof=False`): what a deployed catalog would sho
 the ranking rule (crossgenre.reranker); `~x5p`'s predicted families are out of fold by artist.
 
 Sections: `full` = the 3,944-album pool, 4 clips per album; `bakeoff` = the 1,000 bake-off albums,
-2 clips per album (neighbours come from those 1,000 only).
+2 clips per album (neighbours come from those 1,000 only). In `full`, `clap_music/64` is built on
+crossgenre's `fullclap` pool (the albums with a CLAP vector): the albums without one are never its
+neighbours and are named in `not_covered`; no seed is among them.
 
 Shape:
   {generated, note, anchor: {artist, title, targets}, sections: {full, bakeoff}}
@@ -17,6 +19,7 @@ Shape:
             predicted_family_accuracy: {embedding: out-of-fold accuracy of ~x5p's classifier},
             albums: {row: [artist, title, primary_genre, family, spotify album id]},
             wrong_features: [row, ...]  (listed albums whose Spotify features belong to another record),
+            not_covered: {candidate id: [row, ...]}  (pool albums the candidate has no vector for),
             seeds: [{row, genres, lists: {candidate id: {n_out_family, mean_desc_cos, items, target_ranks?}}}]}
   items: ten [row, out_family, out_primary, desc_cos, same_artist], nearest first. out_family /
          out_primary: 1 / 0 against the seed by the true RYM genre, null when either album has none;
@@ -43,6 +46,7 @@ OUT = RESULTS / "crossgenre_listening.json"
 SPOTIFY = "spotify"
 CANDIDATES = {
     "full": [("effnet/64", "EffNet (in use now)"),
+             ("clap_music/64", "CLAP (music and speech)"),
              ("effnet/64~x5", "EffNet, 5 of 10 forced outside the family (RYM genre)"),
              ("effnet/64~x5p", "EffNet, 5 of 10 forced outside the predicted family"),
              (SPOTIFY, "Spotify features (old site)"),
@@ -67,6 +71,7 @@ CANDIDATES = {
                 (SPOTIFY, "Spotify features (old site)"),
                 ("ridge", "Spotify-like scores predicted from audio")],
 }
+SUBPOOL = {("full", "clap_music/64"): "fullclap"}  # candidates that cover only part of the section's pool
 # Bake-off seeds beyond evaluate.SEEDS (Bitches Brew is not in this pool): every other Miles Davis
 # album, every album RYM tags Jazz Fusion, then prog / krautrock / jazz / metal to spread the families.
 BAKEOFF_EXTRA = [
@@ -115,9 +120,17 @@ def section(pool: str, spotify_id: dict[int, str]) -> dict:
 
     out = [{"row": int(src.rows[s]), "genres": g["genres"][s], "lists": {}} for s in seeds]
     used.update(seeds)
+    not_covered = {}
     for name, _ in CANDIDATES[pool]:
-        X = src.A if name == SPOTIFY else build(name, pool, oof=False)[1]
-        D = distances(X)
+        if (pool, name) in SUBPOOL:  # distances among the covered albums; the others are infinitely far
+            r, X = build(name, SUBPOOL[pool, name], oof=False)
+            at = np.searchsorted(src.rows, r)
+            assert np.array_equal(src.rows[at], r) and set(seeds) <= set(at.tolist())
+            D = np.full((n, n), np.inf, np.float32)
+            D[np.ix_(at, at)] = distances(X)
+            not_covered[name] = np.setdiff1d(src.rows, r).tolist()
+        else:
+            D = distances(src.A if name == SPOTIFY else build(name, pool, oof=False)[1])
         rule = None if name == SPOTIFY else reranker(name, pool)
         tops = np.argsort(D, axis=1, kind="stable")[:, :K] if rule is None else rule(D, np.ones((n, n), bool))
         for s, o in zip(seeds, out):
@@ -143,7 +156,8 @@ def section(pool: str, spotify_id: dict[int, str]) -> dict:
                                           for c, _ in CANDIDATES[pool] if c.endswith("~x5p")},
             "albums": {int(src.rows[i]): [artists[i], str(titles[i]), g["primary"][i], g["family"][i],
                                           spotify_id[int(src.rows[i])]] for i in sorted(used)},
-            "wrong_features": [int(src.rows[i]) for i in sorted(used) if not src.spot_ok[i]], "seeds": out}
+            "wrong_features": [int(src.rows[i]) for i in sorted(used) if not src.spot_ok[i]],
+            "not_covered": not_covered, "seeds": out}
 
 
 def main() -> None:

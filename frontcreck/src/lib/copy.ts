@@ -1,7 +1,7 @@
 /**
  * Every user-visible string and ARIA label (spec section 8). The owner signs the copy off on the PR.
- * Rules: no em or en dashes, no hype, no emoji, no owner name, never the exact catalog count (only the
- * rounded "10,000+" below), never a count of recommendations.
+ * Rules: no em or en dashes, no hype, no emoji (a typed :) smiley is fine), no owner name, never the exact
+ * catalog count (only the rounded "10,000+" below), never a count of recommendations.
  */
 export const CATALOG_SIZE_LABEL = '10,000+';
 
@@ -82,7 +82,9 @@ export const COPY = {
     cardPrimary: 'See closest albums',
     cardSpotify: 'Spotify',
     cardClose: 'Close',
-    noWebgl: 'The map needs WebGL, which this browser has turned off. Search and lists still work.',
+    /** Shown where the map can't draw (no WebGL2, or WebGL turned off); `noWebglHint` under it says what to try. */
+    noWebgl: 'This browser can’t display the map. You can still search albums and get recommendations.',
+    noWebglHint: 'To enjoy the full exploration capabilities, open this page in an up-to-date Chrome, Firefox, Safari or Edge.\u00a0:)',
     preview: 'Map preview of the album and its closest albums',
     openMap: 'Open map',
     /** Beside an album: leaves it for Explore with the map left where it is. */

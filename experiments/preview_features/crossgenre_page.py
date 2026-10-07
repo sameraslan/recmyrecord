@@ -19,6 +19,7 @@ def row(name, out, desc, lift, hubs, cls=None):
 FULL = [
     {"group": "Representations", "cls": "grp"},
     row("EffNet (in use now)", 0.366, 0.432, 0.148, 0.79, "ref"),
+    row("CLAP (music and speech)", 0.410, 0.426, 0.156, 1.24),  # fullclap pool: 3,942 of the 3,944 albums
     row("Spotify features (old site)", 0.606, 0.352, 0.093, 0.77),
     row("Spotify-like scores predicted from audio", 0.521, 0.379, 0.112, 0.57),
     row("Essentia feel scores, all 33", 0.473, 0.398, 0.128, 0.99),
@@ -46,9 +47,9 @@ BAKEOFF = [
     row("EffNet mixed half and half with noise", 0.517, 0.372, 0.083, 1.42, "ctl"),
     row("Random", 0.875, 0.241, -0.001, 0.56, "ctl"),
 ]
-BB = ["effnet/64", "spotify", "ridge", "effnet/64+ridge@0.9", "ball", "musicnn/64", "effnet-inlp2/64", "effnet-leace/64",
+BB = ["effnet/64", "clap_music/64", "spotify", "ridge", "effnet/64+ridge@0.9", "ball", "musicnn/64", "effnet-inlp2/64", "effnet-leace/64",
       "effnet-leace/64+ball@0.5"]
-BB_NAMES = {"effnet/64": "EffNet (in use now)", "spotify": "Spotify features (old site)",
+BB_NAMES = {"effnet/64": "EffNet (in use now)", "clap_music/64": "CLAP (music and speech)", "spotify": "Spotify features (old site)",
             "ridge": "Spotify-like scores predicted from audio", "effnet/64+ridge@0.9": "EffNet + Spotify-like scores",
             "ball": "Essentia feel scores", "musicnn/64": "MusiCNN", "effnet-inlp2/64": "EffNet, light genre removal",
             "effnet-leace/64": "EffNet, genre erased", "effnet-leace/64+ball@0.5": "Genre-erased EffNet + feel scores"}

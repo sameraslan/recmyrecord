@@ -6,6 +6,7 @@ test('without WebGL the map shows a message and search still works', async ({ pa
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/map');
   await expect(page.getByText(COPY.map.noWebgl)).toBeVisible();
+  await expect(page.getByText(COPY.map.noWebglHint)).toBeVisible();
   await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
   expect(await page.evaluate(() => window.__rmr!.getState().webgl)).toBe('unavailable');
   const input = page.getByRole('combobox', { name: COPY.search.label });
