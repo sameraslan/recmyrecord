@@ -189,7 +189,7 @@ if (crowded) {
     const SHORT = 209;
     const STEPS = Math.ceil((TALL - SHORT) / 4);
     const wall = (f) => MARKER_EDGE + Math.max(SHORT, f <= STEPS ? TALL - 4 * f : SHORT + 4 * (f - STEPS));
-    const r = { clusters: 0, frames: 0, solves: 0, arrays: 0, outside: 0, over: 0, overSeed: 0, deep: 0, deepSeed: 0, closeOpening: 0, opening: 0, restGap: 0, settles: 0 };
+    const r = { clusters: 0, frames: 0, solves: 0, arrays: 0, outside: 0, over: 0, overSeed: 0, deep: 0, deepSeed: 0, closeOpening: 0, opening: 0, restGap: 0, settles: 0, ms: 0, worstMs: 0, overMs: 0, worstOverMs: 0 };
     for (let c = 0; c < 200; c++) {
       const anchors = Array.from({ length: RECS_SHOWN + 1 }, (_, i) => ({ id: i, x: MARKER_EDGE + WIDE / 2 + (i ? (rand() - 0.5) * 360 : 0), y: MARKER_EDGE + TALL / 2 + (i ? (rand() - 0.5) * 360 : 0) }));
       const bounds = { left: MARKER_EDGE, top: MARKER_EDGE, right: MARKER_EDGE + WIDE, bottom: wall(0) };
@@ -200,7 +200,12 @@ if (crowded) {
       for (let f = 1; f <= 2 * STEPS; f++) {
         bounds.bottom = wall(f);
         const before = cache.stats.solves;
+        // One timing per frame, not the fastest of several: the layout keeps state, so a frame cannot be replayed.
+        const t0 = performance.now();
         const got = cache.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+        const ms = performance.now() - t0;
+        r.ms += ms;
+        r.worstMs = Math.max(r.worstMs, ms);
         r.frames++;
         if (cache.stats.solves !== before) r.solves++;
         if (got !== prev) r.arrays++;
@@ -219,7 +224,12 @@ if (crowded) {
             if (d + 10 > 1) close = true;
           }
         }
-        if (deep > 0.01) r.over++;
+        if (deep > 0.01) {
+          // The separation left an overlap: with the walls still moving it is tried again on the next frame.
+          r.over++;
+          r.overMs += ms;
+          r.worstOverMs = Math.max(r.worstOverMs, ms);
+        }
         if (deepSeed > 0.01) r.overSeed++;
         r.deep = Math.max(r.deep, deep);
         r.deepSeed = Math.max(r.deepSeed, deepSeed);
@@ -237,7 +247,8 @@ if (crowded) {
     console.log(
       `${label}: ${r.clusters} clusters, ${r.frames} moving frames; fresh solves ${r.solves}, new arrays ${r.arrays}, covers outside the walls ${r.outside};` +
         ` frames with one cover over another ${r.over} (deepest ${r.deep.toFixed(1)} px), over the picked cover ${r.overSeed} (deepest ${r.deepSeed.toFixed(1)} px);` +
-        ` frames with a pair too close while the wall comes back ${r.closeOpening} of ${r.opening}; at rest ${r.settles} solves, gap to a cold solve ${r.restGap.toExponential(1)} px`,
+        ` frames with a pair too close while the wall comes back ${r.closeOpening} of ${r.opening}; at rest ${r.settles} solves, gap to a cold solve ${r.restGap.toExponential(1)} px;` +
+        ` cost of a moving frame (one timing each): mean ${(r.ms / Math.max(1, r.frames)).toFixed(3)} ms, worst ${r.worstMs.toFixed(3)} ms; of the ${r.over} frames that kept an overlap: mean ${(r.overMs / Math.max(1, r.over)).toFixed(3)} ms, worst ${r.worstOverMs.toFixed(3)} ms`,
     );
   }
   process.exit(0);
