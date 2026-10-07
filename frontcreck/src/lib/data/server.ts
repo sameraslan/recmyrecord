@@ -1,7 +1,7 @@
 import 'server-only';
 import fs from 'node:fs';
 import path from 'node:path';
-import { REC_MAX, SHELF_SIZE, buildAlbumPageData, buildCatalog, pickShelf, toSummary } from '@/lib/data/catalog';
+import { REC_MAX, SHELF_SIZE, buildAlbumPageData, buildCatalog, isHostedCover, pickShelf, toSummary } from '@/lib/data/catalog';
 import { ATLAS_PER_SHEET, MAX_ATLAS_SHEETS, atlasCount } from '@/lib/data/sprites';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumPageData, AlbumRecord, AlbumSummary, Catalog, ListenLinks, Positions, Recs, Vocab } from '@/lib/types';
@@ -118,6 +118,23 @@ export function prerenderSlugs(slugs: readonly string[], value: string | undefin
     else if (known.has(part)) out.add(part);
   }
   return slugs.filter((s) => out.has(s));
+}
+
+// The site's own copies of the Cover Art Archive covers (public/covers/<mbid>.jpg) and their sizes, index.json:
+// both written by the pipeline (`python -m rmr_pipeline.covers host`), whose validator checks them against albums.json.
+const HOSTED_INDEX = path.join(process.cwd(), 'public', 'covers', 'index.json');
+let hostedSizes: Record<string, [number, number]> | null = null;
+
+/**
+ * The pixel size of the site's own copy of the cover `coverId`, for a link preview: what the pipeline recorded
+ * for `ca:<mbid>` in public/covers/index.json. Undefined for any other cover, and when the index has no such
+ * copy (the preview then states no size).
+ */
+export function hostedCoverSize(coverId: string): { width: number; height: number } | undefined {
+  if (!isHostedCover(coverId)) return undefined;
+  hostedSizes ??= fs.existsSync(HOSTED_INDEX) ? (JSON.parse(fs.readFileSync(HOSTED_INDEX, 'utf8')) as Record<string, [number, number]>) : {};
+  const size = hostedSizes[coverId.slice(coverId.indexOf(':') + 1)];
+  return size ? { width: size[0], height: size[1] } : undefined;
 }
 
 let cache: { catalog: Catalog; recs: Recs } | null = null;

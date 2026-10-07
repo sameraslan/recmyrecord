@@ -43,6 +43,14 @@ sprite) for as long as covers.csv has exactly that `source:ref` for the album; t
     python -m rmr_pipeline.covers sprites   # one 96 px JPEG per row in .cache/covers/96/ (not committed)
     python -m rmr_pipeline.covers status
     python -m rmr_pipeline.covers adopt     # record the sprites that have no entry in the manifest as made from their rows
+    python -m rmr_pipeline.covers host      # the site's own copies of the last resort's covers (frontcreck/public/covers)
+
+The site does not ask the Cover Art Archive for a `ca:` cover (its file hosts fail too often): `host` keeps one
+copy per such cover in use in frontcreck/public/covers/<mbid>.jpg (committed), the archive's 500 px front image
+as a progressive JPEG of at most 500 px (make_hosted), with each copy's size in index.json beside it, and
+removes the copy of a cover that is no longer in use (hosted_wanted). The site serves /covers/<mbid>.jpg
+(site_cover_path). The validator and `build --require-sprites` check the folder without a request
+(hosted_problems).
 
 `sprites` records the `source:ref` each sprite was made from in .cache/covers/96.manifest.json. A sprite whose
 entry is not its row's image counts as missing: it is not used by the build and is made again. A sprite with
@@ -50,11 +58,11 @@ no entry (made before the manifest existed, or by a run that was killed) is used
 by `status`, until `adopt` records it. An album whose image `sprites` could not fetch for a reason of the image's
 own (the state file's `sprites`) has no cover in the build: its `c` is empty (Covers.is_gone).
 
-One `refs` run and one `sprites` run at a time: each holds a lock file beside the state file (refs.lock,
-sprites.lock) and a second run exits with code 1. Reading (`status`, --dry-run, the build) takes no lock.
+One `refs` run, one `sprites` run and one `host` run at a time: each holds a lock file beside the state file
+(refs.lock, sprites.lock, host.lock) and a second run exits with code 1. Reading (`status`, --dry-run, the build) takes no lock.
 
 The build calls cover_for(key) for a new album; cover_url(c, px) is the URL form of each kind of cover id,
-which the frontend mirrors.
+which the frontend mirrors (but for `ca:`, which it serves from its own files).
 
 Requests go only to the hosts in ALLOWED_HOSTS and ALLOWED_SUFFIXES (never to rateyourmusic.com), spaced per
 host, with a User-Agent that names the project. HTTP 403 or 429 (or Deezer's quota error) twice in a row from a
@@ -105,6 +113,7 @@ DEFAULT_HTTP_CACHE = PIPELINE_DIR / ".cache" / "audio" / "http.sqlite"  # the au
 DEFAULT_CACHE = PIPELINE_DIR / ".cache" / "covers"  # gitignored: the sprites and the state file
 DEFAULT_SPRITES = DEFAULT_CACHE / "96"
 DEFAULT_STATE = DEFAULT_CACHE / "state.json"
+DEFAULT_HOSTED = PIPELINE_DIR.parent / "frontcreck" / "public" / "covers"  # committed: the site's own copies (`host`)
 GONE_STATUS = (404, 410)  # the only answers that say "this page will not come back"
 
 SOURCES = ("spotify", "deezer", "apple", "bandcamp", "youtube")
@@ -124,6 +133,10 @@ USER_AGENT = "recmyrecord-covers/1.0 (+https://github.com/sameraslan/recmyrecord
 
 SPRITE_PX = 96
 SPRITE_QUALITY = 90
+HOSTED_PX = 500  # the longest side of a copy the site serves itself (`host`): the archive's /front-500
+HOSTED_QUALITY = 85
+HOSTED_INDEX = "index.json"  # in the folder of the copies: MBID -> [width, height]
+SITE_COVERS = "/covers/"  # where the site serves that folder
 SAVE_EVERY = 50  # albums between two saves of covers.csv and the state file
 PROGRESS_S = 60.0
 REFS_INTERVALS = {"open.spotify.com": 1.0, "bandcamp": 3.0, "api.deezer.com": 0.2, "itunes.apple.com": 3.2}  # the last two: rmr_audio's
@@ -254,7 +267,8 @@ def cover_url(c: str, px: int) -> str:
                     below a 16:9 picture; show its centre square (see crop_frame)
         ca:<mbid>   https://coverartarchive.org/release-group/<mbid>/front-250 up to 250 px, /front-500 above: the
                     front image of a MusicBrainz release group. The answer is a redirect to archive.org, which
-                    redirects to a host under archive.org
+                    redirects to a host under archive.org. This is where the image comes from: the site does not
+                    ask the archive, it serves its own copy, /covers/<mbid>.jpg, at every size (site_cover_path)
     """
     if not c:
         return ""
@@ -282,6 +296,18 @@ def sprite_url(source: str, ref: str) -> str:
     480 x 360, the Cover Art Archive 250."""
     sizes = {"spotify": 300, "deezer": 250, "apple": 200, "bandcamp": 350, "youtube": 480, "caa": 250}
     return cover_url(c_field(source, ref), sizes[source])
+
+
+def hosted_url(mbid: str) -> str:
+    """What a copy the site serves itself is made from: the archive's front image at 500 px."""
+    return cover_url(c_field(CAA, mbid), HOSTED_PX)
+
+
+def site_cover_path(c: str) -> str:
+    """The path the site serves the cover `c` at from its own files: /covers/<mbid>.jpg for `ca:<mbid>`, at every
+    size (the frontend's coverUrlAt has the same form); "" for every other cover, which is asked from its host."""
+    kind, _, ref = c.partition(":")
+    return f"{SITE_COVERS}{ref}.jpg" if kind == "ca" and ref else ""
 
 
 # --- the polite client -----------------------------------------------------------------------------
@@ -1476,6 +1502,201 @@ def effective_rows(covers: dict[str, tuple[str, str]], skips, caa: dict[str, str
     return out
 
 
+# --- the site's own copies of the last resort's covers -----------------------------------------------------
+#
+# The site does not ask the Cover Art Archive for a `ca:` cover: the archive's file hosts answer HTTP 500 and
+# 503 often enough (down for about 20 minutes on 6 October 2026) that the album page then showed the 48 px
+# sprite. `host` keeps one copy per cover in use in frontcreck/public/covers/<mbid>.jpg, committed (the owner's
+# decision of 7 October 2026), and the site serves /covers/<mbid>.jpg.
+
+def hosted_path(hosted_dir: Path, mbid: str) -> Path:
+    """The copy of the release group's front image: <mbid>.jpg in the folder."""
+    if not MBID.fullmatch(mbid or ""):
+        raise ValueError(f"not a release-group MBID: {mbid!r}")
+    return Path(hosted_dir) / f"{mbid}.jpg"
+
+
+def make_hosted(data: bytes) -> tuple[bytes, tuple[int, int]]:
+    """(the copy of a downloaded image, its (width, height)): the right way up, RGB (a transparent picture on
+    white), at most HOSTED_PX on its longest side and never enlarged, a progressive JPEG of quality
+    HOSTED_QUALITY with no metadata. The image is decoded in memory."""
+    with Image.open(io.BytesIO(data)) as im:
+        im = ImageOps.exif_transpose(im)
+        if im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info:
+            rgba = im.convert("RGBA")
+            im = Image.new("RGB", rgba.size, (255, 255, 255))
+            im.paste(rgba, mask=rgba.getchannel("A"))
+        else:
+            im = im.convert("RGB")
+    im.thumbnail((HOSTED_PX, HOSTED_PX), Image.Resampling.LANCZOS)
+    clean = Image.new("RGB", im.size)  # a new image: nothing of the file's EXIF, ICC profile or comments
+    clean.paste(im)
+    buf = io.BytesIO()
+    clean.save(buf, "JPEG", quality=HOSTED_QUALITY, progressive=True, optimize=True)
+    return buf.getvalue(), clean.size
+
+
+class HostedIndex:
+    """index.json in the folder of the copies: MBID -> [width, height] of <mbid>.jpg. It is the record that
+    `host` made the file (a file with no entry is made again), and the site reads the size of a link-preview
+    image from it. Written by `host` only, under its lock."""
+
+    def __init__(self, hosted_dir: Path, sizes: dict[str, tuple[int, int]] | None = None):
+        self.path = Path(hosted_dir) / HOSTED_INDEX
+        self.sizes: dict[str, tuple[int, int]] = dict(sizes or {})
+
+    @classmethod
+    def read(cls, hosted_dir: Path) -> "HostedIndex":
+        """The folder's index; empty when there is none. ValueError for a file of another form."""
+        out = cls(hosted_dir)
+        if out.path.exists():
+            try:
+                data = json.loads(out.path.read_text(encoding="utf-8"))
+                out.sizes = {k: (int(v[0]), int(v[1])) for k, v in data.items() if MBID.fullmatch(k) and len(v) == 2}
+                if len(out.sizes) != len(data):
+                    raise ValueError("an entry is not MBID: [width, height]")
+            except (ValueError, TypeError, AttributeError, KeyError) as e:
+                raise ValueError(f"{out.path} is not an object of MBID: [width, height] ({e}). Delete it and run "
+                                 "`python -m rmr_pipeline.covers host`, which fetches the covers again") from None
+        return out
+
+    def save(self) -> None:
+        lines = ",\n".join(f'"{k}":[{w},{h}]' for k, (w, h) in sorted(self.sizes.items()))
+        write_atomic(self.path, ("{\n" + lines + "\n}\n" if lines else "{}\n").encode("utf-8"))
+
+
+def hosted_wanted(found: list[tuple[dict, str]], table: "Covers") -> list[str]:
+    """The MBIDs of the covers in use, each once, in catalog order: of the albums that would have no cover
+    otherwise (`found`: caa_candidates), those the last resort gives one (Covers.caa_for: a row of
+    covers_caa.csv that the skip list does not name and whose image is not recorded as gone). These are the
+    albums whose `c` the build writes as `ca:<mbid>`."""
+    wanted = (table.caa_for(row["rym_id"])[0] for row, _ in found)
+    return list(dict.fromkeys(c.partition(":")[2] for c in wanted if c))
+
+
+def hosted_todo(wanted: list[str], hosted_dir: Path, index: HostedIndex | None = None) -> tuple[list[str], list[str]]:
+    """(the MBIDs of `wanted` with no copy `host` made: no file, or a file with no entry in the index; the
+    names of the copies in the folder that are not wanted). Only a file named <mbid>.jpg is a copy."""
+    hosted_dir = Path(hosted_dir)
+    sizes = (index or HostedIndex.read(hosted_dir)).sizes
+    missing = [m for m in wanted if m not in sizes or not hosted_path(hosted_dir, m).exists()]
+    keep = set(wanted)
+    there = sorted(p.name for p in hosted_dir.glob("*.jpg")) if hosted_dir.is_dir() else []
+    return missing, [n for n in there if MBID.fullmatch(n[:-4]) and n[:-4] not in keep]
+
+
+def hosted_problems(cover_ids, hosted_dir: Path) -> list[str]:
+    """What is wrong with the folder of the copies for the albums' cover ids `cover_ids` (every `c` of
+    albums.json), a line each; [] when it holds exactly one readable copy per `ca:` cover in use, each with its
+    size in the index, and nothing else. No request: what the validator and `build --require-sprites` check."""
+    hosted_dir = Path(hosted_dir)
+    albums = Counter(c.partition(":")[2] for c in cover_ids if c.startswith(C_PREFIX[CAA]))
+    fix = "Run python -m rmr_pipeline.covers host"
+
+    def some(names) -> str:
+        names = list(names)
+        return ", ".join(names[:5]) + (" ..." if len(names) > 5 else "")
+
+    if not albums and not hosted_dir.exists():
+        return []
+    if not hosted_dir.is_dir():
+        return [f"{hosted_dir} is missing, and {sum(albums.values())} album(s) have a Cover Art Archive cover (`ca:<mbid>`) "
+                f"that the site serves from it. {fix}"]
+    problems = []
+    missing = [m for m in albums if not hosted_path(hosted_dir, m).exists()]
+    if missing:
+        problems.append(f"{sum(albums[m] for m in missing)} album(s) have a Cover Art Archive cover (`ca:<mbid>`) and no copy "
+                        f"of it in {hosted_dir}: {some(m + '.jpg' for m in missing)}. The site would show the small "
+                        f"sprite. {fix}")
+    extra = sorted(p.name for p in hosted_dir.iterdir() if not p.name.startswith(".") and p.name != HOSTED_INDEX
+                   and not (p.suffix == ".jpg" and p.stem in albums))
+    if extra:
+        problems.append(f"{hosted_dir} holds {len(extra)} file(s) no album uses: {some(extra)}. {fix}, which removes the "
+                        "copy of a cover that left covers_caa.csv or went on the skip list (another file: remove it by hand)")
+    try:
+        sizes = HostedIndex.read(hosted_dir).sizes
+    except ValueError as e:
+        return problems + [str(e)]
+    wrong = []
+    for m in albums:
+        if m in missing:
+            continue
+        try:
+            with Image.open(hosted_path(hosted_dir, m)) as im:
+                ok = im.format == "JPEG" and sizes.get(m) == im.size and max(im.size) <= HOSTED_PX
+        except (OSError, ValueError, Image.DecompressionBombError):
+            ok = False
+        if not ok:
+            wrong.append(m)
+    stale = sorted(m for m in set(sizes) - set(albums) if m + ".jpg" not in extra)  # an unused file is named above
+    if wrong or stale:
+        problems.append(f"{hosted_dir / HOSTED_INDEX} does not describe the folder: {len(wrong)} cop(ies) are not a JPEG of "
+                        f"at most {HOSTED_PX} px with their size recorded ({some(wrong) or 'none'}), {len(stale)} "
+                        f"entr(ies) are of a cover no album uses ({some(stale) or 'none'}). {fix}")
+    return problems
+
+
+def run_host(wanted: list[str], hosted_dir: Path, state_path: Path, fetcher: Fetcher, limit: int | None = None,
+             stop=lambda: False, out=print) -> int:
+    """Make the folder hold exactly the copies of `wanted` (hosted_wanted): remove the copy of a cover that is
+    no longer in use, then fetch each one that is missing (hosted_url, through `fetcher`: the allow-list, one
+    request a second to the archive), write its JPEG (make_hosted) and then its size in the index. A file is
+    written before its entry, so a killed run leaves at worst a file that is made again. An image with no
+    usable answer is asked again by the next run; an HTTP 503 from the archive, twice, stops the run. Returns
+    the exit code, as run_refs (1: another `host` run holds the lock, host.lock beside the state file)."""
+    try:
+        lock = take_lock(lock_path(state_path, "host"))
+    except Locked as e:
+        out(_held(e, "host"))
+        return 1
+    with lock:
+        hosted_dir = Path(hosted_dir)
+        index = HostedIndex.read(hosted_dir)
+        todo, unused = hosted_todo(wanted, hosted_dir, index)
+        for name in unused:
+            (hosted_dir / name).unlink()
+        dropped = [m for m in index.sizes if m not in set(wanted)]
+        for m in dropped:
+            del index.sizes[m]
+        if unused or dropped:
+            index.save()
+            out(f"host: {len(unused)} removed (a cover no album uses any more): {', '.join(unused[:5])}{' ...' if len(unused) > 5 else ''}")
+        todo = todo[:limit] if limit is not None else todo
+        progress, made, failed, unsaved, code = Progress("host", len(todo), out), 0, 0, 0, 0
+        try:
+            for n, mbid in enumerate(todo):
+                if stop():
+                    raise Interrupted()
+                try:
+                    data, size = make_hosted(fetcher.get(hosted_url(mbid), IMAGE_BYTES, busy=MB_BUSY, busy_wait=MB_BUSY_WAIT))
+                except Transient as e:
+                    out(f"  {mbid}: {e} (asked again next time)")
+                except (Gone, OSError, ValueError, Image.DecompressionBombError) as e:  # a 404, or not an image
+                    out(f"  {mbid}: {str(e)[:160]}: no copy; the album shows its sprite until the image is there or "
+                        "the row leaves covers_caa.csv")
+                    failed += 1
+                else:
+                    write_atomic(hosted_path(hosted_dir, mbid), data)
+                    index.sizes[mbid] = size
+                    made += 1
+                    unsaved += 1
+                if unsaved >= CAA_SAVE_EVERY:
+                    index.save()
+                    unsaved = 0
+                progress.tick(n + 1, failed)
+            out(f"host: {made} made, {failed} failed, {len(todo) - made - failed} to ask again, of {len(todo)}")
+        except StopRun as e:
+            out(f"stopped: {e}. Nothing more is asked in this run; wait before starting it again.")
+            code = 2
+        except Interrupted:
+            out("interrupted: progress saved")
+            code = 130
+        finally:
+            if unsaved or not index.path.exists():
+                index.save()
+        return code
+
+
 # --- what the build reads ----------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -1687,6 +1908,23 @@ def cmd_sprites(args) -> int:
                        args.spread, stop, _say)
 
 
+def cmd_host(args) -> int:
+    inputs = Inputs.load(args.albums)
+    found, _ = _caa_albums(args, inputs)
+    table = load_covers(args.covers, args.sprites, args.state, args.skip, args.caa)
+    wanted = hosted_wanted(found, table)
+    if args.dry_run:
+        todo, unused = hosted_todo(wanted, args.hosted)
+        _say(f"{len(wanted)} Cover Art Archive covers in use, {len(todo)} to fetch, {len(unused)} cop(ies) in {args.hosted} "
+             "to remove")
+        return 0
+    stop = _stopper()
+    code = run_host(wanted, args.hosted, args.state, Fetcher(CAA_INTERVALS, stop=stop), args.limit, stop, _say)
+    files = [hosted_path(args.hosted, m) for m in wanted if hosted_path(args.hosted, m).exists()]
+    _say(f"{len(files)} of {len(wanted)} covers in use have a copy in {args.hosted}: {sum(p.stat().st_size for p in files) / 1e6:.2f} MB")
+    return code
+
+
 def cmd_adopt(args) -> int:
     # Not the rows the last resort stands in for: the sprite of such an album is the archive's image, not its row's.
     shown = _sprite_rows(args, State(args.state))
@@ -1751,7 +1989,9 @@ def main(argv: list[str] | None = None) -> int:
                                                 "the last resort for the albums left without one (covers_caa.csv)"),
                            ("sprites", cmd_sprites, "fetch the small image of each row and save its 96 px sprite"),
                            ("status", cmd_status, "counts per source, sprites, albums without a cover"),
-                           ("adopt", cmd_adopt, "record the sprites with no manifest entry as made from their rows; no request")]:
+                           ("adopt", cmd_adopt, "record the sprites with no manifest entry as made from their rows; no request"),
+                           ("host", cmd_host, "keep the site's own copy of each Cover Art Archive cover in use: fetch what "
+                                              "is missing into frontcreck/public/covers, remove what is no longer used")]:
         p = sub.add_parser(name, help=text)
         p.set_defaults(fn=fn)
         p.add_argument("--albums", type=Path, default=DEFAULT_ALBUMS)
@@ -1771,6 +2011,9 @@ def main(argv: list[str] | None = None) -> int:
                            help="also adopt the sprites whose file is older than covers.csv (the table may have changed since)")
             continue
         p.add_argument("--limit", type=int, help="albums looked up in this run, at most")
+        if name == "host":
+            p.add_argument("--hosted", type=Path, default=DEFAULT_HOSTED, help="the folder of the copies")
+            continue
         p.add_argument("--retry-failed", action="store_true", help="ask again for the albums the state file lists")
     refs, sprites = sub.choices["refs"], sub.choices["sprites"]
     refs.add_argument("--tiers", type=lambda v: _names(v, ALL_TIERS), default=ALL_TIERS,

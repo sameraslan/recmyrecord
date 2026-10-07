@@ -111,9 +111,8 @@ const DEEZER_SIZES = [56, 250, 500, 1000] as const;
 /** [px, file-name suffix] */
 const BANDCAMP_SIZES = [[100, 3], [210, 9], [350, 2], [700, 16], [1200, 10]] as const;
 
-/** The two sizes of a Cover Art Archive front cover the pages use (its longer side, in px). */
-const COVER_ART_ARCHIVE_SMALL = 250;
-const COVER_ART_ARCHIVE_LARGE = 500;
+/** Where the site serves its own copies of the Cover Art Archive covers: public/covers/<mbid>.jpg. */
+export const HOSTED_COVERS = '/covers/';
 
 /** True for a cover that is a video frame (wider than tall), shown as its centre square. */
 export function isFrameCover(coverId: string): boolean {
@@ -130,9 +129,11 @@ export const FRAME_COVER = { file: 'mqdefault.jpg', width: 320, height: 180 } as
  *   <id>       Spotify, https://i.scdn.co/image/<id>, with the size prefix swapped for ids that carry one
  *   dz:<md5>   Deezer        am:<path>  Apple        bc:<number>  Bandcamp
  *   yt:<id>    YouTube: a video frame in one size, mqdefault.jpg (320 x 180), at every `px`
- *   ca:<mbid>  Cover Art Archive, by MusicBrainz release group (36 characters with hyphens): front-250 up to
- *              250 px, front-500 above. The answer is a redirect to archive.org and on to one of its file hosts
- *              (`*.archive.org`), so all three are in the img-src of next.config.ts.
+ *   ca:<mbid>  Cover Art Archive, by MusicBrainz release group (36 characters with hyphens): the site's own
+ *              copy of the archive's front image, /covers/<mbid>.jpg (public/covers; at most 500 px on its longer
+ *              side, one file at every `px`). The pipeline keeps that folder (`covers host`): the page never asks
+ *              the archive, whose file hosts fail too often, so no archive host is in the img-src of
+ *              next.config.ts. Here the pipeline's `cover_url` differs too: it names where the copy comes from.
  *
  * Why YouTube differs from the pipeline: `cover_url` there gives hqdefault.jpg, 480 x 360 with a black bar above
  * and below a 16:9 picture, and the pipeline cuts those bars off before it takes the centre square for a sprite
@@ -159,7 +160,7 @@ export function coverUrlAt(coverId: string, px: number): string | null {
     return `https://f4.bcbits.com/img/a${ref}_${suffix}.jpg`;
   }
   if (kind === 'yt') return `https://i.ytimg.com/vi/${ref}/${FRAME_COVER.file}`;
-  if (kind === 'ca') return `https://coverartarchive.org/release-group/${ref}/front-${px <= COVER_ART_ARCHIVE_SMALL ? COVER_ART_ARCHIVE_SMALL : COVER_ART_ARCHIVE_LARGE}`;
+  if (kind === 'ca') return `${HOSTED_COVERS}${ref}.jpg`;
   const prefix = px <= 64 ? 'ab67616d00004851' : px <= 300 ? 'ab67616d00001e02' : 'ab67616d0000b273';
   return COVER_BASE + (coverId.startsWith('ab67616d') && coverId.length > 16 ? prefix + coverId.slice(16) : coverId);
 }
@@ -169,13 +170,23 @@ export function coverUrl(coverId: string, px: number): string | null {
   return coverUrlAt(coverId, px * 2);
 }
 
-/** The cover as a link-preview image, with the pixel size that host serves for a 640 px request (500 at most from the Cover Art Archive); null without a cover id. */
-export function ogCover(coverId: string): { url: string; width: number; height: number } | null {
+/** Whether the cover is one of the site's own files (a Cover Art Archive cover, `ca:`), not a remote image. */
+export function isHostedCover(coverId: string): boolean {
+  return coverId.startsWith('ca:');
+}
+
+/**
+ * The cover as a link-preview image, with the pixel size that host serves for a 640 px request; null without a
+ * cover id. For one of the site's own copies (`ca:`) the URL is a path, which Next.js makes absolute with the
+ * layout's `metadataBase`, and the size is `hosted`, that file's (`hostedCoverSize` in server.ts reads it at
+ * build time); without it no size is stated.
+ */
+export function ogCover(coverId: string, hosted?: { width: number; height: number }): { url: string; width?: number; height?: number } | null {
   const url = coverUrlAt(coverId, 640);
   if (!url) return null;
+  if (isHostedCover(coverId)) return hosted ? { url, width: hosted.width, height: hosted.height } : { url };
   if (isFrameCover(coverId)) return { url, width: FRAME_COVER.width, height: FRAME_COVER.height };
-  // Cover Art Archive: the stated 500 x 500 is the size asked for; a cover that is not square is 500 px on its longer side.
-  const side = coverId.startsWith('dz:') ? 1000 : coverId.startsWith('bc:') ? 700 : coverId.startsWith('ca:') ? COVER_ART_ARCHIVE_LARGE : 640;
+  const side = coverId.startsWith('dz:') ? 1000 : coverId.startsWith('bc:') ? 700 : 640;
   return { url, width: side, height: side };
 }
 

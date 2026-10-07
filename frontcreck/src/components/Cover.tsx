@@ -30,7 +30,7 @@ export interface CoverProps {
 }
 
 /** Remote cover, from Spotify or one of the other hosts of `coverUrlAt` (Deezer, Apple, Bandcamp, a YouTube
- * frame, the Cover Art Archive); on error the 48 px sprite from the album's thumbnail sheet; with no cover id,
+ * frame), or the site's own copy of a Cover Art Archive cover (/covers/<mbid>.jpg); on error the 48 px sprite from the album's thumbnail sheet; with no cover id,
  * or when the sprite sheet fails too, a lettered tile. The tile is a failure state only: while the remote image (or the
  * sheet) loads, the box is empty. The sprite element, the only reference to a thumbnail sheet (up to 2.3 MB), is
  * rendered only after the remote image failed and the sheet has loaded, so a normal page load never fetches

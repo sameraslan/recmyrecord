@@ -5,7 +5,7 @@
     docs/review/still-no-cover.md  the albums that still have no cover, why, and the links the catalog has;
                                    at its top, what the owner could supply for each (still-no-cover-asks.csv)
 
-    python scripts/caa_review.py            # from data-pipeline/, after `covers refs`, `covers sprites` and the build
+    python scripts/caa_review.py            # from data-pipeline/, after `covers refs`, `covers sprites`, `covers host` and the build
 
 Reads catalog/albums.csv, catalog/covers.csv, covers_caa.csv, covers_skip.csv, the sprites and the state file
 of .cache/covers, and the site's albums.json (slugs, shown names, and which album has a cover). No network.
@@ -115,7 +115,9 @@ def main(argv=None) -> int:
              "To take a cover out: add the line `rym_id,caa,<mbid>,<what the image is>` to "
              "`data-pipeline/catalog/covers_skip.csv` and rebuild (the row stays in `covers_caa.csv`, so the lookup does "
              "not find the same release group again). To give an album another release group: put that group's MBID in "
-             "its row of `covers_caa.csv`, run `python -m rmr_pipeline.covers sprites`, rebuild.", "",
+             "its row of `covers_caa.csv`, run `python -m rmr_pipeline.covers sprites`, rebuild. After either, "
+             "`python -m rmr_pipeline.covers host` before the build: it keeps the site's own copy of each of these "
+             "covers (`frontcreck/public/covers/<mbid>.jpg`), removes the one no longer used and fetches the new one.", "",
              "| # | Artist | Title | Year | MusicBrainz title | MusicBrainz artist | Year, type | Release group | Matched | Why no cover before | rym_id |",
              "|---|---|---|---|---|---|---|---|---|---|---|"]
     for n, (row, group, shown, _) in enumerate(found, start=1):
@@ -168,7 +170,8 @@ def main(argv=None) -> int:
              "to `data-pipeline/catalog/covers_caa.csv` with the release group's MBID (the last part of its "
              "`musicbrainz.org/release-group/...` address) and `hand` in the last column; the columns between are for "
              "the reader and may be empty. "
-             "Then `python -m rmr_pipeline.covers sprites`, rebuild, validate. The album page and the map both show it.",
+             "Then `python -m rmr_pipeline.covers sprites` and `python -m rmr_pipeline.covers host` (the site's own copy "
+             "of the image, `frontcreck/public/covers/<mbid>.jpg`), rebuild, validate. The album page and the map both show it.",
              "2. *Any image you have*: an entry in `data-pipeline/overrides.json` under the album's slug (last column but "
              "one) with `image` (a file you put in `data-pipeline/overrides/`) and a `note`, as the README's Overrides "
              "section describes: `\"<slug>\": {\"image\": \"overrides/<slug>.jpg\", \"note\": \"where the image is from\"}`. "

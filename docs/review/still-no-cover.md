@@ -1,4 +1,4 @@
-# Albums that still have no cover (11)
+# Albums that still have no cover (10)
 
 ## What would give each one a cover
 
@@ -8,9 +8,8 @@ The one most useful thing to supply for each album, after the automatic lookup a
 |---|---|---|---|---|
 | RCA Victor Symphony Orchestra / Kirill Kondrashin / Van Cliburn | Concerto No. 1 | 1958 | An image file of the 1958 RCA Victor LP sleeve (the release group chosen by hand, e2c73b4e, has no front image on the Cover Art Archive) | Yes: a commercial LP (Discogs) |
 | The Beatles | A Day in the Life | 1970 | Which record this is: a Spotify link, or its RYM page | Unclear: MusicBrainz has only a 2005 bootleg of this name, so there may be no official sleeve |
-| This Mortal Coil | This Mortal Coil | 1983 | A yes or no: is it the 2011 box set "This Mortal Coil"? If yes, its MusicBrainz group 08e679c4 goes in `covers_caa.csv`; otherwise a Spotify link | Yes: the box set's sleeve is on the Cover Art Archive |
 | SpaceGhoztPurrp | Dark Angel | 2015 | An image file of the mixtape's art (or a Spotify link, if it has a release there) | Plausibly: a self-released mixtape, its art is on the mixtape and streaming pages; no official sleeve on MusicBrainz |
-| Navy Blue | Book II: Gift of Gabriel: Rain’s Reign! | 2024 | A yes or no: is it the 2022 vinyl "Gift of Gabriel: Rain's Reign!" (MusicBrainz ca995a84)? And an image file: that release had no image | Plausibly: a limited vinyl, pictured on Discogs or the label's shop |
+| Navy Blue | Book II: Gift of Gabriel: Rain’s Reign! | 2024 | An image file of the sleeve: the release group the owner confirmed (ca995a84, the 2022 vinyl "Gift of Gabriel: Rain's Reign!") has no front image on the Cover Art Archive (HTTP 404 on 7 October 2026) | Plausibly: a limited vinyl, pictured on Discogs or the label's shop |
 | 불싸조 [Bulssazo] | 뱅쿠오: 오늘밤 비가 내릴 모양이구나. / 첫번째 암살자: 운명을 받아 들여라. [Banquo: It Will Be Rain Tonight / 1st Murderer: Let It Come Down] | 2010 | An image file of the sleeve | Yes: a commercial CD (the catalog's SoundCloud set, Discogs); MusicBrainz has the album and no image |
 | 渡辺貞夫 & 野力奏一 [Sadao Watanabe & Soichi Noriki] | スーパーマリオワールド [Super Mario World] | 1991 | An image file of the 1991 CD's sleeve (the release group chosen by hand, 67458b47, has no front image on the Cover Art Archive) | Yes: a commercial CD (VGMdb, Discogs) |
 | Ludwig van Beethoven & Wilhelm Kempff | Klaviersonaten Pathétique; Mondschein-Sonate; Appassionata | 1961 | An image file of the LP sleeve | Yes: a Deutsche Grammophon LP (Discogs); the likely MusicBrainz release has no image |
@@ -20,7 +19,7 @@ The one most useful thing to supply for each album, after the automatic lookup a
 
 ## Why each has none
 
-These show the lettered tile. Each was asked from MusicBrainz and the Cover Art Archive (the last resort of `rmr_pipeline/covers.py`) and got nothing: 8 none, 1 no art, 2 skipped.
+These show the lettered tile. Each was asked from MusicBrainz and the Cover Art Archive (the last resort of `rmr_pipeline/covers.py`) and got nothing: 7 none, 1 no art, 2 skipped.
 
 - **none**: no release group with the album's title, one of its artists and its year (to within one). A reader then searched MusicBrainz by hand for each of these (`caa-covers-hand.md`): the ones still here have no release group that is this album, or one with no front image.
 - **ambiguous**: two release groups pass that look different (a studio and a live album, two years, two credits). The candidates are in the last column.
@@ -30,7 +29,7 @@ These show the lettered tile. Each was asked from MusicBrainz and the Cover Art 
 
 ## Giving a cover by hand
 
-1. *The album is on MusicBrainz and its release group has a front image* (every ambiguous album, once you have picked the right candidate): add a line `rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by` to `data-pipeline/catalog/covers_caa.csv` with the release group's MBID (the last part of its `musicbrainz.org/release-group/...` address) and `hand` in the last column; the columns between are for the reader and may be empty. Then `python -m rmr_pipeline.covers sprites`, rebuild, validate. The album page and the map both show it.
+1. *The album is on MusicBrainz and its release group has a front image* (every ambiguous album, once you have picked the right candidate): add a line `rym_id,mbid,mb_title,mb_artist,mb_year,mb_type,score,matched_by` to `data-pipeline/catalog/covers_caa.csv` with the release group's MBID (the last part of its `musicbrainz.org/release-group/...` address) and `hand` in the last column; the columns between are for the reader and may be empty. Then `python -m rmr_pipeline.covers sprites` and `python -m rmr_pipeline.covers host` (the site's own copy of the image, `frontcreck/public/covers/<mbid>.jpg`), rebuild, validate. The album page and the map both show it.
 2. *Any image you have*: an entry in `data-pipeline/overrides.json` under the album's slug (last column but one) with `image` (a file you put in `data-pipeline/overrides/`) and a `note`, as the README's Overrides section describes: `"<slug>": {"image": "overrides/<slug>.jpg", "note": "where the image is from"}`. The image gives the album its sprite on the map and its colours. The album page shows a remotely hosted image only, so it keeps the tile unless the entry also has `c`, which takes a Spotify image id.
 3. *The album has a Spotify release*: put its link on the sheet (or `s` in `overrides.json`); the cover follows the link at the next `covers refs`.
 
@@ -38,7 +37,6 @@ These show the lettered tile. Each was asked from MusicBrainz and the Cover Art 
 |---|---|---|---|---|---|---|---|---|
 | RCA Victor Symphony Orchestra / Kirill Kondrashin / Van Cliburn | Concerto No. 1 | 1958 | none | unverified link | [RYM](https://rateyourmusic.com/release/album/rca-victor-symphony-orchestra-kirill-kondrashin-van-cliburn/concerto-no-1/) | `concerto-no-1-rca-victor-symphony-orchestra-kirill-kondrashin-van-cliburn` | Album85121 | search 1: 0 release group(s); search 2: 0 release group(s); search 3: 1 release group(s), 1 with another title; search 4: 4 release group(s), 4 with another title; search 5: 25 release group(s), 3 with another artist, 2 with another year, 20 with another title |
 | The Beatles | A Day in the Life | 1970 | none | unverified link | none | `a-day-in-the-life-the-beatles` | sp:4QsYvbpqj1FC6jQGYG6pPB | search 1: 1 release group(s), 1 with another year; search 2: 25 release group(s), 25 with another artist |
-| This Mortal Coil | This Mortal Coil | 1983 | none | unverified link | none | `this-mortal-coil-this-mortal-coil` | sp:5gD4BU64TwXSUldt6tD9H9 | search 1: 2 release group(s), 2 with another year; search 2: 13 release group(s), 6 with another artist, 2 with another year, 5 with another title |
 | SpaceGhoztPurrp | Dark Angel | 2015 | none | unverified link | none | `dark-angel-spaceghoztpurrp` | sp:7nThwEV875rviPzMvWcWkC | search 1: 0 release group(s); search 2: 25 release group(s), 25 with another artist |
 | Navy Blue | Book II: Gift of Gabriel: Rain’s Reign! | 2024 | none | no source | [RYM](https://rateyourmusic.com/release/album/navy-blue/book-ii-gift-of-gabriel-rain%E2%80%99s-reign/) | `book-ii-gift-of-gabriel-rains-reign-navy-blue` | Album15464374 | search 1: 0 release group(s); search 2: 0 release group(s) |
 | 불싸조 [Bulssazo] | 뱅쿠오: 오늘밤 비가 내릴 모양이구나. / 첫번째 암살자: 운명을 받아 들여라. [Banquo: It Will Be Rain Tonight / 1st Murderer: Let It Come Down] | 2010 | no art | no source | [SoundCloud](https://soundcloud.com/user-457311997/sets/bulssazo), [RYM](https://rateyourmusic.com/release/album/%EB%B6%88%EC%8B%B8%EC%A1%B0/%EB%B1%85%EC%BF%A0%EC%98%A4-%EC%98%A4%EB%8A%98%EB%B0%A4-%EB%B9%84%EA%B0%80-%EB%82%B4%EB%A6%B4-%EB%AA%A8%EC%96%91%EC%9D%B4%EA%B5%AC%EB%82%98-%EC%B2%AB%EB%B2%88%EC%A7%B8-%EC%95%94%EC%82%B4%EC%9E%90-%EC%9A%B4%EB%AA%85%EC%9D%84-%EB%B0%9B%EC%95%84-%EB%93%A4%EC%97%AC%EB%9D%BC/) | `banquo-it-will-be-rain-tonight-1st-murderer-let-it-come-down-bulssazo` | Album7109737 | the archive has no image for the release group (HTTP 404) |

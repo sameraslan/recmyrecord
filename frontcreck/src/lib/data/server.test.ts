@@ -5,7 +5,7 @@ import { STOP_IDS } from '@/lib/types';
 import type { AlbumRecord, Positions, Recs } from '@/lib/types';
 import { CATALOG_SIZE_LABEL } from '@/lib/copy';
 import { TAGS_MAX } from './catalog';
-import { assertDataConsistent, getAlbumPageData, getAllSlugs, getServerCatalog, getShelf } from './server';
+import { assertDataConsistent, getAlbumPageData, getAllSlugs, getServerCatalog, getShelf, hostedCoverSize } from './server';
 
 const raw = <T>(name: string): T => JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'data', name), 'utf8')) as T;
 
@@ -74,6 +74,22 @@ describe('build-time data access (real public/data)', () => {
     expect(new Set(getServerCatalog().vocab).size).toBe(113);
     // Every descriptor index of every album names a word.
     for (const a of getServerCatalog().albums) for (const k of a.d) expect(k, a.slug).toBeLessThan(113);
+  });
+});
+
+describe("the size of the site's own copy of a cover (real public/covers)", () => {
+  it('is the width and height the pipeline recorded for a Cover Art Archive cover', () => {
+    const sizes = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'covers', 'index.json'), 'utf8')) as Record<string, [number, number]>;
+    const album = getServerCatalog().albums.find((a) => a.c.startsWith('ca:'))!;
+    const [width, height] = sizes[album.c.slice(3)];
+    expect(hostedCoverSize(album.c)).toEqual({ width, height });
+    expect(Math.max(width, height)).toBeLessThanOrEqual(500);
+  });
+
+  it('is unknown for any other cover, and for a copy the folder does not have', () => {
+    expect(hostedCoverSize('')).toBeUndefined();
+    expect(hostedCoverSize('dz:0123456789abcdef0123456789abcdef')).toBeUndefined();
+    expect(hostedCoverSize('ca:00000000-0000-0000-0000-000000000000')).toBeUndefined();
   });
 });
 

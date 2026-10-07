@@ -1,12 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
 import { albumOnAnotherService, albumWithNoLink } from './data';
-import { answerArchiveCovers, camera, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
-
-// An album chosen from the data can have a Cover Art Archive cover, whose hosts are sometimes very slow.
-test.beforeEach(async ({ page }) => {
-  await answerArchiveCovers(page);
-});
+import { camera, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 async function albumTitle(page: Page, id: number): Promise<string> {
   return page.evaluate(async (i) => (await (await fetch('/data/albums.json')).json())[i].t, id);

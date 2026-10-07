@@ -5,7 +5,7 @@ import { AlbumPanel } from '@/components/album/AlbumPanel';
 import { AlbumView } from '@/components/album/AlbumView';
 import { COPY } from '@/lib/copy';
 import { ogCover } from '@/lib/data/catalog';
-import { getAlbumPageData, getPrerenderSlugs } from '@/lib/data/server';
+import { getAlbumPageData, getPrerenderSlugs, hostedCoverSize } from '@/lib/data/server';
 
 export const dynamicParams = false;
 
@@ -20,7 +20,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = getAlbumPageData(slug);
   if (!data) return {};
   const title = COPY.titles.album(data.seed.title, data.seed.artist);
-  const image = ogCover(data.seed.coverId);
+  const image = ogCover(data.seed.coverId, hostedCoverSize(data.seed.coverId));
   return {
     title,
     description: COPY.metaDescription,
