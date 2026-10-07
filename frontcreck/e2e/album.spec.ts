@@ -333,3 +333,36 @@ test('unknown album slugs are 404s', async ({ page }) => {
   const res = await page.goto('/album/not-an-album');
   expect(res?.status()).toBe(404);
 });
+
+test("the header's Map tab is the current one on an album page, as in the approved picture, and only there and on the map", async ({ page }) => {
+  const nav = page.getByRole('navigation', { name: COPY.nav.label });
+  const tabs = () =>
+    nav.locator('.navbtn').evaluateAll((els) =>
+      els.map((a) => {
+        const s = getComputedStyle(a);
+        return { text: a.textContent!.trim(), current: a.getAttribute('aria-current'), ink: s.color, line: s.boxShadow !== 'none' };
+      }),
+    );
+  // An album is a place on the map: Map is bright with the underline (final-album.jpg, final-phone-list.jpg).
+  await page.goto(IR);
+  await expect(page.getByRole('heading', { level: 1, name: 'In Rainbows' })).toBeVisible();
+  const onAlbum = await tabs();
+  expect(onAlbum.map((t) => [t.text, t.current, t.line])).toEqual([
+    [COPY.nav.map, 'page', true],
+    [COPY.nav.about, null, false],
+  ]);
+  // The same look as on the map itself, and with a slider stop in the address too.
+  await page.goto('/map');
+  const onMap = await tabs();
+  expect(onMap).toEqual(onAlbum);
+  await page.goto(`${IR}?by=mood`);
+  expect(await tabs()).toEqual(onAlbum);
+  // Home and a page that does not exist have no current tab; About has its own.
+  for (const [url, current] of [['/', [null, null]], ['/about', [null, 'page']], ['/no-such-page', [null, null]]] as const) {
+    await page.goto(url);
+    const here = await tabs();
+    expect(here.map((t) => t.current), url).toEqual(current);
+    expect(here.map((t) => t.line), url).toEqual(current.map((c) => c !== null));
+    expect(here.map((t) => t.ink), url).toEqual(current.map((c) => (c ? onAlbum[0].ink : onAlbum[1].ink)));
+  }
+});
