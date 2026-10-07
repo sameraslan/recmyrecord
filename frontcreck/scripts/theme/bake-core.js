@@ -1,7 +1,7 @@
 /* The DOM-free half of the theme build (npm run theme). A classic script with no imports or exports, so one file
  * serves three readers: the bake page loads it with a script tag, and Node and vitest import it for its side
  * effect. Everything hangs off globalThis.RMR_THEME.
- * Ported from docs/design/trifid-theme/prototype/src/gas.js, data.js, stars.js and labels.js (gas look `swirl`,
+ * Ported from docs/design/trifid-theme/prototype/src/gas.js, data.js, and stars.js (gas look `swirl`,
  * palette `ember`). The site never imports from docs/; this copy is the production one. */
 (function () {
   'use strict';
@@ -16,13 +16,11 @@
     SHARP: 4096,
     PROBE: 512, // px of the coarse bake of the whole square that finds where a stop's gas is
     RECT_PAD: 0.06, // raw units of empty sky kept around the gas inside a stop's rectangle
-    LUM: 512, // px of the luminance copy that stars and names read
+    LUM: 1024, // px of the luminance copy that stars read
     LUM_PPR: 1000, // px per raw unit the luminance copy is shaded for
     BAKE_MARGIN: 0.6, // the bake reaches this far past the outermost album, where the gas has already ended
     RAW_MARGIN: 0.75, // the fields reach a little further, past the widest blur that still lights anything
     LUM_MAX: 0.6, // a byte of 255 in stars.bg
-    LABEL_REF_PPW: 600, // px per world unit names are boxed at: the desktop overview of the app
-    LABEL_WIDE_PPW: 400, // and for the second, wider box (lumWide): the whole map in a short laptop window
   };
   const EMBER = { hues: [[232, 96, 60], [244, 190, 120], [150, 200, 214], [66, 110, 190], [120, 140, 220]], neutral: [138, 138, 146] };
   const STOPS = ['sonic', 'balanced', 'mood'];
@@ -153,54 +151,27 @@
     for (let i = 0; i < n * n; i++) out[i] = luminance([px[4 * i], px[4 * i + 1], px[4 * i + 2]]);
     return out;
   }
-  /** Brightest luminance inside a raw box. */
-  function lumIn(lum, rawHalf, x0, y0, x1, y1) {
-    const n = GAS.LUM, a = lumCell(x0, y0, rawHalf), b = lumCell(x1, y1, rawHalf);
-    const xa = Math.min(a % n, b % n), xb = Math.max(a % n, b % n), ya = Math.min((a / n) | 0, (b / n) | 0), yb = Math.max((a / n) | 0, (b / n) | 0);
-    let m = 0;
-    for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) { const v = lum[y * n + x]; if (v > m) m = v; }
-    return m;
+  /** One character per album: its leading family 0..4, or - for none. */
+  const packLead = (lead) => Array.from(lead, (v) => (v < 0 ? '-' : String(v))).join('');
+  /** Bytes as base64 (btoa is in browsers and in Node). */
+  function packBytes(bytes) {
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 8192) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    return btoa(s);
   }
 
-  /** Font size in px of a region name in Tenor Sans (the prototype's fontSize with the face's 0.88 factor). */
-  function labelFontPx(strong, n) {
-    const k = Math.min(1, Math.sqrt(n / 346));
-    return 0.88 * (strong ? 17 + 7 * k : 15 + 3 * k);
-  }
-  /** Half width and half height, in raw units, of the area a name may cover at the overview: wide capitals at
-   * about 0.94 em a letter (advance plus 0.26 em tracking), plus room for the nudges the placement may apply.
-   * `ppw` is the map scale the name is boxed at, px per world unit: the smaller it is, the more map the name covers. */
-  function labelBox(name, strong, n, s, ppw = GAS.LABEL_REF_PPW) {
-    const fs = labelFontPx(strong, n);
-    return [(0.47 * fs * name.length + 30) / ppw / s, (0.525 * fs + 28) / ppw / s];
-  }
-  /** Ink of a name: the gas colour under it at full brightness, then 80% of the way to white. */
-  function labelInk(rgb) {
-    const m = Math.max(rgb[0], rgb[1], rgb[2], 1);
-    return rgb.map((v) => { const c = (v / m) * 255; return Math.round(c + (255 - c) * 0.8); });
-  }
-
-  /** theme.json. input: { n, positionsHash, positions, weights, regions }; lumPx: per stop, the RGBA bytes of the
-   * luminance copy (rows from the south edge); gas: per stop, { rect, px, sharp } of its images. */
+  /** theme.json. input: { n, positionsHash, positions, weights }; lumPx: per stop, the RGBA bytes of the luminance
+   * copy (rows from the south edge); gas: per stop, { rect, px, sharp, hash } of its images. The stars are packed
+   * as text, since a number per album and stop in JSON made the file 126 KB at 10,467 albums (src/lib/data/theme.ts
+   * reads them back): lead, one character an album; bg, base64 of three bytes an album (sonic, balanced, mood). */
   function assemble(input, lumPx, bakeHalf, rawHalf, gas) {
-    const { n, positions, weights, regions } = input;
-    const tx = positionsTransform(positions.balanced), bg = new Array(3 * n).fill(0), labels = {};
+    const { n, positions, weights } = input;
+    const bg = new Uint8Array(3 * n);
     STOPS.forEach((stop, k) => {
-      const px = lumPx[stop], lum = lumGrid(px), P = positions[stop];
+      const lum = lumGrid(lumPx[stop]), P = positions[stop];
       for (let i = 0; i < n; i++) bg[3 * i + k] = Math.min(255, Math.round((lum[lumCell(P[2 * i], P[2 * i + 1], rawHalf)] / GAS.LUM_MAX) * 255));
-      labels[stop] = regions[stop].filter((r) => r.level === 1 && r.name).map((r) => {
-        const strong = r.strength === 'strong', c = 4 * lumCell(r.cx, r.cy, rawHalf), [hw, hh] = labelBox(r.name, strong, r.n, tx.s);
-        const [ww, wh] = labelBox(r.name, strong, r.n, tx.s, GAS.LABEL_WIDE_PPW);
-        return {
-          id: r.id, name: r.name, x: r.cx, y: r.cy, strong, n: r.n, p: r.priority,
-          rgb: labelInk([px[c], px[c + 1], px[c + 2]]),
-          lum: Math.round(lumIn(lum, rawHalf, r.cx - hw, r.cy - hh, r.cx + hw, r.cy + hh) * 1000) / 1000,
-          // the same in the wider box: the map shows the name over this much gas once it is zoomed out past LABEL_REF_PPW
-          lumWide: Math.round(lumIn(lum, rawHalf, r.cx - ww, r.cy - wh, r.cx + ww, r.cy + wh) * 1000) / 1000,
-        };
-      });
     });
-    return { v: 3, n, positionsHash: input.positionsHash, bakeHalf: Math.round(bakeHalf * 1e4) / 1e4, gas, stars: { lead: Array.from(leadFamilies(weights, n)), bg }, labels };
+    return { v: 4, n, positionsHash: input.positionsHash, bakeHalf: Math.round(bakeHalf * 1e4) / 1e4, gas, stars: { lead: packLead(leadFamilies(weights, n)), bg: packBytes(bg) } };
   }
 
   /** A gas image is named after its own bytes: the first 10 hex characters of their SHA-256, between the stem and
@@ -214,6 +185,6 @@
   globalThis.RMR_THEME = Object.assign(globalThis.RMR_THEME || {}, {
     GAS_HASH_LEN, gasHash, gasFile, gasFiles,
     GAS, EMBER, STOPS, noiseTable, blur, at, halves, gasRect, gasSizes, fieldData, leadFamilies, positionsTransform,
-    luminance, lumCell, lumGrid, lumIn, labelFontPx, labelBox, labelInk, assemble,
+    luminance, lumCell, lumGrid, packLead, packBytes, assemble,
   });
 })();

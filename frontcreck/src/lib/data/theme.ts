@@ -16,9 +16,10 @@ export interface ThemeGas {
   hash: [string, string];
 }
 
-/** public/data/theme/theme.json, written by `npm run theme` (scripts/theme/build-theme.mjs). */
+/** public/data/theme/theme.json as the map uses it, written by `npm run theme` (scripts/theme/build-theme.mjs).
+ * In the file the two star lists are text (see readTheme); here they are numbers. */
 export interface ThemeData {
-  v: 3;
+  v: 4;
   /** Album count the theme was built for. */
   n: number;
   /** First 12 hex characters of the SHA-256 of the positions.json it was built for. */
@@ -51,17 +52,30 @@ function isGas(v: unknown, half: number): v is ThemeGas {
   return x0 < x1 && y0 < y1 && size(g.px, 2048) && size(g.sharp, 4096) && hashes;
 }
 
-export function isTheme(x: unknown): x is ThemeData {
-  if (!x || typeof x !== 'object') return false;
+/** The stars as the file packs them: `lead` one character an album (0 to 4, or - for none), `bg` base64 of three
+ * bytes an album. A number per album and stop made the file 126 KB at 10,467 albums; packed it is under half. */
+function readStars(v: unknown, n: number): ThemeData['stars'] | null {
+  const s = (v ?? {}) as { lead?: unknown; bg?: unknown };
+  if (typeof s.lead !== 'string' || typeof s.bg !== 'string' || s.lead.length !== n || !/^[-0-4]*$/.test(s.lead)) return null;
+  let bytes: string;
+  try {
+    bytes = atob(s.bg);
+  } catch {
+    return null;
+  }
+  if (bytes.length !== 3 * n) return null;
+  return { lead: Array.from(s.lead, (c) => (c === '-' ? -1 : Number(c))), bg: Array.from(bytes, (c) => c.charCodeAt(0)) };
+}
+
+/** The theme a parsed theme.json holds, or null when it is not one this build can draw. */
+export function readTheme(x: unknown): ThemeData | null {
+  if (!x || typeof x !== 'object') return null;
   const t = x as Record<string, unknown>;
-  if (t.v !== 3 || !isInt(t.n, 1, 1e6) || typeof t.positionsHash !== 'string' || !isNum(t.bakeHalf) || t.bakeHalf <= 0) return false;
-  const n = t.n as number;
+  if (t.v !== 4 || !isInt(t.n, 1, 1e6) || typeof t.positionsHash !== 'string' || !isNum(t.bakeHalf) || t.bakeHalf <= 0) return null;
   const gas = t.gas as Record<string, unknown> | null | undefined;
-  if (!gas || !STOP_IDS.every((s) => isGas(gas[s], t.bakeHalf as number))) return false;
-  const stars = t.stars as { lead?: unknown; bg?: unknown } | null | undefined;
-  if (!stars || !Array.isArray(stars.lead) || !Array.isArray(stars.bg)) return false;
-  if (stars.lead.length !== n || stars.bg.length !== 3 * n) return false;
-  return stars.lead.every((v) => isInt(v, -1, 4)) && stars.bg.every((v) => isInt(v, 0, 255));
+  if (!gas || !STOP_IDS.every((s) => isGas(gas[s], t.bakeHalf as number))) return null;
+  const stars = readStars(t.stars, t.n as number);
+  return stars && { v: 4, n: t.n as number, positionsHash: t.positionsHash, bakeHalf: t.bakeHalf, gas: gas as ThemeData['gas'], stars };
 }
 
 let theme = idle<ThemeData>();
@@ -76,7 +90,10 @@ registerReset(() => {
 export function loadTheme(): Promise<ThemeData> {
   return load(
     () => theme,
-    () => fetchJson<ThemeData>(THEME_URL, isTheme),
+    () => {
+      let read: ThemeData | null = null;
+      return fetchJson<unknown>(THEME_URL, (v) => (read = readTheme(v)) !== null).then(() => read as unknown as ThemeData);
+    },
   );
 }
 

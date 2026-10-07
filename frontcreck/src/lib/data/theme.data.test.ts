@@ -4,16 +4,16 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { STOP_IDS } from '@/lib/types';
-import { isTheme, type ThemeData } from './theme';
+import { readTheme, type ThemeData } from './theme';
 
 // vitest runs from frontcreck/, like the build-time data access in server.ts
 const DATA = path.resolve(process.cwd(), 'public/data');
 const read = (name: string): Buffer => fs.readFileSync(path.join(DATA, name));
-const theme = (): ThemeData => JSON.parse(read('theme/theme.json').toString('utf8')) as ThemeData;
+const theme = (): ThemeData => readTheme(JSON.parse(read('theme/theme.json').toString('utf8'))) as ThemeData;
 
 describe('committed theme data (public/data/theme)', () => {
   it('has the shape the loader accepts', () => {
-    expect(isTheme(theme())).toBe(true);
+    expect(theme()).not.toBeNull();
   });
 
   it('was built for the committed albums and layouts (run npm run theme after either changes)', () => {
@@ -65,7 +65,7 @@ describe('committed theme data (public/data/theme)', () => {
     expect(b.length).toBeGreaterThan((g.px[0] * g.px[1]) / 16);
   });
 
-  it.each(STOP_IDS)('has the sharper image of %s: the prototype\'s texels per raw unit over the same rectangle, under 1 MB', (stop) => {
+  it.each(STOP_IDS)('has the sharper image of %s: the prototype\'s texels per raw unit over the same rectangle, under 1 MB', async (stop) => {
     const t = theme();
     const g = t.gas[stop];
     const b = read(`theme/gas-${stop}-sharp.${g.hash[1]}.webp`);
@@ -78,8 +78,14 @@ describe('committed theme data (public/data/theme)', () => {
     expect(g.sharp[1] / (g.rect[3] - g.rect[1])).toBeCloseTo(perRaw, 0);
     // fetched at idle by desktops only; the agreed ceiling is 1.5 MB
     expect(b.length).toBeLessThan(1_000_000);
-    expect(b.length).toBeGreaterThan((g.sharp[0] * g.sharp[1]) / 16);
-  });
+    // And the quality was not turned down without anyone looking. Until the 10k catalog this was a floor of 0.5
+    // bits a pixel, which measures the picture as much as the quality: with 10,467 albums the gas is smoother and
+    // a little more of the rectangle is sky, and the same quality gives 0.44. So the file is weighed against
+    // itself encoded again at 84, the quality that smeared the swirl. At the bake's 95 it is 1.5 to 1.6 times
+    // that, on the 4,081-album images and on these alike; a file made at 84 would be 1.0.
+    const at84 = await sharp(b).webp({ quality: 84, alphaQuality: 100, effort: 5 }).toBuffer();
+    expect(b.length / at84.length).toBeGreaterThan(1.4);
+  }, 60_000);
 
   it('keeps every album inside its stop\'s gas rectangle, with the padding to spare', () => {
     const t = theme();

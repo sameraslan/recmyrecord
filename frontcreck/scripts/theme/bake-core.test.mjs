@@ -105,23 +105,6 @@ describe('bake-core (the DOM-free half of the theme build)', () => {
     expect(T.luminance([0, 0, 0])).toBe(0);
     const lum = new Float32Array(n * n);
     lum[T.lumCell(0.1, 0.1, 1.75)] = 0.4;
-    expect(T.lumIn(lum, 1.75, 0, 0, 0.2, 0.2)).toBeCloseTo(0.4, 6);
-    expect(T.lumIn(lum, 1.75, -0.4, -0.4, -0.2, -0.2)).toBe(0);
-  });
-
-  it('sizes and inks a name as the prototype does', () => {
-    expect(T.labelFontPx(true, 346)).toBeCloseTo(0.88 * 24, 6);
-    expect(T.labelFontPx(false, 0)).toBeCloseTo(0.88 * 15, 6);
-    const [hw, hh] = T.labelBox('Warm Halo', true, 346, 0.5);
-    expect(hw).toBeCloseTo((0.47 * 0.88 * 24 * 9 + 30) / 600 / 0.5, 6);
-    expect(hh).toBeCloseTo((0.525 * 0.88 * 24 + 28) / 600 / 0.5, 6);
-    // The wider box, for short windows: the same name with the same 30 and 28 px to spare, at 400 px per world unit.
-    expect(T.GAS.LABEL_WIDE_PPW).toBe(400);
-    const [ww, wh] = T.labelBox('Warm Halo', true, 346, 0.5, T.GAS.LABEL_WIDE_PPW);
-    expect(ww).toBeCloseTo((0.47 * 0.88 * 24 * 9 + 30) / 400 / 0.5, 6);
-    expect(wh).toBeCloseTo((0.525 * 0.88 * 24 + 28) / 400 / 0.5, 6);
-    expect(T.labelInk([120, 60, 30])).toEqual([255, 230, 217]);
-    expect(T.labelInk([0, 0, 0])).toEqual([204, 204, 204]);
   });
 
   it('names a gas image after its own bytes, and lists every file a theme names', () => {
@@ -137,57 +120,34 @@ describe('bake-core (the DOM-free half of the theme build)', () => {
     ]);
   });
 
-  it('assembles theme.json from the luminance renders', () => {
+  it('assembles theme.json from the luminance renders, the stars packed as text (one character and three bytes an album)', () => {
     const n = T.GAS.LUM;
     const px = new Uint8Array(4 * n * n);
     for (let i = 0; i < n * n; i++) px.set([60, 30, 15, 255], 4 * i);
-    const region = { id: 'warm', name: 'Warm Halo', word: 'warm', strength: 'strong', level: 1, n: 106, priority: 2.3104, cx: 0.262, cy: 0.248, radius: 0.112 };
     const input = {
       n: 2,
       positionsHash: 'a7c1dbd996fd',
       positions: { sonic: [0, 0, 1, 1], balanced: [0, 0, 1, 1], mood: [0, 0, 1, 1] },
       weights: [50, 20, 10, 10, 0, 10, 10, 10, 10, 10, 20, 40],
-      regions: { sonic: [], balanced: [region, { ...region, id: 'area', level: 0 }, { ...region, id: 'bare', name: null }], mood: [] },
     };
     const gas = { sonic: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560], hash: ['0123456789', 'abcdef0123'] }, balanced: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560], hash: ['0123456789', 'abcdef0123'] }, mood: { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560], hash: ['0123456789', 'abcdef0123'] } };
     const theme = T.assemble(input, { sonic: px, balanced: px, mood: px }, 1.6, 1.75, gas);
     const byte = Math.min(255, Math.round((T.luminance([60, 30, 15]) / 0.6) * 255));
+    // no names and no regions: the map has none (2026-10-06)
     expect(theme).toEqual({
-      v: 3,
+      v: 4,
       n: 2,
       positionsHash: 'a7c1dbd996fd',
       bakeHalf: 1.6,
       gas,
-      stars: { lead: [0, -1], bg: [byte, byte, byte, byte, byte, byte] },
-      labels: {
-        sonic: [],
-        balanced: [{ id: 'warm', name: 'Warm Halo', x: 0.262, y: 0.248, strong: true, n: 106, p: 2.3104, rgb: [255, 230, 217], lum: Math.round(T.luminance([60, 30, 15]) * 1000) / 1000, lumWide: Math.round(T.luminance([60, 30, 15]) * 1000) / 1000 }],
-        mood: [],
-      },
+      stars: { lead: '0-', bg: Buffer.from([byte, byte, byte, byte, byte, byte]).toString('base64') },
     });
   });
 
-  it('measures a second, wider box per name: gas that the first box misses and the wider one holds', () => {
-    const n = T.GAS.LUM, rawHalf = 1.75;
-    const px = new Uint8Array(4 * n * n);
-    for (let i = 0; i < n * n; i++) px.set([60, 30, 15, 255], 4 * i);
-    const region = { id: 'warm', name: 'Warm Halo', word: 'warm', strength: 'strong', level: 1, n: 106, priority: 2.3104, cx: 0.262, cy: 0.248, radius: 0.112 };
-    const positions = { sonic: [0, 0, 1, 1], balanced: [0, 0, 1, 1], mood: [0, 0, 1, 1] };
-    const s = T.positionsTransform(positions.balanced).s;
-    const [hw] = T.labelBox(region.name, true, region.n, s);
-    const [ww] = T.labelBox(region.name, true, region.n, s, T.GAS.LABEL_WIDE_PPW);
-    expect(ww).toBeCloseTo(hw * 1.5, 9);
-    // A bright cell beside the name: outside the first box, inside the wider one.
-    const x = region.cx + (hw + ww) / 2;
-    expect((ww - hw) / 2).toBeGreaterThan((2 * rawHalf) / n);
-    px.set([200, 180, 160, 255], 4 * T.lumCell(x, region.cy, rawHalf));
-    // And one beyond both.
-    px.set([255, 255, 255, 255], 4 * T.lumCell(region.cx + ww + (4 * rawHalf) / n, region.cy, rawHalf));
-    const gas = { rect: [-1, -1, 1, 1], px: [2048, 2048], sharp: [2560, 2560], hash: ['0123456789', 'abcdef0123'] };
-    const input = { n: 2, positionsHash: 'a7c1dbd996fd', positions, weights: [50, 20, 10, 10, 0, 10, 10, 10, 10, 10, 20, 40], regions: { sonic: [], balanced: [region], mood: [] } };
-    const label = T.assemble(input, { sonic: px, balanced: px, mood: px }, 1.6, rawHalf, { sonic: gas, balanced: gas, mood: gas }).labels.balanced[0];
-    expect(label.lum).toBe(Math.round(T.luminance([60, 30, 15]) * 1000) / 1000);
-    expect(label.lumWide).toBe(Math.round(T.luminance([200, 180, 160]) * 1000) / 1000);
-    expect(Object.keys(label)).toEqual(['id', 'name', 'x', 'y', 'strong', 'n', 'p', 'rgb', 'lum', 'lumWide']);
+  it('packs the stars so that they read back exactly: every family and none, every byte', () => {
+    expect(T.packLead(Int8Array.from([-1, 0, 1, 2, 3, 4]))).toBe('-01234');
+    const all = Uint8Array.from({ length: 70_000 }, (_, i) => i % 256);
+    expect([...Buffer.from(T.packBytes(all), 'base64')]).toEqual([...all]);
+    expect(T.packBytes(new Uint8Array(0))).toBe('');
   });
 });

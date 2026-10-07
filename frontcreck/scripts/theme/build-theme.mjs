@@ -4,8 +4,8 @@
  * records them: /data is cached by browsers for a day, so an image whose content changed must change its name,
  * or a visitor could draw an old image into a new rectangle. Images of an earlier bake are deleted.
  * One headless Chromium on software WebGL does the shading, so the output is the same on every machine.
- * Inputs: data-pipeline/theme/{weights,regions}.json and public/data/{albums,positions}.json. It refuses to run
- * when the inputs were made for other albums or layouts. Previews for a human go to test-results/theme/. */
+ * Inputs: data-pipeline/theme/weights.json and public/data/{albums,positions}.json. It refuses to run when the
+ * weights were made for another album list. Previews for a human go to test-results/theme/. */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -44,18 +44,15 @@ function loadInput() {
   const positionsBytes = fs.readFileSync(path.join(DATA, 'positions.json'));
   const positions = JSON.parse(positionsBytes.toString('utf8'));
   const weights = readJson(path.join(INPUTS, 'weights.json'));
-  const regions = readJson(path.join(INPUTS, 'regions.json'));
   const n = albums.length;
   const positionsHash = shortHash(positionsBytes);
   const again = 'Refresh data-pipeline/theme (see its README), then run npm run theme again.';
   if (weights.n !== n || weights.weights.length !== 6 * n) throw new Error(`weights.json covers ${weights.n} albums but albums.json has ${n}. ${again}`);
   if (weights.slugsHash !== shortHash(Buffer.from(albums.map((a) => a.slug).join('\n'), 'utf8'))) throw new Error(`weights.json was made for another album list. ${again}`);
-  if (regions.positionsHash !== positionsHash) throw new Error(`regions.json was made for other layouts. ${again}`);
   for (const stop of T.STOPS) {
     if (!Array.isArray(positions[stop]) || positions[stop].length !== 2 * n) throw new Error(`positions.json: ${stop} does not hold ${n} points`);
-    if (!Array.isArray(regions[stop])) throw new Error(`regions.json: no ${stop} list. ${again}`);
   }
-  return { n, positions, positionsHash, weights: weights.weights, regions };
+  return { n, positions, positionsHash, weights: weights.weights };
 }
 
 /** What is asked of every gas image before it is written: it holds gas, the dust channel is sane, and its outer
@@ -208,8 +205,7 @@ async function main() {
   for (const f of fs.readdirSync(OUT)) {
     if (/^gas-.*\.webp$/.test(f) && !keep.has(f)) fs.rmSync(path.join(OUT, f));
   }
-  const names = T.STOPS.map((s) => `${s} ${theme.labels[s].length}`).join(', ');
-  console.log(`theme.json ${Math.round(fs.statSync(path.join(OUT, 'theme.json')).size / 1024)} KB (names: ${names}; positions ${theme.positionsHash})`);
+  console.log(`theme.json ${Math.round(fs.statSync(path.join(OUT, 'theme.json')).size / 1024)} KB (${theme.n} albums; positions ${theme.positionsHash})`);
 }
 
 main().catch((e) => {
