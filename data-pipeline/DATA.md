@@ -17,7 +17,7 @@ Column meanings are taken from the docstring of the module named in each section
 | `catalog/descriptor_aliases.json` | 4 names | hand | |
 | `catalog/unverified_links.csv` | 67 | hand | |
 | `catalog/covers.csv` | 7,476 | generated | `python -m rmr_pipeline.covers refs` |
-| `catalog/covers_caa.csv` | 154 | generated, with rows added by hand | `covers refs`, `scripts/caa_hand.py` |
+| `catalog/covers_caa.csv` | 155 | generated, with rows added by hand | `covers refs`, `scripts/caa_hand.py` |
 | `catalog/covers_skip.csv` | 14 | hand | |
 | `catalog/covers_state.csv` | 213 | generated, a record | `python scripts/covers_state.py` |
 | `catalog/covers_resolved.csv` | 10,467 | generated, a record | `python scripts/covers_resolved.py` |
@@ -35,6 +35,7 @@ Column meanings are taken from the docstring of the module named in each section
 | `audio/` (`embeddings/`, `manifest.json`, `transform.npz`) | 3,980 albums | generated | `python -m rmr_audio sync` |
 | `overrides.json`, `overrides/*.jpg` | 19 | hand | |
 | `frontcreck/public/data/` | 10,467 albums | generated | `python -m rmr_pipeline.build --map-root PATH` |
+| `frontcreck/public/covers/` | 153 images | generated | `python -m rmr_pipeline.covers` (the site's own copy of each Cover Art Archive cover in use, 500 px, named by MusicBrainz release group id; see that module's docstring) |
 
 ## Catalog (`catalog/`)
 
@@ -99,7 +100,7 @@ The covers module does not read this table. It matters because the build reads t
 
 One row for every album: the cover the built site shows, its URL, and where it came from. Columns: `rym_id`, `slug`, `kind`, `ref`, `url`, `origin`, `note` (docstring of `scripts/covers_resolved.py`). Read from the built `frontcreck/public/data/albums.json`, with the URL from `rmr_pipeline.covers.cover_url`.
 
-By kind: spotify 9,616, yt 341, bc 192, ca 152, am 102, dz 53, none 11. By origin: `covers.csv` 7,430, `map` 2,858, `covers_caa.csv` 152, `overrides.json` 16, none 11.
+By kind: spotify 9,616, yt 341, bc 192, ca 153, am 102, dz 53, none 10. By origin: `covers.csv` 7,430, `map` 2,858, `covers_caa.csv` 153, `overrides.json` 16, none 10.
 
 The 2,858 `map` rows are the reason for the file. Their cover ids come from another repository (the build's `--map-root`), and nothing else in this one has them but the built `albums.json`.
 
