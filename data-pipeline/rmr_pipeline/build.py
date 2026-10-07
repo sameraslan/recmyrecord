@@ -33,6 +33,7 @@ from .catalog import (DEFAULT_EXISTING, DEFAULT_WEIGHTS, EXISTING, WEIGHT_PROFIL
                       unverified_links)
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS
+from .covers import DEFAULT_HOSTED, hosted_problems
 from .images import load_album_sprites, tile_thumbs, write_sheets
 from .io import write_json
 from .layout import build_layouts, flat_positions
@@ -76,7 +77,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                         "whose Spotify link changed) has a cover in it and no sprite of that image in "
                         ".cache/covers/96 (python -m rmr_pipeline.covers sprites), or "
                         "when a sprite has no entry in the manifest (covers adopt). An album whose image the state "
-                        "file records as failed has no cover and is not counted. For the final build.")
+                        "file records as failed has no cover and is not counted. Also when the folder of the site's own "
+                        "copies of the Cover Art Archive covers (frontcreck/public/covers) lacks the "
+                        "copy of a `ca:` cover or holds a file no album uses (covers host). For the final build.")
     p.add_argument("--hub-correction", default="", metavar="STOPS",
                    help="Comma-separated stops whose recommendations rank by mutual proximity instead of the raw "
                         "distance (for example: balanced). Off by default.")
@@ -324,6 +327,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"--require-sprites: {problem}", file=sys.stderr)
                 return 1
             print(f"WARNING, covers: {problem}")
+        # The site serves a `ca:` cover from its own files (frontcreck/public/covers): no request here, only
+        # whether the folder holds exactly the copies these albums use.
+        hosted = hosted_problems(covers, DEFAULT_HOSTED)
+        if hosted and args.require_sprites:
+            print("\n".join(f"--require-sprites: {p}" for p in hosted), file=sys.stderr)
+            return 1
+        for p in hosted:
+            print(f"WARNING, covers: {p}")
+        print(f"covers, hosted: {len({c for c in covers if c.startswith('ca:')})} Cover Art Archive cover(s) are served "
+              f"from the site's own files ({DEFAULT_HOSTED}): {'ok' if not hosted else 'see the warning'}")
     override_images = {**new_images, **override_images}
     if args.catalog:
         by_table = shared_spotify_ids(cat, cat.legacy_ids[:n_site] + cat.spotify_ids[n_site:])
@@ -416,7 +429,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     for name, size in sizes.items():
         print(f"wrote {name}: {size / 1e6:.2f} MB")
-    print(validate_dir(out, images=not args.skip_images))
+    print(validate_dir(out, images=not args.skip_images, hosted=DEFAULT_HOSTED if args.require_sprites else None))
     print(f"done in {time.time() - t0:.0f}s")
     return 0
 

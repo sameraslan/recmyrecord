@@ -6,6 +6,9 @@ A catalog build (python -m rmr_pipeline.build --catalog) adds to the site's cont
                 `n`: 1, after `l`: the album has no audio
   recs.json     an `n` album's sonic and balanced rows are [], and no sonic or balanced row lists one
   thumbs        one sheet per THUMB_PER_SHEET albums: thumbs.webp, thumbs-1.webp, ...
+And of the folder beside it, frontcreck/public/covers (`--covers`; rmr_pipeline.covers `host`):
+  <mbid>.jpg    exactly one per `ca:<mbid>` cover of albums.json, which the site serves as /covers/<mbid>.jpg
+  index.json    the width and height of each
 """
 import argparse
 import json
@@ -18,6 +21,7 @@ from .colors import contrast_ratio, hex_to_rgb
 from .constants import (ATLAS_COLS, ATLAS_NAME_RE, ATLAS_PER_SHEET, ATLAS_SPRITE_PX, AUDIO_STOPS, DEFAULT_OUT,
                         LYRIC_DROP, MIN_ACCENT_CONTRAST, NON_MOOD, RECS_PER_STOP, ROOM_RGB, STOPS, THUMB_COLS,
                         THUMB_PER_SHEET, THUMB_ROWS, THUMB_SPRITE_PX, THUMBS_NAME_RE, TOP_DESCRIPTORS)
+from .covers import DEFAULT_HOSTED, hosted_problems
 from .links import LINK_COLUMNS, LINK_REF_RE
 
 ALBUM_KEYS = ["slug", "t", "a", "s", "c", "k", "d", "w"]
@@ -107,7 +111,17 @@ def _validate_links(a: dict, where: str, err) -> None:
             err(f"{where}: bad {key} link {ref!r}")
 
 
-def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
+def hosted_dir(out: Path = DEFAULT_OUT) -> Path | None:
+    """The folder of the site's own copies of the Cover Art Archive covers when `out` is the site's data folder
+    (frontcreck/public/covers, beside frontcreck/public/data); None for any other data folder, which has none
+    beside it (a trial build in .cache/ is checked against a folder only when one is named)."""
+    return DEFAULT_HOSTED if Path(out).resolve() == DEFAULT_OUT.resolve() else None
+
+
+def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True, hosted: Path | None = None) -> dict:
+    """`hosted`: the folder of the site's own copies of the Cover Art Archive covers (hosted_dir(out): the
+    site's, for the site's data). When given, it must hold exactly one copy per `ca:<mbid>` cover of albums.json
+    (covers.hosted_problems); the summary then has their number, `hosted_covers`. Not checked without it."""
     errs: list[str] = []
 
     def err(msg: str) -> None:
@@ -224,12 +238,18 @@ def validate_dir(out: Path = DEFAULT_OUT, *, images: bool = True) -> dict:
 
     if images:
         _validate_images(out, n, err)
+    cover_ids = [a["c"] for a in albums if isinstance(a, dict) and isinstance(a.get("c"), str)]
+    if hosted is not None:
+        for problem in hosted_problems(cover_ids, hosted):
+            err("covers: " + problem)
 
     if errs:
         raise ContractError("\n".join(errs))
     summary = {"albums": n, "vocab": len(vocab), "no_cover": no_cover, "empty_descriptors": empty_d}
     if with_links or no_audio:  # a catalog build's; the site's summary stays what it was
         summary |= {"links": with_links, "no_audio": len(no_audio)}
+    if hosted is not None:
+        summary |= {"hosted_covers": len({c for c in cover_ids if c.startswith("ca:")})}
     return summary
 
 
@@ -238,9 +258,13 @@ def main(argv: list[str] | None = None) -> int:
                                      description="Check frontcreck/public/data against the data contract.")
     parser.add_argument("--data", type=Path, default=DEFAULT_OUT)
     parser.add_argument("--no-images", action="store_true", help="Skip the sprite sheet checks.")
+    parser.add_argument("--covers", type=Path, help="The folder of the site's own copies of the Cover Art Archive covers. "
+                        "Default: frontcreck/public/covers when --data is the site's data; not checked for another folder.")
+    parser.add_argument("--no-covers", action="store_true", help="Skip the check of that folder.")
     args = parser.parse_args(argv)
     try:
-        summary = validate_dir(args.data, images=not args.no_images)
+        summary = validate_dir(args.data, images=not args.no_images,
+                               hosted=None if args.no_covers else args.covers or hosted_dir(args.data))
     except ContractError as e:
         print("FAIL\n" + str(e), file=sys.stderr)
         return 1

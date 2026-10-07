@@ -18,12 +18,16 @@ const readJson = <T>(name: string): T => JSON.parse(fs.readFileSync(path.join(DA
 
 /**
  * The hosts remote covers come from, one per form of the cover id (`coverUrlAt` in src/lib/data/catalog.ts; the
- * same list as the img-src hosts of next.config.ts). A Cover Art Archive cover is asked for at coverartarchive.org,
- * which redirects to archive.org and on to one of its file hosts (`*.archive.org`).
+ * same list as the img-src hosts of next.config.ts). A Cover Art Archive cover has none: it is one of the site's
+ * own files, /covers/<mbid>.jpg (public/covers).
  */
-export const COVER_HOSTS = ['i.scdn.co', 'cdn-images.dzcdn.net', 'is1-ssl.mzstatic.com', 'f4.bcbits.com', 'i.ytimg.com', 'coverartarchive.org', 'archive.org'] as const;
-/** Any URL on a cover host: for `page.route` (holding or failing every remote cover) and for telling a failed cover from another failed request. */
-export const COVER_URL_RE = new RegExp(`^https://(?:${COVER_HOSTS.map((h) => h.replaceAll('.', '\\.')).join('|')}|[a-z0-9.-]+\\.archive\\.org)/`);
+export const COVER_HOSTS = ['i.scdn.co', 'cdn-images.dzcdn.net', 'is1-ssl.mzstatic.com', 'f4.bcbits.com', 'i.ytimg.com'] as const;
+/** The site's own copy of a Cover Art Archive cover, on any origin. */
+export const HOSTED_COVER_RE = /\/covers\/[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\.jpg$/;
+/** Any host a cover must never be asked from: the page serves its own copy of a Cover Art Archive cover. */
+export const ARCHIVE_HOST_RE = /^https?:\/\/(?:[a-z0-9.-]+\.)?(?:coverartarchive|archive|musicbrainz)\.org\//;
+/** Any cover: a URL on a cover host, or one of the site's own copies. For `page.route` (holding or failing every cover) and for telling a failed cover from another failed request. */
+export const COVER_URL_RE = new RegExp(`^https://(?:${COVER_HOSTS.map((h) => h.replaceAll('.', '\\.')).join('|')})/|${HOSTED_COVER_RE.source}`);
 /** A thumbnail sheet: thumbs.webp, then thumbs-1.webp, ... (one per 4,096 albums). */
 export const THUMB_SHEET_RE = /\/data\/thumbs(-\d+)?\.webp$/;
 /** A map atlas sheet: atlas-0.webp, ... (one per 1,024 albums, so two digits from the eleventh). */
@@ -198,7 +202,7 @@ export function albumWithoutCover(): (PickedAlbum & { query: string }) | null {
   return null;
 }
 
-/** The first album whose cover is a Cover Art Archive one (`ca:<release-group MBID>`), with that id. */
+/** The first album whose cover is a Cover Art Archive one (`ca:<release-group MBID>`, served from public/covers), with that id. */
 export function albumWithArchiveCover(): PickedAlbum & { mbid: string } {
   const album = firstAlbum('with a Cover Art Archive cover', (a) => a.c.startsWith('ca:'));
   return { ...album, mbid: data().albums[album.id].c.slice(3) };

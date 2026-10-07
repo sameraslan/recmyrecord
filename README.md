@@ -10,7 +10,7 @@
   <img src="docs/readme/search.gif" alt="Searching for In Rainbows and opening its closest albums" width="900">
 </p>
 
-Every album is placed by how it sounds, using Spotify's audio values, and how it feels, using mood descriptors handpicked from RateYourMusic. Pick one and you get the albums nearest to it.
+Every album is placed by how it sounds, measured from short audio previews, and how it feels, using mood descriptors handpicked from RateYourMusic. Pick one and you get the albums nearest to it.
 
 <p align="center">
   <img src="docs/readme/slider.gif" alt="Sliding from sound to mood reorders the list and moves the map" width="900">
@@ -22,7 +22,7 @@ Slide between sound and mood to change what "close" means.
   <img src="docs/readme/map.gif" alt="Exploring the map of albums" width="900">
 </p>
 
-Or skip the search and wander the map: 4,000+ albums, with the ones that sound or feel alike sitting together.
+Or skip the search and wander the map: 10,000+ albums, with the ones that sound or feel alike sitting together.
 
 <p align="center">
   <img src="docs/readme/phone.gif" alt="The album page on a phone, switching between list and map" width="300">

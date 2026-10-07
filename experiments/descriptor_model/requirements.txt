@@ -1,0 +1,9 @@
+# arm64 venv: uv venv --python 3.13 .venv && uv pip install --python .venv/bin/python -r requirements.txt
+# Pins below are copied from data-pipeline/requirements.txt (same numerics as the site build); torch added.
+numpy==2.4.6
+pandas==3.0.6
+scikit-learn==1.9.1
+scipy==1.17.1
+pyarrow==25.0.1
+pytest==9.1.1
+torch==2.14.1

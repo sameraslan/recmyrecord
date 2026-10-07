@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { THUMB_SHEET_RE, albumOnAnotherService, albumWithArchiveCover, albumWhoseFirstRecHasNoLink, albumWhoseFirstRecIsOnAnotherService, albumWithBracketedTitle, albumWithNoLink, albumWithoutAudio, recsOf } from './data';
-import { ARCHIVE_COVER_RE, act, answerArchiveCovers, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { ARCHIVE_HOST_RE, HOSTED_COVER_RE, THUMB_SHEET_RE, albumOnAnotherService, albumWithArchiveCover, albumWhoseFirstRecHasNoLink, albumWhoseFirstRecIsOnAnotherService, albumWithBracketedTitle, albumWithNoLink, albumWithoutAudio, recsOf } from './data';
+import { act, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 const IR_SLUG = 'in-rainbows-radiohead';
 const IR = `/album/${IR_SLUG}`;
@@ -11,13 +11,6 @@ const IR_SONIC = recsOf(IR_SLUG, 'sonic').map((r) => r.title);
 // The mood list barely depends on audio, so its first five are pinned by title (and checked against the data).
 const IR_MOOD = ['Glitter', 'Have You in My Wilderness', 'Carrie & Lowell Live', 'Bon Iver, Bon Iver', 'Takk...'];
 const titles = (page: Page) => page.locator('ol.rec-list .rec-title').allTextContents();
-
-// Albums chosen from the data can have a Cover Art Archive cover, whose hosts are sometimes very slow: every
-// test here gets a quick answer for them, but for the one that lets the real hosts answer.
-let realArchive: () => Promise<void> = async () => {};
-test.beforeEach(async ({ page }) => {
-  realArchive = await answerArchiveCovers(page);
-});
 
 /** The accent colour of an album, read from the served data. */
 async function accentOf(page: Page, slug: string): Promise<string> {
@@ -416,18 +409,14 @@ test('a title in another script with a Latin form in brackets shows both, the br
 });
 
 /**
- * A Cover Art Archive cover is asked for at coverartarchive.org, which answers with a redirect to archive.org,
- * which redirects to one of its file hosts (`*.archive.org`); those now and then answer 500. Playwright cannot
- * play a redirect chain itself (a request that follows a redirect is not routed), so the first test lets the
- * real hosts answer and the others answer the first request themselves.
+ * A Cover Art Archive cover is one of the site's own files, /covers/<mbid>.jpg (public/covers, kept by the
+ * pipeline's `covers host`): the page asks no archive host, whose file hosts fail too often. No test here
+ * reaches the network for it.
  */
 test.describe('a Cover Art Archive cover', () => {
   const album = albumWithArchiveCover();
   const url = `/album/${encodeURIComponent(album.slug)}`;
-  const FIRST = `https://coverartarchive.org/release-group/${album.mbid}/front-250`;
-  const ARCHIVE_RE = ARCHIVE_COVER_RE;
-  // A 1 x 1 PNG.
-  const PIXEL = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  const FILE = `/covers/${album.mbid}.jpg`;
   const sheetOf = (id: number) => (id < 4096 ? 'thumbs.webp' : `thumbs-${Math.floor(id / 4096)}.webp`);
 
   /** Console messages about the Content-Security-Policy. */
@@ -439,66 +428,71 @@ test.describe('a Cover Art Archive cover', () => {
     return found;
   }
 
-  test('comes through the real redirects with nothing refused by the Content-Security-Policy, and ends as the picture or the sprite', async ({ page }) => {
-    test.setTimeout(120_000);
-    await realArchive();
-    const csp = cspMessages(page);
-    // Every answer on the way: the two redirects and the file host's own.
-    const hops: { host: string; status: number }[] = [];
-    page.on('response', (r) => {
-      const host = new URL(r.url()).host;
-      if (host === 'coverartarchive.org' || host === 'archive.org' || host.endsWith('.archive.org')) hops.push({ host, status: r.status() });
-    });
-    // Not the load event: it waits for this very cover.
-    await page.goto(url, { waitUntil: 'domcontentloaded' });
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText(album.title);
-    const cover = page.locator('.seed .cover');
-    // The archive can be slow: the cover settles as the loaded picture, or (a 500, or no network) as the sprite.
-    await expect(cover.locator('img.ok, .spr')).toBeVisible({ timeout: 90_000 });
-    const state = await cover.getAttribute('data-state');
-    const file = hops.find((h) => h.host.endsWith('.archive.org'));
-    if (file?.status === 200) {
-      // The file host answered with the picture: it is shown, so no hop was blocked.
-      expect(state).toBe('remote');
-      await expect(cover.locator('img')).toHaveAttribute('src', FIRST);
-      expect(await cover.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(100);
-      expect(hops.map((h) => h.host).slice(0, 2)).toEqual(['coverartarchive.org', 'archive.org']);
-    } else {
-      expect(state).toBe('sprite');
-    }
-    expect(csp).toEqual([]);
-  });
-
-  test('shows the picture the archive answers with, and fetches no thumbnail sheet', async ({ page }) => {
+  test("is the site's own file: the picture shows, no archive host is asked and no thumbnail sheet is fetched", async ({ page }) => {
     const csp = cspMessages(page);
     const sheets: string[] = [];
+    const archive: string[] = [];
+    const files: { url: string; status: number; type: string | undefined; cache: string | undefined }[] = [];
+    // Any request to an archive host is refused here, and fails the test below: nothing may reach the network.
+    await page.route(ARCHIVE_HOST_RE, (route) => {
+      archive.push(route.request().url());
+      return route.abort();
+    });
     page.on('request', (r) => {
       if (THUMB_SHEET_RE.test(r.url())) sheets.push(r.url());
     });
-    const asked: string[] = [];
-    await page.route(ARCHIVE_RE, (route) => {
-      asked.push(route.request().url());
-      return route.fulfill({ status: 200, contentType: 'image/png', body: PIXEL });
+    page.on('response', (r) => {
+      if (HOSTED_COVER_RE.test(r.url())) files.push({ url: new URL(r.url()).pathname, status: r.status(), type: r.headers()['content-type'], cache: r.headers()['cache-control'] });
     });
     await page.goto(url);
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(album.title);
     const cover = page.locator('.seed .cover');
-    await expect(cover.locator('img')).toHaveAttribute('src', FIRST);
+    await expect(cover.locator('img')).toHaveAttribute('src', FILE);
     await expect(cover.locator('img.ok')).toBeVisible();
     await expect(cover).toHaveAttribute('data-state', 'remote');
     await expect(cover).not.toHaveAttribute('data-frame', '');
-    // The same URL can be asked for twice (the phone's map strip draws the same cover), never another one.
-    expect([...new Set(asked)]).toEqual([FIRST]);
+    // The picture itself, not a placeholder: a copy is up to 500 px on its longer side.
+    const natural = await cover.locator('img').evaluate((img: HTMLImageElement) => Math.max(img.naturalWidth, img.naturalHeight));
+    expect(natural).toBeGreaterThan(100);
+    expect(natural).toBeLessThanOrEqual(500);
+    // The same file can be asked for twice (the phone's map strip draws the same cover), never another one of the seed's.
+    const own = files.filter((f) => f.url === FILE);
+    expect(own.length).toBeGreaterThan(0);
+    for (const f of own) {
+      expect(f.status).toBe(200);
+      expect(f.type).toBe('image/jpeg');
+      // The cache lifetime of /data (next.config.ts).
+      expect(f.cache).toBe('public, max-age=86400, stale-while-revalidate=604800');
+    }
+    expect(archive).toEqual([]);
     expect(csp).toEqual([]);
     expect(sheets).toEqual([]);
+  });
+
+  test('the link preview names the same file, as an absolute address, with its size', async ({ page }) => {
+    await page.goto(url);
+    const og = await page.locator('meta[property="og:image"]').getAttribute('content');
+    expect(new URL(og!).pathname).toBe(FILE);
+    expect(og).toMatch(/^https:\/\//);
+    const width = Number(await page.locator('meta[property="og:image:width"]').getAttribute('content'));
+    const height = Number(await page.locator('meta[property="og:image:height"]').getAttribute('content'));
+    const real = await page.evaluate(async (src) => {
+      const im = new Image();
+      im.src = src;
+      await im.decode();
+      return [im.naturalWidth, im.naturalHeight];
+    }, FILE);
+    expect([width, height]).toEqual(real);
   });
 
   for (const [what, answer] of [
     ['answers 500', (route: Route) => route.fulfill({ status: 500, body: 'error' })],
     ['cannot be reached', (route: Route) => route.abort('connectionfailed')],
-    ['answers with something that is no picture', (route: Route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Internal Server Error</h1>' })],
+    ['is missing', (route: Route) => route.fulfill({ status: 404, contentType: 'text/html', body: '<h1>Not Found</h1>' })],
+    ['is no picture', (route: Route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<h1>Internal Server Error</h1>' })],
   ] as const) {
-    test(`falls back to the thumbnail sprite when the archive ${what}`, async ({ page }) => {
-      await page.route(ARCHIVE_RE, answer);
+    test(`falls back to the thumbnail sprite when the file ${what}`, async ({ page }) => {
+      await page.route(HOSTED_COVER_RE, answer);
       await page.goto(url);
       const cover = page.locator('.seed .cover');
       await expect(cover).toHaveAttribute('data-state', 'sprite');
@@ -513,8 +507,8 @@ test.describe('a Cover Art Archive cover', () => {
     });
   }
 
-  test('falls back to the lettered tile when the archive and the thumbnail sheet both fail', async ({ page }) => {
-    await page.route(ARCHIVE_RE, (route) => route.fulfill({ status: 500, body: 'error' }));
+  test('falls back to the lettered tile when the file and the thumbnail sheet both fail', async ({ page }) => {
+    await page.route(HOSTED_COVER_RE, (route) => route.fulfill({ status: 500, body: 'error' }));
     await page.route(THUMB_SHEET_RE, (route) => route.abort());
     await page.goto(url);
     await expect(page.locator('.seed .cover')).toHaveAttribute('data-state', 'tile');

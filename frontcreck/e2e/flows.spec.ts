@@ -1,7 +1,7 @@
 import { expect, test as base, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
 import { COVER_URL_RE, albumWithoutCover, recsOf } from './data';
-import { act, answerArchiveCovers, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { act, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 /** Every flow fails on a page error or a console error (remote cover failures excepted: covers fall back). */
 const test = base.extend<{ errors: string[] }>({
@@ -20,11 +20,6 @@ const test = base.extend<{ errors: string[] }>({
     },
     { auto: true },
   ],
-});
-
-// An album chosen from the data can have a Cover Art Archive cover, whose hosts are sometimes very slow.
-test.beforeEach(async ({ page }) => {
-  await answerArchiveCovers(page);
 });
 
 const IR = '/album/in-rainbows-radiohead';

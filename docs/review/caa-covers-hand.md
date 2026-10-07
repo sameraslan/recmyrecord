@@ -72,6 +72,17 @@ West Side Story's wrong group (ccdcf53e) stays on `covers_skip.csv`; its row of 
 | Ludwig van Beethoven & Wilhelm Kempff | Klaviersonaten Pathétique; Mondschein-Sonate; Appassionata | 1961 | "Klaviersonaten", [7815a791](https://musicbrainz.org/release-group/7815a791-a8da-4df3-8961-4e88d0d576c8): Kempff, the same three sonatas, one German LP dated 1965 | The programme is the catalog's, but the catalog says 1961 and MusicBrainz 1965, so it may be a later issue or another recording, and its one release had no front image. Not taken. |
 | Arnold Schoenberg | Verklaerte Nacht, Op. 4 | 1950 | one group, [e6928dbb](https://musicbrainz.org/release-group/e6928dbb-b71b-4d64-8cac-505d2a683caa): the 1993 Testament CD "Schoenberg: Verklärte Nacht / Schubert: Quintet" | The same recording by the Hollywood String Quartet, on a 1993 compilation with the Schubert quintet and another sleeve. The 1950 Capitol LP is not on MusicBrainz. |
 
+## Added on the owner's word (7 October 2026)
+
+The owner read the two rows above that were left as his call and answered "I trust your covers match". Both groups were then asked from the Cover Art Archive (its list of images for the group, one request each, with one MusicBrainz lookup each for the row's columns):
+
+| Artist | Title | Year | Release group | Outcome |
+|---|---|---|---|---|
+| This Mortal Coil | This Mortal Coil | 1983 | [08e679c4](https://musicbrainz.org/release-group/08e679c4-651c-4327-98f1-0d84f7f635a5): "This Mortal Coil", This Mortal Coil, 2011-11-08, Album + Compilation (the box set) | The group has one image, a front image. Added to `covers_caa.csv` with `hand` in `matched_by` (`sp:5gD4BU64TwXSUldt6tD9H9`); its sprite was made and its copy is `frontcreck/public/covers/08e679c4-651c-4327-98f1-0d84f7f635a5.jpg`. The row is not in `caa-covers-hand-pending.csv`: it was written straight to the table. |
+| Navy Blue | Book II: Gift of Gabriel: Rain's Reign! | 2024 | [ca995a84](https://musicbrainz.org/release-group/ca995a84-1191-4724-a1a8-b9a6307c15e8): "Gift of Gabriel: Rain's Reign!", Navy Blue, 2022-12-23, Album | The archive has no image for the group (HTTP 404 for its list of images). Not added: the album keeps the lettered tile and stays in `still-no-cover.md`, which now asks for an image file. |
+
+So 31 hand-chosen groups give their album a cover, and 10 albums are left without one.
+
 ## The searches
 
 91 requests to `musicbrainz.org` (release-group and release searches, and lookups of a group's releases or a release's tracks), at most one a second, with the module's fetcher and User-Agent: 90 answered, 1 was a mistyped release id (HTTP 404); no 503 and no refusal. 18 requests to `coverartarchive.org` between 23:16 and 23:33, each answered HTTP 503 or timed out; then one at 23:51, answered, the 35 of `scripts/caa_hand.py`, the 32 images, and 4 lists of images with 8 MusicBrainz lookups to see which release each doubtful image belongs to. No other host was asked.

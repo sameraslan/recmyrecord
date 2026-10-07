@@ -2,12 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
 import { tileLetter } from '../src/lib/data/catalog';
 import { COVER_URL_RE, THUMB_SHEET_RE, albumWithoutCover } from './data';
-import { answerArchiveCovers, coversSettled, isPhone, shot } from './helpers';
-
-// An album chosen from the data can have a Cover Art Archive cover, whose hosts are sometimes very slow.
-test.beforeEach(async ({ page }) => {
-  await answerArchiveCovers(page);
-});
+import { coversSettled, isPhone, shot } from './helpers';
 
 const BODY_SPOT = { x: 700, y: 600 };
 

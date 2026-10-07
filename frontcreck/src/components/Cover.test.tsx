@@ -53,17 +53,16 @@ describe('Cover falls back to the album’s own thumbnail sheet', () => {
     expect(container.querySelector<HTMLElement>('.spr')!.style.backgroundImage.replaceAll('"', '')).toBe(`url(${sheetUrl})`);
   });
 
-  it('asks the Cover Art Archive for a ca: cover and falls back to the sprite when that fails', () => {
+  it("shows the site's own copy of a ca: cover and falls back to the sprite when that fails", () => {
     const mbid = 'a415fc9b-1516-303e-b354-fc3a5b269f1b';
     const { container } = render(<Cover album={{ id: THUMB_PER_SHEET + 7, title: 'Chill Out', coverId: `ca:${mbid}`, cluster: 2 }} size={116} />);
     const img = container.querySelector('img')!;
-    expect(img).toHaveAttribute('src', `https://coverartarchive.org/release-group/${mbid}/front-250`);
-    // No CORS request: the archive's file hosts are reached through two redirects.
+    expect(img).toHaveAttribute('src', `/covers/${mbid}.jpg`);
     expect(img).not.toHaveAttribute('crossorigin');
     expect(container.querySelector('.cover')).toHaveAttribute('data-state', 'remote');
     expect(container.querySelector('.cover')).not.toHaveAttribute('data-frame');
     expect(FakeImage.made).toHaveLength(0);
-    fireEvent.error(img); // archive.org's file hosts now and then answer 500
+    fireEvent.error(img); // the file is missing, or did not arrive
     expect(container.querySelector('.cover')).toHaveAttribute('data-state', 'sprite');
     expect(container.querySelector('img')).toBeNull();
     expect(FakeImage.made.map((i) => i.src)).toEqual(['/data/thumbs-1.webp']);

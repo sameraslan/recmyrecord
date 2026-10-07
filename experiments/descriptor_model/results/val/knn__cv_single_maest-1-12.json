@@ -1,0 +1,1486 @@
+{
+ "name": "knn__cv_single_maest-1-12",
+ "split": "val",
+ "timestamp": "2026-10-01T20:10:23+00:00",
+ "notes": "k-NN on the best single feature set; k/weighting/labels by train CV",
+ "config": {
+  "arm": "knn",
+  "model": "baselines.knn_label_transfer (cosine)",
+  "blocks": [
+   [
+    "maest:1-12",
+    "mean"
+   ]
+  ],
+  "spec": "maest:1-12",
+  "dims": [
+   768
+  ],
+  "block_transform": "z",
+  "k": 50,
+  "weighting": "softmax",
+  "temperature": 0.1,
+  "labels": "rank",
+  "cv": {
+   "k=5,uniform,binary": {
+    "ndcg@10": 0.6230236286153205,
+    "precision@10": 0.47353896103896104
+   },
+   "k=10,uniform,binary": {
+    "ndcg@10": 0.648500445359099,
+    "precision@10": 0.4941558441558441
+   },
+   "k=20,uniform,binary": {
+    "ndcg@10": 0.6586055665359056,
+    "precision@10": 0.5068181818181818
+   },
+   "k=35,uniform,binary": {
+    "ndcg@10": 0.6551808203903368,
+    "precision@10": 0.5038961038961038
+   },
+   "k=50,uniform,binary": {
+    "ndcg@10": 0.6497546266066321,
+    "precision@10": 0.5001623376623378
+   },
+   "k=100,uniform,binary": {
+    "ndcg@10": 0.6231243135967909,
+    "precision@10": 0.48425324675324666
+   },
+   "k=5,similarity,binary": {
+    "ndcg@10": 0.6252664524531831,
+    "precision@10": 0.4780844155844156
+   },
+   "k=10,similarity,binary": {
+    "ndcg@10": 0.654531154086805,
+    "precision@10": 0.4995129870129871
+   },
+   "k=20,similarity,binary": {
+    "ndcg@10": 0.6640475869320783,
+    "precision@10": 0.5084415584415585
+   },
+   "k=35,similarity,binary": {
+    "ndcg@10": 0.6625110221341607,
+    "precision@10": 0.5092532467532468
+   },
+   "k=50,similarity,binary": {
+    "ndcg@10": 0.6605699806208519,
+    "precision@10": 0.5094155844155843
+   },
+   "k=100,similarity,binary": {
+    "ndcg@10": 0.6496076347968296,
+    "precision@10": 0.4991883116883117
+   },
+   "k=5,softmax0.05,binary": {
+    "ndcg@10": 0.6137046895508709,
+    "precision@10": 0.4667207792207792
+   },
+   "k=10,softmax0.05,binary": {
+    "ndcg@10": 0.6273587200249857,
+    "precision@10": 0.47353896103896104
+   },
+   "k=20,softmax0.05,binary": {
+    "ndcg@10": 0.6384435832128215,
+    "precision@10": 0.4840909090909092
+   },
+   "k=35,softmax0.05,binary": {
+    "ndcg@10": 0.6412010645806343,
+    "precision@10": 0.4858766233766233
+   },
+   "k=50,softmax0.05,binary": {
+    "ndcg@10": 0.6421142943531938,
+    "precision@10": 0.4866883116883116
+   },
+   "k=100,softmax0.05,binary": {
+    "ndcg@10": 0.6423221254402061,
+    "precision@10": 0.4868506493506493
+   },
+   "k=5,softmax0.1,binary": {
+    "ndcg@10": 0.6234206487896818,
+    "precision@10": 0.4772727272727273
+   },
+   "k=10,softmax0.1,binary": {
+    "ndcg@10": 0.6492101304090903,
+    "precision@10": 0.4946428571428571
+   },
+   "k=20,softmax0.1,binary": {
+    "ndcg@10": 0.6607030996314284,
+    "precision@10": 0.5050324675324676
+   },
+   "k=35,softmax0.1,binary": {
+    "ndcg@10": 0.661354619159636,
+    "precision@10": 0.5061688311688312
+   },
+   "k=50,softmax0.1,binary": {
+    "ndcg@10": 0.6639069611847703,
+    "precision@10": 0.5099025974025975
+   },
+   "k=100,softmax0.1,binary": {
+    "ndcg@10": 0.6642177227074454,
+    "precision@10": 0.5112012987012987
+   },
+   "k=5,uniform,rank": {
+    "ndcg@10": 0.6313709869766684,
+    "precision@10": 0.4790584415584416
+   },
+   "k=10,uniform,rank": {
+    "ndcg@10": 0.6541381604587434,
+    "precision@10": 0.4980519480519481
+   },
+   "k=20,uniform,rank": {
+    "ndcg@10": 0.6612947491040909,
+    "precision@10": 0.5074675324675324
+   },
+   "k=35,uniform,rank": {
+    "ndcg@10": 0.6573578428754188,
+    "precision@10": 0.5058441558441559
+   },
+   "k=50,uniform,rank": {
+    "ndcg@10": 0.6526685651567142,
+    "precision@10": 0.502435064935065
+   },
+   "k=100,uniform,rank": {
+    "ndcg@10": 0.6266321744442731,
+    "precision@10": 0.4862012987012987
+   },
+   "k=5,similarity,rank": {
+    "ndcg@10": 0.6324365235193408,
+    "precision@10": 0.4803571428571429
+   },
+   "k=10,similarity,rank": {
+    "ndcg@10": 0.6559577107414799,
+    "precision@10": 0.5006493506493506
+   },
+   "k=20,similarity,rank": {
+    "ndcg@10": 0.6652624815642829,
+    "precision@10": 0.5097402597402597
+   },
+   "k=35,similarity,rank": {
+    "ndcg@10": 0.6653573322797968,
+    "precision@10": 0.5113636363636364
+   },
+   "k=50,similarity,rank": {
+    "ndcg@10": 0.6618019362964396,
+    "precision@10": 0.5108766233766234
+   },
+   "k=100,similarity,rank": {
+    "ndcg@10": 0.6513955049368131,
+    "precision@10": 0.500974025974026
+   },
+   "k=5,softmax0.05,rank": {
+    "ndcg@10": 0.6131700800930383,
+    "precision@10": 0.4654220779220779
+   },
+   "k=10,softmax0.05,rank": {
+    "ndcg@10": 0.62828150961936,
+    "precision@10": 0.47581168831168835
+   },
+   "k=20,softmax0.05,rank": {
+    "ndcg@10": 0.6375316875893494,
+    "precision@10": 0.48344155844155845
+   },
+   "k=35,softmax0.05,rank": {
+    "ndcg@10": 0.6396396838076224,
+    "precision@10": 0.48538961038961037
+   },
+   "k=50,softmax0.05,rank": {
+    "ndcg@10": 0.6412763349634529,
+    "precision@10": 0.4871753246753247
+   },
+   "k=100,softmax0.05,rank": {
+    "ndcg@10": 0.6420630978965087,
+    "precision@10": 0.4878246753246753
+   },
+   "k=5,softmax0.1,rank": {
+    "ndcg@10": 0.6260262357274521,
+    "precision@10": 0.47662337662337667
+   },
+   "k=10,softmax0.1,rank": {
+    "ndcg@10": 0.6500313663161362,
+    "precision@10": 0.4938311688311688
+   },
+   "k=20,softmax0.1,rank": {
+    "ndcg@10": 0.6620928717494223,
+    "precision@10": 0.5064935064935064
+   },
+   "k=35,softmax0.1,rank": {
+    "ndcg@10": 0.6622920183050741,
+    "precision@10": 0.5060064935064936
+   },
+   "k=50,softmax0.1,rank": {
+    "ndcg@10": 0.665977960872405,
+    "precision@10": 0.5107142857142858
+   },
+   "k=100,softmax0.1,rank": {
+    "ndcg@10": 0.66426740248365,
+    "precision@10": 0.5090909090909091
+   }
+  },
+  "cv_ndcg@10": 0.665977960872405,
+  "cv_precision@10": 0.5107142857142858,
+  "n_configs": 48,
+  "cv_folds": 5,
+  "best": "k=50,softmax0.1,rank",
+  "at_grid_edge": false,
+  "cv_criterion": "out-of-fold nDCG@10 on train; transforms fitted per fold",
+  "fit_seconds": 1.6,
+  "sig": {
+   "n_shards": 38,
+   "n_train": 616,
+   "n_val": 138,
+   "quick": false,
+   "blocks": [
+    [
+     "maest:1-12",
+     "mean"
+    ]
+   ],
+   "variant": "z",
+   "model": "knn",
+   "grid": [
+    [
+     "5",
+     "uniform",
+     "None",
+     "binary"
+    ],
+    [
+     "10",
+     "uniform",
+     "None",
+     "binary"
+    ],
+    [
+     "20",
+     "uniform",
+     "None",
+     "binary"
+    ],
+    [
+     "35",
+     "uniform",
+     "None",
+     "binary"
+    ],
+    [
+     "50",
+     "uniform",
+     "None",
+     "binary"
+    ],
+    [
+     "100",
+     "uniform",
+     "None",
+     "binary"
+    ],
+    [
+     "5",
+     "similarity",
+     "None",
+     "binary"
+    ],
+    [
+     "10",
+     "similarity",
+     "None",
+     "binary"
+    ],
+    [
+     "20",
+     "similarity",
+     "None",
+     "binary"
+    ],
+    [
+     "35",
+     "similarity",
+     "None",
+     "binary"
+    ],
+    [
+     "50",
+     "similarity",
+     "None",
+     "binary"
+    ],
+    [
+     "100",
+     "similarity",
+     "None",
+     "binary"
+    ],
+    [
+     "5",
+     "softmax",
+     "0.05",
+     "binary"
+    ],
+    [
+     "10",
+     "softmax",
+     "0.05",
+     "binary"
+    ],
+    [
+     "20",
+     "softmax",
+     "0.05",
+     "binary"
+    ],
+    [
+     "35",
+     "softmax",
+     "0.05",
+     "binary"
+    ],
+    [
+     "50",
+     "softmax",
+     "0.05",
+     "binary"
+    ],
+    [
+     "100",
+     "softmax",
+     "0.05",
+     "binary"
+    ],
+    [
+     "5",
+     "softmax",
+     "0.1",
+     "binary"
+    ],
+    [
+     "10",
+     "softmax",
+     "0.1",
+     "binary"
+    ],
+    [
+     "20",
+     "softmax",
+     "0.1",
+     "binary"
+    ],
+    [
+     "35",
+     "softmax",
+     "0.1",
+     "binary"
+    ],
+    [
+     "50",
+     "softmax",
+     "0.1",
+     "binary"
+    ],
+    [
+     "100",
+     "softmax",
+     "0.1",
+     "binary"
+    ],
+    [
+     "5",
+     "uniform",
+     "None",
+     "rank"
+    ],
+    [
+     "10",
+     "uniform",
+     "None",
+     "rank"
+    ],
+    [
+     "20",
+     "uniform",
+     "None",
+     "rank"
+    ],
+    [
+     "35",
+     "uniform",
+     "None",
+     "rank"
+    ],
+    [
+     "50",
+     "uniform",
+     "None",
+     "rank"
+    ],
+    [
+     "100",
+     "uniform",
+     "None",
+     "rank"
+    ],
+    [
+     "5",
+     "similarity",
+     "None",
+     "rank"
+    ],
+    [
+     "10",
+     "similarity",
+     "None",
+     "rank"
+    ],
+    [
+     "20",
+     "similarity",
+     "None",
+     "rank"
+    ],
+    [
+     "35",
+     "similarity",
+     "None",
+     "rank"
+    ],
+    [
+     "50",
+     "similarity",
+     "None",
+     "rank"
+    ],
+    [
+     "100",
+     "similarity",
+     "None",
+     "rank"
+    ],
+    [
+     "5",
+     "softmax",
+     "0.05",
+     "rank"
+    ],
+    [
+     "10",
+     "softmax",
+     "0.05",
+     "rank"
+    ],
+    [
+     "20",
+     "softmax",
+     "0.05",
+     "rank"
+    ],
+    [
+     "35",
+     "softmax",
+     "0.05",
+     "rank"
+    ],
+    [
+     "50",
+     "softmax",
+     "0.05",
+     "rank"
+    ],
+    [
+     "100",
+     "softmax",
+     "0.05",
+     "rank"
+    ],
+    [
+     "5",
+     "softmax",
+     "0.1",
+     "rank"
+    ],
+    [
+     "10",
+     "softmax",
+     "0.1",
+     "rank"
+    ],
+    [
+     "20",
+     "softmax",
+     "0.1",
+     "rank"
+    ],
+    [
+     "35",
+     "softmax",
+     "0.1",
+     "rank"
+    ],
+    [
+     "50",
+     "softmax",
+     "0.1",
+     "rank"
+    ],
+    [
+     "100",
+     "softmax",
+     "0.1",
+     "rank"
+    ]
+   ]
+  },
+  "val_rows_filled": 0
+ },
+ "calibration": null,
+ "data": {
+  "n_train": 616,
+  "n_train_source": "given",
+  "n_val": 138,
+  "n_val_expected": 138,
+  "val_coverage": 1.0,
+  "n_val_labelled_total": 601,
+  "n_shards": 38,
+  "n_albums_extracted": 892,
+  "n_albums_matched": 3761,
+  "partial_data": true,
+  "shard_limit_env": "38"
+ },
+ "metrics": {
+  "ranking": {
+   "n_albums": 138,
+   "k": 10,
+   "precision@10": 0.5021739130434782,
+   "recall@10": 0.5506483907932468,
+   "ndcg@10": 0.6704244077476025,
+   "micro_recall@10": 0.47859116022099446,
+   "max_precision@10": 0.8072463768115942,
+   "max_recall@10": 0.8577452546013931,
+   "mAP": 0.3558052687418062,
+   "mAP_n_labels": 101,
+   "mAP_skipped": 19,
+   "macro_auc": 0.7766237356482665,
+   "auc_n_labels": 101,
+   "auc_skipped": 19,
+   "micro_ap": 0.536973003060962,
+   "micro_auc": 0.8941739614926778,
+   "best_auc": [
+    [
+     "androgynous vocals",
+     0.9927007299270072,
+     1
+    ],
+    [
+     "rock opera",
+     0.9854014598540146,
+     1
+    ],
+    [
+     "tropical",
+     0.9734848484848484,
+     6
+    ],
+    [
+     "heavy",
+     0.9733542319749217,
+     22
+    ],
+    [
+     "sampling",
+     0.933179723502304,
+     14
+    ],
+    [
+     "party",
+     0.9309701492537313,
+     4
+    ],
+    [
+     "mechanical",
+     0.930827067669173,
+     5
+    ],
+    [
+     "instrumental",
+     0.9295089936801166,
+     17
+    ],
+    [
+     "aggressive",
+     0.9210829493087557,
+     14
+    ],
+    [
+     "male vocals",
+     0.9177475482442266,
+     109
+    ],
+    [
+     "urban",
+     0.9155241043785937,
+     19
+    ],
+    [
+     "vocal group",
+     0.9124087591240876,
+     1
+    ],
+    [
+     "acoustic",
+     0.9094850948509485,
+     15
+    ],
+    [
+     "disturbing",
+     0.9073064340239914,
+     7
+    ],
+    [
+     "avant-garde",
+     0.9012168933428776,
+     11
+    ]
+   ],
+   "worst_auc": [
+    [
+     "rain",
+     0.2846715328467153,
+     1
+    ],
+    [
+     "medieval",
+     0.3102189781021898,
+     1
+    ],
+    [
+     "polyphonic",
+     0.32116788321167883,
+     1
+    ],
+    [
+     "desert",
+     0.34671532846715325,
+     1
+    ],
+    [
+     "tribal",
+     0.35766423357664234,
+     1
+    ],
+    [
+     "lyrics",
+     0.4744525547445255,
+     1
+    ],
+    [
+     "infernal",
+     0.4860074626865672,
+     4
+    ],
+    [
+     "aquatic",
+     0.4871323529411765,
+     2
+    ],
+    [
+     "happy",
+     0.5728395061728395,
+     3
+    ],
+    [
+     "funereal",
+     0.5845588235294118,
+     2
+    ],
+    [
+     "lethargic",
+     0.6058394160583942,
+     1
+    ],
+    [
+     "ballad",
+     0.6176470588235294,
+     2
+    ],
+    [
+     "angry",
+     0.6339362618432386,
+     9
+    ],
+    [
+     "seasonal",
+     0.635036496350365,
+     1
+    ],
+    [
+     "anxious",
+     0.6511270491803278,
+     16
+    ]
+   ],
+   "precision@1": 0.8913043478260869,
+   "max_precision@1": 1.0,
+   "precision@3": 0.7536231884057971,
+   "max_precision@3": 0.9855072463768116,
+   "precision@5": 0.6579710144927536,
+   "max_precision@5": 0.9492753623188406,
+   "per_label": {
+    "label": [
+     "melancholic",
+     "anxious",
+     "futuristic",
+     "male vocals",
+     "atmospheric",
+     "lonely",
+     "cold",
+     "depressive",
+     "longing",
+     "dense",
+     "urban",
+     "progressive",
+     "passionate",
+     "concept album",
+     "bittersweet",
+     "meditative",
+     "epic",
+     "complex",
+     "sentimental",
+     "melodic",
+     "eclectic",
+     "spiritual",
+     "rhythmic",
+     "uplifting",
+     "surreal",
+     "technical",
+     "improvisation",
+     "avant-garde",
+     "psychedelic",
+     "medieval",
+     "sombre",
+     "winter",
+     "hypnotic",
+     "mysterious",
+     "dark",
+     "nocturnal",
+     "apocalyptic",
+     "ethereal",
+     "noisy",
+     "romantic",
+     "female vocals",
+     "lush",
+     "Wall of Sound",
+     "warm",
+     "sensual",
+     "androgynous vocals",
+     "soothing",
+     "mellow",
+     "space",
+     "calm",
+     "summer",
+     "happy",
+     "medley",
+     "quirky",
+     "playful",
+     "energetic",
+     "suite",
+     "sampling",
+     "raw",
+     "dissonant",
+     "lo-fi",
+     "anthemic",
+     "rock opera",
+     "triumphant",
+     "autumn",
+     "polyphonic",
+     "repetitive",
+     "manic",
+     "tribal",
+     "instrumental",
+     "suspenseful",
+     "acoustic",
+     "aquatic",
+     "heavy",
+     "ominous",
+     "funereal",
+     "chamber music",
+     "vocal group",
+     "orchestral",
+     "aggressive",
+     "uncommon time signatures",
+     "monologue",
+     "pastoral",
+     "soft",
+     "peaceful",
+     "minimalistic",
+     "sparse",
+     "sad",
+     "rain",
+     "angry",
+     "chaotic",
+     "seasonal",
+     "spring",
+     "forest",
+     "choral",
+     "scary",
+     "lethargic",
+     "ballad",
+     "disturbing",
+     "mechanical",
+     "infernal",
+     "tropical",
+     "party",
+     "mashup",
+     "ritualistic",
+     "desert",
+     "martial",
+     "natural",
+     "skit",
+     "parody",
+     "atonal",
+     "lyrics",
+     "waltz",
+     "jingle",
+     "opera",
+     "symphony",
+     "fairy tale",
+     "oratorio",
+     "ensemble",
+     "string quartet"
+    ],
+    "ap": [
+     0.6135611788845599,
+     0.1916316729719975,
+     0.46409983692953327,
+     0.9792781346605365,
+     0.7979495289936966,
+     0.33768877869166847,
+     0.3381587131296501,
+     0.24048563683608767,
+     0.3056499656901748,
+     0.42307218767920396,
+     0.7489596273651367,
+     0.5367346975116939,
+     0.5271966543455253,
+     0.21728991357592403,
+     0.4699697528308892,
+     0.24325889776200332,
+     0.40838859628462176,
+     0.5226974488287334,
+     0.2059582420098472,
+     0.8200409433760213,
+     0.3456546347720796,
+     0.4011542044436781,
+     0.6432847047364759,
+     0.14081381016981137,
+     0.3907052060772946,
+     0.3731232374629552,
+     0.4463159469473408,
+     0.45235310865020084,
+     0.47285458409056724,
+     0.007246376811594203,
+     0.3856213252941592,
+     0.2799145177569343,
+     0.5358750701983929,
+     0.5620112687594012,
+     0.6525677692489174,
+     0.764325844404243,
+     0.2690851950536312,
+     0.4859273546332031,
+     0.49687231103916196,
+     0.24861933959760046,
+     0.21058054161055523,
+     0.45922402773080834,
+     0.09057971014492754,
+     0.6209269098346182,
+     0.3638468013468013,
+     0.5,
+     0.12145003370613128,
+     0.42380732801697807,
+     0.3493566618566618,
+     0.20629437658817892,
+     0.2247562166022508,
+     0.08751848565513162,
+     null,
+     0.46065302909068434,
+     0.4744602654610876,
+     0.8150864542158278,
+     null,
+     0.8833308186855096,
+     0.4462239314107305,
+     0.5478129530924563,
+     0.3474168576900655,
+     0.3694708190849826,
+     0.3333333333333333,
+     0.23725560820473413,
+     0.18442664956700017,
+     0.007246376811594203,
+     0.6033702213279678,
+     0.5842371977240398,
+     0.007246376811594203,
+     0.6649531608463969,
+     0.204012654012654,
+     0.6015439614510163,
+     0.019441498762813716,
+     0.8746342560558121,
+     0.47932665105567024,
+     0.028985507246376812,
+     null,
+     0.07692307692307693,
+     0.05263157894736842,
+     0.7436391610654081,
+     0.18106884057971012,
+     null,
+     0.39496656370057903,
+     0.16950766092390135,
+     0.19694582083347378,
+     0.17716507822006541,
+     0.17156755175188354,
+     0.23593839818732215,
+     0.007246376811594203,
+     0.15870815570988647,
+     0.505050505050505,
+     0.0196078431372549,
+     0.07888036062378168,
+     0.1080246913580247,
+     null,
+     0.14134599366983175,
+     0.01818181818181818,
+     0.03356216628527841,
+     0.24474081985602722,
+     0.3987301587301587,
+     0.044466403162055336,
+     0.5952380952380952,
+     0.3645833333333333,
+     null,
+     0.22391304347826085,
+     0.007246376811594203,
+     null,
+     null,
+     null,
+     null,
+     null,
+     0.007246376811594203,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "auc": [
+     0.8033693738999246,
+     0.6511270491803278,
+     0.8981481481481481,
+     0.9177475482442266,
+     0.8921297460397284,
+     0.7971311475409836,
+     0.8747315676449534,
+     0.8060128847530422,
+     0.747457627118644,
+     0.8634146341463416,
+     0.9155241043785937,
+     0.8499115044247787,
+     0.6516203703703702,
+     0.6812307692307693,
+     0.7508696815627508,
+     0.806979280261723,
+     0.8541565386485173,
+     0.8716577540106951,
+     0.6514816452896948,
+     0.8071428571428572,
+     0.7093805309734512,
+     0.7846683893195521,
+     0.810969387755102,
+     0.6603076923076924,
+     0.77004477004477,
+     0.8084016393442622,
+     0.8673076923076923,
+     0.9012168933428776,
+     0.7607079646017698,
+     0.3102189781021898,
+     0.7883597883597884,
+     0.8320707070707071,
+     0.7729230769230769,
+     0.8388888888888889,
+     0.8524691358024692,
+     0.8458710407239819,
+     0.88113413304253,
+     0.868923076923077,
+     0.8784562211981567,
+     0.7466931216931216,
+     0.744815668202765,
+     0.7479646017699115,
+     0.6636029411764707,
+     0.7463203463203463,
+     0.8901515151515151,
+     0.9927007299270072,
+     0.7078125,
+     0.825,
+     0.8952020202020202,
+     0.7726153846153847,
+     0.7724654377880185,
+     0.5728395061728395,
+     null,
+     0.7758872143898882,
+     0.755656108597285,
+     0.8769414575866189,
+     null,
+     0.933179723502304,
+     0.798728813559322,
+     0.8604143947655398,
+     0.7219193020719739,
+     0.8274874731567645,
+     0.9854014598540146,
+     0.6649038461538461,
+     0.733715103793844,
+     0.32116788321167883,
+     0.871319520174482,
+     0.8923076923076924,
+     0.35766423357664234,
+     0.9295089936801166,
+     0.8302238805970149,
+     0.9094850948509485,
+     0.4871323529411765,
+     0.9733542319749217,
+     0.8617886178861789,
+     0.5845588235294118,
+     null,
+     0.9124087591240876,
+     0.8686131386861313,
+     0.9210829493087557,
+     0.8535353535353536,
+     null,
+     0.8214030064423765,
+     0.8355769230769231,
+     0.8156565656565656,
+     0.8434343434343434,
+     0.8375136314067612,
+     0.8359788359788359,
+     0.2846715328467153,
+     0.6339362618432386,
+     0.9002525252525253,
+     0.635036496350365,
+     0.792910447761194,
+     0.8617283950617285,
+     null,
+     0.6703703703703703,
+     0.6058394160583942,
+     0.6176470588235294,
+     0.9073064340239914,
+     0.930827067669173,
+     0.4860074626865672,
+     0.9734848484848484,
+     0.9309701492537313,
+     null,
+     0.7765432098765432,
+     0.34671532846715325,
+     null,
+     null,
+     null,
+     null,
+     null,
+     0.4744525547445255,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null,
+     null
+    ],
+    "n_pos": [
+     41,
+     16,
+     12,
+     109,
+     41,
+     16,
+     11,
+     11,
+     20,
+     15,
+     19,
+     25,
+     48,
+     13,
+     37,
+     7,
+     17,
+     17,
+     19,
+     68,
+     25,
+     9,
+     40,
+     13,
+     21,
+     16,
+     8,
+     11,
+     25,
+     1,
+     21,
+     6,
+     13,
+     18,
+     30,
+     34,
+     7,
+     13,
+     14,
+     12,
+     14,
+     25,
+     2,
+     33,
+     6,
+     1,
+     10,
+     20,
+     6,
+     13,
+     14,
+     3,
+     0,
+     17,
+     34,
+     45,
+     0,
+     14,
+     20,
+     7,
+     7,
+     11,
+     1,
+     8,
+     11,
+     1,
+     7,
+     8,
+     1,
+     17,
+     4,
+     15,
+     2,
+     22,
+     15,
+     2,
+     0,
+     1,
+     1,
+     14,
+     6,
+     0,
+     11,
+     8,
+     6,
+     6,
+     7,
+     12,
+     1,
+     9,
+     6,
+     1,
+     4,
+     3,
+     0,
+     3,
+     1,
+     2,
+     7,
+     5,
+     4,
+     6,
+     4,
+     0,
+     3,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   },
+   "cP@10": 0.6397084195997239,
+   "cP@5": 0.6913043478260869,
+   "perfect@10": 0.08695652173913043
+  },
+  "precision_coverage": {
+   "n_albums": 138,
+   "mean_true_count": 10.492753623188406,
+   "n_operating_points": 10544,
+   "points": [
+    {
+     "target_count": 0.5,
+     "avg_count": 0.5,
+     "precision": 1.0,
+     "recall": 0.04765193370165746,
+     "threshold": 1.3240257119666687,
+     "share_albums_ge1": 0.41304347826086957,
+     "n_emitted": 69
+    },
+    {
+     "target_count": 1.0,
+     "avg_count": 1.0,
+     "precision": 0.9565217391304348,
+     "recall": 0.09116022099447514,
+     "threshold": 1.177832018681097,
+     "share_albums_ge1": 0.7101449275362319,
+     "n_emitted": 138
+    },
+    {
+     "target_count": 2.0,
+     "avg_count": 2.0,
+     "precision": 0.8405797101449275,
+     "recall": 0.16022099447513813,
+     "threshold": 0.9276533631521028,
+     "share_albums_ge1": 0.9202898550724637,
+     "n_emitted": 276
+    },
+    {
+     "target_count": 3.0,
+     "avg_count": 3.0,
+     "precision": 0.7632850241545893,
+     "recall": 0.21823204419889503,
+     "threshold": 0.7850307554617145,
+     "share_albums_ge1": 0.9927536231884058,
+     "n_emitted": 414
+    },
+    {
+     "target_count": 4.0,
+     "avg_count": 4.0,
+     "precision": 0.7065217391304348,
+     "recall": 0.26933701657458564,
+     "threshold": 0.6848251961503614,
+     "share_albums_ge1": 1.0,
+     "n_emitted": 552
+    },
+    {
+     "target_count": 5.0,
+     "avg_count": 5.0,
+     "precision": 0.6492753623188405,
+     "recall": 0.30939226519337015,
+     "threshold": 0.6070570023431314,
+     "share_albums_ge1": 1.0,
+     "n_emitted": 690
+    },
+    {
+     "target_count": 7.0,
+     "avg_count": 7.0,
+     "precision": 0.5859213250517599,
+     "recall": 0.39088397790055246,
+     "threshold": 0.498956471094606,
+     "share_albums_ge1": 1.0,
+     "n_emitted": 966
+    },
+    {
+     "target_count": 10.0,
+     "avg_count": 10.0,
+     "precision": 0.5079710144927536,
+     "recall": 0.48411602209944754,
+     "threshold": 0.39892600253656696,
+     "share_albums_ge1": 1.0,
+     "n_emitted": 1380
+    },
+    {
+     "target_count": 10.492753623188406,
+     "avg_count": 10.492753623188406,
+     "precision": 0.4986187845303867,
+     "recall": 0.4986187845303867,
+     "threshold": 0.3860012143502254,
+     "share_albums_ge1": 1.0,
+     "n_emitted": 1448,
+     "is_mean_true_count": true
+    }
+   ],
+   "at_precision": {
+    "0.90": {
+     "target_count": null,
+     "avg_count": 1.463768115942029,
+     "precision": 0.900990099009901,
+     "recall": 0.12569060773480664,
+     "threshold": 1.0630510769207449,
+     "share_albums_ge1": 0.8405797101449275,
+     "n_emitted": 202
+    },
+    "0.80": {
+     "target_count": null,
+     "avg_count": 2.753623188405797,
+     "precision": 0.8,
+     "recall": 0.20994475138121546,
+     "threshold": 0.8162262344206052,
+     "share_albums_ge1": 0.9855072463768116,
+     "n_emitted": 380
+    },
+    "0.70": {
+     "target_count": null,
+     "avg_count": 4.065217391304348,
+     "precision": 0.7005347593582888,
+     "recall": 0.27140883977900554,
+     "threshold": 0.6831279915399628,
+     "share_albums_ge1": 1.0,
+     "n_emitted": 561
+    }
+   },
+   "crossfit_at_precision": {
+    "0.90": {
+     "precision": 0.898936170212766,
+     "avg_count": 1.3623188405797102,
+     "share_albums_ge1": 0.7971014492753623,
+     "thresholds": [
+      0.9858456850039519,
+      1.1629982413046265
+     ]
+    },
+    "0.80": {
+     "precision": 0.8071216617210683,
+     "avg_count": 2.4420289855072466,
+     "share_albums_ge1": 0.9710144927536232,
+     "thresholds": [
+      0.8008301961749795,
+      0.905481516727422
+     ]
+    },
+    "0.70": {
+     "precision": 0.7005545286506469,
+     "avg_count": 3.920289855072464,
+     "share_albums_ge1": 1.0,
+     "thresholds": [
+      0.6475376026977463,
+      0.7368050279304688
+     ]
+    }
+   }
+  },
+  "calibrated_count": {
+   "train_mean_count": 10.7273977311791,
+   "threshold": 0.38020392179483337,
+   "threshold_source": "count-matched on these rows (no labels used)",
+   "n_albums": 138,
+   "precision": 0.5019589525840367,
+   "recall": 0.5640708442303387,
+   "f1": 0.49841577073589927,
+   "jaccard": 0.34541533946765185,
+   "micro_precision": 0.4925675675675676,
+   "micro_recall": 0.5034530386740331,
+   "mean_n_pred": 10.72463768115942,
+   "mean_n_true": 10.492753623188406
+  },
+  "fixed_k10": {
+   "n_albums": 138,
+   "precision": 0.5021739130434782,
+   "recall": 0.5506483907932468,
+   "f1": 0.48867370520226344,
+   "jaccard": 0.33710045229462743,
+   "micro_precision": 0.5021739130434782,
+   "micro_recall": 0.47859116022099446,
+   "mean_n_pred": 10.0,
+   "mean_n_true": 10.492753623188406
+  },
+  "excluding_label_suspects": {
+   "n_label_suspect": 0,
+   "n_albums": 138,
+   "note": "no label-suspect rows among the evaluated rows: identical to the main metrics"
+  },
+  "downstream": {
+   "k10": {
+    "n_eval": 136,
+    "n_skipped_not_in_catalogue": 2,
+    "mean_n_pred": 10.0,
+    "stops": {
+     "balanced": {
+      "overlap@10_mean": 0.16617647058823531,
+      "overlap@10_median": 0.1,
+      "overlap@10_share_zero": 0.25,
+      "overlap@10_isolated_mean": 0.18382352941176472,
+      "overlap@10_isolated_median": 0.1,
+      "inbound_before_total": 1608,
+      "inbound_after_total": 2306,
+      "inbound_ratio": 1.4340796019900497,
+      "zero_inbound_share_before": 0.022058823529411766,
+      "zero_inbound_share_after": 0.022058823529411766,
+      "inbound_spearman": 0.20744578458123447,
+      "others_share_changed": 0.4633713561470216
+     },
+     "mood": {
+      "overlap@10_mean": 0.04926470588235294,
+      "overlap@10_median": 0.0,
+      "overlap@10_share_zero": 0.6911764705882353,
+      "overlap@10_isolated_mean": 0.052941176470588235,
+      "overlap@10_isolated_median": 0.0,
+      "inbound_before_total": 1513,
+      "inbound_after_total": 2499,
+      "inbound_ratio": 1.651685393258427,
+      "zero_inbound_share_before": 0.051470588235294115,
+      "zero_inbound_share_after": 0.0,
+      "inbound_spearman": -0.07362639334118498,
+      "others_share_changed": 0.4697084917617237
+     }
+    },
+    "seconds": 0.41939666704274714
+   },
+   "calibrated": {
+    "n_eval": 136,
+    "n_skipped_not_in_catalogue": 2,
+    "mean_n_pred": 10.772058823529411,
+    "stops": {
+     "balanced": {
+      "overlap@10_mean": 0.1801470588235294,
+      "overlap@10_median": 0.1,
+      "overlap@10_share_zero": 0.2426470588235294,
+      "overlap@10_isolated_mean": 0.1941176470588235,
+      "overlap@10_isolated_median": 0.2,
+      "inbound_before_total": 1608,
+      "inbound_after_total": 2605,
+      "inbound_ratio": 1.6200248756218905,
+      "zero_inbound_share_before": 0.022058823529411766,
+      "zero_inbound_share_after": 0.007352941176470588,
+      "inbound_spearman": 0.26636813349139454,
+      "others_share_changed": 0.4699619771863118
+     },
+     "mood": {
+      "overlap@10_mean": 0.058823529411764705,
+      "overlap@10_median": 0.0,
+      "overlap@10_share_zero": 0.6617647058823529,
+      "overlap@10_isolated_mean": 0.0625,
+      "overlap@10_isolated_median": 0.0,
+      "inbound_before_total": 1513,
+      "inbound_after_total": 2755,
+      "inbound_ratio": 1.8208856576338401,
+      "zero_inbound_share_before": 0.051470588235294115,
+      "zero_inbound_share_after": 0.0,
+      "inbound_spearman": 0.14076626320842184,
+      "others_share_changed": 0.4826362484157161
+     }
+    },
+    "seconds": 0.19685733295045793
+   },
+   "sonic_overlap@10_mean": 0.9911764705882353,
+   "sonic_note": "variant k10; uninformative (all-zero descriptors already score 0.988)"
+  },
+  "timing_seconds": {
+   "metrics": 0.20880237501114607,
+   "downstream": 0.7555173749569803
+  }
+ },
+ "backfill": {
+  "fields": [
+   "cP@10",
+   "cP@5",
+   "perfect@10"
+  ],
+  "from": "cache/scores (float32)",
+  "when": "2026-10-01T20:14:50+00:00",
+  "precision@10_recomputed_minus_stored": 0.0
+ }
+}

@@ -80,7 +80,7 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
   <header>
     <div class="eyebrow">recmyrecord experiment · 3 October 2026</div>
     <h1>Can the sonic stop leave the seed's genre?</h1>
-    <p class="lede">Not by swapping the audio model. Every option that reaches further outside the genre gives up some agreement on how the music feels. One comes close to the <em>Bitches Brew</em> list you expected: Spotify's old scores, predicted from the audio.</p>
+    <p class="lede">No option escapes the trade-off between reach and agreement, but CLAP comes out best: a little further across genres, almost the same agreement on how the music feels, and <em>Live-Evil</em> first for <em>Bitches Brew</em>.</p>
     <p class="muted">Seventeen representations were compared on cached clips. The lists below are the real test: the numbers are all built from RYM genres and descriptors, and RYM descriptors follow genre themselves. Nothing the site serves was changed.</p>
   </header>
 </div>
@@ -91,7 +91,7 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
       <div class="controls">
         <div class="seg" role="group" aria-label="Album pool">
           <button type="button" id="pool-full" aria-pressed="true">Whole catalog · 3,944</button>
-          <button type="button" id="pool-bakeoff" aria-pressed="false">CLAP and MERT · 1,000</button>
+          <button type="button" id="pool-bakeoff" aria-pressed="false">Model bake-off · 1,000</button>
         </div>
         <label class="small muted" for="seed">Album</label>
         <select id="seed"></select>
@@ -132,7 +132,7 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
 
   <section>
     <h2>Other models</h2>
-    <p>1,000 albums, two clips each, every model on the same clips. CLAP and MERT exist only here, and <em>Bitches Brew</em> is not among these albums.</p>
+    <p>1,000 albums, two clips each, every model on the same clips. MERT exists only here. CLAP has since been run over the whole catalog; see the table above and the first tab.</p>
     <div class="tablebox"><table>
       <thead><tr><th>Option</th><th class="n">Outside family, of 10</th><th class="n">Descriptor agreement</th><th class="n">Crossing quality</th><th class="n">Hubs</th></tr></thead>
       <tbody id="tbl-bakeoff"></tbody>
@@ -144,7 +144,7 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
     <ul class="plain">
       <li><strong>EffNet already crosses more than Bitches Brew suggests.</strong> On average 3.7 of its ten are outside the seed's family, and those are far better matched than chance. Jazz is the hard case: it forms a tight cluster, and the first non-jazz album for <em>Bitches Brew</em> is at rank 164.</li>
       <li><strong>No model picks better crossings than EffNet.</strong> Forced to choose outside the family, EffNet and CLAP tie, and MusiCNN and MERT are behind. The genre training does not make its out-of-genre picks worse.</li>
-      <li><strong>CLAP reaches a little further for almost nothing.</strong> 4.9 of ten outside the family against 4.4, for 0.007 less descriptor agreement. It was trained on audio paired with text, not on genre labels.</li>
+      <li><strong>CLAP reaches a little further for almost nothing.</strong> On the whole catalog 4.1 of ten are outside the family against 3.7, for 0.005 less descriptor agreement, and its out-of-family picks agree slightly better than EffNet's. It was trained on audio paired with text, not on genre labels. The price: somewhat more hubs, and at the balanced stop its lists match the seed's primary genre less often (0.237 against 0.270).</li>
       <li><strong>MERT reaches furthest and agrees least.</strong> Its middle layers are its best; the early layers are not better. A few albums take over its lists.</li>
       <li><strong>Removing the Discogs classifier's directions does nothing.</strong> The lists are the same at every rank. Genre is spread through the whole embedding.</li>
       <li><strong>Removal fitted on RYM genres does move the lists, at a price.</strong> Reach rises, the crossings get about as good as adding noise would make them, and hubs appear.</li>
@@ -156,6 +156,7 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
   <section>
     <h2>Bitches Brew</h2>
     <p>Every embedding keeps the list inside jazz. EffNet's first non-jazz album is at rank 164, and <em>Live-Evil</em>, <em>Get Up With It</em> and <em>Rocksession</em> are at 70, 286 and 430.</p>
+    <p>CLAP also stays inside jazz, but it finds the electric Miles records: <em>Live-Evil</em> is first, <em>At Fillmore</em> and <em>Big Fun</em> are in the ten, and <em>Get Up With It</em> is at 13. <em>Rocksession</em> is at 93 and there is no prog. At the balanced stop the CLAP and EffNet lists share eight of ten.</p>
     <p>The old Spotify list had eight of ten outside jazz, with King Crimson twice, at a descriptor match of 0.34 against EffNet's 0.50. The Spotify-like scores predicted from audio give the list closest to what you described: Mahavishnu Orchestra, <em>In a Silent Way</em>, Soft Machine's <em>Third</em> and Julia Holter among free and fusion jazz, at a descriptor match of 0.50. Mixing even a tenth of EffNet back in returns it to all jazz.</p>
     <p class="muted small">One caution on that list: for albums already in the catalog the predictor has seen their real Spotify scores. A new album gets a pure prediction, which recovers energy, acousticness, danceability, loudness and valence well (R² 0.7 to 0.8) and key, mode and tempo poorly.</p>
     <div class="tablebox"><table>
@@ -170,7 +171,7 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
     <div class="pair">
       <div>
         <h3>What I would do</h3>
-        <p>Keep EffNet as the store for now. If the CLAP columns sound better to you on the 1,000-album tab, the next step is running CLAP over the whole catalog so it can be judged on <em>Bitches Brew</em> itself. That is a 776 MB download and about 30,000 clips, a few hours of gentle laptop time.</p>
+        <p>Go with CLAP. It has now been run over the whole catalog at four clips per album and is the second column above. It is not trained on genre labels, it keeps almost all of EffNet's agreement, and it finds the <em>Bitches Brew</em> neighbours EffNet missed. Listen first; the numbers are proxies.</p>
         <p>If the Spotify-like column sounds right to you, that block can be built today from the clips already stored, with no new downloads. It is the old sonic stop without Spotify: looser than EffNet, further across genres, weaker on the descriptor numbers.</p>
       </div>
       <div>
@@ -178,6 +179,7 @@ select { font: inherit; color: var(--paper); background: var(--room-3); border: 
         <ul class="plain small">
           <li>Genre erasure fitted on RYM families: weaker crossings and hubs.</li>
           <li>MERT: least agreement, heaviest to run.</li>
+          <li>Expect CLAP to add prog to <em>Bitches Brew</em>: it does not, and nothing is forced.</li>
           <li>Pick on these numbers alone. They are RYM proxies; your ears decide.</li>
         </ul>
       </div>
