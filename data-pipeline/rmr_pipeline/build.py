@@ -11,7 +11,8 @@ albums (rmr_pipeline.covers), listen links `l` for an album with no Spotify id (
 form `native [Latin]` of a new album's artist and title (catalog.display_artist, display_title), the
 sheet's Spotify link for an existing album, with the cover of that release (catalog.catalog_frame,
 existing_album_covers), no Spotify link and no Spotify cover for the albums of catalog/unverified_links.csv
-(catalog.unverified_links), and the mood-only rule for an album with no audio (`n`; audio.mean_fill,
+(catalog.unverified_links), the Cover Art Archive cover of an album that would have none (covers.py's last
+resort; catalog.last_resort_covers for an existing album), and the mood-only rule for an album with no audio (`n`; audio.mean_fill,
 recs.build_recs, recs.no_audio_columns, layout.build_layouts).
 
 --no-catalog is the build of before the switch: the feature table's albums alone, an imputed block for an
@@ -27,8 +28,9 @@ from .artists import clean_artist
 from .audio import DEFAULT_CATALOG, audio_block, descriptors, site_matrix
 from .audio_store import StoreError, site_store
 from .catalog import (DEFAULT_EXISTING, DEFAULT_WEIGHTS, EXISTING, WEIGHT_PROFILES, CatalogError, catalog_frame, covers_table,
-                      display_artist, display_title, existing_album_covers, load_catalog, load_unverified_links,
-                      neighbour_clusters, new_album_covers, shared_spotify_ids, shared_spotify_lines, unverified_links)
+                      display_artist, display_title, existing_album_covers, last_resort_covers, load_catalog,
+                      load_unverified_links, neighbour_clusters, new_album_covers, shared_spotify_ids, shared_spotify_lines,
+                      unverified_links)
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS
 from .images import load_album_sprites, tile_thumbs, write_sheets
@@ -283,12 +285,18 @@ def main(argv: list[str] | None = None) -> int:
         print(f"covers: {len(new_keys)} new albums, {sum(1 for c in new_covers if c)} with a cover, "
               f"{len(new_images) - len(old.images)} with a sprite, {len(waiting)} with a cover and no sprite yet (a flat tile on the "
               f"sheets): {', '.join(waiting[:5])}{' ...' if len(waiting) > 5 else ''}")
+        last = set(table.last_resort(new_keys))  # the new albums whose cover is the Cover Art Archive's
         if gone:
             print(f"covers: {len(gone)} new album(s) have a row in covers.csv whose image could not be fetched (recorded "
-                  f"in the covers state file): no cover, `c` is empty ({', '.join(gone[:5])}{' ...' if len(gone) > 5 else ''})")
+                  f"in the covers state file): no cover from it ({', '.join(gone[:5])}{' ...' if len(gone) > 5 else ''}); "
+                  f"{sum(k in last for k in gone)} of them have the last resort's, the others an empty `c`")
         if skipped := table.skipped(new_keys):
             print(f"covers: {len(skipped)} new album(s) have a row in covers.csv that catalog/covers_skip.csv names as not "
-                  f"a cover: no cover, `c` is empty ({', '.join(skipped[:5])}{' ...' if len(skipped) > 5 else ''})")
+                  f"a cover: no cover from it ({', '.join(skipped[:5])}{' ...' if len(skipped) > 5 else ''}); "
+                  f"{sum(k in last for k in skipped)} of them have the last resort's, the others an empty `c`")
+        print(f"covers, last resort: {len(last)} new album(s) with no other cover show the Cover Art Archive's front image "
+              f"of their MusicBrainz release group (`ca:<mbid>`, catalog/covers_caa.csv); "
+              f"{sum(1 for c in new_covers if not c)} new album(s) have no cover")
         problems = cover_problems(table, new_keys, waiting, [keys[i] for i in old.relinked], old.waiting)
         if problems and args.require_sprites:
             print("\n".join(f"--require-sprites: {p}" for p in problems), file=sys.stderr)
@@ -297,6 +305,25 @@ def main(argv: list[str] | None = None) -> int:
             print(f"WARNING, covers: {p}")
     covers, spotify_ids, override_images, artists = apply_overrides(
         slugs, cover_ids, spotify_ids, overrides, args.overrides.parent, artists=artists)
+    if args.catalog:
+        # The last resort for an existing album whose `c` is still empty: an album of unverified_links.csv
+        # takes the archive's cover and its sprite; one with an image of its own in overrides.json (`c` "")
+        # takes the cover id for the album page and keeps that image for its sprite and colours.
+        resort = last_resort_covers(keys, covers, n_site, set(override_images))
+        for i, c in resort.covers.items():
+            covers[i] = c
+        new_images = {**new_images, **resort.images}
+        print(f"covers, last resort: {len(resort.covers)} existing album(s) with no cover id take the Cover Art Archive's "
+              f"(`ca:<mbid>`): {len(resort.images)} with its sprite, {len(resort.own_image)} that keep the sprite of their "
+              f"image in overrides.json; {sum(1 for c in covers[:n_site] if not c)} existing album(s) have no cover")
+        if resort.waiting:
+            problem = (f"{len(resort.waiting)} existing album(s) have a row in covers_caa.csv and no sprite of it, so they "
+                       f"keep the tile ({', '.join(resort.waiting[:5])}{' ...' if len(resort.waiting) > 5 else ''}). "
+                       "Run python -m rmr_pipeline.covers sprites")
+            if args.require_sprites:
+                print(f"--require-sprites: {problem}", file=sys.stderr)
+                return 1
+            print(f"WARNING, covers: {problem}")
     override_images = {**new_images, **override_images}
     if args.catalog:
         by_table = shared_spotify_ids(cat, cat.legacy_ids[:n_site] + cat.spotify_ids[n_site:])
@@ -351,7 +378,7 @@ def main(argv: list[str] | None = None) -> int:
     ambient = [FALLBACK_AMBIENT[k % 3] for k in clusters]
     out = args.out
     if not args.skip_images:
-        # A catalog build letters the tile of an album without a cover, as the album page does (96 such
+        # A catalog build letters the tile of an album without a cover, as the album page does (40 such
         # albums; flat squares on the map read as images that failed to load). A --no-catalog build's are flat.
         lettered = sprite_titles(args.catalog, titles)
         sprites = load_album_sprites(src, uris, meta, covers, clusters, override_images, titles=lettered)

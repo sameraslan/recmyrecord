@@ -1,7 +1,7 @@
 """The data contract for frontcreck/public/data (spec section 6.2), and for a catalog build's folder.
 
 A catalog build (python -m rmr_pipeline.build --catalog) adds to the site's contract:
-  albums.json   `c` may be a prefixed cover id (dz:, am:, bc:, yt:; rmr_pipeline.covers.cover_url);
+  albums.json   `c` may be a prefixed cover id (dz:, am:, bc:, yt:, ca:; rmr_pipeline.covers.cover_url);
                 `l`, after `w`: listen links of an album with no Spotify id (rmr_pipeline.links);
                 `n`: 1, after `l`: the album has no audio
   recs.json     an `n` album's sonic and balanced rows are [], and no sonic or balanced row lists one
@@ -30,10 +30,11 @@ HEX_RE = re.compile(r"^#[0-9a-f]{6}$")
 SPOTIFY_RE = re.compile(r"^[0-9A-Za-z]{22}$")
 COVER_RE = re.compile(r"^[0-9a-f]{24,64}\Z")  # \Z: `$` would let a trailing newline through
 # The cover ids of the other sources (covers.c_field): Deezer's image md5, the path of Apple's artwork,
-# Bandcamp's image number, a YouTube video id. Apple's path goes into a URL as it is: its segments are
+# Bandcamp's image number, a YouTube video id, the MBID of a MusicBrainz release group (the Cover Art Archive). Apple's path goes into a URL as it is: its segments are
 # separated by one `/`, and each starts and ends with a letter or a digit, so there is no `.`, `..` or empty one.
 PREFIXED_COVER_RE = re.compile(r"^(?:dz:[0-9a-f]{32}|am:[A-Za-z0-9]+(?:(?:/|[._-]+)[A-Za-z0-9]+)*|bc:[0-9]+"
-                               r"|yt:[A-Za-z0-9_-]{11})\Z")
+                               r"|yt:[A-Za-z0-9_-]{11}"
+                               r"|ca:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\Z")
 
 
 class ContractError(Exception):

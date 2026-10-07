@@ -171,15 +171,32 @@ def test_new_and_relinked_albums_have_their_own_sprites(deduped):
 
 
 def test_the_albums_with_an_unverified_link_have_no_spotify_link_and_a_lettered_tile(catalog_albums):
-    """catalog/unverified_links.csv in the committed data: no `s`, no `c`, the fallback colours, and the
-    lettered tile of the album's cluster in its atlas and thumbnail cells."""
+    """catalog/unverified_links.csv in the committed data: no `s`, and no Spotify cover. An album the Cover
+    Art Archive has a cover for (catalog/covers_caa.csv, the last resort) shows that one, with its sprite in
+    its cells; the others have no `c`, the fallback colours, and the lettered tile of the album's cluster in
+    their atlas and thumbnail cells."""
+    import rmr_pipeline.covers as cv
     from rmr_pipeline.catalog import load_unverified_links
 
     albums = _albums()
     index = {k: i for i, k in enumerate(catalog_albums.keys)}
     rows = load_unverified_links()
     assert len(rows) == 67
+    caa = cv.read_caa()
+    covered = [r for r in rows if albums[index[r["rym_id"]]]["c"]]
+    assert covered and len(covered) < len(rows)  # both kinds are in the data
+    for r in covered:
+        i = index[r["rym_id"]]
+        a = albums[i]
+        assert (a["slug"], a["s"], a["c"]) == (r["slug"], "", "ca:" + caa[r["rym_id"]]["mbid"]), r["slug"]
+        sprite = cv.sprite_path(cv.DEFAULT_SPRITES, r["rym_id"])
+        if sprite.exists():  # not committed: checked on a machine that has fetched them
+            with Image.open(sprite) as im:
+                ref = np.asarray(square(im, ATLAS_SPRITE_PX), dtype=float)
+            assert np.abs(_atlas_cell(i) - ref).mean() < 10, f"atlas cell of {r['slug']} is not its Cover Art Archive sprite"
     for r in rows:
+        if r in covered:
+            continue
         i = index[r["rym_id"]]
         a = albums[i]
         assert (a["slug"], a["s"], a["c"]) == (r["slug"], "", ""), r["slug"]
@@ -207,7 +224,10 @@ def test_committed_outputs_apply_every_override(deduped):
     assert overrides
     for slug, e in overrides.items():
         a = albums[index[slug]]
-        assert (a["s"], a["c"]) == (e.get("s", a["s"]), e.get("c", a["c"])), slug
+        # an empty `c` (no Spotify cover) may be filled by the last resort: the Cover Art Archive's id for the
+        # album page, while the cell stays the override image (checked below)
+        wanted = a["c"] if e.get("c") == "" and a["c"].startswith("ca:") else e.get("c", a["c"])
+        assert (a["s"], a["c"]) == (e.get("s", a["s"]), wanted), slug
         assert a["a"] == e.get("a", a["a"]), slug
         assert a["slug"] == make_slugs([a["t"]], [a["a"]])[0], slug
         with Image.open(DEFAULT_OVERRIDES.parent / e["image"]) as im:

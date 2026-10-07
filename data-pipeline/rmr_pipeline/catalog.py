@@ -473,3 +473,46 @@ def existing_album_covers(keys: list[str], spotify_ids: list[str], legacy_ids: l
         if cover:
             out.waiting.append(keys[i])
     return out
+
+
+def last_resort_cover(key: str) -> tuple[str, Path | None]:
+    """The Cover Art Archive cover of an album (covers.Covers.caa_for on the committed catalog/covers_caa.csv):
+    (`ca:<mbid>`, its sprite or None), or ("", None)."""
+    return covers_table().caa_for(key)
+
+
+@dataclass(frozen=True)
+class LastResort:
+    """What last_resort_covers found. Album numbers are rows of the catalog."""
+    covers: dict[int, str]  # album number -> `ca:<mbid>`, for the existing albums that take it
+    images: dict[int, Path]  # album number -> the sprite of that cover, for those that have no image of their own
+    own_image: list[int]  # those of `covers` whose sprite stays the image overrides.json gives them
+    waiting: list[str]  # keys with a row in covers_caa.csv and no sprite yet: they keep the tile until it is there
+
+
+def last_resort_covers(keys: list[str], cover_ids: list[str], n_site: int, own_images, cover_of=last_resort_cover) -> LastResort:
+    """The last-resort covers of the existing albums (the first `n_site`) whose cover id is empty once the
+    unverified links and overrides.json have been applied (`cover_ids`: the ids after both). `own_images`:
+    the album numbers overrides.json gives an image. Never an album that has a cover id.
+
+    An album with an image of its own (Chill Out, Gimix, Dark & Long: `c` "" and `image` in overrides.json)
+    takes the cover id alone: the album page can then show the archive's image, while its sprite and its
+    ambient colours stay those of the override image. Any other (an album of unverified_links.csv) takes
+    the cover id together with its sprite, and waits without one: a cover id with no file of its own would
+    put the map's sprite on the sheets, and that is the cover of the album its old link opened. A new album
+    is not this function's: covers.cover_for gives it the last resort by itself."""
+    out = LastResort({}, {}, [], [])
+    for i in range(n_site):
+        if cover_ids[i]:
+            continue
+        cover, image = cover_of(keys[i])
+        if not cover:
+            continue
+        if i in own_images:
+            out.covers[i] = cover
+            out.own_image.append(i)
+        elif image is not None:
+            out.covers[i], out.images[i] = cover, image
+        else:
+            out.waiting.append(keys[i])
+    return out

@@ -21,12 +21,23 @@ A tier never spends a request on an album that a better source may still answer:
 the album's Spotify lookup is neither done nor failed. The `cache` tier is the exception, since it costs
 nothing: it gives every album it can a row at once, and the Spotify tier replaces that row later.
 
+The last resort, tier `caa` (source `caa`, `c` `ca:<mbid>`): the Cover Art Archive's front image of the album's
+release group on MusicBrainz, for every catalog album that would otherwise end with no cover (caa_candidates:
+a new album with no source left, with an image that is gone or with a skipped row, and the existing albums of
+unverified_links.csv and those overrides.json gives an empty `c`). Its rows are in a table of their own,
+catalog/covers_caa.csv (`rym_id,mbid` and what was matched), not in covers.csv: it never replaces a cover an
+album has, the row it stands in for stays where it is (so `refs` does not find the same image again and the
+skip list still names it), and cover_for answers from it only when covers.csv gives the album nothing. The
+release group is found by a search on title and artist and accepted by a strict rule (mb_accepts, mb_choose);
+what was decided for every album asked is in the state file (`caa`), so a rerun asks nothing twice. MusicBrainz
+is asked at most once a second and an HTTP 503 from it, twice, stops the run.
+
 catalog/covers_skip.csv (`rym_id,source,ref,note`, written by hand) names the rows whose image is not a cover
 (a video frame with a track list, a "FULL ALBUM" card). Such a row gives no cover (cover_for: no `c`, no
 sprite) for as long as covers.csv has exactly that `source:ref` for the album; the row stays in covers.csv, so
 `refs` does not find the same image again, and `sprites` does not fetch it.
 
-    python -m rmr_pipeline.covers refs      # (re)writes catalog/covers.csv; resumable
+    python -m rmr_pipeline.covers refs      # (re)writes catalog/covers.csv, then catalog/covers_caa.csv; resumable
     python -m rmr_pipeline.covers sprites   # one 96 px JPEG per row in .cache/covers/96/ (not committed)
     python -m rmr_pipeline.covers status
     python -m rmr_pipeline.covers adopt     # record the sprites that have no entry in the manifest as made from their rows
@@ -65,6 +76,7 @@ import sqlite3
 import sys
 import tempfile
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -80,6 +92,10 @@ PIPELINE_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_ALBUMS = PIPELINE_DIR / "catalog" / "albums.csv"
 DEFAULT_COVERS = PIPELINE_DIR / "catalog" / "covers.csv"
 DEFAULT_SKIP = PIPELINE_DIR / "catalog" / "covers_skip.csv"
+DEFAULT_CAA = PIPELINE_DIR / "catalog" / "covers_caa.csv"  # the last resort's table (read_caa)
+DEFAULT_UNVERIFIED = PIPELINE_DIR / "catalog" / "unverified_links.csv"
+DEFAULT_OVERRIDES = PIPELINE_DIR / "overrides.json"
+DEFAULT_SITE_ALBUMS = PIPELINE_DIR.parent / "frontcreck" / "public" / "data" / "albums.json"  # read for its slugs only
 DEFAULT_MATCHES = PIPELINE_DIR / "audio" / "matches.csv"
 DEFAULT_MATCH_OVERRIDES = PIPELINE_DIR / "audio" / "match_overrides.json"
 DEFAULT_FULLLENGTH = PIPELINE_DIR / "audio" / "fulllength.csv"
@@ -93,11 +109,15 @@ SOURCES = ("spotify", "deezer", "apple", "bandcamp", "youtube")
 TIERS = ("spotify", "cache", "store", "bandcamp", "youtube")  # in priority order; a run takes them in this order
 TIER_RANK = {"spotify": 0, "cache": 1, "store": 1, "bandcamp": 2, "youtube": 3}
 SOURCE_RANK = {"spotify": 0, "deezer": 1, "apple": 1, "bandcamp": 2, "youtube": 3}
-C_PREFIX = {"deezer": "dz:", "apple": "am:", "bandcamp": "bc:", "youtube": "yt:"}  # Spotify's id is stored bare
+C_PREFIX = {"deezer": "dz:", "apple": "am:", "bandcamp": "bc:", "youtube": "yt:", "caa": "ca:"}  # Spotify's id is stored bare
+CAA = "caa"  # the last resort: a tier and a source of its own, with its own table (never a row of covers.csv)
+ALL_TIERS = TIERS + (CAA,)
+ALL_SOURCES = SOURCES + (CAA,)
 
 ALLOWED_HOSTS = {"open.spotify.com", "i.scdn.co", "api.deezer.com", "cdn-images.dzcdn.net", "e-cdns-images.dzcdn.net",
-                 "itunes.apple.com", "f4.bcbits.com", "i.ytimg.com"}
-ALLOWED_SUFFIXES = (".spotifycdn.com", ".mzstatic.com", ".bandcamp.com")
+                 "itunes.apple.com", "f4.bcbits.com", "i.ytimg.com",
+                 "musicbrainz.org", "coverartarchive.org", "archive.org"}  # the last resort; the archive redirects to
+ALLOWED_SUFFIXES = (".spotifycdn.com", ".mzstatic.com", ".bandcamp.com", ".archive.org")  # archive.org, then to a host under it
 USER_AGENT = "recmyrecord-covers/1.0 (+https://github.com/sameraslan/recmyrecord; one small cover image per album)"
 
 SPRITE_PX = 96
@@ -107,6 +127,11 @@ PROGRESS_S = 60.0
 REFS_INTERVALS = {"open.spotify.com": 1.0, "bandcamp": 3.0, "api.deezer.com": 0.2, "itunes.apple.com": 3.2}  # the last two: rmr_audio's
 SPRITES_INTERVAL = 0.5  # between any two image requests
 SPRITES_INTERVALS = {"f4.bcbits.com": 1.0}
+CAA_INTERVALS = {"musicbrainz.org": 1.1, "coverartarchive.org": 1.0}  # MusicBrainz: at most one request a second
+MB_BUSY_WAIT = 30.0  # before the one retry of a request MusicBrainz answered with HTTP 503 (its rate limit)
+MB_BUSY = (503,)
+MB_LIMIT = 25  # release groups per search answer
+CAA_SAVE_EVERY = 10
 BACKOFF_S = 30.0  # a host that refused a request is left alone this long
 RETRY_S = 5.0  # before the one retry of a request that got no answer or a 5xx
 LIMITED_IN_A_ROW, LIMITED_IN_A_RUN = 2, 5  # HTTP 403/429 answers that stop the run
@@ -124,6 +149,9 @@ OG_IMAGE = re.compile(r"""<meta\b(?=[^>]*\bproperty=["']og:image["'])[^>]*\bcont
 BANDCAMP_ART = re.compile(r"^https://f\d\.bcbits\.com/img/a(\d+)_\d+\.(?:jpg|png)\Z")  # `a`: album art, not the band's photo
 YOUTUBE_ID = re.compile(r"(?:youtube\.com/watch\?(?:[^#]*&)?v=|youtu\.be/)([A-Za-z0-9_-]{11})(?![A-Za-z0-9_-])")
 SAFE_NAME = re.compile(r"[A-Za-z0-9_-]+")  # used with fullmatch: `$` would let a trailing newline through
+PLACEHOLDER_KEY = re.compile(r"sp:([A-Za-z0-9]{22})")  # an existing album with no RYM id yet (fullmatch)
+MBID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}")  # fullmatch
+CAA_FIELDS = ("rym_id", "mbid", "mb_title", "mb_artist", "mb_year", "mb_type", "score")
 DEEZER_SIZES = (56, 250, 500, 1000)
 BANDCAMP_SIZES = ((100, 3), (210, 9), (350, 2), (700, 16), (1200, 10))  # px, the file name's suffix
 
@@ -206,7 +234,7 @@ def listing_ref(source: str, body: object) -> tuple[str, str] | None:
 
 def c_field(source: str, ref: str) -> str:
     """The album's `c` in albums.json: the bare image id for Spotify (today's form), `dz:<md5>`, `am:<path>`,
-    `bc:<number>`, `yt:<video id>` for the others."""
+    `bc:<number>`, `yt:<video id>`, `ca:<release-group MBID>` for the others."""
     return C_PREFIX.get(source, "") + ref
 
 
@@ -221,6 +249,9 @@ def cover_url(c: str, px: int) -> str:
         bc:<n>      https://f4.bcbits.com/img/a<n>_<s>.jpg, s = 3 (100 px), 9 (210), 2 (350), 16 (700), 10 (1200)
         yt:<id>     https://i.ytimg.com/vi/<id>/hqdefault.jpg: a 480 x 360 video frame, with black bars above and
                     below a 16:9 picture; show its centre square (see crop_frame)
+        ca:<mbid>   https://coverartarchive.org/release-group/<mbid>/front-250 up to 250 px, /front-500 above: the
+                    front image of a MusicBrainz release group. The answer is a redirect to archive.org, which
+                    redirects to a host under archive.org
     """
     if not c:
         return ""
@@ -235,6 +266,8 @@ def cover_url(c: str, px: int) -> str:
         return f"https://f4.bcbits.com/img/a{ref}_{suffix}.jpg"
     if kind == "yt":
         return f"https://i.ytimg.com/vi/{ref}/hqdefault.jpg"
+    if kind == "ca":
+        return f"https://coverartarchive.org/release-group/{ref}/front-{250 if px <= 250 else 500}"
     if c.startswith("ab67616d") and len(c) > 16:
         prefix = "ab67616d00004851" if px <= 64 else "ab67616d00001e02" if px <= 300 else SPOTIFY_PREFIX
         return "https://i.scdn.co/image/" + prefix + c[16:]
@@ -242,8 +275,10 @@ def cover_url(c: str, px: int) -> str:
 
 
 def sprite_url(source: str, ref: str) -> str:
-    """The small rendition a sprite is made from: Spotify 300 px, Deezer 250, Apple 200, Bandcamp 350, YouTube 480 x 360."""
-    return cover_url(c_field(source, ref), {"spotify": 300, "deezer": 250, "apple": 200, "bandcamp": 350, "youtube": 480}[source])
+    """The small rendition a sprite is made from: Spotify 300 px, Deezer 250, Apple 200, Bandcamp 350, YouTube
+    480 x 360, the Cover Art Archive 250."""
+    sizes = {"spotify": 300, "deezer": 250, "apple": 200, "bandcamp": 350, "youtube": 480, "caa": 250}
+    return cover_url(c_field(source, ref), sizes[source])
 
 
 # --- the polite client -----------------------------------------------------------------------------
@@ -365,16 +400,19 @@ class Fetcher:
             raise StopRun(f"{key} answered {what}: {self.limited_run} refused requests in this run")
         raise RateLimited(what)
 
-    def get(self, url: str, max_bytes: int = IMAGE_BYTES, refusal=None) -> bytes:
+    def get(self, url: str, max_bytes: int = IMAGE_BYTES, refusal=None, busy: tuple[int, ...] = (),
+            busy_wait: float = BACKOFF_S) -> bytes:
         """The body of a 200. Raises HostNotAllowed for a URL that is not allowed (no request), Gone for HTTP
         404 or 410 and for a redirect to a host that is not allowed, RateLimited or StopRun for a refusal,
         Transient for anything else. `refusal(body)` names a refusal that a host sends as a 200 (Deezer's quota
-        error), or returns ""; it is asked before the 200 ends the host's row of refusals."""
+        error), or returns ""; it is asked before the 200 ends the host's row of refusals. `busy`: the statuses
+        by which the host says it is asked too much (MusicBrainz: 503). The request is tried once more after
+        `busy_wait` seconds, and the same answer again raises StopRun."""
         check_host(url)
-        key, why = host_key(url), ""
+        key, why, wait = host_key(url), "", RETRY_S
         for attempt in range(2):
             if attempt:
-                self._pause(RETRY_S)
+                self._pause(wait)
             self._wait(key)
             self.requests += 1
             try:
@@ -388,6 +426,11 @@ class Fetcher:
                 continue
             if status in (403, 429):
                 self.refused(url, f"HTTP {status}")
+            if status in busy:
+                if attempt:
+                    raise StopRun(f"{key} answered HTTP {status} again after a wait of {busy_wait:.0f} s")
+                why, wait = f"HTTP {status}", busy_wait
+                continue
             if status >= 500:
                 why = f"HTTP {status}"
                 continue
@@ -475,15 +518,15 @@ def write_covers(path: Path, covers: dict[str, tuple[str, str]], order: list[str
 
 
 def read_skips(path: Path = DEFAULT_SKIP) -> set[tuple[str, str]]:
-    """covers_skip.csv as {(rym_id, `source:ref`)}: the rows of covers.csv that are not a cover. Empty when
-    there is no file."""
+    """covers_skip.csv as {(rym_id, `source:ref`)}: the rows of covers.csv that are not a cover, and the rows
+    of covers_caa.csv that are not the album's (`caa`, the MBID). Empty when there is no file."""
     path = Path(path)
     if not path.exists():
         return set()
     out = set()
     with path.open(encoding="utf-8", newline="") as f:
         for row in csv.DictReader(f):
-            if row["source"] not in SOURCES or not row["ref"]:
+            if row["source"] not in ALL_SOURCES or not row["ref"]:
                 raise ValueError(f"{path}: {row['rym_id']}: unknown source or empty ref ({row['source']!r}, {row['ref']!r})")
             out.add((row["rym_id"], made_from((row["source"], row["ref"]))))
     return out
@@ -496,17 +539,27 @@ def without_skipped(covers: dict[str, tuple[str, str]], skips) -> dict[str, tupl
 
 class State:
     """The gitignored record of what failed: `refs` is rym_id -> {tier: why}, `sprites` is rym_id -> {of, why},
-    `of` being the `source:ref` the image was asked for."""
+    `of` being the `source:ref` the image was asked for. And of the last resort: `caa` is rym_id -> what was
+    decided for the album (look_up_caa: `decision` found, none, ambiguous or no art, `why`, the MusicBrainz
+    `score`, and the release group when there is one), `caa_sprites` is `sprites` for the archive's images,
+    kept apart so that a row's own failure stays recorded beside it."""
 
     def __init__(self, path: Path):
         self.path = Path(path)
         data = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
         self.refs: dict[str, dict[str, str]] = data.get("refs", {})
         self.sprites: dict[str, dict[str, str]] = data.get("sprites", {})
+        self.caa: dict[str, dict] = data.get("caa", {})
+        self.caa_sprites: dict[str, dict[str, str]] = data.get("caa_sprites", {})
+
+    def sprite_failures(self, source: str) -> dict[str, dict[str, str]]:
+        """Where a failed image of `source` is recorded: `caa_sprites` for the last resort, else `sprites`."""
+        return self.caa_sprites if source == CAA else self.sprites
 
     def save(self) -> None:
-        body = json.dumps({"refs": self.refs, "sprites": self.sprites}, ensure_ascii=False, indent=1, sort_keys=True)
-        write_atomic(self.path, body.encode("utf-8"))
+        data = {"refs": self.refs, "sprites": self.sprites}
+        data |= {k: v for k, v in (("caa", self.caa), ("caa_sprites", self.caa_sprites)) if v}
+        write_atomic(self.path, json.dumps(data, ensure_ascii=False, indent=1, sort_keys=True).encode("utf-8"))
 
 
 def manifest_path(sprite_dir: Path) -> Path:
@@ -856,7 +909,7 @@ def make_sprite(data: bytes, source: str) -> Image.Image:
 
 def spread(keys: list[str], covers: dict[str, tuple[str, str]]) -> list[str]:
     """The keys reordered so that the sources take turns (for a trial across every source)."""
-    queues = {s: [k for k in keys if covers[k][0] == s] for s in SOURCES}
+    queues = {s: [k for k in keys if covers[k][0] == s] for s in ALL_SOURCES}
     out = []
     while any(queues.values()):
         out += [q.pop(0) for q in queues.values() if q]
@@ -864,7 +917,11 @@ def spread(keys: list[str], covers: dict[str, tuple[str, str]]) -> list[str]:
 
 
 def sprite_path(sprite_dir: Path, key: str) -> Path:
-    if not SAFE_NAME.fullmatch(key):
+    """The sprite file of the album `key`. An existing album with no RYM id has the placeholder key
+    `sp:<Spotify id>`, and the file `sp_<Spotify id>.jpg` (no RYM id has an underscore)."""
+    if m := PLACEHOLDER_KEY.fullmatch(key):
+        key = "sp_" + m.group(1)
+    elif not SAFE_NAME.fullmatch(key):
         raise ValueError(f"not a file name: {key!r}")
     return Path(sprite_dir) / f"{key}.jpg"
 
@@ -884,6 +941,11 @@ def sprite_state(key: str, cover: tuple[str, str], sprite_dir: Path, of: dict[st
     return "current" if of[key] == made_from(cover) else "stale"
 
 
+# The sprite states a build uses, for a row of covers.csv and (True) for the last resort. A file with no
+# manifest entry may be the sprite of the row the last resort stands in for, so there it does not count.
+USABLE = {False: ("current", "unverified"), True: ("current",)}
+
+
 def missing_sprites(covers: dict, order: list[str], sprite_dir: Path, state: State, sources=None,
                     retry_failed: bool = False, manifest: SpriteManifest | None = None) -> list[str]:
     """The albums of covers.csv, in `order`, with no sprite of their current image (none at all, or one the
@@ -894,9 +956,9 @@ def missing_sprites(covers: dict, order: list[str], sprite_dir: Path, state: Sta
     for key in order:
         if key not in covers or (sources and covers[key][0] not in sources):
             continue
-        if sprite_state(key, covers[key], sprite_dir, of) in ("current", "unverified"):
+        if sprite_state(key, covers[key], sprite_dir, of) in USABLE[covers[key][0] == CAA]:
             continue
-        if not retry_failed and state.sprites.get(key, {}).get("of") == made_from(covers[key]):
+        if not retry_failed and state.sprite_failures(covers[key][0]).get(key, {}).get("of") == made_from(covers[key]):
             continue
         out.append(key)
     return out
@@ -938,7 +1000,7 @@ def _run_sprites(covers: dict[str, tuple[str, str]], order: list[str], sprite_di
             except Transient as e:
                 out(f"  {key}: {e} (not recorded, asked again next time)")
             except (Gone, OSError, ValueError, Image.DecompressionBombError) as e:  # a 404, or not an image
-                state.sprites[key] = {"of": made_from((source, ref)), "why": str(e)[:160]}
+                state.sprite_failures(source)[key] = {"of": made_from((source, ref)), "why": str(e)[:160]}
                 failed += 1
                 unsaved += 1
             else:
@@ -947,7 +1009,7 @@ def _run_sprites(covers: dict[str, tuple[str, str]], order: list[str], sprite_di
                 write_atomic(sprite_path(sprite_dir, key), buf.getvalue())
                 manifest.of[key] = made_from((source, ref))
                 recorded += 1
-                if state.sprites.pop(key, None) is not None:
+                if state.sprite_failures(source).pop(key, None) is not None:
                     unsaved += 1
                 made += 1
             if unsaved >= SAVE_EVERY:
@@ -1016,6 +1078,397 @@ def adopt(covers: dict[str, tuple[str, str]], sprite_dir: Path, covers_path: Pat
             lock.close()
 
 
+# --- the last resort: MusicBrainz and the Cover Art Archive --------------------------------------------
+
+_TRANSLIT = str.maketrans({"ø": "o", "æ": "ae", "œ": "oe", "ß": "ss", "ł": "l", "đ": "d", "ð": "d", "þ": "th", "ı": "i"})
+_ORDINALS = {"first": "1st", "second": "2nd", "third": "3rd", "fourth": "4th", "fifth": "5th", "sixth": "6th",
+             "seventh": "7th", "eighth": "8th", "ninth": "9th", "tenth": "10th"}
+_EDITION = re.compile(
+    r"\b(?:deluxe|expanded|remaster(?:ed|ise[dr]|ize[dr])?|re-?issue|anniversary|edition|version|bonus|mono|stereo|special|"
+    r"collector'?s|legacy|explicit|clean|edici[oó]n|aniversario|remasteri[sz]ad[oa]|[ée]dition)\b|^\s*(?:19|20)\d\d\s*$",
+    re.IGNORECASE)
+_LAST_BRACKET = re.compile(r"\s*[(\[]([^()\[\]]*)[)\]]\s*$")
+_NATIVE_LATIN = re.compile(r"^(.+?)\s*\[([^\[\]]+)\]\s*$")  # `native [Latin]`, the form an artist is shown in
+_JOINER = re.compile(r"\s*[,&/;]\s*|\s+(?:and|with|feat\.?|featuring|vs\.?)\s+", re.IGNORECASE)
+MB_TYPE_RANK = {"Album": 0, "EP": 1, "Single": 2}  # any other primary type, or none: 3
+
+
+def fold_name(text: str, artist: bool = False) -> str:
+    """A title or an artist as two sides are compared: casefolded, accents dropped, "&" read as "and",
+    punctuation dropped, words joined by one space, an ordinal word as its numeral; a title loses a leading
+    "the", an artist every "the". The folding of rmr_audio/textnorm.py (`norm`), which belongs to the audio
+    environment. A text with no letter or digit (the album "?") is itself, casefolded, without its spaces."""
+    s = unicodedata.normalize("NFKD", str(text).translate(_TRANSLIT))
+    s = "".join(c for c in s if not unicodedata.combining(c)).casefold().translate(_TRANSLIT)
+    words = [_ORDINALS.get(w, w) for w in re.split(r"[\W_]+", re.sub(r"['’`´]", "", s.replace("&", " and "))) if w]
+    if artist:
+        words = [w for w in words if w != "the"] or words
+    elif len(words) > 1 and words[0] == "the":
+        words = words[1:]
+    return " ".join(words) or "".join(str(text).casefold().split())
+
+
+def fold_title(title: str) -> str:
+    """fold_name of the title without its bracketed edition suffixes ("(Remastered 2011)", "[Deluxe Edition]").
+    A bracket that says anything else stays: "(Live in Tokyo)" is another record."""
+    out = str(title)
+    while (m := _LAST_BRACKET.search(out)) and _EDITION.search(m.group(1)) and out[:m.start()].strip():
+        out = out[:m.start()]
+    return fold_name(out)
+
+
+def _spellings(*texts: str) -> list[str]:
+    """The texts, each `native [Latin]` as its two halves, without the empty and the repeated ones."""
+    out: list[str] = []
+    for text in texts:
+        m = _NATIVE_LATIN.match(text or "")
+        out += [m.group(1), m.group(2)] if m else [text or ""]
+    return list(dict.fromkeys(s.strip() for s in out if s and s.strip()))
+
+
+def billed(credit: str) -> list[str]:
+    """The names of a credit ("A & B", "A / B / C", "A with B"), in order; the credit itself when it is one name."""
+    return [n for n in (p.strip() for p in _JOINER.split(credit)) if n] or [credit]
+
+
+def album_titles(row: dict) -> set[str]:
+    """The album's title in every spelling the catalog has, folded: `title`, `title_latin`, the sheet's."""
+    return {fold_title(t) for t in _spellings(row["title"], row.get("title_latin", ""), row.get("rym_title", ""))} - {""}
+
+
+def album_artists(row: dict) -> set[str]:
+    """The album's billed artists in every spelling the catalog has, folded: each whole credit and each of its names."""
+    credits = _spellings(row["artist"], row.get("artist_latin", ""), row.get("rym_artist", ""))
+    return {fold_name(n, artist=True) for c in credits for n in [c, *billed(c)]} - {""}
+
+
+def mb_queries(row: dict) -> list[tuple[str, str]]:
+    """The (title, artist) pairs MusicBrainz is asked for, in order: the catalog's native spelling (and the
+    sheet's, where an existing album's differs), the Latin forms, then each of them with the first billed
+    artist alone when the credit has several."""
+    title, artist = row["title"], row["artist"]
+    native = _spellings(artist)
+    pairs = [(title, native[0])] if native else []
+    if row.get("rym_artist") or row.get("rym_title"):
+        pairs.append((row.get("rym_title") or title, row.get("rym_artist") or (native[0] if native else artist)))
+    latin_artist = row.get("artist_latin") or (native[1] if len(native) > 1 else "")
+    if latin_artist or row.get("title_latin"):
+        pairs.append((row.get("title_latin") or title, latin_artist or (native[0] if native else artist)))
+    pairs += [(t, names[0]) for t, a in list(pairs) if len(names := billed(a)) > 1]
+    seen, out = set(), []
+    for t, a in pairs:
+        key = (fold_name(t), fold_name(a, artist=True))
+        if t and a and key not in seen:
+            seen.add(key)
+            out.append((t, a))
+    return out
+
+
+def _phrase(text: str) -> str:
+    return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def mb_search_url(title: str, artist: str) -> str:
+    """MusicBrainz's release-group search for a title and an artist, both as Lucene phrases."""
+    query = f"releasegroup:{_phrase(title)} AND artist:{_phrase(artist)}"
+    return f"https://musicbrainz.org/ws/2/release-group/?query={urllib.parse.quote(query, safe='')}&fmt=json&limit={MB_LIMIT}"
+
+
+def mb_title_url(title: str) -> str:
+    """The same search on the title alone."""
+    query = urllib.parse.quote(f"releasegroup:{_phrase(title)}", safe="")
+    return f"https://musicbrainz.org/ws/2/release-group/?query={query}&fmt=json&limit={MB_LIMIT}"
+
+
+def mb_search_urls(row: dict) -> list[str]:
+    """The searches for an album, in the order they are made: mb_queries, then each spelling of the title
+    alone. The search's artist field does not know every name of an artist (芸能山城組 is not found by
+    "Geinoh Yamashirogumi"), while an answer carries the artists' aliases; mb_accepts judges it all the same."""
+    pairs = mb_queries(row)
+    return [mb_search_url(t, a) for t, a in pairs] + [mb_title_url(t) for t in dict.fromkeys(t for t, _ in pairs)]
+
+
+def caa_listing_url(mbid: str) -> str:
+    """The Cover Art Archive's list of a release group's images (JSON); HTTP 404 when it has none."""
+    return f"https://coverartarchive.org/release-group/{mbid}"
+
+
+def mb_release_groups(body: bytes) -> list[dict]:
+    """The release groups of a search answer: mbid, title, credit (as MusicBrainz prints it), artists (every
+    name of every credited artist: as credited, its own, its aliases), date, year, primary, secondary, score.
+    Raises ValueError for an answer that is not the search's JSON."""
+    data = json.loads(body)
+    if not isinstance(data, dict) or not isinstance(data.get("release-groups", []), list):
+        raise ValueError("not a release-group search answer")
+    out = []
+    for g in data.get("release-groups", []):
+        if not isinstance(g, dict) or not MBID.fullmatch(str(g.get("id", ""))) or not g.get("title"):
+            continue
+        names, credit = [], ""
+        for c in g.get("artist-credit") or []:
+            who = c.get("artist") or {}
+            names += [c.get("name"), who.get("name"), *(a.get("name") for a in who.get("aliases") or [])]
+            credit += (c.get("name") or who.get("name") or "") + (c.get("joinphrase") or "")
+        if not credit:
+            credit = ", ".join(dict.fromkeys(n for n in names if n))
+        date = str(g.get("first-release-date") or "")
+        out.append({"mbid": g["id"], "title": str(g["title"]), "credit": credit, "artists": [n for n in names if n],
+                    "date": date, "year": date[:4] if re.fullmatch(r"\d{4}(?:-\d\d){0,2}", date) else "",
+                    "primary": str(g.get("primary-type") or ""), "secondary": tuple(sorted(g.get("secondary-types") or [])),
+                    "score": int(g.get("score") or 0)})
+    return out
+
+
+def mb_accepts(row: dict, cand: dict) -> str:
+    """"" when the release group may be the album, else what speaks against it (`title`, `artist`, `year`).
+    All three must hold: its title is the album's after fold_title, in one of the catalog's spellings; one of
+    its credited artists is one of the album's billed artists after fold_name; and, when the catalog has a
+    year and MusicBrainz a first-release date, the years are at most one apart."""
+    if fold_title(cand["title"]) not in album_titles(row):
+        return "title"
+    if not {fold_name(n, artist=True) for n in cand["artists"]} & album_artists(row):
+        return "artist"
+    year = (row.get("year") or "").strip()
+    if year.isdigit() and cand["year"] and abs(int(year) - int(cand["year"])) > 1:
+        return "year"
+    return ""
+
+
+def _as_written(title: str) -> str:
+    return " ".join(str(title).casefold().split())
+
+
+def _looks(cand: dict) -> tuple:
+    return fold_name(cand["credit"], artist=True), cand["year"], cand["secondary"]
+
+
+def mb_choose(row: dict, cands: list[dict]) -> tuple[str, dict | None, str]:
+    """(`found`, the release group, "") or (`none` or `ambiguous`, None, why). Of the accepted groups, those
+    whose title is the album's as written (case aside) are kept when there are any ("0%" is not "0", though
+    they fold alike); then those of the best type (Album, then EP, then Single, then the rest). When they look alike (the same
+    credit, year and secondary types: MusicBrainz has the release twice) the earliest is taken; when two look
+    different (a studio and a live album, two years, two credits) none is, since nothing here can tell which
+    one the catalog means, and a wrong cover is worse than a tile."""
+    refused = Counter()
+    passed = []
+    for c in cands:
+        if why := mb_accepts(row, c):
+            refused[why] += 1
+        else:
+            passed.append(c)
+    if not passed:
+        said = ", ".join(f"{n} with another {w}" for w, n in refused.items())
+        return "none", None, f"{len(cands)} release group(s)" + (f", {said}" if said else "")
+    written = {_as_written(t) for t in _spellings(row["title"], row.get("title_latin", ""), row.get("rym_title", ""))}
+    passed = [c for c in passed if _as_written(c["title"]) in written] or passed
+    rank = min(MB_TYPE_RANK.get(c["primary"], 3) for c in passed)
+    best = [c for c in passed if MB_TYPE_RANK.get(c["primary"], 3) == rank]
+    if len({_looks(c) for c in best}) > 1:
+        return "ambiguous", None, "; ".join(
+            f"{c['mbid']} {c['credit']} - {c['title']} ({c['date'] or 'no date'}, {'+'.join((c['primary'] or 'no type',) + c['secondary'])})"
+            for c in best)
+    best.sort(key=lambda c: ("-".join((c["date"].split("-") + ["99", "99"])[:3]) if c["date"] else "9999", -c["score"], c["mbid"]))
+    return "found", best[0], ""
+
+
+def has_front(body: bytes) -> bool:
+    """Does the archive's list of images have a front image (the one its /front addresses serve)?"""
+    try:
+        data = json.loads(body)
+    except ValueError:
+        return False
+    images = data.get("images") if isinstance(data, dict) else None
+    return isinstance(images, list) and any(isinstance(i, dict) and i.get("front") is True for i in images)
+
+
+def look_up_caa(row: dict, fetcher: Fetcher) -> dict:
+    """What MusicBrainz and the archive say about one album: `decision` (found, none, ambiguous, no art), `why`,
+    `score` (MusicBrainz's, of the group taken, else the best in the answers), `queries` (searches made), and
+    for found and no art the release group (`mbid`, `mb_title`, `mb_artist`, `mb_year`, `mb_type`). The
+    searches of mb_search_urls are made in order until one answer has an accepted group. Raises Transient when
+    a request got no usable answer (nothing is recorded then) and StopRun by the stop rules."""
+    decision, cand, why, best_score, asked, said = "none", None, "no spelling to ask", 0, 0, []
+    for url in mb_search_urls(row):
+        try:
+            cands = mb_release_groups(fetcher.get(url, IMAGE_BYTES, busy=MB_BUSY, busy_wait=MB_BUSY_WAIT))
+        except Gone as e:
+            raise Transient(f"MusicBrainz: {e}") from None
+        except ValueError:
+            raise Transient("MusicBrainz's answer is not JSON") from None
+        asked += 1
+        best_score = max([best_score, *(c["score"] for c in cands)])
+        decision, cand, why = mb_choose(row, cands)
+        if decision != "none":
+            break
+        said.append(f"search {asked}: {why}")
+    if decision == "none" and said:
+        why = "; ".join(said)
+    out = {"decision": decision, "why": why, "score": cand["score"] if cand else best_score, "queries": asked}
+    if cand is None:
+        return out
+    out |= {"mbid": cand["mbid"], "mb_title": cand["title"], "mb_artist": cand["credit"], "mb_year": cand["year"],
+            "mb_type": "+".join(filter(None, (cand["primary"],) + cand["secondary"]))}
+    try:
+        front = has_front(fetcher.get(caa_listing_url(cand["mbid"]), IMAGE_BYTES))
+    except Gone as e:
+        if not str(e).startswith("HTTP "):  # a redirect off the allow-list says nothing about the art
+            raise Transient(f"the archive: {e}") from None
+        return out | {"decision": "no art", "why": f"the archive has no image for the release group ({e})"}
+    return out if front else out | {"decision": "no art", "why": "the archive's images of the release group have no front"}
+
+
+def read_caa(path: Path = DEFAULT_CAA) -> dict[str, dict[str, str]]:
+    """covers_caa.csv as rym_id -> its row (CAA_FIELDS), in file order; {} when there is no file."""
+    path = Path(path)
+    if not path.exists():
+        return {}
+    out: dict[str, dict[str, str]] = {}
+    with path.open(encoding="utf-8", newline="") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames != list(CAA_FIELDS):
+            raise ValueError(f"{path}: the header must be {','.join(CAA_FIELDS)}")
+        for row in reader:
+            if not row["rym_id"] or not MBID.fullmatch(row["mbid"] or ""):
+                raise ValueError(f"{path}: {row['rym_id']!r}: {row['mbid']!r} is not a release-group MBID")
+            out[row["rym_id"]] = dict(row)
+    return out
+
+
+def write_caa(path: Path, rows: dict[str, dict[str, str]], order: list[str]) -> None:
+    """Write covers_caa.csv with its rows in `order` (the catalog's); a row of another album is kept, after them."""
+    buf = io.StringIO(newline="")
+    w = csv.DictWriter(buf, CAA_FIELDS, lineterminator="\n", extrasaction="ignore")
+    w.writeheader()
+    w.writerows(rows[k] for k in dict.fromkeys([k for k in order if k in rows] + list(rows)))
+    write_atomic(path, buf.getvalue().encode("utf-8"))
+
+
+def catalog_rows(path: Path = DEFAULT_ALBUMS) -> list[dict]:
+    """Every row of the catalog, in its order."""
+    with Path(path).open(encoding="utf-8", newline="") as f:
+        return list(csv.DictReader(f))
+
+
+def existing_without_cover(rows: list[dict], unverified_path: Path = DEFAULT_UNVERIFIED, overrides_path: Path = DEFAULT_OVERRIDES,
+                           site_albums_path: Path = DEFAULT_SITE_ALBUMS) -> tuple[set[str], set[str]]:
+    """The existing albums the build gives no cover id, as two sets of keys: those of unverified_links.csv
+    (their link opens another album, so the build blanks its cover), and those overrides.json gives `c` ""
+    (no Spotify release). overrides.json is keyed by slug; an album's slug is read from the site's
+    albums.json, whose rows are the catalog's (`rows`: catalog_rows). A file that is missing gives nothing."""
+    unverified, bare = set(), set()
+    if Path(unverified_path).exists():
+        with Path(unverified_path).open(encoding="utf-8", newline="") as f:
+            unverified = {r["rym_id"] for r in csv.DictReader(f)}
+    if Path(overrides_path).exists() and Path(site_albums_path).exists():
+        blank = {slug for slug, e in json.loads(Path(overrides_path).read_text(encoding="utf-8")).items() if e.get("c") == ""}
+        site = json.loads(Path(site_albums_path).read_text(encoding="utf-8"))
+        bare = {rows[i]["rym_id"] for i, a in enumerate(site[:len(rows)]) if a.get("slug") in blank}
+    return unverified, bare
+
+
+def caa_candidates(rows: list[dict], inputs: Inputs, covers: dict, skips, state: State, sprite_dir: Path, of: dict[str, str],
+                   unverified: set[str] = frozenset(), bare: set[str] = frozenset()) -> list[tuple[dict, str]]:
+    """The albums that would end with no cover, in catalog order, each with the reason:
+
+        no source        a new album with no row in covers.csv and no tier left that could give it one
+        gone             a new album whose row's image could not be fetched (the state file's `sprites`)
+        skipped          a new album whose row the skip list names
+        unverified link  an existing album of unverified_links.csv
+        no cover id      an existing album overrides.json gives `c` ""
+
+    A new album a tier may still answer for is not one of them: the last resort waits for the better sources."""
+    out = []
+    for row in rows:
+        key = row["rym_id"]
+        if row["legacy_uri"]:
+            if key in unverified or key in bare:
+                out.append((row, "unverified link" if key in unverified else "no cover id"))
+            continue
+        have = covers.get(key)
+        if have is None:
+            if not inputs.wanted(row, state.refs.get(key, {})):
+                out.append((row, "no source"))
+        elif (key, made_from(have)) in skips:
+            out.append((row, "skipped"))
+        elif (state.sprites.get(key, {}).get("of") == made_from(have)
+              and sprite_state(key, have, sprite_dir, of) not in USABLE[False]):
+            out.append((row, "gone"))
+    return out
+
+
+def run_caa(albums: list[dict], caa_path: Path, state_path: Path, fetcher: Fetcher, order: list[str] | None = None,
+            limit: int | None = None, retry_failed: bool = False, stop=lambda: False, out=print) -> int:
+    """Ask MusicBrainz and the archive for each album of `albums` (caa_candidates) that has neither a row in
+    covers_caa.csv nor a decision in the state file, and write both. `retry_failed` asks again for the albums
+    decided as none, ambiguous or no art. Returns the exit code, as run_refs, whose lock it holds."""
+    try:
+        lock = take_lock(lock_path(state_path, "refs"))
+    except Locked as e:
+        out(_held(e, "refs"))
+        return 1
+    with lock:
+        table, state = read_caa(caa_path), State(state_path)
+        order = order if order is not None else [r["rym_id"] for r in albums]
+        due = [r for r in albums if r["rym_id"] not in table and (retry_failed or r["rym_id"] not in state.caa)]
+        due = due[:limit] if limit is not None else due
+        progress, counts, unsaved, code, before = Progress("refs caa", len(due), out), Counter(), 0, 0, fetcher.requests
+
+        def save() -> None:
+            nonlocal unsaved
+            write_caa(caa_path, table, order)
+            state.save()
+            unsaved = 0
+
+        try:
+            for n, row in enumerate(due):
+                if stop():
+                    raise Interrupted()
+                key = row["rym_id"]
+                try:
+                    got = look_up_caa(row, fetcher)
+                except Transient as e:
+                    out(f"  {key}: caa: {e} (not recorded, asked again next time)")
+                    continue
+                state.caa[key] = got
+                counts[got["decision"]] += 1
+                if got["decision"] == "found":
+                    table[key] = {"rym_id": key, **{f: str(got[f]) for f in CAA_FIELDS[1:]}}
+                unsaved += 1
+                if unsaved >= CAA_SAVE_EVERY:
+                    save()
+                progress.tick(n + 1, counts["none"] + counts["ambiguous"] + counts["no art"])
+            out(f"refs caa: {counts['found']} found, {counts['none']} none, {counts['ambiguous']} ambiguous, "
+                f"{counts['no art']} no art, {len(due) - sum(counts.values())} to ask again, of {len(due)}; "
+                f"{fetcher.requests - before} request(s)")
+        except StopRun as e:
+            out(f"stopped: {e}. Nothing more is asked in this run; wait before starting it again. "
+                f"({fetcher.requests - before} request(s) made)")
+            code = 2
+        except Interrupted:
+            out("interrupted: progress saved")
+            code = 130
+        finally:
+            if unsaved or not Path(caa_path).exists():
+                save()
+        return code
+
+
+def effective_rows(covers: dict[str, tuple[str, str]], skips, caa: dict[str, str], failed: dict[str, str], sprite_dir: Path,
+                   of: dict[str, str]) -> dict[str, tuple[str, str]]:
+    """The image each album shows, as rows (source, ref): its row of covers.csv, unless the skip list names it;
+    and (`caa`, the MBID) for an album of covers_caa.csv (`caa`: rym_id -> MBID) that covers.csv gives nothing:
+    no row, a skipped row, or a row whose image is gone; not a row of covers_caa.csv the skip list names (`failed`: rym_id -> the `source:ref` that could not
+    be fetched; pass {} to have those rows asked again first). What `sprites` fetches and `status` counts."""
+    out = without_skipped(covers, skips)
+    for key, mbid in caa.items():
+        row = out.get(key)
+        if (key, made_from((CAA, mbid))) in skips:  # not the album's cover: the row stays, so it is not asked again
+            continue
+        if row is None or (failed.get(key) == made_from(row) and sprite_state(key, row, sprite_dir, of) not in USABLE[False]):
+            out[key] = (CAA, mbid)
+    return out
+
+
 # --- what the build reads ----------------------------------------------------------------------------
 
 @dataclass(frozen=True)
@@ -1031,6 +1484,8 @@ class Covers:
     path: Path | None = None
     failed: dict[str, str] = field(default_factory=dict)
     skip: frozenset = frozenset()  # (rym_id, `source:ref`): rows that are not a cover (read_skips)
+    caa: dict[str, str] = field(default_factory=dict)  # rym_id -> release-group MBID: the last resort (read_caa)
+    caa_failed: dict[str, str] = field(default_factory=dict)  # as `failed`, for the archive's images
 
     def state(self, key: str) -> str:
         return sprite_state(key, self.rows[key], self.sprite_dir, self.made_from)
@@ -1040,11 +1495,30 @@ class Covers:
         or a file the manifest says was made from another image). ("", None) for an album with no cover source,
         and for one whose image is gone (is_gone): the site asks for the remote image of a `c` first, and that
         request would fail for every visitor before the tile showed. And for a row the skip list names
-        (is_skipped): its image is not a cover."""
+        (is_skipped): its image is not a cover. Such an album has the last resort's cover when covers_caa.csv
+        has one for it (caa_for)."""
         if key not in self.rows or self.is_skipped(key) or self.is_gone(key):
-            return "", None
-        usable = self.state(key) in ("current", "unverified")
+            return self.caa_for(key)
+        usable = self.state(key) in USABLE[False]
         return c_field(*self.rows[key]), sprite_path(self.sprite_dir, key) if usable else None
+
+    def caa_for(self, key: str) -> tuple[str, Path | None]:
+        """The last resort's cover of the album, whatever covers.csv has for it: (`ca:<mbid>`, its sprite or
+        None when there is none of that image yet). ("", None) without a row in covers_caa.csv, for a row
+        the skip list names (`caa`, the MBID: not the album's cover), and when the archive's image could not
+        be fetched. cover_for answers with it for an album covers.csv gives nothing;
+        the build asks it directly for an existing album whose `c` is empty (catalog.last_resort_covers)."""
+        if key not in self.caa or (key, made_from((CAA, self.caa[key]))) in self.skip:
+            return "", None
+        row = (CAA, self.caa[key])
+        usable = sprite_state(key, row, self.sprite_dir, self.made_from) in USABLE[True]
+        if not usable and self.caa_failed.get(key) == made_from(row):
+            return "", None
+        return c_field(*row), sprite_path(self.sprite_dir, key) if usable else None
+
+    def last_resort(self, keys=None) -> list[str]:
+        """The albums (of `keys`, or every row of covers_caa.csv) whose cover_for is the last resort's."""
+        return [k for k in (self.caa if keys is None else keys) if k in self.caa and self.cover_for(k)[0].startswith(C_PREFIX[CAA])]
 
     def is_skipped(self, key: str) -> bool:
         """The skip list names exactly this row: the album, and the `source:ref` it has now."""
@@ -1080,17 +1554,21 @@ class Covers:
 
 
 def load_covers(path: Path = DEFAULT_COVERS, sprite_dir: Path = DEFAULT_SPRITES, state_path: Path | None = None,
-                skip_path: Path | None = None) -> Covers:
+                skip_path: Path | None = None, caa_path: Path | None = None) -> Covers:
     """`state_path`: the state file whose recorded sprite failures blank a cover (Covers.failed); none are read
-    without it. `skip_path`: the skip list (Covers.skip); no row is skipped without it."""
-    failed = {k: v["of"] for k, v in State(state_path).sprites.items() if v.get("of")} if state_path else {}
+    without it. `skip_path`: the skip list (Covers.skip); no row is skipped without it. `caa_path`: the last
+    resort's table (Covers.caa); no album has such a cover without it."""
+    state = State(state_path) if state_path else None
+    failed = {k: v["of"] for k, v in state.sprites.items() if v.get("of")} if state else {}
+    caa_failed = {k: v["of"] for k, v in state.caa_sprites.items() if v.get("of")} if state else {}
+    caa = {k: r["mbid"] for k, r in read_caa(caa_path).items()} if caa_path else {}
     return Covers(read_covers(path), Path(sprite_dir), Path(path).exists(), SpriteManifest(manifest_path(sprite_dir)).of,
-                  Path(path), failed, frozenset(read_skips(skip_path)) if skip_path else frozenset())
+                  Path(path), failed, frozenset(read_skips(skip_path)) if skip_path else frozenset(), caa, caa_failed)
 
 
 @lru_cache(maxsize=1)
 def _default_covers() -> Covers:
-    return load_covers(state_path=DEFAULT_STATE, skip_path=DEFAULT_SKIP)
+    return load_covers(state_path=DEFAULT_STATE, skip_path=DEFAULT_SKIP, caa_path=DEFAULT_CAA)
 
 
 def cover_for(key: str) -> tuple[str, Path | None]:
@@ -1124,30 +1602,72 @@ def _albums_line(albums: list[dict]) -> str:
     return f"{len(albums)} albums ({existing} existing with another Spotify link on the sheet, {len(albums) - existing} new)"
 
 
+def _caa_albums(args, inputs: Inputs) -> tuple[list[tuple[dict, str]], list[dict]]:
+    """(caa_candidates for the files the command was given, every catalog row)."""
+    rows = catalog_rows(args.albums)
+    unverified, bare = existing_without_cover(rows, args.unverified, args.overrides, args.site_albums)
+    found = caa_candidates(rows, inputs, read_covers(args.covers), read_skips(args.skip), State(args.state), args.sprites,
+                           SpriteManifest(manifest_path(args.sprites)).of, unverified, bare)
+    return found, rows
+
+
+def _caa_line(found: list[tuple[dict, str]], table: dict, state: State) -> str:
+    """The last resort's counts: the albums with no cover, by reason, and what was decided for them."""
+    reasons = Counter(why for _, why in found)
+    decided = Counter("found" if r["rym_id"] in table else state.caa.get(r["rym_id"], {}).get("decision", "not asked")
+                      for r, _ in found)
+    return (f"last resort (caa): {len(found)} albums with no cover otherwise ("
+            + ", ".join(f"{n} {why}" for why, n in reasons.items()) + "): "
+            + ", ".join(f"{decided[d]} {d}" for d in ("found", "none", "ambiguous", "no art", "not asked")))
+
+
 def cmd_refs(args) -> int:
     inputs = Inputs.load(args.albums)
+    tiers = tuple(t for t in args.tiers if t in TIERS)
     if args.dry_run:
         covers, state = read_covers(args.covers), State(args.state)
-        counts = plan(inputs, covers, state, args.tiers, args.retry_failed)
+        counts = plan(inputs, covers, state, tiers, args.retry_failed)
         _say(f"{_albums_line(inputs.albums)}, {len(covers)} with a row in {Path(args.covers).name}")
         _say("tier       asked by a run now   source in the end, if every lookup answers")
         for t in TIERS:
-            now = counts["now"][t] if t in args.tiers else "-"
+            now = counts["now"][t] if t in tiers else "-"
             _say(f"{t:<10} {now!s:>18}   {counts['final'][t]:>6}")
         _say(f"{'none':<10} {'':>18}   {counts['final']['none']:>6}")
+        found, _ = _caa_albums(args, inputs)
+        table = read_caa(args.caa)
+        asked = sum(1 for r, _ in found if r["rym_id"] not in table and (args.retry_failed or r["rym_id"] not in state.caa))
+        _say(_caa_line(found, table, state) + f"; a run now would ask for {asked if CAA in args.tiers else '-'}")
         return 0
     stop = _stopper()
     intervals = REFS_INTERVALS | {"open.spotify.com": args.spotify_interval, "bandcamp": args.bandcamp_interval}
-    code = run_refs(inputs, args.covers, args.state, args.sprites, Fetcher(intervals, stop=stop), args.tiers, args.limit,
-                    args.retry_failed, stop, _say)
-    have = read_covers(args.covers)
-    _say(f"{sum(r['rym_id'] in have for r in inputs.albums)} of {len(inputs.albums)} albums have a row in {args.covers}")
+    code = 0
+    if tiers:
+        code = run_refs(inputs, args.covers, args.state, args.sprites, Fetcher(intervals, stop=stop), tiers, args.limit,
+                        args.retry_failed, stop, _say)
+        have = read_covers(args.covers)
+        _say(f"{sum(r['rym_id'] in have for r in inputs.albums)} of {len(inputs.albums)} albums have a row in {args.covers}")
+    if code == 0 and CAA in args.tiers:  # after the others: it asks only for what they left without a cover
+        found, rows = _caa_albums(args, inputs)
+        code = run_caa([r for r, _ in found], args.caa, args.state, Fetcher(CAA_INTERVALS, stop=stop),
+                       [r["rym_id"] for r in rows], args.limit, args.retry_failed, stop, _say)
+        _say(_caa_line(found, read_caa(args.caa), State(args.state)))
     return code
 
 
+def _sprite_rows(args, state: State, retry_failed: bool = False) -> dict[str, tuple[str, str]]:
+    """effective_rows for the files the command was given. A row of covers_caa.csv for an album the --albums
+    file does not have is not this catalog's to fetch or count."""
+    known = {r["rym_id"] for r in catalog_rows(args.albums)}
+    caa = {k: r["mbid"] for k, r in read_caa(args.caa).items() if k in known}
+    failed = {} if retry_failed else {k: v["of"] for k, v in state.sprites.items() if v.get("of")}
+    return effective_rows(read_covers(args.covers), read_skips(args.skip), caa, failed, args.sprites,
+                          SpriteManifest(manifest_path(args.sprites)).of)
+
+
 def cmd_sprites(args) -> int:
-    covers = without_skipped(read_covers(args.covers), read_skips(args.skip))  # a skipped row's image is not fetched
-    order = [r["rym_id"] for r in cover_albums(args.albums)]
+    # A skipped row's image is not fetched; the last resort's is, for an album covers.csv gives nothing.
+    covers = _sprite_rows(args, State(args.state), args.retry_failed)
+    order = [r["rym_id"] for r in catalog_rows(args.albums)]
     if args.dry_run:
         state = State(args.state)
         todo = missing_sprites(covers, order, args.sprites, state, args.sources, args.retry_failed)
@@ -1161,7 +1681,10 @@ def cmd_sprites(args) -> int:
 
 
 def cmd_adopt(args) -> int:
-    return adopt(read_covers(args.covers), args.sprites, args.covers, args.older_too, args.dry_run, _say, args.state)
+    # Not the rows the last resort stands in for: the sprite of such an album is the archive's image, not its row's.
+    shown = _sprite_rows(args, State(args.state))
+    covers = {k: v for k, v in read_covers(args.covers).items() if shown.get(k, v) == v}
+    return adopt(covers, args.sprites, args.covers, args.older_too, args.dry_run, _say, args.state)
 
 
 def cmd_status(args) -> int:
@@ -1170,7 +1693,13 @@ def cmd_status(args) -> int:
     by_source = Counter(s for s, _ in covers.values())
     of = SpriteManifest(manifest_path(args.sprites)).of
     wanted = without_skipped(covers, skips)
-    states = Counter(sprite_state(k, v, args.sprites, of) for k, v in wanted.items())
+    shown = _sprite_rows(args, state)  # with the last resort's rows, which stand in for a gone or skipped one
+    last = {k: v for k, v in shown.items() if v[0] == CAA}
+    states = Counter(sprite_state(k, v, args.sprites, of) for k, v in shown.items())
+    for k, v in last.items():  # a file with no entry is not the archive's image: USABLE
+        if sprite_state(k, v, args.sprites, of) == "unverified":
+            states["unverified"] -= 1
+            states["missing"] += 1
     have = states["current"] + states["unverified"]
     if not Path(args.covers).exists():
         _say(f"{args.covers} is MISSING: no album has a cover source (python -m rmr_pipeline.covers refs, or restore the file)")
@@ -1180,11 +1709,16 @@ def cmd_status(args) -> int:
     for s in SOURCES:
         _say(f"  {s:<9} {by_source[s]:>5}")
     if skips:
-        unmatched = len(skips) - (len(covers) - len(wanted))
-        _say(f"skipped: {len(covers) - len(wanted)} row(s) named in {Path(args.skip).name} give no cover (not a cover image)"
+        table = read_caa(args.caa)
+        named = len(covers) - len(wanted) + sum(1 for k, of in skips if k in table and of == made_from((CAA, table[k]["mbid"])))
+        unmatched = len(skips) - named
+        _say(f"skipped: {named} row(s) named in {Path(args.skip).name} give no cover (not a cover image)"
              + (f"; {unmatched} line(s) of {Path(args.skip).name} match no row (the album has another image now, or none)"
                 if unmatched else ""))
-    _say(f"sprites: {have} present, {len(wanted) - have} missing ({sum(k in wanted for k in state.sprites)} of them failed)")
+    _say(f"  {CAA:<9} {len(last):>5}  (the last resort, in {Path(args.caa).name}: of {len(read_caa(args.caa))} rows, those "
+         "that stand in for no row, a skipped row or an image that is gone)")
+    gone = sum(1 for k, v in shown.items() if state.sprite_failures(v[0]).get(k, {}).get("of") == made_from(v))
+    _say(f"sprites: {have} present, {len(shown) - have} missing ({gone} of them failed)")
     if states["stale"]:
         _say(f"  {states['stale']} of the missing have a file made from another image than their row's: `sprites` makes them again")
     if states["unverified"]:
@@ -1199,13 +1733,15 @@ def cmd_status(args) -> int:
         for r in without:
             failed = "; ".join(f"{t}: {w}" for t, w in state.refs.get(r["rym_id"], {}).items())
             _say(f"  {r['rym_id']}  {r['artist']} - {r['title']}" + (f"  [{failed}]" if failed else ""))
+    _say(_caa_line(_caa_albums(args, inputs)[0], read_caa(args.caa), state))
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m rmr_pipeline.covers", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="command", required=True)
-    for name, fn, text in [("refs", cmd_refs, "find a cover source per album (new, or relinked) and write covers.csv"),
+    for name, fn, text in [("refs", cmd_refs, "find a cover source per album (new, or relinked) and write covers.csv; then "
+                                                "the last resort for the albums left without one (covers_caa.csv)"),
                            ("sprites", cmd_sprites, "fetch the small image of each row and save its 96 px sprite"),
                            ("status", cmd_status, "counts per source, sprites, albums without a cover"),
                            ("adopt", cmd_adopt, "record the sprites with no manifest entry as made from their rows; no request")]:
@@ -1216,6 +1752,10 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--state", type=Path, default=DEFAULT_STATE)
         p.add_argument("--sprites", type=Path, default=DEFAULT_SPRITES, help="the sprite folder")
         p.add_argument("--skip", type=Path, default=DEFAULT_SKIP, help="the skip list: rows that are not a cover")
+        p.add_argument("--caa", type=Path, default=DEFAULT_CAA, help="the last resort's table (Cover Art Archive)")
+        p.add_argument("--unverified", type=Path, default=DEFAULT_UNVERIFIED, help=argparse.SUPPRESS)
+        p.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES, help=argparse.SUPPRESS)
+        p.add_argument("--site-albums", type=Path, default=DEFAULT_SITE_ALBUMS, help=argparse.SUPPRESS)
         if name == "status":
             continue
         p.add_argument("--dry-run", action="store_true", help="print the counts; no request, nothing written")
@@ -1226,11 +1766,12 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--limit", type=int, help="albums looked up in this run, at most")
         p.add_argument("--retry-failed", action="store_true", help="ask again for the albums the state file lists")
     refs, sprites = sub.choices["refs"], sub.choices["sprites"]
-    refs.add_argument("--tiers", type=lambda v: _names(v, TIERS), default=TIERS, help=f"comma-separated, of {', '.join(TIERS)}")
+    refs.add_argument("--tiers", type=lambda v: _names(v, ALL_TIERS), default=ALL_TIERS,
+                      help=f"comma-separated, of {', '.join(ALL_TIERS)}")
     refs.add_argument("--spotify-interval", type=float, default=REFS_INTERVALS["open.spotify.com"], help="seconds between oEmbed requests")
     refs.add_argument("--bandcamp-interval", type=float, default=REFS_INTERVALS["bandcamp"], help="seconds between Bandcamp pages")
     sprites.add_argument("--interval", type=float, default=SPRITES_INTERVAL, help="seconds between two image requests")
-    sprites.add_argument("--sources", type=lambda v: _names(v, SOURCES), help=f"only these, of {', '.join(SOURCES)}")
+    sprites.add_argument("--sources", type=lambda v: _names(v, ALL_SOURCES), help=f"only these, of {', '.join(ALL_SOURCES)}")
     sprites.add_argument("--spread", action="store_true", help="take the sources in turn instead of catalog order")
     args = ap.parse_args(argv)
     return args.fn(args)
