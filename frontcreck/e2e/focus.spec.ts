@@ -574,60 +574,64 @@ for (const n of [5, 10]) {
   });
 }
 
-test('a pinch with an album open keeps every cover in its place for the view on screen, frame by frame, with nothing to catch up on after the fingers lift', async ({ page, isMobile }) => {
-  test.skip(!isMobile, 'a two-finger pinch is a touch gesture');
-  await page.goto('/map');
-  await waitForMap(page);
-  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 5));
-  await waitForCameraIdle(page);
-  await waitForGasSharpSettled(page);
-  const canvas = page.locator('canvas.map-canvas');
-  const box = (await canvas.boundingBox())!;
-  const cx = box.x + box.width / 2;
-  const cy = box.y + box.height * 0.35;
-  // Synthetic touch pointers: the canvas captures pointers, which needs a real pointer behind it.
-  await canvas.evaluate((c: HTMLCanvasElement) => {
-    c.setPointerCapture = () => {};
-    c.hasPointerCapture = () => false;
-    c.releasePointerCapture = () => {};
+// Five recommendations, as an album opens, and ten, as after "Show more": the same bounds for both.
+for (const n of [5, 10]) {
+  test(`a pinch with an album open keeps every cover in its place for the view on screen, frame by frame, with nothing to catch up on after the fingers lift (${n} recommendations)`, async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'a two-finger pinch is a touch gesture');
+    await page.goto('/map');
+    await waitForMap(page);
+    await setFocus(page, 11, await recsOf(page, 11, 'balanced', n));
+    await waitForCameraIdle(page);
+    await waitForGasSharpSettled(page);
+    await expect(page.locator('.mk')).toHaveCount(n + 1);
+    const canvas = page.locator('canvas.map-canvas');
+    const box = (await canvas.boundingBox())!;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height * 0.35;
+    // Synthetic touch pointers: the canvas captures pointers, which needs a real pointer behind it.
+    await canvas.evaluate((c: HTMLCanvasElement) => {
+      c.setPointerCapture = () => {};
+      c.hasPointerCapture = () => false;
+      c.releasePointerCapture = () => {};
+    });
+    const touch = (type: string, id: number, x: number) =>
+      canvas.evaluate(
+        (c, [type, id, x, y]) => c.dispatchEvent(new PointerEvent(type as string, { pointerId: id as number, pointerType: 'touch', clientX: x as number, clientY: y as number, bubbles: true, isPrimary: id === 1, button: 0, buttons: 1 })),
+        [type, id, x, cy] as const,
+      );
+    const before = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+    const z0 = (await camera(page)).zoom;
+    const f0 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+    await sampleCovers(page);
+    await touch('pointerdown', 1, cx - 40);
+    await touch('pointerdown', 2, cx + 40);
+    for (let i = 1; i <= 20; i++) {
+      await touch('pointermove', 1, cx - 40 - i * 5);
+      await touch('pointermove', 2, cx + 40 + i * 5);
+      await page.waitForTimeout(60);
+    }
+    const pinchFrames = (await page.evaluate(() => window.__rmr!.frames ?? 0)) - f0;
+    expect(pinchFrames, 'the pinch drew frames').toBeGreaterThan(10);
+    const during = await page.evaluate(() => window.__rmr!.markerLayout!());
+    expect(during, 'no ease runs during the pinch').not.toBeNull();
+    expect(during!.freshGap, 'px from the layout of the view on screen, fingers still down').toBeLessThan(1);
+    await touch('pointerup', 1, cx - 140);
+    await touch('pointerup', 2, cx + 140);
+    await waitForCameraIdle(page);
+    await page.waitForTimeout(400);
+    const lag = await coverLag(page);
+    const after = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+    console.log(`pinch, ${n} recs: ${JSON.stringify(lag)}`);
+    expect((await camera(page)).zoom, 'the pinch zoomed in').toBeGreaterThan(z0 * 1.5);
+    expect(lag.moving, 'frames on which the camera moved').toBeGreaterThan(10);
+    expect(lag.behind, 'px a cover was from its place for the view on screen, on a frame of the pinch').toBeLessThan(1);
+    expect(lag.easing, 'frames on which covers were easing over').toBe(0);
+    expect(lag.after, 'px a cover moved after the camera had stopped').toBeLessThan(0.5);
+    expect(after.settles - before.settles, 'settles for the whole pinch').toBeLessThanOrEqual(1);
+    expect(after.eases - before.eases, 'eases for the whole pinch').toBe(0);
+    expect(after.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
   });
-  const touch = (type: string, id: number, x: number) =>
-    canvas.evaluate(
-      (c, [type, id, x, y]) => c.dispatchEvent(new PointerEvent(type as string, { pointerId: id as number, pointerType: 'touch', clientX: x as number, clientY: y as number, bubbles: true, isPrimary: id === 1, button: 0, buttons: 1 })),
-      [type, id, x, cy] as const,
-    );
-  const before = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
-  const z0 = (await camera(page)).zoom;
-  const f0 = await page.evaluate(() => window.__rmr!.frames ?? 0);
-  await sampleCovers(page);
-  await touch('pointerdown', 1, cx - 40);
-  await touch('pointerdown', 2, cx + 40);
-  for (let i = 1; i <= 20; i++) {
-    await touch('pointermove', 1, cx - 40 - i * 5);
-    await touch('pointermove', 2, cx + 40 + i * 5);
-    await page.waitForTimeout(60);
-  }
-  const pinchFrames = (await page.evaluate(() => window.__rmr!.frames ?? 0)) - f0;
-  expect(pinchFrames, 'the pinch drew frames').toBeGreaterThan(10);
-  const during = await page.evaluate(() => window.__rmr!.markerLayout!());
-  expect(during, 'no ease runs during the pinch').not.toBeNull();
-  expect(during!.freshGap, 'px from the layout of the view on screen, fingers still down').toBeLessThan(1);
-  await touch('pointerup', 1, cx - 140);
-  await touch('pointerup', 2, cx + 140);
-  await waitForCameraIdle(page);
-  await page.waitForTimeout(400);
-  const lag = await coverLag(page);
-  const after = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
-  console.log(`pinch: ${JSON.stringify(lag)}`);
-  expect((await camera(page)).zoom, 'the pinch zoomed in').toBeGreaterThan(z0 * 1.5);
-  expect(lag.moving, 'frames on which the camera moved').toBeGreaterThan(10);
-  expect(lag.behind, 'px a cover was from its place for the view on screen, on a frame of the pinch').toBeLessThan(1);
-  expect(lag.easing, 'frames on which covers were easing over').toBe(0);
-  expect(lag.after, 'px a cover moved after the camera had stopped').toBeLessThan(0.5);
-  expect(after.settles - before.settles, 'settles for the whole pinch').toBeLessThanOrEqual(1);
-  expect(after.eases - before.eases, 'eases for the whole pinch').toBe(0);
-  expect(after.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
-});
+}
 
 test('a wheel zoom with an album open draws no frame after it ends', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse wheel');
