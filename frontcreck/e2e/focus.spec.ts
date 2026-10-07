@@ -485,11 +485,19 @@ async function sampleCovers(page: Page): Promise<void> {
   });
 }
 
+/** Samples within which the frame that draws a camera move is due after the sample that saw the move. */
+const ARRIVES_WITHIN = 3;
+
 /** Stops the sampler and reports what the owner's eye sees: the covers behind the map while it zooms (`behind`,
  * the largest gap in px on a frame where the camera moved), frames where an ease was moving them (`easing`), and
  * how far any cover still moves once the map has drawn the view the camera stopped at (`after`, px, and
  * `afterFrames`). A pinch moves the camera in its pointer event and the map draws it on the next frame, covers
- * and stars together: that one frame is the view arriving, not a cover catching up, so `after` counts from it. */
+ * and stars together: that one frame is the view arriving, not a cover catching up, so `after` counts from it.
+ * A frame counter that moved since the sample before does not show that frame has been drawn: a pinch step is
+ * two pointer events, and a frame that lands between them moves the counter for the first finger while the
+ * second finger's move is still to be drawn. So the view has arrived at the first frame drawn after the sample
+ * that saw the camera's last move. It is due on the very next frame; `ARRIVES_WITHIN` samples are allowed, and a
+ * frame drawn later than that (a settle as the fingers lift, an ease) is counted as movement after the stop. */
 async function coverLag(page: Page) {
   const rows = await page.evaluate(() => {
     const s = (window as CoverWindow).__covers!;
@@ -507,9 +515,15 @@ async function coverLag(page: Page) {
     last = k;
     behind = Math.max(behind, rows[k].gap ?? Infinity);
   }
-  // The first sample at which the map has drawn the camera's last move (the same sample, when a frame made it).
+  // The first sample at which the map has drawn the camera's last move: the first frame drawn after the sample
+  // that saw it, or that sample itself when no frame follows (the move had been drawn by then).
   let shown = last;
-  if (last > 0 && rows[last].drawn === rows[last - 1].drawn) while (shown < rows.length - 1 && rows[shown].drawn === rows[last].drawn) shown++;
+  for (let k = last + 1; k < rows.length && k <= last + ARRIVES_WITHIN; k++) {
+    if (rows[k].drawn > rows[last].drawn) {
+      shown = k;
+      break;
+    }
+  }
   let after = 0;
   let afterFrames = 0;
   for (let k = shown + 1; k < rows.length; k++) {
