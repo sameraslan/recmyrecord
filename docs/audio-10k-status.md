@@ -2,6 +2,8 @@
 
 5 October 2026. Branch `feat/audio-10k`, draft PR #31 (stacked on #26, which is stacked on #25). Tracking issue: #37. Nothing here is on the site.
 
+**Note of 6 October 2026.** The owner gave the go-ahead and the site data on this branch was switched to the 10k catalog that day: `SITE_MODEL = "effnet10k"`, `frontcreck/public/data` rebuilt with 10,467 albums from `data-pipeline/audio/effnet10k/`. The lines below that say the site still runs on `data-pipeline/audio/` describe the state before it. What was done and what remains (frontend pins, site copy, merge and deploy by the owner) is in `docs/10k-switch.md`, section 0. Nothing is deployed.
+
 ## In short
 
 - The catalog, the matcher and the embeddings for the RYM top 10,000 are built. 10,467 albums are keyed by RYM id.

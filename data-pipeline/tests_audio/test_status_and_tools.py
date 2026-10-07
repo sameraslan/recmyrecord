@@ -64,8 +64,10 @@ def test_site_slugs():
     catalog = [al for al in everything if not al.new]  # the site's albums come first, in its order
     assert everything[:len(catalog)] == catalog
     assert [(al.key, al.slug, al.artist) for al in load_catalog(albums=None)] == [(al.key, al.slug, al.artist) for al in catalog]
-    assert [al.slug for al in catalog] == [a["slug"] for a in site]
-    assert [al.artist for al in catalog] == [a["a"] for a in site]
+    # the site's data holds the new albums too since the switch to the 10k catalog: its first rows are these
+    assert len(site) == len(everything) > len(catalog)
+    assert [al.slug for al in catalog] == [a["slug"] for a in site[:len(catalog)]]
+    assert [al.artist for al in catalog] == [a["a"] for a in site[:len(catalog)]]
     assert len({al.key for al in everything}) == len(everything) == len({al.slug for al in everything})
     assert sum(not al.override for al in catalog) > 4000  # the Spotify numbers were found
 

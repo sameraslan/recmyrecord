@@ -126,7 +126,7 @@ def load_album_sprites(src: MapSource, uris: list[str], meta: dict[str, dict], c
                        titles: list[str] | None = None) -> list[Image.Image]:
     """One 96 px sprite per album in album order: an override image, else the map sprite,
     else (no cover id, or no URI: a catalog album the map does not have) a tile in the cluster's
-    fallback colour: flat without `titles` (the default build), lettered from the album's shown title with
+    fallback colour: flat without `titles` (a --no-catalog build), lettered from the album's shown title with
     them (the catalog build; lettered_tile). A new album's own sprite comes in through `override_images`."""
     cache: dict[int, Image.Image] = {}
     out: list[Image.Image] = []

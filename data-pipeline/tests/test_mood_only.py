@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from rmr_pipeline.audio import audio_block, descriptors, mean_fill, site_matrix
-from rmr_pipeline.audio_store import site_store
+from rmr_pipeline.audio_store import DEFAULT_AUDIO
 from rmr_pipeline.constants import AUDIO_STOPS, NO_AUDIO_NEIGHBOURS, SLIDER, STOPS
 from rmr_pipeline.layout import (build_layouts, finalize_layouts, flat_positions, nearest_with_audio, stacked3,
                                  with_derived)
@@ -39,7 +39,7 @@ def test_mean_fill_gives_the_albums_without_audio_the_mean_block():
 
 def test_the_catalog_block_is_not_imputed(deduped, audio):
     sub, _ = deduped
-    plain = audio_block(sub, site_store(), fill="mean")
+    plain = audio_block(sub, DEFAULT_AUDIO, fill="mean")  # the `audio` fixture's store
     assert (plain.has_audio == audio.has_audio).all() and not plain.has_audio.all()
     np.testing.assert_array_equal(plain.block[plain.has_audio], audio.block[audio.has_audio])
     mean = audio.block[audio.has_audio].astype(np.float64).mean(axis=0)
@@ -47,7 +47,7 @@ def test_the_catalog_block_is_not_imputed(deduped, audio):
     assert not np.allclose(audio.block[~audio.has_audio], plain.block[~plain.has_audio])  # the default still imputes
     assert "imputed" in audio.summary() and "imputed" not in plain.summary()
     with pytest.raises(ValueError, match="fill"):
-        audio_block(sub, site_store(), fill="zero")
+        audio_block(sub, DEFAULT_AUDIO, fill="zero")
 
 
 # --- recommendations ---

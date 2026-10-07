@@ -15,42 +15,59 @@ from rmr_pipeline.constants import DEFAULT_OUT
 from rmr_pipeline.validate import validate_dir
 
 
-def test_catalog_needs_an_out_folder_that_is_not_the_sites(capsys, tmp_path):
+def test_the_catalog_build_is_the_sites_and_no_catalog_needs_an_out_folder_that_is_not_the_sites(capsys, tmp_path):
+    """Since the switch to the 10k catalog (the owner's go-ahead of 6 October 2026) the catalog build writes
+    frontcreck/public/data by default. It was the other way round: --catalog needed --out and refused that
+    folder. The build of before the switch, --no-catalog, now has that guard."""
+    for flags in ([], ["--catalog"]):
+        args = parse_args(["--map-root", "map", *flags])
+        assert args.catalog and args.out == DEFAULT_OUT
+    assert parse_args(["--map-root", "map", "--out", str(DEFAULT_OUT)]).out == DEFAULT_OUT
     with pytest.raises(SystemExit):
-        parse_args(["--map-root", "map", "--catalog"])
-    assert "--out" in capsys.readouterr().err
+        parse_args(["--map-root", "map", "--no-catalog"])
+    assert "--no-catalog needs an explicit --out" in capsys.readouterr().err
     for out in (DEFAULT_OUT, DEFAULT_OUT / "sub"):
         with pytest.raises(SystemExit):
-            parse_args(["--map-root", "map", "--catalog", "--skip-images", "--out", str(out)])
-        assert "go-ahead" in capsys.readouterr().err
+            parse_args(["--map-root", "map", "--no-catalog", "--skip-images", "--out", str(out)])
+        assert "--no-catalog does not write into" in capsys.readouterr().err
+    args = parse_args(["--map-root", "map", "--no-catalog", "--out", str(tmp_path)])
+    assert not args.catalog and args.out == tmp_path
     assert parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path)]).out == tmp_path
 
 
 def test_catalog_defaults(tmp_path):
-    args = parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path)])
-    assert args.audio_dir == store.STORES["effnet10k"] and store.SITE_MODEL == "effnet"
+    args = parse_args(["--map-root", "map"])
+    assert args.audio_dir == store.STORES["effnet10k"] == store.site_store() and store.SITE_MODEL == "effnet10k"
     assert (args.descriptor_weights, args.existing_descriptors) == ("slope", "table-novocals")
     assert args.catalog_path == DEFAULT_CATALOG
     args = parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path), "--audio-dir", "x",
                        "--descriptor-weights", "rank", "--existing-descriptors", "sheet"])
     assert (args.audio_dir.name, args.descriptor_weights, args.existing_descriptors) == ("x", "rank", "sheet")
+    # --no-catalog: no descriptor choices, and the store is the switch's too unless one is named
+    args = parse_args(["--map-root", "map", "--no-catalog", "--out", str(tmp_path)])
+    assert (args.descriptor_weights, args.existing_descriptors, args.audio_dir) == (None, None, store.site_store())
+    args = parse_args(["--map-root", "map", "--no-catalog", "--out", str(tmp_path), "--audio-dir", str(store.DEFAULT_AUDIO)])
+    assert args.audio_dir == store.DEFAULT_AUDIO  # the data of before the switch
 
 
-def test_the_catalog_flags_need_catalog(capsys):
-    assert not parse_args(["--map-root", "map"]).catalog
+def test_the_catalog_flags_are_not_for_no_catalog(capsys, tmp_path):
+    assert parse_args(["--map-root", "map"]).catalog  # on by default (off, until the switch)
     for flag in (["--descriptor-weights", "equal"], ["--existing-descriptors", "table"], ["--catalog-path", "x.csv"]):
+        assert parse_args(["--map-root", "map", *flag]).catalog
         with pytest.raises(SystemExit):
-            parse_args(["--map-root", "map", *flag])
+            parse_args(["--map-root", "map", "--no-catalog", "--out", str(tmp_path), *flag])
         assert "need --catalog" in capsys.readouterr().err
     with pytest.raises(SystemExit):
         parse_args(["--map-root", "map", "--catalog", "--out", "x", "--descriptor-weights", "loud"])
 
 
 def test_require_sprites_is_a_catalog_flag(capsys, tmp_path):
+    assert not parse_args(["--map-root", "map"]).require_sprites
     assert not parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path)]).require_sprites
+    assert parse_args(["--map-root", "map", "--require-sprites"]).require_sprites
     assert parse_args(["--map-root", "map", "--catalog", "--out", str(tmp_path), "--require-sprites"]).require_sprites
     with pytest.raises(SystemExit):
-        parse_args(["--map-root", "map", "--require-sprites"])
+        parse_args(["--map-root", "map", "--no-catalog", "--out", str(tmp_path), "--require-sprites"])
     assert "needs --catalog" in capsys.readouterr().err
 
 
@@ -264,13 +281,16 @@ def test_the_catalog_builds_existing_albums_link_where_the_sheet_links(catalog_b
     overrides = json.loads(DEFAULT_OVERRIDES.read_text(encoding="utf-8"))
     legacy = [u.split(":")[-1] for u in deduped[0]["URI"]]
     assert cat.legacy_ids[:n_site] == legacy and not any(cat.legacy_ids[n_site:])
-    by_override = [i for i in range(n_site) if albums[i]["s"] != cat.spotify_ids[i]]
+    # (the albums of catalog/unverified_links.csv have no link at all: test_the_catalog_builds_unverified_links)
+    unverified = set(_unverified(cat, albums).applied)
+    by_override = [i for i in range(n_site) if albums[i]["s"] != cat.spotify_ids[i] and i not in unverified]
     assert 0 < len(by_override) <= len(overrides)
     assert {albums[i]["s"] for i in by_override} <= {e["s"] for e in overrides.values() if "s" in e}
     assert {e["s"] for e in overrides.values() if "s" in e} <= {a["s"] for a in albums[:n_site]}  # every override holds
-    no_link = [i for i in range(n_site) if not catalog["spotify_url"].iloc[i] and i not in by_override]
+    no_link = [i for i in range(n_site)
+               if not catalog["spotify_url"].iloc[i] and i not in by_override and i not in unverified]
     assert len(no_link) > 400 and all(albums[i]["s"] == legacy[i] for i in no_link)
-    moved = [i for i in range(n_site) if albums[i]["s"] != legacy[i] and i not in by_override]
+    moved = [i for i in range(n_site) if albums[i]["s"] != legacy[i] and i not in by_override and i not in unverified]
     assert len(moved) > 1000 and all(albums[i]["s"] in catalog["spotify_url"].iloc[i] for i in moved)
     # covers: the album with a row and a sprite shows its new release; the one with a row alone, and every
     # other one, keeps what the map gave it
@@ -291,6 +311,44 @@ def cv_relinked():
     import rmr_pipeline.covers as cv
 
     return cv.relinked_albums()
+
+
+def _unverified(cat, albums):
+    """catalog.unverified_links for the committed list, as the build calls it. The slugs overrides.json is
+    keyed by are the built ones but for the albums whose artist it corrects, which have another key."""
+    from rmr_pipeline.catalog import load_unverified_links, unverified_links
+    from rmr_pipeline.constants import DEFAULT_OVERRIDES
+    from rmr_pipeline.overrides import load_overrides
+
+    return unverified_links(load_unverified_links(), cat.keys, cat.legacy_ids, list(load_catalog()["spotify_url"]),
+                            [a["slug"] for a in albums], load_overrides(DEFAULT_OVERRIDES))
+
+
+def test_the_catalog_builds_unverified_links(catalog_build, deduped):
+    """The albums of catalog/unverified_links.csv (their Spotify link opens another album and the right id is
+    not known): no Spotify link, no Spotify cover, the fallback colours of their cluster, and the catalog's
+    other links, if any, as `l`. Every other existing album has a Spotify id unless an override takes it away."""
+    from rmr_pipeline.catalog import catalog_frame, load_unverified_links
+    from rmr_pipeline.constants import DEFAULT_OVERRIDES, FALLBACK_AMBIENT
+    from rmr_pipeline.links import album_links
+
+    albums, _, _, printed, _, _ = catalog_build
+    n_site, catalog = len(deduped[0]), load_catalog()
+    cat = catalog_frame(deduped[0], catalog)
+    listed = load_unverified_links()
+    found = _unverified(cat, albums)
+    assert len(listed) == 67 and len(found.applied) == 67 and found.stale == []  # every row of the list still applies
+    assert (f"unverified links: 67 of the 67 albums of catalog/unverified_links.csv have no Spotify link and no "
+            "Spotify cover") in printed and "no longer apply" not in printed
+    rows = catalog.to_dict("records")
+    for i, row in zip(found.applied, listed):
+        a = albums[i]
+        assert i < n_site and (a["slug"], cat.legacy_ids[i]) == (row["slug"], row["site_id"])
+        assert (a["s"], a["c"]) == ("", "") and a["w"] == list(FALLBACK_AMBIENT[a["k"] % 3]), row["slug"]
+        assert a.get("l", {}) == album_links(rows[i])[0]
+    assert sum("l" in albums[i] for i in found.applied) == 23
+    taken_away = {k for k, e in json.loads(DEFAULT_OVERRIDES.read_text(encoding="utf-8")).items() if e.get("s") == ""}
+    assert {a["slug"] for i, a in enumerate(albums[:n_site]) if not a["s"] and i not in found.applied} <= taken_away
 
 
 def test_the_committed_covers_table_parses_and_every_row_is_a_cover_id_the_validator_accepts():
@@ -324,15 +382,15 @@ def test_the_audio_block_takes_explicit_keys(deduped, audio):
     from rmr_pipeline.audio import album_keys
 
     sub, _ = deduped
-    keys = album_keys(sub, store.site_store())
-    by_key = audio_block(sub.drop(columns=["URI"]), store.site_store(), keys)
+    keys = album_keys(sub, store.DEFAULT_AUDIO)  # the `audio` fixture's store
+    by_key = audio_block(sub.drop(columns=["URI"]), store.DEFAULT_AUDIO, keys)
     assert (by_key.block == audio.block).all() and (by_key.has_audio == audio.has_audio).all()
     with pytest.raises(ValueError, match="keys for"):
-        audio_block(sub, store.site_store(), keys[:-1])
+        audio_block(sub, store.DEFAULT_AUDIO, keys[:-1])
 
 
 def test_only_the_catalog_build_letters_its_tiles():
     from rmr_pipeline.build import sprite_titles
 
-    assert sprite_titles(False, ["Chill Out"]) is None  # the default build: flat tiles, the bytes it always wrote
+    assert sprite_titles(False, ["Chill Out"]) is None  # --no-catalog: flat tiles, the bytes that build always wrote
     assert sprite_titles(True, ["Chill Out"]) == ["Chill Out"]

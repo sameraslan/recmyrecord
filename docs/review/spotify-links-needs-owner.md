@@ -4,6 +4,8 @@ From the full audit of 2026-10-06 (`report-full.md`). For each album the site li
 
 ## A. No link in the sheet
 
+Since 6 October 2026 the build gives these 67 albums no Spotify link and no Spotify cover: they are the rows of `data-pipeline/catalog/unverified_links.csv`. A link on the sheet or an `s` in `overrides.json` wins over a row; delete the row then. Sections B and C keep their links.
+
 | index | slug | rym_id | artist | title | year | the site link opens | note |
 |---|---|---|---|---|---|---|---|
 | 224 | live-at-the-fillmore-east-hendrix | Album39581 | Hendrix | Live at the Fillmore East | 1999 | `0X8uUl77dOADdr7v1ECVB2` Jimi Hendrix - Band Of Gypsys (50th Anniversary / Live At Fillmore East, 1970) (6 tracks, 46 min) | A different live album. |

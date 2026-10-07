@@ -127,8 +127,9 @@ def test_the_real_catalogs_new_slugs_are_within_the_cap_and_the_sites_are_the_co
 
     site = json.loads((DEFAULT_OUT / "albums.json").read_text(encoding="utf-8"))
     n_site = len(deduped[0])
-    assert n_site == len(site) == 4081
     cat = catalog_frame(deduped[0], load_catalog())
+    # the site's data is the whole catalog since the switch of 6 October 2026 (it was the 4,081 alone)
+    assert n_site == 4081 and len(site) == len(cat.keys) > 10000
     artists = [clean_artist(a) for a in deduped[0]["Artist"].astype(str)] + cat.slug_artists[n_site:]
     bare = make_slugs(cat.slug_titles, artists)
     slugs = make_slugs(cat.slug_titles, artists, cap_from=n_site)
@@ -138,8 +139,9 @@ def test_the_real_catalogs_new_slugs_are_within_the_cap_and_the_sites_are_the_co
     moved = [i for i in range(n_site) if slugs[i] != site[i]["slug"]]
     overrides = json.loads((DEFAULT_OUT.parents[2] / "data-pipeline" / "overrides.json").read_text(encoding="utf-8"))
     assert {slugs[i] for i in moved} == {k for k, e in overrides.items() if "a" in e}
-    assert max(len(s["slug"].encode()) for s in site) == 151  # the longest of the existing ones; they are not cut
+    assert max(len(s["slug"].encode()) for s in site[:n_site]) == 151  # the longest of the existing ones; they are not cut
     assert max(len(s.encode()) for s in slugs[n_site:]) <= MAX_SLUG_BYTES
+    assert [s["slug"] for s in site[n_site:]] == slugs[n_site:]  # and the committed new albums have exactly these
     changed = [i for i in range(n_site, len(slugs)) if slugs[i] != bare[i]]
     assert len(changed) == 17 and all(len(bare[i]) > MAX_SLUG_BYTES for i in changed)
     assert max(len(s) for s in bare) == 245  # Salvatore Sciarrino: over the host's 233 for `<slug>.prerender-config.json`

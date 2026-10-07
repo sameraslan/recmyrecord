@@ -1,11 +1,16 @@
 """The audio block: 64 numbers per album from the committed store and the frozen transform.
 
-CLI: python -m rmr_pipeline.audio status [--audio-dir DIR] [--table PATH]   summary and the imputed albums
-     python -m rmr_pipeline.audio fit    [--audio-dir DIR] [--table PATH]   refit transform.npz (explicit, see README)
+CLI: python -m rmr_pipeline.audio status [--audio-dir DIR] [--table PATH]   the feature table's albums in the store,
+                                         and those without audio as a --no-catalog build would impute them
+     python -m rmr_pipeline.audio fit    --audio-dir DIR [--table PATH]     refit DIR/transform.npz on the feature
+                                         table's albums (the old store, audio/; see README)
      python -m rmr_pipeline.audio fit-catalog --audio-dir DIR [--catalog CSV] [--target-from DIR]
-                                         fit DIR/transform.npz on every catalog album the store has (the CLAP store)
+                                         fit DIR/transform.npz on every catalog album the store has (the site's
+                                         store, audio/effnet10k, and the CLAP store)
 
---audio-dir defaults to the store the site reads (audio_store.SITE_MODEL); `fit-catalog` has no default.
+`status` reads the store the site reads (audio_store.SITE_MODEL) unless --audio-dir names another. `fit` and
+`fit-catalog` write a transform and have no default: the site's store is fitted on the whole catalog, and a
+`fit` on it would replace that transform with one fitted on the feature table's albums alone.
 
   block = ((e / |e|) - mean) @ components.T * scale      e: the album's mean clip embedding (store)
 
@@ -299,7 +304,8 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m rmr_pipeline.audio", description="The audio block of the site matrix.")
     p.add_argument("cmd", choices=("status", "fit", "fit-catalog"))
     p.add_argument("--audio-dir", type=Path, default=None,
-                   help="The audio store (default: the one the site reads, audio_store.SITE_MODEL).")
+                   help="The audio store (status: default the one the site reads, audio_store.SITE_MODEL; "
+                        "fit and fit-catalog need it).")
     p.add_argument("--table", type=Path, default=DEFAULT_TABLE, help="Feature table pickle (read-only).")
     p.add_argument("--catalog", type=Path, default=DEFAULT_CATALOG, help="fit-catalog: the catalog table.")
     p.add_argument("--target-from", type=Path, default=DEFAULT_AUDIO,
@@ -307,7 +313,7 @@ def main(argv: list[str] | None = None) -> int:
     args = p.parse_args(argv)
     if args.cmd == "fit-catalog":
         if args.audio_dir is None:
-            p.error("fit-catalog needs an explicit --audio-dir (for example audio/clap): it writes that store's transform.npz")
+            p.error("fit-catalog needs an explicit --audio-dir (for example audio/effnet10k): it writes that store's transform.npz")
         try:
             t = refit_catalog(args.audio_dir, args.catalog, args.target_from)
             old = args.audio_dir / "transform.npz"
@@ -321,6 +327,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"fitted on {t.albums} catalog albums ({t.model}), {len(t.components)} components, scale {t.scale:.4f}, "
               f"target total variance {t.target_total_variance:.4f} -> {old}")
         return 0
+    if args.cmd == "fit" and args.audio_dir is None:
+        p.error("fit needs an explicit --audio-dir: it writes that store's transform.npz from the feature table's "
+                "albums alone (the old store: --audio-dir audio). The site's store is fitted on the whole catalog: "
+                "fit-catalog --audio-dir audio/effnet10k")
     args.audio_dir = args.audio_dir or site_store()
     sub, _ = dedupe_table(load_table(args.table))
     try:

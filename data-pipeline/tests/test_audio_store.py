@@ -335,10 +335,11 @@ def test_replace_store_rewrites_whole_and_leaves_an_identical_store_alone(tmp_pa
     assert load_store(d).keys.tolist() == ["c", "Album1"]  # a refused write leaves the store as it was
 
 
-def test_the_site_reads_the_effnet_store_until_the_switch_is_changed():
-    """audio_store.SITE_MODEL is the one switch. The build's default store follows it (tests/test_build.py)."""
-    assert SITE_MODEL == "effnet" and site_store() == STORES["effnet"] == DEFAULT_AUDIO
-    assert STORES["clap"] == DEFAULT_AUDIO / "clap"
+def test_the_site_reads_the_10k_effnet_store_since_the_switch():
+    """audio_store.SITE_MODEL is the one switch. The build's default store follows it (tests/test_build.py).
+    It was "effnet", data-pipeline/audio itself, until 6 October 2026."""
+    assert SITE_MODEL == "effnet10k" and site_store() == STORES["effnet10k"] == DEFAULT_AUDIO / "effnet10k"
+    assert STORES["effnet"] == DEFAULT_AUDIO and STORES["clap"] == DEFAULT_AUDIO / "clap"
     assert load_manifest(DEFAULT_AUDIO)["model"] == "discogs-effnet-bs1-1" and load_store(DEFAULT_AUDIO).dim == DIM == 1280
 
 

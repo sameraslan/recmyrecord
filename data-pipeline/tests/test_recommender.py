@@ -117,9 +117,11 @@ def test_mutual_ranking_does_not_depend_on_the_thread_count_and_ties_go_to_the_e
 
 
 def test_catalog_recs_for_in_rainbows(deduped, site_recs):
-    """The mood stop is the descriptor side, which the audio block barely touches: it stays pinned
-    to the live site's answer. The sonic and balanced lists depend on the audio store, so they are
-    checked against the committed files (test_outputs) and by what the stops mean (below)."""
+    """The feature table's albums alone, on data-pipeline/audio (a --no-catalog build; the site's lists until
+    the switch to the 10k catalog). The mood stop is the descriptor side, which the audio block barely
+    touches: it stays pinned to the old live site's answer. The sonic and balanced lists depend on the audio
+    store, so they are checked by what the stops mean (below). The site's own lists, of the whole catalog,
+    are checked against the committed files (test_outputs)."""
     sub, _ = deduped
     for stop in ("sonic", "balanced", "mood"):
         assert site_recs[stop].shape == (len(sub), 10)

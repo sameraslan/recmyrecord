@@ -1,15 +1,22 @@
 """CLI: python -m rmr_pipeline.build --map-root PATH [--table PATH] [--out PATH] [--overrides PATH]
                                     [--audio-dir PATH] [--hub-correction STOPS] [--skip-images]
-                                    [--catalog --out PATH [--catalog-path CSV] [--descriptor-weights PROFILE]
-                                     [--existing-descriptors SOURCE] [--require-sprites]]
+                                    [--catalog-path CSV] [--descriptor-weights PROFILE]
+                                    [--existing-descriptors SOURCE] [--require-sprites]
+                                    [--no-catalog --out PATH]
 
---catalog builds every album of catalog/albums.csv (rmr_pipeline.catalog) instead of the feature table's.
-It never writes into frontcreck/public/data. What it adds to the site's data (README, Catalog mode):
-covers of the new albums (rmr_pipeline.covers), listen links `l` for an album with no Spotify id
-(rmr_pipeline.links), the form `native [Latin]` of a new album's artist and title (catalog.display_artist,
-display_title), the sheet's Spotify link for an existing album, with the cover of that release
-(catalog.catalog_frame, existing_album_covers), and the mood-only rule for an album with no audio (`n`;
-audio.mean_fill, recs.build_recs, recs.no_audio_columns, layout.build_layouts)."""
+The site's data, in frontcreck/public/data unless --out names another folder: every album of
+catalog/albums.csv (rmr_pipeline.catalog), from the store of audio_store.SITE_MODEL (the switch of
+6 October 2026; README, Catalog mode). Beside the feature table's albums it has the covers of the new
+albums (rmr_pipeline.covers), listen links `l` for an album with no Spotify id (rmr_pipeline.links), the
+form `native [Latin]` of a new album's artist and title (catalog.display_artist, display_title), the
+sheet's Spotify link for an existing album, with the cover of that release (catalog.catalog_frame,
+existing_album_covers), no Spotify link and no Spotify cover for the albums of catalog/unverified_links.csv
+(catalog.unverified_links), and the mood-only rule for an album with no audio (`n`; audio.mean_fill,
+recs.build_recs, recs.no_audio_columns, layout.build_layouts).
+
+--no-catalog is the build of before the switch: the feature table's albums alone, an imputed block for an
+album with no audio, flat tiles. It needs an explicit --out and never writes into frontcreck/public/data.
+The data of before the switch: --no-catalog --audio-dir audio --map-root PATH --out PATH."""
 import argparse
 import json
 import sys
@@ -18,10 +25,10 @@ from pathlib import Path
 
 from .artists import clean_artist
 from .audio import DEFAULT_CATALOG, audio_block, descriptors, site_matrix
-from .audio_store import STORES, StoreError, site_store
+from .audio_store import StoreError, site_store
 from .catalog import (DEFAULT_EXISTING, DEFAULT_WEIGHTS, EXISTING, WEIGHT_PROFILES, CatalogError, catalog_frame, covers_table,
-                      display_artist, display_title, existing_album_covers, load_catalog, neighbour_clusters,
-                      new_album_covers, shared_spotify_ids, shared_spotify_lines)
+                      display_artist, display_title, existing_album_covers, load_catalog, load_unverified_links,
+                      neighbour_clusters, new_album_covers, shared_spotify_ids, shared_spotify_lines, unverified_links)
 from .colors import ambient_from_image
 from .constants import DEFAULT_OUT, DEFAULT_OVERRIDES, DEFAULT_TABLE, FALLBACK_AMBIENT, SLIDER, STOPS
 from .images import load_album_sprites, tile_thumbs, write_sheets
@@ -39,29 +46,31 @@ from .vocab import build_vocab
 
 def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p = argparse.ArgumentParser(prog="python -m rmr_pipeline.build",
-                                description="Build frontcreck/public/data from the feature table and the map outputs.")
+                                description="Build frontcreck/public/data from the catalog table, the feature table, "
+                                            "the audio store and the map outputs.")
     p.add_argument("--map-root", type=Path, required=True,
                    help="Root of the personal-site music_map worktree (has public/data and pipeline/outputs).")
     p.add_argument("--table", type=Path, default=DEFAULT_TABLE, help="Feature table pickle (read-only).")
     p.add_argument("--out", type=Path, default=None,
-                   help="Output folder (default frontcreck/public/data). Required with --skip-images.")
+                   help="Output folder (default frontcreck/public/data). Required with --skip-images and with "
+                        "--no-catalog.")
     p.add_argument("--overrides", type=Path, default=DEFAULT_OVERRIDES, help="Manual corrections keyed by slug.")
     p.add_argument("--audio-dir", type=Path, default=None,
                    help="The audio store: embeddings, manifest and transform.npz (default: the store of "
-                        "audio_store.SITE_MODEL, data-pipeline/audio while that is effnet; with --catalog, "
-                        "the effnet10k store).")
-    p.add_argument("--catalog", action="store_true",
-                   help="Build every album of the catalog table, keyed by RYM id, instead of the feature table's "
-                        "albums. Needs an explicit --out that is not frontcreck/public/data.")
-    p.add_argument("--catalog-path", type=Path, default=DEFAULT_CATALOG, help="With --catalog: the catalog table.")
+                        "audio_store.SITE_MODEL, data-pipeline/audio/effnet10k).")
+    p.add_argument("--catalog", action=argparse.BooleanOptionalAction, default=True,
+                   help="Build every album of the catalog table, keyed by RYM id (the default: the site's data). "
+                        "--no-catalog builds the feature table's albums alone, as before the switch to the 10k "
+                        "catalog; it needs an explicit --out that is not frontcreck/public/data.")
+    p.add_argument("--catalog-path", type=Path, default=DEFAULT_CATALOG, help="The catalog table. Not with --no-catalog.")
     p.add_argument("--descriptor-weights", choices=tuple(WEIGHT_PROFILES), default=None,
-                   help="With --catalog: the weight of an album's eight descriptors by place (default slope, 1 down "
-                        "to 0.5; rank is the feature table's 1.5 down to 1.33).")
+                   help="The weight of an album's eight descriptors by place (default slope, 1 down "
+                        "to 0.5; rank is the feature table's 1.5 down to 1.33). Not with --no-catalog.")
     p.add_argument("--existing-descriptors", choices=EXISTING, default=None,
-                   help="With --catalog: where an existing album's eight descriptors come from (default "
-                        "table-novocals, the vocals descriptors dropped; see rmr_pipeline.catalog).")
+                   help="Where an existing album's eight descriptors come from (default "
+                        "table-novocals, the vocals descriptors dropped; see rmr_pipeline.catalog). Not with --no-catalog.")
     p.add_argument("--require-sprites", action="store_true",
-                   help="With --catalog: stop when catalog/covers.csv is missing, when a new album (or an existing one "
+                   help="Not with --no-catalog. Stop when catalog/covers.csv is missing, when a new album (or an existing one "
                         "whose Spotify link changed) has a cover in it and no sprite of that image in "
                         ".cache/covers/96 (python -m rmr_pipeline.covers sprites), or "
                         "when a sprite has no entry in the manifest (covers adopt). An album whose image the state "
@@ -74,18 +83,17 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                         "Needs an explicit --out so the committed albums.json keeps its extracted colours.")
     args = p.parse_args(argv)
     if args.catalog:
-        if args.out is None:
-            p.error("--catalog needs an explicit --out folder")
-        if args.out.resolve() == DEFAULT_OUT.resolve() or DEFAULT_OUT.resolve() in args.out.resolve().parents:
-            p.error(f"--catalog does not write into {DEFAULT_OUT}: switching the site to the catalog build needs "
-                    "the owner's go-ahead. Pass another --out folder")
-        args.audio_dir = args.audio_dir or STORES["effnet10k"]
         args.descriptor_weights = args.descriptor_weights or DEFAULT_WEIGHTS
         args.existing_descriptors = args.existing_descriptors or DEFAULT_EXISTING
     elif args.descriptor_weights or args.existing_descriptors or args.catalog_path != DEFAULT_CATALOG:
-        p.error("--catalog-path, --descriptor-weights and --existing-descriptors need --catalog")
+        p.error("--catalog-path, --descriptor-weights and --existing-descriptors need --catalog: not with --no-catalog")
     elif args.require_sprites:
-        p.error("--require-sprites needs --catalog")
+        p.error("--require-sprites needs --catalog: not with --no-catalog")
+    elif args.out is None:
+        p.error("--no-catalog needs an explicit --out folder")
+    elif args.out.resolve() == DEFAULT_OUT.resolve() or DEFAULT_OUT.resolve() in args.out.resolve().parents:
+        p.error(f"--no-catalog does not write into {DEFAULT_OUT}: the site's data is the catalog build's. "
+                "Pass another --out folder")
     args.audio_dir = args.audio_dir or site_store()
     args.hub_correction = tuple(s for s in args.hub_correction.split(",") if s)
     unknown = [s for s in args.hub_correction if s not in STOPS]
@@ -176,8 +184,8 @@ def ambient_colours(sprites: list, covers: list[str], uris: list[str], clusters:
 
 
 def sprite_titles(catalog: bool, titles: list[str]) -> list[str] | None:
-    """The titles the sheets' tiles are lettered from: the shown titles in a catalog build, None in the
-    default build, whose tiles stay flat (its sheets are the committed site's, byte for byte)."""
+    """The titles the sheets' tiles are lettered from: the shown titles in a catalog build, None in a
+    --no-catalog build, whose tiles stay flat (its sheets are the ones the site had before the switch)."""
     return titles if catalog else None
 
 
@@ -233,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
         slug_titles, slug_artists = cat.slug_titles, artists[:n_site] + cat.slug_artists[n_site:]
 
     # A catalog build keeps a new album's slug within slugs.MAX_SLUG_BYTES (a slug is a file name on the host);
-    # the site's albums, and every album of the default build, have the slugs they always had.
+    # the albums of the feature table, and every album of a --no-catalog build, have the slugs they always had.
     cap_from = n_site if args.catalog else None
     slugs = make_slugs(slug_titles, slug_artists, cap_from)  # overrides.json is keyed by these
     overrides = load_overrides(args.overrides)
@@ -251,6 +259,22 @@ def main(argv: list[str] | None = None) -> int:
               f"skipped): {', '.join(old.kept_map[:5])}{' ...' if len(old.kept_map) > 5 else ''}")
         for i, c in old.covers.items():
             cover_ids[i] = c
+        # The albums whose link opens another album and whose right id is not known: no Spotify link and no
+        # Spotify cover (the lettered tile, the fallback colours) until the sheet or overrides.json has the
+        # link. Before apply_overrides, so an override's `c` or `image` still holds.
+        try:
+            listed = load_unverified_links()
+        except CatalogError as e:
+            print(f"catalog: {e}", file=sys.stderr)
+            return 1
+        unverified = unverified_links(listed, keys, cat.legacy_ids, list(catalog["spotify_url"]), slugs, overrides)
+        for i in unverified.applied:
+            spotify_ids[i], cover_ids[i] = "", ""
+        print(f"unverified links: {len(unverified.applied)} of the {len(listed)} albums of catalog/unverified_links.csv "
+              "have no Spotify link and no Spotify cover (their link opens another album)"
+              + (f"; {len(unverified.stale)} row(s) no longer apply and can be deleted:" if unverified.stale else ""))
+        for line in unverified.stale:
+            print(f"  {line}")
         new_covers, new_images, waiting = new_album_covers(new_keys, n_site)
         new_images = {**old.images, **new_images}
         cover_ids = cover_ids + new_covers
@@ -328,7 +352,7 @@ def main(argv: list[str] | None = None) -> int:
     out = args.out
     if not args.skip_images:
         # A catalog build letters the tile of an album without a cover, as the album page does (96 such
-        # albums; flat squares on the map read as images that failed to load). The default build's are flat.
+        # albums; flat squares on the map read as images that failed to load). A --no-catalog build's are flat.
         lettered = sprite_titles(args.catalog, titles)
         sprites = load_album_sprites(src, uris, meta, covers, clusters, override_images, titles=lettered)
         small = tile_thumbs(uris, covers, clusters, override_images, lettered) if lettered is not None else None

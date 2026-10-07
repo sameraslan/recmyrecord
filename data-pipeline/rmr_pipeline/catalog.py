@@ -1,8 +1,8 @@
 """The catalog build's albums: every row of catalog/albums.csv as a frame the build can use.
 
-`python -m rmr_pipeline.build --catalog` builds the whole catalog table (key: `rym_id`) instead of the
-feature table's albums. The site's albums come first in the catalog, in the feature table's order, so
-album numbers and slugs stay what they are; the new albums follow.
+`python -m rmr_pipeline.build` builds the whole catalog table (key: `rym_id`), not only the feature
+table's albums (`--no-catalog`). The feature table's albums come first in the catalog, in the table's
+order, so album numbers and slugs stay what they are; the new albums follow.
 
 Every album is described by its first CATALOG_DESCRIPTORS (8) descriptors, weighted by their place among
 those eight (WEIGHT_PROFILES):
@@ -19,6 +19,7 @@ those eight (WEIGHT_PROFILES):
                       renamed a few). A name with no column is dropped and takes no place, like the gaps
                       the table has where the scrape met a name it did not know.
 """
+import csv
 import json
 import math
 import re
@@ -41,6 +42,10 @@ EXISTING = ("table", "table-novocals", "sheet")
 CATALOG_FIELDS = ("rym_id", "title", "artist", "title_latin", "artist_latin", "top_descriptors", "spotify_url",
                   "legacy_uri")
 SPOTIFY_URL_RE = re.compile(r"^https://open\.spotify\.com/album/([0-9A-Za-z]{22})(?:[/?#].*)?$")
+SPOTIFY_ID_RE = re.compile(r"^[0-9A-Za-z]{22}\Z")
+# The existing albums whose Spotify link opens another album and whose right id is not known (unverified_links).
+DEFAULT_UNVERIFIED = PIPELINE_DIR / "catalog" / "unverified_links.csv"
+UNVERIFIED_FIELDS = ("rym_id", "slug", "site_id", "opens", "note")
 CLUSTER_NEIGHBOURS = 5
 CHUNK = 1 << 22  # numbers per temporary array
 
@@ -59,8 +64,8 @@ WEIGHT_PROFILES = {
     "equal": _same_length([1.0] * CATALOG_DESCRIPTORS, _RANK),
     "slope": _same_length([1 - p / 14 for p in range(CATALOG_DESCRIPTORS)], _RANK),
 }
-# What `build --catalog` uses unless --descriptor-weights says otherwise (the owner's decision of 6 October
-# 2026: the weights are not equal; the gentle slope, to be confirmed against `rank`). catalog_frame's own
+# What the build uses unless --descriptor-weights says otherwise (the owner's decision of 6 October 2026:
+# the weights are not equal; the gentle slope, confirmed against `rank` the same day). catalog_frame's own
 # default stays `rank`, the feature table's.
 DEFAULT_WEIGHTS = "slope"
 # And for --existing-descriptors (the owner's decision of 6 October 2026: the three vocals descriptors are
@@ -344,6 +349,67 @@ def shared_spotify_lines(rows: list[dict]) -> list[str]:
     lines += [f"  {s}  " + "  |  ".join(f"{r['index']} {r['rym_id']} {r['artist']} - {r['title']} [{r['side']}]" for r in group)
               for s, group in by_id.items()]
     return lines
+
+
+@dataclass(frozen=True)
+class UnverifiedLinks:
+    """What unverified_links found. Album numbers are rows of the catalog."""
+    applied: list[int]  # the albums whose Spotify id and cover the build leaves empty
+    stale: list[str]  # the rows of the list that no longer apply, each with its reason
+
+
+def load_unverified_links(path: Path = DEFAULT_UNVERIFIED) -> list[dict[str, str]]:
+    """catalog/unverified_links.csv (UNVERIFIED_FIELDS), written by hand: the existing albums whose Spotify
+    link was found to open another album and whose right id nobody has looked up. A missing file means none."""
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            if reader.fieldnames != list(UNVERIFIED_FIELDS):
+                raise CatalogError(f"{path}: the header must be {','.join(UNVERIFIED_FIELDS)}")
+            rows = list(reader)
+    except FileNotFoundError:
+        return []
+    seen: set[str] = set()
+    for n, r in enumerate(rows, start=2):
+        if not r["rym_id"] or r["rym_id"] in seen:
+            raise CatalogError(f"{path} line {n}: empty or repeated rym_id {r['rym_id']!r}")
+        seen.add(r["rym_id"])
+        if not SPOTIFY_ID_RE.match(r["site_id"] or ""):
+            raise CatalogError(f"{path} line {n}: site_id {r['site_id']!r} is not a 22-character Spotify album id")
+    return rows
+
+
+def unverified_links(rows: list[dict[str, str]], keys: list[str], legacy_ids: list[str], sheet_urls: list[str],
+                     slugs: list[str], overrides: dict[str, dict[str, str]]) -> UnverifiedLinks:
+    """Which albums of the list (`rows`: load_unverified_links) the build leaves without a Spotify link and
+    without a Spotify cover (the owner was asked on 6 October 2026 and did not object): their link opens
+    another album, so the cover it gives is that album's too. `keys`, `legacy_ids`: CatalogAlbums'; `sheet_urls`:
+    the catalog's `spotify_url`; `slugs`: the slugs overrides.json is keyed by; `overrides`: load_overrides().
+
+    A row applies while nothing has said what the album's link is: the catalog still has the album under
+    that key and slug, its id is still the feature table's `site_id`, the sheet has no link for it, and
+    overrides.json sets no `s` for it. A sheet link or an override therefore wins, and the row is reported
+    as no longer applying (delete it then). An override that sets only `c` or `image` is applied after this
+    and keeps its cover."""
+    index = {k: i for i, k in enumerate(keys)}
+    applied, stale = [], []
+    for r in rows:
+        i = index.get(r["rym_id"])
+        if i is None:
+            why = "the catalog has no album with this key"
+        elif slugs[i] != r["slug"]:
+            why = f"the album's slug is {slugs[i]!r}"
+        elif sheet_urls[i]:
+            why = f"the sheet has a Spotify link for it ({sheet_urls[i]})"
+        elif "s" in overrides.get(slugs[i], {}):
+            why = "overrides.json sets its Spotify id"
+        elif legacy_ids[i] != r["site_id"]:
+            why = f"its id is {legacy_ids[i] or 'empty'}, not the one that was checked"
+        else:
+            applied.append(i)
+            continue
+        stale.append(f"{r['rym_id']} ({r['slug']}): {why}")
+    return UnverifiedLinks(applied, stale)
 
 
 def covers_table() -> Covers:

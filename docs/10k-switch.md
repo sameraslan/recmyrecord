@@ -1,8 +1,48 @@
 # Switching the site build to the 10k catalog: runbook
 
-6 October 2026. Branch `feat/audio-10k`, issue #37. Item 7 of `docs/10k-site-handoff.md`. Nothing here is done. Do none of it before Samer says yes: `SITE_MODEL`, `frontcreck/public/data/`, the site copy and the pinned tests stay as they are until then. Merging and deploying need a second yes.
+6 October 2026. Branch `feat/audio-10k`, issue #37. Item 7 of `docs/10k-site-handoff.md`. Written before the switch. Samer said yes the same day ("Let's just switch to 10k") and the pipeline side was done that evening: section 0 says what is done and what remains. The sections after it are the runbook as written, with a line "As done" where the work differed from it. Merging and deploying need a second yes.
 
-Line numbers are of the working tree of 6 October. `frontcreck/` was being edited that day, so check its numbers again. "Scratch build" below is `data-pipeline/.cache/site10k`, a catalog build of 6 October 11:01 (flags not recorded, cover fetch unfinished). Its numbers were read for this runbook and are not in any report: measure again on the final build.
+## 0. Status, 6 October 2026
+
+Done, in the working tree of `feat/audio-10k`, not committed by the session that did it:
+
+| Step | State |
+|---|---|
+| Section 3, the code change | Done. `SITE_MODEL = "effnet10k"`; the build is the catalog build by default and writes `frontcreck/public/data`; `--no-catalog` is kept, needs `--out` and refuses that folder; the descriptor defaults stay `slope` and `table-novocals`; `rmr_pipeline.audio fit` needs an explicit `--audio-dir`. |
+| A data rule added that day | Done. `data-pipeline/catalog/unverified_links.csv`: the 67 existing albums of section A of `docs/review/spotify-links-needs-owner.md` get no Spotify link and no Spotify cover (lettered tile, fallback colours, their other links as `l`). A sheet link or an `s` in `overrides.json` wins over a row; deleting a row undoes it. The owner was asked twice and did not object. |
+| Section 4, cover sprites | Checked: `covers adopt --dry-run` had nothing to adopt, `covers status` shows 22 sprites missing, all 22 failed for good. |
+| Section 4, step 2, the build | Done: `build --require-sprites --map-root <map>` into `frontcreck/public/data`, 95 s. `validate`: `{"albums": 10467, "vocab": 113, "no_cover": 163, "empty_descriptors": 96, "links": 719, "no_audio": 225}`. A rehearsal into a scratch folder gave the same bytes. The folder is 33 MB (13 MB before). The nine old files were overwritten in place; `atlas-4.webp` to `atlas-10.webp`, `thumbs-1.webp` and `thumbs-2.webp` are new; nothing was left over to remove. |
+| Section 4, step 3, the reference | Done: `tests/fixtures/catalog_audio_reference.npz` (3.0 MB, 10,467 albums, 10,242 with audio). `tests/fixtures/audio_reference.npz` is unchanged. |
+| Section 4, step 4, the pipeline pins | Done: `pytest tests` and the audio env's `pytest tests_audio` pass (section 5 has what each pin became). |
+| `data-pipeline/README.md` | Updated. |
+
+Not done:
+
+| Step | Who |
+|---|---|
+| The frontend pins of section 5 (`frontcreck/src`, `frontcreck/e2e`): they fail against the new `public/data` until re-pinned | the frontend session |
+| The copy of section 5 ("4,000+", the How it works paragraphs, the footer line about Spotify, the README lines) | the frontend session, each string approved by Samer |
+| Section 6: `npm` checks, the perf budgets, the time of the static build of 10,467 pages, the look by eye on a preview | the frontend session |
+| `frontcreck/public/data-10k` (a symlink into `data-pipeline/.cache/site10k`, ignored by git) is still there | remove it when the frontend no longer builds with `RMR_DATA_DIR` |
+| Commit, PR, merge, deploy | Samer; merge and deploy need his second yes |
+| Section 8: what happens to `audio/` and `audio/clap/` | Samer. Both are in place and unchanged |
+
+The final data against the data it replaced, for the 4,081 existing albums: kept of 10 per album, 2.96 at sonic, 2.88 at balanced, 2.03 at mood; 99%, 98% and 99% of the lists hold a new album. 1,204 existing albums changed their Spotify id and cover (1,137 by the sheet's link, 67 by the unverified list); no title, artist or slug changed. Albums without audio: 39 existing, 186 new. Covers: Spotify 9,616, YouTube 341, Bandcamp 192, Apple 102, Deezer 53, none 163 (93 new, 67 unverified, 3 with no Spotify release). No Spotify id: 844 albums (774 new, 70 existing); 719 of them have `l` (YouTube 609, Bandcamp 285, Apple Music 122, SoundCloud 108, Deezer 30), 125 have no link (79 new, 46 existing).
+
+In Rainbows' first five: sonic Charm, Circles, Ruby Blue, Mundo civilizado, This Old Dog; balanced 0, A Moon Shaped Pool, Bon Iver, Bon Iver, No Shape, Circles; mood Glitter, Have You in My Wilderness, Carrie & Lowell Live, Bon Iver, Bon Iver, Takk....
+
+Where this runbook was wrong or incomplete:
+
+- Section 1 and section 5 give In Rainbows' mood five of the scratch build (Glitter, Takk..., Have You in My Wilderness, Carrie & Lowell Live, 0). The final build's are above.
+- Section 1: 719 albums with `l` and 125 with no link, not 696 and 81: the 67 unverified albums have no Spotify id now.
+- Section 2: the folder is 33 MB, not 36. The copies `tests/test_validate.py` makes are now removed after each passed test (`pytest.ini`: `tmp_path_retention_policy = failed`), so a run needs tens of megabytes, not 5 GB.
+- Section 5 missed `tests/test_slugs.py:130` and `:141` (the site has 4,081 albums; the longest slug of the whole site is 151 bytes).
+- Section 5, `tests/test_outputs.py:86-99`: not only the last album. The test looked the map sprite up by `albums[i]["s"]`, which for album 0 (OK Computer) is now the sheet's id, not the map's URI, and that album shows another release's cover.
+- Section 5, `tests/test_build_catalog.py:192-201`: the lines that use `site_store()` are the test of the explicit keys, `:322-331` in the tree of that day.
+- Section 5, frontend: `e2e/flows.spec.ts:147` is not only stale wording. Spiritual Unity has a cover id now (its link changed), so its tile check fails; an album of `unverified_links.csv` (Live at the Fillmore East, album 224) has none.
+- Section 3 did not say that `build`'s slug check now covers the new albums: it compares with the committed `albums.json`, which has all 10,467 since the switch.
+
+Line numbers below are of the working tree of 6 October. `frontcreck/` was being edited that day, so check its numbers again. "Scratch build" below is `data-pipeline/.cache/site10k`, a catalog build of 6 October 11:01 (flags not recorded, cover fetch unfinished). Its numbers were read for this runbook and are not in any report: measure again on the final build.
 
 ## 1. What changes for a visitor
 
@@ -49,6 +89,8 @@ State:
 
 ## 3. The code change (smallest honest one)
 
+As done: as below. `--no-catalog` without `--audio-dir` reads the store of `SITE_MODEL` like any build, so the data of before the switch is `--no-catalog --audio-dir audio`. `rmr_pipeline.audio status` without `--audio-dir` reads `effnet10k` and lists the feature table's albums a `--no-catalog` build on it would impute (39).
+
 `SITE_MODEL` means "the store the site build reads" and the default build means "the site". Both have to stay true.
 
 ```
@@ -67,6 +109,8 @@ rmr_pipeline/audio.py:324           `fit` and `status` without --audio-dir now r
 - `audio.py:324`: `python -m rmr_pipeline.audio fit` refits on the feature table's albums. After the switch it would overwrite `audio/effnet10k/transform.npz` with a fit on 4,081 albums. The right command is `fit-catalog --audio-dir audio/effnet10k`.
 
 ## 4. Steps, in order
+
+As done: steps 1 to 4 on 6 October 2026 (section 0). Step 5 and the commits are open.
 
 All from `data-pipeline/`, one heavy job at a time.
 
@@ -94,7 +138,9 @@ nice -n 19 .venv-audio/bin/python -m pytest tests_audio
 
 "Hand": the new value is a decision. "Data": read it from the built files or the code, never type it.
 
-**Pipeline** (`data-pipeline/`):
+**Pipeline** (`data-pipeline/`). As done, 6 October 2026: every row below, as its last column says, with these differences. `tests/test_outputs.py:45-53` pins the final build's five titles in the test (`IN_RAINBOWS_MOOD`), recorded from the data and not a list the owner has seen; `tests/test_recommender.py` keeps the old live replica and the old five for the feature table's albums on `audio/`. `tests/test_outputs.py:39-42` recomputes the vocabulary and every album's `d` with `build_vocab` on the catalog frame, and `n` from the store. `tests/test_outputs.py:86-99` takes the first and the last existing album whose id is still the feature table's, and In Rainbows; a new test compares new and relinked albums' cells with their sprites of `.cache/covers/96`. `tests/conftest.py` got `catalog_albums`, `catalog_audio` and `catalog_recs`. Also re-pinned: `tests/test_slugs.py:130`, `:141`. New: `tests/test_unverified_links.py`, a test of the unverified albums in the built data and in the committed data, and a test that `fit` without `--audio-dir` writes nothing.
+
+**Pipeline, as written:**
 
 | Where | Pins | How | Becomes |
 |---|---|---|---|
@@ -116,7 +162,7 @@ nice -n 19 .venv-audio/bin/python -m pytest tests_audio
 
 If `conftest.py` keeps following `site_store()` instead, these fail (seen in a simulated run): `tests/test_rekey.py:58-63` and `tests/test_audio.py:82-91`, `:94-105`, `:116-126`, `:129`, `:221-232`, `:235-257`. They compare the fixture with `audio/` and the experiment's transform, so pinning the fixture is the smaller change. `tests/test_vocab.py` keeps passing: its 114 words are the feature table's, no longer the site's.
 
-**Frontend** (`frontcreck/`; read against the scratch build, not run):
+**Frontend** (`frontcreck/`; read against the scratch build, not run). Not done. Against the final data: In Rainbows has seven tags (`ethereal` last); its mood five are in section 0; Chill Out has `l` (`yt`, `sc`); Gimix and Dark & Long have no `s` and no `l`; `albumWhoseFirstRecHasNoSpotify('balanced')` first meets Illinois, whose first row (Eureka) has `l`, then Magical Mystery Tour, whose first row (Strawberry Fields Forever, an unverified album) has none; Spiritual Unity has a cover id (see section 0).
 
 | Where | Pins | How | Becomes |
 |---|---|---|---|
@@ -157,6 +203,8 @@ If `conftest.py` keeps following `site_store()` instead, these fail (seen in a s
 - A change to `audio/` (section 8) is a separate revert. Keep it out of the switch PR.
 
 ## 8. `data-pipeline/audio/` and `audio/clap/` afterwards (owner's decision)
+
+Still open on 6 October 2026 after the switch: both are in place and unchanged, and the tests of `audio/` (`tests/test_rekey.py`, `tests/test_audio.py`, the `audio` and `site_recs` fixtures) read it by name.
 
 `audio/` cannot simply go. `keys.csv`, `matches.csv`, `match_overrides.json`, `fulllength.csv`, `fulllength_links.csv` and `album_status.*` live there and are shared by the inner stores; `audio/effnet10k/` is a folder inside it; `audio/transform.npz` gives `fit-catalog` its target variance (`rmr_pipeline/audio.py:270`, `:305`; `tests/test_modelstore.py:426`, `:452`); `rmr_audio sync`, `status` and `compact` work on `audio/embeddings/`; the old reference, `tests/test_rekey.py`, most of `tests/test_audio.py`, `tests/test_audio_store.py:217-270` and `experiments/top8_descriptors/measure.py` read its embeddings.
 

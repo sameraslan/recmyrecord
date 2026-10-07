@@ -1,5 +1,7 @@
 # The 10k catalog on the site: handoff, 6 October 2026
 
+**Note of 6 October 2026, later that day.** Items 1 to 7 below are done in the pipeline: the owner gave the go-ahead ("Let's just switch to 10k"), `SITE_MODEL` is `effnet10k`, and `frontcreck/public/data` holds the 10,467 albums. The rule at the end of the next paragraph ("do not change `frontcreck/public/data/`, site copy or `SITE_MODEL` without it") was lifted for the data and `SITE_MODEL` by that go-ahead; site copy still needs his approval string by string, and merging and deploying a second yes. `docs/10k-switch.md`, section 0, has what was done and what remains (frontend pins, site copy, merge and deploy). `audio/` is no longer what the site data is built from; it and `audio/clap/` are still in place.
+
 For the session that takes the 10k catalog from "audio is ready" to "on the real map". The audio work is finished and recorded in `docs/audio-10k-status.md`, `docs/audio-10k-handoff.md` and `experiments/audio_10k/REPORT.md`. Branch `feat/audio-10k`, draft PR #31 (stacked on #26, on #25). Tracking issue #37; site gaps #39; descriptors #40; no-audio albums #41. Never merge or deploy without Samer's go-ahead, and do not change `frontcreck/public/data/`, site copy or `SITE_MODEL` without it.
 
 ## Decided by Samer

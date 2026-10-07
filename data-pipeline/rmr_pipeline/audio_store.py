@@ -2,12 +2,13 @@
 shards, a manifest, the match provenance and the hand corrections of matches.
 
 A store holds one model's embeddings. The manifest names the model and its width (`dim`); nothing here
-assumes a width. data-pipeline/audio/ is the Discogs-EffNet store (1,280 numbers per album) and
+assumes a width. data-pipeline/audio/ is the first Discogs-EffNet store (1,280 numbers per album; the
+feature table's albums at up to eight clips, what the site was built from until 6 October 2026) and
 data-pipeline/audio/clap/ the CLAP one (512; written by rmr_audio.modelstore), with its own embeddings/,
 manifest.json and transform.npz. data-pipeline/audio/effnet10k/ is Discogs-EffNet again, for the whole 10k
-catalog at four clips (written by rmr_audio.modelstore too). A store inside another shares the outer one's
-keys.csv, matches.csv and match_overrides.json (keys_csv). STORES names them and SITE_MODEL says which one
-the site build reads.
+catalog at four clips (written by rmr_audio.modelstore too): the store the site is built from. A store
+inside another shares the outer one's keys.csv, matches.csv and match_overrides.json (keys_csv). STORES
+names them and SITE_MODEL says which one the site build reads.
 
 Written by the audio stage, read by the build. Only numpy and the standard library, and nothing
 newer than numpy 1.26, so the audio venv (Python 3.11, numpy<2) and the build venv share it.
@@ -43,11 +44,12 @@ import numpy as np
 DEFAULT_AUDIO = Path(__file__).resolve().parents[1] / "audio"
 DIM = 1280  # Discogs-EffNet's width: what a manifest without `dim` means, and init_store's default
 # One store per embedding model. SITE_MODEL is the switch: the store rmr_pipeline.build (and
-# `rmr_pipeline.audio status`) read when no --audio-dir is given. It stays "effnet" until the owner signs
-# off on another store; changing it changes the site's data at the next build, nothing before that.
-# "effnet10k" is the 10k catalog's EffNet store (the owner's choice over CLAP, 5 October 2026).
+# `rmr_pipeline.audio status`) read when no --audio-dir is given. Changing it changes the site's data at
+# the next build, nothing before that, and needs the owner's sign-off.
+# "effnet10k" is the 10k catalog's EffNet store (the owner's choice over CLAP, 5 October 2026), and the
+# site's since the owner's go-ahead of 6 October 2026 ("effnet", data-pipeline/audio, until then).
 STORES = {"effnet": DEFAULT_AUDIO, "clap": DEFAULT_AUDIO / "clap", "effnet10k": DEFAULT_AUDIO / "effnet10k"}
-SITE_MODEL = "effnet"
+SITE_MODEL = "effnet10k"
 SHARD_RE = re.compile(r"^part-(\d{4})\.npz$")
 # deezer and itunes:<storefront> are store previews; local, youtube and bandcamp are 30-second windows of
 # full-length audio (the owner's files; rmr_audio.fulllength), which is never kept

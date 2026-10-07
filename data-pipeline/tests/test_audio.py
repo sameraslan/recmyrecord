@@ -295,9 +295,29 @@ def test_a_store_without_its_keys_fails_clearly(deduped, audio, tmp_path):
 
 def test_status_lists_the_imputed_albums(deduped, audio, capsys):
     sub, _ = deduped
-    assert main(["status"]) == 0
+    assert main(["status", "--audio-dir", str(DEFAULT_AUDIO)]) == 0  # the `audio` fixture's store
     out = capsys.readouterr().out.splitlines()
     assert out[0] == audio.summary()
     keys = album_keys(sub)
     assert out[1:] == [f"imputed\t{keys[i]}\t{sub.loc[i, 'Title']}\t{clean_artist(str(sub.loc[i, 'Artist']))}"
                        for i in np.flatnonzero(~audio.has_audio)]
+
+
+def test_status_reads_the_sites_store_and_fit_needs_a_store_named(capsys, monkeypatch):
+    """`status` follows audio_store.SITE_MODEL. `fit` writes a transform from the feature table's albums alone,
+    so it has no default: on the site's store it would replace the transform fitted on the whole catalog."""
+    import rmr_pipeline.audio as audio_module
+    from rmr_pipeline.audio_store import STORES, site_store
+
+    assert main(["status"]) == 0
+    first = capsys.readouterr().out.splitlines()[0]
+    assert site_store() == STORES["effnet10k"]
+    assert first.endswith(f"on {load_transform(site_store() / 'transform.npz').albums} albums")
+    written = []
+    monkeypatch.setattr(audio_module, "save_transform", lambda path, t: written.append(path))
+    with pytest.raises(SystemExit):
+        main(["fit"])
+    assert "fit needs an explicit --audio-dir" in capsys.readouterr().err and written == []
+    before = (STORES["effnet10k"] / "transform.npz").read_bytes()
+    assert main(["fit", "--audio-dir", str(DEFAULT_AUDIO)]) == 0  # named: it fits (the write is caught above)
+    assert written == [DEFAULT_AUDIO / "transform.npz"] and (STORES["effnet10k"] / "transform.npz").read_bytes() == before

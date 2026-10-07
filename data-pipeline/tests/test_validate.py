@@ -1,9 +1,10 @@
 import json
 import shutil
+from math import ceil
 
 import pytest
 
-from rmr_pipeline.constants import DEFAULT_OUT
+from rmr_pipeline.constants import ATLAS_PER_SHEET, DEFAULT_OUT
 from rmr_pipeline.validate import ContractError, main, validate_dir
 
 
@@ -21,8 +22,10 @@ def test_stray_atlas_name_is_a_contract_error(out):
 
 
 def test_extra_numbered_atlas_is_a_contract_error(out):
-    shutil.copy(out / "atlas-0.webp", out / "atlas-4.webp")
-    with pytest.raises(ContractError, match="atlas-4.webp"):
+    extra = f"atlas-{ceil(len(_read(out, 'albums.json')) / ATLAS_PER_SHEET)}.webp"  # the first number not in use
+    assert not (out / extra).exists() and (out / "atlas-10.webp").exists()  # (atlas-4.webp, until the 10k catalog)
+    shutil.copy(out / "atlas-0.webp", out / extra)
+    with pytest.raises(ContractError, match=extra):
         validate_dir(out)
 
 
@@ -84,6 +87,8 @@ def _edit(out, i, **fields):
 
 
 def test_the_catalog_fields_pass(out):
+    before = _read(out, "albums.json")
+    assert all(a["s"] and "l" not in a and "n" not in a for a in (before[7], before[20], before[30]))
     _make_mood_only(out, 7)
     _edit(out, 20, s="", l={"am": "us/1097861387", "bc": "magdalenabay.bandcamp.com/album/imaginal-disk",
                              "dz": "14879699", "yt": "zdPCt5ZEf40", "sc": "radiohead/sets/ok-computer-3"})
@@ -96,10 +101,29 @@ def test_the_catalog_fields_pass(out):
     _edit(out, 42, c="bc:2980782782")
     _edit(out, 43, c="yt:mnjH-ZYe59c")
     summary = validate_dir(out, images=False)
-    assert (summary["albums"], summary["links"], summary["no_audio"]) == (4081, 2, 2)
+    # the data's own counts and the two albums with `l` (20, 30) and with `n` (7, 30) made above
+    # ((4081, 2, 2) while the site's data had neither field)
+    assert (summary["albums"], summary["links"], summary["no_audio"]) == (
+        len(before), sum("l" in a for a in before) + 2, sum("n" in a for a in before) + 2)
 
 
-def test_the_summary_of_the_site_data_has_no_catalog_counts(out):
+def test_the_summary_of_the_site_data_has_the_catalog_counts(out):
+    """The site's data is a catalog build's since the switch to the 10k catalog; before it the summary had
+    neither `links` nor `no_audio`, and a folder with no `l` and no `n` still has neither."""
+    albums = _read(out, "albums.json")
+    summary = validate_dir(out, images=False)
+    assert sorted(summary) == ["albums", "empty_descriptors", "links", "no_audio", "no_cover", "vocab"]
+    assert (summary["links"], summary["no_audio"]) == (sum("l" in a for a in albums), sum("n" in a for a in albums))
+    assert summary["links"] > 0 and summary["no_audio"] > 0
+    recs = _read(out, "recs.json")
+    for a in albums:
+        a.pop("l", None), a.pop("n", None)
+    quiet = [i for i, row in enumerate(recs["sonic"]) if not row]
+    for stop in ("sonic", "balanced"):
+        for i in quiet:
+            recs[stop][i] = recs["mood"][i]
+    _write(out, "albums.json", albums)
+    _write(out, "recs.json", recs)
     assert sorted(validate_dir(out, images=False)) == ["albums", "empty_descriptors", "no_cover", "vocab"]
 
 
