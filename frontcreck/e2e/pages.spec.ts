@@ -707,6 +707,16 @@ test('Home shows the nebula nearly as bright as the map does: only the veil dims
     // Home's cells were 126.8 there, which is 0.66. The bound is the veil less 0.03 for rounding and the stars,
     // which are dealt afresh on each load. (While the map had region names their dark halos lay on these cells
     // of the map and not of Home, which read as 0.989; the bound was 0.9 then.)
+    // Two-sided: above the veil's 0.90 by as much would mean the veil had gone or thinned.
     expect(mean(onHome) / mean(onMap), `${size.width} x ${size.height}`).toBeGreaterThanOrEqual(0.87);
+    expect(mean(onHome) / mean(onMap), `${size.width} x ${size.height}`).toBeLessThanOrEqual(0.93);
+    // Without the veil the same cells are the gas itself, which must be at the map's strength. This pins the gas
+    // apart from the veil: a gas dimmed by a tenth under a missing veil would pass the bounds above.
+    // Measured 0.996, 0.998 and 0.991 at the three sizes (the stars are fainter on Home, hence not quite 1).
+    await page.addStyleTag({ content: '.map-pane .veil { visibility: hidden !important; }' });
+    await expect(page.locator('.map-pane .veil')).toBeHidden();
+    const bare = await cells();
+    console.log(`nebula on Home without the veil at ${size.width} x ${size.height}: ${mean(bare).toFixed(1)} / ${mean(onMap).toFixed(1)} = ${(mean(bare) / mean(onMap)).toFixed(3)}`);
+    expect(mean(bare) / mean(onMap), `${size.width} x ${size.height}, veil hidden`).toBeGreaterThanOrEqual(0.97);
   }
 });
