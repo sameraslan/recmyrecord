@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { albumSpread, camera, coversSettled, isPhone, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap, waitForMapQuiet, wholeMapMiss } from './helpers';
+import { albumSpread, camera, coversSettled, isPhone, mapFrames, shot, twinkleOff, visibleAlbumPoint, waitForCameraIdle, waitForGasSharpSettled, waitForMap, waitForMapQuiet, wholeMapMiss } from './helpers';
 
 test('the map is a lazily loaded WebGL canvas that renders on demand', async ({ page }, info) => {
   const atlasRequests: string[] = [];
@@ -79,8 +79,109 @@ test('zoom buttons work', async ({ page }, info) => {
   expect(Math.hypot(again.x - whole.x, again.y - whole.y) + Math.abs(again.zoom - whole.zoom)).toBeLessThan(1e-6);
 });
 
+test('the zoom corner is one closed stack of three buttons: zoom in, zoom out, whole map, and nothing above them', async ({ page, isMobile }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  const side = isMobile ? 44 : 40;
+  const corner = page.locator('.map-zoom');
+  await expect(corner.locator('> *')).toHaveCount(3);
+  expect(await corner.locator('button').evaluateAll((els) => els.map((e) => e.getAttribute('aria-label')))).toEqual([COPY.map.zoomIn, COPY.map.zoomOut, COPY.map.reset]);
+  const boxes = await corner.locator('button').evaluateAll((els) => els.map((e) => e.getBoundingClientRect()).map((r) => ({ x: r.x, y: r.y, w: r.width, h: r.height })));
+  for (const b of boxes) expect([b.w, b.h]).toEqual([side, side]);
+  // Each starts where the one above it ends, and the corner is exactly the three of them tall.
+  for (let i = 1; i < boxes.length; i++) expect(boxes[i].y - (boxes[i - 1].y + boxes[i - 1].h)).toBeCloseTo(0, 1);
+  const box = (await corner.boundingBox())!;
+  expect(box.y).toBeCloseTo(boxes[0].y, 1);
+  expect(box.height).toBeCloseTo(3 * side, 1);
+});
+
 test.describe('desktop pointer', () => {
   test.skip(({ isMobile }) => isMobile, 'desktop only');
+
+  test('a pointer move over empty map draws one frame, a move onto an album at most three, and neither touches the zoom corner', async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto('/map');
+    await waitForMap(page);
+    await waitForCameraIdle(page);
+    // The sharper gas image may fade in about a second after the map settles, and a glint is a timer: neither
+    // may draw or write while the moves are counted.
+    await waitForGasSharpSettled(page);
+    await twinkleOff(page);
+    // Twenty albums across the map, clear of the controls, and twenty-one points with no album within 12 px.
+    const albums = await page.evaluate(() => {
+      const api = window.__rmr!.map!;
+      const out: { x: number; y: number }[] = [];
+      for (let id = 0; out.length < 20; id += 37) {
+        const p = api.screenPoint(id);
+        if (!p) break;
+        if (p.x < 320 || p.y < 240 || p.x > innerWidth - 140 || p.y > innerHeight - 140) continue;
+        if (document.elementFromPoint(p.x, p.y)?.classList.contains('map-canvas')) out.push({ x: Math.round(p.x), y: Math.round(p.y) });
+      }
+      return out;
+    });
+    expect(albums.length).toBe(20);
+    const free = await page.evaluate(() => {
+      const api = window.__rmr!.map!;
+      const pts: { x: number; y: number }[] = [];
+      for (let id = 0; ; id++) {
+        const p = api.screenPoint(id);
+        if (!p) break;
+        pts.push(p);
+      }
+      const open: { x: number; y: number; d: number }[] = [];
+      for (let y = 220; y <= innerHeight - 220; y += 10) {
+        for (let x = 320; x <= innerWidth - 320; x += 10) {
+          let d = Infinity;
+          for (const p of pts) {
+            d = Math.min(d, Math.max(Math.abs(p.x - x), Math.abs(p.y - y)));
+            if (d < 12) break;
+          }
+          if (d >= 12 && document.elementFromPoint(x, y)?.classList.contains('map-canvas')) open.push({ x, y, d });
+        }
+      }
+      open.sort((p, q) => q.d - p.d || p.y - q.y || p.x - q.x);
+      const out: { x: number; y: number }[] = [];
+      for (const f of open) {
+        if (out.length >= 21) break;
+        if (out.every((o) => Math.max(Math.abs(o.x - f.x), Math.abs(o.y - f.y)) >= 40)) out.push({ x: f.x, y: f.y });
+      }
+      return out;
+    });
+    expect(free.length, 'points with no album within 12 px').toBe(21);
+    /** Walks a path, one move at a time, each left to settle: the frames each move drew, and after how many of
+     * the moves an album was hovered (the canvas shows the pointer cursor). */
+    const walk = async (path: { x: number; y: number }[]): Promise<{ frames: number[]; hovers: number }> => {
+      // From a point that hovers nothing, so the first move ends no hover either.
+      await page.mouse.move(free[20].x, free[20].y);
+      await waitForMapQuiet(page, 200);
+      const frames: number[] = [];
+      let hovers = 0;
+      for (const p of path) {
+        const f = await mapFrames(page);
+        await page.mouse.move(p.x, p.y);
+        await waitForMapQuiet(page, 200, { since: f });
+        frames.push((await mapFrames(page)) - f);
+        if (await page.evaluate(() => document.querySelector<HTMLCanvasElement>('canvas.map-canvas')!.style.cursor === 'pointer')) hovers += 1;
+      }
+      return { frames, hovers };
+    };
+    await page.evaluate(() => {
+      const w = window as unknown as { __cornerChanges: number };
+      w.__cornerChanges = 0;
+      new MutationObserver((r) => (w.__cornerChanges += r.length)).observe(document.querySelector('.map-zoom')!, { subtree: true, childList: true, attributes: true, characterData: true });
+    });
+    // Over albums the hover changes with every move. How many frames a hover draws depends on whether its 80 ms
+    // label timer falls into a frame already asked for, so those are bounded: the move, the change of hover, the label.
+    const over = await walk(albums);
+    expect(over.hovers, 'moves that ended on an album').toBeGreaterThan(5);
+    for (const n of over.frames) expect(n, `frames for a move onto an album (${over.frames.join(', ')})`).toBeLessThanOrEqual(3);
+    // Over empty map a move changes no hover: one frame, the pointer's.
+    const empty = await walk(free.slice(0, 20));
+    expect(empty.hovers, 'moves over empty map that hovered an album').toBe(0);
+    expect(empty.frames, 'frames per pointer move over empty map').toEqual(free.slice(0, 20).map(() => 1));
+    expect(await page.evaluate(() => (window as unknown as { __cornerChanges: number }).__cornerChanges), 'changes in the zoom corner over 40 pointer moves').toBe(0);
+  });
 
   test('hover shows a label, drag pans, wheel zooms, click selects and flies', async ({ page }, info) => {
     await page.goto('/map');

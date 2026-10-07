@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { EMBER_RGB, FRAME_RGB, GAS_LUM_MAX, NAMES_BAND_PX, NEUTRAL_RGB, SKY_RGB, STAR_WHITE } from "../theme";
+import { EMBER_RGB, FRAME_RGB, GAS_LUM_MAX, GAS_BAND_FULL_PX, NEUTRAL_RGB, SKY_RGB, STAR_WHITE } from "../theme";
 import {
   GAS_BAND_COVERS_PX,
   GAS_BAND_MID_PX,
@@ -70,7 +70,7 @@ describe("theme constants the three parts share", () => {
     expect(NEUTRAL_RGB).toEqual([138, 138, 146]);
     expect(STAR_WHITE).toEqual([255, 250, 244]);
     expect(FRAME_RGB).toEqual([241, 236, 228]);
-    expect(NAMES_BAND_PX).toBe(13);
+    expect(GAS_BAND_FULL_PX).toBe(13);
     expect(GAS_LUM_MAX).toBe(0.6);
   });
 
@@ -82,7 +82,7 @@ describe("theme constants the three parts share", () => {
 
 describe("gasCurve and gasDust (zoom bands by cover size)", () => {
   it("has the prototype's bands and deep zoom numbers", () => {
-    expect([NAMES_BAND_PX, GAS_BAND_MID_PX, GAS_BAND_COVERS_PX, GAS_DEEP_END_PX]).toEqual([13, 22, 32, 56]);
+    expect([GAS_BAND_FULL_PX, GAS_BAND_MID_PX, GAS_BAND_COVERS_PX, GAS_DEEP_END_PX]).toEqual([13, 22, 32, 56]);
     expect(GAS_DEEP_FLOOR).toBe(0.06);
     expect(GAS_DEEP_DESAT).toBe(0.35);
     // the prototype's mip levels 4.5 and 6 of its 4096 px bake of the whole square
@@ -100,7 +100,7 @@ describe("gasCurve and gasDust (zoom bands by cover size)", () => {
     expect(gasLodBias(700, 1.6)).toBeCloseTo(Math.log2(700 / 1280), 12);
   });
 
-  it("keeps the gas at full strength while names show, then yields to the covers", () => {
+  it("keeps the gas at full strength while covers are dots, then yields to the covers", () => {
     expect(gasCurve(5)).toEqual({ strength: 1, deep: 0 });
     expect(gasCurve(12.99)).toEqual({ strength: 1, deep: 0 });
     expect(gasCurve(17.5).strength).toBeCloseTo(0.8, 10);

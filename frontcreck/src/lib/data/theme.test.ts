@@ -4,7 +4,6 @@ import { DataLoadError, resetDataCache } from './client';
 import { THEME_URL, isTheme, loadTheme, peekTheme, themeFor, type ThemeData } from './theme';
 import { useThemeLoad } from './useData';
 
-const LABEL = { id: 'live', name: 'The Live Belt', x: -0.236, y: 0.883, strong: true, n: 174, p: 2.1772, rgb: [255, 236, 224] as [number, number, number], lum: 0.31 };
 const STOP_GAS = { rect: [-1.4, -1.4, 1.1, 1.4] as [number, number, number, number], px: [1829, 2048] as [number, number], sharp: [3200, 3584] as [number, number], hash: ['0123456789', 'abcdef0123'] as [string, string] };
 const THEME: ThemeData = {
   v: 3,
@@ -13,7 +12,6 @@ const THEME: ThemeData = {
   bakeHalf: 1.6,
   gas: { sonic: STOP_GAS, balanced: STOP_GAS, mood: STOP_GAS },
   stars: { lead: [0, -1], bg: [10, 20, 30, 40, 50, 255] },
-  labels: { sonic: [], balanced: [LABEL], mood: [] },
 };
 
 const serve = (body: unknown, status = 200) => vi.fn(async () => new Response(JSON.stringify(body), { status }));
@@ -27,12 +25,6 @@ afterEach(() => {
 describe('isTheme', () => {
   it('accepts the shape the theme build writes', () => {
     expect(isTheme(THEME)).toBe(true);
-  });
-
-  it('accepts labels with the wider measurement, and labels of an older bake without it', () => {
-    expect(isTheme({ ...THEME, labels: { ...THEME.labels, mood: [{ ...LABEL, lumWide: 0.42 }] } })).toBe(true);
-    expect('lumWide' in LABEL).toBe(false);
-    expect(isTheme({ ...THEME, labels: { ...THEME.labels, mood: [LABEL] } })).toBe(true);
   });
 
   it.each([
@@ -55,8 +47,6 @@ describe('isTheme', () => {
     ['a lead family out of range', { ...THEME, stars: { ...THEME.stars, lead: [0, 5] } }],
     ['a luminance list that is not three per album', { ...THEME, stars: { ...THEME.stars, bg: [1, 2, 3] } }],
     ['a luminance that is not a byte', { ...THEME, stars: { ...THEME.stars, bg: [10, 20, 30, 40, 50, 256] } }],
-    ['a missing stop', { ...THEME, labels: { sonic: [], balanced: [LABEL] } }],
-    ['a label without its ink', { ...THEME, labels: { ...THEME.labels, mood: [{ ...LABEL, rgb: [255, 236] }] } }],
     ['no bake size', { ...THEME, bakeHalf: 0 }],
   ])('rejects %s', (_, value) => {
     expect(isTheme(value)).toBe(false);

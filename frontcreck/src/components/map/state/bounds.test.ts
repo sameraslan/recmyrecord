@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { buildMapData, type MapData } from "../data";
-import { NAMES_BAND_PX } from "../theme";
+import { GAS_BAND_FULL_PX } from "../theme";
 import {
   OVERVIEW_COVER_MAX_PX,
   OVERVIEW_SIDE_PAD_PX,
@@ -309,8 +309,8 @@ describe("fitOverview (prototype Cam.fitOverview, camera.js L27-34)", () => {
     expect(OVERVIEW_SIDE_PAD_PX).toBe(24);
   });
 
-  it("is capped at 12.5 px covers, half a pixel under the names band", () => {
-    expect(OVERVIEW_COVER_MAX_PX).toBe(NAMES_BAND_PX - 0.5);
+  it("is capped at 12.5 px covers, half a pixel under the full gas band", () => {
+    expect(OVERVIEW_COVER_MAX_PX).toBe(GAS_BAND_FULL_PX - 0.5);
     expect(OVERVIEW_COVER_MAX_PX).toBe(12.5);
     const narrow = { x1: -0.1, x99: 0.1, medY: 0 }; // (1440 - 48) / 0.2 = 6960 px per world unit wanted
     const v = fitOverview(narrow, zoomForPxPerWorld(500, 836), area);
@@ -391,7 +391,7 @@ describe("the Overview on the real map (Task 0's recorded scales)", () => {
         expect(pxPerWorld(whole.zoom, c.height)).toBeCloseTo(c.whole[stop], 2);
         const ov = overviewView(data, t, { width: c.width, height: c.height, insetLeft: 0, insetTop: 0, bottomCover: c.cover }, whole.zoom);
         expect(pxPerWorld(ov.zoom, c.height)).toBeCloseTo(c.overview[stop], 2);
-        // Covers stay dots and names show: under 13 px everywhere, at most 12.5.
+        // Covers stay dots and the gas is full: under 13 px everywhere, at most 12.5.
         expect(pxPerWorld(ov.zoom, c.height) * COVER_WORLD).toBeLessThanOrEqual(12.5 + 1e-9);
       });
     }

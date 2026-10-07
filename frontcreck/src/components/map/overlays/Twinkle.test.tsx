@@ -95,7 +95,7 @@ describe('the glass surfaces a glint keeps clear of (glassRects)', () => {
         <div class="tw-layer"></div>
         <div class="mode panel"></div>
         <div class="card panel"></div>
-        <div class="map-zoom"><button class="map-names"></button><button id="in"></button><button id="out"></button></div>
+        <div class="map-zoom"><button id="in"></button><button id="out"></button></div>
         <div class="map-msg"></div>
         <p class="map-hint"></p>
         <div class="map-tip"></div>
@@ -106,7 +106,6 @@ describe('the glass surfaces a glint keeps clear of (glassRects)', () => {
     boxed(root.querySelector('.album')!, 0, 64, 420, 656);
     boxed(root.querySelector('.mode')!, 440, 84, 244, 130);
     boxed(root.querySelector('.card')!, 0, 0, 0, 0); // not laid out (display: none)
-    boxed(root.querySelector('.map-names')!, 1220, 532, 40, 40);
     boxed(root.querySelector('#in')!, 1220, 580, 40, 40);
     boxed(root.querySelector('#out')!, 1220, 620, 40, 40);
     boxed(root.querySelector('.map-msg')!, 2000, 100, 300, 100); // off the pane altogether
@@ -121,7 +120,6 @@ describe('the glass surfaces a glint keeps clear of (glassRects)', () => {
       { left: 0, top: 0, right: 1280, bottom: 64 },
       { left: 0, top: 64, right: 420, bottom: 720 },
       { left: 440, top: 84, right: 684, bottom: 214 },
-      { left: 1220, top: 532, right: 1260, bottom: 572 },
       { left: 1220, top: 580, right: 1260, bottom: 620 },
       { left: 1220, top: 620, right: 1260, bottom: 660 },
     ]);
@@ -132,7 +130,7 @@ describe('the glass surfaces a glint keeps clear of (glassRects)', () => {
     boxed(layer, 100, 30, 1280, 720);
     const rects = glassRects(layer, root);
     expect(rects[0]).toEqual({ left: -100, top: -30, right: 1180, bottom: 34 });
-    expect(rects).toHaveLength(6);
+    expect(rects).toHaveLength(5);
   });
 
   it('names exactly the surfaces the stylesheet makes glass (styles/shell.css): a new one there must be added here', () => {

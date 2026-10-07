@@ -69,7 +69,7 @@ describe('the map behind the header', () => {
     expect(rule(map, '.map-msg').top).toBe('calc(50% + var(--hdr) / 2)');
   });
 
-  it('the header is above every layer of the stage, the names and the glints included', () => {
+  it('the header is above every layer of the stage, the glints included', () => {
     expect(rule(shell, '.top')['z-index']).toBe('60');
     for (const f of ['styles/map.css', 'styles/album.css', 'styles/home.css', 'styles/phone.css']) {
       const over = [...read(f).matchAll(/z-index:\s*(-?\d+)/g)].map((m) => Number(m[1])).filter((z) => z >= 60);
@@ -77,8 +77,8 @@ describe('the map behind the header', () => {
     }
   });
 
-  it('the names and the glints are told the same height', () => {
-    // Part 2's layers read state/stageTop.ts; MusicMap sets it from the map input in the effect that applies the input.
+  it('the glints are told the height of the header', () => {
+    // The glint layer reads state/stageTop.ts; MusicMap sets it from the map input in the effect that applies the input.
     expect(read('components/map/MusicMap.tsx')).toContain('setStageTop(input.insetTop);');
   });
 

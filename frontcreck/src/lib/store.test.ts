@@ -107,17 +107,4 @@ describe('app store', () => {
   it('exposes getState for end-to-end tests', () => {
     expect(window.__rmr?.getState().stop).toBe('balanced');
   });
-
-  // The names toggle's flag. Its setter, the saved choice and the read of it are in lib/namesPref.ts, which only
-  // the map's own chunk loads (see namesPref.test.ts); the store itself never touches storage for it.
-  it('shows region names by default, whatever is saved: the store does not read the choice itself', async () => {
-    expect(useAppStore.getState().namesOn).toBe(true);
-    window.localStorage.setItem('rmr-names', '0');
-    const read = vi.spyOn(Storage.prototype, 'getItem');
-    vi.resetModules();
-    const fresh = await import('./store');
-    expect(fresh.useAppStore.getState().namesOn).toBe(true);
-    expect(read.mock.calls.filter(([key]) => key === 'rmr-names')).toHaveLength(0);
-    window.localStorage.clear();
-  });
 });

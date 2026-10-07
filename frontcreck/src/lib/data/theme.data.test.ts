@@ -23,22 +23,6 @@ describe('committed theme data (public/data/theme)', () => {
     expect(t.positionsHash).toBe(crypto.createHash('sha256').update(read('positions.json')).digest('hex').slice(0, 12));
   });
 
-  it('names regions at every stop, inside the baked square, with light ink', () => {
-    const t = theme();
-    expect(STOP_IDS.map((s) => t.labels[s].length)).toEqual([7, 17, 6]);
-    for (const s of STOP_IDS) {
-      for (const l of t.labels[s]) {
-        expect(Math.max(Math.abs(l.x), Math.abs(l.y)), l.id).toBeLessThan(t.bakeHalf);
-        expect(Math.min(...l.rgb), l.id).toBeGreaterThanOrEqual(204);
-        expect(l.lum, l.id).toBeGreaterThan(0);
-        expect(l.lum, l.id).toBeLessThanOrEqual(1);
-        // The wider box holds the first one, so its brightest gas is at least as bright.
-        expect(l.lumWide, l.id).toBeGreaterThanOrEqual(l.lum);
-        expect(l.lumWide, l.id).toBeLessThanOrEqual(1);
-      }
-    }
-  });
-
   it('colours most stars and sees gas behind most of them', () => {
     const t = theme();
     const led = t.stars.lead.filter((v) => v >= 0).length;
@@ -97,7 +81,7 @@ describe('committed theme data (public/data/theme)', () => {
     expect(b.length).toBeGreaterThan((g.sharp[0] * g.sharp[1]) / 16);
   });
 
-  it('keeps every album and every name inside its stop\'s gas rectangle, with the padding to spare', () => {
+  it('keeps every album inside its stop\'s gas rectangle, with the padding to spare', () => {
     const t = theme();
     const positions = JSON.parse(read('positions.json').toString('utf8')) as Record<string, number[]>;
     for (const s of STOP_IDS) {
@@ -106,7 +90,6 @@ describe('committed theme data (public/data/theme)', () => {
       for (let i = 0; i < p.length; i += 2) {
         if (p[i] < x0 + 0.06 || p[i] > x1 - 0.06 || p[i + 1] < y0 + 0.06 || p[i + 1] > y1 - 0.06) throw new Error(`${s}: album ${i / 2} at ${p[i]}, ${p[i + 1]} is outside the gas rectangle`);
       }
-      for (const l of t.labels[s]) expect(l.x > x0 && l.x < x1 && l.y > y0 && l.y < y1, l.id).toBe(true);
     }
   });
 

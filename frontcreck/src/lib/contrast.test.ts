@@ -273,8 +273,8 @@ describe('marks on the map', () => {
     const ring = rule(css('styles/shell.css'), ':focus-visible');
     expect(ring.outline).toBe('2px solid var(--color-lamp)');
     expect(ring['outline-offset']).toBe('3px');
-    // Every focusable control in .map-ui: the zoom buttons, the names toggle and "Explore this area" stand on open
-    // nebula (e2e/glass.spec.ts measures those three). The phone's List button is outside .map-ui, so it is named.
+    // Every focusable control in .map-ui: the zoom buttons and "Explore this area" stand on open
+    // nebula (e2e/glass.spec.ts measures them). The phone's List button is outside .map-ui, so it is named.
     const cased = rule(css('styles/map.css'), '.map-ui :focus-visible:not(input), .fab-map--on:focus-visible');
     // One band from the control's edge to 7 px out: the 3 px gap, the 2 px ring and 2 px beyond it.
     const casing = /^0 0 0 7px rgba\(4, 4, 8, ([\d.]+)\)$/.exec(cased['box-shadow'] ?? '');

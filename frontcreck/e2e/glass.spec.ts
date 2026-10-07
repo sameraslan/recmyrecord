@@ -548,12 +548,7 @@ test('the keyboard focus ring of the controls that stand on the map reads on the
   await waitForAnimations(page);
   await waitForGasSharpSettled(page);
   await twinkleOff(page);
-  // The names toggle arrives with the map's own chunk.
-  await expect(page.locator('.map-zoom .map-names')).toBeVisible();
-  const rows = [
-    ...(await measure(`.map-zoom button[aria-label="${COPY.map.zoomIn}"]`)),
-    ...(await measure('.map-zoom .map-names')),
-  ];
+  const rows = [...(await measure(`.map-zoom button[aria-label="${COPY.map.zoomIn}"]`))];
   // "Explore this area" stands on the map beside an open album. There the gas has stepped back (covers show), so
   // the brightest gas on screen is no test: the worst backdrop there is, white in place of the map, is.
   await page.goto('/album/in-rainbows-radiohead');

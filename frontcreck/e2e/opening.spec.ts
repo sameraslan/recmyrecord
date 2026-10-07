@@ -37,7 +37,7 @@ test('/map opens at the Overview: the 1st to 99th percentile span fills the pane
   expect(overviewMiss(s)).toEqual([]);
   const z = await zoomAsRecorded(page, (await camera(page)).zoom);
   expect(z).toBeCloseTo(OVERVIEW_ZOOM[isPhone(info) ? 'phone' : 'desktop'], 3);
-  // covers stay dots and names can show: under 13 px (12.5 at most). `z` is the zoom of a canvas as tall as the
+  // covers stay dots and the gas is full: under 13 px (12.5 at most). `z` is the zoom of a canvas as tall as the
   // map below the header, which is `h`.
   const h = s.bottom - s.top;
   expect((z * h) / 1.1 * 0.0068).toBeLessThan(12.5 + 1e-6);

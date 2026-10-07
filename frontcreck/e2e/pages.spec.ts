@@ -701,9 +701,12 @@ test('Home shows the nebula nearly as bright as the map does: only the veil dims
     const mean = (v: number[]) => brightest.reduce((s, i) => s + v[i], 0) / brightest.length;
     console.log(`nebula on Home against the map at ${size.width} x ${size.height}: ${mean(onHome).toFixed(1)} / ${mean(onMap).toFixed(1)} = ${(mean(onHome) / mean(onMap)).toFixed(3)}`);
     expect(mean(onMap), 'the compared cells are gas').toBeGreaterThan(40);
-    // Only the veil is over these cells on Home. Measured at full strength: 0.989 at 1440 x 900, 0.944 at
-    // 1600 x 1000, 1.025 at 1280 x 720; and 0.726 at 1440 x 900 with the gas at 0.6 of its strength (the dimmed
-    // backdrop this replaced).
-    expect(mean(onHome) / mean(onMap), `${size.width} x ${size.height}`).toBeGreaterThanOrEqual(0.9);
+    // Only the veil is over these cells on Home: a tenth of near black (styles/map.css .veil, pinned in
+    // styles/glass.test.ts), so the nebula at full strength reads 0.90 of the map's. Measured: 0.900 at
+    // 1440 x 900 (174.0 against 193.4). With the gas at 0.6 of its strength (the dimmed backdrop this replaced)
+    // Home's cells were 126.8 there, which is 0.66. The bound is the veil less 0.03 for rounding and the stars,
+    // which are dealt afresh on each load. (While the map had region names their dark halos lay on these cells
+    // of the map and not of Home, which read as 0.989; the bound was 0.9 then.)
+    expect(mean(onHome) / mean(onMap), `${size.width} x ${size.height}`).toBeGreaterThanOrEqual(0.87);
   }
 });

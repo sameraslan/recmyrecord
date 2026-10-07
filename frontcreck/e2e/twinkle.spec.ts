@@ -40,7 +40,7 @@ async function openAtRest(page: Page, url = '/map'): Promise<void> {
   await page.goto(url);
   await waitForMap(page);
   await waitForCameraIdle(page);
-  // The names' face has arrived and been measured: nothing is left that could ask the canvas for a late frame.
+  // The fonts have arrived: nothing is left that could ask the canvas for a late frame.
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
   await waitForMapQuiet(page, 400);
   // Part 1's sharper gas image (desktops with a real GPU) fades in about a second after the map settles; wait for
@@ -366,7 +366,7 @@ async function sampleGlints(page: Page, want: number, maxMs: number) {
     async ([count, max]) => {
       type Box = { left: number; top: number; right: number; bottom: number };
       const box = (r: DOMRect): Box => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom });
-      const NAMED = 'header.top, .album, .panel, .map-zoom button, .map-names, .map-msg, .fab-map--on';
+      const NAMED = 'header.top, .album, .panel, .map-zoom button, .map-msg, .fab-map--on';
       const surfaces = (): { what: string; box: Box }[] => {
         const els = new Set<Element>(document.querySelectorAll(NAMED));
         for (const el of document.querySelectorAll('body *')) {
@@ -421,7 +421,7 @@ for (const where of ['the map', 'an open album at 1280 x 720'] as const) {
     expect(run.glints.length).toBeGreaterThanOrEqual(15);
     // The check is not empty: the header is there, and so are the map's controls.
     expect(run.surfaces.some((s) => s.startsWith('header.top'))).toBe(true);
-    expect(run.surfaces.some((s) => s.includes('map-names') || s.startsWith('button'))).toBe(true);
+    expect(run.surfaces.some((s) => s.startsWith('button'))).toBe(true);
     expect(run.surfaces.some((s) => s.includes('mode.panel'))).toBe(true);
     if (where !== 'the map') expect(run.surfaces.some((s) => s.includes('album'))).toBe(true);
     for (const g of run.glints) {

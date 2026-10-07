@@ -15,7 +15,7 @@ describe('glass', () => {
     const m = /\n([^{}\n]+)\{\s*-webkit-backdrop-filter: var\(--glass-blur\); backdrop-filter: var\(--glass-blur\);\s*\}/.exec(read('styles/shell.css'));
     expect(m, 'the glass rule in shell.css').not.toBeNull();
     expect(m![1].split(',').map((s) => s.trim())).toEqual([
-      '.top', '.panel', '.album', '.map-zoom button', '.map-names', '.map-msg', '.about', '.combo--hero .combo-field', '.fab-map--on',
+      '.top', '.panel', '.album', '.map-zoom button', '.map-msg', '.about', '.combo--hero .combo-field', '.fab-map--on',
     ]);
   });
 

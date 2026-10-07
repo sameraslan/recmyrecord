@@ -30,7 +30,7 @@ const N = (JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public/data/albu
 /** One stop's gas images as theme.json version 3 describes them (the fixture of src/lib/data/theme.test.ts); unused here. */
 const STOP_GAS = { rect: [-1.4, -1.4, 1.1, 1.4] as [number, number, number, number], px: [1829, 2048] as [number, number], sharp: [3200, 3584] as [number, number], hash: ['0123456789', 'abcdef0123'] as [string, string] };
 function theme(n: number, lead: number[], bg: number[]): ThemeData {
-  return { v: 3, n, positionsHash: 'x', bakeHalf: 1.75, gas: { sonic: STOP_GAS, balanced: STOP_GAS, mood: STOP_GAS }, stars: { lead, bg }, labels: { sonic: [], balanced: [], mood: [] } };
+  return { v: 3, n, positionsHash: 'x', bakeHalf: 1.75, gas: { sonic: STOP_GAS, balanced: STOP_GAS, mood: STOP_GAS }, stars: { lead, bg } };
 }
 const histogram = (classes: Uint8Array): number[] => {
   const h = [0, 0, 0, 0];

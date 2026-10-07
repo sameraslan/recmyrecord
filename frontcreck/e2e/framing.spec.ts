@@ -349,23 +349,13 @@ test('a window resized across 900 px wide shows what a fresh load at the new siz
   const WIDE = { width: 1000, height: 800 };
   const NARROW = { width: 880, height: 800 };
   const canvasWidth = () => page.evaluate(() => document.querySelector('canvas.map-canvas')!.getBoundingClientRect().width);
-  const names = () =>
-    page.locator('.rn-layer .rn').evaluateAll((els) =>
-      els
-        .filter((e) => e.getClientRects().length > 0 && Number(getComputedStyle(e).opacity) > 0.5)
-        .map((e) => {
-          const r = e.getBoundingClientRect();
-          return { text: e.textContent ?? '', x: r.x, y: r.y };
-        })
-        .sort((a, b) => a.text.localeCompare(b.text)),
-    );
   const view = async () => {
     await waitForCameraIdle(page);
     await waitForAnimations(page);
     await markersSettled(page);
     await waitForMapQuiet(page, 400);
     await waitForAnimations(page);
-    return { header: await headerBottom(page), points: await points(page), markers: await markers(page), names: await names() };
+    return { header: await headerBottom(page), points: await points(page), markers: await markers(page) };
   };
   type View = Awaited<ReturnType<typeof view>>;
   const load = async (size: { width: number; height: number }, url: string) => {
@@ -384,7 +374,7 @@ test('a window resized across 900 px wide shows what a fresh load at the new siz
   const expectSame = (now: View, fresh: View, what: string) => {
     let worst = 0;
     now.points.forEach((p, i) => (worst = Math.max(worst, Math.abs(p.x - fresh.points[i].x), Math.abs(p.y - fresh.points[i].y))));
-    console.log(`resize ${what}: albums at most ${worst.toFixed(3)} px from a fresh load, ${now.markers.length} markers, ${now.names.length} names`);
+    console.log(`resize ${what}: albums at most ${worst.toFixed(3)} px from a fresh load, ${now.markers.length} markers`);
     expect(now.header, `${what}: header height`).toBe(fresh.header);
     now.points.forEach((p, i) => {
       expect(Math.abs(p.x - fresh.points[i].x), `${what}: album ${PROBES[i]} x`).toBeLessThanOrEqual(TOLERANCE_PX);
@@ -394,19 +384,11 @@ test('a window resized across 900 px wide shows what a fresh load at the new siz
     now.markers.forEach((m, i) => {
       for (const k of ['x', 'y', 'w', 'h'] as const) expect(Math.abs(m[k] - fresh.markers[i][k]), `${what}: marker ${m.id} ${k}`).toBeLessThanOrEqual(TOLERANCE_PX);
     });
-    // The region names are laid out below the header's height as the names know it (state/stageTop.ts), the
-    // camera frames below the height it knows (MapInput.insetTop): after the resize both are the fresh load's.
-    expect(now.names.map((n) => n.text), `${what}: names`).toEqual(fresh.names.map((n) => n.text));
-    now.names.forEach((n, i) => {
-      expect(Math.abs(n.x - fresh.names[i].x), `${what}: name ${n.text} x`).toBeLessThanOrEqual(TOLERANCE_PX);
-      expect(Math.abs(n.y - fresh.names[i].y), `${what}: name ${n.text} y`).toBeLessThanOrEqual(TOLERANCE_PX);
-    });
   };
   for (const url of [IR, '/map']) {
     const freshWide = await load(WIDE, url);
     expect(freshWide.header).toBe(64);
     if (url === IR) expect(freshWide.markers).toHaveLength(6);
-    else expect(freshWide.names.length, 'names on the untouched map').toBeGreaterThan(0);
     const resizedNarrow = await resize(NARROW);
     const resizedWide = await resize(WIDE);
     const freshNarrow = await load(NARROW, url);
@@ -423,8 +405,8 @@ test('keyboard order is unchanged: skip link, header, then the map and its contr
   test.skip(isMobile, 'keyboard');
   await openMap(page);
   const where: string[] = [];
-  // Ten stops: the skip link, the header's four (wordmark, search, Map, About), the canvas, the slider, the names
-  // button, zoom in, zoom out. The slider's three stop buttons are not tab stops.
+  // Ten stops: the skip link, the header's four (wordmark, search, Map, About), the canvas, the slider, zoom in,
+  // zoom out, whole map. The slider's three stop buttons are not tab stops.
   for (let i = 0; i < 10; i++) {
     await page.keyboard.press('Tab');
     where.push(
