@@ -1,0 +1,40 @@
+before: ## 19:48:56 4.35 4.62 5.03 | Now drawing from 'Battery Power'
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --mode gpu --viewport desktop --names on
+
+First-load JS of / (gzip): 190.8 KB with nomodule scripts (budget 200 KB), 152.2 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.2 KB, /album/in-rainbows-radiohead 33.9 KB (budget 150 KB each)
+
+| Measure | gpu desktop |
+|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Gas shader (reported only) | full |
+| Search usable | 69 ms |
+| Startup worst long task | 0 ms |
+| WebGL warm-up end (reported only) | 107 ms (done) |
+| Map first frame (reported only) | 546 ms |
+| Nebula visible (reported only) | 607 ms |
+| Typing to suggestions | 7 ms |
+| Select to album | 29 ms |
+| Transition worst frame gap | 24 ms |
+| Slider to list | 15 ms |
+| Morph worst frame gap | 18 ms |
+| Drag worst frame gap | 19 ms |
+| Zoom worst frame gap | 36 ms |
+| Drag worst frame gap at the opening view (reported only) | 17 ms |
+| Zoom worst frame gap at the opening view (reported only) | 35 ms |
+| Deep zoom drag worst frame gap (reported only) | 18 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 17 ms |
+| Long tasks while idle (3 s) | 0 |
+| Frames rendered while idle (3 s) | 0 |
+
+Run with --names on: an A/B run, not the site as a visitor gets it. Read back in the page:
+  gpu desktop, album: {"at":"album","path":"/album/loveless-my-bloody-valentine","glassBlur":"blur(22px) saturate(1.2) brightness(.58)","glassInline":null,"header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":"blur(22px) saturate(1.2) brightness(0.58)","headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":"1","namesOn":true,"forcedMs":null,"firstPaintMs":76,"twinkleOn":true,"twinkleSpawned":1,"twinkleNodes":0}
+  gpu desktop, map: {"at":"map","path":"/map","glassBlur":"blur(22px) saturate(1.2) brightness(.58)","glassInline":null,"header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":null,"headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":"1","namesOn":true,"forcedMs":null,"firstPaintMs":48,"twinkleOn":true,"twinkleSpawned":3,"twinkleNodes":0}
+  gpu desktop, opening view: {"at":"opening view","path":"/map","glassBlur":"blur(22px) saturate(1.2) brightness(.58)","glassInline":null,"header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":null,"headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":"1","namesOn":true,"forcedMs":null,"firstPaintMs":72,"twinkleOn":true,"twinkleSpawned":1,"twinkleNodes":0}
+
+Glints made in the 3 s idle window, as a visitor gets the site: gpu desktop 1
+
+All budgets met.
+after: ## 19:49:35 5.13 4.76 5.06 | Now drawing from 'Battery Power'

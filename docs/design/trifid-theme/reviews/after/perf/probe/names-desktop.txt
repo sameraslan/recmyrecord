@@ -1,0 +1,31 @@
+names desktop round 1 on: load 5.84 -> 5.69
+names desktop round 1 off: load 5.69 -> 5.48
+names desktop round 2 off: load 5.48 -> 5.44
+names desktop round 2 on: load 5.44 -> 5.32
+names desktop round 3 on: load 5.32 -> 5.3
+names desktop round 3 off: load 5.3 -> 5.19
+names desktop round 4 off: load 5.19 -> 5.18
+names desktop round 4 on: load 5.18 -> 5.8
+names desktop round 5 on: load 5.8 -> 5.74
+names desktop round 5 off: load 5.74 -> 5.6
+names desktop round 6 off: load 5.6 -> 5.55
+names desktop round 6 on: load 5.55 -> 5.35
+names desktop round 7 on: load 5.35 -> 5.08
+names desktop round 7 off: load 5.08 -> 4.99
+names desktop round 8 off: load 4.99 -> 4.75
+names desktop round 8 on: load 4.75 -> 4.61
+
+names, desktop, 8 sessions per arm, median (best to worst). Load average over the run: 4.61 to 5.84.
+
+| Measure | on | off |
+|---|---|---|
+| map first frame, ms | 550.5 (538 to 565) | 548.5 (536 to 564) |
+| gas first shown, ms | 592.5 (580 to 607) | 591 (579 to 606) |
+| gas after first frame, ms | 43 (41 to 44) | 42 (41 to 44) |
+| longest task, ms | 0 (0 to 0) | 0 (0 to 0) |
+| long tasks, total ms | 0 (0 to 0) | 0 (0 to 0) |
+| names in the layer | 30 (30 to 30) | n/a |
+
+Read back in the page, per arm: on: namesOn true | off: namesOn false
+Saved /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/probe/names-desktop.json
+## 19:08:21 4.61 5.71 6.08 | Now drawing from 'AC Power'

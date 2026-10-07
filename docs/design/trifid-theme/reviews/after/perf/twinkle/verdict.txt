@@ -1,0 +1,9 @@
+First hover across 36 saved session(s). One row per session: its first measured mouse run.
+
+| Glints | Sessions | Longest frame gap, median (best to worst), ms | Longest task, median (best to worst), ms | Median above every off session (gap / task) |
+|---|---|---|---|---|
+| on | 12 | 61 (45 to 71) | 0 (0 to 53) | false / false |
+| off | 12 | 64 (49 to 78) | 0 (0 to 53) |  |
+| held | 12 | 60 (46 to 75) | 0 (0 to 53) | false / false |
+
+The median first hover with glints (on, held) is within 8 ms of the median without, in both measures.

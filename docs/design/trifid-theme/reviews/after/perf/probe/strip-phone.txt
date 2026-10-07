@@ -1,0 +1,25 @@
+strip phone round 1 bitmap: load 5.69 -> 5.69
+strip phone round 1 canvas: load 5.69 -> 6.28
+strip phone round 2 canvas: load 6.28 -> 5.93
+strip phone round 2 bitmap: load 5.93 -> 5.54
+strip phone round 3 bitmap: load 5.54 -> 5.25
+strip phone round 3 canvas: load 5.25 -> 5.25
+strip phone round 4 canvas: load 5.15 -> 5.15
+strip phone round 4 bitmap: load 5.15 -> 7.14
+strip phone round 5 bitmap: load 7.14 -> 7.77
+strip phone round 5 canvas: load 7.77 -> 7.47
+strip phone round 6 canvas: load 7.47 -> 7.03
+strip phone round 6 bitmap: load 7.03 -> 6.71
+
+strip, phone, 6 sessions per arm, median (best to worst). Load average over the run: 5.15 to 7.77.
+
+| Measure | bitmap | canvas |
+|---|---|---|
+| copy, ms | 36 (29.6 to 46.8) | 67.1 (57.1 to 75.5) |
+| longest frame gap during, ms | 17 (16.7 to 20.5) | 45.3 (37.6 to 50.6) |
+| longest task, ms | 0 (0 to 0) | 0 (0 to 0) |
+| copy bytes | 923648 (923648 to 923648) | 923648 (923648 to 923648) |
+
+Read back in the page, per arm: bitmap: 451,512 | canvas: 451,512
+Saved /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/probe/strip-phone.json
+## 20:26:08 6.71 5.95 5.75 | Now drawing from 'Battery Power'

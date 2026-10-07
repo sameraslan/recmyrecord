@@ -1,0 +1,17 @@
+## 21:21:32 9.79 8.48 8.75 | Now drawing from 'Battery Power'
+
+## Crowded bounds: 11 markers, 20 clusters per bounds, a 300-frame pan each (moving), then one frame at rest
+fresh solves and new arrays are counts over the 6000 moving frames (worst cluster of 300 in brackets); 3 runs, each frame's fastest kept
+
+### current
+| Bounds | Opens that overlap | Frames with a fresh solve | Frames with a new array | Mean per frame | Worst frame | Settle solves | Settle frame mean / worst | Gap to a cold solve | Pairs too close, mean per frame | Cover over cover, mean of each frame's worst / worst | Worst jump |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 150x150 | 20 of 20 | 0 of 6000 (0) | 0 of 6000 (0) | 0.001 ms | 0.006 ms | 20 in 20 | 0.188 ms / 0.548 ms | 0.0e+0 px | 14.55 | 36.1 / 46.0 px | 2.5 px |
+| 250x200 | 20 of 20 | 0 of 6000 (0) | 0 of 6000 (0) | 0.001 ms | 0.003 ms | 20 in 20 | 0.140 ms / 0.587 ms | 0.0e+0 px | 2.95 | 3.8 / 37.5 px | 2.5 px |
+| 828x209 | 13 of 20 | 0 of 6000 (0) | 0 of 6000 (0) | 0.001 ms | 0.004 ms | 20 in 20 | 0.316 ms / 1.102 ms | 0.0e+0 px | 1.35 | 0.0 / 0.0 px | 2.5 px |
+| 360x684 | 0 of 20 | 0 of 6000 (0) | 0 of 6000 (0) | 0.001 ms | 0.002 ms | 20 in 20 | 0.049 ms / 0.322 ms | 0.0e+0 px | 0.00 | 0.0 / 0.0 px | 2.5 px |
+| 300x500 | 1 of 20 | 0 of 6000 (0) | 0 of 6000 (0) | 0.001 ms | 0.002 ms | 20 in 20 | 0.071 ms / 0.516 ms | 0.0e+0 px | 0.20 | 0.0 / 0.0 px | 2.5 px |
+
+## Moving walls: clusters that open clean at 828x400, the bottom wall rising 4 px a frame to 209 and back, every frame moving
+current: 200 clusters, 19200 moving frames; fresh solves 0, new arrays 0, covers outside the walls 0; frames with one cover over another 406 (deepest 31.5 px), over the picked cover 158 (deepest 18.8 px); frames with a pair too close while the wall comes back 268 of 9600; at rest 200 solves, gap to a cold solve 0.0e+0 px; cost of a moving frame (one timing each): mean 0.010 ms, worst 1.543 ms; of the 406 frames that kept an overlap: mean 0.149 ms, worst 0.403 ms
+## 21:21:33 9.79 8.48 8.75 | Now drawing from 'Battery Power'

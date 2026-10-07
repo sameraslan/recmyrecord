@@ -1,0 +1,514 @@
+{
+ "date": "2026-10-07T00:27:24.355Z",
+ "base": "http://127.0.0.1:3500",
+ "nodeArch": "arm64",
+ "loads": 5,
+ "open": "app",
+ "modes": {
+  "gpu": {
+   "browser": "154.0.8037.98",
+   "browserArch": "arm64",
+   "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+   "summary": [
+    {
+     "hover": 1,
+     "tipMs": {
+      "median": 119,
+      "min": 111.8,
+      "max": 147.4,
+      "values": [
+       118.2,
+       119,
+       111.8,
+       147.4,
+       126.3
+      ]
+     },
+     "tipDomMs": {
+      "median": 96.5,
+      "min": 85.8,
+      "max": 97.4,
+      "values": [
+       86.8,
+       85.8,
+       96.6,
+       97.4,
+       96.5
+      ]
+     },
+     "tipPaintMs": {
+      "median": 117,
+      "min": 109.7,
+      "max": 143.8,
+      "values": [
+       117,
+       116.3,
+       127.3,
+       143.8,
+       109.7
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 50,
+      "values": [
+       0,
+       0,
+       0,
+       50,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 33.4,
+      "min": 16.8,
+      "max": 50,
+      "values": [
+       33.4,
+       33.3,
+       33.4,
+       50,
+       16.8
+      ]
+     },
+     "eventMs": {
+      "median": 24,
+      "min": 16,
+      "max": 32,
+      "values": [
+       24,
+       24,
+       16,
+       24,
+       32
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    },
+    {
+     "hover": 2,
+     "tipMs": {
+      "median": 90.7,
+      "min": 85.8,
+      "max": 94.8,
+      "values": [
+       91.4,
+       86.3,
+       85.8,
+       94.8,
+       90.7
+      ]
+     },
+     "tipDomMs": {
+      "median": 89.6,
+      "min": 84.9,
+      "max": 93.5,
+      "values": [
+       90.7,
+       84.9,
+       85.1,
+       93.5,
+       89.6
+      ]
+     },
+     "tipPaintMs": {
+      "median": 105.6,
+      "min": 100.1,
+      "max": 108,
+      "values": [
+       107,
+       101.6,
+       100.1,
+       108,
+       105.6
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 16.8,
+      "min": 16.8,
+      "max": 16.8,
+      "values": [
+       16.8,
+       16.8,
+       16.8,
+       16.8,
+       16.8
+      ]
+     },
+     "eventMs": {
+      "median": 0,
+      "min": 0,
+      "max": 16,
+      "values": [
+       0,
+       0,
+       0,
+       16,
+       0
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    },
+    {
+     "hover": 3,
+     "tipMs": {
+      "median": 90.8,
+      "min": 89.7,
+      "max": 93.6,
+      "values": [
+       93.3,
+       90,
+       90.8,
+       93.6,
+       89.7
+      ]
+     },
+     "tipDomMs": {
+      "median": 90.3,
+      "min": 88.5,
+      "max": 92.7,
+      "values": [
+       92.7,
+       88.5,
+       90.3,
+       91.7,
+       89.1
+      ]
+     },
+     "tipPaintMs": {
+      "median": 106,
+      "min": 103.6,
+      "max": 108.9,
+      "values": [
+       108.5,
+       103.6,
+       106,
+       108.9,
+       104.4
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 16.8,
+      "min": 16.7,
+      "max": 16.8,
+      "values": [
+       16.8,
+       16.7,
+       16.7,
+       16.8,
+       16.8
+      ]
+     },
+     "eventMs": {
+      "median": 16,
+      "min": 0,
+      "max": 24,
+      "values": [
+       24,
+       0,
+       16,
+       16,
+       16
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    }
+   ],
+   "loads": [
+    {
+     "load": 1,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 118.2,
+       "tipDomMs": 86.8,
+       "tipPaintMs": 117,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 33.4,
+       "eventMs": 24,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 91.4,
+       "tipDomMs": 90.7,
+       "tipPaintMs": 107,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 7,
+       "title": "Abbey Road",
+       "tipMs": 93.3,
+       "tipDomMs": 92.7,
+       "tipPaintMs": 108.5,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 24,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 2,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 119,
+       "tipDomMs": 85.8,
+       "tipPaintMs": 116.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 33.3,
+       "eventMs": 24,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 86.3,
+       "tipDomMs": 84.9,
+       "tipPaintMs": 101.6,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 7,
+       "title": "Abbey Road",
+       "tipMs": 90,
+       "tipDomMs": 88.5,
+       "tipPaintMs": 103.6,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.7,
+       "eventMs": 0,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 3,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 111.8,
+       "tipDomMs": 96.6,
+       "tipPaintMs": 127.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 33.4,
+       "eventMs": 16,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 85.8,
+       "tipDomMs": 85.1,
+       "tipPaintMs": 100.1,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 7,
+       "title": "Abbey Road",
+       "tipMs": 90.8,
+       "tipDomMs": 90.3,
+       "tipPaintMs": 106,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.7,
+       "eventMs": 16,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 4,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 147.4,
+       "tipDomMs": 97.4,
+       "tipPaintMs": 143.8,
+       "longTaskMs": 50,
+       "longTasks": [
+        [
+         98,
+         50
+        ]
+       ],
+       "frameGapMs": 50,
+       "eventMs": 24,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 94.8,
+       "tipDomMs": 93.5,
+       "tipPaintMs": 108,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 16,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 7,
+       "title": "Abbey Road",
+       "tipMs": 93.6,
+       "tipDomMs": 91.7,
+       "tipPaintMs": 108.9,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 16,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 5,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 126.3,
+       "tipDomMs": 96.5,
+       "tipPaintMs": 109.7,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 32,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 90.7,
+       "tipDomMs": 89.6,
+       "tipPaintMs": 105.6,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 7,
+       "title": "Abbey Road",
+       "tipMs": 89.7,
+       "tipDomMs": 89.1,
+       "tipPaintMs": 104.4,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 16,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    }
+   ]
+  }
+ }
+}

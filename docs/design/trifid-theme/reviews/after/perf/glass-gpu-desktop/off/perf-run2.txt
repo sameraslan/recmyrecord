@@ -1,0 +1,40 @@
+before: ## 19:41:05 5.48 5.87 5.53 | Now drawing from 'Battery Power'
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --mode gpu --viewport desktop --glass off
+
+First-load JS of / (gzip): 190.8 KB with nomodule scripts (budget 200 KB), 152.2 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.2 KB, /album/in-rainbows-radiohead 33.9 KB (budget 150 KB each)
+
+| Measure | gpu desktop |
+|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Gas shader (reported only) | full |
+| Search usable | 75 ms |
+| Startup worst long task | 0 ms |
+| WebGL warm-up end (reported only) | 130 ms (done) |
+| Map first frame (reported only) | 582 ms |
+| Nebula visible (reported only) | 641 ms |
+| Typing to suggestions | 7 ms |
+| Select to album | 27 ms |
+| Transition worst frame gap | 22 ms |
+| Slider to list | 14 ms |
+| Morph worst frame gap | 21 ms |
+| Drag worst frame gap | 22 ms |
+| Zoom worst frame gap | 30 ms |
+| Drag worst frame gap at the opening view (reported only) | 19 ms |
+| Zoom worst frame gap at the opening view (reported only) | 38 ms |
+| Deep zoom drag worst frame gap (reported only) | 19 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 18 ms |
+| Long tasks while idle (3 s) | 0 |
+| Frames rendered while idle (3 s) | 0 |
+
+Run with --glass off: an A/B run, not the site as a visitor gets it. Read back in the page:
+  gpu desktop, album: {"at":"album","path":"/album/loveless-my-bloody-valentine","glassBlur":"none","glassInline":"none","header":"none","panel":"none","album":"none","headerBackground":"rgb(10, 9, 14)","namesSaved":null,"namesOn":true,"forcedMs":17,"firstPaintMs":60,"twinkleOn":true,"twinkleSpawned":1,"twinkleNodes":0}
+  gpu desktop, map: {"at":"map","path":"/map","glassBlur":"none","glassInline":"none","header":"none","panel":"none","album":null,"headerBackground":"rgb(10, 9, 14)","namesSaved":null,"namesOn":true,"forcedMs":21,"firstPaintMs":44,"twinkleOn":true,"twinkleSpawned":4,"twinkleNodes":0}
+  gpu desktop, opening view: {"at":"opening view","path":"/map","glassBlur":"none","glassInline":"none","header":"none","panel":"none","album":null,"headerBackground":"rgb(10, 9, 14)","namesSaved":null,"namesOn":true,"forcedMs":12,"firstPaintMs":80,"twinkleOn":true,"twinkleSpawned":1,"twinkleNodes":0}
+
+Glints made in the 3 s idle window, as a visitor gets the site: gpu desktop 1
+
+All budgets met.
+after: ## 19:41:44 4.71 5.65 5.46 | Now drawing from 'Battery Power'

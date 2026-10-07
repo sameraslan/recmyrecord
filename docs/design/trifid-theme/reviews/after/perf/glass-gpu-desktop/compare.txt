@@ -1,0 +1,36 @@
+Baseline: /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/glass-gpu-desktop/off (perf-run1.json, perf-run2.json, perf-run3.json)
+Current: /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/glass-gpu-desktop/on (perf-run1.json, perf-run2.json, perf-run3.json)
+First-load JS of / (KB, per full run): baseline 190.8, 190.8, 190.8; now 190.8, 190.8, 190.8 (budget 200)
+three.js chunk in the first load (KB, per full run): baseline 0, 0, 0; now 0, 0, 0 (must be 0)
+Server HTML of / (KB, per full run): baseline 28.2, 28.2, 28.2; now 28.2, 28.2, 28.2 (budget 150)
+Server HTML of /album/in-rainbows-radiohead (KB, per full run): baseline 33.9, 33.9, 33.9; now 33.9, 33.9, 33.9 (budget 150)
+How the baseline runs were made: perf-run1.json: open=app glass=off; perf-run2.json: open=app glass=off; perf-run3.json: open=app glass=off
+How the current runs were made: perf-run1.json: open=app glass=on; perf-run2.json: open=app glass=on; perf-run3.json: open=app glass=on
+Only the column gpu desktop is compared.
+
+| Where | Measure | Budget | Baseline median (min to max), runs | Now, median (min to max), runs | Difference | |
+|---|---|---|---|---|---|---|
+| gpu desktop | searchUsableMs | 1000 | 75 (71 to 97), n=3 | 76 (74 to 84), n=3 | +1 (+1 %) | SLOWER |
+| gpu desktop | startupLongTaskMs | 250 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | mapFirstFrameMs | none | 582 (550 to 653), n=3 | 558 (556 to 602), n=3 | -24 (-4 %) | |
+| gpu desktop | typeToSuggestionsMs | 100 | 7 (5 to 8), n=3 | 7 (5 to 7), n=3 | 0 | |
+| gpu desktop | selectToAlbumMs | 200 | 27 (23 to 33), n=3 | 25 (23 to 25), n=3 | -2 (-7 %) | |
+| gpu desktop | transitionGapMs | 50 | 22 (21 to 31), n=3 | 22 (21 to 25), n=3 | 0 | |
+| gpu desktop | sliderToListMs | 150 | 14 (8 to 18), n=3 | 12 (11 to 17), n=3 | -2 (-14 %) | |
+| gpu desktop | morphGapMs | 50 | 19 (18 to 21), n=3 | 20 (18 to 21), n=3 | +1 (+5 %) | SLOWER |
+| gpu desktop | dragGapMs | 50 | 19 (18 to 22), n=3 | 18 (18 to 19), n=3 | -1 (-5 %) | |
+| gpu desktop | zoomGapMs | 50 | 34 (30 to 41), n=3 | 31 (29 to 42), n=3 | -3 (-9 %) | |
+| gpu desktop | openingDragGapMs | none (yardstick 50) | 19 (19 to 20), n=3 | 18 (18 to 18), n=3 | -1 (-5 %) | |
+| gpu desktop | openingZoomGapMs | none (yardstick 50) | 38 (37 to 40), n=3 | 35 (32 to 36), n=3 | -3 (-8 %) | |
+| gpu desktop | idleLongTasks | 0 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | idleFrames | 1 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | deepDragGapMs | none (yardstick 50) | 19 (19 to 20), n=3 | 18 (18 to 19), n=3 | -1 (-5 %) | |
+| gpu desktop | deepMorphGapMs | none (yardstick 50) | 18 (18 to 18), n=3 | 17 (17 to 18), n=3 | -1 (-6 %) | |
+| gpu desktop | gasShownMs | none | 641 (591 to 711), n=3 | 599 (598 to 661), n=3 | -42 (-7 %) | |
+
+Single runs over budget or with a failed check (each is named and explained in the write-up):
+none
+
+Findings (2):
+gpu desktop searchUsableMs: median 76 is above the baseline median (75), inside the baseline spread (71 to 97)
+gpu desktop morphGapMs: median 20 is above the baseline median (19), inside the baseline spread (18 to 21)

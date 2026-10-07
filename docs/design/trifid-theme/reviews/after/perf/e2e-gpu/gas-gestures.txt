@@ -1,0 +1,67 @@
+## 20:40:17 6.77 6.83 6.37 | Now drawing from 'Battery Power'
+
+Running 3 tests using 1 worker
+
+  ✓  1 [desktop] › e2e/gas.spec.ts:930:1 › a drag that begins while a late image waits behind the GPU fence gets no upload, and has the frame gaps of a drag with nothing waiting (6.5s)
+  ✘  2 [desktop] › e2e/gas.spec.ts:962:1 › a drag or a wheel zoom held longer than the longest wait gets no upload until it ends (29.5s)
+  ✓  3 [desktop] › e2e/gas.spec.ts:992:1 › a drag that begins between two strips of a sharper image, or inside one, gets no further strip (22.7s)
+
+
+  1) [desktop] › e2e/gas.spec.ts:962:1 › a drag or a wheel zoom held longer than the longest wait gets no upload until it ends 
+
+    Error: texture uploads and long tasks that began inside the gesture. THE GESTURE: gaps 1 9 18 17 17 17 17 16 17 17 16 17 17 17 17 17 16 17 17 17 16 17 17 16 17 16 17 16 17 16 17 16 17 17 17 17 17 17 16 17 16 18 16 17 17 17 16 17 17 16 18 17 17 17 17 17 16 17 17 17 17 17 17 17 16 17 17 16 17 18 16 17 16 17 17 16 18 17 16 22 32 1 12 17 17 17 17 17 17 17 39 1 8 18 17 17 17 17 16 38 1 11 16 17 17 17 17 17 17 17 32 2 17 17 16 18 16 17 17 16 17 17 17 17 17 17 17 17 16 17 17 17 17 17 17 17 17 16 17 16 17 16 17 17 17 17 17 16 17 17 17 17 17 16 17 16 17 17 17 16 17 16 17 17 17 17 17 17 16 16 18 17 17 16 17 17 17 16 17 17 17 17 16 18 17 16 17 17 16 17 17 17 16 17 17 17 17 17 17 17 16 17 17 16 17 17 17 16 17 16 17 17 17 16 17 16 17 17 17 17 17 17 17 17 16 17 16 17 18 16 16 17 17 17 16 18 16 17 17 17 17 17 16 17 17 17 17 17 16 17 17 17 17 17 17 16 17 17 16 17 17 16 17 16 18 17 17 17 16 17 17 17 16 17 17 16 17 17 17 17 17 17 17 16 17 16 17 16 17 17 17 17 16 17 16 17 16 18 16 17 17 17 16 18 17 17 17 17 17 17 17 17 17 16 17 17 16 18 17 17 16 17 17 17 17 17 16 18 17 16 17 17 17 17 17 17 17 16 17; gesture from 1138 to 6765 ms; texSubImage2D 3072 x 3072 at 2465 ms, 20 ms; texSubImage2D 3072 x 3072 at 2631 ms, 24 ms; texSubImage2D 3072 x 3072 at 2782 ms, 20 ms; texSubImage2D 3072 x 3072 at 2965 ms, 15 ms. THE CONTROL: gaps 1 10 17 17 17 17 17 17 17 17 17 17 17 17 16 18 17 17 17 17 16 17 16 18 17 16 17 17 17 16 18 17 17 17 16 17 17 18 17 16 17 18 17 17 17 17 17 17 17 16 17 17 17 17 17 17 17 17 17 17 16 17 17 17 17 17 16 17 18 17 17 17 17 17 17 17 17 17 17 17 17 17 16 17 16 18 17 17 17 17 17 17 16 17 17 16 17 16 17 17 16 17 17 17 16 17 17 17 17 17 17 17 17 16 17 17 17 17 16 16 18 16 18 16 17 17 17 17 17 17 16 18 17 17 17 17 17 17 17 17 17 17 17 17 16 16 18 17 17 17 16 16 18 17 17 17 17 17 17 17 16 17 17 17 17 17 17 17 17 16 17 17 17 16 17 17 17 16 17 17 17 17 17 17 17 17 17 17 17 17 16 18 17 16 17 18 17 17 16 16 18 17 17 17 17 17 17 17 17 17 16 16 18 17 17 17 17 16 17 16 16 18 17 16 17 17 17 17 17 17 16 17 17 17 17 17 17 16 16 16 18 17 17 17 16 17 17 17 17 16 17 17 17 17 17 17 17 17 17 17 17 16 16 18 17 17 16 17 17 17 17 17 17 17 17 16 17 17 16 17 17 16 18 16 18 17 16 17 17 16 18 17 16 18 17 16 17 17 16 17 17 16 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 17 16 17 17 17 17 17 16 17; gesture from 8320 to 13831 ms; no texture upload and no long task
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   "texSubImage2D 3072 x 3072 at 2465 ms, 20 ms",
+    +   "texSubImage2D 3072 x 3072 at 2631 ms, 24 ms",
+    +   "texSubImage2D 3072 x 3072 at 2782 ms, 20 ms",
+    +   "texSubImage2D 3072 x 3072 at 2965 ms, 15 ms",
+    + ]
+
+      377 | async function expectGapsOfControl(page: Page, info: TestInfo, got: Gesture, control: Gesture): Promise<void> {
+      378 |   expect(got.gaps.length, 'frames in the gesture').toBeGreaterThan(3);
+    > 379 |   expect(got.began, `texture uploads and long tasks that began inside the gesture. THE GESTURE: ${told(got)}. THE CONTROL: ${told(control)}`).toEqual([]);
+          |                                                                                                                                               ^
+      380 |   // The renderer's name, by the map's own rule for a software renderer (shaders/gas.ts gasSoftwareRenderer; the
+      381 |   // map's flag for it, gasLite, is switched off for this file). Asked here, after the gestures.
+      382 |   const renderer = await page.evaluate(() => {
+        at expectGapsOfControl (/Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/frontcreck/e2e/gas.spec.ts:379:143)
+        at /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/frontcreck/e2e/gas.spec.ts:986:11
+
+    attachment #1: gesture-1-drag-held-5-5-s.json (application/json) ───────────────────────────────
+    test-results/playwright/gas-a-drag-or-a-wheel-zoom-243d3-ets-no-upload-until-it-ends-desktop/attachments/gesture-1-drag-held-5-5-s-json-9a2399023ed9c9dead84955d57101cc7aad0fb00.json
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: gesture-2-control-drag.json (application/json) ──────────────────────────────────
+    test-results/playwright/gas-a-drag-or-a-wheel-zoom-243d3-ets-no-upload-until-it-ends-desktop/attachments/gesture-2-control-drag-json-9c9e515d0bfccfd5e50a71ce44ab3ee7f4d392c9.json
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: gesture-3-wheel-held-5-5-s.json (application/json) ──────────────────────────────
+    test-results/playwright/gas-a-drag-or-a-wheel-zoom-243d3-ets-no-upload-until-it-ends-desktop/attachments/gesture-3-wheel-held-5-5-s-json-365843b3082057a76ada236a5f194b027482e48a.json
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: gesture-4-control-wheel.json (application/json) ─────────────────────────────────
+    test-results/playwright/gas-a-drag-or-a-wheel-zoom-243d3-ets-no-upload-until-it-ends-desktop/attachments/gesture-4-control-wheel-json-4993d35c0034c913ddf4efad6172ccf27ca232df.json
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/playwright/gas-a-drag-or-a-wheel-zoom-243d3-ets-no-upload-until-it-ends-desktop/error-context.md
+
+    attachment #6: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/playwright/gas-a-drag-or-a-wheel-zoom-243d3-ets-no-upload-until-it-ends-desktop/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/playwright/gas-a-drag-or-a-wheel-zoom-243d3-ets-no-upload-until-it-ends-desktop/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [desktop] › e2e/gas.spec.ts:962:1 › a drag or a wheel zoom held longer than the longest wait gets no upload until it ends 
+  2 passed (1.4m)
+exit 1
+## 20:41:42 7.56 7.42 6.67 | Now drawing from 'Battery Power'

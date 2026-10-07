@@ -1,0 +1,39 @@
+before: ## 18:57:46 4.69 5.62 6.21 | Now drawing from 'AC Power'
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --open whole
+
+First-load JS of / (gzip): 190.8 KB with nomodule scripts (budget 200 KB), 152.2 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.2 KB, /album/in-rainbows-radiohead 33.9 KB (budget 150 KB each)
+
+| Measure | software desktop | software phone | gpu desktop | gpu phone | gpu desktop2x |
+|---|---|---|---|---|---|
+| Renderer | ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver) | ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver) | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Gas shader (reported only) | lighter | lighter | full | full | full |
+| Search usable | 84 ms | 772 ms | 73 ms | 69 ms | 77 ms |
+| Startup worst long task | 0 ms | 0 ms | 0 ms | 0 ms | 0 ms |
+| WebGL warm-up end (reported only) | 4029 ms (done) | 2427 ms (done) | 120 ms (done) | 112 ms (done) | 131 ms (done) |
+| Map first frame (reported only) | 4448 ms | 2878 ms | 581 ms | 551 ms | 585 ms |
+| Nebula visible (reported only) | 4807 ms | 3158 ms | 623 ms | 594 ms | 643 ms |
+| Typing to suggestions | 4 ms | 5 ms | 6 ms | 4 ms | 4 ms |
+| Select to album | 21 ms | 27 ms | 27 ms | 22 ms | 23 ms |
+| Transition worst frame gap | 640 ms | 861 ms | 27 ms | 19 ms | 18 ms |
+| Slider to list | 6 ms | 10 ms | 6 ms | 10 ms | 9 ms |
+| Morph worst frame gap | 115 ms | 117 ms | 18 ms | 19 ms | 18 ms |
+| Drag worst frame gap | 116 ms | 88 ms | 19 ms | 20 ms | 18 ms |
+| Zoom worst frame gap | 214 ms | 52 ms | 34 ms | 30 ms | 27 ms |
+| Drag worst frame gap at the opening view (reported only) | n/a | n/a | n/a | n/a | n/a |
+| Zoom worst frame gap at the opening view (reported only) | n/a | n/a | n/a | n/a | n/a |
+| Deep zoom drag worst frame gap (reported only) | 73 ms | 42 ms | 18 ms | 19 ms | 19 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 67 ms | 44 ms | 18 ms | 19 ms | 17 ms |
+| Long tasks while idle (3 s) | 0 | 0 | 0 | 0 | 0 |
+| Frames rendered while idle (3 s) | 0 | 0 | 0 | 0 | 0 |
+
+The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.
+
+Run with --open whole: the opening view rows were not measured (n/a). The budget rows are measured at the whole map in every run.
+
+Glints made in the 3 s idle window, as a visitor gets the site: software desktop 0, software phone 0, gpu desktop 1, gpu phone 1, gpu desktop2x 2
+
+All budgets met.
+after: ## 19:00:26 6.35 6.15 6.33 | Now drawing from 'AC Power'

@@ -1,0 +1,39 @@
+Baseline: /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/names-gpu-desktop/off (perf-run1.json, perf-run2.json, perf-run3.json)
+Current: /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/names-gpu-desktop/on (perf-run1.json, perf-run2.json, perf-run3.json)
+First-load JS of / (KB, per full run): baseline 190.8, 190.8, 190.8; now 190.8, 190.8, 190.8 (budget 200)
+three.js chunk in the first load (KB, per full run): baseline 0, 0, 0; now 0, 0, 0 (must be 0)
+Server HTML of / (KB, per full run): baseline 28.2, 28.2, 28.2; now 28.2, 28.2, 28.2 (budget 150)
+Server HTML of /album/in-rainbows-radiohead (KB, per full run): baseline 33.9, 33.9, 33.9; now 33.9, 33.9, 33.9 (budget 150)
+How the baseline runs were made: perf-run1.json: open=app names=off; perf-run2.json: open=app names=off; perf-run3.json: open=app names=off
+How the current runs were made: perf-run1.json: open=app names=on; perf-run2.json: open=app names=on; perf-run3.json: open=app names=on
+Only the column gpu desktop is compared.
+
+| Where | Measure | Budget | Baseline median (min to max), runs | Now, median (min to max), runs | Difference | |
+|---|---|---|---|---|---|---|
+| gpu desktop | searchUsableMs | 1000 | 71 (71 to 75), n=3 | 69 (69 to 77), n=3 | -2 (-3 %) | |
+| gpu desktop | startupLongTaskMs | 250 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | mapFirstFrameMs | none | 568 (561 to 585), n=3 | 569 (546 to 569), n=3 | +1 (0 %) | SLOWER |
+| gpu desktop | typeToSuggestionsMs | 100 | 7 (5 to 7), n=3 | 6 (6 to 7), n=3 | -1 (-14 %) | |
+| gpu desktop | selectToAlbumMs | 200 | 24 (17 to 25), n=3 | 26 (26 to 29), n=3 | +2 (+8 %) | WORSE |
+| gpu desktop | transitionGapMs | 50 | 24 (23 to 28), n=3 | 24 (21 to 25), n=3 | 0 | |
+| gpu desktop | sliderToListMs | 150 | 11 (10 to 14), n=3 | 11 (7 to 15), n=3 | 0 | |
+| gpu desktop | morphGapMs | 50 | 18 (18 to 27), n=3 | 21 (18 to 21), n=3 | +3 (+17 %) | SLOWER |
+| gpu desktop | dragGapMs | 50 | 19 (18 to 20), n=3 | 18 (18 to 19), n=3 | -1 (-5 %) | |
+| gpu desktop | zoomGapMs | 50 | 30 (28 to 30), n=3 | 33 (30 to 36), n=3 | +3 (+10 %) | WORSE |
+| gpu desktop | openingDragGapMs | none (yardstick 50) | 18 (18 to 19), n=3 | 18 (17 to 18), n=3 | 0 | |
+| gpu desktop | openingZoomGapMs | none (yardstick 50) | 38 (35 to 46), n=3 | 35 (30 to 39), n=3 | -3 (-8 %) | |
+| gpu desktop | idleLongTasks | 0 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | idleFrames | 1 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | deepDragGapMs | none (yardstick 50) | 18 (18 to 20), n=3 | 18 (18 to 19), n=3 | 0 | |
+| gpu desktop | deepMorphGapMs | none (yardstick 50) | 18 (18 to 18), n=3 | 17 (17 to 18), n=3 | -1 (-6 %) | |
+| gpu desktop | gasShownMs | none | 610 (605 to 624), n=3 | 611 (607 to 612), n=3 | +1 (0 %) | SLOWER |
+
+Single runs over budget or with a failed check (each is named and explained in the write-up):
+none
+
+Findings (5):
+gpu desktop mapFirstFrameMs: median 569 is above the baseline median (568), inside the baseline spread (561 to 585)
+gpu desktop selectToAlbumMs: median 26 is above the worst baseline run (25)
+gpu desktop morphGapMs: median 21 is above the baseline median (18), inside the baseline spread (18 to 27)
+gpu desktop zoomGapMs: median 33 is above the worst baseline run (30)
+gpu desktop gasShownMs: median 611 is above the baseline median (610), inside the baseline spread (605 to 624)
