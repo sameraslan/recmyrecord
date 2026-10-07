@@ -603,3 +603,65 @@ def test_the_sites_last_resort_covers_are_the_committed_tables():
     primary, skips = cv.read_covers(), cv.read_skips()
     new = [k for k in used if not rows[order.index(k)]["legacy_uri"]]
     assert sum(k not in primary for k in new) >= 30 and sum((k, cv.made_from(primary[k])) in skips for k in new if k in primary) >= 5
+
+
+# --- scripts/caa_hand.py: the rows a reader chose by hand ---------------------------------------------
+
+def _caa_hand():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("caa_hand", cv.PIPELINE_DIR / "scripts" / "caa_hand.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+HEAD = ",".join(cv.CAA_FIELDS) + "\n"
+
+
+def _hand_files(tmp_path, pending, table=""):
+    (tmp_path / "albums.csv").write_text("rym_id,artist\nAlbum1,a\nAlbum2,b\nAlbum3,c\n")
+    (tmp_path / "pending.csv").write_text(HEAD + pending, encoding="utf-8")
+    (tmp_path / "covers_caa.csv").write_text(HEAD + table, encoding="utf-8")
+
+
+def _hand(tmp_path, net):
+    lines = []
+    code = _caa_hand().main(tmp_path / "pending.csv", tmp_path / "covers_caa.csv", tmp_path / "albums.csv",
+                            fetcher(net, cv.CAA_INTERVALS), lines.append)
+    return code, cv.read_caa(tmp_path / "covers_caa.csv"), lines
+
+
+def test_a_hand_row_is_added_only_when_its_group_has_a_front_image(tmp_path):
+    """A row replaces the album's row of another group (in catalog order), a group with no front image or no
+    image at all is left out, and a second run asks for nothing it has added."""
+    _hand_files(tmp_path, f'Album3,{M3},"T, three",A,1990,Album,,hand\nAlbum1,{M1},T1,A,1990,Album,,hand\nAlbum2,{M2},T2,A,,,,hand\n',
+                f"Album3,{M2},Old,A,1990,Album,100,auto\n")
+    net = Net({cv.caa_listing_url(M3): listing(), cv.caa_listing_url(M1): listing(front=False)})
+    code, table, lines = _hand(tmp_path, net)
+    assert code == 0 and list(table) == ["Album3"]
+    assert table["Album3"] == {"rym_id": "Album3", "mbid": M3, "mb_title": "T, three", "mb_artist": "A", "mb_year": "1990",
+                               "mb_type": "Album", "score": "", "matched_by": "hand"}
+    assert lines[-1].startswith("1 added, 0 already there, 2 with no front image, 0 left for the next run, of 3; 3 request(s)")
+    before = len(net.asked)
+    net.pages[cv.caa_listing_url(M2)] = listing()
+    code, table, lines = _hand(tmp_path, net)
+    assert code == 0 and list(table) == ["Album2", "Album3"] and len(net.asked) == before + 2  # Album3 is not asked again
+    assert lines[-1].startswith("1 added, 1 already there, 1 with no front image")
+
+
+def test_a_refusing_archive_ends_the_hand_run_and_keeps_what_was_added(tmp_path):
+    _hand_files(tmp_path, f"Album1,{M1},T1,A,1990,Album,,hand\nAlbum2,{M2},T2,A,1990,Album,,hand\nAlbum3,{M3},T3,A,1990,Album,,hand\n")
+    net = Net({cv.caa_listing_url(M1): listing(), cv.caa_listing_url(M2): 503, cv.caa_listing_url(M3): listing()})
+    code, table, lines = _hand(tmp_path, net)
+    assert code == 2 and list(table) == ["Album1"]
+    assert cv.caa_listing_url(M3) not in net.asked and net.asked.count(cv.caa_listing_url(M2)) == 2  # the fetcher's one retry
+    assert "1 added" in lines[-1] and "2 left for the next run, of 3" in lines[-1]
+
+
+def test_a_hand_row_that_is_not_a_catalog_album_or_not_hand_stops_before_any_request(tmp_path):
+    for bad in (f"Album9,{M1},T,A,1990,Album,,hand\n", f"Album1,{M1},T,A,1990,Album,,auto\n", "Album1,nope,T,A,1990,Album,,hand\n"):
+        _hand_files(tmp_path, bad)
+        net = Net()
+        with pytest.raises(SystemExit):
+            _hand(tmp_path, net)
+        assert not net.asked

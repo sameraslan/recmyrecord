@@ -221,12 +221,18 @@ def test_status_counts_the_existing_albums_and_the_skipped_rows(tmp_path, capsys
 
 
 def test_the_committed_skip_list_names_rows_of_the_covers_table():
-    """The eleven frames the owner named on docs/review/youtube-covers.jpg (6 October 2026), and the one
-    last-resort match the first review of docs/review/caa-covers.jpg found wrong (West Side Story)."""
+    """The eleven frames the owner named on docs/review/youtube-covers.jpg (6 October 2026), and the last-resort
+    covers a review of docs/review/caa-covers.jpg found wrong: the first match of West Side Story (its row now
+    names another release group, so the line matches no row), and two release groups chosen by hand whose image
+    on the archive is a bootleg game rip's fan-made sleeve (Wii Sports, A Link to the Past)."""
     skips = cv.read_skips(cv.DEFAULT_SKIP)
     rows = cv.read_covers(cv.DEFAULT_COVERS)
     wrong = {(key, of) for key, of in skips if of.startswith("caa:")}
-    assert wrong == {("sp:3DCQhS6eII8WUExSzdN9sE", "caa:ccdcf53e-fe7b-4ee2-b820-0f8ae9436839")}
+    assert wrong == {("sp:3DCQhS6eII8WUExSzdN9sE", "caa:ccdcf53e-fe7b-4ee2-b820-0f8ae9436839"),
+                     ("Album16150201", "caa:430fb2a6-65fa-4fc0-8487-16621a7f0f75"),
+                     ("Album16352063", "caa:482e30a7-47bb-4f80-b7e7-10fa25357a1a")}
+    caa = cv.read_caa()
+    assert {key for key, of in wrong if of == cv.made_from((cv.CAA, caa[key]["mbid"]))} == {"Album16150201", "Album16352063"}
     skips -= wrong
     assert len(skips) == 11 and all(key in rows and of == cv.made_from(rows[key]) for key, of in skips)
     assert {of.split(":")[0] for _, of in skips} == {"youtube"}
