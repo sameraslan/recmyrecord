@@ -12,6 +12,7 @@ import {
   coverFade,
   dotCssPx,
 } from "../state/zoomLimits";
+import { MAX_ATLAS_SHEETS } from "@/lib/data/sprites";
 
 /**
  * Sprite sizes (see state/zoomLimits.ts): a dot of 3 to 7 CSS px that grows gently with the map scale, cross-fading to a cover whose size is linear in the map scale (COVER_WORLD world
@@ -65,7 +66,9 @@ export const DOT_ALPHA_DIMMED = 0.34;
 /** The dimmed map draws its dots this much larger (mockup `muted`: radius * 1.35), easing with the alpha. */
 export const MUTED_DOT_SCALE = 1.35;
 
-/** Alpha factor of the other covers while an album is picked (mockup coverA * .5); dots are unaffected. */
+/** How much of the other covers' own colour is left while an album is picked (mockup coverA * .5): the rest is
+ * the map's background colour, mixed in by the fragment shader. The covers stay opaque, so where they overlap
+ * the one on top hides the one under it instead of both showing through. Dots are unaffected. */
 export const SELECTION_DIM = 0.5;
 
 /** True when the picked album is drawn large and framed by the shader (else OverlayDriver's DOM ring marks it). */
@@ -82,7 +85,20 @@ export function selectedSpriteCssSize(zoom: number, canvasHeightCssPx: number, p
 
 const f = (v: number) => v.toFixed(4);
 
-export const ALBUM_VERTEX_SHADER = /* glsl */ `
+/**
+ * Atlas sheets the shader is written for: one texture unit per sheet the data has, at least one, at most
+ * MAX_ATLAS_SHEETS and what the device offers (`maxTextureUnits`, 16 or more under WebGL2). Albums on a sheet
+ * beyond that stay dots. Measured (headless Chrome, M1 Pro, 10,467 albums, 11 sheets): a frame costs the same
+ * as with one array texture, and a sheet upload about a third of an array layer's in software rendering, where
+ * mipmaps are rebuilt for the whole array; larger 4096 px sheets upload more slowly per sheet.
+ */
+export function shaderSheetCount(sheets: number, maxTextureUnits = MAX_ATLAS_SHEETS): number {
+  return Math.max(1, Math.min(sheets, MAX_ATLAS_SHEETS, maxTextureUnits));
+}
+
+export const albumVertexShader = (sheetCount: number): string => {
+  const sheets = shaderSheetCount(sheetCount);
+  return /* glsl */ `
   attribute vec2 a_pos_sonic;
   attribute vec2 a_pos_balanced;
   attribute vec2 a_pos_mood;
@@ -99,7 +115,7 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   uniform float u_hoverIndex;   // -1 = no hover target
   uniform float u_selectedIndex; // album picked in Explore, -1 = none (always -1 in album view)
   uniform float u_maxSpritePx;  // device px cap, viewportHeightCssPx * 0.18 * dpr
-  uniform float u_atlasLoaded[5];
+  uniform float u_atlasLoaded[${sheets}];
   uniform float u_dotAlpha;     // eases from DOT_ALPHA to DOT_ALPHA_DIMMED as the map dims
 
   varying vec2 v_atlasOrigin;
@@ -134,12 +150,8 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
   }
 
   float atlasLoaded(int idx) {
-    if (idx == 0) return u_atlasLoaded[0];
-    if (idx == 1) return u_atlasLoaded[1];
-    if (idx == 2) return u_atlasLoaded[2];
-    if (idx == 3) return u_atlasLoaded[3];
-    if (idx == 4) return u_atlasLoaded[4];
-    return 0.0;
+    if (idx < 0 || idx >= ${sheets}) return 0.0;
+    return u_atlasLoaded[idx];
   }
 
   void main() {
@@ -217,24 +229,27 @@ export const ALBUM_VERTEX_SHADER = /* glsl */ `
     v_clusterId = a_clusterId;
   }
 `;
+};
 
-export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
+export const albumFragmentShader = (sheetCount: number): string => {
+  const sheets = shaderSheetCount(sheetCount);
+  const ids = Array.from({ length: sheets }, (_, i) => i);
+  // A sampler cannot be picked by a computed index in GLSL ES, so the choice is spelled out per sheet.
+  const pick = ids.map((i) => (i < sheets - 1 ? `if (idx == ${i}) return texture2D(u_atlas${i}, uv).rgb;` : `return texture2D(u_atlas${i}, uv).rgb;`));
+  return /* glsl */ `
   precision highp float;
 
-  uniform sampler2D u_atlas0;
-  uniform sampler2D u_atlas1;
-  uniform sampler2D u_atlas2;
-  uniform sampler2D u_atlas3;
-  uniform sampler2D u_atlas4;
+  ${ids.map((i) => `uniform sampler2D u_atlas${i};`).join("\n  ")}
   uniform vec3 u_clusterColors[8];
   uniform float u_pixelRatio;
   uniform float u_dotAlpha;   // 0.78, 0.34 when the map is dimmed
   uniform float u_focusDim;   // alpha factor of albums outside the focus
-  uniform float u_selDim;     // alpha factor of the other covers while an album is picked
+  uniform float u_selDim;     // share of their own colour the other covers keep while an album is picked
 
   const vec3 PAPER = vec3(0.929, 0.898, 0.835); // #ede5d5
   const vec3 LAMP = vec3(0.902, 0.659, 0.337);  // #e6a856
   const vec3 ROOM = vec3(0.082, 0.067, 0.051);  // #15110d
+  const vec3 PANE = vec3(0.090, 0.071, 0.055);  // #17120e, the map's background (--color-pane)
 
   varying vec2 v_atlasOrigin;
   varying vec2 v_atlasSize;
@@ -258,11 +273,7 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
   }
 
   vec3 sampleAtlas(int idx, vec2 uv) {
-    if (idx == 0) return texture2D(u_atlas0, uv).rgb;
-    if (idx == 1) return texture2D(u_atlas1, uv).rgb;
-    if (idx == 2) return texture2D(u_atlas2, uv).rgb;
-    if (idx == 3) return texture2D(u_atlas3, uv).rgb;
-    return texture2D(u_atlas4, uv).rgb;
+    ${pick.join("\n    ")}
   }
 
   vec3 clusterColor(int id) {
@@ -302,8 +313,10 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
     }
     float alpha = mask * mix(u_dotAlpha, 1.0, v_coverT);
     if (v_dim > 0.5) alpha *= u_focusDim;
-    // Only the cover part dims, so dots stay as they are.
-    if (v_selDim > 0.5) alpha *= mix(1.0, u_selDim, v_coverT);
+    // Only the cover part dims, so dots stay as they are. The colour moves toward the map's background and the
+    // alpha stays: over the bare map this is the same pixel as lowering the alpha was, and an opaque dimmed
+    // cover no longer shows the covers under it.
+    if (v_selDim > 0.5) col = mix(PANE, col, mix(1.0, u_selDim, v_coverT));
     if (v_sel > 0.5) {
       // Mockup: a 1 px room-coloured backing around the cover, then a 2 px lamp frame 4 px outside it.
       float back = 1.0 - smoothstep(1.0 - 0.5 * aa, 1.0 + 0.5 * aa, squareSd(p, halfSize));
@@ -339,3 +352,8 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
     gl_FragColor = vec4(col, alpha);
   }
 `;
+};
+
+/** The sources for the five sheets the map had before the shader followed the data (kept for tests). */
+export const ALBUM_VERTEX_SHADER = albumVertexShader(5);
+export const ALBUM_FRAGMENT_SHADER = albumFragmentShader(5);

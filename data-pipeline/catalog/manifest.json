@@ -1,0 +1,23 @@
+{
+ "sheet": {
+  "file": "rym10k_sheet.csv",
+  "sha256": "d36c7a48e5c671a565ed471139c4a3d8858ef2030071d03f3023b4b22702e991",
+  "rows": 10000,
+  "retrieved": [
+   "2026-10-01T23:54:09Z",
+   "2026-10-03T08:33:46Z"
+  ]
+ },
+ "albums": 10467,
+ "existing": 4081,
+ "existing_on_chart": 3614,
+ "paired_by": {
+  "spotify_id": 2368,
+  "artist_title_year": 1099,
+  "manual": 147
+ },
+ "existing_off_chart": 467,
+ "new": 6386,
+ "doubtful_pairs": 0,
+ "doubtful_by_reason": {}
+}

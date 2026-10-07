@@ -1,12 +1,23 @@
 import 'server-only';
 import fs from 'node:fs';
 import path from 'node:path';
-import { SHELF_SIZE, buildAlbumPageData, buildCatalog, pickShelf, toSummary } from '@/lib/data/catalog';
+import { REC_MAX, SHELF_SIZE, buildAlbumPageData, buildCatalog, isHostedCover, pickShelf, toSummary } from '@/lib/data/catalog';
+import { ATLAS_PER_SHEET, MAX_ATLAS_SHEETS, atlasCount } from '@/lib/data/sprites';
 import { STOP_IDS } from '@/lib/types';
-import type { AlbumPageData, AlbumRecord, AlbumSummary, Catalog, Positions, Recs, Vocab } from '@/lib/types';
+import type { AlbumPageData, AlbumRecord, AlbumSummary, Catalog, ListenLinks, Positions, Recs, Vocab } from '@/lib/types';
+
+/**
+ * The folder under public/ that holds the data: `data` unless RMR_DATA_DIR names another one, for building
+ * and testing against a data set that is not the committed one (next.config.ts then serves it at /data).
+ */
+export function dataDirName(value: string | undefined = process.env.RMR_DATA_DIR): string {
+  if (!value) return 'data';
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(value)) throw new Error(`RMR_DATA_DIR must be the name of a folder under public/, got "${value}"`);
+  return value;
+}
 
 // Relies on the working directory being frontcreck/, which holds for `next build`, `next dev` and Vitest.
-const DATA_DIR = path.join(process.cwd(), 'public', 'data');
+const DATA_DIR = path.join(process.cwd(), 'public', dataDirName());
 
 function readJson<T>(name: string): T {
   return JSON.parse(fs.readFileSync(path.join(DATA_DIR, name), 'utf8')) as T;
@@ -28,6 +39,104 @@ export function assertDataConsistent(albumCount: number, recs: Recs, positions: 
   }
 }
 
+/**
+ * Fails the build when a row of recs.json has the wrong number of albums: `expected` (ten) for every album at
+ * every stop, except that an album without audio (`n`) has none at sonic and balanced, and is in no other
+ * album's sonic or balanced row.
+ */
+export function assertRecsConsistent(albums: readonly AlbumRecord[], recs: Recs, expected = REC_MAX): void {
+  for (const stop of STOP_IDS) {
+    const byAudio = stop !== 'mood';
+    for (let id = 0; id < albums.length; id++) {
+      const row = recs[stop]?.[id];
+      const count = Array.isArray(row) ? row.length : 0;
+      if (byAudio && albums[id].n) {
+        if (count !== 0) throw new Error(`recs.json: ${stop} row of ${albums[id].slug} has ${count} albums but the album has no audio (expected none)`);
+        continue;
+      }
+      if (count !== expected) throw new Error(`recs.json: ${stop} row of ${albums[id].slug} has ${count} albums (expected ${expected})`);
+      if (!byAudio) continue;
+      for (const j of row) {
+        if (albums[j]?.n) throw new Error(`recs.json: ${stop} row of ${albums[id].slug} lists ${albums[j].slug}, which has no audio`);
+      }
+    }
+  }
+}
+
+const LINK_NAME = '[A-Za-z0-9_-]+';
+/**
+ * What a listen-link reference (`l` in albums.json) looks like, per service: the mirror of LINK_REF_RE in
+ * data-pipeline/rmr_pipeline/links.py, which the pipeline's validator checks the same file against. The page
+ * builds a URL from a reference by putting it after a fixed prefix (`listenLink` in catalog.ts), so a reference
+ * of another form would be a broken or a misdirected link.
+ */
+export const LINK_REF_RE: Record<keyof ListenLinks, RegExp> = {
+  am: /^[a-z]{2}\/[0-9]+$/,
+  bc: /^(?:[a-z0-9-]+\.)+[a-z]{2,}\/(?:album|track)\/[A-Za-z0-9_.~%-]*[A-Za-z0-9_~%-]$/,
+  dz: /^[0-9]+$/,
+  yt: /^[A-Za-z0-9_-]{11}$/,
+  sc: new RegExp(`^${LINK_NAME}/(?:sets/)?${LINK_NAME}$`),
+};
+
+/** Fails the build when an album's listen links are not an object of known services with references of their form. */
+export function assertLinksValid(albums: readonly AlbumRecord[]): void {
+  for (const a of albums) {
+    if (a.l === undefined) continue;
+    const links: unknown = a.l;
+    if (links === null || typeof links !== 'object' || Array.isArray(links)) throw new Error(`albums.json: l of ${a.slug} must be an object of listen links`);
+    for (const [key, ref] of Object.entries(links)) {
+      if (!Object.hasOwn(LINK_REF_RE, key)) {
+        throw new Error(`albums.json: ${a.slug} has a link for "${key}", which is not a service (${Object.keys(LINK_REF_RE).join(', ')})`);
+      }
+      if (typeof ref !== 'string' || !LINK_REF_RE[key as keyof ListenLinks].test(ref)) {
+        throw new Error(`albums.json: ${a.slug} has a bad ${key} link ${JSON.stringify(ref)}`);
+      }
+    }
+  }
+}
+
+/** Fails the build when the albums need more atlas sheets than the map can draw (it would leave the rest as dots). */
+export function assertAtlasSheets(albumCount: number): void {
+  const sheets = atlasCount(albumCount);
+  if (sheets > MAX_ATLAS_SHEETS) {
+    throw new Error(
+      `albums.json: ${albumCount} albums need ${sheets} atlas sheets but the map draws at most ${MAX_ATLAS_SHEETS} (${MAX_ATLAS_SHEETS * ATLAS_PER_SHEET} albums)`,
+    );
+  }
+}
+
+/**
+ * The album pages to prerender: all of them, unless RMR_PRERENDER asks for fewer (a test build of a large data
+ * set on a small disk). Its value is a comma list of a count (that many leading albums) and slugs.
+ */
+export function prerenderSlugs(slugs: readonly string[], value: string | undefined = process.env.RMR_PRERENDER): string[] {
+  if (!value) return [...slugs];
+  const known = new Set(slugs);
+  const out = new Set<string>();
+  for (const part of value.split(',').map((s) => s.trim()).filter(Boolean)) {
+    if (/^\d+$/.test(part)) slugs.slice(0, Number(part)).forEach((s) => out.add(s));
+    else if (known.has(part)) out.add(part);
+  }
+  return slugs.filter((s) => out.has(s));
+}
+
+// The site's own copies of the Cover Art Archive covers (public/covers/<mbid>.jpg) and their sizes, index.json:
+// both written by the pipeline (`python -m rmr_pipeline.covers host`), whose validator checks them against albums.json.
+const HOSTED_INDEX = path.join(process.cwd(), 'public', 'covers', 'index.json');
+let hostedSizes: Record<string, [number, number]> | null = null;
+
+/**
+ * The pixel size of the site's own copy of the cover `coverId`, for a link preview: what the pipeline recorded
+ * for `ca:<mbid>` in public/covers/index.json. Undefined for any other cover, and when the index has no such
+ * copy (the preview then states no size).
+ */
+export function hostedCoverSize(coverId: string): { width: number; height: number } | undefined {
+  if (!isHostedCover(coverId)) return undefined;
+  hostedSizes ??= fs.existsSync(HOSTED_INDEX) ? (JSON.parse(fs.readFileSync(HOSTED_INDEX, 'utf8')) as Record<string, [number, number]>) : {};
+  const size = hostedSizes[coverId.slice(coverId.indexOf(':') + 1)];
+  return size ? { width: size[0], height: size[1] } : undefined;
+}
+
 let cache: { catalog: Catalog; recs: Recs } | null = null;
 
 function load(): { catalog: Catalog; recs: Recs } {
@@ -36,6 +145,9 @@ function load(): { catalog: Catalog; recs: Recs } {
     const recs = readJson<Recs>('recs.json');
     // positions.json is only read to check it; the client fetches it.
     assertDataConsistent(albums.length, recs, readJson<Positions>('positions.json'));
+    assertRecsConsistent(albums, recs);
+    assertLinksValid(albums);
+    assertAtlasSheets(albums.length);
     cache = { catalog: buildCatalog(albums, readJson<Vocab>('vocab.json')), recs };
   }
   return cache;
@@ -47,6 +159,11 @@ export function getServerCatalog(): Catalog {
 
 export function getAllSlugs(): string[] {
   return load().catalog.albums.map((a) => a.slug);
+}
+
+/** The slugs `generateStaticParams` prerenders (every album unless RMR_PRERENDER limits it). */
+export function getPrerenderSlugs(): string[] {
+  return prerenderSlugs(getAllSlugs());
 }
 
 export function getAlbumPageData(slug: string): AlbumPageData | null {

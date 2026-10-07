@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
+import { tileLetter } from '../src/lib/data/catalog';
+import { COVER_URL_RE, THUMB_SHEET_RE, albumWithoutCover } from './data';
 import { coversSettled, isPhone, shot } from './helpers';
 
 const BODY_SPOT = { x: 700, y: 600 };
@@ -29,7 +31,7 @@ test.describe('desktop header search', () => {
   test('builds the index lazily, suggests, highlights and navigates with the keyboard', async ({ page }, info) => {
     const thumbRequests: string[] = [];
     page.on('request', (r) => {
-      if (r.url().endsWith('/data/thumbs.webp')) thumbRequests.push(r.url());
+      if (THUMB_SHEET_RE.test(r.url())) thumbRequests.push(r.url());
     });
     await page.goto('/nope');
     await page.waitForLoadState('networkidle');
@@ -215,7 +217,7 @@ test.describe('covers', () => {
   test('while the remote image loads the box is empty, with no letter', async ({ page }) => {
     let release: () => void = () => {};
     const held = new Promise<void>((r) => (release = r));
-    await page.route('https://i.scdn.co/**', async (route) => {
+    await page.route(COVER_URL_RE, async (route) => {
       await held;
       await route.continue().catch(() => {});
     });
@@ -230,7 +232,7 @@ test.describe('covers', () => {
   });
 
   test('falls back to the sprite, then to the lettered tile', async ({ page }) => {
-    await page.route('https://i.scdn.co/**', (route) => route.abort());
+    await page.route(COVER_URL_RE, (route) => route.abort());
     await page.goto('/nope');
     await searchFor(page, 'kid a');
     const cover = page.getByRole('option').first().locator('.cover');
@@ -239,8 +241,8 @@ test.describe('covers', () => {
     await expect(cover.locator('.fb')).toHaveCount(0);
 
     const next = await page.context().newPage();
-    await next.route('https://i.scdn.co/**', (route) => route.abort());
-    await next.route('**/data/thumbs.webp', (route) => route.abort());
+    await next.route(COVER_URL_RE, (route) => route.abort());
+    await next.route(THUMB_SHEET_RE, (route) => route.abort());
     await next.goto('/nope');
     await searchFor(next, 'kid a');
     const tile = next.getByRole('option').first().locator('.cover');
@@ -255,14 +257,16 @@ test.describe('covers', () => {
     // Only requests this album could cause: the sprite sheet, or a cover URL with no cover id (at most the size prefix). Typing key
     // by key lists (and loads covers for) other albums matching each prefix, which is fine.
     page.on('request', (r) => {
-      if (/^https:\/\/i\.scdn\.co\/image\/(ab67616d[0-9a-f]{8})?$/.test(r.url()) || r.url().endsWith('/data/thumbs.webp')) requests.push(r.url());
+      if (/^https:\/\/i\.scdn\.co\/image\/(ab67616d[0-9a-f]{8})?$/.test(r.url()) || THUMB_SHEET_RE.test(r.url())) requests.push(r.url());
     });
+    // An album without a cover id, found in the data (the pipeline keeps adding covers, so none is named here).
+    const bare = albumWithoutCover();
+    test.skip(!bare, 'every album in public/data has a cover id');
     await page.goto('/nope');
-    await searchFor(page, 'spiritual unity albert');
-    await expect(page.getByRole('option')).toHaveCount(1);
-    const cover = page.getByRole('option').first().locator('.cover');
+    await searchFor(page, bare!.query);
+    const cover = page.locator(`[role="option"][data-album="${bare!.slug}"] .cover`);
     await expect(cover).toHaveAttribute('data-state', 'tile');
-    await expect(cover.locator('.fb')).toHaveText('S');
+    await expect(cover.locator('.fb')).toHaveText(tileLetter(bare!.title));
     await expect(cover.locator('img, .spr')).toHaveCount(0);
     await page.waitForTimeout(300); // nothing should happen: no cover request for a tile
     expect(requests).toEqual([]);

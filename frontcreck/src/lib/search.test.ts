@@ -206,6 +206,49 @@ describe('searchAlbums (real catalog)', () => {
     expect(performance.now() - t0).toBeLessThan(5);
   });
 
+  it('finds through the word index exactly what a scan of every album finds, in the same order', () => {
+    const byHand = [
+      'r', 't', 'th', 'the', 'a', 'an', 'and', 'in', 'i', '1', '19', 'x', 'zz', 'q',
+      'radiohead', 'radio', 'kid a', 'in rainbows', 'the the', 'the the soul', 'blue', 'blue train', 'love', 'live at', 'live at the',
+      'marley and the wailers', 'marley & the wailers', 'velvet underground and nico', 'rise and fall ziggy', 'bjork', 'sigur ros',
+      'm a a d', 'dont', "don't", 'ok computer radiohead', 'computer ok', 'a a', 'the a', 'of the', 'de la', 'la la la',
+      'qzxv', 'radiohed', 'zzkq the', 'the zzkq', 'the qzxvbnmkqzxvbnmk radiohead',
+    ];
+    // A word of every hundredth album, whole and cut short, alone and with a word of its artist.
+    const fromData = albums.flatMap((a, i) => {
+      if (i % 100) return [];
+      const [t] = queryWords(a.t);
+      const [r] = queryWords(a.a);
+      return t && r ? [t, t.slice(0, 3), `${t} ${r}`, `${r.slice(0, 2)} ${t}`] : [];
+    });
+    expect(fromData.length).toBeGreaterThan(350);
+    const ids = (q: string, limit: number, scanAll: boolean) => prefixSearch(index, q, limit, scanAll).map((h) => h.id);
+    let narrowed = 0;
+    // Every match of the hand-written queries (a limit above the size of the catalog), the first 300 of the others.
+    for (const [list, limit] of [[byHand, albums.length + 1], [fromData, 300]] as const) {
+      for (const q of list) {
+        const all = ids(q, limit, true);
+        expect(ids(q, limit, false), q).toEqual(all);
+        if (all.length > 0 && all.length < 300) narrowed++;
+      }
+    }
+    expect(narrowed).toBeGreaterThan(200);
+    // The hits themselves, with their highlight ranges, are the same too.
+    for (const q of ['radiohead', 'kid a', 'the the', 'marley and the wailers', 'th']) expect(prefixSearch(index, q), q).toEqual(prefixSearch(index, q, 6, true));
+  }, 20_000);
+
+  it('keeps one sorted entry per word, each with the albums that have it, in catalog order', () => {
+    expect(index.words.length).toBe(index.posts.length);
+    expect(index.words.length).toBeGreaterThan(5000);
+    for (let i = 1; i < index.words.length; i++) expect(index.words[i - 1] < index.words[i], index.words[i]).toBe(true);
+    const at = index.words.indexOf('radiohead');
+    expect(at).toBeGreaterThanOrEqual(0);
+    const ids = index.posts[at];
+    expect(ids).toEqual([...ids].sort((a, b) => a - b));
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toEqual(albums.flatMap((a, id) => (queryWords(`${a.t} ${a.a}`).includes('radiohead') ? [id] : [])));
+  });
+
   it('returns highlight ranges on the original strings', () => {
     const hit = searchAlbums(index, 'bjork')[0];
     expect(hit.artist).toEqual([{ start: 0, end: 5 }]);

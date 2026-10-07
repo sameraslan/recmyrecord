@@ -1,0 +1,2222 @@
+{
+ "generated": "2026-10-05",
+ "note": "Probes on RYM-catalog proxies over the clip cache; descriptive, nobody listened, no audio opened.",
+ "albums": 9367,
+ "left_out": {
+  "other_source": 870,
+  "models_on_different_listings": 0,
+  "catalog": 10467,
+  "with_both_models": 10237
+ },
+ "probe": {
+  "C": 0.01,
+  "folds": 5,
+  "grouped_by": "artist"
+ },
+ "cells": {
+  "existing, Deezer": {
+   "albums": 3659,
+   "with_genre_year_rank": 3286,
+   "median_year": 1990.0,
+   "median_rank": 2939.5,
+   "share_2010_or_later": 0.116,
+   "share_before_1970": 0.124,
+   "storefronts": {
+    "deezer": 3659
+   },
+   "matched_by": {
+    "(earlier run)": 3659
+   },
+   "top_genres": {
+    "Progressive Rock": 146,
+    "Singer-Songwriter": 134,
+    "Hard Bop": 82,
+    "Hard Rock": 80,
+    "Heavy Metal": 79,
+    "Progressive Metal": 66,
+    "Alternative Rock": 63,
+    "Indie Rock": 61
+   },
+   "clap_clips": {
+    "1": 8,
+    "2": 10,
+    "3": 21,
+    "4": 3620
+   }
+  },
+  "existing, iTunes": {
+   "albums": 218,
+   "with_genre_year_rank": 181,
+   "median_year": 1983.0,
+   "median_rank": 2693.0,
+   "share_2010_or_later": 0.101,
+   "share_before_1970": 0.252,
+   "storefronts": {
+    "itunes:us": 196,
+    "itunes:gb": 19,
+    "itunes:de": 2,
+    "itunes:no": 1
+   },
+   "matched_by": {
+    "(earlier run)": 218
+   },
+   "top_genres": {
+    "Hard Bop": 12,
+    "Krautrock": 9,
+    "Heavy Metal": 8,
+    "Video Game Music": 7,
+    "Hard Rock": 6,
+    "Romanticism": 6,
+    "Progressive Rock": 5,
+    "Psychedelic Rock": 4
+   },
+   "clap_clips": {
+    "1": 3,
+    "2": 2,
+    "3": 1,
+    "4": 212
+   }
+  },
+  "new, Deezer": {
+   "albums": 2815,
+   "with_genre_year_rank": 2807,
+   "median_year": 2002.0,
+   "median_rank": 6130.0,
+   "share_2010_or_later": 0.353,
+   "share_before_1970": 0.063,
+   "storefronts": {
+    "deezer": 2815
+   },
+   "matched_by": {
+    "deezer_id": 2351,
+    "search": 460,
+    "override": 4
+   },
+   "top_genres": {
+    "Singer-Songwriter": 61,
+    "Post-Hardcore": 59,
+    "Video Game Music": 58,
+    "Heavy Metal": 54,
+    "Indie Rock": 49,
+    "Progressive Rock": 48,
+    "Alternative Rock": 45,
+    "Hard Rock": 44
+   },
+   "clap_clips": {
+    "1": 10,
+    "2": 8,
+    "3": 6,
+    "4": 2791
+   }
+  },
+  "new, iTunes": {
+   "albums": 2675,
+   "with_genre_year_rank": 2674,
+   "median_year": 1995.0,
+   "median_rank": 6744.0,
+   "share_2010_or_later": 0.184,
+   "share_before_1970": 0.094,
+   "storefronts": {
+    "itunes:us": 1364,
+    "itunes:ca": 260,
+    "itunes:gb": 191,
+    "itunes:se": 186,
+    "itunes:ru": 133,
+    "itunes:es": 65
+   },
+   "matched_by": {
+    "apple_id": 2605,
+    "search": 70
+   },
+   "top_genres": {
+    "Progressive Rock": 87,
+    "Singer-Songwriter": 72,
+    "MPB": 63,
+    "Hard Bop": 56,
+    "Video Game Music": 50,
+    "Modern Classical": 49,
+    "Jazz Fusion": 44,
+    "Black Metal": 42
+   },
+   "clap_clips": {
+    "1": 7,
+    "2": 6,
+    "3": 18,
+    "4": 2644
+   }
+  }
+ },
+ "clips": {
+  "existing, Deezer": {
+   "albums": 3659,
+   "clips": 14571,
+   "clip_seconds": {
+    "median": 29.989,
+    "p1": 29.806,
+    "under_25_s": 0.006
+   },
+   "most_common_clip_seconds": [
+    [
+     29.989,
+     14006
+    ],
+    [
+     30.015,
+     403
+    ],
+    [
+     9.979,
+     25
+    ]
+   ],
+   "track_seconds_known": 16,
+   "track_seconds_median": 195.0,
+   "cut_short_previews": 0,
+   "albums_whose_clips_are_ranks_0_to_3": 0.9989,
+   "albums_with_4_clips_and_a_known_track_count": 3620,
+   "of_those_in_the_planned_order": 0.9931,
+   "mean_relative_position_in_album": 0.392,
+   "embedded_by": {
+    "copy:clap": 14567,
+    "onepass": 4
+   }
+  },
+  "existing, iTunes": {
+   "albums": 216,
+   "clips": 850,
+   "clip_seconds": {
+    "median": 29.976,
+    "p1": 29.929,
+    "under_25_s": 0.0035
+   },
+   "most_common_clip_seconds": [
+    [
+     29.976,
+     443
+    ],
+    [
+     29.929,
+     340
+    ],
+    [
+     29.952,
+     63
+    ]
+   ],
+   "track_seconds_known": 850,
+   "track_seconds_median": 273.8,
+   "cut_short_previews": 0,
+   "albums_whose_clips_are_ranks_0_to_3": 1.0,
+   "albums_with_4_clips_and_a_known_track_count": 210,
+   "of_those_in_the_planned_order": 1.0,
+   "mean_relative_position_in_album": 0.396,
+   "embedded_by": {
+    "onepass": 850
+   }
+  },
+  "new, Deezer": {
+   "albums": 2815,
+   "clips": 11208,
+   "clip_seconds": {
+    "median": 29.989,
+    "p1": 29.832,
+    "under_25_s": 0.0065
+   },
+   "most_common_clip_seconds": [
+    [
+     29.989,
+     10633
+    ],
+    [
+     30.015,
+     441
+    ],
+    [
+     9.979,
+     23
+    ]
+   ],
+   "track_seconds_known": 11208,
+   "track_seconds_median": 246.0,
+   "cut_short_previews": 24,
+   "albums_whose_clips_are_ranks_0_to_3": 0.9993,
+   "albums_with_4_clips_and_a_known_track_count": 2791,
+   "of_those_in_the_planned_order": 0.995,
+   "mean_relative_position_in_album": 0.392,
+   "embedded_by": {
+    "copy:clap": 11192,
+    "onepass": 16
+   }
+  },
+  "new, iTunes": {
+   "albums": 2675,
+   "clips": 10649,
+   "clip_seconds": {
+    "median": 29.929,
+    "p1": 29.929,
+    "under_25_s": 0.0047
+   },
+   "most_common_clip_seconds": [
+    [
+     29.929,
+     5359
+    ],
+    [
+     29.976,
+     4617
+    ],
+    [
+     29.952,
+     600
+    ]
+   ],
+   "track_seconds_known": 10649,
+   "track_seconds_median": 254.9,
+   "cut_short_previews": 0,
+   "albums_whose_clips_are_ranks_0_to_3": 0.9981,
+   "albums_with_4_clips_and_a_known_track_count": 2644,
+   "of_those_in_the_planned_order": 0.9981,
+   "mean_relative_position_in_album": 0.393,
+   "embedded_by": {
+    "onepass": 10649
+   }
+  }
+ },
+ "pairs": {
+  "groups_examined": 258,
+  "listing_pairs": {
+   "cross_store": 2,
+   "same_store_other_listing": 5
+  },
+  "listing_pairs_with_the_same_track_positions": {
+   "cross_store": 1,
+   "same_store_other_listing": 1
+  },
+  "cosines": {
+   "cross_store": {
+    "clap": {
+     "same_track_across": {
+      "n": 4,
+      "mean": 0.8693,
+      "median": 0.8559,
+      "p10": 0.8369,
+      "p90": 0.9125
+     },
+     "other_track_within_listing": {
+      "n": 12,
+      "mean": 0.9076,
+      "median": 0.9019,
+      "p10": 0.8656,
+      "p90": 0.9581
+     },
+     "other_track_across": {
+      "n": 12,
+      "mean": 0.8602,
+      "median": 0.8634,
+      "p10": 0.8286,
+      "p90": 0.8915
+     }
+    },
+    "effnet": {
+     "same_track_across": {
+      "n": 4,
+      "mean": 0.9157,
+      "median": 0.928,
+      "p10": 0.8721,
+      "p90": 0.9496
+     },
+     "other_track_within_listing": {
+      "n": 12,
+      "mean": 0.9162,
+      "median": 0.9141,
+      "p10": 0.8813,
+      "p90": 0.938
+     },
+     "other_track_across": {
+      "n": 12,
+      "mean": 0.8892,
+      "median": 0.887,
+      "p10": 0.8564,
+      "p90": 0.9256
+     }
+    }
+   },
+   "same_store_other_listing": {
+    "clap": {
+     "same_track_across": {
+      "n": 4,
+      "mean": 0.5852,
+      "median": 0.5453,
+      "p10": 0.5148,
+      "p90": 0.6875
+     },
+     "other_track_within_listing": {
+      "n": 12,
+      "mean": 0.8076,
+      "median": 0.7966,
+      "p10": 0.7053,
+      "p90": 0.884
+     },
+     "other_track_across": {
+      "n": 12,
+      "mean": 0.5821,
+      "median": 0.5705,
+      "p10": 0.5163,
+      "p90": 0.6518
+     }
+    },
+    "effnet": {
+     "same_track_across": {
+      "n": 4,
+      "mean": 0.4752,
+      "median": 0.4647,
+      "p10": 0.4301,
+      "p90": 0.5286
+     },
+     "other_track_within_listing": {
+      "n": 12,
+      "mean": 0.6913,
+      "median": 0.6748,
+      "p10": 0.623,
+      "p90": 0.7385
+     },
+     "other_track_across": {
+      "n": 12,
+      "mean": 0.4682,
+      "median": 0.4772,
+      "p10": 0.3781,
+      "p90": 0.565
+     }
+    }
+   },
+   "same_listing_other_storefront": {
+    "clap": {},
+    "effnet": {}
+   }
+  },
+  "cross_store_albums": [
+   {
+    "keys": [
+     "Album1039131",
+     "sp:6FMu88LoghMcmme2aDkK3S"
+    ],
+    "deezer": "187562312",
+    "itunes": "itunes:us/1575697279",
+    "tracks": 4,
+    "deezer_embedded_by": "copy:clap",
+    "itunes_embedded_by": "onepass"
+   }
+  ],
+  "store_probe_on_pairs": {
+   "clap": {
+    "album_pairs": 1,
+    "track_pairs": 4,
+    "note": "only 1 of the albums held from both stores have `clap_mp3` clips at the same track positions (under 5); the doubles are in the backup from before the rekey, which has no `clap_mp3` rows"
+   },
+   "effnet": {
+    "album_pairs": 1,
+    "track_pairs": 4,
+    "note": "only 1 of the albums held from both stores have `clap_mp3` clips at the same track positions (under 5); the doubles are in the backup from before the rekey, which has no `clap_mp3` rows"
+   }
+  }
+ },
+ "probes": {
+  "new_vs_existing, all": {
+   "clap": {
+    "n": 9367,
+    "n_pos": 5490,
+    "n_neg": 3877,
+    "auc": 0.7508,
+    "fold_mean": 0.751,
+    "fold_sd": 0.012
+   },
+   "effnet": {
+    "n": 9367,
+    "n_pos": 5490,
+    "n_neg": 3877,
+    "auc": 0.6466,
+    "fold_mean": 0.6468,
+    "fold_sd": 0.0099
+   },
+   "with_metadata": {
+    "n": 8948,
+    "metadata_only_logistic": {
+     "n": 8948,
+     "n_pos": 5481,
+     "n_neg": 3467,
+     "auc": 0.8185,
+     "fold_mean": 0.8185,
+     "fold_sd": 0.0113
+    },
+    "metadata_only_boosting": {
+     "n": 8948,
+     "n_pos": 5481,
+     "n_neg": 3467,
+     "auc": 0.8226,
+     "fold_mean": 0.8227,
+     "fold_sd": 0.0146
+    },
+    "year_only_boosting": {
+     "n": 8948,
+     "n_pos": 5481,
+     "n_neg": 3467,
+     "auc": 0.6281,
+     "fold_mean": 0.6291,
+     "fold_sd": 0.0218
+    },
+    "rank_only_boosting": {
+     "n": 8948,
+     "n_pos": 5481,
+     "n_neg": 3467,
+     "auc": 0.7579,
+     "fold_mean": 0.7584,
+     "fold_sd": 0.0161
+    },
+    "clap": {
+     "plain": {
+      "n": 8948,
+      "n_pos": 5481,
+      "n_neg": 3467,
+      "auc": 0.7548,
+      "fold_mean": 0.7551,
+      "fold_sd": 0.0069
+     },
+     "metadata_regressed_out": {
+      "n": 8948,
+      "n_pos": 5481,
+      "n_neg": 3467,
+      "auc": 0.644,
+      "fold_mean": 0.6439,
+      "fold_sd": 0.0138
+     },
+     "metadata_beside_vectors": {
+      "n": 8948,
+      "n_pos": 5481,
+      "n_neg": 3467,
+      "auc": 0.8508,
+      "fold_mean": 0.8507,
+      "fold_sd": 0.01
+     }
+    },
+    "effnet": {
+     "plain": {
+      "n": 8948,
+      "n_pos": 5481,
+      "n_neg": 3467,
+      "auc": 0.6544,
+      "fold_mean": 0.6547,
+      "fold_sd": 0.0142
+     },
+     "metadata_regressed_out": {
+      "n": 8948,
+      "n_pos": 5481,
+      "n_neg": 3467,
+      "auc": 0.5433,
+      "fold_mean": 0.5435,
+      "fold_sd": 0.0153
+     },
+     "metadata_beside_vectors": {
+      "n": 8948,
+      "n_pos": 5481,
+      "n_neg": 3467,
+      "auc": 0.7932,
+      "fold_mean": 0.7932,
+      "fold_sd": 0.0122
+     }
+    }
+   },
+   "matched_genre_decade": {
+    "n": 4832,
+    "metadata_only_boosting": {
+     "n": 4832,
+     "n_pos": 2416,
+     "n_neg": 2416,
+     "auc": 0.763,
+     "fold_mean": 0.7636,
+     "fold_sd": 0.0115
+    },
+    "clap": {
+     "n": 4832,
+     "n_pos": 2416,
+     "n_neg": 2416,
+     "auc": 0.679,
+     "fold_mean": 0.6793,
+     "fold_sd": 0.0127
+    },
+    "clap_year_rank_regressed_out": {
+     "n": 4832,
+     "n_pos": 2416,
+     "n_neg": 2416,
+     "auc": 0.6487,
+     "fold_mean": 0.6491,
+     "fold_sd": 0.0171
+    },
+    "effnet": {
+     "n": 4832,
+     "n_pos": 2416,
+     "n_neg": 2416,
+     "auc": 0.5225,
+     "fold_mean": 0.5228,
+     "fold_sd": 0.0276
+    },
+    "effnet_year_rank_regressed_out": {
+     "n": 4832,
+     "n_pos": 2416,
+     "n_neg": 2416,
+     "auc": 0.5229,
+     "fold_mean": 0.5233,
+     "fold_sd": 0.0261
+    }
+   }
+  },
+  "new_vs_existing, Deezer only": {
+   "clap": {
+    "n": 6474,
+    "n_pos": 2815,
+    "n_neg": 3659,
+    "auc": 0.6955,
+    "fold_mean": 0.6956,
+    "fold_sd": 0.0063
+   },
+   "effnet": {
+    "n": 6474,
+    "n_pos": 2815,
+    "n_neg": 3659,
+    "auc": 0.657,
+    "fold_mean": 0.6571,
+    "fold_sd": 0.0039
+   },
+   "with_metadata": {
+    "n": 6093,
+    "metadata_only_logistic": {
+     "n": 6093,
+     "n_pos": 2807,
+     "n_neg": 3286,
+     "auc": 0.8152,
+     "fold_mean": 0.8153,
+     "fold_sd": 0.0069
+    },
+    "metadata_only_boosting": {
+     "n": 6093,
+     "n_pos": 2807,
+     "n_neg": 3286,
+     "auc": 0.8169,
+     "fold_mean": 0.8169,
+     "fold_sd": 0.0128
+    },
+    "year_only_boosting": {
+     "n": 6093,
+     "n_pos": 2807,
+     "n_neg": 3286,
+     "auc": 0.6826,
+     "fold_mean": 0.6828,
+     "fold_sd": 0.0093
+    },
+    "rank_only_boosting": {
+     "n": 6093,
+     "n_pos": 2807,
+     "n_neg": 3286,
+     "auc": 0.7342,
+     "fold_mean": 0.7351,
+     "fold_sd": 0.0051
+    },
+    "clap": {
+     "plain": {
+      "n": 6093,
+      "n_pos": 2807,
+      "n_neg": 3286,
+      "auc": 0.7067,
+      "fold_mean": 0.7068,
+      "fold_sd": 0.0088
+     },
+     "metadata_regressed_out": {
+      "n": 6093,
+      "n_pos": 2807,
+      "n_neg": 3286,
+      "auc": 0.5721,
+      "fold_mean": 0.5719,
+      "fold_sd": 0.0152
+     },
+     "metadata_beside_vectors": {
+      "n": 6093,
+      "n_pos": 2807,
+      "n_neg": 3286,
+      "auc": 0.8265,
+      "fold_mean": 0.8266,
+      "fold_sd": 0.0065
+     }
+    },
+    "effnet": {
+     "plain": {
+      "n": 6093,
+      "n_pos": 2807,
+      "n_neg": 3286,
+      "auc": 0.6693,
+      "fold_mean": 0.6701,
+      "fold_sd": 0.0135
+     },
+     "metadata_regressed_out": {
+      "n": 6093,
+      "n_pos": 2807,
+      "n_neg": 3286,
+      "auc": 0.5417,
+      "fold_mean": 0.542,
+      "fold_sd": 0.0196
+     },
+     "metadata_beside_vectors": {
+      "n": 6093,
+      "n_pos": 2807,
+      "n_neg": 3286,
+      "auc": 0.7848,
+      "fold_mean": 0.785,
+      "fold_sd": 0.0068
+     }
+    }
+   },
+   "matched_genre_decade": {
+    "n": 2862,
+    "metadata_only_boosting": {
+     "n": 2862,
+     "n_pos": 1431,
+     "n_neg": 1431,
+     "auc": 0.7305,
+     "fold_mean": 0.7311,
+     "fold_sd": 0.0218
+    },
+    "clap": {
+     "n": 2862,
+     "n_pos": 1431,
+     "n_neg": 1431,
+     "auc": 0.5699,
+     "fold_mean": 0.5711,
+     "fold_sd": 0.0202
+    },
+    "clap_year_rank_regressed_out": {
+     "n": 2862,
+     "n_pos": 1431,
+     "n_neg": 1431,
+     "auc": 0.5602,
+     "fold_mean": 0.5609,
+     "fold_sd": 0.0218
+    },
+    "effnet": {
+     "n": 2862,
+     "n_pos": 1431,
+     "n_neg": 1431,
+     "auc": 0.5141,
+     "fold_mean": 0.5149,
+     "fold_sd": 0.0252
+    },
+    "effnet_year_rank_regressed_out": {
+     "n": 2862,
+     "n_pos": 1431,
+     "n_neg": 1431,
+     "auc": 0.5312,
+     "fold_mean": 0.5323,
+     "fold_sd": 0.026
+    }
+   }
+  },
+  "new_vs_existing, iTunes only": {
+   "clap": {
+    "n": 2893,
+    "n_pos": 2675,
+    "n_neg": 218,
+    "auc": 0.613,
+    "fold_mean": 0.6151,
+    "fold_sd": 0.0393
+   },
+   "effnet": {
+    "n": 2893,
+    "n_pos": 2675,
+    "n_neg": 218,
+    "auc": 0.6491,
+    "fold_mean": 0.6505,
+    "fold_sd": 0.0231
+   },
+   "with_metadata": {
+    "n": 2855,
+    "metadata_only_logistic": {
+     "n": 2855,
+     "n_pos": 2674,
+     "n_neg": 181,
+     "auc": 0.7774,
+     "fold_mean": 0.7809,
+     "fold_sd": 0.036
+    },
+    "metadata_only_boosting": {
+     "n": 2855,
+     "n_pos": 2674,
+     "n_neg": 181,
+     "auc": 0.8088,
+     "fold_mean": 0.811,
+     "fold_sd": 0.0242
+    },
+    "year_only_boosting": {
+     "n": 2855,
+     "n_pos": 2674,
+     "n_neg": 181,
+     "auc": 0.562,
+     "fold_mean": 0.5635,
+     "fold_sd": 0.0484
+    },
+    "rank_only_boosting": {
+     "n": 2855,
+     "n_pos": 2674,
+     "n_neg": 181,
+     "auc": 0.7292,
+     "fold_mean": 0.7284,
+     "fold_sd": 0.0377
+    },
+    "clap": {
+     "plain": {
+      "n": 2855,
+      "n_pos": 2674,
+      "n_neg": 181,
+      "auc": 0.6251,
+      "fold_mean": 0.6316,
+      "fold_sd": 0.0732
+     },
+     "metadata_regressed_out": {
+      "n": 2855,
+      "n_pos": 2674,
+      "n_neg": 181,
+      "auc": 0.577,
+      "fold_mean": 0.5768,
+      "fold_sd": 0.0206
+     },
+     "metadata_beside_vectors": {
+      "n": 2855,
+      "n_pos": 2674,
+      "n_neg": 181,
+      "auc": 0.7943,
+      "fold_mean": 0.796,
+      "fold_sd": 0.0382
+     }
+    },
+    "effnet": {
+     "plain": {
+      "n": 2855,
+      "n_pos": 2674,
+      "n_neg": 181,
+      "auc": 0.6696,
+      "fold_mean": 0.6706,
+      "fold_sd": 0.0478
+     },
+     "metadata_regressed_out": {
+      "n": 2855,
+      "n_pos": 2674,
+      "n_neg": 181,
+      "auc": 0.6094,
+      "fold_mean": 0.6099,
+      "fold_sd": 0.0302
+     },
+     "metadata_beside_vectors": {
+      "n": 2855,
+      "n_pos": 2674,
+      "n_neg": 181,
+      "auc": 0.7736,
+      "fold_mean": 0.7755,
+      "fold_sd": 0.0388
+     }
+    }
+   },
+   "matched_genre_decade": {
+    "n": 264,
+    "metadata_only_boosting": {
+     "n": 264,
+     "n_pos": 132,
+     "n_neg": 132,
+     "auc": 0.7177,
+     "fold_mean": 0.7119,
+     "fold_sd": 0.0856
+    },
+    "clap": {
+     "n": 264,
+     "n_pos": 132,
+     "n_neg": 132,
+     "auc": 0.4021,
+     "fold_mean": 0.4055,
+     "fold_sd": 0.0712
+    },
+    "clap_year_rank_regressed_out": {
+     "n": 264,
+     "n_pos": 132,
+     "n_neg": 132,
+     "auc": 0.4721,
+     "fold_mean": 0.4692,
+     "fold_sd": 0.0766
+    },
+    "effnet": {
+     "n": 264,
+     "n_pos": 132,
+     "n_neg": 132,
+     "auc": 0.4543,
+     "fold_mean": 0.462,
+     "fold_sd": 0.084
+    },
+    "effnet_year_rank_regressed_out": {
+     "n": 264,
+     "n_pos": 132,
+     "n_neg": 132,
+     "auc": 0.4853,
+     "fold_mean": 0.4878,
+     "fold_sd": 0.076
+    }
+   }
+  },
+  "itunes_vs_deezer, new only": {
+   "clap": {
+    "n": 5490,
+    "n_pos": 2675,
+    "n_neg": 2815,
+    "auc": 0.8933,
+    "fold_mean": 0.8933,
+    "fold_sd": 0.0067
+   },
+   "effnet": {
+    "n": 5490,
+    "n_pos": 2675,
+    "n_neg": 2815,
+    "auc": 0.6697,
+    "fold_mean": 0.6699,
+    "fold_sd": 0.0175
+   },
+   "with_metadata": {
+    "n": 5481,
+    "metadata_only_logistic": {
+     "n": 5481,
+     "n_pos": 2674,
+     "n_neg": 2807,
+     "auc": 0.6839,
+     "fold_mean": 0.6841,
+     "fold_sd": 0.0042
+    },
+    "metadata_only_boosting": {
+     "n": 5481,
+     "n_pos": 2674,
+     "n_neg": 2807,
+     "auc": 0.6392,
+     "fold_mean": 0.6394,
+     "fold_sd": 0.0071
+    },
+    "year_only_boosting": {
+     "n": 5481,
+     "n_pos": 2674,
+     "n_neg": 2807,
+     "auc": 0.6264,
+     "fold_mean": 0.6283,
+     "fold_sd": 0.0116
+    },
+    "rank_only_boosting": {
+     "n": 5481,
+     "n_pos": 2674,
+     "n_neg": 2807,
+     "auc": 0.511,
+     "fold_mean": 0.5114,
+     "fold_sd": 0.0127
+    },
+    "clap": {
+     "plain": {
+      "n": 5481,
+      "n_pos": 2674,
+      "n_neg": 2807,
+      "auc": 0.8953,
+      "fold_mean": 0.8953,
+      "fold_sd": 0.0065
+     },
+     "metadata_regressed_out": {
+      "n": 5481,
+      "n_pos": 2674,
+      "n_neg": 2807,
+      "auc": 0.853,
+      "fold_mean": 0.8531,
+      "fold_sd": 0.0074
+     },
+     "metadata_beside_vectors": {
+      "n": 5481,
+      "n_pos": 2674,
+      "n_neg": 2807,
+      "auc": 0.8918,
+      "fold_mean": 0.8921,
+      "fold_sd": 0.004
+     }
+    },
+    "effnet": {
+     "plain": {
+      "n": 5481,
+      "n_pos": 2674,
+      "n_neg": 2807,
+      "auc": 0.6786,
+      "fold_mean": 0.6787,
+      "fold_sd": 0.0099
+     },
+     "metadata_regressed_out": {
+      "n": 5481,
+      "n_pos": 2674,
+      "n_neg": 2807,
+      "auc": 0.5966,
+      "fold_mean": 0.5965,
+      "fold_sd": 0.0127
+     },
+     "metadata_beside_vectors": {
+      "n": 5481,
+      "n_pos": 2674,
+      "n_neg": 2807,
+      "auc": 0.7024,
+      "fold_mean": 0.7027,
+      "fold_sd": 0.0108
+     }
+    }
+   },
+   "matched_genre_decade": {
+    "n": 2678,
+    "metadata_only_boosting": {
+     "n": 2678,
+     "n_pos": 1339,
+     "n_neg": 1339,
+     "auc": 0.5002,
+     "fold_mean": 0.4998,
+     "fold_sd": 0.0098
+    },
+    "clap": {
+     "n": 2678,
+     "n_pos": 1339,
+     "n_neg": 1339,
+     "auc": 0.8583,
+     "fold_mean": 0.8584,
+     "fold_sd": 0.0122
+    },
+    "clap_year_rank_regressed_out": {
+     "n": 2678,
+     "n_pos": 1339,
+     "n_neg": 1339,
+     "auc": 0.8552,
+     "fold_mean": 0.8555,
+     "fold_sd": 0.0142
+    },
+    "effnet": {
+     "n": 2678,
+     "n_pos": 1339,
+     "n_neg": 1339,
+     "auc": 0.5521,
+     "fold_mean": 0.5521,
+     "fold_sd": 0.0262
+    },
+    "effnet_year_rank_regressed_out": {
+     "n": 2678,
+     "n_pos": 1339,
+     "n_neg": 1339,
+     "auc": 0.556,
+     "fold_mean": 0.5563,
+     "fold_sd": 0.0263
+    }
+   }
+  },
+  "itunes_vs_deezer, existing only": {
+   "clap": {
+    "n": 3877,
+    "n_pos": 218,
+    "n_neg": 3659,
+    "auc": 0.783,
+    "fold_mean": 0.7836,
+    "fold_sd": 0.0334
+   },
+   "effnet": {
+    "n": 3877,
+    "n_pos": 218,
+    "n_neg": 3659,
+    "auc": 0.6862,
+    "fold_mean": 0.6867,
+    "fold_sd": 0.0279
+   },
+   "with_metadata": {
+    "n": 3467,
+    "metadata_only_logistic": {
+     "n": 3467,
+     "n_pos": 181,
+     "n_neg": 3286,
+     "auc": 0.5975,
+     "fold_mean": 0.5999,
+     "fold_sd": 0.0667
+    },
+    "metadata_only_boosting": {
+     "n": 3467,
+     "n_pos": 181,
+     "n_neg": 3286,
+     "auc": 0.6106,
+     "fold_mean": 0.614,
+     "fold_sd": 0.0737
+    },
+    "year_only_boosting": {
+     "n": 3467,
+     "n_pos": 181,
+     "n_neg": 3286,
+     "auc": 0.5388,
+     "fold_mean": 0.5394,
+     "fold_sd": 0.0353
+    },
+    "rank_only_boosting": {
+     "n": 3467,
+     "n_pos": 181,
+     "n_neg": 3286,
+     "auc": 0.5112,
+     "fold_mean": 0.5137,
+     "fold_sd": 0.044
+    },
+    "clap": {
+     "plain": {
+      "n": 3467,
+      "n_pos": 181,
+      "n_neg": 3286,
+      "auc": 0.7858,
+      "fold_mean": 0.79,
+      "fold_sd": 0.0676
+     },
+     "metadata_regressed_out": {
+      "n": 3467,
+      "n_pos": 181,
+      "n_neg": 3286,
+      "auc": 0.7623,
+      "fold_mean": 0.7648,
+      "fold_sd": 0.0491
+     },
+     "metadata_beside_vectors": {
+      "n": 3467,
+      "n_pos": 181,
+      "n_neg": 3286,
+      "auc": 0.7638,
+      "fold_mean": 0.7665,
+      "fold_sd": 0.0668
+     }
+    },
+    "effnet": {
+     "plain": {
+      "n": 3467,
+      "n_pos": 181,
+      "n_neg": 3286,
+      "auc": 0.6684,
+      "fold_mean": 0.6716,
+      "fold_sd": 0.0406
+     },
+     "metadata_regressed_out": {
+      "n": 3467,
+      "n_pos": 181,
+      "n_neg": 3286,
+      "auc": 0.6004,
+      "fold_mean": 0.6009,
+      "fold_sd": 0.0411
+     },
+     "metadata_beside_vectors": {
+      "n": 3467,
+      "n_pos": 181,
+      "n_neg": 3286,
+      "auc": 0.6804,
+      "fold_mean": 0.6831,
+      "fold_sd": 0.0514
+     }
+    }
+   },
+   "matched_genre_decade": {
+    "n": 288,
+    "metadata_only_boosting": {
+     "n": 288,
+     "n_pos": 144,
+     "n_neg": 144,
+     "auc": 0.3122,
+     "fold_mean": 0.3102,
+     "fold_sd": 0.0388
+    },
+    "clap": {
+     "n": 288,
+     "n_pos": 144,
+     "n_neg": 144,
+     "auc": 0.5433,
+     "fold_mean": 0.5461,
+     "fold_sd": 0.0934
+    },
+    "clap_year_rank_regressed_out": {
+     "n": 288,
+     "n_pos": 144,
+     "n_neg": 144,
+     "auc": 0.5602,
+     "fold_mean": 0.5613,
+     "fold_sd": 0.1038
+    },
+    "effnet": {
+     "n": 288,
+     "n_pos": 144,
+     "n_neg": 144,
+     "auc": 0.4053,
+     "fold_mean": 0.4016,
+     "fold_sd": 0.0336
+    },
+    "effnet_year_rank_regressed_out": {
+     "n": 288,
+     "n_pos": 144,
+     "n_neg": 144,
+     "auc": 0.4142,
+     "fold_mean": 0.4124,
+     "fold_sd": 0.0318
+    }
+   }
+  },
+  "control: iTunes US vs other storefronts, new iTunes only": {
+   "clap": {
+    "n": 2675,
+    "n_pos": 1311,
+    "n_neg": 1364,
+    "auc": 0.6056,
+    "fold_mean": 0.6063,
+    "fold_sd": 0.0161
+   },
+   "effnet": {
+    "n": 2675,
+    "n_pos": 1311,
+    "n_neg": 1364,
+    "auc": 0.5674,
+    "fold_mean": 0.5673,
+    "fold_sd": 0.0175
+   },
+   "with_metadata": {
+    "n": 2674,
+    "metadata_only_logistic": {
+     "n": 2674,
+     "n_pos": 1311,
+     "n_neg": 1363,
+     "auc": 0.5969,
+     "fold_mean": 0.5993,
+     "fold_sd": 0.034
+    },
+    "metadata_only_boosting": {
+     "n": 2674,
+     "n_pos": 1311,
+     "n_neg": 1363,
+     "auc": 0.5815,
+     "fold_mean": 0.5808,
+     "fold_sd": 0.0175
+    },
+    "year_only_boosting": {
+     "n": 2674,
+     "n_pos": 1311,
+     "n_neg": 1363,
+     "auc": 0.5894,
+     "fold_mean": 0.5917,
+     "fold_sd": 0.0237
+    },
+    "rank_only_boosting": {
+     "n": 2674,
+     "n_pos": 1311,
+     "n_neg": 1363,
+     "auc": 0.4928,
+     "fold_mean": 0.4928,
+     "fold_sd": 0.0221
+    },
+    "clap": {
+     "plain": {
+      "n": 2674,
+      "n_pos": 1311,
+      "n_neg": 1363,
+      "auc": 0.5946,
+      "fold_mean": 0.5962,
+      "fold_sd": 0.0266
+     },
+     "metadata_regressed_out": {
+      "n": 2674,
+      "n_pos": 1311,
+      "n_neg": 1363,
+      "auc": 0.5242,
+      "fold_mean": 0.5243,
+      "fold_sd": 0.0129
+     },
+     "metadata_beside_vectors": {
+      "n": 2674,
+      "n_pos": 1311,
+      "n_neg": 1363,
+      "auc": 0.5984,
+      "fold_mean": 0.5995,
+      "fold_sd": 0.0305
+     }
+    },
+    "effnet": {
+     "plain": {
+      "n": 2674,
+      "n_pos": 1311,
+      "n_neg": 1363,
+      "auc": 0.5734,
+      "fold_mean": 0.574,
+      "fold_sd": 0.024
+     },
+     "metadata_regressed_out": {
+      "n": 2674,
+      "n_pos": 1311,
+      "n_neg": 1363,
+      "auc": 0.5295,
+      "fold_mean": 0.5288,
+      "fold_sd": 0.0143
+     },
+     "metadata_beside_vectors": {
+      "n": 2674,
+      "n_pos": 1311,
+      "n_neg": 1363,
+      "auc": 0.5815,
+      "fold_mean": 0.5819,
+      "fold_sd": 0.0255
+     }
+    }
+   },
+   "matched_genre_decade": {
+    "n": 1260,
+    "metadata_only_boosting": {
+     "n": 1260,
+     "n_pos": 630,
+     "n_neg": 630,
+     "auc": 0.4328,
+     "fold_mean": 0.4347,
+     "fold_sd": 0.0293
+    },
+    "clap": {
+     "n": 1260,
+     "n_pos": 630,
+     "n_neg": 630,
+     "auc": 0.4784,
+     "fold_mean": 0.48,
+     "fold_sd": 0.0421
+    },
+    "clap_year_rank_regressed_out": {
+     "n": 1260,
+     "n_pos": 630,
+     "n_neg": 630,
+     "auc": 0.4859,
+     "fold_mean": 0.4869,
+     "fold_sd": 0.0411
+    },
+    "effnet": {
+     "n": 1260,
+     "n_pos": 630,
+     "n_neg": 630,
+     "auc": 0.5221,
+     "fold_mean": 0.5218,
+     "fold_sd": 0.0229
+    },
+    "effnet_year_rank_regressed_out": {
+     "n": 1260,
+     "n_pos": 630,
+     "n_neg": 630,
+     "auc": 0.5243,
+     "fold_mean": 0.5244,
+     "fold_sd": 0.0235
+    }
+   }
+  }
+ },
+ "year": {
+  "all": {
+   "n": 9366,
+   "clap": {
+    "r2": 0.6746,
+    "mae_years": 7.74
+   },
+   "effnet": {
+    "r2": 0.7238,
+    "mae_years": 6.98
+   }
+  },
+  "Deezer only": {
+   "n": 6474,
+   "clap": {
+    "r2": 0.6943,
+    "mae_years": 7.56
+   },
+   "effnet": {
+    "r2": 0.7461,
+    "mae_years": 6.74
+   }
+  },
+  "new only": {
+   "n": 5489,
+   "clap": {
+    "r2": 0.6625,
+    "mae_years": 8.18
+   },
+   "effnet": {
+    "r2": 0.7067,
+    "mae_years": 7.44
+   }
+  },
+  "existing only": {
+   "n": 3877,
+   "clap": {
+    "r2": 0.6658,
+    "mae_years": 7.06
+   },
+   "effnet": {
+    "r2": 0.7198,
+    "mae_years": 6.35
+   }
+  }
+ },
+ "neighbours": {
+  "whole catalog": {
+   "albums": 9367,
+   "share_itunes": 0.3089,
+   "share_new": 0.5861,
+   "clap": {
+    "neighbours_from_itunes": {
+     "new Deezer seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2733,
+      "share_of_neighbours": 0.2757,
+      "share_of_neighbours_seeds_with_genre": 0.2752,
+      "same_genre_share": 0.2896,
+      "seeds_with_genre_decade_cell": 2564,
+      "share_of_neighbours_those_seeds": 0.2737,
+      "same_genre_decade_share": 0.2775
+     },
+     "new iTunes seeds": {
+      "seeds": 2675,
+      "seeds_with_genre": 2602,
+      "share_of_neighbours": 0.3806,
+      "share_of_neighbours_seeds_with_genre": 0.3796,
+      "same_genre_share": 0.3783,
+      "seeds_with_genre_decade_cell": 2430,
+      "share_of_neighbours_those_seeds": 0.38,
+      "same_genre_decade_share": 0.3993
+     },
+     "existing Deezer seeds": {
+      "seeds": 3659,
+      "seeds_with_genre": 3258,
+      "share_of_neighbours": 0.2569,
+      "share_of_neighbours_seeds_with_genre": 0.2602,
+      "same_genre_share": 0.2884,
+      "seeds_with_genre_decade_cell": 3133,
+      "share_of_neighbours_those_seeds": 0.2601,
+      "same_genre_decade_share": 0.2745
+     },
+     "existing iTunes seeds": {
+      "seeds": 218,
+      "seeds_with_genre": 179,
+      "share_of_neighbours": 0.3408,
+      "share_of_neighbours_seeds_with_genre": 0.348,
+      "same_genre_share": 0.3674,
+      "seeds_with_genre_decade_cell": 170,
+      "share_of_neighbours_those_seeds": 0.3488,
+      "same_genre_decade_share": 0.3427
+     }
+    },
+    "neighbours_that_are_new": {
+     "new seeds": {
+      "seeds": 5490,
+      "seeds_with_genre": 5335,
+      "share_of_neighbours": 0.6141,
+      "share_of_neighbours_seeds_with_genre": 0.6123,
+      "same_genre_share": 0.6437,
+      "seeds_with_genre_decade_cell": 4994,
+      "share_of_neighbours_those_seeds": 0.6105,
+      "same_genre_decade_share": 0.6642
+     },
+     "existing seeds": {
+      "seeds": 3877,
+      "seeds_with_genre": 3437,
+      "share_of_neighbours": 0.4933,
+      "share_of_neighbours_seeds_with_genre": 0.491,
+      "same_genre_share": 0.5531,
+      "seeds_with_genre_decade_cell": 3303,
+      "share_of_neighbours_those_seeds": 0.4897,
+      "same_genre_decade_share": 0.5077
+     },
+     "new Deezer seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2733,
+      "share_of_neighbours": 0.6096,
+      "share_of_neighbours_seeds_with_genre": 0.6083,
+      "same_genre_share": 0.6454,
+      "seeds_with_genre_decade_cell": 2564,
+      "share_of_neighbours_those_seeds": 0.606,
+      "same_genre_decade_share": 0.6742
+     },
+     "new iTunes seeds": {
+      "seeds": 2675,
+      "seeds_with_genre": 2602,
+      "share_of_neighbours": 0.6188,
+      "share_of_neighbours_seeds_with_genre": 0.6165,
+      "same_genre_share": 0.642,
+      "seeds_with_genre_decade_cell": 2430,
+      "share_of_neighbours_those_seeds": 0.6152,
+      "same_genre_decade_share": 0.6536
+     },
+     "existing Deezer seeds": {
+      "seeds": 3659,
+      "seeds_with_genre": 3258,
+      "share_of_neighbours": 0.4911,
+      "share_of_neighbours_seeds_with_genre": 0.4889,
+      "same_genre_share": 0.5511,
+      "seeds_with_genre_decade_cell": 3133,
+      "share_of_neighbours_those_seeds": 0.4876,
+      "same_genre_decade_share": 0.5055
+     },
+     "existing iTunes seeds": {
+      "seeds": 218,
+      "seeds_with_genre": 179,
+      "share_of_neighbours": 0.5298,
+      "share_of_neighbours_seeds_with_genre": 0.5285,
+      "same_genre_share": 0.5879,
+      "seeds_with_genre_decade_cell": 170,
+      "share_of_neighbours_those_seeds": 0.5288,
+      "same_genre_decade_share": 0.5491
+     }
+    }
+   },
+   "effnet": {
+    "neighbours_from_itunes": {
+     "new Deezer seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2733,
+      "share_of_neighbours": 0.2704,
+      "share_of_neighbours_seeds_with_genre": 0.2696,
+      "same_genre_share": 0.2896,
+      "seeds_with_genre_decade_cell": 2564,
+      "share_of_neighbours_those_seeds": 0.2681,
+      "same_genre_decade_share": 0.2775
+     },
+     "new iTunes seeds": {
+      "seeds": 2675,
+      "seeds_with_genre": 2602,
+      "share_of_neighbours": 0.3619,
+      "share_of_neighbours_seeds_with_genre": 0.361,
+      "same_genre_share": 0.3783,
+      "seeds_with_genre_decade_cell": 2430,
+      "share_of_neighbours_those_seeds": 0.3595,
+      "same_genre_decade_share": 0.3993
+     },
+     "existing Deezer seeds": {
+      "seeds": 3659,
+      "seeds_with_genre": 3258,
+      "share_of_neighbours": 0.2614,
+      "share_of_neighbours_seeds_with_genre": 0.2637,
+      "same_genre_share": 0.2884,
+      "seeds_with_genre_decade_cell": 3133,
+      "share_of_neighbours_those_seeds": 0.2625,
+      "same_genre_decade_share": 0.2745
+     },
+     "existing iTunes seeds": {
+      "seeds": 218,
+      "seeds_with_genre": 179,
+      "share_of_neighbours": 0.3252,
+      "share_of_neighbours_seeds_with_genre": 0.3307,
+      "same_genre_share": 0.3674,
+      "seeds_with_genre_decade_cell": 170,
+      "share_of_neighbours_those_seeds": 0.33,
+      "same_genre_decade_share": 0.3427
+     }
+    },
+    "neighbours_that_are_new": {
+     "new seeds": {
+      "seeds": 5490,
+      "seeds_with_genre": 5335,
+      "share_of_neighbours": 0.6126,
+      "share_of_neighbours_seeds_with_genre": 0.6106,
+      "same_genre_share": 0.6437,
+      "seeds_with_genre_decade_cell": 4994,
+      "share_of_neighbours_those_seeds": 0.6079,
+      "same_genre_decade_share": 0.6642
+     },
+     "existing seeds": {
+      "seeds": 3877,
+      "seeds_with_genre": 3437,
+      "share_of_neighbours": 0.4993,
+      "share_of_neighbours_seeds_with_genre": 0.4966,
+      "same_genre_share": 0.5531,
+      "seeds_with_genre_decade_cell": 3303,
+      "share_of_neighbours_those_seeds": 0.4947,
+      "same_genre_decade_share": 0.5077
+     },
+     "new Deezer seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2733,
+      "share_of_neighbours": 0.6118,
+      "share_of_neighbours_seeds_with_genre": 0.6096,
+      "same_genre_share": 0.6454,
+      "seeds_with_genre_decade_cell": 2564,
+      "share_of_neighbours_those_seeds": 0.6075,
+      "same_genre_decade_share": 0.6742
+     },
+     "new iTunes seeds": {
+      "seeds": 2675,
+      "seeds_with_genre": 2602,
+      "share_of_neighbours": 0.6135,
+      "share_of_neighbours_seeds_with_genre": 0.6117,
+      "same_genre_share": 0.642,
+      "seeds_with_genre_decade_cell": 2430,
+      "share_of_neighbours_those_seeds": 0.6084,
+      "same_genre_decade_share": 0.6536
+     },
+     "existing Deezer seeds": {
+      "seeds": 3659,
+      "seeds_with_genre": 3258,
+      "share_of_neighbours": 0.4984,
+      "share_of_neighbours_seeds_with_genre": 0.4959,
+      "same_genre_share": 0.5511,
+      "seeds_with_genre_decade_cell": 3133,
+      "share_of_neighbours_those_seeds": 0.494,
+      "same_genre_decade_share": 0.5055
+     },
+     "existing iTunes seeds": {
+      "seeds": 218,
+      "seeds_with_genre": 179,
+      "share_of_neighbours": 0.5133,
+      "share_of_neighbours_seeds_with_genre": 0.5101,
+      "same_genre_share": 0.5879,
+      "seeds_with_genre_decade_cell": 170,
+      "share_of_neighbours_those_seeds": 0.5076,
+      "same_genre_decade_share": 0.5491
+     }
+    }
+   }
+  },
+  "new albums only": {
+   "albums": 5490,
+   "share_itunes": 0.4872,
+   "share_new": 1.0,
+   "clap": {
+    "neighbours_from_itunes": {
+     "new Deezer seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2708,
+      "share_of_neighbours": 0.4315,
+      "share_of_neighbours_seeds_with_genre": 0.432,
+      "same_genre_share": 0.43,
+      "seeds_with_genre_decade_cell": 2485,
+      "share_of_neighbours_those_seeds": 0.4305,
+      "same_genre_decade_share": 0.3995
+     },
+     "new iTunes seeds": {
+      "seeds": 2675,
+      "seeds_with_genre": 2580,
+      "share_of_neighbours": 0.5605,
+      "share_of_neighbours_seeds_with_genre": 0.5596,
+      "same_genre_share": 0.5487,
+      "seeds_with_genre_decade_cell": 2350,
+      "share_of_neighbours_those_seeds": 0.5605,
+      "same_genre_decade_share": 0.5775
+     }
+    }
+   },
+   "effnet": {
+    "neighbours_from_itunes": {
+     "new Deezer seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2708,
+      "share_of_neighbours": 0.4188,
+      "share_of_neighbours_seeds_with_genre": 0.4196,
+      "same_genre_share": 0.43,
+      "seeds_with_genre_decade_cell": 2485,
+      "share_of_neighbours_those_seeds": 0.4183,
+      "same_genre_decade_share": 0.3995
+     },
+     "new iTunes seeds": {
+      "seeds": 2675,
+      "seeds_with_genre": 2580,
+      "share_of_neighbours": 0.5463,
+      "share_of_neighbours_seeds_with_genre": 0.5459,
+      "same_genre_share": 0.5487,
+      "seeds_with_genre_decade_cell": 2350,
+      "share_of_neighbours_those_seeds": 0.5462,
+      "same_genre_decade_share": 0.5775
+     }
+    }
+   }
+  },
+  "Deezer albums only": {
+   "albums": 6474,
+   "share_itunes": 0.0,
+   "share_new": 0.4348,
+   "clap": {
+    "neighbours_that_are_new": {
+     "new seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2704,
+      "share_of_neighbours": 0.486,
+      "share_of_neighbours_seeds_with_genre": 0.4843,
+      "same_genre_share": 0.5241,
+      "seeds_with_genre_decade_cell": 2474,
+      "share_of_neighbours_those_seeds": 0.4824,
+      "same_genre_decade_share": 0.5667
+     },
+     "existing seeds": {
+      "seeds": 3659,
+      "seeds_with_genre": 3228,
+      "share_of_neighbours": 0.3556,
+      "share_of_neighbours_seeds_with_genre": 0.3508,
+      "same_genre_share": 0.3986,
+      "seeds_with_genre_decade_cell": 3051,
+      "share_of_neighbours_those_seeds": 0.3481,
+      "same_genre_decade_share": 0.3513
+     },
+     "new Deezer seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2704,
+      "share_of_neighbours": 0.486,
+      "share_of_neighbours_seeds_with_genre": 0.4843,
+      "same_genre_share": 0.5241,
+      "seeds_with_genre_decade_cell": 2474,
+      "share_of_neighbours_those_seeds": 0.4824,
+      "same_genre_decade_share": 0.5667
+     },
+     "existing Deezer seeds": {
+      "seeds": 3659,
+      "seeds_with_genre": 3228,
+      "share_of_neighbours": 0.3556,
+      "share_of_neighbours_seeds_with_genre": 0.3508,
+      "same_genre_share": 0.3986,
+      "seeds_with_genre_decade_cell": 3051,
+      "share_of_neighbours_those_seeds": 0.3481,
+      "same_genre_decade_share": 0.3513
+     }
+    }
+   },
+   "effnet": {
+    "neighbours_that_are_new": {
+     "new seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2704,
+      "share_of_neighbours": 0.4909,
+      "share_of_neighbours_seeds_with_genre": 0.4888,
+      "same_genre_share": 0.5241,
+      "seeds_with_genre_decade_cell": 2474,
+      "share_of_neighbours_those_seeds": 0.4862,
+      "same_genre_decade_share": 0.5667
+     },
+     "existing seeds": {
+      "seeds": 3659,
+      "seeds_with_genre": 3228,
+      "share_of_neighbours": 0.3551,
+      "share_of_neighbours_seeds_with_genre": 0.3492,
+      "same_genre_share": 0.3986,
+      "seeds_with_genre_decade_cell": 3051,
+      "share_of_neighbours_those_seeds": 0.3459,
+      "same_genre_decade_share": 0.3513
+     },
+     "new Deezer seeds": {
+      "seeds": 2815,
+      "seeds_with_genre": 2704,
+      "share_of_neighbours": 0.4909,
+      "share_of_neighbours_seeds_with_genre": 0.4888,
+      "same_genre_share": 0.5241,
+      "seeds_with_genre_decade_cell": 2474,
+      "share_of_neighbours_those_seeds": 0.4862,
+      "same_genre_decade_share": 0.5667
+     },
+     "existing Deezer seeds": {
+      "seeds": 3659,
+      "seeds_with_genre": 3228,
+      "share_of_neighbours": 0.3551,
+      "share_of_neighbours_seeds_with_genre": 0.3492,
+      "same_genre_share": 0.3986,
+      "seeds_with_genre_decade_cell": 3051,
+      "share_of_neighbours_those_seeds": 0.3459,
+      "same_genre_decade_share": 0.3513
+     }
+    }
+   }
+  }
+ },
+ "correction_clap": {
+  "none (as it is)": {
+   "overlap_at_10_with_uncorrected": 10.0,
+   "genre_primary": 0.1928,
+   "genre_family": 0.6,
+   "desc_jaccard": 0.1946,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6141,
+     "share_of_neighbours_seeds_with_genre": 0.6123,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4933,
+     "share_of_neighbours_seeds_with_genre": 0.491,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2757,
+     "share_of_neighbours_seeds_with_genre": 0.2752,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3806,
+     "share_of_neighbours_seeds_with_genre": 0.3796,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.13,
+    "iTunes albums": 9.71
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0215,
+    "iTunes albums": 0.0197
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.192,
+    "iTunes seeds": 0.1946
+   },
+   "probe_store_new_albums": 0.8933,
+   "probe_new_vs_existing": 0.7508,
+   "probe_new_vs_existing_block64": 0.703
+  },
+  "1 direction: between the store means (new albums)": {
+   "overlap_at_10_with_uncorrected": 8.417,
+   "genre_primary": 0.1885,
+   "genre_family": 0.5944,
+   "desc_jaccard": 0.1933,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6141,
+     "share_of_neighbours_seeds_with_genre": 0.6126,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4932,
+     "share_of_neighbours_seeds_with_genre": 0.4903,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2775,
+     "share_of_neighbours_seeds_with_genre": 0.2771,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3817,
+     "share_of_neighbours_seeds_with_genre": 0.3806,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.11,
+    "iTunes albums": 9.75
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0215,
+    "iTunes albums": 0.0204
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1878,
+    "iTunes seeds": 0.19
+   },
+   "probe_store_new_albums": 0.2865,
+   "probe_new_vs_existing": 0.7094,
+   "probe_new_vs_existing_block64": 0.6975
+  },
+  "1 direction: store probe weights (new albums)": {
+   "overlap_at_10_with_uncorrected": 9.945,
+   "genre_primary": 0.193,
+   "genre_family": 0.5999,
+   "desc_jaccard": 0.1945,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6139,
+     "share_of_neighbours_seeds_with_genre": 0.6121,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4939,
+     "share_of_neighbours_seeds_with_genre": 0.4916,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2766,
+     "share_of_neighbours_seeds_with_genre": 0.2761,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3788,
+     "share_of_neighbours_seeds_with_genre": 0.3778,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.13,
+    "iTunes albums": 9.72
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0216,
+    "iTunes albums": 0.02
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1922,
+    "iTunes seeds": 0.1947
+   },
+   "probe_store_new_albums": 0.7462,
+   "probe_new_vs_existing": 0.717,
+   "probe_new_vs_existing_block64": 0.6878
+  },
+  "2 directions: store probe, iterated": {
+   "overlap_at_10_with_uncorrected": 9.914,
+   "genre_primary": 0.193,
+   "genre_family": 0.5999,
+   "desc_jaccard": 0.1945,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.614,
+     "share_of_neighbours_seeds_with_genre": 0.6122,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.494,
+     "share_of_neighbours_seeds_with_genre": 0.4916,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2772,
+     "share_of_neighbours_seeds_with_genre": 0.2766,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3782,
+     "share_of_neighbours_seeds_with_genre": 0.3773,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.13,
+    "iTunes albums": 9.72
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0213,
+    "iTunes albums": 0.02
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1924,
+    "iTunes seeds": 0.1944
+   },
+   "probe_store_new_albums": 0.6788,
+   "probe_new_vs_existing": 0.7035,
+   "probe_new_vs_existing_block64": 0.6834
+  },
+  "4 directions: store probe, iterated": {
+   "overlap_at_10_with_uncorrected": 9.825,
+   "genre_primary": 0.1931,
+   "genre_family": 0.6002,
+   "desc_jaccard": 0.1945,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6135,
+     "share_of_neighbours_seeds_with_genre": 0.6118,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4941,
+     "share_of_neighbours_seeds_with_genre": 0.4917,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2779,
+     "share_of_neighbours_seeds_with_genre": 0.2775,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3774,
+     "share_of_neighbours_seeds_with_genre": 0.3764,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.12,
+    "iTunes albums": 9.73
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0207,
+    "iTunes albums": 0.0204
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1925,
+    "iTunes seeds": 0.1945
+   },
+   "probe_store_new_albums": 0.6345,
+   "probe_new_vs_existing": 0.6937,
+   "probe_new_vs_existing_block64": 0.6784
+  },
+  "8 directions: store probe, iterated": {
+   "overlap_at_10_with_uncorrected": 9.597,
+   "genre_primary": 0.1931,
+   "genre_family": 0.5994,
+   "desc_jaccard": 0.1945,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6132,
+     "share_of_neighbours_seeds_with_genre": 0.6115,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4951,
+     "share_of_neighbours_seeds_with_genre": 0.4928,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2785,
+     "share_of_neighbours_seeds_with_genre": 0.2783,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3763,
+     "share_of_neighbours_seeds_with_genre": 0.3752,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.12,
+    "iTunes albums": 9.73
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0202,
+    "iTunes albums": 0.0197
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1926,
+    "iTunes seeds": 0.1942
+   },
+   "probe_store_new_albums": 0.6038,
+   "probe_new_vs_existing": 0.6889,
+   "probe_new_vs_existing_block64": 0.6751
+  },
+  "each store centred on its own mean": {
+   "overlap_at_10_with_uncorrected": 8.804,
+   "genre_primary": 0.1911,
+   "genre_family": 0.5992,
+   "desc_jaccard": 0.1938,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6136,
+     "share_of_neighbours_seeds_with_genre": 0.6121,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4816,
+     "share_of_neighbours_seeds_with_genre": 0.4789,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2467,
+     "share_of_neighbours_seeds_with_genre": 0.2465,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.4131,
+     "share_of_neighbours_seeds_with_genre": 0.4122,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.25,
+    "iTunes albums": 9.43
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0209,
+    "iTunes albums": 0.0204
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.191,
+    "iTunes seeds": 0.1913
+   },
+   "probe_store_new_albums": 0.546,
+   "probe_new_vs_existing": 0.6495,
+   "probe_new_vs_existing_block64": 0.648
+  },
+  "control: 1 random direction": {
+   "overlap_at_10_with_uncorrected": 9.939,
+   "genre_primary": 0.1931,
+   "genre_family": 0.6001,
+   "desc_jaccard": 0.1945,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6139,
+     "share_of_neighbours_seeds_with_genre": 0.6121,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.493,
+     "share_of_neighbours_seeds_with_genre": 0.4907,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2753,
+     "share_of_neighbours_seeds_with_genre": 0.2748,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3805,
+     "share_of_neighbours_seeds_with_genre": 0.3795,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.13,
+    "iTunes albums": 9.7
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0213,
+    "iTunes albums": 0.0194
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1924,
+    "iTunes seeds": 0.1946
+   },
+   "probe_store_new_albums": 0.8933,
+   "probe_new_vs_existing": 0.7508,
+   "probe_new_vs_existing_block64": 0.7031
+  },
+  "control: the block's first principal direction": {
+   "overlap_at_10_with_uncorrected": 8.047,
+   "genre_primary": 0.1857,
+   "genre_family": 0.5818,
+   "desc_jaccard": 0.1912,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6138,
+     "share_of_neighbours_seeds_with_genre": 0.612,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4917,
+     "share_of_neighbours_seeds_with_genre": 0.4899,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2725,
+     "share_of_neighbours_seeds_with_genre": 0.2724,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3796,
+     "share_of_neighbours_seeds_with_genre": 0.3784,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.17,
+    "iTunes albums": 9.62
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0182,
+    "iTunes albums": 0.0245
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1849,
+    "iTunes seeds": 0.1874
+   },
+   "probe_store_new_albums": 0.8909,
+   "probe_new_vs_existing": 0.7509,
+   "probe_new_vs_existing_block64": 0.7019
+  },
+  "each store standardised per dimension (mean and sd)": {
+   "overlap_at_10_with_uncorrected": 8.752,
+   "genre_primary": 0.1906,
+   "genre_family": 0.599,
+   "desc_jaccard": 0.1937,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6157,
+     "share_of_neighbours_seeds_with_genre": 0.6142,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4848,
+     "share_of_neighbours_seeds_with_genre": 0.4821,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.252,
+     "share_of_neighbours_seeds_with_genre": 0.2519,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.4163,
+     "share_of_neighbours_seeds_with_genre": 0.4155,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.18,
+    "iTunes albums": 9.59
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0215,
+    "iTunes albums": 0.019
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1908,
+    "iTunes seeds": 0.19
+   },
+   "probe_store_new_albums": 0.5641,
+   "probe_new_vs_existing": 0.6518,
+   "probe_new_vs_existing_block64": 0.6479
+  },
+  "iTunes albums mapped onto Deezer's mean and covariance": {
+   "overlap_at_10_with_uncorrected": 8.175,
+   "genre_primary": 0.1867,
+   "genre_family": 0.5945,
+   "desc_jaccard": 0.1922,
+   "neighbours_new": {
+    "new seeds": {
+     "share_of_neighbours": 0.6058,
+     "share_of_neighbours_seeds_with_genre": 0.6041,
+     "same_genre_share": 0.6437
+    },
+    "existing seeds": {
+     "share_of_neighbours": 0.4793,
+     "share_of_neighbours_seeds_with_genre": 0.4762,
+     "same_genre_share": 0.5531
+    }
+   },
+   "neighbours_itunes": {
+    "new Deezer seeds": {
+     "share_of_neighbours": 0.2367,
+     "share_of_neighbours_seeds_with_genre": 0.2368,
+     "same_genre_share": 0.2896
+    },
+    "new iTunes seeds": {
+     "share_of_neighbours": 0.3973,
+     "share_of_neighbours_seeds_with_genre": 0.3962,
+     "same_genre_share": 0.3783
+    }
+   },
+   "mean_n10": {
+    "Deezer albums": 10.41,
+    "iTunes albums": 9.08
+   },
+   "never_recommended": {
+    "Deezer albums": 0.0205,
+    "iTunes albums": 0.0328
+   },
+   "genre_primary_by_seed": {
+    "Deezer seeds": 0.1883,
+    "iTunes seeds": 0.1834
+   },
+   "probe_store_new_albums": 0.5352,
+   "probe_new_vs_existing": 0.6447,
+   "probe_new_vs_existing_block64": 0.6443
+  }
+ },
+ "clap_model": "clap_mp3"
+}

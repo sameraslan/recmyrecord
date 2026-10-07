@@ -5,7 +5,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.neighbors import NearestNeighbors
 
 from .constants import AUDIO, DEFAULT_TABLE, DEFAULT_TABLE_SHA256, LYRIC_DROP, META
 
@@ -71,6 +70,8 @@ def rec_matrix(df: pd.DataFrame, slider: float) -> np.ndarray:
 def live_recommend(df: pd.DataFrame, album_row: int, slider: float, k: int = 5) -> list[int]:
     """What the Heroku endpoint returns for one album: KNN(n_neighbors=k+1) over the given rows,
     minus the seed. Row numbers are positions in `df`."""
+    from sklearn.neighbors import NearestNeighbors  # here, so the audio venv can load the table without scikit-learn
+
     X = rec_matrix(df, slider)
     nn = NearestNeighbors(n_neighbors=k + 1, algorithm="auto").fit(X)
     _, idx = nn.kneighbors(X[[album_row]])

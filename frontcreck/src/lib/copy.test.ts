@@ -45,7 +45,7 @@ describe('copy rules (spec section 8)', () => {
       {
         heading: 'Sound and mood',
         body: [
-          'Every album here has two core properties that make it what it is: sound and mood. Sound (sonic values) comes from the audio itself: measurements such as energy, tempo, danceability and acousticness, taken from the recording. Mood descriptors are words listeners use for the feelings or atmosphere an album evokes, such as melancholic or warm.',
+          'Every album here has two core properties that make it what it is: sound and mood. Sound comes from the audio itself: a model listens to short clips of each album and places albums that sound alike near one another. Mood descriptors are words listeners use for the feelings or atmosphere an album evokes, such as melancholic or warm.',
           'Pick an album and you get the ones most similar to it. By default that means similar in both sound and mood; use the slider to match on sound only or mood only.',
           'Listening history plays no part in finding similar albums. Most streaming services base their recommendations on songs the same listeners play together, which reflects listening habits more than the music itself.',
           'Neither do genres or genre tags; it all comes from the sound and the mood each album evokes. Albums from the same genre often cluster together anyway, but the albums around a given one are not always from its genre. That can help you get into a new genre, since you start from something that sounds and feels a lot like music you already like.',
@@ -60,6 +60,9 @@ describe('copy rules (spec section 8)', () => {
       },
     ]);
     expect(COPY.about.signoff).toBe('Time for exploration! Enjoy!');
+    expect(COPY.about.credits).toBe('Mood descriptors handpicked from RateYourMusic. Sound measured from audio previews. Cover art from Spotify and other music services.');
+    expect(CATALOG_SIZE_LABEL).toBe('10,000+');
+    expect(COPY.about.sections[1].body[0]).toBe('The map places 10,000+ albums so that similar ones sit near one another and different ones sit further apart.');
     expect(COPY.notFound.heading).toBe('That page isn\u2019t here.');
     expect(COPY.notFound.sub).toBe('Search for an album, or explore the map. Experimental exploration!');
     expect(COPY).not.toHaveProperty('home.wander');

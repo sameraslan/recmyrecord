@@ -2,15 +2,17 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { contrastRatio } from '../src/lib/contrast';
 import { COPY } from '../src/lib/copy';
-import { camera, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { camera, coversSettled, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
 async function audit(page: Page, label: string) {
   // Audit the settled state: mid-fade colours (a card sliding in, a panel cross-fading) are blends, not the design.
-  // Bounded: a looping animation would otherwise hold the audit until the test times out.
+  // Bounded: a looping animation would otherwise hold the audit until the test times out. 5 s, not less: with
+  // 10,467 albums a map frame takes a few hundred ms in software rendering, and a card or a list that would
+  // settle in well under a second on a GPU was seen to take 2 to 3.5 s here.
   await page
-    .waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 2000 })
+    .waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 5000 })
     .catch(async () => {
       const running = await page.evaluate(() =>
         document.getAnimations().filter((a) => a.playState === 'running').map((a) => {
@@ -18,7 +20,7 @@ async function audit(page: Page, label: string) {
           return `${a.constructor.name} on ${t instanceof Element ? `${t.tagName.toLowerCase()}.${[...t.classList].join('.')}` : '?'}`;
         }),
       );
-      throw new Error(`${label}: animations still running after 2 s, so the audit would see blended colours: ${running.join(', ')}`);
+      throw new Error(`${label}: animations still running after 5 s, so the audit would see blended colours: ${running.join(', ')}`);
     });
   const r = await new AxeBuilder({ page }).withTags(TAGS).analyze();
   expect(
@@ -72,6 +74,11 @@ test('open states pass axe', async ({ page, isMobile }) => {
   await audit(page, 'map card');
   await page.goto('/album/in-rainbows-radiohead?by=mood');
   await page.getByRole('button', { name: COPY.album.showMore }).click();
+  // The five new rows are in and their covers have loaded and faded in before the audit's own short wait: in
+  // software rendering on a phone the map's frames hold the page up, and the covers of rows 6 to 10 only start
+  // to fade in about 3 s after the click.
+  await expect(page.locator('li.rec')).toHaveCount(10);
+  await coversSettled(page, 'section.album');
   await audit(page, 'album, show more');
   if (isMobile) {
     await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();

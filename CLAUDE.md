@@ -29,8 +29,8 @@ The full cycle (starting, running, writing up, merging, referencing) is in `expe
 |---|---|---|---|
 | Descriptor model | Can we predict an album's RYM descriptors for new albums without scraping? | `experiments/descriptor_model/REPORT.md` | on `main` |
 | Preview features | Can preview-clip embeddings replace Spotify audio features? | `experiments/preview_features/REPORT.md` | on `main` |
-| Genre crossing | Can the sonic slider stop cross genres? | `experiments/preview_features/REPORT-genre-crossing.md` | scripts on `main`; the newer report and the `common.py` change are on branch `experiment/genre-crossing` (open PR #26, stacked on #25), see `experiments/preview_features/NOTE-genre-crossing-code.md` |
-| Audio 10k | Why does CLAP keep Deezer-sourced and Apple-sourced albums apart, and what removes it? | `experiments/audio_10k/REPORT.md` | report and code on branch `feat/audio-10k` (open PR #31, which also changes pipeline code and waits for approval) |
+| Genre crossing | Can the sonic slider stop cross genres? | `experiments/preview_features/REPORT-genre-crossing.md` | scripts and the `common.py` change on `main` (the latter since PR #31); the newer report is on branch `experiment/genre-crossing` (PR #26), see `experiments/preview_features/NOTE-genre-crossing-code.md` |
+| Audio 10k | Why does CLAP keep Deezer-sourced and Apple-sourced albums apart, and what removes it? | `experiments/audio_10k/REPORT.md` | report and code on `main` since PR #31, which also made the 10k catalog the site's data |
 
 To read code or newer notes that are only on a branch:
 

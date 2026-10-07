@@ -52,6 +52,8 @@
 .mode-stops button:nth-child(2) { text-align: center; }
 .mode-stops button:nth-child(3) { text-align: right; }
 .mode-stops button[aria-pressed="true"], .mode-stops button:hover { color: var(--color-paper); }
+/* Beside an album without audio: the stops that have no list for it, and their names. They stay operable. */
+.mode-track i.is-off, .mode-stops button.is-off { opacity: .4; }
 .mode-note { font-size: 13px; color: var(--color-dust); margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--color-rule); }
 
 /* Explore: the hint line and the picked album's card (mockup .map-hint, .card; lines 204 to 216, 432 to 438) */

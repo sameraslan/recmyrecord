@@ -1,0 +1,11 @@
+rym_id,supply,elsewhere
+Album85121,"An image file of the 1958 RCA Victor LP sleeve (the release group chosen by hand, e2c73b4e, has no front image on the Cover Art Archive)",Yes: a commercial LP (Discogs)
+Album489755,"An image file of the 1991 CD's sleeve (the release group chosen by hand, 67458b47, has no front image on the Cover Art Archive)","Yes: a commercial CD (VGMdb, Discogs)"
+Album16150201,"An image file of the Nintendo Music artwork (the release group chosen by hand, 430fb2a6, shows a bootleg game rip's fan-made sleeve on the Cover Art Archive: on the skip list)","Yes: in the Nintendo Music app; the group's official releases of 2024 have an image on the Cover Art Archive (MusicBrainz releases 8e02ca4d, d3052a09), which the pipeline cannot address by release"
+Album16352063,"An image file of the Nintendo Music artwork (the release group chosen by hand, 482e30a7, shows a bootleg game rip's fan-made sleeve on the Cover Art Archive: on the skip list)","Yes: in the Nintendo Music app; the group's official releases of 2025 have an image on the Cover Art Archive (MusicBrainz releases da9ddcbd, 4ae0323b), which the pipeline cannot address by release"
+sp:4QsYvbpqj1FC6jQGYG6pPB,"Which record this is: a Spotify link, or its RYM page","Unclear: MusicBrainz has only a 2005 bootleg of this name, so there may be no official sleeve"
+sp:7nThwEV875rviPzMvWcWkC,"An image file of the mixtape's art (or a Spotify link, if it has a release there)","Plausibly: a self-released mixtape, its art is on the mixtape and streaming pages; no official sleeve on MusicBrainz"
+Album15464374,"An image file of the sleeve: the release group the owner confirmed (ca995a84, the 2022 vinyl ""Gift of Gabriel: Rain's Reign!"") has no front image on the Cover Art Archive (HTTP 404 on 7 October 2026)","Plausibly: a limited vinyl, pictured on Discogs or the label's shop"
+Album7109737,An image file of the sleeve,"Yes: a commercial CD (the catalog's SoundCloud set, Discogs); MusicBrainz has the album and no image"
+Album138357,An image file of the LP sleeve,Yes: a Deutsche Grammophon LP (Discogs); the likely MusicBrainz release has no image
+Album2770134,An image file of the 1950 Capitol LP sleeve,"Yes: on Discogs; MusicBrainz has only the 1993 CD reissue, with another sleeve"

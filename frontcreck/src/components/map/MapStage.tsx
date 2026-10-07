@@ -151,6 +151,7 @@ export function MapStage() {
   // Phone map mode belongs to one album: on a pick the new URL turns it off before the old panel unmounts.
   const mapMode = mapModeFor !== null && pathname === `/album/${mapModeFor}`;
   const ambient = useAppStore((s) => s.ambient);
+  const noAudio = useAppStore((s) => s.noAudio);
 
   useEffect(() => {
     // After first paint, like the rest of the map: the probe creates (and releases) a WebGL context. A worker
@@ -354,7 +355,7 @@ export function MapStage() {
       <div className={`map-ui${cardShown ? ' has-card' : ''}`} style={{ left: input.insetLeft }}>
         {interactive ? (
           <>
-            <SimilaritySlider stop={stop} onChange={onStop} />
+            <SimilaritySlider stop={stop} onChange={onStop} noAudio={view === 'album' && noAudio} />
             {mapData && view === 'album' && focus ? <ExploreHere onClick={onExploreHere} /> : null}
             {mapData ? <ZoomControls api={apiRef} /> : null}
             {/* No hint over an empty map: the data is still loading or failed to load. */}

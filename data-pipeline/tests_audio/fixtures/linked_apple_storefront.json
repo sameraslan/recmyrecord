@@ -1,0 +1,313 @@
+{
+ "album": {
+  "key": "Album60949",
+  "title": "Cuban Soul: 18 kilates",
+  "artist": "Cassiano",
+  "slug": "cuban-soul-18-kilates-cassiano",
+  "mean_s": 0.0,
+  "means": [
+   0.0,
+   0.0,
+   0.0
+  ],
+  "override": true,
+  "legacy_uri": "",
+  "artist_latin": "",
+  "title_latin": "",
+  "deezer_url": "https://www.deezer.com/album/15499278",
+  "apple_url": "https://music.apple.com/br/album/cuban-soul-18-kilates/1443350176",
+  "rank": 2392,
+  "year": "1976",
+  "new": true
+ },
+ "expected": {
+  "key": "Album60949",
+  "source": "itunes:br",
+  "source_album_id": "1443350176",
+  "matched_title": "Cuban Soul: 18 Kilates",
+  "matched_artist": "Cassiano",
+  "score": "0.9450",
+  "ambiguous": 0,
+  "n_tracks": 9,
+  "n_clips_available": 9,
+  "matched_by": "apple_id",
+  "edition": "",
+  "runtime_s": 2193,
+  "under_covered": 0,
+  "short_preview": ""
+ },
+ "responses": {
+  "https://api.deezer.com/album/15499278": {
+   "id": 15499278,
+   "title": "Cuban Soul: 18 Kilates",
+   "nb_tracks": 9,
+   "duration": 2188,
+   "record_type": "album",
+   "artist": {
+    "id": 363183,
+    "name": "Cassiano"
+   }
+  },
+  "https://api.deezer.com/album/15499278/tracks?limit=200": {
+   "data": [
+    {
+     "id": 143178584,
+     "title": "Hoje É Natal",
+     "duration": 230,
+     "track_position": 1,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    },
+    {
+     "id": 143178586,
+     "title": "Coleção",
+     "duration": 189,
+     "track_position": 2,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    },
+    {
+     "id": 143178588,
+     "title": "Ana Luiza",
+     "duration": 219,
+     "track_position": 3,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    },
+    {
+     "id": 143178592,
+     "title": "Onda",
+     "duration": 465,
+     "track_position": 4,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    },
+    {
+     "id": 143178594,
+     "title": "Central Do Brasil",
+     "duration": 220,
+     "track_position": 5,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    },
+    {
+     "id": 143178596,
+     "title": "Saia Dessa Fossa",
+     "duration": 200,
+     "track_position": 6,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    },
+    {
+     "id": 143178598,
+     "title": "De Bar Em Bar",
+     "duration": 235,
+     "track_position": 7,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    },
+    {
+     "id": 143178604,
+     "title": "Salve Essa Flor",
+     "duration": 258,
+     "track_position": 8,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    },
+    {
+     "id": 143178608,
+     "title": "A Lua E Eu",
+     "duration": 172,
+     "track_position": 9,
+     "disk_number": 1,
+     "preview": "",
+     "artist": {
+      "id": 363183,
+      "name": "Cassiano"
+     }
+    }
+   ]
+  },
+  "https://itunes.apple.com/lookup?id=1443350176&entity=song&limit=200&country=br": {
+   "resultCount": 10,
+   "results": [
+    {
+     "wrapperType": "collection",
+     "collectionType": "Album",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackCount": 9
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443350442,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "Hoje É Natal",
+     "previewUrl": "https://previews.invalid/1443350442",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 1,
+     "trackTimeMillis": 227493
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443350451,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "Coleção",
+     "previewUrl": "https://previews.invalid/1443350451",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 2,
+     "trackTimeMillis": 190307
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443350456,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "Ana Luiza (feat. Sergio Endrigo)",
+     "previewUrl": "https://previews.invalid/1443350456",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 3,
+     "trackTimeMillis": 220733
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443350461,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "Onda",
+     "previewUrl": "https://previews.invalid/1443350461",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 4,
+     "trackTimeMillis": 464627
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443350922,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "Central Do Brasil",
+     "previewUrl": "https://previews.invalid/1443350922",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 5,
+     "trackTimeMillis": 221307
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443350932,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "Saia Dessa Fossa",
+     "previewUrl": "https://previews.invalid/1443350932",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 6,
+     "trackTimeMillis": 202093
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443350945,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "De Bar Em Bar",
+     "previewUrl": "https://previews.invalid/1443350945",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 7,
+     "trackTimeMillis": 238333
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443351025,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "Salve Essa Flor",
+     "previewUrl": "https://previews.invalid/1443351025",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 8,
+     "trackTimeMillis": 258133
+    },
+    {
+     "wrapperType": "track",
+     "kind": "song",
+     "artistId": 62049490,
+     "collectionId": 1443350176,
+     "trackId": 1443351035,
+     "artistName": "Cassiano",
+     "collectionName": "Cuban Soul: 18 Kilates",
+     "trackName": "A Lua E Eu",
+     "previewUrl": "https://previews.invalid/1443351035",
+     "discNumber": 1,
+     "trackCount": 9,
+     "trackNumber": 9,
+     "trackTimeMillis": 170267
+    }
+   ]
+  }
+ }
+}

@@ -80,10 +80,12 @@ def apply_overrides(slugs: list[str], cover_ids: list[str], spotify_ids: list[st
     return covers, spots, images, names
 
 
-def slugs_after_overrides(titles: list[str], artists: list[str], slugs: list[str], changed: set[int]) -> list[str]:
+def slugs_after_overrides(titles: list[str], artists: list[str], slugs: list[str], changed: set[int],
+                          cap_from: int | None = None) -> list[str]:
     """Slugs from the corrected artists. Only the albums in `changed` (artist corrections) may get a new
-    slug; if a corrected artist would collide with, or renumber, any other album, fail instead."""
-    new = make_slugs(titles, artists)
+    slug; if a corrected artist would collide with, or renumber, any other album, fail instead.
+    `cap_from` is make_slugs's: the one the slugs were made with."""
+    new = make_slugs(titles, artists, cap_from)
     moved = [i for i, (a, b) in enumerate(zip(slugs, new)) if a != b and i not in changed]
     if moved:
         raise ValueError("overrides.json: an artist correction changes the slug of other albums: "
