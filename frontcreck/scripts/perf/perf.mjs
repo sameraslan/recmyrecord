@@ -298,7 +298,7 @@ async function albumFlow(page, isPhone) {
     }
     const list = () => [...document.querySelectorAll('ol.rec-list .rec-title')].map((e) => e.textContent).join('|');
     const before = list();
-    const sonic = [...document.querySelectorAll('.mode-stops button')].find((b) => P.vis(b) && b.textContent.trim() === 'Sonic');
+    const sonic = [...document.querySelectorAll('.mode-stops button')].find((b) => P.vis(b) && b.textContent.trim() === 'Sound');
     if (!sonic) return res;
     t = performance.now();
     sonic.click();

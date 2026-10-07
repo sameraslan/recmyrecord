@@ -65,7 +65,7 @@ export const COPY = {
   },
   slider: {
     label: 'Similarity',
-    stops: { sonic: 'Sonic', balanced: 'Balanced', mood: 'Mood' },
+    stops: { sonic: 'Sound', balanced: 'Balanced', mood: 'Mood' },
     notes: { sonic: 'Closest in sound.', balanced: 'Sound and mood together.', mood: 'Closest in mood.' },
   },
   map: {

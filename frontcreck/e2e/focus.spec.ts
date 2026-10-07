@@ -207,6 +207,11 @@ test('the slider morphs the layout and changes the stop', async ({ page }, info)
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowLeft');
   expect(await page.evaluate(() => window.__rmr!.getState().stop)).toBe('sonic');
+  // The stop is named "Sound" to a visitor, in the button and in what the slider reads out; its id stays `sonic`.
+  await expect(slider).toHaveAttribute('aria-valuetext', 'Sound');
+  await expect(page.locator('.mode-stops button').first()).toHaveText('Sound');
+  await expect(page.getByRole('button', { name: 'Sound', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Sonic', exact: true })).toHaveCount(0);
   await shot(page, info, 'slider-sonic');
 });
 

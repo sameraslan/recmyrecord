@@ -215,6 +215,14 @@ describe('the cover tile', () => {
 });
 
 describe('the slider beside an album without audio', () => {
+  it('names its first stop "Sound": on the button and in what the slider reads out', () => {
+    render(<SimilaritySlider stop="sonic" onChange={() => {}} />);
+    expect([...document.querySelectorAll('.mode-stops button')].map((b) => b.textContent)).toEqual(['Sound', 'Balanced', 'Mood']);
+    expect(screen.getByRole('slider', { name: COPY.slider.label })).toHaveAttribute('aria-valuetext', 'Sound');
+    expect(screen.getByRole('button', { name: 'Sound' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('Sonic')).toBeNull();
+  });
+
   it('is as before for every other album', () => {
     render(<SimilaritySlider stop="balanced" onChange={() => {}} />);
     for (const s of ['sonic', 'balanced', 'mood'] as const) {

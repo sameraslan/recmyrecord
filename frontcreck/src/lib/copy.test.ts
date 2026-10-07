@@ -37,6 +37,7 @@ describe('copy rules (spec section 8)', () => {
     expect(COPY.search.noMatches('zzkq')).toBe('No album matches zzkq. Try the artist\u2019s name, or fewer words.');
     expect(COPY.album.listHeading).toBe('Closest albums');
     expect(COPY.album.shares(['lush', 'melancholic'])).toBe('Shares lush, melancholic');
+    expect(COPY.slider.stops).toEqual({ sonic: 'Sound', balanced: 'Balanced', mood: 'Mood' });
     expect(COPY.slider.notes).toEqual({ sonic: 'Closest in sound.', balanced: 'Sound and mood together.', mood: 'Closest in mood.' });
     expect(COPY.map.cardPrimary).toBe('See closest albums');
     expect(COPY.titles.album('In Rainbows', 'Radiohead')).toBe('In Rainbows by Radiohead');
@@ -99,5 +100,19 @@ describe('copy rules (spec section 8)', () => {
       expect(text, f).not.toMatch(/[\u2013\u2014]/);
       expect(text, f).not.toMatch(OWNER_NAME_RE);
     }
+  });
+  it('says "sound", never "sonic", in every string a visitor reads or hears', () => {
+    const found: string[] = [];
+    const walk = (v: unknown, at: string): void => {
+      if (typeof v === 'string') {
+        if (/sonic/i.test(v)) found.push(`${at}: ${v}`);
+      } else if (v && typeof v === 'object') {
+        // Keys are ids of the code (the `sonic` stop), not words on the page: only the values are read.
+        for (const [k, x] of Object.entries(v)) walk(x, `${at}.${k}`);
+      }
+    };
+    walk(COPY, 'COPY');
+    expect(found).toEqual([]);
+    expect(COPY.slider.stops.sonic).toBe('Sound');
   });
 });
