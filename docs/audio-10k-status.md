@@ -124,6 +124,8 @@ The counts are in `data-pipeline/audio/album_status.md`. Both files are written 
 
 ## Where things are
 
+Every data file, with its columns, its row count and the command that writes it, is in `data-pipeline/DATA.md`. That file is the index; the tables below are of 5 October.
+
 Committed on the branch:
 
 | Path | What |
