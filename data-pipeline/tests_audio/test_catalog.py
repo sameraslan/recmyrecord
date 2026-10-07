@@ -168,7 +168,7 @@ def test_dates_and_links():
 
 
 def test_committed_catalog_is_what_the_builder_gives():
-    """Skipped where the sheet export is not present (it is gitignored)."""
+    """The sheet export is committed (catalog/source/); skipped only where it has been removed."""
     if not DEFAULT_SHEET.exists():
         pytest.skip(f"no sheet export at {DEFAULT_SHEET}")
     files = build()

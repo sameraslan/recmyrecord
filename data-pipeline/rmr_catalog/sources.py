@@ -14,8 +14,9 @@ from rmr_pipeline.keys import RYM_ID_RE, URI_PREFIX
 from rmr_pipeline.slugs import make_slugs
 from rmr_pipeline.table import dedupe_table, load_table, verify_table_hash
 
-# A local export of the sheet's "Top 10K Chart" tab (gitignored: the builder's outputs are what is committed).
-DEFAULT_SHEET = REPO / "experiments" / "audio_10k" / "cache" / "rym10k_sheet.csv"
+# The export of the sheet's "Top 10K Chart" tab the catalog was built from. It is committed, and
+# catalog/manifest.json has its SHA-256, so the builder and its --check run from a fresh clone.
+DEFAULT_SHEET = REPO / "data-pipeline" / "catalog" / "source" / "rym10k_sheet.csv"
 # The scrape the feature table was built from: the only source of an existing album's release date.
 # It is unpickled, so it is pinned like the feature table.
 SCRAPE = REPO / "data-retrieval" / "rymscraper-master" / "Scraped Data" / "top5000records.pkl"
