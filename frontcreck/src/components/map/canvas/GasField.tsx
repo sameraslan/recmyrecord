@@ -9,7 +9,6 @@ import { easeOutCubic, prefersReducedMotion } from "@/lib/media";
 import { STOP_IDS, type StopId } from "@/lib/types";
 import { STOP_T, type MapData } from "../data";
 import {
-  GAS_DIMMED_STRENGTH,
   GAS_FRAGMENT_SOURCE,
   GAS_QUAD_SCALE,
   GAS_BUSY_UPLOAD_CAP_MS,
@@ -153,7 +152,8 @@ function emptySharpTexture(width: number, height: number): THREE.Texture {
 /**
  * The nebula gas: one quad in world space under the album points, textured with the stop baked at build time.
  * The current stop's texture loads first. The other two load only on an interactive map, in an idle slot after
- * the first is on screen (or at once when the slider asks); the dimmed backdrop loads only the stop it shows.
+ * the first is on screen (or at once when the slider asks); the backdrop of Home, About and 404 loads only the
+ * stop it shows.
  * An image that is needed on screen is uploaded once the GPU has finished the frames already asked of it. One
  * that is not is uploaded only in a quiet moment, never during a pan, a zoom, a hover or a camera move, and one
  * at a time; if no quiet moment comes for four seconds it goes in at the next idle moment, but never while a
@@ -165,7 +165,7 @@ function emptySharpTexture(width: number, height: number): THREE.Texture {
  * held at a time; it is freed when the slider comes to rest at another stop (gasSharpPlan).
  * A software renderer gets a lighter shader (GAS_FRAGMENT_SHADER_LITE), chosen by a define before the gas first
  * draws; a GPU compiles the full shader as before.
- * Nothing here draws at rest: the dim, the pool and the fade to a sharper image ask for another frame only while
+ * Nothing here draws at rest: the pool and the fade to a sharper image ask for another frame only while
  * they are easing, and a texture that arrives or is released asks for one frame. The zoom curve and deep zoom are a pure function of the camera, so
  * they change only in frames the camera has already asked for.
  */
@@ -178,8 +178,6 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   // The stops whose image could not be used and that show plain sky (emptyGas): bound like a loaded stop, but
   // not a nebula on screen and not a first image the sharper one may follow.
   const empty = useRef(new Set<StopId>());
-  // Strength factor of the dimmed pages, eased like AlbumField's dot alpha; -1 until the first frame.
-  const dim = useRef(-1);
   // Pool amount (0 to 1) and its easing; value -1 until the first frame.
   const pool = useRef({ value: -1, from: 0, to: 0, start: 0 });
   // World centre and radius of the pool; kept after the album closes so the pool fades out in place.
@@ -837,7 +835,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       flag();
       queueRest();
     }
-    // The stop on screen is fetched at once. The dimmed backdrop (Home, About, 404) starts nothing else; an
+    // The stop on screen is fetched at once. The backdrop of Home, About and 404 starts nothing else; an
     // interactive map also starts the other two, which are fetched at idle priority.
     const first = useMapStore.getState().input;
     fetchStop(first.stop);
@@ -922,7 +920,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   }, [enabled, gl, invalidate, mesh, material, noise, theme, images]);
 
   // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-  useFrame((state, delta) => {
+  useFrame((state) => {
     frameAt.current = performance.now();
     const { input, sliderT } = useMapStore.getState();
     const got = loaded.current;
@@ -987,17 +985,11 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     u.u_ppr.value = ppw * data.tx.s;
     u.u_dust.value = gasDust(cover);
 
-    // The dimmed backdrop (Home, About, 404) eases with the dots (AlbumField). With frameloop="demand" the first
-    // frame after an idle period has a delta of seconds; clamp it, or the dim would jump instead of easing.
-    const dt = Math.min(delta, 1 / 30);
-    const dimTarget = input.dimmed ? GAS_DIMMED_STRENGTH : 1;
-    if (dim.current < 0 || reduced) dim.current = dimTarget;
-    else dim.current += (dimTarget - dim.current) * (1 - Math.exp(-dt / 0.12));
-    if (Math.abs(dimTarget - dim.current) < 0.002) dim.current = dimTarget;
-    else invalidate();
+    // The gas has the same strength behind Home, About and 404 as on the map (shaders/gas.ts GAS_DIMMED_STRENGTH
+    // is 1), so nothing eases between them.
     // Zoom bands, and past 32 px covers the deep zoom fade to a faint remnant (strength, colour, detail, focus).
     const curve = gasCurve(cover);
-    u.u_strength.value = curve.strength * dim.current;
+    u.u_strength.value = curve.strength;
     u.u_deep.value = curve.deep;
     // The lighter shader's one read: at the screen's resolution, and blurrier as deep zoom takes the detail away.
     if (lite.current) {

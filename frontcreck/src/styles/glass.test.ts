@@ -94,7 +94,7 @@ describe('glass', () => {
     expect(stage).not.toContain('ambient');
     // The panel's own wash is still there.
     expect(read('styles/album.css')).toMatch(/(?:^|\n)\.amb \{/);
-    expect(read('components/album/AlbumPanel.tsx')).toContain('<AmbientLayers ambient={seed.ambient} variant="panel" />');
+    expect(read('components/album/AlbumPanel.tsx')).toContain('<AmbientLayers ambient={seed.ambient} />');
   });
 
   it('no colour of the old warm theme is left in the stylesheets', () => {

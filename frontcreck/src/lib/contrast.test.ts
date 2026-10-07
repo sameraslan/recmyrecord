@@ -197,8 +197,8 @@ describe('text over washes and bands', () => {
     expect(opacity).toBeLessThanOrEqual(1);
     const bad: string[] = [];
     for (const a of ALBUMS) {
-      // The alphas ambientBackground gives the two washes (the panel variant paints w[0], then w[1]).
-      const alphas = [...ambientBackground(a.w, 'panel').matchAll(/rgba\(\d+,\d+,\d+,([\d.]+)\)/g)].map((m) => Number(m[1]));
+      // The alphas ambientBackground gives the two washes (it paints w[0], then w[1]).
+      const alphas = [...ambientBackground(a.w).matchAll(/rgba\(\d+,\d+,\d+,([\d.]+)\)/g)].map((m) => Number(m[1]));
       a.w.slice(0, 2).forEach((wash, i) => {
         const bg = rgbToHex(paintOver(hexToRgb(wash), alphas[i] * opacity, WORST_PANEL));
         for (const t of ['paper', 'dust']) {
