@@ -1,5 +1,7 @@
 # SDD ledger — plan: docs/superpowers/plans/2026-10-04-trifid-theme-1-data-gas.md
 
+> Note (2026-10-07): the pictures (`.jpg`, `.png`) under `docs/design/trifid-theme/reviews/app-gas-detail/` and `app-part1/` were pruned before merge. They remain in git history at commit `03f1386c`. The documents, scripts and measurement files are still in place.
+
 Pre-flight scan: see .superpowers/sdd/preflight.md and crosscheck-report.md (71 found, 57 fixed, 14 ruled).
 Ruling: perf judged on median of 3 runs vs budget and baseline; single-run outliers explained — baseline itself trips on outliers — cost if wrong: a real regression hidden as noise.
 Ruling: twinkle with album open and on Home follows prototype — owner approved prototype live — cost: one condition to remove.

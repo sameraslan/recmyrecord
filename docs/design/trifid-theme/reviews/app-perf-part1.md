@@ -1,5 +1,7 @@
 # Part 1 (data and gas) against the baseline: performance and regression checklist
 
+> Note (2026-10-07): the pictures (`.jpg`, `.png`) under `app-part1/` and `app-gas-detail/` were pruned before merge. They remain in git history at commit `03f1386c`. The documents, scripts and measurement files are still in place.
+
 **Read this section first. It is the closing measurement of part 1 (2026-10-05) and replaces every headline below it.** The older sections are kept as history and each says at its top that it is superseded.
 
 ## Closing measurement: round 3 and the closing pass

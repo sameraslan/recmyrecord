@@ -1,5 +1,7 @@
 # Part 1 fidelity: the app's gas against the prototype and the approved pictures
 
+> Note (2026-10-07): the pictures (`.jpg`, `.png`) under `app-part1/` were pruned before merge. They remain in git history at commit `03f1386c`. The documents, scripts and measurement files are still in place.
+
 Date: 2026-10-05. Branch `trifid-build`, app code at commit `6c225edd` (gas layer of tasks 1 to 5, plus Task 6's changes to when gas images are uploaded, which do not change a pixel). All pairs and numbers below were taken again on that commit. Only the gas is judged. Stars, region names, glass panels, the header over the map, the removal of the film grain and the sky-coloured pane belong to parts 2 and 3.
 
 This was written by the implementer of Task 6 and is **not a sign-off**. The plan asks for a reviewer who did not write the part; that reviewer redoes the comparison from the files named here.

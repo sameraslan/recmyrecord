@@ -1,5 +1,7 @@
 # Gas fine detail (review item M1): experiment log and result
 
+> Note (2026-10-07): the pictures (`.jpg`, `.png`) under `app-gas-detail/` and `app-part1/` were pruned before merge. They remain in git history at commit `03f1386c`. The documents, scripts and measurement files are still in place.
+
 Date: 2026-10-05, 03:50 to 05:40 local time. Branch `trifid-build`. Before: commit `3dacd965`. After: commits `7fdca313` (bake, shader, loader) and the shader trim that follows it. Written by the implementer. **This is not a sign-off.** An independent reviewer should redo the comparison from the files named here.
 
 The finding being answered is M1 of `app-fidelity-part1-independent.md`: large scale gas right, fine swirl missing at Overview, blur plus a blotchy mottle beside an open album, dark blue smudged, nothing captured at device pixel ratio 2.

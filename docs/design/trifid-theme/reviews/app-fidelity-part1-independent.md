@@ -1,5 +1,7 @@
 # Part 1 gas: independent fidelity review
 
+> Note (2026-10-07): the pictures (`.jpg`, `.png`) under `app-part1/` were pruned before merge. They remain in git history at commit `03f1386c`. The documents, scripts and measurement files are still in place.
+
 Date: 2026-10-05. Reviewer did not build part 1. Read-only: the files in `app-part1/`, the approved pictures in `options/`, the baseline shots, the builder's two notes, the baked files `frontcreck/public/data/theme/gas-*.webp` and the bake and shader sources. No browser, build or server was run. Crops and measurements were made with Pillow and numpy from the saved JPEGs (quality 90, dpr 1, software WebGL), so every number here carries JPEG noise on both sides.
 
 ## Verdict

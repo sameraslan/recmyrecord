@@ -1,5 +1,7 @@
 # Trifid Theme Part 2: Stars, Lines and Names Implementation Plan
 
+> Note (2026-10-07): the pictures (`.jpg`, `.png`) under `docs/design/trifid-theme/reviews/app-part1/` and `app-gas-detail/` were pruned before merge. They remain in git history at commit `03f1386c`. The documents, scripts and measurement files are still in place.
+
 ## Reconciled with part 1 as built (2026-10-05)
 
 This part was written before part 1 was built. It has been checked against the code on `feat/trifid-theme` and against `2026-10-04-trifid-theme-build-handoff.md` (which wins where they differ). **Precondition: part 1's ledger (`2026-10-04-trifid-theme-ledger-part1.md`) must say "Task 6: complete" before Task 1 starts (Task 0 may run before).** **A new Task 0, "the map opens at the Overview framing", comes before Task 1 and is written separately**; the notes below that mention Task 0 only say which statements of this part its framing changes. What changed in this file, one line each (old -> new):

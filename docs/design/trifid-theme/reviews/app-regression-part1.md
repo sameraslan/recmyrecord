@@ -1,5 +1,7 @@
 # Part 1 regression pass by eye
 
+> Note (2026-10-07): the pictures (`.jpg`, `.png`) under `app-part1/covers/` were pruned before merge. They remain in git history at commit `03f1386c`. The documents, scripts and measurement files are still in place.
+
 Date: 2026-10-05, build of commit `6c225edd`. The states were taken again with `baseline/capture.mjs` (gpu Chrome, 1440 x 900 and the phone viewport, as the baseline) and opened one pair at a time, the baseline on the left and part 1 on the right. The pairs are saved as `app-part1/covers/<name>-baseline-left-part1-right.jpg` (phone ones start with `phone-`); the magenta bar divides the halves. Written by the implementer; the counts and the method of the full checklist are in `app-perf-part1.md`.
 
 Nothing that part 1 does not own was found changed. In every pair the only difference is what lies behind the albums: gas where the brown pane was.
