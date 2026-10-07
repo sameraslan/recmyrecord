@@ -5,7 +5,7 @@ Captured on 2026-10-04 from commit `1e9ef508` (branch `trifid-build`; the app co
 | File | What it is |
 |---|---|
 | `capture.mjs` | Takes the same named screenshots every run. Re-run it after the retheme and compare file by file. |
-| `shots/desktop/`, `shots/phone/` | The baseline screenshots (186 files). `shots/capture-log-*.json` records the URL and camera at each shot. |
+| `shots/` | `capture-log-*.json`: the URL and camera at each baseline shot. The 186 screenshots themselves (30 MB) were removed from the repository on 2026-10-07, before the merge. They are in git history up to commit `1d648ae3` of `feat/trifid-theme`, and `capture.mjs` run on a build of commit `1e9ef508` makes them again. |
 | `hover-measure.mjs` | Times the hover path on the map (pointer move to tip, long tasks). |
 | `perf/` | Raw output of three `npm run perf` runs and of the hover measurement. |
 | `BASELINE-PERF.md` | Every performance number, per run, with medians, spread and budgets. |

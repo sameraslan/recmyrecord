@@ -14,7 +14,7 @@ Build: `feat/trifid-theme` at `daef1189`, production build, 6 October 2026. Pict
 - Scripted checks for items a still cannot show: `_notes/scratch/p2-task9-captures/fid.mjs`, output `fid/fid-results.json` and `_notes/logs/p2t9-capture.log`.
 - Not run: any timing (`npm run perf`), by the rules of this build.
 
-Evidence paths: `regression/...` is relative to `docs/design/trifid-theme/reviews/app-part2/`; `scratch:...` is relative to `ROOT/.claude/worktrees/_notes/scratch/p2-task9-captures/` (not in the repository). Baseline pictures are in `docs/design/trifid-theme/reviews/baseline/shots/`.
+Note, 2026-10-07: the baseline screenshots (`baseline/shots/`) and the review pictures this file does not cite were removed from the repository before the merge; every `regression/...` picture cited here is kept. Evidence paths: `regression/...` is relative to `docs/design/trifid-theme/reviews/app-part2/`; `scratch:...` is relative to `ROOT/.claude/worktrees/_notes/scratch/p2-task9-captures/` (not in the repository). Baseline pictures are in `docs/design/trifid-theme/reviews/baseline/shots/`.
 
 ## Verdicts
 
