@@ -126,6 +126,21 @@ describe("albums outside the focus in album view", () => {
     const dimBranch = ALBUM_VERTEX_SHADER.slice(ALBUM_VERTEX_SHADER.indexOf("v_dim = 1.0;"));
     expect(dimBranch.slice(0, dimBranch.indexOf("}"))).not.toMatch(/baseCss\s*\*=/);
   });
+
+  it("bring their cover tile in with the cover fade, so at the start of the fade a star beside an open album is still a star and not a flat disc", () => {
+    // Approved picture final-album.jpg: small points of mixed size beside the open album. The prototype draws a
+    // map cover at the square of the fade there, so it is invisible while covers are 16 to about 20 px; the tile's
+    // own ease (the first eighth of the fade) made every album a flat 8 px disc of its star colour at that framing.
+    // The extra factor is 1 once covers are fully shown, so a full cover outside the focus is still 45% opaque.
+    const cover = ALBUM_FRAGMENT_SHADER.slice(ALBUM_FRAGMENT_SHADER.indexOf("if (v_coverT > 0.0) {"), ALBUM_FRAGMENT_SHADER.indexOf("if (v_sel > 0.5) {"));
+    expect(cover).toMatch(/if \(v_dim > 0\.5\) alpha \*= u_focusDim;/);
+    expect(cover).toMatch(/if \(v_dim > 0\.5\) alpha \*= v_coverT;/);
+    // Only outside an open album's focus: the Explore cross-fade and the picked album's dimming are as they were.
+    expect(cover).toMatch(/alpha = mask \* mix\(u_dotAlpha, 1\.0, v_coverT\) \* smoothstep\(0\.0, 0\.125, v_coverT\);/);
+    expect(cover).toMatch(/if \(v_selDim > 0\.5\) alpha \*= mix\(1\.0, u_selDim, v_coverT\);/);
+    // The star under the tile is untouched: same size rule, same fade, same 45%.
+    expect(ALBUM_FRAGMENT_SHADER).toMatch(/float starA = v_tint\.a \* \(v_dim > 0\.5 \? u_focusDim : 1\.0\);/);
+  });
 });
 
 describe("the dimmed map behind Home, About and 404", () => {

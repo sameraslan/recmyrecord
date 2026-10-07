@@ -369,6 +369,9 @@ export const ALBUM_FRAGMENT_SHADER = /* glsl */ `
       // and (the cover part only) while another album is picked. Where two such covers overlap, the lower one
       // shows through the upper.
       if (v_dim > 0.5) alpha *= u_focusDim;
+      // Beside an open album the tile also comes in with the fade (it is whole once the cover is). At the start
+      // of the fade it is a flat disc of the star colour, which at a close framing hid every star behind one.
+      if (v_dim > 0.5) alpha *= v_coverT;
       if (v_selDim > 0.5) alpha *= mix(1.0, u_selDim, v_coverT);
     }
     if (v_sel > 0.5) {

@@ -1,5 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
-import { waitForCameraIdle, waitForMap } from './helpers';
+import { drawStarClasses, seededRandom } from '../src/components/map/state/stars';
+import { coverCssPx } from '../src/components/map/state/zoomLimits';
+import { twinkleOff, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
 
 /** The stars in a browser (part 2 Task 9). Every star is an album, and which album is a bright star is dealt
  * afresh on every page load (components/map/state/stars.ts). The unit tests pin the deal and the source of the
@@ -110,4 +112,120 @@ test('every star is an album, and which albums are the bright stars is this page
   // Another deal: with 41 brightest stars among 4,081 albums, two loads agree on all of them by chance never.
   const differ = first.classes[0].filter((c, i) => c !== second.classes[0][i]).length;
   expect(differ, 'albums whose star class differs between the two loads').toBeGreaterThan(n / 10);
+});
+
+/** The Stone Roses at 1600 x 1000: the approved picture of an open album (docs/design/trifid-theme/options/
+ * final-album.jpg). Its framing is close: covers on the map would be 16 to 24 px, the start of their fade. */
+const STONE = '/album/the-stone-roses-the-stone-roses';
+
+test('beside an open album at a close framing the stars are still points: no flat disc of the star colour round a small star', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'the approved desktop picture; the same shader draws the phone');
+  test.setTimeout(120_000);
+  const SEED = 7;
+  await page.addInitScript((seed) => {
+    (window as unknown as { __rmr: { starSeed: number } }).__rmr = { starSeed: seed };
+    window.__rmrTwinkle = 'off';
+  }, SEED);
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.goto(STONE);
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await page.waitForLoadState('networkidle');
+  await waitForAnimations(page);
+  await waitForGasSharpSettled(page);
+  await twinkleOff(page);
+  await waitForCameraIdle(page);
+
+  // The framing this test is about: the cover fade has started (16 px) and is in its first quarter.
+  const view = await page.evaluate(() => {
+    const c = document.querySelector<HTMLCanvasElement>('canvas.map-canvas')!.getBoundingClientRect();
+    return { zoom: window.__rmr!.map!.getCamera().zoom, height: c.height };
+  });
+  const coverPx = coverCssPx(view.zoom, view.height);
+  expect(coverPx, 'covers on the map at this framing, CSS px').toBeGreaterThan(16);
+  expect(coverPx).toBeLessThan(24);
+
+  // Small stars (the smallest class of this load's deal) outside the open album's focus, on the bare map: no
+  // other album within 16 px, clear of the focus covers, and nothing of the page over them.
+  const n = await page.evaluate(async () => ((await (await fetch('/data/albums.json')).json()) as unknown[]).length);
+  const classes = Array.from(drawStarClasses(n, seededRandom(SEED)));
+  const points = await page.evaluate((cls) => {
+    const api = window.__rmr!.map!;
+    const focus = new Set((window.__rmr!.markerLayout?.()?.placed ?? []).map((m) => m.id));
+    const covers = [...document.querySelectorAll('.mk')].map((e) => e.getBoundingClientRect());
+    const all: { id: number; x: number; y: number }[] = [];
+    for (let id = 0; id < cls.length; id++) {
+      const p = api.screenPoint(id);
+      if (p && p.x > 0 && p.y > 0 && p.x < innerWidth && p.y < innerHeight) all.push({ id, x: p.x, y: p.y });
+    }
+    return {
+      focus: focus.size,
+      points: all.filter((p) => {
+        if (cls[p.id] !== 3 || focus.has(p.id)) return false;
+        if (p.x < 20 || p.y < 20 || p.x > innerWidth - 20 || p.y > innerHeight - 20) return false;
+        if (covers.some((r) => p.x > r.left - 40 && p.x < r.right + 40 && p.y > r.top - 40 && p.y < r.bottom + 40)) return false;
+        if (all.some((q) => q.id !== p.id && Math.hypot(q.x - p.x, q.y - p.y) < 16)) return false;
+        for (const [dx, dy] of [[0, 0], [-12, -12], [12, -12], [-12, 12], [12, 12]]) {
+          if (!document.elementFromPoint(p.x + dx, p.y + dy)?.classList.contains('map-canvas')) return false;
+        }
+        return true;
+      }),
+    };
+  }, classes);
+  expect(points.focus, 'albums in the open focus').toBeGreaterThan(1);
+  expect(points.points.length, 'small stars on the bare map beside the album').toBeGreaterThan(40);
+
+  // Round each: the mean grey of the ring 2.5 to 3.6 px from its centre (outside a small star's core, which is
+  // under 1.8 px here; inside a disc of the dot size, 7 to 8 px across) less that of the ring 7 to 9 px out
+  // (the map beside it). A flat disc of the star colour lifts the near ring by about 50 of 255 (measured before
+  // the fix: median 49.5, nine in ten under 60.9). A point of light leaves only its glow and the first trace of
+  // its cover there: 7.3 and 11.8 with the tile brought in by the cover fade, which is the look of the approved
+  // picture. The bounds sit between the two, about a quarter of the disc's.
+  const png = (await page.screenshot()).toString('base64');
+  const lift = await page.evaluate(
+    async ([data, list]) => {
+      const img = new Image();
+      img.src = `data:image/png;base64,${data}`;
+      await img.decode();
+      const c = document.createElement('canvas');
+      c.width = img.width;
+      c.height = img.height;
+      const ctx = c.getContext('2d')!;
+      ctx.drawImage(img, 0, 0);
+      const k = img.width / innerWidth;
+      const out: number[] = [];
+      for (const p of list) {
+        const R = 10;
+        const x0 = Math.round(p.x * k) - R;
+        const y0 = Math.round(p.y * k) - R;
+        const d = ctx.getImageData(x0, y0, 2 * R + 1, 2 * R + 1).data;
+        let near = 0;
+        let nearN = 0;
+        let far = 0;
+        let farN = 0;
+        for (let y = 0; y <= 2 * R; y++) {
+          for (let x = 0; x <= 2 * R; x++) {
+            const r = Math.hypot(x0 + x + 0.5 - p.x * k, y0 + y + 0.5 - p.y * k) / k;
+            const i = 4 * (y * (2 * R + 1) + x);
+            const grey = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+            if (r >= 2.5 && r <= 3.6) {
+              near += grey;
+              nearN++;
+            } else if (r >= 7 && r <= 9) {
+              far += grey;
+              farN++;
+            }
+          }
+        }
+        out.push(near / nearN - far / farN);
+      }
+      return out.sort((a, b) => a - b);
+    },
+    [png, points.points] as const,
+  );
+  const median = lift[Math.floor(lift.length / 2)];
+  const upper = lift[Math.floor(lift.length * 0.9)];
+  console.log(`stars beside the open album: covers ${coverPx.toFixed(2)} px, ${lift.length} small stars, near ring less far ring: median ${median.toFixed(2)}, 90th percentile ${upper.toFixed(2)} (of 255)`);
+  expect(median, 'median lift of the ring 2.5 to 3.6 px from a small star over the map beside it, of 255').toBeLessThan(12);
+  expect(upper, '90th percentile of that lift').toBeLessThan(20);
 });
