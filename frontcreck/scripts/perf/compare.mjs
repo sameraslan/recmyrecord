@@ -24,7 +24,7 @@
  * yardstick in the GPU columns, named as such. A measure with no baseline value shows "n/a".
  *
  * --no-fail      exit 0 whatever the findings (they are still printed): for exploring
- * --allow-flags  the current runs were made with --glass, --names, --no-gas and so on, on purpose (an A/B)
+ * --allow-flags  the current runs were made with --glass, --twinkle, --no-gas and so on, on purpose (an A/B)
  * --only="gpu desktop"  compare that one column (a current set made with --mode and --viewport); without it every
  *                column of the baseline that the current set lacks is MISSING
  * Exit code: 0 no finding, 1 a finding, 2 a usage error. Behind a pipe (`| tee`) use `set -o pipefail`.

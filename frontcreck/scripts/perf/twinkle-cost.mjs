@@ -224,7 +224,7 @@ async function runs(browser, mode, vpName) {
     null,
     { timeout: 30000 },
   );
-  await page.waitForTimeout(2500); // fonts, names and the first frames have settled
+  await page.waitForTimeout(2500); // fonts and the first frames have settled
   // Part 1's sharper gas image (gpu desktop only) is fetched about a second after the map settles and fades in over
   // up to 14 frames: wait until it is not on its way and neither its flag nor the frame count has changed for 2.5 s
   // (e2e/helpers.ts waitForGasSharpSettled), so the still runs count no frame of it.

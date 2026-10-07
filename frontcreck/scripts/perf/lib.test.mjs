@@ -363,7 +363,7 @@ describe('reading run files', () => {
   it('reads a file of the old script and of the new one', () => {
     const old = checkRun('perf-run1.json', { js: { kb: 190.5, threeKb: 0 }, rows: [{ mode: 'gpu', vp: 'desktop' }], fails: ['x'] }, 'Server HTML: / 28.3 KB, /album/in-rainbows-radiohead 34 KB (budget 150 KB each)\n');
     expect(old).toMatchObject({ file: 'perf-run1.json', fails: ['x'], settings: '', pages: [{ path: '/', kb: 28.3 }, { path: '/album/in-rainbows-radiohead', kb: 34 }] });
-    const now = checkRun('perf-run1.json', { js: { kb: 191 }, pages: [{ path: '/', kb: 29, unrelatedSlug: null }], rows: [], open: 'app', effects: { glass: 'off', twinkle: null, names: null }, flags: { noGas: true } });
+    const now = checkRun('perf-run1.json', { js: { kb: 191 }, pages: [{ path: '/', kb: 29, unrelatedSlug: null }], rows: [], open: 'app', effects: { glass: 'off', twinkle: null }, flags: { noGas: true } });
     expect(now.pages).toEqual([{ path: '/', kb: 29 }]);
     expect(now.settings).toBe('open=app glass=off noGas');
     expect(checkRun('x.json', { rows: [] }).pages).toBeNull();
@@ -446,23 +446,28 @@ describe('settingsFindings', () => {
 
 describe('perf.mjs flags', () => {
   it('reads on and off, and nothing when a flag is absent', () => {
-    expect(parseEffectFlags([])).toEqual({ glass: null, twinkle: null, names: null });
-    expect(parseEffectFlags(['--mode', 'gpu', '--glass', 'off', '--names', 'on'])).toEqual({ glass: 'off', twinkle: null, names: 'on' });
-    expect(parseEffectFlags(['--twinkle', 'off'])).toEqual({ glass: null, twinkle: 'off', names: null });
+    expect(parseEffectFlags([])).toEqual({ glass: null, twinkle: null });
+    expect(parseEffectFlags(['--mode', 'gpu', '--glass', 'off', '--twinkle', 'on'])).toEqual({ glass: 'off', twinkle: 'on' });
+    expect(parseEffectFlags(['--twinkle', 'off'])).toEqual({ glass: null, twinkle: 'off' });
   });
 
   it('refuses any other value and a flag with no value', () => {
     expect(() => parseEffectFlags(['--glass', 'maybe'])).toThrow('--glass takes on or off');
-    expect(() => parseEffectFlags(['--names'])).toThrow('--names takes on or off');
+    expect(() => parseEffectFlags(['--glass'])).toThrow('--glass takes on or off');
     expect(() => parseEffectFlags(['--twinkle', '--glass', 'on'])).toThrow('--twinkle takes on or off');
   });
 
+  it('refuses --names with the reason: the region names were removed, there is nothing to switch', () => {
+    expect(() => parseEffectFlags(['--names', 'off'])).toThrow('--names is gone: the region names were removed from the map');
+    expect(() => parseEffectFlags(['--glass', 'off', '--names'])).toThrow('--names is gone');
+  });
+
   it('adds nothing but `open` to the JSON of a run with no flag, and records every flag that was set', () => {
-    expect(jsonExtras({ open: null, glass: null, twinkle: null, names: null, noGas: false, gasLite: null, allowSoftwareGpu: false })).toEqual({ open: 'app' });
+    expect(jsonExtras({ open: null, glass: null, twinkle: null, noGas: false, gasLite: null, allowSoftwareGpu: false })).toEqual({ open: 'app' });
     expect(Object.keys(jsonExtras({ open: null }))).toEqual(['open']);
-    expect(jsonExtras({ open: 'whole', glass: 'off', twinkle: null, names: 'on', noGas: true, gasLite: 'off', allowSoftwareGpu: true })).toEqual({
+    expect(jsonExtras({ open: 'whole', glass: 'off', twinkle: null, noGas: true, gasLite: 'off', allowSoftwareGpu: true })).toEqual({
       open: 'whole',
-      effects: { glass: 'off', twinkle: null, names: 'on' },
+      effects: { glass: 'off', twinkle: null },
       flags: { noGas: true, gasLite: 'off', allowSoftwareGpu: true },
     });
     expect(jsonExtras({ open: null, gasLite: 'force' })).toEqual({ open: 'app', flags: { gasLite: 'force' } });
@@ -471,19 +476,19 @@ describe('perf.mjs flags', () => {
 
 describe('checkEffects', () => {
   const vars = { '--glass-blur': 'none' };
-  const seen = (over) => ({ at: 'map', glassBlur: 'none', header: 'none', panel: 'none', album: null, namesOn: false, forcedMs: 3, firstPaintMs: 120, ...over });
+  const seen = (over) => ({ at: 'map', glassBlur: 'none', header: 'none', panel: 'none', album: null, forcedMs: 3, firstPaintMs: 120, ...over });
   const all = [seen({ at: 'album', album: 'none' }), seen(), seen({ at: 'opening view' })];
 
   it('passes when the page had what was forced', () => {
-    expect(checkEffects('gpu desktop', all, { glass: 'off', names: 'off' }, vars)).toEqual([]);
+    expect(checkEffects('gpu desktop', all, { glass: 'off' }, vars)).toEqual([]);
     const blur = 'blur(22px) saturate(1.2) brightness(0.58)';
-    const on = all.map((s) => ({ ...s, glassBlur: blur, header: blur, panel: blur, album: s.album && blur, namesOn: true }));
-    expect(checkEffects('gpu desktop', on, { glass: 'on', names: 'on' }, { '--glass-blur': blur })).toEqual([]);
-    expect(checkEffects('gpu desktop', all, { glass: null, names: null }, null)).toEqual([]);
+    const on = all.map((s) => ({ ...s, glassBlur: blur, header: blur, panel: blur, album: s.album && blur }));
+    expect(checkEffects('gpu desktop', on, { glass: 'on' }, { '--glass-blur': blur })).toEqual([]);
+    expect(checkEffects('gpu desktop', all, { glass: null }, null)).toEqual([]);
   });
 
   it('fails a glass off run in which a surface still blurs, naming it', () => {
-    const fails = checkEffects('gpu desktop', [all[0], seen({ panel: 'blur(22px)' }), all[2]], { glass: 'off', names: null }, vars);
+    const fails = checkEffects('gpu desktop', [all[0], seen({ panel: 'blur(22px)' }), all[2]], { glass: 'off' }, vars);
     expect(fails).toEqual(['gpu desktop: forced effect not applied: --glass off, but the panel has backdrop-filter blur(22px) (map)']);
   });
 
@@ -491,15 +496,15 @@ describe('checkEffects', () => {
     const blur = 'blur(22px)';
     const on = all.map((s) => ({ ...s, glassBlur: blur, header: blur, panel: blur, album: s.album && blur }));
     on[1] = { ...on[1], header: 'none', glassBlur: 'blur(14px)' };
-    expect(checkEffects('gpu phone', on, { glass: 'on', names: null }, { '--glass-blur': blur })).toEqual([
+    expect(checkEffects('gpu phone', on, { glass: 'on' }, { '--glass-blur': blur })).toEqual([
       'gpu phone: forced effect not applied: --glass on, but --glass-blur is blur(14px), not blur(22px) (map)',
       'gpu phone: forced effect not applied: --glass on, but the header has backdrop-filter none (map)',
     ]);
   });
 
   it('fails when one of the three surfaces was never found, or the properties were set after first paint', () => {
-    expect(checkEffects('gpu desktop', [seen(), seen({ at: 'opening view' })], { glass: 'off', names: null }, vars)).toEqual(['gpu desktop: forced effect not verified: --glass off, but the album panel was never found to read back']);
-    expect(checkEffects('gpu desktop', [all[0], seen({ forcedMs: 400 }), seen({ at: 'opening view', forcedMs: null })], { glass: 'off', names: null }, vars)).toEqual([
+    expect(checkEffects('gpu desktop', [seen(), seen({ at: 'opening view' })], { glass: 'off' }, vars)).toEqual(['gpu desktop: forced effect not verified: --glass off, but the album panel was never found to read back']);
+    expect(checkEffects('gpu desktop', [all[0], seen({ forcedMs: 400 }), seen({ at: 'opening view', forcedMs: null })], { glass: 'off' }, vars)).toEqual([
       'gpu desktop: forced effect applied late: the glass properties were set at 400 ms, after first paint at 120 ms (map)',
       'gpu desktop: forced effect not applied: the glass properties were never set on <html> (opening view)',
     ]);
@@ -507,15 +512,15 @@ describe('checkEffects', () => {
 
   it('passes a twinkle run whose page did what was forced, read from the app and from the DOM', () => {
     const off = [seen({ at: 'album', twinkleOn: false, twinkleSpawned: 0, twinkleNodes: 0 }), seen({ twinkleOn: false, twinkleSpawned: 0, twinkleNodes: 0 })];
-    expect(checkEffects('gpu desktop', off, { glass: null, names: null, twinkle: 'off' }, null)).toEqual([]);
+    expect(checkEffects('gpu desktop', off, { glass: null, twinkle: 'off' }, null)).toEqual([]);
     // On: the timer says enabled on every page, and at least one page had made a glint by the time it was read.
     const on = [seen({ at: 'album', twinkleOn: true, twinkleSpawned: 0, twinkleNodes: 0 }), seen({ twinkleOn: true, twinkleSpawned: 9, twinkleNodes: 2 })];
-    expect(checkEffects('gpu desktop', on, { glass: null, names: null, twinkle: 'on' }, null)).toEqual([]);
-    expect(checkEffects('gpu desktop', on, { glass: null, names: null, twinkle: null }, null)).toEqual([]);
+    expect(checkEffects('gpu desktop', on, { glass: null, twinkle: 'on' }, null)).toEqual([]);
+    expect(checkEffects('gpu desktop', on, { glass: null, twinkle: null }, null)).toEqual([]);
   });
 
   it('fails a twinkle run in which the app ignored the switch, has no twinkle, or never made a glint', () => {
-    const want = (twinkle) => ({ glass: null, names: null, twinkle });
+    const want = (twinkle) => ({ glass: null, twinkle });
     expect(checkEffects('gpu desktop', [seen({ twinkleOn: true, twinkleSpawned: 4, twinkleNodes: 1 })], want('off'))).toEqual([
       'gpu desktop: forced effect not applied: --twinkle off, but the glints\' timer reads enabled true (map)',
       'gpu desktop: forced effect not applied: --twinkle off, but 4 glints were made and 1 are on the page (map)',
@@ -531,11 +536,6 @@ describe('checkEffects', () => {
     expect(checkEffects('gpu desktop', [seen({ twinkleOn: true, twinkleSpawned: 0, twinkleNodes: 0 })], want('on'))).toEqual([
       'gpu desktop: forced effect not verified: --twinkle on, but no glint had been made on any page read back',
     ]);
-  });
-
-  it('fails a names run in which the store disagrees', () => {
-    expect(checkEffects('gpu desktop', [seen({ namesOn: true })], { glass: null, names: 'off' }, null)).toEqual(['gpu desktop: forced effect not applied: --names off, but the store has namesOn true (map)']);
-    expect(checkEffects('gpu desktop', [seen({ namesOn: null })], { glass: null, names: 'on' }, null)).toEqual(['gpu desktop: forced effect not applied: --names on, but the store has namesOn null (map)']);
   });
 });
 
@@ -553,13 +553,13 @@ describe('compare.mjs', () => {
     write('same', `perf-run${i}.json`, { drag: 18 + i });
     write('slow', `perf-run${i}.json`, { drag: 20 + i });
     write('big', `perf-run${i}.json`, { drag: 18 + i, kb: 192 });
-    write('forced', `perf-run${i}.json`, { drag: 18 + i, extra: { open: 'app', effects: { glass: 'off', twinkle: null, names: null } } });
+    write('forced', `perf-run${i}.json`, { drag: 18 + i, extra: { open: 'app', effects: { glass: 'off', twinkle: null } } });
     write('nocol', `perf-run${i}.json`, { rows: [{ mode: 'gpu', vp: 'phone', dragGapMs: 19, idleFrames: 0 }] });
   }
   // A dpr 2 file that also holds a desktop row: that row must not reach the desktop column.
   write('base', 'perf-dpr2-run1.json', { rows: [{ mode: 'gpu', vp: 'desktop', dragGapMs: 900 }, { mode: 'gpu', vp: 'desktop2x', dragGapMs: 18 }] });
   write('same', 'perf-dpr2-run1.json', { rows: [{ mode: 'gpu', vp: 'desktop', dragGapMs: 900 }, { mode: 'gpu', vp: 'desktop2x', dragGapMs: 18 }] });
-  write('forced', 'perf-dpr2-run1.json', { rows: [{ mode: 'gpu', vp: 'desktop2x', dragGapMs: 18 }], extra: { open: 'app', effects: { glass: 'off', twinkle: null, names: null } } });
+  write('forced', 'perf-dpr2-run1.json', { rows: [{ mode: 'gpu', vp: 'desktop2x', dragGapMs: 18 }], extra: { open: 'app', effects: { glass: 'off', twinkle: null } } });
   fs.writeFileSync(path.join(dir, 'bad.json'), '{"rows":[null]}');
 
   it('exits 0 and says so when nothing is worse', () => {

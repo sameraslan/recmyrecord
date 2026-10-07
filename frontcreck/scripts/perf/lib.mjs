@@ -101,10 +101,12 @@ export function glassVars(css, want) {
   );
 }
 
-/** --glass, --twinkle and --names of perf.mjs: 'on', 'off', or null when the flag is absent. Anything else throws. */
+/** --glass and --twinkle of perf.mjs: 'on', 'off', or null when the flag is absent. Anything else throws.
+ * --names is refused: the map's region names were removed (October 2026), so there is nothing to switch. */
 export function parseEffectFlags(args) {
+  if (args.includes('--names')) throw new Error('--names is gone: the region names were removed from the map, so there is nothing to switch. Run without it.');
   const out = {};
-  for (const name of ['glass', 'twinkle', 'names']) {
+  for (const name of ['glass', 'twinkle']) {
     const i = args.indexOf(`--${name}`);
     const v = i >= 0 ? args[i + 1] : null;
     if (i >= 0 && v !== 'on' && v !== 'off') throw new Error(`--${name} takes on or off`);
@@ -116,9 +118,9 @@ export function parseEffectFlags(args) {
 /** What perf.mjs writes into its JSON beside { js, pages, rows, fails }: how the run was made. A run with no flag
  * gets `open` and nothing else; `effects` and `flags` appear only when one of theirs was set, so compare.mjs can
  * tell a forced run from the site as a visitor gets it. */
-export function jsonExtras({ open, glass, twinkle, names, noGas, gasLite, allowSoftwareGpu }) {
+export function jsonExtras({ open, glass, twinkle, noGas, gasLite, allowSoftwareGpu }) {
   const out = { open: open ?? 'app' };
-  if (glass || twinkle || names) out.effects = { glass: glass ?? null, twinkle: twinkle ?? null, names: names ?? null };
+  if (glass || twinkle) out.effects = { glass: glass ?? null, twinkle: twinkle ?? null };
   const flags = { ...(noGas ? { noGas: true } : {}), ...(gasLite ? { gasLite } : {}), ...(allowSoftwareGpu ? { allowSoftwareGpu: true } : {}) };
   if (Object.keys(flags).length) out.flags = flags;
   return out;
@@ -128,7 +130,7 @@ const SURFACES = [['header', 'the header'], ['panel', 'the panel'], ['album', 't
 
 /** Whether a run had what its flags forced. `seen` is the list of readbacks perf.mjs takes in the page (on the
  * album, on /map, at the opening view): the computed --glass-blur, the computed backdrop-filter of the header, of
- * a panel and of the album panel (null where the page has none), the store's namesOn, and when the glass
+ * a panel and of the album panel (null where the page has none), and when the glass
  * properties were set against first paint. Returns one line per thing that is not as forced; perf.mjs adds them to
  * its fails, so an A/B in which nothing changed can never read as "costs nothing". */
 export function checkEffects(where, seen, want, vars) {
@@ -151,11 +153,6 @@ export function checkEffects(where, seen, want, vars) {
     }
     for (const [key, label] of SURFACES) {
       if (!seen.some((s) => typeof s[key] === 'string')) fails.push(`${where}: forced effect not verified: ${flag}, but ${label} was never found to read back`);
-    }
-  }
-  if (want.names) {
-    for (const s of seen) {
-      if (s.namesOn !== (want.names === 'on')) fails.push(`${where}: forced effect not applied: --names ${want.names}, but the store has namesOn ${s.namesOn} (${s.at})`);
     }
   }
   // The glints: what the app's own timer says its switch is (window.__rmr.twinkle.enabled(), null when the app
@@ -240,7 +237,9 @@ export function checkRun(file, json, txt = null) {
   const e = json.effects ?? {};
   const f = json.flags ?? {};
   const settings = [
-    json.open ? `open=${json.open}` : '', e.glass ? `glass=${e.glass}` : '', e.twinkle ? `twinkle=${e.twinkle}` : '', e.names ? `names=${e.names}` : '',
+    json.open ? `open=${json.open}` : '', e.glass ? `glass=${e.glass}` : '', e.twinkle ? `twinkle=${e.twinkle}` : '',
+    // (a run recorded before the region names were removed may still say it forced them)
+    e.names ? `names=${e.names}` : '',
     f.noGas ? 'noGas' : '', f.gasLite ? `gasLite=${f.gasLite}` : '', f.allowSoftwareGpu ? 'allowSoftwareGpu' : '',
   ].filter(Boolean).join(' ');
   const pages = Array.isArray(json.pages) ? json.pages.map((p) => ({ path: p.path, kb: p.kb })) : pagesFromText(txt);

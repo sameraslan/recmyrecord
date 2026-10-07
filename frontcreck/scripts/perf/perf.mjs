@@ -40,7 +40,7 @@ if (OPEN !== null && OPEN !== 'whole') {
   console.error('--open takes whole');
   process.exit(2);
 }
-// --glass on|off, --twinkle on|off, --names on|off: force one effect for the whole run, for an A/B of what it
+// --glass on|off, --twinkle on|off: force one effect for the whole run, for an A/B of what it
 // costs. Each is read back in the page and the run fails when the page did not have what was forced.
 let EFFECTS;
 try {
@@ -61,8 +61,6 @@ if (GLASS_WANT) {
     process.exit(2);
   }
 }
-// --names: the region names, through the visitor's own saved choice.
-const NAMES = EFFECTS.names;
 // --twinkle: the glints, through the app's own switch for tests and measurements: window.__rmrTwinkle, set before
 // the page's scripts run ('off' = no glints; 'on' = glints on any renderer, also the software one, where a visitor
 // gets none: src/components/map/state/twinkle.ts twinkleShown and watchTwinkleSwitch; the run says so when it
@@ -83,7 +81,7 @@ const TWINKLE_READBACK = () => {
     twinkleNodes: document.querySelector('.tw-layer')?.childElementCount ?? null,
   };
 };
-const ANY_EFFECT = !!(GLASS || TWINKLE || NAMES);
+const ANY_EFFECT = !!(GLASS || TWINKLE);
 
 /** Sets the forced effects up for every page of a browser context, before any script of the page runs. Called for
  * every context the run opens. With no flag it adds nothing.
@@ -113,15 +111,6 @@ async function presetEffects(ctx) {
       }
     }, GLASS);
   }
-  // The names choice is the visitor's saved one (src/lib/namesPref.ts: key 'rmr-names', only an exact '0' is off);
-  // the map's chunk reads it when it loads. Storage is blocked on about:blank, hence the try.
-  if (NAMES) {
-    await ctx.addInitScript((v) => {
-      try {
-        window.localStorage.setItem('rmr-names', v);
-      } catch {}
-    }, NAMES === 'on' ? '1' : '0');
-  }
   if (TWINKLE) await ctx.addInitScript(twinkleSwitch, TWINKLE);
 }
 
@@ -134,10 +123,6 @@ const effectsSeenBase = (page, at) =>
       const el = document.querySelector(sel);
       return el ? getComputedStyle(el).backdropFilter : null;
     };
-    let names = null;
-    try {
-      names = window.localStorage.getItem('rmr-names');
-    } catch {}
     const paint = performance.getEntriesByType('paint').find((e) => e.name === 'first-paint');
     const html = document.documentElement;
     return {
@@ -149,8 +134,6 @@ const effectsSeenBase = (page, at) =>
       panel: backdrop('.panel'),
       album: backdrop('.album'),
       headerBackground: document.querySelector('header.top') ? getComputedStyle(document.querySelector('header.top')).backgroundColor : null,
-      namesSaved: names,
-      namesOn: window.__rmr?.getState?.().namesOn ?? null,
       forcedMs: typeof window.__perfGlassAt === 'number' ? Math.round(window.__perfGlassAt) : null,
       firstPaintMs: paint ? Math.round(paint.startTime) : null,
     };
@@ -602,7 +585,7 @@ async function main() {
     if (NO_GAS) console.log('Run with --no-gas: the script did not wait for a gas layer.\n');
     if (GAS_LITE) console.log(`Run with --gas-lite ${GAS_LITE}: the gas shader was not the app's own choice.\n`);
     if (ANY_EFFECT) {
-      console.log(`Run with${GLASS ? ` --glass ${GLASS_WANT}` : ''}${TWINKLE ? ` --twinkle ${TWINKLE}` : ''}${NAMES ? ` --names ${NAMES}` : ''}: an A/B run, not the site as a visitor gets it. Read back in the page:`);
+      console.log(`Run with${GLASS ? ` --glass ${GLASS_WANT}` : ''}${TWINKLE ? ` --twinkle ${TWINKLE}` : ''}: an A/B run, not the site as a visitor gets it. Read back in the page:`);
       for (const r of rows) for (const e of [...r.effectsSeen, ...(r.openingEffectsSeen ? [r.openingEffectsSeen] : [])]) console.log(`  ${r.mode} ${r.vp}, ${e.at}: ${JSON.stringify(e)}`);
       const forcedOnSoftware = TWINKLE === 'on' ? rows.filter((r) => r.twinkleSoftware === true || /swiftshader|llvmpipe|software|basic render/i.test(r.renderer ?? '')) : [];
       if (forcedOnSoftware.length) {
