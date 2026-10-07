@@ -44,7 +44,7 @@ test('without WebGL the see-through panels sit on the plain sky and keep 4.5:1',
   // No gas behind the glass: the pane is the plain sky colour, which the glass panels must not turn muddy or pale.
   expect(await page.locator('.map-pane').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(7, 6, 10)');
   const results = [
-    ...(await contrastOverBackdrop(page, 'section.album', ['.seed-artist', '.tags li', '.rec-n', '.rec-artist', '.rec-shared'])),
+    ...(await contrastOverBackdrop(page, 'section.album', ['.seed-artist', '.tags li', '.rec-artist', '.rec-shared'])),
     ...(await contrastOverBackdrop(page, '.map-pane', ['.map-msg', '.mode .cap', '.mode-stops button', '.mode-note'])),
   ];
   for (const r of results) expect(r.ratio, r.selector).toBeGreaterThanOrEqual(4.5);

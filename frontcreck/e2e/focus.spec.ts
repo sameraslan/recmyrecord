@@ -33,12 +33,15 @@ async function openFocus(page: Page): Promise<number[]> {
   return recs;
 }
 
-test('focus draws numbered covers joined to the seed, framed on screen', async ({ page }, info) => {
+test('focus draws covers joined to the seed, framed on screen, with no number on them', async ({ page }, info) => {
   const recs = await openFocus(page);
   const markers = page.locator('.mk');
   await expect(markers).toHaveCount(6);
   await expect(page.locator('.mk--seed')).toHaveAttribute('data-album-id', '11');
-  await expect(page.locator('.mk-n')).toHaveText(['1', '2', '3', '4', '5']);
+  // The order of the closest albums is not written on the map: no badge element, and no text in the layer but
+  // the letter of a cover that has no image.
+  await expect(page.locator('.mk-n, .mk-badges')).toHaveCount(0);
+  expect(await page.locator('.mk-layer').evaluate((el) => /\d/.test(el.textContent ?? ''))).toBe(false);
   await expect(page.locator('svg.mk-lines line[data-to]')).toHaveCount(5);
   // Every line is a dark casing under a white core, and all casings are drawn below all cores.
   await expect(page.locator('svg.mk-lines g.mk-case line[data-case]')).toHaveCount(5);
@@ -72,9 +75,8 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
     if (core.rec !== null || core.display !== 'none') expect(casing.at, `casing ${j} lies under its core`).toEqual(core.at);
   }
 
-  // (a) recommendation markers in list order, each with its own rank badge
+  // (a) recommendation markers in list order
   expect(await page.locator('.mk--rec').evaluateAll((els) => els.map((e) => Number((e as HTMLElement).dataset.albumId)))).toEqual(recs);
-  for (const [i, id] of recs.entries()) await expect(page.locator(`.mk-n[data-for="${id}"]`)).toHaveText(String(i + 1));
 
   const boxes = await markers.evaluateAll((els) =>
     els.map((e) => {
@@ -138,7 +140,7 @@ test('hot album is highlighted and a hovered marker shows its label', async ({ p
   await expect(page.locator(`.mk[data-album-id="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator(`svg.mk-lines line[data-to="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator(`svg.mk-lines g.mk-case line[data-case="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
-  await expect(page.locator(`.mk-n[data-for="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
+  await expect(page.locator('.mk-n')).toHaveCount(0);
   await page.evaluate(() => window.__rmr!.getState().setHot(null));
   // The markers take no pointer events: the canvas under them hit-tests their boxes.
   const p = await markerCentre(page, recs[2]);

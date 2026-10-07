@@ -24,7 +24,7 @@
   .tags { grid-area: auto; grid-column: 1 / -1; grid-row: 5; }
   .seed-actions .btn { flex: 1; min-height: 44px; }
   .icon-quiet { width: 44px; height: 44px; }
-  .rec-main { grid-template-columns: 16px 56px minmax(0, 1fr); gap: 12px; padding: 12px 52px 12px 2px; }
+  .rec-main { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; padding: 12px 52px 12px 10px; }
   .rec .cover { width: 56px !important; }
   .rec-title { -webkit-line-clamp: 3; font-size: 22px; }
   .seed-title.len-l .seed-title-box { -webkit-line-clamp: 4; }

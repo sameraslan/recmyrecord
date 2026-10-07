@@ -8,19 +8,17 @@ import { STOP_T, interpolated } from '../data';
 import { HOT_FRAME_PX, MARKER_SIZE, MarkerLayout, REC_FRAME_PX, SEED_FRAME_PX, layoutMarkers, type MarkerAnchor, type MarkerBounds, type MarkerItem, type PlacedMarker } from '../state/focusLayout';
 import { useMapStore, type MapStore } from '../state/mapStore';
 import { inMotion } from '../state/motion';
-import { badgeKey, getOverlayEl, getOverlaySize, getPlacedMarkers, markerKey, setPlacedMarkers } from '../state/overlayEls';
+import { getOverlayEl, getOverlaySize, getPlacedMarkers, markerKey, setPlacedMarkers } from '../state/overlayEls';
 import { canvasRect, visibleArea, worldToScreen } from '../state/projection';
 import { getCameraControl } from './CameraTween';
 import { frustumCamera } from './InitialFrame';
 import { TIP_EDGE, clamp } from './OverlayDriver';
 
 const HOT_SCALE = 1.16;
-/** Keeps a hot marker (scaled 1.16) and its badge clear of the edges of the visible map. */
+/** Keeps a hot marker (scaled 1.16) and its frame clear of the edges of the visible map. */
 const MARKER_EDGE = 8;
 /** A marker moved further than this from its album gets a leader line back to it (mockup: 6 px). */
 const LEADER_MIN_PX = 6;
-/** Rank badge offset from the cover's top-left corner (prototype: 0.4 of the 18 px badge, up and left). */
-const BADGE_OFFSET = 7;
 /** How long the covers take to ease onto the settled layout once a motion ends. */
 export const MARKER_SETTLE_MS = 180;
 /** A tween that is sent elsewhere this soon after the focus changed (the album panel's inset arriving a frame
@@ -100,7 +98,7 @@ interface Work {
   asked: boolean;
 }
 
-/** Draws the covers, badges, lines and leaders where `w.shown` has them, publishes those boxes for hover and
+/** Draws the covers, lines and leaders where `w.shown` has them, publishes those boxes for hover and
  * pick, and places the hover label beside the hovered one. DOM only: a frame and each step of an ease call it. */
 function paint(w: Work): void {
   const placed = w.placed;
@@ -123,11 +121,6 @@ function paint(w: Work): void {
     el.style.height = `${s}px`;
     el.style.transform = `translate3d(${x0.toFixed(1)}px, ${y0.toFixed(1)}px, 0)`;
     el.style.visibility = '';
-    const badge = getOverlayEl(badgeKey(it.id));
-    if (badge) {
-      badge.style.transform = `translate3d(${(x0 - BADGE_OFFSET).toFixed(1)}px, ${(y0 - BADGE_OFFSET).toFixed(1)}px, 0)`;
-      badge.style.visibility = '';
-    }
   }
   setPlacedMarkers(w.drawn);
   const drawn = w.drawn;

@@ -64,6 +64,7 @@ One fallback is written down beside the code and not applied: a solid header ("S
 ## Removed
 
 - **Region names and their button.** Built in part 2, then removed on the owner's instruction on 2026-10-06: the layer, the toggle, the store state, the CSS, the copy, the web font it loaded and its tests. The map has no names. Left in place and ignored by the app: the `labels` block in `public/data/theme/theme.json` and the code in `scripts/theme/` that computes it.
+- **The numbers beside the closest albums.** Removed on the owner's instruction on 2026-10-07 (the model is only so accurate): the number in each list row, the numbered badges on the covers round an open album, and those drawn on the phone strip, with their CSS and the `rank` field of a list row. The lists and the covers keep their order, closest first.
 - **The hint band beside an open album** (`COPY.map.hintAlbum`), to match the approved album picture.
 - **The film grain overlay**, and the warm ambient wash over the map.
 

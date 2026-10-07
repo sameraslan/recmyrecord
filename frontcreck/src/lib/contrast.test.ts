@@ -167,12 +167,14 @@ describe('WCAG AA contrast', () => {
     expect(bad).toEqual([]);
   });
 
-  it('the hot rank badge on the map passes 4.5:1 for every album accent', () => {
-    const hot = rule(css('styles/map.css'), '.mk-n[data-hot]');
-    const bad = ACCENTS.filter(([, acc]) => contrastRatio(resolve(hot.color, acc), resolve(hot.background, acc)) < 4.5).map(
-      ([s, acc]) => `${s} ${acc} ${contrastRatio(resolve(hot.color, acc), resolve(hot.background, acc)).toFixed(2)}`,
-    );
-    expect(bad).toEqual([]);
+  it('no style is left for a number beside an album: not on the map covers, not in the list rows', () => {
+    // The numbered badges and the row numbers are gone, so there is no digit whose contrast needs holding.
+    for (const file of ['styles/map.css', 'styles/album.css', 'styles/phone.css']) {
+      expect(css(file), file).not.toMatch(/\.mk-n\b|\.mk-badges\b|\.rec-n\b/);
+    }
+    // A hot cover on the map is still marked: by its lamp ring and its heavier line.
+    expect(rule(css('styles/map.css'), '.mk[data-hot]::after').border).toContain('var(--color-lamp)');
+    expect(rule(css('styles/map.css'), '.mk-core line[data-hot]')['stroke-width']).toBe('2.25');
   });
 
   it('a lit mood tag passes 4.5:1 for every album accent, on the glass panel and on the solid one', () => {

@@ -14,13 +14,11 @@ import { useIsNarrow } from '@/lib/media';
 import type { AlbumRecord, Focus, StopId } from '@/lib/types';
 
 const rgba = ([r, g, b]: readonly number[], a: number) => `rgba(${r},${g},${b},${a})`;
-/** The map's empty sky, its stars and its off-white frames (components/map/theme.ts), plus two tokens of globals.css. */
+/** The map's empty sky, its stars and its off-white frames (components/map/theme.ts), plus one token of globals.css. */
 const SKY = rgba(SKY_RGB, 1);
 const FRAME = rgba(FRAME_RGB, 1);
 const FRAME_QUIET = rgba(FRAME_RGB, 0.6);
-const BADGE_EDGE = rgba(FRAME_RGB, 0.45);
 const ROOM = '#07060a'; // --color-room
-const PAPER = '#f3eee7'; // --color-paper
 /** The lines to the closest albums, as on the map: white on a dark casing, so they hold on any gas. */
 const LINE_CASING = 'rgba(4,4,8,.8)';
 const LINE = 'rgba(255,255,255,.92)';
@@ -165,8 +163,8 @@ function readyImage(url: string, onReady: () => void): HTMLImageElement | null {
 }
 
 /** The compact map of the phone album list: the sky, the stop's gas when it has loaded, a star per album, cased
- * lines to the closest albums, small covers (seed 38 px, recs 28 px, kept inside the canvas) and rank badges
- * drawn last, so no cover hides one. Without `gas` everything else is still drawn. */
+ * lines to the closest albums and small covers (seed 38 px, recs 28 px, kept inside the canvas), the seed's
+ * drawn last. Without `gas` everything else is still drawn. */
 export function drawStrip(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -221,7 +219,7 @@ export function drawStrip(
   ctx.fillStyle = STAR;
   ctx.fill();
   const placed = layoutMarkers(ids.map((id) => ({ id, x: sx(pos[2 * id]), y: sy(pos[2 * id + 1]) })), STRIP_SEED, STRIP_REC, {
-    // 6 px: room for the badges (5 px out, top-left) and the seed's frame (5 px out).
+    // 6 px: room for the seed's frame (5 px out).
     bounds: { left: 6, top: 6, right: w - 6, bottom: h - 6 },
     gap: MARKER_GAP,
     // The strip's covers are small: 10 px of visible line is enough (layoutMarkers defaults to more).
@@ -264,23 +262,6 @@ export function drawStrip(
     ctx.lineWidth = it.seed ? 2 : 1;
     const o = it.seed ? 4 : 0.5;
     ctx.strokeRect(x - o, y - o, s + 2 * o, s + 2 * o);
-  }
-  // 15 px with 10 px numbers leaves "10" clear of the edge; 5 px out, so 10 px of a cover is under it each way.
-  const b = 15;
-  const out = 5;
-  ctx.font = '600 10px system-ui, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.lineWidth = 1;
-  for (const it of placed.slice(1)) {
-    const bx = it.x - it.size / 2 - out;
-    const by = it.y - it.size / 2 - out;
-    ctx.fillStyle = ROOM;
-    ctx.fillRect(bx, by, b, b);
-    ctx.strokeStyle = BADGE_EDGE;
-    ctx.strokeRect(bx + 0.5, by + 0.5, b - 1, b - 1);
-    ctx.fillStyle = PAPER;
-    ctx.fillText(String(it.rank), bx + b / 2, by + b / 2 + 0.5);
   }
 }
 

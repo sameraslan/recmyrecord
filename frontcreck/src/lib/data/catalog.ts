@@ -59,9 +59,8 @@ export function buildAlbumPageData(catalog: Catalog, recs: Recs, id: AlbumId): A
     const ids = [...new Set(recs[stop][id] ?? [])].filter(
       (j) => Number.isInteger(j) && j >= 0 && j < albums.length && j !== id,
     );
-    byStop[stop] = ids.slice(0, REC_MAX).map((j, n) => ({
+    byStop[stop] = ids.slice(0, REC_MAX).map((j) => ({
       ...toSummary(albums, j),
-      rank: n + 1,
       shared: sharedWords(seedRecord, albums[j], vocab),
     }));
   }

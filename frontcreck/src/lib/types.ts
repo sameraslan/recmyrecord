@@ -70,8 +70,6 @@ export interface AlbumSummary {
 }
 
 export interface RecRow extends AlbumSummary {
-  /** 1-based rank at this stop */
-  rank: number;
   /** up to 4 mood words shared with the seed, in the seed's order */
   shared: string[];
 }
@@ -89,7 +87,7 @@ export interface AlbumPageData {
   recs: Record<StopId, RecRow[]>;
 }
 
-/** What the map highlights in album view: the seed and the visible recommendations, in rank order. */
+/** What the map highlights in album view: the seed and the visible recommendations, closest first. */
 export interface Focus {
   seed: AlbumId;
   recs: AlbumId[];

@@ -24,7 +24,6 @@ export function getOverlaySize(key: string): { width: number; height: number } {
 }
 
 export const markerKey = (id: number): string => `marker-${id}`;
-export const badgeKey = (id: number): string => `badge-${id}`;
 
 let placedMarkers: readonly PlacedMarker[] = [];
 

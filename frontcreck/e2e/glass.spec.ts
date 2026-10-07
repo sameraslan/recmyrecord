@@ -116,7 +116,7 @@ test('text on the panels keeps 4.5:1 over the map, with the weakest accent', asy
   await waitForCameraIdle(page);
   await waitForAnimations(page);
   await waitForGasSharpSettled(page); // measure the image that stays
-  const results = await contrastOverBackdrop(page, 'section.album', ['.seed-artist', '.seed-title', '.tags li', '.recs-h', '.rec-n', '.rec-title', '.rec-artist', '.rec-shared']);
+  const results = await contrastOverBackdrop(page, 'section.album', ['.seed-artist', '.seed-title', '.tags li', '.recs-h', '.rec-title', '.rec-artist', '.rec-shared']);
   await page.goto('/map');
   await waitForMap(page);
   await waitForCameraIdle(page);

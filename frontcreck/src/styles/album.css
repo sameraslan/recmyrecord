@@ -44,14 +44,13 @@
 .recs-h { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 21px; padding-bottom: 6px; border-bottom: 1px solid var(--color-rule); }
 .rec { position: relative; border-bottom: 1px solid var(--color-rule); }
 .rec-main {
-  position: relative; display: grid; grid-template-columns: 18px 60px minmax(0, 1fr); gap: 14px; align-items: center; width: 100%;
-  padding: 11px 56px 11px 6px; text-align: left; color: inherit; text-decoration: none; transition: background-color .22s var(--out);
+  position: relative; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 14px; align-items: center; width: 100%;
+  padding: 11px 56px 11px 12px; text-align: left; color: inherit; text-decoration: none; transition: background-color .22s var(--out);
 }
 .rec-main::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 2px; background: var(--acc); opacity: 0; transition: opacity .22s var(--out); }
 .rec.hot .rec-main { background: rgba(241, 236, 228, .06); }
 .rec.hot .rec-main::before { opacity: 1; }
 .rec-main:focus-visible { outline-offset: -2px; }
-.rec-n { font-family: var(--font-serif); font-style: italic; font-size: 20px; color: var(--color-ash); text-align: right; line-height: 1; }
 .rec-text { min-width: 0; display: grid; }
 /* Up to 2 lines each (the title 3 on a phone), then an ellipsis; a single long word wraps instead of being cut. */
 .rec-title { font-family: var(--font-serif); font-weight: 600; font-size: 23px; line-height: 1.08; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }

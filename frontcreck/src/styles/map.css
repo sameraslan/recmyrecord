@@ -122,14 +122,6 @@
 .mk--seed::after { inset: -4px; border: 2px solid var(--color-lamp); box-shadow: inset 0 0 0 2px var(--color-room); }
 .mk[data-hot] { z-index: 2; }
 .mk[data-hot]::after { inset: -2px; border: 2px solid var(--color-lamp); box-shadow: 0 0 0 1px rgba(6, 6, 10, .8); }
-/* Badges in their own layer above every cover and ring (drawn last). Solid, not glass: digits must hold on any gas. */
-.mk-badges { position: absolute; inset: 0; z-index: 4; pointer-events: none; }
-.mk-n {
-  position: absolute; left: 0; top: 0; min-width: 18px; will-change: transform; height: 18px; padding: 0 4px; display: grid; place-items: center;
-  background: #0b0a0f; border: 1px solid rgba(255, 255, 255, .55); color: #fff; font: 600 11px/1 var(--font-sans);
-}
-/* Inverted when hot: room-coloured digits on the lamp token (17:1 with the Trifid values). */
-.mk-n[data-hot] { background: var(--color-lamp); border-color: var(--color-room); color: var(--color-room); }
 
 /* twinkle (canvas/TwinkleDriver.tsx): star glints in a layer over the map canvas.
  * Only opacity and transform animate. Decoration: nothing here takes pointer events. */

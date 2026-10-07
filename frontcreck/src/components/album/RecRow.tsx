@@ -25,9 +25,6 @@ export function RecRow({ row, stop }: { row: Row; stop: StopId }) {
         onFocus={() => setHot(row.id)}
         onBlur={() => setHot(null)}
       >
-        <span className="rec-n" aria-hidden="true">
-          {row.rank}
-        </span>
         <Cover album={row} size={60} />
         <span className="rec-text" aria-hidden="true">
           <span className="rec-title">

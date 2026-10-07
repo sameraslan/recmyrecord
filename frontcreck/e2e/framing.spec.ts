@@ -216,10 +216,10 @@ test('after every fit nothing is behind the header', async ({ page, isMobile }) 
   // A picked album: its 64 px cover and the frame 6 px outside it clear the bar.
   await pick(page, isMobile, IN_RAINBOWS);
   expect((await pointOf(page, IN_RAINBOWS)).y).toBeGreaterThanOrEqual(bottom + 38);
-  // An open album: every cover marker and every rank badge.
+  // An open album: every cover marker (the seed and its five closest albums).
   await openAlbum(page, isMobile);
-  const tops = await page.locator('.mk, .mk-n').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
-  expect(tops.length).toBe(11);
+  const tops = await page.locator('.mk').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+  expect(tops.length).toBe(6);
   for (const t of tops) expect(t).toBeGreaterThanOrEqual(bottom);
 });
 

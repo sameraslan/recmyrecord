@@ -50,7 +50,7 @@ describe('build-time data access (real public/data)', () => {
       expect(page!.recs[stop].map((r) => r.id)).toEqual(recs[stop][page!.seed.id]);
       expect(page!.recs[stop].map((r) => r.title)).toEqual(recs[stop][page!.seed.id].map((id) => albums[id].t));
       expect(page!.recs[stop]).toHaveLength(10);
-      expect(page!.recs[stop].map((r) => r.rank)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      for (const row of page!.recs[stop]) expect(row).not.toHaveProperty('rank');
     }
     expect(page!.seed.ambient).toHaveLength(3);
     for (const stop of ['sonic', 'balanced', 'mood'] as const) {
