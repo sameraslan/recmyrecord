@@ -1,12 +1,17 @@
 #!/usr/bin/env node
-/** Renders the icon SVGs to src/app/favicon.ico (16, 32 and 48 px PNG entries) and src/app/apple-icon.png (180 px).
+/** Renders the icon SVGs (the Eddy mark: three gas arms curling into a cream core) to src/app/favicon.ico (16, 32 and
+ * 48 px PNG entries) and src/app/apple-icon.png (180 px), and writes scripts/icons/built.json: the SHA-256 of each
+ * source the binaries were rendered from, which icons.test.mjs compares with the sources as they are now.
  * One headless Chromium, one page. Run: node scripts/icons/build.mjs */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
+const SOURCES = ['src/app/icon.svg', 'scripts/icons/icon-16.svg', 'scripts/icons/apple-icon.svg'];
 const svg = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
+const sha256 = (file) => crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, file))).digest('hex');
 
 async function render(page, markup, px, opaque) {
   await page.setViewportSize({ width: px, height: px });
@@ -44,7 +49,9 @@ try {
   ];
   fs.writeFileSync(path.join(ROOT, 'src/app/favicon.ico'), ico(entries));
   fs.writeFileSync(path.join(ROOT, 'src/app/apple-icon.png'), await render(page, svg('scripts/icons/apple-icon.svg'), 180, true));
-  console.log('wrote src/app/favicon.ico and src/app/apple-icon.png');
+  const built = Object.fromEntries(SOURCES.map((file) => [file, sha256(file)]));
+  fs.writeFileSync(path.join(ROOT, 'scripts/icons/built.json'), `${JSON.stringify(built, null, 2)}\n`);
+  console.log('wrote src/app/favicon.ico, src/app/apple-icon.png and scripts/icons/built.json');
 } finally {
   await browser.close();
 }
