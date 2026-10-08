@@ -47,7 +47,7 @@
     "sharp": "0.35.5",
     "tailwindcss": "4.3.3",
     "typescript": "6.0.3",
-    "vitest": "4.1.11"
+    "vitest": "5.0.3"
   },
   "overrides": {
     "playwright-core": "$@playwright/test"
