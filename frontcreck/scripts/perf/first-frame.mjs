@@ -15,7 +15,11 @@
  *
  * Options: --label <name> (required), --runs <n>, --mode gpu|software (gpu: the installed Chrome on Metal, as
  * `npm run perf`; software: SwiftShader), --only <page>:<viewport>:<profile> (for a single case), --port <n>,
- * --hold-gas <ms> (the opening nebula image is held back that long, to see the stars arrive before it).
+ * --hold-gas <ms> (the opening nebula image is held back that long, to see the stars arrive before it),
+ * --profiles none,fast4g (only these), --stills (no timing: full-resolution PNGs of the stand-in alone, with the
+ * album list held back, for Home, /map and an album page at 1440 x 900, 390 x 844 and 2560 x 1440, into <label>/png/).
+ * Each run also lists the frames that were darker than the one before them (mean luma of the whole frame, panels
+ * and text included, down by 0.75 of a level or more): a load should only ever gain light.
  *
  * The throttled profiles are applied with CDP Network.emulateNetworkConditions, to every request of the page:
  *   slow4g  Lighthouse's "slow 4G" as DevTools applies it: 562.5 ms added latency, 1474.56 kbit/s down, 675 kbit/s
@@ -49,6 +53,8 @@ const MODE = opt('--mode', 'gpu');
 const PORT = Number(opt('--port', '3210'));
 const ONLY = opt('--only');
 const HOLD_GAS = Number(opt('--hold-gas', '0'));
+const ONLY_PROFILES = opt('--profiles')?.split(',') ?? null;
+const STILLS = args.includes('--stills');
 const OUT = path.join(ROOT, 'test-results/first-frame', LABEL);
 
 const MODES = {
@@ -166,7 +172,9 @@ async function readFrame(jpeg, covered, viewport) {
   let lit = 0;
   let sum = 0;
   let points = 0;
+  let all = 0;
   for (let i = 0; i < mask.length; i++) {
+    all += img.data[i];
     if (!mask[i]) continue;
     free++;
     const v = img.data[i];
@@ -174,7 +182,8 @@ async function readFrame(jpeg, covered, viewport) {
     if (v >= LIT_LUMA) lit++;
     if (v - blurred[i] >= 24) points++;
   }
-  return { lit: lit / free, mean: sum / free, points: points / free, free: free / mask.length, img, mask };
+  // `whole`: the mean luma of the whole frame, panels and text included (a panel that comes in darkens it).
+  return { lit: lit / free, mean: sum / free, whole: all / mask.length, points: points / free, free: free / mask.length, img, mask };
 }
 
 /** Mean absolute luma difference of two frames in the free pane. */
@@ -289,6 +298,11 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
       if (diffs[i] > tolerance) break;
       settledAt = read[i].t;
     }
+    // Frames darker than the one before them, as [time, mean before, mean now].
+    const darker = [];
+    for (let i = 1; i < read.length; i++) {
+      if (read[i].whole <= read[i - 1].whole - 0.75) darker.push([Math.round(read[i].t), Math.round(read[i - 1].whole * 10) / 10, Math.round(read[i].whole * 10) / 10]);
+    }
     const round = (v) => (v === null || v === undefined ? null : Math.round(v));
     const dataFiles = requests.filter((p) => /\/data\/(albums|positions|vocab)\.json$|\/data\/theme\//.test(p));
     const duplicates = [...new Set(dataFiles.filter((p, i) => dataFiles.indexOf(p) !== i))];
@@ -312,6 +326,7 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
       finalLit: Math.round(last.lit * 1000) / 1000,
       finalMean: Math.round(last.mean * 10) / 10,
       screencastFrames: frames.length,
+      darker,
       requests: dataFiles,
       duplicates,
       console: consoleLines,
@@ -351,15 +366,52 @@ const spread = (xs) => {
   return `${median(xs)} (${Math.min(...s)} to ${Math.max(...s)})`;
 };
 
+/** Full-resolution PNGs of the stand-in alone: the album list never arrives, so the map never mounts. */
+async function stills(base) {
+  const dir = path.join(OUT, 'png');
+  fs.mkdirSync(dir, { recursive: true });
+  const sizes = { '1440x900': VIEWPORTS.desktop, '390x844': VIEWPORTS.phone, '2560x1440': { viewport: { width: 2560, height: 1440 } } };
+  const pages = { ...PAGES, album: '/album/in-rainbows-radiohead' };
+  const browser = await chromium.launch({ channel: 'chrome', headless: true, args: MODES[MODE] });
+  try {
+    for (const [sizeName, vp] of Object.entries(sizes)) {
+      for (const [pageName, url] of Object.entries(pages)) {
+        const ctx = await browser.newContext(vp);
+        const page = await ctx.newPage();
+        await page.route('**/data/albums.json', () => {});
+        await page.goto(`${base}${url}`, { waitUntil: 'commit' });
+        await page.waitForSelector('.gas-ph', { timeout: 30_000 });
+        // the fonts, the covers of Home's shelf, the album panel's slide
+        await page.waitForTimeout(2500);
+        const file = path.join(dir, `${pageName}-${sizeName}.png`);
+        await page.screenshot({ path: file });
+        console.log(path.relative(ROOT, file));
+        await ctx.close();
+      }
+    }
+  } finally {
+    await browser.close();
+  }
+}
+
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
   const server = await startServer(PORT);
+  if (STILLS) {
+    try {
+      await stills(server.base);
+    } finally {
+      await server.stop();
+    }
+    return;
+  }
   const rows = [];
   try {
     for (const pageName of Object.keys(PAGES)) {
       for (const vpName of Object.keys(VIEWPORTS)) {
         for (const profileName of Object.keys(PROFILES)) {
           if (ONLY && ONLY !== `${pageName}:${vpName}:${profileName}`) continue;
+          if (ONLY_PROFILES && !ONLY_PROFILES.includes(profileName)) continue;
           const runs = [];
           for (let i = 0; i < RUNS; i++) {
             // The frames of the first run of every case are kept: the stills and a filmstrip.
@@ -398,6 +450,8 @@ async function main() {
       ].join(' | '),
     );
   }
+  const dips = rows.flatMap((r) => r.runs.flatMap((x, i) => x.darker.map((d) => `${r.page} ${r.vp} ${r.profile} run ${i + 1}: at ${d[0]} ms the frame's mean luma went ${d[1]} -> ${d[2]}`)));
+  console.log(dips.length ? `\nFrames darker than the one before:\n${dips.join('\n')}` : '\nNo frame was darker than the one before it.');
   const dup = rows.flatMap((r) => r.runs.flatMap((x) => x.duplicates.map((d) => `${r.page} ${r.vp} ${r.profile}: ${d}`)));
   console.log(dup.length ? `\nRequested more than once:\n${[...new Set(dup)].join('\n')}` : '\nNo data file or nebula image was requested twice.');
   const lines = rows.flatMap((r) => r.runs.flatMap((x) => x.console.map((c) => `${r.page} ${r.vp} ${r.profile}: ${c}`)));
