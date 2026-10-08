@@ -9,6 +9,7 @@
  *   rmr-gas-decoded  it is decoded
  *   rmr-map-frame    the canvas has drawn its first frame
  *   rmr-gas-drawn    the first frame with the nebula in it
+ *   rmr-map-shown    the canvas is shown for the first time (components/map/state/reveal.ts)
  * (rmr-search-ready and rmr-webgl-warm are older and set where they happen.)
  */
 export type LoadMark =
@@ -19,7 +20,8 @@ export type LoadMark =
   | 'rmr-gas-fetch'
   | 'rmr-gas-decoded'
   | 'rmr-map-frame'
-  | 'rmr-gas-drawn';
+  | 'rmr-gas-drawn'
+  | 'rmr-map-shown';
 
 const done = new Set<LoadMark>();
 

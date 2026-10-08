@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { addAfterEffect, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
+import { GAS_BITMAP, dropEarlyGas, takeEarlyGas } from "@/lib/data/early";
 import type { ThemeData } from "@/lib/data/theme";
 import { markOnce } from "@/lib/marks";
 import { easeOutCubic, prefersReducedMotion } from "@/lib/media";
@@ -55,9 +56,6 @@ import { coverCssPx, pxPerWorld } from "../state/zoomLimits";
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
-// Decoded off the main thread. The alpha channel is data (what the dust lets through), so it must not be
-// multiplied into the colour: premultiplyAlpha "none", and never a 2D canvas.
-const GAS_BITMAP: ImageBitmapOptions = { imageOrientation: "none", premultiplyAlpha: "none", colorSpaceConversion: "none" };
 const loader = new THREE.ImageBitmapLoader();
 loader.setOptions(GAS_BITMAP);
 
@@ -75,27 +73,29 @@ interface LoadedGas {
   bitmap: ImageBitmap;
 }
 
+/** A decoded gas image as a texture that is not on the GPU yet. */
+function asGas(bitmap: ImageBitmap): LoadedGas {
+  const texture = new THREE.Texture(bitmap as unknown as HTMLImageElement);
+  // Row 0 of the image (north) stays at v = 0; the shader flips v itself.
+  texture.flipY = false;
+  // The shader writes display-referred values straight to the framebuffer (Scene.tsx onCreated).
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true; // the glow and the deep zoom blur read the mips
+  texture.needsUpdate = true;
+  markOnce("rmr-gas-decoded");
+  return { texture, bitmap };
+}
+
+/** Loads a stop's first image. The image of the stop the page opened on was asked for as the page opened
+ * (lib/data/early.ts) and is taken over here, decoded or still on its way: no second download. Every other image,
+ * and that one again after a lost WebGL context, is fetched and decoded now. */
 function loadGas(url: string): Promise<LoadedGas> {
+  const early = takeEarlyGas(url);
+  if (early) return early.then(asGas);
   return new Promise((resolve, reject) => {
-    loader.load(
-      url,
-      (result) => {
-        const bitmap = result as unknown as ImageBitmap;
-        const texture = new THREE.Texture(bitmap as unknown as HTMLImageElement);
-        // Row 0 of the image (north) stays at v = 0; the shader flips v itself.
-        texture.flipY = false;
-        // The shader writes display-referred values straight to the framebuffer (Scene.tsx onCreated).
-        texture.colorSpace = THREE.NoColorSpace;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        texture.generateMipmaps = true; // the glow and the deep zoom blur read the mips
-        texture.needsUpdate = true;
-        markOnce("rmr-gas-decoded");
-        resolve({ texture, bitmap });
-      },
-      undefined,
-      (err) => reject(err),
-    );
+    loader.load(url, (result) => resolve(asGas(result as unknown as ImageBitmap)), undefined, (err) => reject(err));
   });
 }
 
@@ -252,8 +252,11 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   useEffect(() => {
     if (!enabled) {
       setGasFlag("off");
+      dropEarlyGas();
       return;
     }
+    // An image asked for as the page opened that this theme does not name will never be taken: free it.
+    dropEarlyGas(STOP_IDS.map((stop) => gasUrl(stop, theme.gas[stop].hash)));
     let alive = true;
     const store: Partial<Record<StopId, THREE.Texture>> = {};
     loaded.current = store;

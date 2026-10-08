@@ -38,6 +38,12 @@ export interface ThemeData {
 
 export const THEME_URL = '/data/theme/theme.json';
 
+/** Where a stop's image is. `hash` is theme.json's gas.<stop>.hash: the first 10 hex characters of the SHA-256
+ * of the first image and of the sharper one. The name changes whenever the content does, so a browser's cached
+ * copy can never be an image of another bake (and next.config.ts lets browsers keep these files for good). */
+export const gasUrl = (stop: StopId, hash: readonly [string, string], sharp = false): string =>
+  `/data/theme/gas-${stop}${sharp ? '-sharp' : ''}.${hash[sharp ? 1 : 0]}.webp`;
+
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isInt = (v: unknown, lo: number, hi: number): boolean => Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi;
 
