@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { GAS_GLOW, GAS_SKY } from '../../src/components/map/shaders/gas.ts';
-import { GLOW, PLACEHOLDER_MAX_BYTES, SKY, shownColour, stopFraming, themeModule, worldRect } from './build-module.mjs';
+import { GLOW, PLACEHOLDER_DISPLAY_BLUR, PLACEHOLDER_FEATHER_FROM, PLACEHOLDER_MAX_BYTES, PLACEHOLDER_PX, SKY, feather, shownColour, stopFraming, themeModule, worldRect } from './build-module.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 
@@ -48,7 +48,35 @@ describe('build-module (theme.generated.ts)', () => {
       const p = made.pictures[stop];
       expect(p.bytes.length, stop).toBeGreaterThanOrEqual(1024);
       expect(p.bytes.length, stop).toBeLessThanOrEqual(PLACEHOLDER_MAX_BYTES);
-      expect(Math.max(...p.size), stop).toBe(192);
+      expect(Math.max(...p.size), stop).toBe(PLACEHOLDER_PX);
+      // the round mask takes next to none of the nebula's light: the stand-in is no dimmer for it
+      expect(p.lost, stop).toBeLessThan(0.01);
     }
+    expect(made.text).toContain(`picturePx: ${PLACEHOLDER_PX},`);
+    expect(made.text).toContain(`pictureBlur: ${PLACEHOLDER_DISPLAY_BLUR},`);
+    expect(made.text).toContain(`pictureFadeFrom: ${PLACEHOLDER_FEATHER_FROM},`);
+  });
+
+  it('the round mask the page shows a stand-in through (the curve its light is checked against) is nothing at every edge and whole in the middle', () => {
+    const [w, h] = [79, 96];
+    // every edge texel, and the corners well inside the edges, are gone
+    for (let x = 0; x < w; x++) for (const y of [0, h - 1]) expect(feather(x, y, w, h)).toBe(0);
+    for (let y = 0; y < h; y++) for (const x of [0, w - 1]) expect(feather(x, y, w, h)).toBe(0);
+    for (const [x, y] of [[6, 6], [w - 7, 6], [6, h - 7], [w - 7, h - 7]]) expect(feather(x, y, w, h)).toBe(0);
+    expect(feather(40, 48, w, h)).toBe(1);
+    expect(feather(Math.round(w * 0.3), Math.round(h * 0.3), w, h)).toBe(1);
+    // rising all the way in from an edge, in steps no texel-wide jump could hide in
+    let last = 0;
+    for (let x = 0; x <= 14; x++) {
+      const a = feather(x, 48, w, h);
+      expect(a).toBeGreaterThanOrEqual(last);
+      expect(a - last).toBeLessThan(0.25);
+      last = a;
+    }
+    expect(last).toBe(1);
+    // the same amount at the same distance from the middle, whichever way: the fade is round, not a frame
+    expect(feather(w - 1 - 4, 48, w, h)).toBeCloseTo(feather(4, 47, w, h), 6);
+    const along = feather(4, 48, w, h); // 4 texels in from the left edge, mid height
+    expect(feather(4, 20, w, h), 'nearer a corner at the same distance from the edge: more faded').toBeLessThan(along);
   });
 });

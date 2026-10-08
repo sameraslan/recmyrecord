@@ -43,24 +43,31 @@ describe('theme.generated.ts (what the page knows of the theme before theme.json
     }
   });
 
-  it('has a stand-in picture per stop: a small opaque WebP in the shape of the stop\'s gas image, sky at its edges', async () => {
+  it('has a stand-in picture per stop: a small opaque WebP in the shape of the stop\'s gas image, the pane\'s colour at its edges', async () => {
     for (const stop of STOP_IDS) {
       const uri = PICTURES[stop];
       expect(uri.startsWith('data:image/webp;base64,'), stop).toBe(true);
       const bytes = Buffer.from(uri.slice('data:image/webp;base64,'.length), 'base64');
-      // one to three kilobytes each, as the page carries one inline
+      // one to two kilobytes each, as the page carries one inline
       expect(bytes.length, stop).toBeGreaterThanOrEqual(1024);
-      expect(bytes.length, stop).toBeLessThanOrEqual(3072);
+      expect(bytes.length, stop).toBeLessThanOrEqual(2048);
       const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
       expect(info.channels, stop).toBe(3);
-      expect(Math.max(info.width, info.height), stop).toBe(192);
+      expect(Math.max(info.width, info.height), stop).toBe(THEME_BAKE.picturePx);
+      expect(THEME_BAKE.picturePx, 'small enough to be blurred where it is shown, not sharp').toBeLessThanOrEqual(128);
       const [w, h] = theme.gas[stop].px;
       expect(info.width / info.height, stop).toBeCloseTo(w / h, 1);
-      // the corners are the map's sky, rgb(6, 6, 9), so the picture has no visible box; the middle is lit
-      for (const [x, y] of [[0, 0], [info.width - 1, 0], [0, info.height - 1], [info.width - 1, info.height - 1]]) {
-        const o = 3 * (y * info.width + x);
-        expect(Math.max(Math.abs(data[o] - 6), Math.abs(data[o + 1] - 6), Math.abs(data[o + 2] - 9)), `${stop} corner ${x},${y}`).toBeLessThanOrEqual(6);
+      // Where there is no gas the picture is the pane's own colour, rgb(7, 6, 10), to within what the display blur
+      // evens out, so its fading rim has nothing to show; the middle is lit.
+      let edge = 0;
+      for (let y = 0; y < info.height; y++) {
+        for (let x = 0; x < info.width; x++) {
+          if (x !== 0 && y !== 0 && x !== info.width - 1 && y !== info.height - 1) continue;
+          const o = 3 * (y * info.width + x);
+          edge = Math.max(edge, Math.abs(data[o] - 7), Math.abs(data[o + 1] - 6), Math.abs(data[o + 2] - 10));
+        }
       }
+      expect(edge, `${stop}: levels off the pane's colour at the edges`).toBeLessThanOrEqual(6);
       const mid = 3 * (Math.floor(info.height / 2) * info.width + Math.floor(info.width / 2));
       expect(data[mid] + data[mid + 1] + data[mid + 2], stop).toBeGreaterThan(90);
       const tone = THEME_BAKE.stops[stop].tone;

@@ -8,9 +8,17 @@ import { MAP_REVEAL_FADE_MS, getMapReveal, subscribeMapReveal, type MapReveal } 
 
 /**
  * The stand-in nebula: what the map pane shows from the server HTML's first paint until the map has drawn, so the
- * pane is never an empty near-black box. A soft copy of the default stop's gas, about a kilobyte, inline
+ * pane is never an empty near-black box. A soft copy of the default stop's gas, 96 px and about 1.5 KB, inline
  * (theme.generated.ts), placed where the map will draw the real one, so the real one reads as the same picture
  * coming into focus. The canvas lies over it and is see-through until it draws (state/reveal.ts).
+ *
+ * The picture is enlarged up to about forty times (/map on a large screen). A browser's plain enlargement shows
+ * the grid of its texels, so it is blurred where it is shown: an SVG Gaussian blur of one texel (BLUR below, in
+ * sRGB, so its brightness does not change), after which no texel and no codec block is left to see. The picture
+ * is then shown through a round mask (FADE below): whole inside an ellipse, fading to nothing at the ellipse that
+ * touches its four edges, so nothing of it ends in a straight line (the real nebula fades into the sky; so does
+ * this). Blur and mask are worked out once, when the pane is first painted, off the main thread; nothing here
+ * moves or changes until the stand-in leaves the document, and then there is no filter and no mask left.
  *
  * Where it goes follows from the window's size alone, so it is placed in CSS (styles/map.css `.gas-ph`), before
  * any script runs. The two framings a page can open at, both of state/bounds.ts:
@@ -41,6 +49,20 @@ const U = 1000;
 const r = (v: number): number => Math.round(v * U * 100) / 100;
 
 const BAKE = THEME_BAKE.stops.balanced;
+/** The ids of the blur's <filter>, the mask and its gradient (one stand-in in a document). */
+const BLUR_ID = 'gas-ph-blur';
+const MASK_ID = 'gas-ph-mask';
+const FADE_ID = 'gas-ph-fade';
+/** The round mask's gradient stops, [offset, opacity]: whole up to THEME_BAKE.pictureFadeFrom of the way out, then
+ * down a smooth step to nothing at the edge (the curve `feather` of scripts/theme/build-module.mjs checks the
+ * picture's light against). */
+export const FADE: [number, number][] = [0, 0.25, 0.5, 0.75, 1].map((t) => [
+  Math.round((THEME_BAKE.pictureFadeFrom + (1 - THEME_BAKE.pictureFadeFrom) * t) * 1000) / 1000,
+  Math.round((1 - t * t * (3 - 2 * t)) * 1000) / 1000,
+]);
+/** The display blur as an feGaussianBlur stdDeviation, in <svg> units: THEME_BAKE.pictureBlur texels of the picture,
+ * whose longer side is THEME_BAKE.picturePx texels over the longer side of the gas's rectangle. */
+export const BLUR = Math.round(((THEME_BAKE.pictureBlur * Math.max(BAKE.gas[2] - BAKE.gas[0], BAKE.gas[3] - BAKE.gas[1])) / THEME_BAKE.picturePx) * U * 100) / 100;
 
 /** The pieces of the stand-in for a view, pure so they can be checked: which kind, the <svg> viewBox, the picture's
  * box in it, and the custom properties the stylesheet places it with. */
@@ -99,7 +121,20 @@ export function GasPlaceholder({ view, off }: { view: View; off: boolean }) {
     <div className={`gas-ph gas-ph--${kind}${fading ? ' is-leaving' : ''}`} aria-hidden="true" style={vars as CSSProperties}>
       {viewBox ? (
         <svg viewBox={viewBox} preserveAspectRatio="xMidYMid meet" focusable="false">
-          <image href={GAS_PLACEHOLDER_BALANCED} {...image} preserveAspectRatio="none" />
+          <filter id={BLUR_ID} x="-10%" y="-10%" width="120%" height="120%" colorInterpolationFilters="sRGB">
+            <feGaussianBlur stdDeviation={BLUR} />
+          </filter>
+          <radialGradient id={FADE_ID}>
+            {FADE.map(([offset, opacity]) => (
+              <stop key={offset} offset={offset} stopColor="#fff" stopOpacity={opacity} />
+            ))}
+          </radialGradient>
+          <mask id={MASK_ID} maskUnits="userSpaceOnUse" x={image.x} y={image.y} width={image.width} height={image.height}>
+            <ellipse cx={image.x + image.width / 2} cy={image.y + image.height / 2} rx={image.width / 2} ry={image.height / 2} fill={`url(#${FADE_ID})`} />
+          </mask>
+          <g mask={`url(#${MASK_ID})`}>
+            <image href={GAS_PLACEHOLDER_BALANCED} {...image} preserveAspectRatio="none" filter={`url(#${BLUR_ID})`} />
+          </g>
         </svg>
       ) : null}
     </div>
