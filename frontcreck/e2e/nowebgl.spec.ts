@@ -18,8 +18,9 @@ test('without WebGL the map shows a message, asks for no theme file beyond the t
   await expect(page.getByText(COPY.map.noWebgl)).toBeVisible();
   await expect(page.getByText(COPY.map.noWebglHint)).toBeVisible();
   await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
-  // No map, so no map data and no zoom corner.
+  // No map, so no map data, no zoom corner and no hint line (it is in the first paint, and goes with the verdict).
   await expect(page.locator('.map-zoom')).toHaveCount(0);
+  await expect(page.locator('.map-hint')).toHaveCount(0);
   expect(await page.evaluate(() => window.__rmr!.getState().webgl)).toBe('unavailable');
   const input = page.getByRole('combobox', { name: COPY.search.label });
   await input.click();

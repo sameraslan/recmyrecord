@@ -43,8 +43,8 @@ export function setMapReveal(next: MapReveal): void {
   for (const l of [...listeners]) l();
 }
 
-/** True once the canvas is shown ('stars', 'gas' or 'sky'). MapStage shows the controls that stand on the map (the
- * hint line with its band, the zoom buttons) with it, never ahead of it. Kept here, with the bridge, so the page's
+/** True once the canvas is shown ('stars', 'gas' or 'sky'). MapStage shows the controls that need the map (the zoom
+ * buttons) with it, never ahead of it. Kept here, with the bridge, so the page's
  * first chunk reads it without the map's code. */
 export function mapShown(): boolean {
   return state !== 'wait';

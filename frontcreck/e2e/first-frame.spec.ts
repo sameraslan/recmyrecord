@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { THEME_BAKE } from '../src/lib/data/theme.generated';
-import { albumSpread, isPhone, waitForCameraIdle, waitForMap } from './helpers';
+import { albumSpread, contrastOverBackdrop, isPhone, waitForAnimations, waitForCameraIdle, waitForMap } from './helpers';
 
 /** Issue 78: the map's first picture. The server HTML asks for everything the map needs at once and carries a soft
  * stand-in nebula, placed where the map will draw the real one; the canvas shows once it has the nebula. */
@@ -197,8 +197,9 @@ test('when the album list fails the stand-in leaves with the error panel, and a 
   await page.goto('/map');
   const panel = page.locator('.map-msg');
   await expect(panel).toBeVisible();
-  // No soft nebula behind a message that says the map could not load, and no canvas.
+  // No soft nebula behind a message that says the map could not load, no hint line over nothing, and no canvas.
   await expect(page.locator('.gas-ph')).toHaveCount(0);
+  await expect(page.locator('.map-hint')).toHaveCount(0);
   await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
   failing = false;
   await panel.getByRole('button').click();
@@ -241,17 +242,20 @@ test('when the map\'s code fails to download the error panel shows, and its retr
   expect(typeof (await page.evaluate(() => window.__rmr!.gasShownMs))).toBe('number');
 });
 
-test('the hint line, its band and the zoom buttons come in with the map, never before it', async ({ page }, info) => {
+test('the zoom buttons come in with the map, never before it; the hint line is there from the first paint', async ({ page, request }, info) => {
+  // In the server HTML, with the stand-in: before any script.
+  expect(await (await request.get('/map')).text()).toContain('class="map-hint"');
   // The nebula image is held back, so the map shows its stars over the stand-in: the moment the controls must wait for.
   const release = await hold(page, `**${GAS}`);
   await page.addInitScript(() => {
-    // Every frame: is the canvas shown, and are the controls? A control seen while the canvas is not is the bug.
+    // Every frame: is the canvas shown, and are the controls that need the map? One seen while the canvas is not is
+    // the bug. (The hint line needs no map and is allowed.)
     const w = window as unknown as { __early: string[] };
     w.__early = [];
     const look = () => {
       const canvas = document.querySelector('canvas.map-canvas');
       const mapShown = !!canvas && !canvas.classList.contains('is-veiled');
-      for (const sel of ['.map-zoom', '.map-hint']) {
+      for (const sel of ['.map-zoom']) {
         const el = document.querySelector<HTMLElement>(sel);
         if (!el || mapShown) continue;
         const cs = getComputedStyle(el);
@@ -269,6 +273,26 @@ test('the hint line, its band and the zoom buttons come in with the map, never b
   expect(await page.evaluate(() => (window as unknown as { __early: string[] }).__early)).toEqual([]);
   release();
   await waitForMap(page);
+});
+
+test('the hint line reads over the stand-in as well as it does over the drawn map', async ({ page }, info) => {
+  test.skip(isPhone(info), 'a phone has no hint line');
+  const release = await hold(page, '**/data/albums.json');
+  await page.goto('/map');
+  await expect(page.locator('.gas-ph image')).toBeVisible();
+  await expect(page.locator('.map-hint')).toBeVisible();
+  await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
+  await page.evaluate(() => document.fonts.ready);
+  await waitForAnimations(page);
+  const [early] = await contrastOverBackdrop(page, '.map-pane', ['.map-hint'], { box: 'text' });
+  release();
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  const [settled] = await contrastOverBackdrop(page, '.map-pane', ['.map-hint'], { box: 'text' });
+  console.log(`hint contrast: over the stand-in ${early.ratio.toFixed(2)}, over the map ${settled.ratio.toFixed(2)}`);
+  expect(early.ratio).toBeGreaterThanOrEqual(4.5);
+  // No worse than on the settled page (whose backdrop has stars in it, so it is the harder of the two).
+  expect(early.ratio).toBeGreaterThanOrEqual(settled.ratio - 0.3);
 });
 
 test('an album page shows a glow, not a picture, and it leaves when the map has drawn', async ({ page }) => {

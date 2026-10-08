@@ -70,10 +70,10 @@
 .map-explore:hover svg { color: var(--color-lamp); }
 /* --zb: the side of a button in the zoom corner (44 px on a phone, styles/phone.css). */
 .map-zoom { position: absolute; right: 20px; bottom: 20px; display: grid; --zb: 40px; transition: opacity .2s var(--out), visibility 0s; }
-/* Until the canvas is shown (MapStage data-shown, state/reveal.ts) the controls that stand on the map are held
- * back, and then come in with its fade: the hint's dark band over the stand-in a frame before the map was the one
- * frame of a load that was darker than the frame before it. */
-.map-pane[data-shown="0"] .map-zoom, .map-pane[data-shown="0"] .map-hint { opacity: 0; visibility: hidden; }
+/* Until the canvas is shown (MapStage data-shown, state/reveal.ts) the controls that need the map are held back,
+ * and then come in with its fade. The hint line and its band are not held back: they are in the server HTML, over
+ * the stand-in, from the first paint (so no frame of a load is darker than the one before it for their arrival). */
+.map-pane[data-shown="0"] .map-zoom { opacity: 0; visibility: hidden; }
 .map-zoom button { width: var(--zb); height: var(--zb); display: grid; place-items: center; background: var(--color-float); border: 1px solid var(--color-rule); color: var(--color-dust); }
 .map-zoom button + button { border-top: 0; }
 .map-zoom button:hover { color: var(--color-paper); }

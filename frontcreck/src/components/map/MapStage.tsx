@@ -304,7 +304,7 @@ export function MapStage() {
   // Without WebGL there is no map to miss its data: the no-WebGL message stands alone.
   const codeFailed = useMapCodeFailed();
   const failed = webgl !== 'unavailable' && (catalogStatus === 'error' || positionsStatus === 'error' || codeFailed);
-  // The hint line (with its dark band) and the zoom buttons come in with the canvas, never a frame ahead of it.
+  // The zoom buttons, which need the map, come in with the canvas, never a frame ahead of it.
   const shown = useMapShown();
   return (
     <div
@@ -344,8 +344,10 @@ export function MapStage() {
             <SimilaritySlider stop={stop} onChange={onStop} noAudio={view === 'album' && noAudio} />
             {mapData && view === 'album' && focus ? <ExploreHere onClick={onExploreHere} /> : null}
             {mapData ? <ZoomControls api={apiRef} /> : null}
-            {/* No hint over an empty map: the data is still loading or failed to load. */}
-            {mapData && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'album' || selected !== null} /> : null}
+            {/* The hint line is in the server HTML, over the stand-in nebula, so it is there from the first paint (it
+             * is the largest text of /map: held back until the map showed, it was the page's largest contentful
+             * paint, half a second late). Not where no map is coming: without WebGL, or when the data failed. */}
+            {webgl !== 'unavailable' && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'album' || selected !== null} /> : null}
             {cardShown && selected !== null && catalog ? (
               <MapCard
                 key={selected}

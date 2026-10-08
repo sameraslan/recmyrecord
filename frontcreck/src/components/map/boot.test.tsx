@@ -135,10 +135,15 @@ describe('starting everything the map needs at once', () => {
     const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
     expect(stage).toContain("data-shown={shown ? '1' : '0'}");
     const css = fs.readFileSync('src/styles/map.css', 'utf8');
-    expect(css).toContain('.map-pane[data-shown="0"] .map-zoom, .map-pane[data-shown="0"] .map-hint { opacity: 0; visibility: hidden; }');
+    expect(css).toContain('.map-pane[data-shown="0"] .map-zoom { opacity: 0; visibility: hidden; }');
     // and they fade as the canvas does
     expect(css).toMatch(/\.map-zoom \{[^}]*transition: opacity \.2s var\(--out\), visibility 0s;/);
-    expect(css).toMatch(/\.map-hint \{[^}]*transition: opacity \.25s var\(--out\), visibility 0s;/);
+  });
+
+  it('the hint line is not one of them: it is rendered before any data, for the first paint, unless no map is coming', () => {
+    const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
+    expect(stage).toContain("{webgl !== 'unavailable' && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'album' || selected !== null} /> : null}");
+    expect(fs.readFileSync('src/styles/map.css', 'utf8')).not.toMatch(/data-shown="0"\] \.map-hint/);
   });
 
   it('the stand-in is off behind the no-WebGL message and behind the error panel', () => {
