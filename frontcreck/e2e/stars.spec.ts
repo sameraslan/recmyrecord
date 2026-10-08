@@ -115,7 +115,10 @@ test('every star is an album, and which albums are the bright stars is this page
 });
 
 /** The Stone Roses at 1600 x 1000: the approved picture of an open album (docs/design/trifid-theme/options/
- * final-album.jpg). Its framing is close: covers on the map would be 16 to 24 px, the start of their fade. */
+ * final-album.jpg). Its framing is close: covers on the map would be 16 to 25 px, the first half of their fade.
+ * On the map of 10,467 albums its group is tighter than the least span an open album is framed at (state/
+ * focusLayout.ts MIN_FOCUS_SPAN), as most groups are, so this is the closest framing an open album gets: covers of
+ * 24.39 px (19.80 px on 4,081 albums, when the bound here was 24). */
 const STONE = '/album/the-stone-roses-the-stone-roses';
 
 test('beside an open album at a close framing the stars are still points: no flat disc of the star colour round a small star', async ({ page, isMobile }) => {
@@ -136,14 +139,14 @@ test('beside an open album at a close framing the stars are still points: no fla
   await twinkleOff(page);
   await waitForCameraIdle(page);
 
-  // The framing this test is about: the cover fade has started (16 px) and is in its first quarter.
+  // The framing this test is about: the cover fade has started (16 px) and is in its first half.
   const view = await page.evaluate(() => {
     const c = document.querySelector<HTMLCanvasElement>('canvas.map-canvas')!.getBoundingClientRect();
     return { zoom: window.__rmr!.map!.getCamera().zoom, height: c.height };
   });
   const coverPx = coverCssPx(view.zoom, view.height);
   expect(coverPx, 'covers on the map at this framing, CSS px').toBeGreaterThan(16);
-  expect(coverPx).toBeLessThan(24);
+  expect(coverPx).toBeLessThan(25);
 
   // Small stars (the smallest class of this load's deal) outside the open album's focus, on the bare map: no
   // other album within 16 px, clear of the focus covers, and nothing of the page over them.
@@ -179,8 +182,9 @@ test('beside an open album at a close framing the stars are still points: no fla
   // under 1.8 px here; inside a disc of the dot size, 7 to 8 px across) less that of the ring 7 to 9 px out
   // (the map beside it). A flat disc of the star colour lifts the near ring by about 50 of 255 (measured before
   // the fix: median 49.5, nine in ten under 60.9). A point of light leaves only its glow and the first trace of
-  // its cover there: 7.3 and 11.8 with the tile brought in by the cover fade, which is the look of the approved
-  // picture. The bounds sit between the two, about a quarter of the disc's.
+  // its cover there: 11.7 and 17.6 with the tile brought in by the cover fade at 24.39 px covers (7.3 and 11.8 at
+  // 19.80 px, which is the look of the approved picture). The bounds sit between the two, about a quarter of the
+  // disc's.
   const png = (await page.screenshot()).toString('base64');
   const lift = await page.evaluate(
     async ([data, list]) => {

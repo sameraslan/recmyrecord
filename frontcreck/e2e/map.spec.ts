@@ -199,7 +199,14 @@ test('an album on the last atlas sheet shows its cover on the map', async ({ pag
   }
   await page.evaluate((album) => window.__rmr!.map!.flyTo(album), id);
   await waitForCameraIdle(page);
-  expect(await zoomOf()).toBeCloseTo(MAX_ZOOM, 6);
+  // The ceiling is a size on screen. The canvas runs under the header, and a zoom is relative to the canvas
+  // height, so the ceiling is MAX_ZOOM for a canvas as tall as the map below the header (as opening.spec's
+  // zoomAsRecorded): 111.47 on the 900 px canvas of this window, where 836 px are below the header.
+  const underHeader = await page.evaluate(() => {
+    const canvas = document.querySelector('canvas.map-canvas')!.getBoundingClientRect();
+    return canvas.height / (canvas.bottom - document.querySelector('#stage')!.getBoundingClientRect().top);
+  });
+  expect((await zoomOf()) * underHeader).toBeCloseTo(MAX_ZOOM, 6);
   await expect.poll(() => sheetLoaded, { timeout: 30_000 }).toBe(true);
   await waitForMapQuiet(page, 400); // the sheet is uploaded and its covers have faded in
 

@@ -9,9 +9,13 @@ import { act, albumSpread, camera, isPhone, overviewMiss, twinkleOff, waitForCam
  * committed positions: desktop 1440 x 900 (canvas 836 tall) and phone 390 x 844 (canvas 784 tall), Balanced.
  * Those canvases started below the header. The canvas now runs under it (part 3 Task 3) and a zoom is relative to
  * the canvas height, so the same scale on screen is `zoomAsRecorded`: the camera's zoom times the canvas height
- * over the height of the map below the header (836 and 784 still). */
-const OVERVIEW_ZOOM = { desktop: 2.15721, phone: 0.56516 };
-const WHOLE_ZOOM = { desktop: 0.78507, phone: 0.37581 };
+ * over the height of the map below the header (836 and 784 still).
+ * Recorded again on 7 October 2026 for the 10,467-album layouts (positions.json e3093d62c5e6), after the tests'
+ * own checks of where the albums sit (overviewMiss, wholeMapMiss) passed on them and the views were looked at.
+ * On the 4,081-album layouts they were 2.15721 / 0.56516 and 0.78507 / 0.37581. The same numbers are pinned in
+ * src/components/map/state/bounds.test.ts. */
+const OVERVIEW_ZOOM = { desktop: 2.26031, phone: 0.59217 };
+const WHOLE_ZOOM = { desktop: 0.66419, phone: 0.39736 };
 
 /** The camera's zoom as a canvas that starts below the header would have it: the scale on screen is the same. */
 async function zoomAsRecorded(page: Page, zoom: number): Promise<number> {
