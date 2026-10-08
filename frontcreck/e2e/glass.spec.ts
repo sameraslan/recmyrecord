@@ -233,11 +233,16 @@ test.describe('the hint band and the hover label', () => {
     await waitForCameraIdle(page);
     await waitForAnimations(page);
     await waitForGasSharpSettled(page);
-    const gas = await panBrightestGasUnder(page, '.map-hint');
+    // Held there (the visitor's hand on the map): the idle camera is eased back to the cloud half a second after a
+    // pan that leaves most of it out of view, and the gas would slide away while it is read (helpers.ts).
+    const gas = await panBrightestGasUnder(page, '.map-hint', undefined, { hold: true });
     // Cream gas, not sky: otherwise this measures nothing.
     expect(gas, 'mean luminance of the gas moved under the hint').toBeGreaterThan(0.4);
     await expect(page.locator('.map-hint')).toBeVisible();
     const [r] = await contrastOverBackdrop(page, '.map-ui', ['.map-hint'], { box: 'text' });
+    // Still there when the contrast was read: the gas behind the words now is the gas that was reported.
+    expect(await gasBehind(page, '.map-hint', '.map-ui, header.top'), 'the gas stayed behind the hint while its contrast was read').toBeCloseTo(gas, 1);
+    await releaseMap(page);
     console.log(`hint over the brightest gas (mean luminance ${gas.toFixed(2)}): ${r.ratio.toFixed(2)}`);
     expect(r.ratio).toBeGreaterThanOrEqual(4.5);
   });

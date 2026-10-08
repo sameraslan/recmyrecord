@@ -252,11 +252,22 @@ test.describe('album to album', () => {
  * Not measured for these two links: the backdrop above and below their line of words inside the tap target.
  */
 const HERO_LINKS = ['.hero-row a.textbtn', '.hero-row button.textbtn'];
-const boxOf = (selector: string): 'content' | 'text' => (HERO_LINKS.includes(selector) ? 'text' : 'content');
+/**
+ * The lede is measured on the rectangle of its words too (ruled by the orchestrator, 2026-10-07). Its content box
+ * is the hero's full width; on a phone the words are two balanced lines 204 px wide in the middle of 358 px, and
+ * the hero's dark pad ends at the hero's edge there, so it is at half strength at both ends of the box, 77 px from
+ * any word. On the map of 10,467 albums the bright gas is wide enough to lie at those ends at three times Home's
+ * zoom: the content box read 3.78 to 3.87 while the words stood on 5.57 (390 x 844) and 5.51 (360 x 640). The
+ * bound stays 4.5 and is read behind every word of the lede (all its lines), after the brightest gas on screen
+ * was moved under those same words, so a word on a backdrop under 4.5 still fails.
+ * Not measured for the lede: the backdrop left and right of its words inside the hero's width.
+ */
+const HERO_LEDE = '.hero .lede';
+const boxOf = (selector: string): 'content' | 'text' => (HERO_LINKS.includes(selector) || selector === HERO_LEDE ? 'text' : 'content');
 /** The shelf's line names a cover while that cover has the focus or the pointer: its title and artist stand where
  * the caption stood, over the same gas. */
 const SHELF_NAMED = ['.shelf-now .t', '.shelf-now .a'];
-const HOME_TEXT = ['.hero h1', '.hero .lede', ...HERO_LINKS, '.shelf-now .cap', ...SHELF_NAMED];
+const HOME_TEXT = ['.hero h1', HERO_LEDE, ...HERO_LINKS, '.shelf-now .cap', ...SHELF_NAMED];
 /** Puts the shelf's line in the state that shows `selector`: the first cover focused for a title or an artist,
  * no cover focused for the caption (and for every other text). */
 async function showShelfLine(page: Page, selector: string): Promise<void> {

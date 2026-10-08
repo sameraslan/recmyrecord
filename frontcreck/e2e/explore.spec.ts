@@ -388,13 +388,33 @@ test('in cover mode the picked album is drawn large on top, framed in off-white,
   await shot(page, info, 'explore-selected-cover');
   const p = (await page.evaluate((i) => window.__rmr!.map!.screenPoint(i), IN_RAINBOWS))!;
   // Covers are 32 px here, so the picked one is 64 px with a 2 px off-white frame 4 px outside it (centre 36 px out).
-  const framePoints = [
-    { x: p.x + 36, y: p.y },
-    { x: p.x - 36, y: p.y },
-    { x: p.x, y: p.y - 36 },
-    { x: p.x + 20, y: p.y - 36 },
-  ];
-  expect((await pixels(page, framePoints)).map(isFrame)).toEqual([true, true, true, true]);
+  // The frame is read all along its left, right and top sides, every 4 px. Among 10,467 albums a neighbour's cover
+  // lies under parts of that line, and a pale one is frame-coloured with no pick at all (the phone has "AIR" 3 px
+  // beside the middle of the right side: 228, 234, 239 against the frame's 241, 236, 228). So the points that no
+  // other album's cover reaches are noted (a cover is 16 px each way from its album; 19 leaves 3 px clear): those
+  // are the ones looked at again once the pick is gone.
+  const framePoints = await page.evaluate(
+    async ([at, seed]) => {
+      const n = (await (await fetch('/data/albums.json')).json()).length;
+      const others: Array<{ x: number; y: number }> = [];
+      for (let i = 0; i < n; i++) {
+        const s = i === seed ? null : window.__rmr!.map!.screenPoint(i);
+        if (s && Math.abs(s.x - at.x) < 80 && Math.abs(s.y - at.y) < 80) others.push(s);
+      }
+      const out: Array<{ x: number; y: number; bare: boolean }> = [];
+      for (let t = -28; t <= 28; t += 4) {
+        for (const c of [{ x: at.x + 36, y: at.y + t }, { x: at.x - 36, y: at.y + t }, { x: at.x + t, y: at.y - 36 }]) {
+          out.push({ ...c, bare: !others.some((o) => Math.abs(o.x - c.x) <= 19 && Math.abs(o.y - c.y) <= 19) });
+        }
+      }
+      return out;
+    },
+    [p, IN_RAINBOWS] as const,
+  );
+  const barePoints = framePoints.filter((c) => c.bare);
+  expect(barePoints.length, 'points of the frame that no other cover reaches').toBeGreaterThanOrEqual(4);
+  // The pick is drawn on top of everything: every point of the three sides is frame-coloured, covers under it or not.
+  expect((await pixels(page, framePoints)).map(isFrame)).toEqual(framePoints.map(() => true));
   await expect(page.locator('.map-sel')).toHaveCSS('opacity', '0');
   // The hit area matches the drawn size: a click well outside a plain cover, near its corner, still lands on it.
   if (isMobile) await page.touchscreen.tap(p.x + 24, p.y + 24);
@@ -430,9 +450,10 @@ test('in cover mode the picked album is drawn large on top, framed in off-white,
   expect(dimmed).toBeLessThan(plain * LONE_LINE);
   expect(pilesPlain, 'the undimmed piles show detail').toBeGreaterThan(6);
   expect(pilesDimmed, 'covers in piles step back too').toBeLessThan(pilesPlain * PILE_LINE);
-  // With the pick gone the frame is gone: none of the same four points is frame-coloured, so the frame check
-  // above was not satisfied by pale gas or a pale cover at any of them.
-  expect((await pixels(page, framePoints)).map(isFrame)).toEqual([false, false, false, false]);
+  // With the pick gone the frame is gone: where no cover lies, none of the same points is frame-coloured, so the
+  // frame check above was not satisfied by pale gas at any of them.
+  console.log(`picked cover: ${framePoints.length} frame points read, ${barePoints.length} of them clear of other covers`);
+  expect((await pixels(page, barePoints)).map(isFrame)).toEqual(barePoints.map(() => false));
 });
 
 test('an album with no place to listen shows the card without a listen action', async ({ page, isMobile }) => {
