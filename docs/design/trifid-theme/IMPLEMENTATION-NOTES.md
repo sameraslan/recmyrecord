@@ -11,7 +11,7 @@ State of `feat/trifid-theme` on 2026-10-07 (draft PR 47, issue 45). This file de
 - **The map runs under the header.** The canvas starts at the top of the window and the header sits over it. Albums are framed in the area below the header.
 - **Glass panels on wide screens.** The header, the album panel, the slider panel and the zoom buttons are see-through with a backdrop blur. On phones, in browsers without `backdrop-filter`, and under reduced transparency they are fully solid.
 - **Home, About and 404** sit over the same nebula. Home has a scrim over the header bar and shows one row of covers in short windows.
-- **Phone album page.** The strip above the list is a small picture of the map around the album, with the gas at 62 % strength.
+- **Phone album page.** The strip below the list is a small picture of the map around the album, with the gas at 62 % strength (`e2e/phone.spec.ts` "list first, then the map strip" pins the order).
 - **No film grain.** New favicon. The colour tokens keep their names and have new values (`frontcreck/src/app/globals.css`).
 
 Pictures of the current state: `reviews/app-part3/no-names-overview.jpg`, `no-names-album.jpg`, `no-names-phone.jpg`. The approved pictures it was built to are `options/final-*.jpg`.
@@ -67,6 +67,16 @@ One fallback is written down beside the code and not applied: a solid header ("S
 - **The numbers beside the closest albums.** Removed on the owner's instruction on 2026-10-07 (the model is only so accurate): the number in each list row, the numbered badges on the covers round an open album, and those drawn on the phone strip, with their CSS and the `rank` field of a list row. The lists and the covers keep their order, closest first.
 - **The hint band beside an open album** (`COPY.map.hintAlbum`), to match the approved album picture.
 - **The film grain overlay**, and the warm ambient wash over the map.
+
+## Changes since the 10,467-album map
+
+Dated record of what changed after the theme was moved onto the larger catalog.
+
+- **2026-10-07, rank numbers removed.** The number in each list row, the numbered badges on the covers round an open album and those on the phone strip (`a1515901`; see Removed above).
+- **2026-10-08, list rows flush.** In the album panel the cover of a row starts at the left end of the heading and of the rules. The hover fill and its 2 px bar reach 12 px into the gutter beside the cover, and the Spotify icon ends at the rule's right end with its 44 px target unchanged. Nothing moves on hover (`album.css`, `phone.css`; `e2e/album.spec.ts`).
+- **2026-10-08, phone strip specks.** The strip is cut into 32 px squares and draws at most 5 albums of each, the same ones on every draw. Dot radius goes from 1 px toward 0.7 px and strength from 0.55 toward 0.42 by the share left out. The other covers on the strip have a 1 px dark casing (`MapPreviewStrip.tsx`). Round In Rainbows the strip's window holds 4,323 albums and about 275 dots are drawn.
+- **2026-10-08, phone opening view 1.8 times closer.** With the slider panel across the bottom of the screen, `fitOverview` in `state/bounds.ts` multiplies the span scale by 1.8, up to covers of 5.2 px (764.7 px per world unit). Same centre. A window that is already closer, the desktop and the Whole map are unchanged. At 390 x 844 the balanced view went from 422.054 to 759.697 px per world unit. `framing-baseline.json` `phone/opening` was recorded again.
+- **2026-10-08, gas peak cap.** The bake holds the largest colour channel of the gas under `GAS.PEAK` 0.8, eased in from `GAS.KNEE` 0.5 (`capPeak` in `scripts/theme/bake-core.js`, the same line in the shader of `bake-page.js`); below the knee the bake is unchanged. The six gas images and `theme.json` were baked again, and `theme.data.test.ts` holds the brightest channel of every image at 212 of 255 or less. Measured on a desktop GPU at the opening view: stars over the brightest gas went from a median contrast of 1.21 to 1.60. Two floors in `e2e/glass.spec.ts` that prove a test is reading bright gas and not sky (Home's header, the focus ring of a zoom button) are now 0.4 of the luminance of the capped peak, 0.242, where they were 0.4 of white; the contrast bounds are unchanged.
 
 ## Speed against the old site
 
