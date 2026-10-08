@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<defs>
+<radialGradient id="g0" gradientUnits="userSpaceOnUse" cx="16.02" cy="15.44" r="14.42"><stop offset="0" stop-color="#ffb48e"/><stop offset=".42" stop-color="#e8603c"/><stop offset="1" stop-color="#a83820"/></radialGradient>
+<clipPath id="c0"><path d="M15.7 17L-37.64 -17.64L28.38 -45.32L78.33 5.96Z"/></clipPath>
+<radialGradient id="g1" gradientUnits="userSpaceOnUse" cx="16.89" cy="18.19" r="13.67"><stop offset="0" stop-color="#fff2d0"/><stop offset=".42" stop-color="#f4be78"/><stop offset="1" stop-color="#c08440"/></radialGradient>
+<clipPath id="c1"><path d="M15.7 17L78.33 5.96L60.67 61.97L4.66 79.63Z"/></clipPath>
+<radialGradient id="g2" gradientUnits="userSpaceOnUse" cx="14.18" cy="17.66" r="13.14"><stop offset="0" stop-color="#d6f8f4"/><stop offset=".42" stop-color="#5fcfd4"/><stop offset="1" stop-color="#267f92"/></radialGradient>
+<clipPath id="c2"><path d="M15.7 17L4.66 79.63L-42.63 42.36L-37.64 -17.64Z"/></clipPath>
+</defs>
+<rect width="32" height="32" rx="7" fill="#07060a"/>
+<g fill="url(#g0)" clip-path="url(#c0)"><circle cx="16.76" cy="11.81" r="9.12"/><circle cx="11.63" cy="8.84" r="4.66"/><circle cx="21.45" cy="11.35" r="3.82"/></g>
+<g fill="url(#g1)" clip-path="url(#c1)"><circle cx="19.67" cy="20.97" r="8.06"/><circle cx="18.6" cy="25.42" r="3.82"/></g>
+<g fill="url(#g2)" clip-path="url(#c2)"><circle cx="10.65" cy="19.2" r="7.63"/><circle cx="9.54" cy="23.72" r="3.6"/></g>
+<g fill="none" stroke="#07060a" stroke-linecap="round"><path d="M15.7 17Q9.89 11.19 2.41 7.34M15.7 17Q23.2 13.66 31.68 13.16M15.7 17Q12.1 24.38 11.73 32.94" stroke-width="1.54"/><path d="M15.7 17L10.26 12M15.7 17L22.59 14.33M15.7 17L12.83 23.82" stroke-width="2.38"/></g>
+<circle cx="15.7" cy="17" r="1.22" fill="#fffaf4"/>
+</svg>

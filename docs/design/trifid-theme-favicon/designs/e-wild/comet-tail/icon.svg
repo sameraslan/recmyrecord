@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+<defs><linearGradient id="t" gradientUnits="userSpaceOnUse" x1="4" y1="28.5" x2="21" y2="11">
+<stop offset="0" stop-color="#426ebe"/><stop offset=".3" stop-color="#788cdc"/><stop offset=".62" stop-color="#6fd2dc"/><stop offset="1" stop-color="#96c8d6"/></linearGradient>
+<radialGradient id="h" gradientUnits="userSpaceOnUse" cx="21" cy="11" r="8.6">
+<stop offset="0" stop-color="#fffaf4"/><stop offset="0.3" stop-color="#fffaf4"/><stop offset="0.45999999999999996" stop-color="#f4be78"/><stop offset=".74" stop-color="#e8603c"/><stop offset="1" stop-color="#e8603c" stop-opacity="0"/></radialGradient></defs>
+<path d="M4 28.5C6 20 9.5 11 14.67 6.64A7.7 7.7 0 1 1 24 18.1C17.5 22.5 10.5 25.5 4 28.5Z" fill="#07060a" stroke="#07060a" stroke-width="2.8" stroke-linejoin="round"/>
+<path d="M4 28.5C6 20 9.5 11 14.67 6.64A7.7 7.7 0 1 1 24 18.1C17.5 22.5 10.5 25.5 4 28.5Z" fill="url(#t)"/>
+<path d="M6.5 26.6C10 20.5 13 16 17 13.5" fill="none" stroke="#07060a" stroke-opacity=".45" stroke-width="1.1" stroke-linecap="round"/>
+<path d="M4 28.5C6 20 9.5 11 14.67 6.64A7.7 7.7 0 1 1 24 18.1C17.5 22.5 10.5 25.5 4 28.5Z" fill="url(#h)"/>
+</svg>

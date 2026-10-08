@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><defs>
+<radialGradient id="r" cx="3.5" cy="4.5" r="7" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#f06a44"/><stop offset=".55" stop-color="#e8603c" stop-opacity=".8"/><stop offset="1" stop-color="#e8603c" stop-opacity="0"/></radialGradient>
+<radialGradient id="t" cx="12.5" cy="4.5" r="7" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5fd0dc"/><stop offset=".55" stop-color="#45b4cc" stop-opacity=".8"/><stop offset="1" stop-color="#426ebe" stop-opacity="0"/></radialGradient>
+<radialGradient id="g" cx="8" cy="11" r="5.5" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffe2b0"/><stop offset=".5" stop-color="#f4be78" stop-opacity=".9"/><stop offset="1" stop-color="#f4be78" stop-opacity="0"/></radialGradient>
+<clipPath id="c"><rect width="16" height="16" rx="3.5"/></clipPath></defs>
+<rect width="16" height="16" rx="3.5" fill="#07060a"/>
+<g clip-path="url(#c)"><rect width="16" height="16" fill="url(#r)"/><rect width="16" height="16" fill="url(#t)"/><rect width="16" height="16" fill="url(#g)"/></g>
+<path d="M3.5 4.5H12.5L8 11Z" fill="none" stroke="#fffaf4" stroke-opacity=".85" stroke-width="1"/>
+<circle cx="3.5" cy="4.5" r="1.5" fill="#fffaf4"/>
+<circle cx="12.5" cy="4.5" r="1.5" fill="#fffaf4"/>
+<circle cx="8" cy="11" r="2.5" fill="#fffaf4"/>
+</svg>

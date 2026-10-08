@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180"><defs>
+<linearGradient id="h" x1="30" y1="30" x2="150" y2="150" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8603c"/><stop offset=".42" stop-color="#f4be78"/><stop offset=".6" stop-color="#5fd0dc"/><stop offset="1" stop-color="#426ebe"/></linearGradient>
+<radialGradient id="m" cx="90" cy="90" r="84" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset=".5" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<mask id="k"><rect x="-20" y="-20" width="220" height="220" fill="url(#m)"/></mask>
+<filter id="w" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency=".013" numOctaves="3" seed="11"/><feDisplacementMap in="SourceGraphic" scale="55"/><feGaussianBlur stdDeviation="2"/></filter>
+<filter id="b" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="8"/></filter></defs>
+<rect width="180" height="180" fill="#060609"/>
+<g filter="url(#w)"><rect x="-20" y="-20" width="220" height="220" fill="url(#h)" mask="url(#k)"/></g>
+<g fill="#fffaf4" opacity=".75"><circle cx="48" cy="62" r="1.300"/><circle cx="126" cy="50" r="1.100"/><circle cx="58" cy="128" r="1.200"/><circle cx="134" cy="122" r="1.400"/><circle cx="114" cy="142" r="1"/><circle cx="68" cy="42" r="1"/></g>
+<circle cx="90" cy="90" r="24" fill="#fffaf4" filter="url(#b)"/>
+<path d="M90 22 94.500 90 90 158 85.500 90ZM36 90 90 86 144 90 90 94Z" fill="#fffaf4"/>
+<circle cx="90" cy="90" r="19" fill="#fffaf4"/>
+</svg>

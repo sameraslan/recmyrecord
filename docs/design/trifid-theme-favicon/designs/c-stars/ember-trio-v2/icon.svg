@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs>
+<radialGradient id="a" cx="4" cy="6" r="21" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c0604a"/><stop offset=".5" stop-color="#9a5148" stop-opacity=".8"/><stop offset="1" stop-color="#9a5148" stop-opacity="0"/></radialGradient>
+<radialGradient id="b" cx="27" cy="29" r="24" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4c98a6"/><stop offset=".5" stop-color="#3a7c8c" stop-opacity=".8"/><stop offset="1" stop-color="#3a7c8c" stop-opacity="0"/></radialGradient>
+<radialGradient id="g" cx="27" cy="3" r="12" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#c9a672" stop-opacity=".75"/><stop offset="1" stop-color="#c9a672" stop-opacity="0"/></radialGradient>
+<clipPath id="c"><rect width="32" height="32" rx="7"/></clipPath></defs>
+<g clip-path="url(#c)"><rect width="32" height="32" fill="#2b3359"/><rect width="32" height="32" fill="url(#a)"/><rect width="32" height="32" fill="url(#b)"/><rect width="32" height="32" fill="url(#g)"/></g>
+<path d="M6.500 12 24 6.500 17 22.500Z" fill="none" stroke="#fffaf4" stroke-width="1.300" stroke-linejoin="round"/>
+<circle cx="6.500" cy="12" r="2.300" fill="#ffd39a"/>
+<circle cx="24" cy="6.500" r="3.200" fill="#aee8ee"/>
+<circle cx="17" cy="22.500" r="5" fill="#fffaf4"/>
+</svg>

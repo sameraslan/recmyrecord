@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><defs>
+<radialGradient id="r" cx="7.5" cy="9.5" r="13" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8603c" stop-opacity=".95"/><stop offset=".5" stop-color="#e8603c" stop-opacity=".7"/><stop offset="1" stop-color="#e8603c" stop-opacity="0"/></radialGradient>
+<radialGradient id="t" cx="25" cy="8" r="13" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5fd0dc" stop-opacity=".95"/><stop offset=".5" stop-color="#45b4cc" stop-opacity=".7"/><stop offset="1" stop-color="#426ebe" stop-opacity="0"/></radialGradient>
+<radialGradient id="g" cx="15" cy="22.5" r="11" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffe2b0"/><stop offset=".45" stop-color="#f4be78" stop-opacity=".85"/><stop offset="1" stop-color="#f4be78" stop-opacity="0"/></radialGradient>
+<clipPath id="c"><rect width="32" height="32" rx="7"/></clipPath></defs>
+<rect width="32" height="32" rx="7" fill="#07060a"/>
+<g clip-path="url(#c)"><rect width="32" height="32" fill="url(#r)"/><rect width="32" height="32" fill="url(#t)"/><rect width="32" height="32" fill="url(#g)"/></g>
+<path d="M7.5 9.5 25 8 15 22.5Z" fill="none" stroke="#fffaf4" stroke-opacity=".9" stroke-width="1.5" stroke-linejoin="round"/>
+<circle cx="7.5" cy="9.5" r="3" fill="#ffd9c8"/>
+<circle cx="25" cy="8" r="3" fill="#dcf6fa"/>
+<circle cx="15" cy="22.5" r="5" fill="#fffaf4"/>
+</svg>

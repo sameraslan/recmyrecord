@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><defs>
+<linearGradient id="h" x1="2.500" y1="2.500" x2="13.500" y2="13.500" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#e8603c"/><stop offset=".42" stop-color="#f4be78"/><stop offset=".6" stop-color="#5fd0dc"/><stop offset="1" stop-color="#426ebe"/></linearGradient>
+<radialGradient id="m" cx="8" cy="8" r="8.500" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+<mask id="k"><rect width="16" height="16" fill="url(#m)"/></mask>
+<clipPath id="c"><rect width="16" height="16" rx="3.500"/></clipPath></defs>
+<rect width="16" height="16" rx="3.500" fill="#07060a"/>
+<g clip-path="url(#c)"><rect width="16" height="16" fill="url(#h)" mask="url(#k)"/></g>
+<path d="M7.500 1h1v14h-1zM3 7.500h10v1H3z" fill="#fffaf4" fill-opacity=".9"/>
+<circle cx="8" cy="8" r="2.500" fill="#fffaf4"/>
+</svg>
