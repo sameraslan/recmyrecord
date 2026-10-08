@@ -12,6 +12,7 @@ import { worldToScreen } from '../state/projection';
 import { overviewView } from '../state/bounds';
 import { getFitCamera, getFitKind, getOverviewFraming, isFramed, openingKind, setFitKind, untouchedOverview } from '../state/view';
 import { COVER_FADE_END_PX, zoomForCoverPx } from '../state/zoomLimits';
+import { tweenCoord, tweenZoom } from '../state/zoomMath';
 import type { MapApi } from '../types';
 import { clampZoom, stopCameraRig } from './CameraRig';
 import { applyFrustum } from './InitialFrame';
@@ -217,10 +218,10 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
     const p = Math.min(1, (performance.now() - t.start) / t.duration);
     const e = easeOutCubic(p);
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-    camera.position.x = t.from.x + (t.to.x - t.from.x) * e;
-    camera.position.y = t.from.y + (t.to.y - t.from.y) * e;
+    camera.position.x = tweenCoord(t.from.x, t.to.x, e);
+    camera.position.y = tweenCoord(t.from.y, t.to.y, e);
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-    camera.zoom = Math.exp(Math.log(t.from.zoom) + (Math.log(t.to.zoom) - Math.log(t.from.zoom)) * e);
+    camera.zoom = tweenZoom(t.from.zoom, t.to.zoom, e);
     camera.updateProjectionMatrix();
     if (p < 1) invalidate();
     else {

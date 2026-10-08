@@ -68,3 +68,19 @@ export function flingStopSpeedSq(zoom: number): number {
   const speed = zoom > FLING_STOP_REF_ZOOM ? (FLING_STOP_SPEED * FLING_STOP_REF_ZOOM) / zoom : FLING_STOP_SPEED;
   return speed * speed;
 }
+
+/**
+ * The zoom of a camera glide from `from` to `to` at eased progress `e` (0 to 1): a straight line in the logarithm,
+ * so every step of the glide multiplies the scale by the same factor. At the end it is `to` itself: the sum can
+ * end one step of the float away from it (it depends on where the glide began), and a zoom meant to rest exactly
+ * on a threshold (32 px covers, the start of deep zoom) must.
+ */
+export function tweenZoom(from: number, to: number, e: number): number {
+  return e >= 1 ? to : Math.exp(Math.log(from) + (Math.log(to) - Math.log(from)) * e);
+}
+
+/** One coordinate of a camera glide from `from` to `to` at eased progress `e` (0 to 1): a straight line, and at
+ * the end `to` itself (as tweenZoom). */
+export function tweenCoord(from: number, to: number, e: number): number {
+  return e >= 1 ? to : from + (to - from) * e;
+}
