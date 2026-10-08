@@ -27,7 +27,7 @@ function SelectedRing() {
   );
 }
 
-/** Loaded with next/dynamic (ssr: false) after first paint, so three.js is its own chunk. */
+/** Imported by boot.ts loadMapChunk right after first paint and never by the page itself, so three.js is its own chunk. */
 export default function MusicMap({ data, theme, input, callbacks, initialCamera, onApi }: MusicMapProps) {
   useLayoutEffect(() => {
     useMapStore.getState().setData(data);

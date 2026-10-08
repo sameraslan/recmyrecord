@@ -1,15 +1,17 @@
-import { cleanup, renderHook } from '@testing-library/react';
+import { act, cleanup, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { resetMarks } from '@/lib/marks';
 import { useAppStore } from '@/lib/store';
+import type { MusicMapProps } from './types';
 
 const early = vi.hoisted(() => ({ startEarlyGas: vi.fn(), dropEarlyGas: vi.fn() }));
 const webgl = vi.hoisted(() => ({ warmUpWebGL: vi.fn(), isWebGLAvailable: vi.fn() }));
 vi.mock('@/lib/data/early', () => early);
 vi.mock('./state/webgl', () => webgl);
-// The map's code: three.js and the canvas. Only that it is asked for matters here.
-vi.mock('./MusicMap', () => ({ default: () => null }));
+// The map's code: three.js and the canvas. Here a stand-in that says what it was given.
+vi.mock('./MusicMap', () => ({ default: (props: { data: { n: number } }) => <div data-testid="map">{props.data.n} albums</div> }));
 
-import { openingStop, useMapBoot } from './boot';
+import { MapWhenLoaded, loadMapChunk, openingStop, resetMapCode, useMapBoot, useMapCodeFailed } from './boot';
 
 describe('starting everything the map needs at once', () => {
   let frames: FrameRequestCallback[];
@@ -26,6 +28,8 @@ describe('starting everything the map needs at once', () => {
     webgl.isWebGLAvailable.mockReset();
     useAppStore.setState({ webgl: 'unknown' });
     performance.clearMarks();
+    resetMarks();
+    resetMapCode();
   });
   afterEach(() => {
     cleanup();
@@ -82,6 +86,27 @@ describe('starting everything the map needs at once', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(useAppStore.getState().webgl).toBe('unknown');
+  });
+
+  it('renders the map in the commit its code arrives in, with no Suspense boundary to hold it back', async () => {
+    const props = { data: { n: 7 } } as unknown as MusicMapProps;
+    const failed: boolean[] = [];
+    function Probe() {
+      failed.push(useMapCodeFailed());
+      return <MapWhenLoaded {...props} />;
+    }
+    const { queryByTestId } = render(<Probe />);
+    // nothing before the code is in, and no fallback either
+    expect(queryByTestId('map')).toBeNull();
+    await act(() => loadMapChunk());
+    expect(queryByTestId('map')!.textContent).toBe('7 albums');
+    expect(failed.every((f) => !f)).toBe(true);
+    // asked for once, however often it is called
+    await act(() => loadMapChunk());
+    expect(performance.getEntriesByName('rmr-chunk-start')).toHaveLength(1);
+    // React shows a lazy component 300 ms after its fallback: the map's code is not loaded that way.
+    const source = await import('node:fs').then((fs) => fs.readFileSync('src/components/map/MapStage.tsx', 'utf8') + fs.readFileSync('src/components/map/boot.ts', 'utf8'));
+    expect(source).not.toMatch(/from 'next\/dynamic'|\blazy\(|<Suspense/);
   });
 
   it('opens on the stop an album link names, and on the default everywhere else', () => {

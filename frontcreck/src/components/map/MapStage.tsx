@@ -1,6 +1,5 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toSummary } from '@/lib/data/catalog';
@@ -11,7 +10,7 @@ import { useAppStore } from '@/lib/store';
 import type { StopId } from '@/lib/types';
 import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-state';
 import { ErrorPanel } from '@/components/ErrorPanel';
-import { useMapBoot } from './boot';
+import { MapWhenLoaded, loadMapChunk, useMapBoot, useMapCodeFailed } from './boot';
 import { buildMapData } from './data';
 import { DESKTOP_FIT_PADDING, DESKTOP_PADDING, PHONE_FIT_PADDING, PHONE_PADDING, PHONE_SLIDER_COVER_FALLBACK_PX, PHONE_SLIDER_MARGIN_PX } from './framing';
 import { ExploreHere } from './overlays/ExploreHere';
@@ -23,9 +22,6 @@ import { SimilaritySlider } from './overlays/SimilaritySlider';
 import { ZoomControls } from './overlays/ZoomControls';
 import { setMapReveal } from './state/reveal';
 import type { MapApi, MapCallbacks, MapInput } from './types';
-
-// The map's code is asked for as the page opens (boot.ts loadMapChunk imports the same module), not when this first renders.
-const MusicMap = dynamic(() => import('./MusicMap'), { ssr: false, loading: () => null });
 
 /** Space kept between a flown-to album and the top of the phone card (bottom sheet). */
 const PHONE_CARD_MARGIN_PX = 16;
@@ -306,7 +302,8 @@ export function MapStage() {
   }, [router]);
 
   // Without WebGL there is no map to miss its data: the no-WebGL message stands alone.
-  const failed = webgl !== 'unavailable' && (catalogStatus === 'error' || positionsStatus === 'error');
+  const codeFailed = useMapCodeFailed();
+  const failed = webgl !== 'unavailable' && (catalogStatus === 'error' || positionsStatus === 'error' || codeFailed);
   return (
     <div
       ref={paneRef}
@@ -319,7 +316,7 @@ export function MapStage() {
       <GasPlaceholder view={view} off={webgl === 'unavailable'} />
       <div className="map-host">
         {mapData ? (
-          <MusicMap data={mapData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
+          <MapWhenLoaded data={mapData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
         ) : null}
       </div>
       {/* Home (mockup .veil): dims the map further round the hero; a click on empty map area opens the map. Always
@@ -332,6 +329,7 @@ export function MapStage() {
           onRetry={() => {
             retryCatalog();
             retryPositions();
+            void loadMapChunk();
           }}
         />
       ) : null}
