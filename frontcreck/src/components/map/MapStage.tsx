@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toSummary } from '@/lib/data/catalog';
 import { themeFor } from '@/lib/data/theme';
 import { useCatalog, usePositions, useThemeLoad } from '@/lib/data/useData';
@@ -121,6 +121,10 @@ export function MapStage() {
   const { status: positionsStatus, positions, retry: retryPositions } = usePositions();
   // No map without WebGL, so no map data either (and none of the controls that stand on it).
   const mapData = useMemo(() => (enabled && catalog && positions ? buildMapData(catalog.albums, positions) : null), [enabled, catalog, positions]);
+  // The map mounts in a render of its own, after the one the data arrived in: reading the album list and starting
+  // three.js (the renderer, the WebGL context) in one task was a long task of up to 175 ms on a slow connection,
+  // where the album list is the last thing to arrive.
+  const mountData = useDeferredValue(mapData);
   // The theme is optional. Missing, failed or built for another album count, the map goes on with plain sky.
   const { status: themeStatus, theme: loadedTheme } = useThemeLoad(true);
   const theme = mapData ? themeFor(loadedTheme, mapData.n) : null;
@@ -315,8 +319,8 @@ export function MapStage() {
     >
       <GasPlaceholder view={view} off={webgl === 'unavailable'} />
       <div className="map-host">
-        {mapData ? (
-          <MapWhenLoaded data={mapData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
+        {mountData ? (
+          <MapWhenLoaded data={mountData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
         ) : null}
       </div>
       {/* Home (mockup .veil): dims the map further round the hero; a click on empty map area opens the map. Always
