@@ -29,7 +29,8 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
 | `npm run test:e2e` | Playwright end-to-end and accessibility tests at desktop and phone sizes, plus a run with WebGL turned off. Builds and serves the site on port 3100 first. `E2E_DEV=1 npm run test:e2e` runs them against a dev server instead. |
 | `npm run perf` | Measures the performance budgets of the design spec (section 7) at 1440 x 900 and 390 x 844, in software and GPU rendering, and fails when a budget is missed. Needs a build. |
 | `npm run shots` | Screenshots of every reviewed state at 1440 x 900, 1280 x 800 and 390 x 844, written to `test-results/review/`. Needs a build. Pass part of a name to shoot only some, for example `npm run shots -- d1440-d1`. |
-| `npm run theme` | Bakes the map theme into `public/data/theme/`: the gas of each slider stop as two images, plus `theme.json`. Uses Playwright's own Chromium on software rendering. Run it after `albums.json` or `positions.json` change (see "Map theme data"). |
+| `npm run theme:module` | Writes `src/lib/data/theme.generated.ts` again from the files already in `public/data/` (the last step of `npm run theme`, by itself). It bakes nothing and leaves the gas images as they are. |
+| `npm run theme` | Bakes the map theme into `public/data/theme/`: the gas of each slider stop as two images, plus `theme.json`, and writes `src/lib/data/theme.generated.ts` from them. Uses Playwright's own Chromium on software rendering. Run it after `albums.json` or `positions.json` change (see "Map theme data"). |
 
 ## Trying another data set
 
@@ -54,7 +55,7 @@ Routes:
 - `/album/[slug]`: the album, its closest albums and the map framed around them. "Explore this area" on the map drops the album and opens Explore with the map left where it is. `?by=sound`, `?by=balanced` (the default) or `?by=mood` picks the slider stop. `sound` is the address of the stop the code and the data files call `sonic`; `src/lib/url-state.ts` is the one place that translates.
 - `/about`: how the recommendations work, and the credits.
 
-One map stays mounted in the root layout for every route (`src/components/map/`). It is a WebGL point-sprite map ported from an earlier map of the same catalog. three.js loads on the client after first paint, cover sheets load only when zoom reaches the point where covers show, and the canvas draws only when something changes. Without WebGL the map shows a short message while search, lists and links keep working.
+One map stays mounted in the root layout for every route (`src/components/map/`). It is a WebGL point-sprite map ported from an earlier map of the same catalog. Everything its first picture needs is asked for as the page opens: the server HTML has preload links for the album list, the positions, the theme and the opening nebula image, and three.js is asked for on the client right after first paint (it is no script of the page). Until the map has drawn, the pane shows a soft stand-in of the nebula from the server HTML, placed where the real one will be; the canvas fades in over it once it has the nebula. `node scripts/perf/first-frame.mjs --label <name>` times this on a cold load and saves a filmstrip (see the top of that file). Cover sheets load only when zoom reaches the point where covers show, and the canvas draws only when something changes. Without WebGL the map shows a short message while search, lists and links keep working.
 
 App state (current stop, focus, hover, selection and the trail of visited albums) lives in one Zustand store, `src/lib/store.ts`. Every visible string, including labels read by screen readers, is in `src/lib/copy.ts`.
 
@@ -66,11 +67,13 @@ The gas behind the albums is painted once, at build time, not in the visitor's b
 - `gas-sonic-sharp.<hash>.webp`, `gas-balanced-sharp.<hash>.webp`, `gas-mood-sharp.<hash>.webp`: the same gas at the resolution of the approved design (about 2800 by 3300 px, 500 to 550 KB). A desktop or laptop with a real GPU fetches the one for the stop on screen once the map is idle and frees it when the slider comes to rest at another stop. The test is a main pointer that is a mouse or a trackpad and can hover, so a laptop with a touch screen gets it too.
 - `theme.json`: for every album its colour family and the gas brightness under it at each stop (both packed as text, which `src/lib/data/theme.ts` reads back), and for each stop the rectangle its two gas images cover, their sizes and their hashes.
 
-`<hash>` is the first 10 hex characters of the SHA-256 of the image's own bytes. Browsers keep everything under `/data` for a day, so an image whose content changes must change its name: `theme.json` names the images it was baked with, and the map draws no others. It also refuses an image whose size is not the one `theme.json` gives, and shows plain sky for that stop. A bake that changes nothing writes the same names again. One that changes an image writes a new name and deletes the old file.
+`<hash>` is the first 10 hex characters of the SHA-256 of the image's own bytes. Browsers keep the rest of `/data` for a day and these images for a year (`next.config.ts`), so an image whose content changes must change its name: `theme.json` names the images it was baked with, and the map draws no others. It also refuses an image whose size is not the one `theme.json` gives, and shows plain sky for that stop. A bake that changes nothing writes the same names again. One that changes an image writes a new name and deletes the old file.
 
 An image covers only the rectangle that holds its stop's gas, with a little empty sky around it, not the whole layout square. The build finds that rectangle itself and refuses to write an image whose edge is not plain sky. The smaller image is the sharper one scaled down, so the two always show the same gas.
 
-It reads `public/data/albums.json`, `public/data/positions.json` and one input file, `../data-pipeline/theme/weights.json` (described in that folder's README). It changes none of them.
+Its last step writes `src/lib/data/theme.generated.ts`, also committed, from the files above and `positions.json` (`scripts/theme/build-module.mjs`; `npm run theme:module` runs that step alone). The module holds what a page needs before `theme.json` has arrived: the images' hashes, so the server HTML can ask for the opening image at once; where each stop's gas lies and what the map's opening views are fitted to; and for each stop a soft stand-in picture of its nebula, 192 px and about 1.4 KB, that the pane shows until the map has drawn. `npm test` fails when the module is not what the committed data gives (`scripts/theme/build-module.test.mjs`).
+
+The build reads `public/data/albums.json`, `public/data/positions.json` and one input file, `../data-pipeline/theme/weights.json` (described in that folder's README). It changes none of them.
 
 ### When the theme goes stale
 
@@ -80,7 +83,7 @@ To bake again:
 
 1. Refresh the inputs, following `../data-pipeline/theme/README.md`. Its last step is `cd ../data-pipeline && .venv/bin/python -m rmr_pipeline.theme`.
 2. `npm run theme`, on arm64 Node with nothing else heavy running.
-3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit `public/data/theme/` as it now is: the seven files, and the removal of any image the bake replaced. `src/lib/data/theme.data.test.ts` also checks the file sizes (under 400 KB for a first image, under 1 MB for a sharper one) and the GPU memory the images need, so a bake that outgrows those limits fails there.
+3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit `public/data/theme/` as it now is (the seven files, and the removal of any image the bake replaced) together with `src/lib/data/theme.generated.ts`. `src/lib/data/theme.data.test.ts` also checks the file sizes (under 400 KB for a first image, under 1 MB for a sharper one) and the GPU memory the images need, so a bake that outgrows those limits fails there.
 
 A stale or missing theme never breaks the map for a visitor: the map checks the album count, and without a matching theme it shows plain sky.
 

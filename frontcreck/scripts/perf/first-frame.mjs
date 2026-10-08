@@ -3,8 +3,8 @@
  * node scripts/perf/first-frame.mjs --label <name>: how long a cold load takes to put a picture in the map pane.
  * Reported only, no budgets. It measures the production build (run `npm run build` first) on `next start`.
  *
- * For Home and /map, at 1440 x 900 and at 390 x 844 (device pixel ratio 2, touch), with no throttling and with a
- * slow connection, each `--runs` times (3) in a fresh browser with an empty cache, it records:
+ * For Home and /map, at 1440 x 900 and at 390 x 844 (device pixel ratio 2, touch), with no throttling and on two
+ * throttled connections, each `--runs` times (3) in a fresh browser with an empty cache, it records:
  *   - the page's own marks (src/lib/marks.ts), first paint, first and largest contentful paint, search usable,
  *     long tasks, and every request for a data file, a nebula image or the map's code;
  *   - a screencast (the frames the browser presented, each with its time), from which it reads when the map pane
@@ -14,10 +14,17 @@
  * every 100 ms of the slow load), and the frames at first light, first stars, first nebula and the settled page.
  *
  * Options: --label <name> (required), --runs <n>, --mode gpu|software (gpu: the installed Chrome on Metal, as
- * `npm run perf`; software: SwiftShader), --only <page>:<viewport>:<profile> (for a single case), --port <n>.
+ * `npm run perf`; software: SwiftShader), --only <page>:<viewport>:<profile> (for a single case), --port <n>,
+ * --hold-gas <ms> (the opening nebula image is held back that long, to see the stars arrive before it).
  *
- * The slow profile is Lighthouse's "slow 4G" as DevTools applies it to each request: 562.5 ms added latency,
- * 1474.56 kbit/s down, 675 kbit/s up (lighthouse/core/config/constants.js, throttling.mobileSlow4G).
+ * The throttled profiles are applied with CDP Network.emulateNetworkConditions, to every request of the page:
+ *   slow4g  Lighthouse's "slow 4G" as DevTools applies it: 562.5 ms added latency, 1474.56 kbit/s down, 675 kbit/s
+ *           up (lighthouse/core/config/constants.js, throttling.mobileSlow4G). The page is then short of
+ *           bandwidth from start to end: what counts is how many bytes the first picture needs.
+ *   fast4g  DevTools' "Fast 4G" preset: 165 ms added latency, 8.1 Mbit/s down, 1.35 Mbit/s up (9 and 1.5 Mbit/s
+ *           times its 0.9 factor, 60 ms times 2.75). Here the waits between requests count.
+ * `next start` serves HTTP/1.1 with gzip; a deployment serves HTTP/2 or 3 with Brotli, so the numbers are for
+ * comparing two builds, not a forecast.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -41,6 +48,7 @@ const RUNS = Number(opt('--runs', '3'));
 const MODE = opt('--mode', 'gpu');
 const PORT = Number(opt('--port', '3210'));
 const ONLY = opt('--only');
+const HOLD_GAS = Number(opt('--hold-gas', '0'));
 const OUT = path.join(ROOT, 'test-results/first-frame', LABEL);
 
 const MODES = {
@@ -54,6 +62,7 @@ const VIEWPORTS = {
 const PAGES = { home: '/', map: '/map' };
 const PROFILES = {
   none: null,
+  fast4g: { offline: false, latency: 165, downloadThroughput: (9_000_000 * 0.9) / 8, uploadThroughput: (1_500_000 * 0.9) / 8 },
   slow4g: { offline: false, latency: 562.5, downloadThroughput: (1474.56 * 1024) / 8, uploadThroughput: (675 * 1024) / 8 },
 };
 
@@ -224,6 +233,12 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
       if (/\/data\//.test(p)) requests.push(p);
     });
     await page.addInitScript(observe);
+    if (HOLD_GAS > 0) {
+      await page.route(/\/data\/theme\/gas-balanced\.[0-9a-f]+\.webp$/, async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, HOLD_GAS));
+        await route.continue();
+      });
+    }
     const cdp = await ctx.newCDPSession(page);
     await cdp.send('Network.enable');
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: false });
@@ -235,7 +250,20 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
     });
     await cdp.send('Page.startScreencast', { format: 'jpeg', quality: 80, everyNthFrame: 1 });
     await page.goto(`${base}${PAGES[pageName]}`, { waitUntil: 'commit', timeout: 120_000 });
-    await page.waitForFunction(() => typeof window.__rmr?.gasShownMs === 'number' || window.__rmr?.gas === 'off', null, { timeout: 120_000 });
+    try {
+      await page.waitForFunction(() => typeof window.__rmr?.gasShownMs === 'number' || window.__rmr?.gas === 'off', null, { timeout: 120_000 });
+    } catch (e) {
+      // What the page had got to, so a load that never showed the nebula can be explained.
+      const state = await page.evaluate(() => ({
+        gas: window.__rmr?.gas ?? null,
+        webgl: window.__rmr?.getState().webgl ?? null,
+        frames: window.__rmr?.frames ?? 0,
+        marks: performance.getEntriesByType('mark').map((m) => `${m.name}@${Math.round(m.startTime)}`),
+        pending: performance.getEntriesByType('resource').filter((r) => r.responseEnd === 0).map((r) => new URL(r.name).pathname),
+        done: performance.getEntriesByType('resource').filter((r) => /\/data\/|chunks/.test(r.name)).map((r) => `${new URL(r.name).pathname.split('/').pop()} ${Math.round(r.startTime)}-${Math.round(r.responseEnd)}`),
+      })).catch(() => null);
+      throw new Error(`${pageName} ${vpName} ${profileName}: no nebula after 120 s. ${JSON.stringify(state)} console: ${JSON.stringify(consoleLines)}`, { cause: e });
+    }
     // the fade, the late stops on /map and anything else that still draws
     await page.waitForTimeout(2000);
     await cdp.send('Page.stopScreencast');
@@ -300,6 +328,8 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
       save('1-first-paint', frames[0]);
       save('2-pane-lit', at(firstLit?.t ?? null));
       save('3-stars', at(firstStars?.t ?? null));
+      // the canvas once its fade has run (when it is shown before the nebula, this is the stars over the stand-in)
+      if (info.marks['rmr-map-shown'] !== null) save('3b-map-shown', at(info.marks['rmr-map-shown'] + 230));
       // (a frame is presented a moment after the mark of the script that drew it)
       save('4-nebula', at(info.marks['rmr-gas-drawn']));
       fs.writeFileSync(path.join(saveTo, '5-settled.png'), finalPng);
@@ -332,7 +362,7 @@ async function main() {
           if (ONLY && ONLY !== `${pageName}:${vpName}:${profileName}`) continue;
           const runs = [];
           for (let i = 0; i < RUNS; i++) {
-            // The frames of the first run are kept: of the slow load for the filmstrip, of the fast one for the stills.
+            // The frames of the first run of every case are kept: the stills and a filmstrip.
             const saveTo = i === 0 ? path.join(OUT, `${pageName}-${vpName}-${profileName}`) : null;
             const r = await runOnce(server.base, pageName, vpName, profileName, saveTo);
             runs.push(r);
