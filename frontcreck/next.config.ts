@@ -91,6 +91,14 @@ const nextConfig: NextConfig = {
         ],
       },
       {
+        // The nebula images carry a hash of their own bytes in their names (gas-<stop>.<hash>.webp and
+        // gas-<stop>-sharp.<hash>.webp, written by npm run theme), so a name never stands for other content: they
+        // are kept for a year and never asked about again. After the /data rule, whose Cache-Control this replaces
+        // (the last matching rule wins); theme.json and every other file of /data keep the day.
+        source: '/data/theme/:file(gas-[a-z]+(?:-sharp)?\\.[0-9a-f]{10}\\.webp)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+      {
         // The site's own copies of the Cover Art Archive covers (the pipeline's `covers host`). The same cache
         // lifetime as /data: a file can change when its cover is fetched again. No Cross-Origin-Resource-Policy:
         // a link preview shows such a file on another site.
