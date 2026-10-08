@@ -51,6 +51,7 @@ import {
   stopsShown,
 } from "../shaders/gas";
 import { useMapStore } from "../state/mapStore";
+import { setMapReveal } from "../state/reveal";
 import { rendererName } from "../state/renderer";
 import { coverCssPx, pxPerWorld } from "../state/zoomLimits";
 
@@ -253,6 +254,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     if (!enabled) {
       setGasFlag("off");
       dropEarlyGas();
+      // No nebula will come: the stand-in of the first paint fades out, and the stars show on the plain sky.
+      setMapReveal("sky");
       return;
     }
     // An image asked for as the page opened that this theme does not name will never be taken: free it.
@@ -406,6 +409,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       chooseShader();
       store[stop] = emptyGas();
       noImage.add(stop);
+      // The stop on screen shows plain sky: the stand-in of the first paint must not stay behind the stars.
+      if (onScreen(stop)) setMapReveal("sky");
       if (stopsShown(useMapStore.getState().sliderT).includes(stop) || !mesh.visible) invalidate();
       settle();
     }
@@ -940,6 +945,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       window.__rmr.gasShownMs = performance.now();
       markOnce("rmr-gas-drawn");
     }
+    // The nebula is in this frame: the canvas may show, over the stand-in it now covers (canvas/Reveal.tsx).
+    if (!(empty.current.has(pair.a) && empty.current.has(pair.b))) setMapReveal("gas");
     const u = material.uniforms;
     // The sharper image stands in for its stop's first image wherever that stop is bound, also as one end of a
     // morph, so nothing changes on screen when the slider starts to move.

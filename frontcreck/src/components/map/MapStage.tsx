@@ -21,6 +21,7 @@ import { MapHint } from './overlays/MapHint';
 import { NoWebGL } from './overlays/NoWebGL';
 import { SimilaritySlider } from './overlays/SimilaritySlider';
 import { ZoomControls } from './overlays/ZoomControls';
+import { setMapReveal } from './state/reveal';
 import type { MapApi, MapCallbacks, MapInput } from './types';
 
 // The map's code is asked for as the page opens (boot.ts loadMapChunk imports the same module), not when this first renders.
@@ -129,8 +130,10 @@ export function MapStage() {
   const theme = mapData ? themeFor(loadedTheme, mapData.n) : null;
   useEffect(() => {
     // Tests wait for the gas to settle (e2e/helpers.ts waitForMap); tell them when there is none to wait for.
-    if (!window.__rmr) return;
-    if (themeStatus === 'error' || (mapData !== null && loadedTheme !== null && theme === null)) window.__rmr.gas = 'off';
+    // No nebula will come either: the stand-in of the first paint fades out (state/reveal.ts).
+    if (themeStatus !== 'error' && (mapData === null || loadedTheme === null || theme !== null)) return;
+    setMapReveal('sky');
+    if (window.__rmr) window.__rmr.gas = 'off';
   }, [themeStatus, mapData, loadedTheme, theme]);
 
   const interactive = view === 'explore' || (view === 'album' && (!narrow || mapMode));

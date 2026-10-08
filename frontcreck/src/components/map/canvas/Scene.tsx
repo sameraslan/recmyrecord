@@ -10,6 +10,7 @@ import type { MapCamera } from "@/lib/types";
 import { interpolated } from "../data";
 import { setInvalidate } from "../state/invalidate";
 import { useMapStore } from "../state/mapStore";
+import { getMapReveal } from "../state/reveal";
 import type { MapApi } from "../types";
 import { AlbumField } from "./AlbumField";
 import { useAtlasTextures } from "./AtlasManager";
@@ -25,6 +26,7 @@ import { MarkerDriver } from "./MarkerDriver";
 import { MorphDriver } from "./MorphDriver";
 import { OverlayDriver } from "./OverlayDriver";
 import { PickController } from "./PickController";
+import { Reveal, VEILED } from "./Reveal";
 import { TwinkleDriver } from "./TwinkleDriver";
 
 // Bridges R3F's demand-mode invalidate() out to state/invalidate.ts, so DOM
@@ -126,6 +128,8 @@ export function Scene({ initialCamera, onApi }: { initialCamera: MapCamera | nul
         gl.setClearColor(0x000000, 0);
         const canvas = gl.domElement;
         canvas.classList.add("map-canvas");
+        // See-through over the stand-in nebula until the map has something to show (Reveal below).
+        if (getMapReveal() === "wait") canvas.classList.add(VEILED);
         canvas.setAttribute("role", "img");
         const interactive = useMapStore.getState().input.interactive;
         canvas.setAttribute("aria-label", interactive ? COPY.map.canvasLabel : COPY.map.canvasLabelStatic);
@@ -172,6 +176,8 @@ function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null;
       {/* The gas reads the slider position MorphDriver has just written and is drawn under the album points.
           Without a theme there is no gas: the pane's sky colour shows through the transparent canvas. */}
       {theme ? <GasField data={data} theme={theme} /> : null}
+      {/* After GasField: shows the canvas once the nebula is drawn, or the stars alone if it is late. */}
+      <Reveal />
       <AlbumField data={data} atlasTextures={textures} positionsRef={positionsRef} />
       <OverlayDriver positionsRef={positionsRef} />
       <MarkerDriver positionsRef={positionsRef} />
