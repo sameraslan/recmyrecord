@@ -1,0 +1,411 @@
+<title>recmyrecord Album Notes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: the real album panel (site tokens, dark only, as the site is) on the left, reading notes on the right; plan and numbers below. */
+:root {
+  --room: #15110d; --room-2: #1c1712; --room-3: #262019; --room-4: #322a21;
+  --paper: #ede5d5; --dust: #b3a792; --ash: #a39887;
+  --rule: rgba(237, 229, 213, 0.11); --rule-2: rgba(237, 229, 213, 0.2);
+  --lamp: #e6a856; --lamp-ink: #1a130b; --moss: #97a077; --clay: #c4886f; --ochre: #c8a560;
+  --acc: #afcddf; --w1: #2a3e4a; --w2: #2d2e2e;
+  --serif: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  --sans: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --out: cubic-bezier(.22, .72, .2, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--room); color: var(--paper); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; border-radius: 2px; }
+ul, ol { list-style: none; margin: 0; padding: 0; }
+p, h1, h2, h3, dl, dd { margin: 0; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 24px; padding-block: 36px 64px; display: grid; gap: 44px; }
+@media (max-width: 600px) { .wrap { padding-inline: 16px; padding-block: 24px 48px; } }
+
+/* Page header */
+.intro { display: grid; gap: 10px; max-width: 46em; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ash); }
+.intro h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(34px, 5vw, 50px); line-height: 1; letter-spacing: -.015em; text-wrap: balance; }
+.intro p { color: var(--dust); max-width: 40em; }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: end; }
+.ctl { display: grid; gap: 6px; }
+.ctl-label { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { padding: 8px 12px; border: 1px solid var(--rule-2); border-radius: 2px; color: var(--dust); font-size: 13.5px; text-align: left; line-height: 1.25; }
+.seg button small { display: block; font-size: 11.5px; color: var(--ash); }
+.seg button[aria-pressed="true"] { color: var(--paper); border-color: var(--lamp); background: color-mix(in srgb, var(--lamp) 12%, transparent); }
+.seg button:hover { color: var(--paper); }
+
+/* Stage: panel + notes */
+.stage { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 40px; align-items: start; }
+@media (max-width: 1060px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+
+/* The album panel, as on the site */
+.panel { position: relative; width: 648px; max-width: 100%; background: var(--room-2); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; transition: width .3s var(--out); }
+.panel.is-phone { width: 390px; }
+@media (max-width: 700px) { .ctl-width { display: none; } }
+.amb { position: absolute; inset: 0 0 auto 0; height: 440px; pointer-events: none; background:
+  radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--w1) 85%, transparent), transparent 70%),
+  radial-gradient(90% 80% at 100% 10%, color-mix(in srgb, var(--w2) 80%, transparent), transparent 70%);
+  -webkit-mask-image: linear-gradient(#000 40%, transparent); mask-image: linear-gradient(#000 40%, transparent); opacity: .9; }
+.pin { position: relative; padding: 18px 26px 26px; display: grid; gap: 0; }
+.is-phone .pin { padding: 14px 20px 22px; }
+.trail { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ash); min-height: 38px; }
+.trail b { font-weight: 400; color: var(--dust); }
+.closex { position: absolute; top: 14px; right: 16px; width: 36px; height: 36px; display: grid; place-items: center; color: var(--dust); }
+
+.seed { display: grid; grid-template-columns: 116px minmax(0, 1fr); column-gap: 22px; align-items: end; grid-template-areas: "cover artist" "cover title" "cover actions" "tags tags"; grid-template-rows: 1fr auto auto auto; }
+.is-phone .seed { grid-template-columns: 92px minmax(0, 1fr); column-gap: 16px; }
+.cover { grid-area: cover; aspect-ratio: 1; width: 100%; border-radius: 2px; box-shadow: 0 18px 40px -20px rgba(0,0,0,.85); display: grid; place-items: end start; padding: 9px; font-family: var(--serif); font-size: 13px; line-height: 1.05; color: rgba(237,229,213,.82); overflow: hidden; }
+.artist { grid-area: artist; font-size: 15px; color: var(--dust); }
+.artist .yr { color: var(--ash); }
+.title { grid-area: title; font-family: var(--serif); font-weight: 500; line-height: .96; letter-spacing: -.015em; margin-top: 2px; font-size: 44px; text-wrap: balance; overflow-wrap: break-word; }
+.is-phone .title { font-size: 34px; }
+.actions { grid-area: actions; display: flex; gap: 6px; margin-top: 12px; }
+.btn { min-height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; border-radius: 2px; font-size: 14px; font-weight: 500; }
+.btn-lamp { background: var(--lamp); color: var(--lamp-ink); }
+.btn-ghost { border: 1px solid var(--rule-2); color: var(--dust); width: 40px; justify-content: center; padding: 0; }
+.tags { grid-area: tags; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+.tags li { font-size: 12.5px; line-height: 1; padding: 6px 8px; border-radius: 2px; color: var(--dust); border: 1px solid var(--rule-2); }
+
+/* NEW: the About block */
+.about { margin-top: 16px; display: grid; gap: 6px; position: relative; }
+.mark { outline: 1px dashed color-mix(in srgb, var(--lamp) 55%, transparent); outline-offset: 6px; border-radius: 2px; }
+.hook { font-family: var(--serif); font-weight: 500; font-size: 20px; line-height: 1.35; color: var(--paper); text-wrap: pretty; max-width: 36em; }
+.is-phone .hook { font-size: 19px; }
+.empty { font-size: 15px; color: var(--dust); max-width: 32em; }
+.meta { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline; min-height: 28px; }
+.textbtn { font-size: 13.5px; color: var(--paper); text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 4px; display: inline-flex; gap: 6px; align-items: center; }
+.textbtn:hover { text-decoration-color: var(--acc); }
+.textbtn svg { width: 11px; height: 11px; transition: transform .18s var(--out); }
+.textbtn[aria-expanded="true"] svg { transform: rotate(180deg); }
+.src { font-size: 12.5px; color: var(--ash); }
+.notes { display: grid; gap: 0; padding-top: 8px; max-width: 36em; }
+.notes[hidden] { display: none; }
+.skip { font-size: 12.5px; color: var(--ash); justify-self: start; margin-bottom: 10px; text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 3px; }
+.facts { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 5px 14px; padding-block: 4px 2px; }
+.is-phone .facts { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.is-phone .facts dd { margin-bottom: 6px; }
+.cap { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); font-weight: 500; }
+.facts dt { padding-top: 2px; }
+.facts dd { font-size: 14.5px; line-height: 1.45; color: var(--dust); }
+.notes h3 { margin: 22px 0 6px; }
+.notes p { font-size: 15.5px; line-height: 1.62; color: var(--paper); }
+.notes p + p { margin-top: .75em; }
+.listen { display: grid; gap: 10px; }
+.listen li { position: relative; padding-left: 14px; }
+.listen li::before { content: ""; position: absolute; left: 0; top: 4px; bottom: 4px; width: 2px; background: var(--acc); }
+.listen .trk { display: block; font-family: var(--serif); font-style: italic; font-size: 17px; line-height: 1.2; color: var(--acc); }
+.listen span:last-child { font-size: 15px; line-height: 1.55; }
+.foot { margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--rule); font-size: 13px; line-height: 1.5; color: var(--ash); display: grid; gap: 8px; }
+.foot a { text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 3px; }
+.foot a:hover { color: var(--paper); }
+.less { justify-self: start; margin-top: 4px; }
+.nbsp { white-space: nowrap; }
+
+.recs { margin-top: 18px; }
+.recs-h { font-family: var(--serif); font-style: italic; font-size: 22px; font-weight: 500; padding-bottom: 8px; border-bottom: 1px solid var(--rule); }
+.rec { display: grid; grid-template-columns: 22px 54px minmax(0, 1fr); gap: 12px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+.rec-n { font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--ash); text-align: right; }
+.rec-c { width: 54px; aspect-ratio: 1; border-radius: 2px; }
+.rec-t { font-family: var(--serif); font-weight: 600; font-size: 21px; line-height: 1.08; overflow-wrap: anywhere; }
+.rec-a { font-size: 14px; color: var(--dust); }
+.rec-s { font-size: 13px; color: var(--ash); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rec-s span { color: var(--dust); }
+.is-phone .rec-s { display: none; }
+
+/* Reading notes beside the panel */
+.side { display: grid; gap: 22px; align-content: start; min-width: 0; }
+.side h2, .sec h2 { font-family: var(--serif); font-weight: 500; font-size: 28px; line-height: 1.1; text-wrap: balance; }
+.lookfor { display: grid; gap: 14px; counter-reset: k; }
+.lookfor li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; color: var(--dust); font-size: 14.5px; }
+.lookfor li::before { counter-increment: k; content: counter(k); font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--lamp); line-height: 1.1; text-align: right; }
+.lookfor b { color: var(--paper); font-weight: 500; }
+.note { font-size: 13px; color: var(--ash); border-left: 2px solid var(--rule-2); padding-left: 12px; }
+
+/* Sections below */
+.sec { display: grid; gap: 16px; }
+.sec > p { color: var(--dust); max-width: 46em; }
+.bars { display: grid; gap: 10px; }
+.bar-row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 54px; gap: 12px; align-items: center; font-size: 13.5px; }
+.bar-row .lab { color: var(--dust); font-variant-numeric: tabular-nums; }
+.bar-row .n { color: var(--ash); font-variant-numeric: tabular-nums; text-align: right; font-size: 12.5px; }
+.bar { display: flex; height: 22px; border-radius: 2px; overflow: hidden; background: var(--room-3); }
+.bar i { display: block; height: 100%; }
+.k-en { background: var(--lamp); } .k-ot { background: var(--ochre); opacity: .7; } .k-ar { background: var(--moss); } .k-no { background: var(--room-4); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--dust); }
+.legend span { display: inline-flex; gap: 7px; align-items: center; }
+.legend i { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+@media (max-width: 600px) { .bar-row { grid-template-columns: 92px minmax(0, 1fr) 44px; gap: 8px; } }
+.tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.tier { border: 1px solid var(--rule); border-radius: 3px; padding: 14px 16px; display: grid; gap: 6px; align-content: start; background: var(--room-2); }
+.tier h3 { font-family: var(--serif); font-size: 21px; font-weight: 600; line-height: 1.1; }
+.tier .share { font-size: 12.5px; color: var(--lamp); font-variant-numeric: tabular-nums; }
+.tier p { font-size: 14px; color: var(--dust); }
+.steps { display: grid; gap: 12px; max-width: 52em; }
+.steps li { display: grid; grid-template-columns: 94px minmax(0, 1fr); gap: 14px; font-size: 14.5px; color: var(--dust); }
+.steps li b { color: var(--paper); font-weight: 500; }
+.steps .ph { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--lamp); padding-top: 3px; }
+@media (max-width: 600px) { .steps li { grid-template-columns: minmax(0, 1fr); gap: 2px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <span class="eyebrow">recmyrecord · issue 73 · prototype</span>
+    <h1>Album notes</h1>
+    <p>A short line about the album under its mood words, and the longer story one tap away, ending where the closest albums begin. Three real albums show the three situations the catalog is in. The notes were written for this prototype from the sources they credit and have not been checked by hand yet.</p>
+  </header>
+
+  <div class="controls">
+    <div class="ctl">
+      <span class="ctl-label" id="album-l">Album</span>
+      <div class="seg" role="group" aria-labelledby="album-l" id="albums"></div>
+    </div>
+    <div class="ctl ctl-width">
+      <span class="ctl-label" id="size-l">Width</span>
+      <div class="seg" role="group" aria-labelledby="size-l">
+        <button type="button" id="sz-desk" aria-pressed="true">Laptop panel</button>
+        <button type="button" id="sz-phone" aria-pressed="false">Phone</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage">
+    <section class="panel" id="panel" aria-label="Album panel prototype">
+      <div class="amb" aria-hidden="true"></div>
+      <span class="closex" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 3l10 10M13 3L3 13"/></svg></span>
+      <div class="pin" id="pin"></div>
+    </section>
+
+    <aside class="side" aria-labelledby="side-h">
+      <h2 id="side-h">What to look at</h2>
+      <ol class="lookfor">
+        <li><span><b>The year</b> now sits beside the artist. The site has it for every album and shows it nowhere today.</span></li>
+        <li><span><b>The line</b> (dashed outline) says what makes the record itself, in under 130 characters. It never says the album is acclaimed: every album here is.</span></li>
+        <li><span><b>Where the words come from</b> is always in view, with AI help said up front, not hidden in a footer.</span></li>
+        <li><span><b>Read more</b> opens the notes in place: credits, where it comes from, how it was made, what to listen for. The closest albums follow straight after.</span></li>
+        <li><span><b>Listen for</b> is the part made for the moment the record is playing in another app. Try Películas: a motorcycle is one of the instruments.</span></li>
+        <li><span><b>Nothing written?</b> Ninjin shows the quiet line used when no source exists. No invented text.</span></li>
+      </ol>
+      <p class="note">Closed, the block costs about 90 px on a laptop: all five closest albums still fit at 1440 × 900. The recommendations themselves are unchanged and the notes never claim to explain them.</p>
+    </aside>
+  </div>
+
+  <section class="sec" aria-labelledby="cov-h" id="coverage">
+    <h2 id="cov-h">How much of the catalog has something to say</h2>
+    <p id="cov-p">Measured on all 10,467 albums by matching each one to Wikidata (by RYM id, Spotify, Apple Music and Deezer ids, then exact title and artist, then a Wikipedia search checked against the album's artist and title). Exact matches for every album, plus a search of 300 random unmatched ones to estimate the rest; spot checks found 54 of 55 matches right. The right column is the share with an article about the album in any language.</p>
+    <div class="legend" aria-hidden="true">
+      <span><i class="k-en"></i>English article about the album</span>
+      <span><i class="k-ot"></i>Article in another language only</span>
+      <span><i class="k-ar"></i>No album article, artist has one</span>
+      <span><i class="k-no"></i>Nothing found</span>
+    </div>
+    <div class="bars" id="bars"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="tier-h">
+    <h2 id="tier-h">What each album gets</h2>
+    <div class="tiers" id="tiers"></div>
+  </section>
+
+  <section class="sec" aria-labelledby="plan-h">
+    <h2 id="plan-h">The plan</h2>
+    <ol class="steps">
+      <li><span class="ph">Phase 0</span><span><b>A trial on 30 albums</b> (rich, translated, thin, across rank bands): notes written in both forms, the plain Wikipedia excerpt and the written notes, then rated by you and two listeners for accuracy and interest. An experiment folder; it changes nothing on the site.</span></li>
+      <li><span class="ph">Phase 1</span><span><b>The build</b>, after your sign-off: a pipeline step that fetches sources, writes and checks the notes, and saves them with their source revision and licence; the year, the line and Read more on the album page; the empty line; credits on the About page.</span></li>
+      <li><span class="ph">Phase 2</span><span><b>Richer notes</b>: links to albums in the catalog that the story mentions, a "Same people, other records" strip from credits, the line on the map card and in link previews.</span></li>
+    </ol>
+  </section>
+</div>
+
+<script>
+const CHEV = '<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 4.5l4 4 4-4"/></svg>';
+const EXT = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 3H3v10h10v-3M9 3h4v4M13 3L7 9"/></svg>';
+const LINK = '<svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1"/><path d="M3 11V3h8"/></svg>';
+const SMILE = '<span class="nbsp"> :)</span>';
+const CC = 'https://creativecommons.org/licenses/by-sa/4.0/';
+
+const ALBUMS = [
+  {
+    id: 'ok', label: 'OK Computer', sub: 'English article',
+    artist: 'Radiohead', title: 'OK Computer', year: 1997, w: ['#2a3e4a', '#2d2e2e', '#afcddf'],
+    trail: ['In Rainbows', 'OK Computer'],
+    tags: ['melancholic', 'anxious', 'futuristic', 'atmospheric', 'lonely', 'cold'],
+    hook: 'Radiohead step away from the inward songs of The Bends, recording mostly live in an empty mansion near Bath.',
+    src: 'Summarised from Wikipedia with AI help', srcPhone: 'Wikipedia, AI help',
+    facts: [
+      ['Released', '21 May 1997'],
+      ['Recorded', '1996 to early 1997, Canned Applause near Didcot, and St Catherine’s Court, Bath'],
+      ['Produced by', 'Nigel Godrich and Radiohead'],
+      ['Label', 'Parlophone, Capitol'],
+    ],
+    sections: [
+      { h: 'Where it comes from', p: [
+        'After The Bends, Thom Yorke said he did not want to make another miserable, morbid and negative record, and Phil Selway thought more soul searching would be excruciatingly boring. The band wanted to record it themselves.',
+        'Nigel Godrich, who had engineered The Bends, came in as an adviser and ended up producing the album with them.' ] },
+      { h: 'Making it', p: [
+        'They started in Canned Applause, their converted shed near Didcot, then moved to St Catherine’s Court in Bath, a mansion owned by the actress Jane Seymour and empty at the time. They used its rooms for their sound: Let Down was recorded in a ballroom at 3 am, and the echo on the voice in Exit Music comes from a stone staircase. Ed O’Brien guessed that 80 per cent of the album was recorded live.' ] },
+      { h: 'Listen for', items: [
+        ['Airbag', 'The drums are a few seconds of Phil Selway’s playing, sampled and rearranged, after the music of DJ Shadow.'],
+        ['Paranoid Android', 'Four sections and no chorus, built the way the Beatles’ Happiness Is a Warm Gun and Queen’s Bohemian Rhapsody are.'],
+        ['Fitter Happier', 'The voice is the speech synthesiser of the Macintosh SimpleText program. Yorke wrote the words in ten minutes.'],
+        ['Exit Music (For a Film)', 'Written for Baz Luhrmann’s Romeo + Juliet. The band asked for it to be left off the film’s soundtrack album.'],
+        ['No Surprises', 'One take, a guitar after the Beach Boys’ Wouldn’t It Be Nice, and the mood of Louis Armstrong’s What a Wonderful World.'] ] },
+      { h: 'What came after', p: [
+        'Grant Gee followed the band on the tour that came after it for the film Meeting People Is Easy, shown in 1998. The layered sound and abstract words set up the more experimental records Radiohead made next.' ] },
+    ],
+    foot: `Adapted from the Wikipedia article <a href="https://en.wikipedia.org/w/index.php?title=OK_Computer&oldid=1378826414" target="_blank" rel="noopener">OK Computer</a> (English), shared under <a href="${CC}" target="_blank" rel="noopener">CC BY-SA 4.0</a>, which lets you reuse this text too. Album facts from Wikidata. Written with AI help. It can get small details wrong, and the article has the whole story.`,
+    recs: [
+      ['No Good for No One Now', 'Owen', '#564621', ['melancholic', 'lonely']],
+      ['The Moon & Antarctica', 'Modest Mouse', '#353338', ['lonely', 'cold']],
+      ['Transcendental Blues', 'Steve Earle', '#3e3624', ['melancholic']],
+      ['Kid A', 'Radiohead', '#2c343b', ['cold', 'melancholic']],
+      ['Is This Desire?', 'PJ Harvey', '#3f403f', ['melancholic', 'lonely']],
+    ],
+  },
+  {
+    id: 'pel', label: 'Películas', sub: 'Spanish article only',
+    artist: 'La Máquina de Hacer Pájaros', title: 'Películas', year: 1977, w: ['#4b1d2b', '#433f19', '#d7ca42'], lang: 'es',
+    trail: ['Grasa de las capitales', 'Películas'],
+    tags: ['melodic', 'urban', 'complex', 'progressive', 'uncommon time signatures', 'technical', 'lush'],
+    hook: 'Songs linked by the idea of cinema, recorded in Buenos Aires in 1977 as Argentina’s military dictatorship took hold.',
+    src: 'From Spanish Wikipedia, translated with AI help', srcPhone: 'Spanish Wikipedia, AI help',
+    facts: [
+      ['Released', '1977'],
+      ['Recorded', '1977, Estudios Ion'],
+      ['Label', 'Talent Microfón'],
+      ['Players', 'Charly García, piano, synthesizer, organ, voice; Carlos Cutaia, organ, piano, string ensemble; Gustavo Bazterrica, guitars, voice; José Luis Fernández, bass, acoustic guitar, voice; Oscar Moro, drums'],
+      ['Sleeve', 'Juan Oreste Gatti'],
+    ],
+    sections: [
+      { h: 'Where it comes from', p: [
+        'The band’s second and last album. Where their first record spread across many styles, this one ties its songs to a single idea, the cinema, in the manner of symphonic rock bands like Yes.',
+        'Many of the lyrics are read as metaphors for the horrors that were beginning under the military dictatorship of 1976 to 1983. The title can be heard that way too: watching films as the one thing left to do for a young person in Argentina at the time.' ] },
+      { h: 'Listen for', items: [
+        ['¿Qué se puede hacer salvo ver películas?', 'Congas by Roberto “Negro” Valencia, and voices lifted from the film Casa de muñecas.'],
+        ['Hipercandombe', 'A candombe rhythm played on loud electric instruments.'],
+        ['Ruta perdedora', 'The engine is real: a Honda 500 motorcycle, credited as an instrument and played by Oscar López.'],
+        ['Marilyn, la Cenicienta y las mujeres', 'A children’s choir, Los Desamparados del Once.'],
+        ['No te dejes desanimar', 'The pop song of the set, with strings arranged by Carlos Cutaia.'] ] },
+      { h: 'What came after', p: [
+        'The record was first presented at the Teatro Coliseo. The show people remember came a few months later at the Luna Park in July 1977, a hall for about ten thousand, full, with the band dressed in white among candelabras.' ] },
+    ],
+    foot: `Translated and adapted from the Spanish Wikipedia article <a href="https://es.wikipedia.org/w/index.php?title=Pel%C3%ADculas_(%C3%A1lbum)&oldid=171066773" target="_blank" rel="noopener" lang="es">Películas (álbum)</a>, shared under <a href="${CC}" target="_blank" rel="noopener">CC BY-SA 4.0</a>, which lets you reuse this text too. Written with AI help. It can get small details wrong, and the article has the whole story.`,
+    recs: [
+      ['Arbeit macht frei', 'Area', '#43371d', ['complex', 'progressive']],
+      ['Grasa de las capitales', 'Serú Girán', '#46401b', ['melodic', 'complex']],
+      ['i.o.u.', 'Allan Holdsworth', '#262528', ['complex', 'technical']],
+      ['Samurai', 'Samurai', '#414237', ['progressive', 'complex']],
+      ['In the Wake of Poseidon', 'King Crimson', '#4c271d', ['complex', 'uncommon time signatures']],
+    ],
+  },
+  {
+    id: 'nin', label: 'Ninjin', sub: 'Nothing written',
+    artist: '佐々木好 [Konomi Sasaki]', title: 'にんじん [Ninjin]', year: 1983, w: ['#403f36', '#272a29', '#64b48a'], lang: 'ja',
+    trail: ['Floating Into the Night', 'Ninjin'],
+    tags: ['nocturnal', 'mysterious', 'melodic', 'mellow', 'atmospheric', 'ethereal', 'melancholic'],
+    empty: 'Not much has been written about this one yet, so you get to hear it with fresh ears.',
+    recs: [
+      ['Floating Into the Night', 'Julee Cruise', '#282929', ['nocturnal', 'ethereal']],
+      ['Love', '斉藤由貴 [Yuki Saito]', '#242740', ['nocturnal', 'ethereal']],
+      ['Nights From the Alhambra', 'Loreena McKennitt', '#452c1a', ['ethereal', 'mysterious']],
+      ['Loud City Song', 'Julia Holter', '#2f242b', ['nocturnal', 'ethereal']],
+      ['寓言 [Yùyán]', '王菲 [Faye Wong]', '#1d3849', ['atmospheric', 'ethereal']],
+    ],
+  },
+];
+
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const narrowQ = window.matchMedia('(max-width: 700px)');
+const state = { album: 'ok', phone: narrowQ.matches, open: false };
+narrowQ.addEventListener('change', (e) => { state.phone = e.matches; render(); });
+const panel = document.getElementById('panel');
+const pin = document.getElementById('pin');
+
+function coverStyle(w) { return `background: linear-gradient(145deg, ${w[2]}55, ${w[0]} 55%, ${w[1]});`; }
+
+function render() {
+  const a = ALBUMS.find((x) => x.id === state.album);
+  const root = document.documentElement.style;
+  root.setProperty('--acc', a.w[2]); root.setProperty('--w1', a.w[0]); root.setProperty('--w2', a.w[1]);
+  panel.classList.toggle('is-phone', state.phone);
+  const L = a.lang ? ` lang="${a.lang}"` : '';
+  let about;
+  if (a.empty) {
+    about = `<div class="about mark"><p class="empty">${esc(a.empty)}${SMILE}</p></div>`;
+  } else {
+    const secs = a.sections.map((s) => s.items
+      ? `<h3 class="cap">${s.h}</h3><ul class="listen">${s.items.map(([t, x]) => `<li><span class="trk"${L}>${esc(t)}</span><span>${esc(x)}</span></li>`).join('')}</ul>`
+      : `<h3 class="cap">${s.h}</h3>${s.p.map((x) => `<p>${esc(x)}</p>`).join('')}`).join('');
+    about = `<section class="about" aria-labelledby="about-h">
+      <h2 id="about-h" class="sr" hidden>About this album</h2>
+      <p class="hook mark">${esc(a.hook)}</p>
+      <div class="meta">
+        <button type="button" class="textbtn" id="more" aria-expanded="${state.open}" aria-controls="notes">${state.open ? 'Show less' : 'Read more'}<span hidden> about ${esc(a.title)}</span>${CHEV}</button>
+        <span class="src">${esc(state.phone ? a.srcPhone : a.src)}</span>
+      </div>
+      <div class="notes" id="notes" ${state.open ? '' : 'hidden'}>
+        <a class="skip" href="#recs-h">Skip to closest albums</a>
+        <dl class="facts">${a.facts.map(([k, v]) => `<dt class="cap">${k}</dt><dd>${esc(v)}</dd>`).join('')}</dl>
+        ${secs}
+        <div class="foot"><p>${a.foot}</p><p>Something off? <a href="#more">Let us know</a>.</p></div>
+        <button type="button" class="textbtn less" id="less" aria-expanded="true" aria-controls="notes">Show less${CHEV}</button>
+      </div>
+    </section>`;
+  }
+  pin.innerHTML = `
+    <nav class="trail" aria-label="Albums visited">Visited <b>${esc(a.trail[0])}</b> › <span>${esc(a.trail[1])}</span></nav>
+    <div class="seed">
+      <div class="cover" style="${coverStyle(a.w)}" aria-hidden="true"${L}>${esc(a.title.split(' [')[0])}</div>
+      <p class="artist"${L}>${esc(a.artist)} <span class="yr">· ${a.year}</span></p>
+      <h1 class="title"${L}>${esc(a.title)}</h1>
+      <div class="actions"><span class="btn btn-lamp">Open in Spotify ${EXT}</span><span class="btn btn-ghost" aria-label="Copy link">${LINK}</span></div>
+      <ul class="tags" aria-label="Mood descriptors">${a.tags.map((t) => `<li>${t}</li>`).join('')}</ul>
+    </div>
+    ${about}
+    <div class="recs">
+      <h2 class="recs-h" id="recs-h" tabindex="-1">Closest albums</h2>
+      <ol>${a.recs.map(([t, ar, c, sh], i) => `<li class="rec"><span class="rec-n">${i + 1}</span><span class="rec-c" style="background: linear-gradient(145deg, ${c}, #1a1612)" aria-hidden="true"></span><span><span class="rec-t" style="display:block">${esc(t)}</span><span class="rec-a" style="display:block">${esc(ar)}</span><span class="rec-s" style="display:block">Shares <span>${sh.join(', ')}</span></span></span></li>`).join('')}</ol>
+    </div>`;
+  const more = document.getElementById('more');
+  const less = document.getElementById('less');
+  if (more) more.addEventListener('click', () => { state.open = !state.open; render(); document.getElementById('more').focus({ preventScroll: true }); });
+  if (less) less.addEventListener('click', () => { state.open = false; render(); const m = document.getElementById('more'); m.scrollIntoView({ block: 'center', behavior: 'smooth' }); m.focus({ preventScroll: true }); });
+  pin.querySelectorAll('.skip').forEach((s) => s.addEventListener('click', (e) => { e.preventDefault(); const h = document.getElementById('recs-h'); h.scrollIntoView({ behavior: 'smooth', block: 'start' }); h.focus({ preventScroll: true }); }));
+  pin.querySelectorAll('.foot a[href="#more"]').forEach((s) => s.addEventListener('click', (e) => e.preventDefault()));
+  document.querySelectorAll('#albums button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === state.album)));
+  document.getElementById('sz-desk').setAttribute('aria-pressed', String(!state.phone));
+  document.getElementById('sz-phone').setAttribute('aria-pressed', String(state.phone));
+}
+
+document.getElementById('albums').innerHTML = ALBUMS.map((a) => `<button type="button" data-id="${a.id}" aria-pressed="false">${esc(a.label)}<small>${a.sub}</small></button>`).join('');
+document.querySelectorAll('#albums button').forEach((b) => b.addEventListener('click', () => { state.album = b.dataset.id; state.open = false; render(); }));
+document.getElementById('sz-desk').addEventListener('click', () => { state.phone = false; render(); });
+document.getElementById('sz-phone').addEventListener('click', () => { state.phone = true; render(); });
+
+/* Coverage, by RYM rank band. Filled from the measurement. */
+const COVERAGE = [{"band": "Top 1,000", "en": 800, "ot": 11, "ar": 80, "no": 109}, {"band": "1,001 to 2,500", "en": 970, "ot": 28, "ar": 232, "no": 270}, {"band": "2,501 to 5,000", "en": 1540, "ot": 64, "ar": 378, "no": 518}, {"band": "5,001 to 10,000", "en": 2920, "ot": 218, "ar": 750, "no": 1112}, {"band": "All 10,467", "en": 6550, "ot": 325, "ar": 1537, "no": 2055}];
+const TIERS = [{"share": "about 66% of albums", "h": "Full notes", "p": "An article about the album, in English or another language. The line, Read more, credits, the story and what to listen for, adapted from the article and credited to it."}, {"share": "about 15%", "h": "A short note", "p": "No album article, but the artist has one, often with a paragraph on this record. The line and one short section, only from what that paragraph says. Classical recordings get notes on the work."}, {"share": "about 20%", "h": "A quiet line", "p": "Nothing we found that we may use. The year and mood words as today, and a friendly line instead of invented text. Credits where MusicBrainz has them."}];
+function renderCoverage() {
+  if (!COVERAGE) return;
+  document.getElementById('bars').innerHTML = COVERAGE.map((r) => {
+    const n = r.en + r.ot + r.ar + r.no;
+    const pct = (x) => (100 * x / n).toFixed(1);
+    return `<div class="bar-row"><span class="lab">${r.band}</span>
+      <span class="bar" role="img" aria-label="${r.band}: English article ${Math.round(100 * r.en / n)}%, other language only ${Math.round(100 * r.ot / n)}%, artist article only ${Math.round(100 * r.ar / n)}%, nothing ${Math.round(100 * r.no / n)}%">
+        <i class="k-en" style="width:${pct(r.en)}%"></i><i class="k-ot" style="width:${pct(r.ot)}%"></i><i class="k-ar" style="width:${pct(r.ar)}%"></i><i class="k-no" style="width:${pct(r.no)}%"></i></span>
+      <span class="n">${Math.round(100 * (r.en + r.ot) / n)}%</span></div>`;
+  }).join('');
+}
+function renderTiers() {
+  if (!TIERS) return;
+  document.getElementById('tiers').innerHTML = TIERS.map((t) => `<div class="tier"><span class="share">${t.share}</span><h3>${t.h}</h3><p>${t.p}</p></div>`).join('');
+}
+render(); renderCoverage(); renderTiers();
+</script>
