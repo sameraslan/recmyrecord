@@ -16,8 +16,9 @@
  * Options: --label <name> (required), --runs <n>, --mode gpu|software (gpu: the installed Chrome on Metal, as
  * `npm run perf`; software: SwiftShader), --only <page>:<viewport>:<profile> (for a single case), --port <n>,
  * --hold-gas <ms> (the opening nebula image is held back that long, to see the stars arrive before it),
- * --profiles none,fast4g (only these), --stills (no timing: full-resolution PNGs of the stand-in alone, with the
- * album list held back, for Home, /map and an album page at 1440 x 900, 390 x 844 and 2560 x 1440, into <label>/png/).
+ * --profiles none,fast4g (only these), --base <url> (a server already running; none is started), --stills (no timing: full-resolution PNGs of the stand-in alone, with the
+ * album list held back, for Home, /map and an album page at 1440 x 900, 390 x 844 and 2560 x 1440, and of the drawn
+ * Home and /map at 2560 x 1440, into <label>/png/ or --out <dir>).
  * Each run also lists the frames that were darker than the one before them (mean luma of the whole frame, panels
  * and text included, down by 0.75 of a level or more): a load should only ever gain light.
  *
@@ -55,6 +56,10 @@ const ONLY = opt('--only');
 const HOLD_GAS = Number(opt('--hold-gas', '0'));
 const ONLY_PROFILES = opt('--profiles')?.split(',') ?? null;
 const STILLS = args.includes('--stills');
+// --base <url>: measure a server that is already running (several builds side by side) instead of starting one.
+const BASE_URL = opt('--base');
+// --out <dir under test-results/first-frame>: where --stills writes, instead of <label>/png.
+const STILLS_DIR = opt('--out');
 const OUT = path.join(ROOT, 'test-results/first-frame', LABEL);
 
 const MODES = {
@@ -368,7 +373,7 @@ const spread = (xs) => {
 
 /** Full-resolution PNGs of the stand-in alone: the album list never arrives, so the map never mounts. */
 async function stills(base) {
-  const dir = path.join(OUT, 'png');
+  const dir = STILLS_DIR ? path.join(ROOT, 'test-results/first-frame', STILLS_DIR) : path.join(OUT, 'png');
   fs.mkdirSync(dir, { recursive: true });
   const sizes = { '1440x900': VIEWPORTS.desktop, '390x844': VIEWPORTS.phone, '2560x1440': { viewport: { width: 2560, height: 1440 } } };
   const pages = { ...PAGES, album: '/album/in-rainbows-radiohead' };
@@ -389,6 +394,17 @@ async function stills(base) {
         await ctx.close();
       }
     }
+    // And the drawn pages on the large screen, to hold the stand-in against.
+    for (const [pageName, url] of Object.entries(PAGES)) {
+      const page = await browser.newPage({ viewport: { width: 2560, height: 1440 } });
+      await page.goto(`${base}${url}`, { waitUntil: 'commit' });
+      await page.waitForFunction(() => typeof window.__rmr?.gasShownMs === 'number' || window.__rmr?.gas === 'off', null, { timeout: 60_000 });
+      await page.waitForTimeout(2500);
+      const file = path.join(dir, `${pageName}-2560x1440-settled.png`);
+      await page.screenshot({ path: file });
+      console.log(path.relative(ROOT, file));
+      await page.close();
+    }
   } finally {
     await browser.close();
   }
@@ -396,7 +412,7 @@ async function stills(base) {
 
 async function main() {
   fs.mkdirSync(OUT, { recursive: true });
-  const server = await startServer(PORT);
+  const server = BASE_URL ? { base: BASE_URL, stop: async () => {} } : await startServer(PORT);
   if (STILLS) {
     try {
       await stills(server.base);
