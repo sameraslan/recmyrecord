@@ -1,0 +1,203 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "Its futuristic Thailand is portrayed as a simulation city, a concept from within the musician that Thailand inspired.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": true,
+      "why": "Overview: 'a futuristic Thailand is portrayed as a simulation city ... it is a concept from within him that was inspired there'. Reuses the eight-word run 'futuristic Thailand is portrayed as a simulation city'."
+    },
+    {
+      "where": "fact: Released",
+      "text": "August 2, 1995",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Released: August 2, 1995'."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "August 1994 to March 1995, in Yokohama, Karuizawa, Bangkok and Tokyo",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Recorded: August 1994 – March 1995'; studios in Yokohama, Karuizawa, Bangkok and Tokyo."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "Susumu Hirasawa, Yūichi Kenjo",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Producer: Susumu Hirasawa Yūichi Kenjo ( co. )' (Kenjo is co-producer)."
+    },
+    {
+      "where": "fact: Label",
+      "text": "Polydor K.K.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Label: Polydor K.K.'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "In 1994 his neighbour, Doll Magazine editor-in-chief Mikio Moriwaki, suggested he try a Pink Floyd-style sound for his next record.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'In 1994, Susumu Hirasawa got the suggestion to try a Pink Floyd -like sound for his next solo album from his neighbor, Doll Magazine editor-in-chief Mikio Moriwaki'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "The first plan was a '90s take on The Dark Side of the Moon, covering much the same ground as Virtual Rabbit.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'His original plan was to make a '90s version of The Dark Side of the Moon, which would cover similar ground to Virtual Rabbit'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "Later, he came up with the World Inspection Tour, a role-playing game held overseas for members of his fan club, Hirasawa Bypass.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'the World Inspection Tour ..., a role-playing game held in an overseas country for members of his official fan club Hirasawa Bypass'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "The tour was set for Phuket in Thailand, since the flight was short and the place had little Japanese tourism.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'decided that it would happen in the Thai city of Phuket, since the airplane trip would be short and it didn't have a lot of Japanese tourism'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "On that trial visit he had no clear idea, only a rough picture of the Vietnam War.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'Hirasawa took a trial visit ... He had no idea what to expect and had something like the Vietnam War in mind'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "One night at the Simon Cabaret, where every performer was kathoey, shaped how he saw Thai culture.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'a show at the Simon Cabaret, performed by a cast consisting entirely of the country's Kathoey people, and that was formative on his impression of Thai culture'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Hirasawa did not trust the Thai studio with his gear, so he brought only instrumental 24-track recordings on analog reels to Thailand.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'Hirasawa's lack of trust of their dealing with his gear, he only brought 24-track instrumental recordings on reels of analog tape'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "There he recorded only vocals over four days, his own and those of Thai performers.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'the only material recorded there were vocals both his and from Thai performers over a 4-day span'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Although he was not fluent in Thai, he wrote some lyrics by cross-referencing four language guidebooks.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'Although Hirasawa is not proficient in Thai, he wrote some of the lyrics in it by cross-referencing four language guidebooks'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "What he first wrote meant something other than he intended, so he rewrote lyrics and melodies on the spot.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'the meaning ... was completely different from what he wanted to convey, which led to on-the-fly rewriting of both lyrics and melodies'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Masanori Chinzei handled recording and mixing, and Keiko Ueda mastered it.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: 'Masanori Chinzei - recording, mixing'; 'Keiko Ueda - mastering'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "The booklet was shot in Thailand, and it is the only one of his solo albums where he is not the only person pictured.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Overview: 'The photoshoot for the album's booklet took place in Thailand and is the only one made for a Hirasawa solo album where he isn't the only person in the photos'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "It was his fifth studio album and his last record with Polydor.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'the fifth studio album ... This is his last record with Polydor'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "He later switched labels to Nippon Columbia.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'he would later switch record labels to Nippon Columbia'."
+    },
+    {
+      "where": "listen_for: Recall",
+      "text": "Miss N. of the Phuket Simon Cabaret narrates it, and its lyrics are by her and Hirasawa.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: 'Miss N. (Phuket Simon Cabaret) - narration on \"Recall\"'; Track listing: 'except \"Recall\", \"Sim City\" and \"Prologue\", with lyrics by Hirasawa and Miss N.'. Title matches."
+    },
+    {
+      "where": "listen_for: Sim City",
+      "text": "Wisakha Fraytes sings on it, and Miss N. narrates it without a credit.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: 'Wisakha Fraytes - vocals on \"Sim City\"'; Miss N. narration on '\"Sim City\" (uncredited)'. Title matches."
+    },
+    {
+      "where": "listen_for: Prologue",
+      "text": "Miss N. narrates this track as well.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: Miss N. narration on '\"Prologue\"'. Title matches."
+    }
+  ],
+  "missed": "That 'Sim City' plays on 'Siam City' and that Hirasawa calls the result 'fake' world music simulating no particular place; and the cover image of Miss N. wearing a veil made of MIDI cables."
+}

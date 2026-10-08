@@ -1,0 +1,24 @@
+{
+  "tier": "rich",
+  "hook": {"text": "It was the band's first record with Barry Stern on drums, and four of its songs got music videos.", "src": ["Lead"]},
+  "facts": [
+    {"label": "Released", "value": "13 February 1990"},
+    {"label": "Recorded", "value": "1989"},
+    {"label": "Produced by", "value": "Rick Rubin"},
+    {"label": "Label", "value": "Def American, Hammerheart"},
+    {"label": "Players", "value": "Eric Wagner (vocals), Bruce Franklin (guitars), Rick Wartell (guitars), Ron Holzner (bass), Barry Stern (drums), Jeff Olson (keyboards)"}
+  ],
+  "sections": [
+    {"heading": "Making it", "sentences": [
+      {"text": "David Bianco and Jimmy Heyson engineered the record, with Brian Jenkins as assistant engineer.", "src": ["Personnel"]},
+      {"text": "Eric Wagner, Bruce Franklin and Rick Wartell wrote all of the tracks.", "src": ["Track listing"]},
+      {"text": "The original version was mastered by Greg Fulginiti at Artisan Sound Recorders in Los Angeles.", "src": ["Personnel"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "Hammerheart Records reissued and remastered the album on 27 November 2020, working with Trouble, Inc.", "src": ["Lead"]},
+      {"text": "For that 2020 version, Erwin Hermsen remastered it at Toneshed Recording Studio in the Netherlands.", "src": ["Personnel"]},
+      {"text": "A DVD of the videos came out in 2007 on the band's Trouble, Inc. label.", "src": ["Lead"]}
+    ]}
+  ],
+  "listen_for": []
+}

@@ -1,0 +1,113 @@
+{
+ "items": [
+  {
+   "where": "hook",
+   "text": "Recorded in Warsaw in January, and every track on it is written by the saxophonist who leads the group.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Album nagrany został w Warszawie w styczniu 1966. Wszystkie utwory ... to kompozycje lidera\"; the leader is \"polskiego saksofonisty jazzowego\"."
+  },
+  {
+   "where": "fact:Released",
+   "text": "1966",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Wydany: 1966\"."
+  },
+  {
+   "where": "fact:Recorded",
+   "text": "January 1966",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Nagrywany: styczeń 1966\"."
+  },
+  {
+   "where": "fact:Label",
+   "text": "Polskie Nagrania „Muza” XL 0305",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Wydawnictwo: Polskie Nagrania „Muza” XL 0305\" (XL 0305 is the mono catalogue number, not part of the label name)."
+  },
+  {
+   "where": "Making it 1",
+   "text": "Zbigniew Namysłowski plays alto saxophone and wrote every track on the record.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Zbigniew Namysłowski – saksofon altowy\"; \"Wszystkie utwory ... kompozycje lidera\"."
+  },
+  {
+   "where": "Making it 2",
+   "text": "Adam Matyszkowicz plays piano, Janusz Kozłowski plays double bass and Czesław Bartkowski plays drums.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Muzycy: Matyszkowicz fortepian, Kozłowski kontrabas, Bartkowski perkusja."
+  },
+  {
+   "where": "Making it 3",
+   "text": "The album was recorded in Warsaw in January 1966.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"nagrany został w Warszawie w styczniu 1966\" (repeats the hook)."
+  },
+  {
+   "where": "Making it 4",
+   "text": "Wojciech Piętowski directed the recording, and Halina Jastrzębska was the sound engineer.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Reżyser nagrania – Wojciech Piętowski; Inżynier dźwięku – Halina Jastrzębska\"."
+  },
+  {
+   "where": "What came after 1",
+   "text": "Polskie Nagrania Muza issued the LP in 1966, in a mono version (XL 0305) and a stereo version (SXL).",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"LP został wydany w 1966 przez Polskie Nagrania „Muza” w wersji monofonicznej XL 0305 ... i stereofonicznej SXL\"."
+  },
+  {
+   "where": "What came after 2",
+   "text": "Both versions carry the matrix numbers XW-619 and XW-620.",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "The matrix numbers differ by version: mono \"M-3 XW-619, M-3 XW-620\", stereo \"S-3 XW-619, S-3 XW-620\". Dropping the prefixes merges two different sets into one."
+  },
+  {
+   "where": "What came after 3",
+   "text": "The record was the sixth volume in the Polish Jazz series.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Płyta ukazała się jako vol. 6 serii Polish Jazz\"."
+  },
+  {
+   "where": "What came after 4",
+   "text": "A CD reissue followed in 2004 as PNCD 306.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Reedycja na CD ukazała się w 2004 (PNCD 306)\"."
+  }
+ ],
+ "missed": "Little else is usable: the pack's track list is empty (Strona A and B have no titles), so an empty listen_for is right. Only the liner notes by Józef Balcerak are left out. The pack is thin; tier \"rich\" overstates it, and half the notes are catalogue and matrix numbers a listener will not care about."
+}

@@ -1,0 +1,95 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "This album is notable for including Strasbourg / St. Denis, a Hargrove composition from its track list.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: \"notable for the inclusion of the composition, Strasbourg / St. Denis\"; \"All compositions by Roy Hargrove except as indicated\". Supported but hollow: it drops why the track is notable (\"has since emerged as a modern-day jazz standard\")."
+    },
+    {
+      "where": "fact: Released",
+      "text": "2 June 2008",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Released: June 2, 2008\"."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "19 to 21 September 2007, at Capitol Studios, Los Angeles",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Recorded: September 19–21, 2007\"; \"Studio: Capitol Studios, Los Angeles\"."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "Larry Clothier, Roy Hargrove",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Producer: Larry Clothier, Roy Hargrove\"."
+    },
+    {
+      "where": "fact: Label",
+      "text": "EmArcy",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Label: EmArcy\"."
+    },
+    {
+      "where": "fact: Players",
+      "text": "Roy Hargrove (trumpet, flugelhorn), Justin Robinson (alto saxophone, flute), Gerald Clayton (piano), Danton Boller (bass), Montez Coleman (drums)",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel matches all five with instruments."
+    },
+    {
+      "where": "Where it comes from #1",
+      "text": "Before Earfood, Roy Hargrove had made several albums that explored jazz in a hip-hop and R&B setting.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"following several albums in which he explored jazz within a hip-hop and R&B context\"."
+    },
+    {
+      "where": "Where it comes from #2",
+      "text": "This record was a return to his long-running interest in hard bop.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"a return to Hargrove's enduring interest in hard bop\"."
+    },
+    {
+      "where": "Making it #1",
+      "text": "Al Schmitt recorded and mixed the album, with Steve Genewick as engineer.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Al Schmitt - recorded & mixed; Steve Genewick - engineer\"."
+    },
+    {
+      "where": "Making it #2",
+      "text": "Jacques Muyal is credited as executive producer on the record.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Jacques Muyal - executive producer\"."
+    }
+  ],
+  "missed": "Why Strasbourg / St. Denis matters: it \"has since emerged as a modern-day jazz standard\". And the pack names tracks to listen for, Di Piero: \"listen to 'Joy Is Sorrow Unmasked' and 'Speak Low' ... shut your eyes and you hear the flugel's ancestors\", yet listen_for is empty."
+}

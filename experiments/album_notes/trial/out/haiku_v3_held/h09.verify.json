@@ -1,0 +1,13 @@
+{
+  "items": [
+    {"where": "hook", "text": "All four tunes are the trombonist's own, and the longest of them runs past twelve minutes.", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Track listing: 'All compositions by Grachan Moncur III', four titles, '\"Evolution\" - 12:24' the longest; Lead: 'trombonist Grachan Moncur III'. Accurate but a weak hook that says little about the music."},
+    {"where": "fact: Released", "text": "April 1964", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox 'Released: April 1964'."},
+    {"where": "fact: Recorded", "text": "21 November 1963, Van Gelder Studio, Englewood Cliffs", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox 'Recorded: November 21, 1963 Van Gelder Studio , Englewood Cliffs'."},
+    {"where": "fact: Produced by", "text": "Alfred Lion", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox 'Producer: Alfred Lion'."},
+    {"where": "fact: Label", "text": "Blue Note", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox 'Label: Blue Note BST 84153'."},
+    {"where": "fact: Players", "text": "Grachan Moncur III (trombone), Lee Morgan (trumpet), Jackie McLean (alto saxophone), Bobby Hutcherson (vibes), Bob Cranshaw (double bass), Tony Williams (drums)", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Personnel lists exactly these six with these instruments."},
+    {"where": "section: Where it comes from", "text": "Moncur and his compositions were featured on two Jackie McLean albums made for Blue Note in 1963.", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Lead: 'Two McLean albums also recorded for Blue Note in 1963 ( One Step Beyond and Destination... Out!) featured Moncur and his compositions'."},
+    {"where": "section: Where it comes from", "text": "Both records explored the same inside and outside approach to music.", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Lead: 'and explored the same \"inside/outside\" musical approach.' In the pack 'the same' means the same as Evolution; the notes drop that referent, so it can read as the two McLean records matching each other. Vague rather than wrong."}
+  ],
+  "missed": "The sound: The Penguin Guide says 'the whole record has a dark, misterioso quality that the lowering trombone sound... strongly accentuates'. Also that this is Moncur's debut as a leader and is considered a significant contribution to the jazz avant-garde. listen_for is empty although the pack names all four tracks."
+}

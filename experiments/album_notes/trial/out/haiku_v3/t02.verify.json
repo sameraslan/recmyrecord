@@ -1,0 +1,230 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "Side one's master tape was left in a London taxi, so most of that side was remixed overnight.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Recording: \"Hendrix lost the master tape of side one ... in the back seat of a London taxi ... remixed most of side one in a single overnight session\"."
+    },
+    {
+      "where": "fact: Released",
+      "text": "December 1, 1967",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Released: December 1, 1967\" (UK; Lead says the US release came the following month)."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "May to June and October 1967, Olympic Studios, London",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Recorded: May–June, October 1967\"; \"Studios: Olympic, London\"."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "Chas Chandler",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Producer: Chas Chandler\"."
+    },
+    {
+      "where": "fact: Label",
+      "text": "Polydor, Track (UK), Reprise (US), Barclay (France)",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Labels: Polydor / Track (UK) Reprise (US) Barclay (France)\"."
+    },
+    {
+      "where": "fact: Players",
+      "text": "Jimi Hendrix (vocals, electric guitar, piano, recorder), Noel Redding (bass guitars, backing vocals), Mitch Mitchell (drums, backing vocals)",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: Hendrix \"vocals, electric guitar, piano, recorder\"; Redding \"bass guitars ... backing vocals\"; Mitchell \"drums, backing vocals\"."
+    },
+    {
+      "where": "Where it comes from #1",
+      "text": "The band finished its debut, Are You Experienced, in late April 1967.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Following the completion of Are You Experienced at the end of April 1967\"."
+    },
+    {
+      "where": "Where it comes from #2",
+      "text": "It kept its regular recording schedule and returned on May 4 to start writing songs for a follow-up LP.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"continued their schedule of regular recording sessions, returning to Olympic Studios in London on May 4 to begin composing material for a follow-up LP\"."
+    },
+    {
+      "where": "Where it comes from #3",
+      "text": "The album came out only seven months after the debut's release.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: \"only seven months after the release of the group's highly successful debut album\"."
+    },
+    {
+      "where": "Where it comes from #4",
+      "text": "The lyrics of Spanish Castle Magic were inspired by a dance hall near Seattle, where Hendrix jammed with other local bands in high school.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": true,
+      "why": "\"inspired by The Spanish Castle, a dance hall in what is now Des Moines, Washington, near Seattle where Hendrix jammed with local rock groups during his high school years\". Reuses \"The lyrics of Spanish Castle Magic were inspired by\" (9 words, mostly the title)."
+    },
+    {
+      "where": "Making it #1",
+      "text": "Eddie Kramer and George Chkiantz handled the engineering.",
+      "verdict": "partly",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Recording names Kramer as engineer and Chkiantz as second engineer, but Personnel also credits \"Andy Johns and Terry Brown – engineers\"; the sentence presents the two as the whole engineering team."
+    },
+    {
+      "where": "Making it #2",
+      "text": "The basic tracks went onto a four-track recorder, with stereo drums on two tracks, bass on a third and rhythm guitar on a fourth.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"I would fill the four basic tracks with stereo drums on two of the channels, the bass on the third, and Jimi's rhythm guitar on the fourth.\""
+    },
+    {
+      "where": "Making it #3",
+      "text": "They mixed that onto a second four-track recorder, leaving two more tracks for lead guitar, vocals and percussion.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"mix this down to two tracks on another four-track recorder, giving us two more tracks ... which usually included Jimi's lead guitar and vocals as well as backing vocals and some additional percussion\". \"usually\" is dropped, minor."
+    },
+    {
+      "where": "Making it #4",
+      "text": "Hendrix often asked for many re-takes, and Kramer stayed patient with him.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Kramer was patient with Hendrix, who often demanded numerous re-takes\"."
+    },
+    {
+      "where": "Making it #5",
+      "text": "Hendrix and Mitchell had begun to voice their own views on creative choices that Chandler had handled on the debut.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Hendrix and Mitchell had begun to express their opinions regarding creative choices that had been left up to Chandler during the recording of Are You Experienced.\""
+    },
+    {
+      "where": "Making it #6",
+      "text": "Chandler had grown tired of the guitarist's perfectionism by October 1967, and Redding began to resent Hendrix's instructions on what he played.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"by October 1967, Chandler had grown weary of the guitarist's perfectionism\"; Redding \"began to resent Hendrix's explicit instructions regarding what he played in the studio\"."
+    },
+    {
+      "where": "What came after #1",
+      "text": "Cat Talking to Me, from that June session, appeared in 2010 on the posthumous album West Coast Seattle Boy: The Jimi Hendrix Anthology.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "June 5 session on \"Cat Talking to Me\" ... \"later included on the posthumous album West Coast Seattle Boy: The Jimi Hendrix Anthology (2010)\". \"that June session\" points back to nothing earlier in the notes."
+    },
+    {
+      "where": "What came after #2",
+      "text": "The Hendrix Estate released a box set called The Jimi Hendrix Experience: Bold As Love Sessions on November 7, 2025.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"The Hendrix Estate released, 'The Jimi Hendrix Experience: Bold As Love Sessions' ... Box Set November 7, 2025.\""
+    },
+    {
+      "where": "What came after #3",
+      "text": "The 66 tracks include demos and alternate takes, and the Blu-ray adds a Dolby Atmos mix.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"66 Tracks including Demos and Alternate takes ... The Blu-Ray contains ... plus a Dolby ATMOS mix.\""
+    },
+    {
+      "where": "What came after #4",
+      "text": "Malaysia's Home Ministry banned the album's art after complaints, and some Hindus have since voiced anger over the religious images on the cover.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Some Hindus have since expressed anger over the use of religious images ... The Malaysian government's Home Ministry instituted a ban on the album's art in response to complaints.\""
+    },
+    {
+      "where": "listen_for: EXP",
+      "text": "It opens with microphonic and harmonic feedback, and sounds from Hendrix's guitar pan across the stereo field to circle the listener.",
+      "verdict": "partly",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Pack: the album \"opens with 'EXP', which incorporates microphonic and harmonic feedback\". The notes turn \"incorporates\" into \"It opens with\" the feedback. The panning part is supported (\"move through the stereo image, revolving around the listener\")."
+    },
+    {
+      "where": "listen_for: If 6 Was 9",
+      "text": "Hendrix plays recorder on it, and the percussion effect comes from Chandler, Hendrix, Graham Nash and Gary Leeds stomping on a drum riser.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Recording: \"a percussion effect created by Chandler, Hendrix, and guests Graham Nash and Gary Leeds stamping their feet on a drum riser\"; \"Hendrix played a recorder on the track\". (Personnel also credits Redding with foot stomping; the pack disagrees with itself.) Title is the pack's US spelling."
+    },
+    {
+      "where": "listen_for: Little Wing",
+      "text": "On this track Hendrix first uses a Leslie speaker for his guitar, a revolving speaker that gives a wavering effect.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"On 'Little Wing' Hendrix plays his guitar through a Leslie speaker for the first time (a revolving speaker which creates a wavering effect\"."
+    },
+    {
+      "where": "listen_for: You Got Me Floatin'",
+      "text": "The song starts on a swirling, backwards guitar solo, and Roy Wood and Trevor Burton of the Move add backing vocals.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"'You Got Me Floatin'', a rock song opening with a swirling backwards guitar solo\"; \"Roy Wood and Trevor Burton from the Move ... supplied backing vocals\". Pack also credits Graham Nash with backing vocals here."
+    },
+    {
+      "where": "listen_for: Bold as Love",
+      "text": "Hendrix plays harpsichord on it, and the coda uses stereo phasing for the first time on record.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel \"harpsichord on 'Bold as Love'\"; \"The song's coda features the first recording of stereo phasing.\""
+    }
+  ],
+  "missed": "Hendrix said \"Little Wing\" was his impression of the Monterey Pop Festival in the form of a girl; the cover shows the band as forms of Vishnu and Hendrix disowned it (\"The three of us have nothing to do with what's on the Axis cover\"). Also the title track's closing guitar solo."
+}

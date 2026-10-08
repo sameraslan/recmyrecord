@@ -1,0 +1,728 @@
+[
+ {
+  "rym_id": "Album15012772",
+  "artist": "Simeon ten Holt & Erik Hall",
+  "title": "Canto Ostinato",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Canto_Ostinato",
+   "kind": "wikipedia_work",
+   "detail": "Article on the underlying work only; its Recordings section does not mention Erik Hall's 2023 version. No Wikipedia article for Erik Hall found."
+  },
+  "sources": [
+   {
+    "url": "https://erikhall.bandcamp.com/album/canto-ostinato-simeon-ten-holt",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "Played, recorded and mixed by Erik Hall at his home in Galien, Michigan, in October 2021",
+     "Three keyboards only: a 1962 Hammond M-101 organ, a 1978 Rhodes Mark I and his family's 1910 Steinway (Model O) grand",
+     "Each part played live and miked one at a time, no loops, quantizing or sequencing; page turns and noise left in",
+     "Second of a trilogy of minimalist reinterpretations after his 2020 Music for 18 Musicians (Reich)",
+     "Released 22 February 2023 on Western Vinyl; mastered by Warren Defever at Third Man Mastering, Detroit; art by Aaron Lowell Denton",
+     "Hall says the piece made him rebuild piano technique he had not kept up since his teens"
+    ]
+   },
+   {
+    "url": "https://daily.bandcamp.com/features/erik-hall-canto-ostinato-interview",
+    "type": "interview",
+    "lang": "en",
+    "facts": [
+     "Bandcamp Daily feature by Matthew Blackwell, 21 March 2023",
+     "Hall mapped his pacing after listening to several existing recordings of the 106 section score",
+     "Kept the length under an hour so it would fit a single LP",
+     "Read from the score while recording since he had not memorised it; chose a felted Steinway after trial and error",
+     "Hall is known from NOMO and In Tall Buildings; compares the home made feel to lo-fi indie rock",
+     "Third part of the trilogy not yet chosen at the time"
+    ]
+   },
+   {
+    "url": "https://www.popmatters.com/erik-hall-canto-ostinato-review",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "PopMatters review by Chris Ingalls, 6 March 2023, 8/10",
+     "Notes the release came weeks after ten Holt's 100th birth anniversary (24 January 2023)",
+     "Repeats press facts: three keyboards, no loops or programming, five note motif running through 106 sections"
+    ]
+   },
+   {
+    "url": "https://acloserlisten.com/2023/02/12/erik-hall-canto-ostinato/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "A Closer Listen review, 12 February 2023",
+     "Describes the performer freedoms in the score (instruments, repeats, dynamics) and Hall's instrument choice"
+    ]
+   },
+   {
+    "url": "https://westernvinyl.com/artists/erik-hall.php",
+    "type": "label_page",
+    "lang": "en",
+    "facts": [
+     "Hall is Chicago born and Michigan based, plays in NOMO and Wild Belle, records as In Tall Buildings",
+     "His Music for 18 Musicians won a Libera Award for best classical record; Canto Ostinato was nominated in the same category",
+     "Trilogy completed by Solo Three (Branca, Palestine, Spiegel, Reich)"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Canto_Ostinato",
+    "type": "wikipedia_work",
+    "lang": "en",
+    "facts": [
+     "Work completed 1976, first performed 1979 in Bergen, North Holland, on three pianos and an electric organ",
+     "106 short sections that performers may repeat at will; four pianos is the usual setup"
+    ]
+   },
+   {
+    "url": "https://www.metropolisensemble.org/projects/erik-hall-music-for-18",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Hall later performed both works with a spatial audio installation at National Sawdust (26 September 2026); a separate large ensemble Canto Ostinato with Metropolis Ensemble and Sandbox Percussion followed"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Erik Hall recorded every part alone at his Michigan home in October 2021, on a 1910 Steinway, a Rhodes and a Hammond organ.",
+  "example_line_sources": [
+   "https://erikhall.bandcamp.com/album/canto-ostinato-simeon-ten-holt",
+   "https://daily.bandcamp.com/features/erik-hall-canto-ostinato-interview"
+  ],
+  "notes": "Rich: label about text, a Bandcamp Daily interview and several reviews. Work article on Wikipedia gives background on the piece. Minor date spread (22 vs 24 February 2023) between sources."
+ },
+ {
+  "rym_id": "Album125959",
+  "artist": "Aqsak Maboul",
+  "title": "Un peu de l'âme des bandits",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Un_Peu_de_l%27%C3%82me_des_Bandits",
+   "kind": "wikipedia_album",
+   "detail": "Full album article (about 1,000 words of prose) plus a Dutch version. Matcher likely missed it on the Aqsak/Aksak spelling and title capitalisation."
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Un_Peu_de_l%27%C3%82me_des_Bandits",
+    "type": "wikipedia_album",
+    "lang": "en",
+    "facts": [
+     "Recorded February and August 1979 at Sunrise Studio, Kirchberg, Switzerland; released January 1980 on Marc Hollander's Crammed Discs",
+     "Sleeve spells the band Aqsak Maboul; the 1995 CD reissue went back to Aksak",
+     "Guests include ex Henry Cow members Fred Frith and Chris Cutler and Michel Berckmans of Univers Zero; Vincent Kenis arranged two tracks without playing",
+     "Side B is the 23 minute Cinema suite ending in a mock Bulgarian radio talk show; Tango was built from cut up tango records",
+     "Tied to the Rock in Opposition movement; AllMusic 4.5 stars, Pitchfork 7.2 for the 2018 reissue"
+    ]
+   },
+   {
+    "url": "https://aksakmaboul.bandcamp.com/album/un-peu-de-la-me-des-bandits",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "Second album, first released January 1980",
+     "Placed third in NME's 1980 list of top European albums",
+     "2018 vinyl reissue remastered from the analogue tapes, with a 24 page booklet and liner notes by Mikey IQ Jones",
+     "Bonus CD Before and After Bandits: ten unreleased live and demo tracks from 1977 to 1980"
+    ]
+   },
+   {
+    "url": "https://dereksmusicblog.com/2020/01/08/cult-classic-aksak-maboul-un-peu-lame-des-bandits",
+    "type": "blog",
+    "lang": "en",
+    "facts": [
+     "Sessions began February 1979; unfinished after a month, the band returned in August to finish",
+     "Core quartet Hollander, Kenis, Frank Wuyts and Marc Moulin, with Catherine Jauniaux, Denis Van Hecke and Berckmans as guests",
+     "First Aksak Maboul release on Crammed; debut had flopped on the small Kamikaze label",
+     "I Viaggi is a traditional Turkish tune; pinball flipper sounds and taped sounds used before samplers"
+    ]
+   },
+   {
+    "url": "https://thequietus.com/?p=24127",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Quietus review of the reissue; frames it as the first Crammed Discs release"
+    ]
+   },
+   {
+    "url": "https://www.pressreader.com/uk/uncut/20180301/284309660329149",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Uncut, March 2018: reviews the reissue, rates the extras 8/10 and describes the Before and After Bandits bonus"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Recorded at Sunrise Studio in Kirchberg, Switzerland, in 1979, with Fred Frith and Chris Cutler of Henry Cow as guests.",
+  "example_line_sources": [
+   "https://en.wikipedia.org/wiki/Un_Peu_de_l%27%C3%82me_des_Bandits"
+  ],
+  "notes": "A Wikipedia album article exists after all. Plenty for notes even without it (label about text, reissue booklet, blog history)."
+ },
+ {
+  "rym_id": "Album143905",
+  "artist": "Mariani",
+  "title": "Perpetuum Mobile",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Eric_Johnson_(guitarist)",
+   "kind": "wikipedia_artist_section",
+   "detail": "Only a one sentence mention of the band Mariani in Eric Johnson's Early life section; the album is not named. en Perpetuum_Mobile_(album) is the Einsturzende Neubauten record."
+  },
+  "sources": [
+   {
+    "url": "https://sonobeatrecords.com/milestones-02.html",
+    "type": "label_page",
+    "lang": "en",
+    "facts": [
+     "Sonobeat (Austin) recorded the power trio around drummer Vince Mariani in March and April 1970",
+     "Neighbours complained about the Marshall amps at the home studio, so basic tracks for Perpetuum Mobile moved to a vacant 100 acre ranch near McDade, east of Austin",
+     "Vocal overdubs and jazz intercuts were added at the Western Hills Drive studio; first sessions on Sonobeat's new 16 input console",
+     "Single Re-Birth Day / Memories Lost and Found issued 8 September 1970 (Sonobeat R-s118)"
+    ]
+   },
+   {
+    "url": "https://somethingelsereviews.com/2006/12/19/obscuro-mariani-perpetuum-mobile-1970/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Lineup Vince Mariani (drums), Eric Johnson (guitar), Jay Podolnick (bass, vocals), who wrote the songs together",
+     "Vince Mariani nearly auditioned for Hendrix's band before producer Bill Josey persuaded him to form his own group",
+     "Johnson was about 15 or 16; band toured with acts such as Deep Purple, then split without a second record"
+    ]
+   },
+   {
+    "url": "https://etreedb-test.ibiblio.org/performance/343924",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Quotes Johnson's FAQ: about 100 copies pressed to court a major label, no deal came, band broke up in spring 1970",
+     "Johnson neither sang nor wrote on it per that FAQ; many later bootleg CDs miscredit it"
+    ]
+   },
+   {
+    "url": "https://www.metalkingdom.net/album/mariani-perpetuum-mobile-164701",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Lists plain white sleeves stamped Advance Copy; tracklist and a 2001 re-release"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Eric_Johnson_(guitarist)",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Johnson joined Mariani, a psychedelic rock act, at about 15; start of his professional career"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Its basic tracks were recorded on an empty ranch near McDade, Texas, with Eric Johnson, then about 15, on guitar.",
+  "example_line_sources": [
+   "https://sonobeatrecords.com/milestones-02.html",
+   "https://somethingelsereviews.com/2006/12/19/obscuro-mariani-perpetuum-mobile-1970/"
+  ],
+  "notes": "Sources conflict on date (Johnson's FAQ says a fall 1969 demo; Sonobeat says March/April 1970) and on vocals (Podolnick vs Bill Wilson). The producer is Bill Josey (Sonobeat), misspelled Posey in one review. Notes are possible but should hedge the dates."
+ },
+ {
+  "rym_id": "Album2333953",
+  "artist": "Igor Stravinsky & New York Philharmonic",
+  "title": "Le sacre du printemps",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/The_Rite_of_Spring_discography",
+   "kind": "wikipedia_work",
+   "detail": "Large article on the work (The Rite of Spring) mentions only that Stravinsky re-recorded it in 1940; the discography list has one table row (Columbia/CBS, 4 x 78 rpm, Sony CD 2013)."
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/The_Rite_of_Spring_discography",
+    "type": "wikipedia_work",
+    "lang": "en",
+    "facts": [
+     "Row: New York Philharmonic, Stravinsky conducting, Columbia/CBS, four 78 rpm discs, Sony CD 2013"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/The_Rite_of_Spring",
+    "type": "wikipedia_work",
+    "lang": "en",
+    "facts": [
+     "Stravinsky recorded the work after 1929 again in 1940 and 1960; full history of the 1913 ballet"
+    ]
+   },
+   {
+    "url": "https://musicalamerica.com/mablogs/?p=11492",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Sedgwick Clark, Musical America, 6 June 2013, survey of 49 recordings",
+     "Session date 29 April 1940 (the Sony package wrongly prints 4 April)",
+     "Reissued as CD 2 of Sony's 100th anniversary Sacre set, about 31 minutes",
+     "Calls it tight, a clear advance on Stravinsky's 1929 Paris recording, with some stumbles in the closing Danse sacrale"
+    ]
+   },
+   {
+    "url": "https://www.audaud.com/?p=21732",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Audiophile Audition review of Naxos Historical 8.112070, pairing the 1940 Rite with 1940/1946 Firebird and Petrushka, restored by Mark Obert-Thorn"
+    ]
+   },
+   {
+    "url": "https://classicalvoiceamerica.org/?p=2182",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Richard Ginell survey: the 1940 version is pushed harder, with more tempo changes in Part II; available on Sony and Pearl"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Stravinsky himself conducted the New York Philharmonic for this 1940 Columbia recording, first issued on four 78 rpm discs.",
+  "example_line_sources": [
+   "https://en.wikipedia.org/wiki/The_Rite_of_Spring_discography",
+   "https://musicalamerica.com/mablogs/?p=11492"
+  ],
+  "notes": "Notes would lean on the work's history (well covered) plus a few recording facts. Session venue unconfirmed (one database says Carnegie Hall; Liederkranz Hall is for Petrushka). Which reissue the Spotify album is was not checked."
+ },
+ {
+  "rym_id": "Album3312889",
+  "artist": "Deceased...",
+  "title": "Surreal Overdose",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Deceased_(band)",
+   "kind": "wikipedia_artist_section",
+   "detail": "Band article names the album in History and Discography (2011, Shrieks From the Hearse with PATAC Records); no album article."
+  },
+  "sources": [
+   {
+    "url": "https://lollipopmagazine.com/2011/05/deceased-release-surreal-overdose-news/",
+    "type": "news",
+    "lang": "en",
+    "facts": [
+     "Label news, 16 May 2011: first full length of new material since As the Weird Travels On (2005)",
+     "Released by PATAC Records with the band's own Shrieks From the Hearse; vinyl by Hell's Headbangers",
+     "Recorded at Assembly Line Studios, Virginia, engineered by Kevin Gutierrez, produced by King Fowley",
+     "Fowley back on drums and vocals; Shane Fuegel replaced Mark Adams (retired 2007); Mike Smith studio guitar; Les Snyder bass"
+    ]
+   },
+   {
+    "url": "https://hellbound.ca/2011/07/deceased-surreal-overdose/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Sean Palmerston, July 2011: Fowley's first studio drumming since Supernatural Addiction (2000)",
+     "Songs as self contained horror and B movie science fiction stories",
+     "Fowley sold the reviewer a copy at Maryland Deathfest and called it the band's most explosive"
+    ]
+   },
+   {
+    "url": "https://blabbermouth.net/reviews/surreal-overdose",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "8.5/10; eight songs including the seven minute Skin Crawling Progress; vocoded vocals on Cloned (Day of the Robot)"
+    ]
+   },
+   {
+    "url": "https://www.metalmusicarchives.com/review/surreal-overdose/880972",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "User review, 4/5; little changed since the previous album"
+    ]
+   },
+   {
+    "url": "https://yourlastrites.com/2018/12/01/last-rites-facebook-albums-of-the-week-november-25th-december-1st/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Short Last Rites write up: familiar elements done well"
+    ]
+   },
+   {
+    "url": "https://lostapparitionsrecords.bandcamp.com/album/030-surreal-overdose",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "2016 reissue on Lost Apparitions Records (Luray, Virginia), catalogue 030; no album about text"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Deceased_(band)",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Album named with year and labels only"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "King Fowley went back to the drums here; it was recorded at Assembly Line Studios in Virginia, with Fowley producing.",
+  "example_line_sources": [
+   "https://lollipopmagazine.com/2011/05/deceased-release-surreal-overdose-news/",
+   "https://hellbound.ca/2011/07/deceased-surreal-overdose/"
+  ],
+  "notes": "Encyclopaedia Metallum returned 403 to WebFetch, so its entry was not read. Notes of 150 words are reachable from the label news plus reviews, but thin on the idea behind the record."
+ },
+ {
+  "rym_id": "Album112404",
+  "artist": "György Ligeti & Berliner Philharmoniker & Jonathan Nott",
+  "title": "The Ligeti Project II: Lontano; Atmosphères; Apparitions; San Francisco Polyphony; Concert românesc",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Atmosph%C3%A8res",
+   "kind": "wikipedia_work",
+   "detail": "The Atmospheres article's Discography section names this recording (Philharmonie, 13 to 16 December 2001; Teldec 2002; 2008 box). Works Lontano, San Francisco Polyphony etc. have their own articles; no article for the Ligeti Project series or this disc."
+  },
+  "sources": [
+   {
+    "url": "https://musicweb-international.com/classrev/2003/Feb03/Ligeti2.htm",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Tony Haywood, MusicWeb International, February 2003; Teldec 8573-88261-2",
+     "Recorded at the Philharmonie, Berlin, 13 to 16 December 2001; two performances live",
+     "First recordings of Concert romanesc (1951) and of Apparitions, which premiered in Cologne in 1960",
+     "Liner notes by Ligeti himself; compares Nott's Lontano and Atmospheres with Abbado's 1994 Vienna disc"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Atmosph%C3%A8res",
+    "type": "wikipedia_work",
+    "lang": "en",
+    "facts": [
+     "Lists this recording, released 2002 on Teldec/Warner as The Ligeti Project II, reissued 2008 as disc 2 of a five CD set"
+    ]
+   },
+   {
+    "url": "https://www.classicstoday.com/review/review-7885/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Classics Today review: praises the sound and Ligeti's notes; Teldec filling a gap left by Sony's Ligeti Edition"
+    ]
+   },
+   {
+    "url": "https://www.newsreview.com/sacramento/content/the-ligeti-project-ii/29262",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Sacramento News & Review: Lontano and Atmospheres, the latter known from Kubrick's 2001"
+    ]
+   },
+   {
+    "url": "https://warnerclassics.com/release/ligeti-project",
+    "type": "label_page",
+    "lang": "en",
+    "facts": [
+     "Warner Classics: series close to Ligeti's heart, composer involved in the recordings until his death in 2006"
+    ]
+   },
+   {
+    "url": "https://www.schott-music.com/en/concert-romanesc-no158579.html",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Publisher: Concert romanesc a camouflage piece of 1951, banned after one rehearsal in Budapest, not performed until 1971"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "The Berlin Philharmonic and Jonathan Nott recorded it at the Berlin Philharmonie in December 2001, with notes by Ligeti himself.",
+  "example_line_sources": [
+   "https://musicweb-international.com/classrev/2003/Feb03/Ligeti2.htm",
+   "https://en.wikipedia.org/wiki/Atmosph%C3%A8res"
+  ],
+  "notes": "Plenty: the works themselves are well documented, plus disc specific review facts (dates, premiere recordings, Ligeti's own notes)."
+ },
+ {
+  "rym_id": "Album2346950",
+  "artist": "Hijokaidan",
+  "title": "ザ・ノイズ (The Noise)",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Hijokaidan_discography",
+   "kind": "wikipedia_artist_section",
+   "detail": "One row in the discography's box set table (2009, 30 CDs) and a citation of Jojo Hiroshige's 2009 liner notes in the Hijokaidan article; no prose about it. No ja.wikipedia album article found."
+  },
+  "sources": [
+   {
+    "url": "https://www.discogs.com/release/1830052-Hijokaidan-The-Noise-%E3%82%B6%E3%83%8E%E3%82%A4%E3%82%BA-30th-Anniversary-1979-2009",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "Read through api.discogs.com/releases/1830052 (the HTML page returns 403)",
+     "Full title The Noise - 30th Anniversary - 1979-2009; Alchemy Records ARCD-187 to 216; released 16 June 2009, Japan",
+     "30 CD box, limited to 500 hand numbered copies, with a 32 page booklet of Japanese and English notes, photos, discography and live dates",
+     "Mostly unreleased material; exceptions are the 1982 album on CD5, two discs of the 1992 box on CD17/18 and a 2002 LP side",
+     "Produced and annotated by Jojo Hiroshige; remastered by Ippei Suda at LM Studio in 2009; murky sound is intentional per the notes",
+     "Spans Kyoto recordings from October 1979 to a studio session at Meidaimae Studio, Tokyo, 25 April 2009, incl. a 2005 Scotland show and a John Duncan session"
+    ]
+   },
+   {
+    "url": "http://ambolthuereviews.blogspot.com/2009/09/hijokaidan-noise.html",
+    "type": "blog",
+    "lang": "en",
+    "facts": [
+     "Disc by disc review, 19 September 2009",
+     "CD1 to 3 by the original lineup; a Janis Joplin cover on CD23; solo tracks by Mikawa, Jojo, Kosakai and Junko on CD28; side projects such as Acid Mothers Kaidan on CD29",
+     "Booklet with a band history written by Jojo Hiroshige"
+    ]
+   },
+   {
+    "url": "http://psychmetalfreak.blogspot.com/2009/08/hijokaidan-making-some-righteous-noise.html",
+    "type": "blog",
+    "lang": "en",
+    "facts": [
+     "August 2009 post tracing phases in the box: prog inspired jams, confrontational performances, band noise rock, later walls of noise"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Hijokaidan_discography",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Listed under box sets, 2009, 30 CDs; liner notes titled The Thirtieth Anniversary of Hijokaidan dated 19 June 2009"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "A box of 30 CDs, limited to 500 numbered copies, tracing Hijokaidan from their Kyoto start in 1979 to a 2009 Tokyo session.",
+  "example_line_sources": [
+   "https://www.discogs.com/release/1830052-Hijokaidan-The-Noise-%E3%82%B6%E3%83%8E%E3%82%A4%E3%82%BA-30th-Anniversary-1979-2009"
+  ],
+  "notes": "Important: this is a 30 CD anniversary box set, not a single album; RYM files it as an album. Standard search missed it (also in Japanese); an extended search found Discogs and the blogs. Discogs public API worked when discogs.com pages gave 403. suruga-ya.jp also 403."
+ },
+ {
+  "rym_id": "Album358290",
+  "artist": "Hildegard von Bingen & Sequentia",
+  "title": "Voice of the Blood",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Hildegard_of_Bingen_discography",
+   "kind": "wikipedia_artist_section",
+   "detail": "One bullet in the Hildegard discography (Sequentia, dir. Barbara Thornton, DHM 05472-77346-2, 1995) and a line in Sequentia's discography; title not linked. Sibling album Canticles of Ecstasy has an article; this one does not."
+  },
+  "sources": [
+   {
+    "url": "https://www.sequentia.org/recordings/recording16.html",
+    "type": "label_page",
+    "lang": "en",
+    "facts": [
+     "Ensemble's own page: ten women's voices directed by Barbara Thornton, with fiddler Elizabeth Gaver",
+     "Only Sequentia recording without Benjamin Bagby",
+     "Recorded October and November 1994 at St. Pantaleon, Cologne; released 1995 by Deutsche Harmonia Mundi / BMG with WDR Koln; 76:55",
+     "Part of Sequentia's complete Hildegard project with WDR; programme built around St. Ursula and her 11,000 virgin companions martyred at Cologne",
+     "57 page booklet available as PDF (not read)"
+    ]
+   },
+   {
+    "url": "https://lib.ecu.edu/catalog-preview/catalog/981854",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Library record: German title Stimme des Blutes; selections from the Symphonia; edition by Thornton from the Rupertsberg Riesencodex in Wiesbaden; later in the 900 Years box"
+    ]
+   },
+   {
+    "url": "https://millenniumofmusic.com/tribute-to-barbara-thornton",
+    "type": "blog",
+    "lang": "en",
+    "facts": [
+     "Tribute to Thornton, co founder of Sequentia, who fought a brain tumour to finish the Hildegard recordings",
+     "On this disc she sings the invocation in Hildegard's sequence for St. Ursula"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Hildegard_of_Bingen_discography",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Bullet entry with catalogue number; lists it as 2 discs"
+    ]
+   },
+   {
+    "url": "https://www.allmusic.com/album/hildegard-von-bingen-voice-of-the-blood-mw0001366070",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "AllMusic listing: released 5 December 1995, about 77 minutes"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Ten women's voices led by Barbara Thornton sing Hildegard's music for St. Ursula, recorded at St. Pantaleon, Cologne, in 1994.",
+  "example_line_sources": [
+   "https://www.sequentia.org/recordings/recording16.html"
+  ],
+  "notes": "No critical review found; notes would draw on the ensemble page, the Thornton tribute and Hildegard/Ursula background. Disc count conflicts (Wikipedia says 2 discs, Sequentia gives one 76:55 CD)."
+ },
+ {
+  "rym_id": "Album16701133",
+  "artist": "R.A.P. Ferreira & Kenny Segal",
+  "title": "The Night Green Side of It",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/R.A.P._Ferreira",
+   "kind": "wikipedia_artist_section",
+   "detail": "Listed only in the Collaborative studio albums section of R.A.P. Ferreira's article and on Kenny Segal's page; no album article."
+  },
+  "sources": [
+   {
+    "url": "https://afrolab9000.bandcamp.com/album/the-night-green-side-of-it",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "Released 24 October 2025; produced and mixed by Kenny Segal, recorded by Rory Ferreira, mastered by Daddy Kev",
+     "Players include Mekala (drums, flute, vocals), Jason Wool, Aaron Shaw, Diego Gaeta, Jordan Katz, Ryan Crosby and the band Skyline Electric",
+     "About text calls it the last part of a trilogy the pair only noticed once it was done"
+    ]
+   },
+   {
+    "url": "https://kennysegal.bandcamp.com",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "Third installment of their More Will Than Skill trilogy; vinyl art by Marcher Arrant; no repress planned"
+    ]
+   },
+   {
+    "url": "https://stereogum.com/2326079/r-a-p-ferreira-kenny-segal-announce-new-album-the-night-green-side-of-it-hear-by-the-head/music",
+    "type": "news",
+    "lang": "en",
+    "facts": [
+     "Chris DeVille, 10 October 2025: 13 tracks on Ruby Yacht with Alpha Pup; single by the head",
+     "Milo, Ferreira's former rap name, appears on closer real jazz"
+    ]
+   },
+   {
+    "url": "https://atwoodmagazine.com/tngs-the-night-green-side-of-it-rap-ferreira-kenny-segal-album-review/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Adam Davidson, Atwood Magazine, 2 March 2026; calls it the duo's sixth full length together",
+     "spicer and i samples poet Jack Spicer; blood quantum features British rapper ELDON",
+     "A song for Ferreira's grandmother Ruby, namesake of Ruby Yacht; his young son does an outro; a song for his uncle NIZM",
+     "defense attorney addresses wars in the Middle East and Africa; hidden closing track has decade old verses recorded as Milo"
+    ]
+   },
+   {
+    "url": "https://www.robertchristgau.com/get_artist2.php?id=7899",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Christgau Consumer Guide grade A minus (text is subscriber only); lists the label as Backwoodz Studioz, which conflicts with other sources"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Kenny Segal produced and mixed it; one song is for Ferreira's grandmother Ruby, the namesake of his Ruby Yacht label.",
+  "example_line_sources": [
+   "https://afrolab9000.bandcamp.com/album/the-night-green-side-of-it",
+   "https://atwoodmagazine.com/tngs-the-night-green-side-of-it-rap-ferreira-kenny-segal-album-review/"
+  ],
+  "notes": "Recent release; no interview, Pitchfork or Reddit thread found in standard search. Count of prior collaborations differs (trilogy vs sixth full length)."
+ },
+ {
+  "rym_id": "Album2036970",
+  "artist": "DJ Sprinkles",
+  "title": "Midtown 120 Blues",
+  "wikipedia_after_all": {
+   "found": true,
+   "album_article": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Midtown_120_Blues",
+   "kind": "wikipedia_album",
+   "detail": "Album article (about 500 to 600 words). Matcher probably missed it because the article credits Terre Thaemlitz rather than DJ Sprinkles."
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Midtown_120_Blues",
+    "type": "wikipedia_album",
+    "lang": "en",
+    "facts": [
+     "First full length as DJ Sprinkles; Mule Musiq, 9 August 2008, 79:46; reissued 2014 on Thaemlitz's Comatonse",
+     "Opens with a spoken intro tying deep house to the AIDS crisis, ACT UP, police violence and racism",
+     "Ball'r (Madonna-Free Zone) ends with a speech on Vogue erasing ballroom culture's Black, Latino and queer roots",
+     "Resident Advisor album of the year 2009; Pitchfork Best New Reissue 8.5 (2014)"
+    ]
+   },
+   {
+    "url": "https://w.comatonse.com/reviews/ra140128.html",
+    "type": "interview",
+    "lang": "en",
+    "facts": [
+     "Excerpt of Luis-Manuel Garcia's Resident Advisor feature, 28 January 2014, hosted by Comatonse",
+     "Title refers to Midtown's 42nd Street red light strip, the 120 bpm of 1990s New York deep house, and the blues",
+     "Thaemlitz DJed in the early 1990s at Sally's II, a club for trans sex workers, and lost the residency in 1992 for refusing major label records"
+    ]
+   },
+   {
+    "url": "https://factmag.com/2014/04/23/dj-sprinkles-midtown-120-blues-receives-deluxe-reissue",
+    "type": "news",
+    "lang": "en",
+    "facts": [
+     "2014 deluxe CD reissue on Comatonse with a large poster, out 31 May",
+     "No vinyl because the album's phase based bass placement would cancel when cut in mono"
+    ]
+   },
+   {
+    "url": "https://es-mx.ra.co/reviews/5789",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Resident Advisor review, 4.5/5"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Terre_Thaemlitz",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Discography lists it (Mule Musiq MMD7); Awards: RA album of the year 2009"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "The title names the Midtown strip where Terre Thaemlitz DJed at Sally's II, and the 120 bpm of 1990s New York deep house.",
+  "example_line_sources": [
+   "https://w.comatonse.com/reviews/ra140128.html",
+   "https://en.wikipedia.org/wiki/Midtown_120_Blues"
+  ],
+  "notes": "Album article exists. Release year differs (Wikipedia 2008; some sources 2009). Pitchfork review not fetched; its date and score come from Wikipedia's citation."
+ }
+]

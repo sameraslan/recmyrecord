@@ -1,0 +1,26 @@
+{
+  "tier": "rich",
+  "hook": {"text": "The label pulled out of an earlier agreement while the album was being recorded, and the print run shrank.", "src": ["Lead"]},
+  "facts": [
+    {"label": "Released", "value": "17 September 1984"},
+    {"label": "Recorded", "value": "1983"},
+    {"label": "Produced by", "value": "Andrzej Ludew, Republika, Sławomir Wesołowski"},
+    {"label": "Label", "value": "Polton"},
+    {"label": "Players", "value": "Grzegorz Ciechowski (vocals, piano, moog), Sławomir Ciesielski (drums), Zbigniew Krzywański (electric guitar, vocals), Paweł Kuczyński (bass guitar)"}
+  ],
+  "sections": [
+    {"heading": "Making it", "sentences": [
+      {"text": "The album was recorded at Wawrzyszew Sound Studio.", "src": ["Lead"]},
+      {"text": "Grzegorz Ciechowski wrote the music and lyrics for eight of the nine tracks, and Zbigniew Krzywański shares the music on the ninth track, Obcy astronom.", "src": ["Lista utworów"]},
+      {"text": "The small run and the poor cover were caused by a change of director at Polton, and with it a change of company policy.", "src": ["Lead"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "The case went to court, and the band lost it.", "src": ["Lead"]},
+      {"text": "Reissues followed through the 1990s and 2000s, put out by MMPP, Sound-Pol and Pomaton EMI, and in 2003 the album was part of the Komplet set.", "src": ["Wydania"]},
+      {"text": "In 2002, Nieustanne tango, Psy Pawłowa and Obcy astronom were performed for the last time at a Kombinat concert dedicated to the late Grzegorz Ciechowski.", "src": ["Lead"]}
+    ]}
+  ],
+  "listen_for": [
+    {"track": "Poranna wiadomość", "text": "Polton promoted this song abroad in 1985.", "src": ["Lead"]}
+  ]
+}

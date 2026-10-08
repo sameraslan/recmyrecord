@@ -1,0 +1,140 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "The first record with The Obsessed singer Scott \"Wino\" Weinrich on vocals, cut in a Redondo Beach studio.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'the first Saint Vitus album featuring The Obsessed singer Scott \"Wino\" Weinrich'; Infobox: 'Studio: Total Access Recording ( Redondo Beach, California )'. (Shared run is six words, below the copy threshold.)"
+    },
+    {
+      "where": "fact: Released",
+      "text": "October 1986",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Released: October 1986'."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "1986, at Total Access Recording in Redondo Beach, California",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Recorded: 1986', 'Studio: Total Access Recording ( Redondo Beach, California )'."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "Joe Carducci, Saint Vitus",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Producer: Joe Carducci , Saint Vitus'."
+    },
+    {
+      "where": "fact: Label",
+      "text": "SST",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Label: SST'."
+    },
+    {
+      "where": "fact: Players",
+      "text": "Scott \"Wino\" Weinrich (vocals), Dave Chandler (guitar), Mark Adams (bass), Bill Linnane (piano), Armando Acosta (drums)",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel lists exactly these five with these roles."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "The sound has been described as rooted in early Black Sabbath, and Paul Kott of AllMusic said the band was looking back on the 1970s.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": true,
+      "copied": false,
+      "why": "Music and lyrics: 'deeply rooted in the gloomy ballistics of early [Black] Sabbath'; Kott: 'Saint Vitus were looking back on the '70s with nostalgia'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "Kott also saw the band's slow, heavy music as having little commercial viability at the time, and its commitment to that sound went against the L.A. glam metal of the day.",
+      "verdict": "partly",
+      "generic": false,
+      "evaluative": true,
+      "copied": false,
+      "why": "Legacy: Kott praises 'the outright admission that the band's passion - slow, heavy music - not only lacked commercial viability'. The pack makes it the band's own admission that the music 'lacked' viability, which Kott credits; the notes turn it into Kott's judgement of 'little' viability. The glam-metal half is supported ('in direct opposition to the money and chicks attitude of L.A. glam metal of the day')."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Dave Chandler wrote the music for every song, and Scott Reagers and Robert Gonzales share credit on the lyrics for two of them.",
+      "verdict": "partly",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Track listing: 'Born Too Late' (lyrics: Chandler; Scott Reagers) is shared, but 'H.A.A.G.' has 'lyrics: Robert Gonzales' alone, so Gonzales does not share credit; Chandler is not a lyricist there. 'Every song' holds for the six album tracks only (the CD bonus 'Thirsty and Miserable' is by Dez Cadena, Rosa Medea, ROBO)."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Michael Lardie and Jim Mancuso were the engineers.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: 'Michael Lardie, Jim Mancuso – engineers'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "The riffs are slow and sludgy, and the songs drop the galloping beat that traditional heavy metal often uses.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Music and lyrics: '\"sludgy, ultra-slow riffs,\" and omits the \"galloping rhythms\" that are common in traditional heavy metal'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "In 1987 SST put the album out on CD with three tracks from the Thirsty and Miserable EP added.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "CD reissue: 'In 1987, SST re-released Born Too Late on CD and included the Thirsty and Miserable EP tracks', three listed."
+    },
+    {
+      "where": "section: What came after",
+      "text": "The band's compilation Heavier Than Thou holds every song from this album except The War Starter.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'All the songs from this album except \"The War Starter\" are featured on the band's compilation album Heavier Than Thou'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "On 11 April 2009 the band played Dying Inside in New Orleans, with Phil Anselmo appearing as a guest.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'On April 11, 2009, \"Dying Inside\" was performed by the band with Phil Anselmo as a guest in New Orleans'."
+    },
+    {
+      "where": "listen_for: Thirsty and Miserable",
+      "text": "It is a cover of a Black Flag song.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "CD reissue: '\"Thirsty and Miserable\" ... ( Black Flag cover)'. Title matches. Note it is a 1987 CD bonus track, not on the original album."
+    }
+  ],
+  "missed": "The lyrics' themes (dragons, psychedelic drugs, war, insanity, alcohol abuse) and the vivid sound descriptions (Kott: 'Each chord rains down like a hammer, and each progression takes an eternity to resolve'). listen_for uses only a bonus track and none of the six album songs."
+}

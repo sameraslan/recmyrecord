@@ -1,0 +1,41 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "On this album he plays the cavaquinho for the first time, an instrument he had dropped for the guitar.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"pela primeira vez, Nelson tocou cavaquinho, instrumento que havia abandonando pelo violão\". The pack ties this to the choro \"Caminhando\", which the hook does not name."
+    },
+    {
+      "where": "fact: Released",
+      "text": "1973",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Wikidata \"released: 1973-01-01\"; Lead \"lançado em 1973\"."
+    },
+    {
+      "where": "Making it #1",
+      "text": "Some of the samba musician's songs were recorded on this LP, among them 'Juízo Final', 'Folhas Secas', 'A Flor e o Espinho', 'Rugas' and 'Quando Eu Me Chamar Saudade'.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"foram gravados algumas das melhores composições do sambista, como Juízo Final, Folhas Secas, A Flor e o Espinho, Rugas e Quando Eu Me Chamar Saudade\". Titles match the Disco section; \"melhores\" was dropped, which is safe."
+    },
+    {
+      "where": "listen_for: Potpourri",
+      "text": "Guilherme de Brito is a special guest on this track.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Faixas: \"Potpourri (participação especial: Guilherme de Brito)\"."
+    }
+  ],
+  "missed": "The cavaquinho is played on the choro \"Caminhando\" (Disco), the obvious listen_for item; the notes never name it. Also that this is his third album."
+}

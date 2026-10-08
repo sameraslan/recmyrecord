@@ -1,0 +1,68 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "Released as volume 6 of the Polish Jazz series, every tune on it was written by the saxophonist who leads the band.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Płyta ukazała się jako vol. 6 serii Polish Jazz\"; \"Wszystkie utwory zamieszczone na płycie to kompozycje lidera\"."
+    },
+    {
+      "where": "fact: Released",
+      "text": "1966",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Wydany: 1966\"."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "January 1966, Warsaw",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Album nagrany został w Warszawie w styczniu 1966.\""
+    },
+    {
+      "where": "fact: Label",
+      "text": "Polskie Nagrania „Muza”",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Wydawnictwo: Polskie Nagrania „Muza” XL 0305\"."
+    },
+    {
+      "where": "fact: Players",
+      "text": "Zbigniew Namysłowski (alto saxophone), Adam Matyszkowicz (piano), Janusz Kozłowski (double bass), Czesław Bartkowski (drums)",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Muzycy: \"saksofon altowy\", \"fortepian\", \"kontrabas\", \"perkusja\" for the four named."
+    },
+    {
+      "where": "Making it #1",
+      "text": "Wojciech Piętowski was the recording director for the album, and Halina Jastrzębska was the sound engineer.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Reżyser nagrania – Wojciech Piętowski; Inżynier dźwięku – Halina Jastrzębska\"."
+    },
+    {
+      "where": "Making it #2",
+      "text": "Józef Balcerak wrote the text printed on the cover.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Omówienie płyty (tekst na okładce) – Józef Balcerak\"."
+    }
+  ],
+  "missed": "Little else in the pack: it came out in both mono (XL 0305) and stereo (SXL) and was reissued on CD in 2004 (PNCD 306)."
+}

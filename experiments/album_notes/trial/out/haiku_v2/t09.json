@@ -1,0 +1,46 @@
+{
+  "tier": "rich",
+  "hook": {"text": "Stephin Merritt first aimed for 100 love songs, then settled on 69 split across three volumes.", "src": ["Conception and live performance", "Lead"]},
+  "facts": [
+    {"label": "Released", "value": "7 September 1999"},
+    {"label": "Recorded", "value": "April 1999, at Polar West, Mother West, Polar Mother and Sonics"},
+    {"label": "Produced by", "value": "Stephin Merritt"},
+    {"label": "Label", "value": "Merge"}
+  ],
+  "sections": [
+    {
+      "heading": "Where it comes from",
+      "sentences": [
+        {"text": "Merritt sat in a Manhattan piano bar, a gay one, listening to a pianist play Stephen Sondheim songs.", "src": ["Conception and live performance"]},
+        {"text": "There he decided to move into theatre music, feeling he had a knack for it.", "src": ["Conception and live performance"]},
+        {"text": "The first idea was a music revue with four drag queens, and the one the crowd liked best that night would get paid.", "src": ["Conception and live performance"]},
+        {"text": "He also took inspiration from Charles Ives's 114 Songs, a collection he had read about that same day.", "src": ["Conception and live performance"]}
+      ]
+    },
+    {
+      "heading": "Making it",
+      "sentences": [
+        {"text": "Much of the writing took place at Dick's Bar in New York, and by his own account he spent eight hours a day there.", "src": ["Conception and live performance"]},
+        {"text": "Merritt also plays a long list of instruments on the record, from ukulele and musical saw to kalimbas and rain stick.", "src": ["Personnel"]},
+        {"text": "Shirley Simms, LD Beghtol and Dudley Klute add vocals on a number of songs.", "src": ["Personnel"]}
+      ]
+    },
+    {
+      "heading": "What came after",
+      "sentences": [
+        {"text": "In December 2006 Continuum published a book on the album by LD Beghtol, part of its 33 1/3 series.", "src": ["69 Love Songs, A Field Guide"]},
+        {"text": "It includes studio stories, a glossary of words from the lyrics, and an interview with Merritt.", "src": ["69 Love Songs, A Field Guide"]},
+        {"text": "Domino reissued it in the United Kingdom, and Circus released it in Europe and Australia in 2000.", "src": ["Release"]},
+        {"text": "Peter Gabriel covered The Book of Love, and Black Country, New Road covered I Think I Need a New Heart on an EP.", "src": ["Notable cover versions"]},
+        {"text": "Superchunk covered I Don't Want to Get Over You in 2025.", "src": ["Notable cover versions"]}
+      ]
+    }
+  ],
+  "listen_for": [
+    {"track": "Yeah! Oh, Yeah!", "text": "Merritt sings this one as a duet, and the lyric tells the story of a husband who murders his wife.", "src": ["Personnel", "Genres and themes"]},
+    {"track": "Papa Was a Rodeo", "text": "Shirley Simms sings a duet with Merritt on it.", "src": ["Personnel"]},
+    {"track": "Time Enough for Rocking When We're Old", "text": "John Woo plays banjo, lead guitar, mandolin and bass on it.", "src": ["Personnel"]},
+    {"track": "Asleep and Dreaming", "text": "Daniel Handler plays accordion and keyboards on it, and he also arranged it.", "src": ["Personnel"]},
+    {"track": "The Luckiest Guy on the Lower East Side", "text": "Ida Pearle plays violin on it, and Dudley Klute sings lead.", "src": ["Personnel"]}
+  ]
+}

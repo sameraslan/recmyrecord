@@ -1,0 +1,194 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "The title's first half is a metaphor for dodging hard topics, and the second urges leaving the past behind.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"Melt My Eyez is a metaphor for people's tendency to avoid facing difficult topics in day-to-day life, while See Your Future is motivation for moving on by putting one's past behind\"."
+    },
+    {
+      "where": "fact: Released",
+      "text": "25 March 2022",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Released: March 25, 2022\"."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "2019 to 2021",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Recorded: 2019–2021\"."
+    },
+    {
+      "where": "fact: Label",
+      "text": "PH Loma Vista",
+      "verdict": "partly",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "The infobox flattens it to \"PH Loma Vista\", but the Lead says \"released through PH and Loma Vista Recordings\": two labels, written here as one name."
+    },
+    {
+      "where": "Where it comes from #1",
+      "text": "Denzel Curry first pictured the album's themes in 2018, and began work on it after finishing Zuu, his 2019 album.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"first began envisioning the album's themes in 2018, and began working on it after the completion of his 2019 album, Zuu\"."
+    },
+    {
+      "where": "Where it comes from #2",
+      "text": "In a May 2020 interview he said he planned to retire from music after three more full-length projects.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"In a May 2020 interview with XXL, he shared his plans to retire from making music after releasing three more full-length bodies of work.\""
+    },
+    {
+      "where": "Where it comes from #3",
+      "text": "He talked about retiring past alter egos such as Zeltron, Aquarius Killa and Raven Miyagi, in favor of his own personality and feelings.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"retiring some of his past alter egos in favor of embracing his true personality and feelings\"; quote names Zeltron, Aquarius Killa, Raven Miyagi."
+    },
+    {
+      "where": "Where it comes from #4",
+      "text": "The themes also drew on several works of cinema, among them the Dollars trilogy, Yojimbo, Seven Samurai and Ran.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"inspired by several classic works of cinema, including the Dollars trilogy ... Yojimbo, Seven Samurai, and Ran\"."
+    },
+    {
+      "where": "Making it #1",
+      "text": "Cardo, FnZ, Thundercat, JPEGMafia and Kenny Beats are among the producers.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: \"production from Cardo, FnZ, Thundercat, JPEGMafia, and Kenny Beats, among others\"."
+    },
+    {
+      "where": "Making it #2",
+      "text": "Nathan Burgess mixed and engineered the record, and Chris Gehringer mastered it.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: \"Chris Gehringer – mastering; Nathan Burgess – mixing, engineering\"."
+    },
+    {
+      "where": "Making it #3",
+      "text": "Robert Glasper plays keyboards, A-Trak handles the sampler on two tracks, and Bridget Perez adds background vocals.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: Glasper \"keyboards (1), additional keyboards (8)\"; A-Trak \"sampler (3, 14)\"; Bridget Perez \"background vocals (2)\"."
+    },
+    {
+      "where": "Making it #4",
+      "text": "Anna Wise, Thundercat, Sharina Castillo, Gaby Duran and Shawn K add extra vocals.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel lists each of the five with \"additional vocals\"."
+    },
+    {
+      "where": "What came after #1",
+      "text": "A remix of Walkin featuring Key Glock was the first single from the extended edition, in June 2022.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"On June 1, 2022, a remix of 'Walkin' featuring Key Glock, was released as the first single for the extended version\"."
+    },
+    {
+      "where": "What came after #2",
+      "text": "That edition followed in September 2022 with 10 new songs that Curry recorded with the Cold Blooded Soul Band.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"On September 30, 2022, the extended edition was released featuring 10 new songs recorded by Curry and the Cold Blooded Soul Band\". The pack's own extended track list shows eight of these are \"Cold Blooded Soul version\"s of album songs, so \"new songs\" is the pack's wording, not quite what the list shows."
+    },
+    {
+      "where": "What came after #3",
+      "text": "It also brought two previously unreleased tracks, Larger Than Life and Chrome Hearts, the second featuring Zacari.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"two previously unreleased songs— 'Larger Than Life' and 'Chrome Hearts' (featuring Zacari)\"."
+    },
+    {
+      "where": "What came after #4",
+      "text": "A livestream concert, Melt My Eyez: Live From the Komodo City Cafe, promoted it the day before.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"promoted with a livestream concert: Melt My Eyez: Live From the Komodo City Cafe, on September 29\" (release September 30)."
+    },
+    {
+      "where": "listen_for: Melt Session #1",
+      "text": "Robert Glasper is the featured guest on it.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Track listing: \"'Melt Session #1' (featuring Robert Glasper)\"."
+    },
+    {
+      "where": "listen_for: Walkin",
+      "text": "It samples The Loving Touch, a song Keith Mansfield wrote and performed.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"'Walkin' contains a sample of 'The Loving Touch', written and performed by Keith Mansfield.\""
+    },
+    {
+      "where": "listen_for: Worst Comes to Worst",
+      "text": "It samples Come Closer, a song performed by Salma Agha.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"'Worst Comes to Worst' contains a sample of 'Come Closer' ... as performed by Salma Agha.\""
+    },
+    {
+      "where": "listen_for: Angelz",
+      "text": "It samples Nothing Left to Do, performed by After All, and Karriem Riggins is a featured guest on it.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"'Angelz' contains a sample of 'Nothing Left to Do' ... as performed by After All\"; \"'Angelz' (featuring Karriem Riggins)\"."
+    },
+    {
+      "where": "listen_for: Zatoichi",
+      "text": "It samples Amen, Brother, a song the Winstons performed, and Slowthai is a featured guest on it.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"'Zatoichi' contains a sample of 'Amen, Brother' ... as performed by the Winstons\"; \"'Zatoichi' (featuring Slowthai)\"."
+    }
+  ],
+  "missed": "The change in sound: he meant to go \"in an entirely different direction\", and Pitchfork says he trades \"livewire energy for introspection and vulnerability\". Also the singles (\"Walkin\", \"Zatoichi\" named after the Japanese fictional character, \"Troubles\" with T-Pain) and the \"Ain't No Way\" guest list (6lack, Rico Nasty, JID)."
+}

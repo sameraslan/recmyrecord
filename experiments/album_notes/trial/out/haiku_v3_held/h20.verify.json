@@ -1,0 +1,122 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "The label pulled out of an earlier agreement while the album was being recorded, and the print run shrank.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'Już w czasie nagrywania firma zrezygnowała z wcześniejszej umowy, czego rezultatem było właśnie zmniejszenie nakładu'."
+    },
+    {
+      "where": "fact: Released",
+      "text": "17 September 1984",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Wydany: 17 września 1984'."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "1983",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Nagrywany: 1983'."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "Andrzej Ludew, Republika, Sławomir Wesołowski",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Producent: Andrzej Ludew, Republika , Sławomir Wesołowski'."
+    },
+    {
+      "where": "fact: Label",
+      "text": "Polton",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Wydawnictwo: Polton (LPP-012)'."
+    },
+    {
+      "where": "fact: Players",
+      "text": "Grzegorz Ciechowski (vocals, piano, moog), Sławomir Ciesielski (drums), Zbigniew Krzywański (electric guitar, vocals), Paweł Kuczyński (bass guitar)",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Twórcy: 'Ciechowski – śpiew, fortepian, moog'; 'Ciesielski – perkusja'; 'Krzywański – gitara elektryczna, śpiew'; 'Kuczyński – gitara basowa'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "The album was recorded at Wawrzyszew Sound Studio.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'Płyta została nagrana w „Wawrzyszew Sound Studio”'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Grzegorz Ciechowski wrote the music and lyrics for eight of the nine tracks, and Zbigniew Krzywański shares the music on the ninth track, Obcy astronom.",
+      "verdict": "partly",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lista utworów: eight tracks 'muz. i sł. Grzegorz Ciechowski'; 'Obcy astronom' (muz. Ciechowski, Krzywański; sł. Ciechowski). But 'Obcy astronom' is track seven (side B, third); the ninth track is 'Poranna wiadomość'. 'The ninth track' reads as a track position and is wrong."
+    },
+    {
+      "where": "section: Making it",
+      "text": "The small run and the poor cover were caused by a change of director at Polton, and with it a change of company policy.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'bardzo małym nakładzie, oraz zapakowany w złej jakości okładkę. Było to spowodowane zmianą dyrektora firmy Polton, a co za tym idzie, zmianą polityki firmy'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "The case went to court, and the band lost it.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'Sprawa trafiła do sądu, lecz została przez zespół przegrana'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "Reissues followed through the 1990s and 2000s, put out by MMPP, Sound-Pol and Pomaton EMI, and in 2003 the album was part of the Komplet set.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Wydania: 1991 MMPP, 1998 Sound-Pol, 1999/2002 Pomaton EMI, '2003 wydane jako część zestawu Komplet' (later 2011 and 2013 Pomaton EMI reissues not mentioned, but nothing wrong)."
+    },
+    {
+      "where": "section: What came after",
+      "text": "In 2002, Nieustanne tango, Psy Pawłowa and Obcy astronom were performed for the last time at a Kombinat concert dedicated to the late Grzegorz Ciechowski.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'W 2002 roku utwory „Nieustanne tango”, „Psy Pawłowa” i „Obcy astronom” zostały ostatni raz wykonane na koncercie Kombinat poświęconym zmarłemu Grzegorzowi Ciechowskiemu'."
+    },
+    {
+      "where": "listen_for: Poranna wiadomość",
+      "text": "Polton promoted this song abroad in 1985.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'Utwór „Poranna wiadomość” był promowany za granicą w 1985 przez wytwórnię Polton'. Title matches."
+    }
+  ],
+  "missed": "That it is Republika's second studio album, and the size of the cut-down run (46,000 copies); also that the 1991 and 1998 reissues dropped 'Wielki hipnotyzer'."
+}

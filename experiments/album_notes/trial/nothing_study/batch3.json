@@ -1,0 +1,692 @@
+[
+ {
+  "rym_id": "Album195609",
+  "artist": "Order From Chaos",
+  "title": "An Ending in Fire",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Order_from_Chaos",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Order_from_Chaos",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Band formed 1987 in Kansas City, Missouri, by Pete Helmkamp, Chuck Keller and Mike Miller",
+     "Album tracks were recorded in 1995 and form the band's third and last album",
+     "Band decided to split in 1995, before the record came out",
+     "Their label Shivadarshana folded; French label Osmose Productions picked up the recordings and released them in 1998",
+     "Nuclear War Now! reissued it in 2008"
+    ]
+   },
+   {
+    "url": "https://nuclearwarnowproductions.bandcamp.com/album/an-ending-in-fire",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "Recorded 1995, issued on CD three years later",
+     "Lyrics by Keller and Helmkamp; Mike Miller on drums",
+     "Built as three long pieces, one a five part cycle, split into nine CD tracks",
+     "After the split Keller founded Vulpecula and then Ares Kingdom with Miller; Helmkamp joined Angelcorpse and Revenge",
+     "NWN! issued the first vinyl edition (deluxe 12 inch LP, dated 31 Dec 2023), worked on by all three original members",
+     "Text gives inconsistent year spans, so treat its time figures with care"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/master/107978",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "Original CD: Osmose Productions OPCD 071, France, 1998, distributed by SPV",
+     "Credits: Helmkamp bass and vocals, Keller guitar, Miller drums",
+     "Recorded at Reichstag Studio, mastered at Morrisound Studios",
+     "Track 1 'Conqueror of Fear' has five movements, 'Somnium Helios' has three"
+    ]
+   },
+   {
+    "url": "https://www.metalmusicarchives.com/review/an-ending-in-fire/868229",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "User review, 3 to 3.5 of 5",
+     "Notes this has the clearest production of any Order From Chaos release up to then, still raw",
+     "Misses the heavy distorted bass of the band's early 1990s records",
+     "Says the record got limited attention outside long time followers"
+    ]
+   },
+   {
+    "url": "https://www.deathmetal.org/review/order-from-chaos-frozen-in-steel-2014/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Retrospective via the Frozen in Steel box set review",
+     "Says older riffs and songs were reworked with new material into three long compositions"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Recorded in 1995 by Pete Helmkamp, Chuck Keller and Mike Miller, it came out on Osmose in 1998, after the band had split.",
+  "example_line_sources": [
+   "https://en.wikipedia.org/wiki/Order_from_Chaos",
+   "https://www.discogs.com/master/107978"
+  ],
+  "notes": "Wikipedia has a band article with a short paragraph on the album, not an album article. Metal Archives returned 403 to fetch (not used). Notes would lean on the band article, Bandcamp text and Discogs; the members' later bands give context."
+ },
+ {
+  "rym_id": "Album759617",
+  "artist": "Smar SW",
+  "title": "Samobójstwo",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "pl",
+   "url": "https://pl.wikipedia.org/wiki/Smar_SW",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://pl.wikipedia.org/wiki/Smar_SW",
+    "type": "wikipedia_artist_section",
+    "lang": "pl",
+    "facts": [
+     "Punk band from Rzeszów formed 1989, first concert 17 May 1990, broke up 1996",
+     "Lists Samobójstwo as the last album (dated 1996 there); only a discography line, no album article",
+     "Lineup: Paweł 'Sezon' vocals, Grzegorz 'Kaktus' bass, Robert 'Yogurth' guitar, Rafał 'Słoniu' drums"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/master/385831",
+    "type": "discogs",
+    "lang": "pl",
+    "facts": [
+     "Cassette on QQRYQ Productions (QQP 074), Poland, 1997",
+     "Recorded and mixed at Studio Spaart in Boguchwała, 28 May to 8 June 1996, engineer Bogusław Nowak",
+     "Guests: Ewa Gunia on violin, Dominik Muszyński on congas",
+     "Lyrics credited to Paweł 'Sezon', Robert Śnieżek and Allen Ginsberg; one track is titled 'Skowyt' (Howl)",
+     "Robert Śnieżek credited as producer, guitar and vocals",
+     "Reissued 2006 as a 100 copy CDr on Canal 666; later unofficial CDr copies",
+     "Artist profile: began as crude Polish punk and by the mid 1990s became heavy and dark, closer to Neurosis and The Ex with Tom Cora; already disbanded when this last album came out; title means 'suicide'"
+    ]
+   },
+   {
+    "url": "https://smarsw.bandcamp.com/album/samob-jstwo",
+    "type": "bandcamp_about",
+    "lang": "pl",
+    "facts": [
+     "Band's own page; describes itself as sludge noise punk",
+     "Credits Yogurth guitar and vocals, Kaktus bass, Słoniu drums, Sezon vocals",
+     "Gives release date 18 March 1996 (conflicts with Discogs 1997 cassette), nine tracks, about 62 minutes",
+     "Same account has put remasters of earlier albums online (2023, 2024)"
+    ]
+   },
+   {
+    "url": "https://www.last.fm/music/Smar+SW/+wiki",
+    "type": "other_wiki",
+    "lang": "en",
+    "facts": [
+     "User written bio (seen via search snippet, page fetch blocked): anarcho punk band from Rzeszów",
+     "Over six years moved from simple punk to slow post hardcore inspired by Neurosis' Souls at Zero and Enemy of the Sun",
+     "Gives 1997 as breakup year"
+    ]
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=Gt9C3nrRQos",
+    "type": "youtube_description",
+    "lang": "pl",
+    "facts": [
+     "Full album upload titled with QQRYQ 1997 (title only; description not readable)"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Recorded at Studio Spaart in Boguchwała in 1996, it borrows lyrics from Allen Ginsberg and came out after the band had split.",
+  "example_line_sources": [
+   "https://www.discogs.com/master/385831"
+  ],
+  "notes": "Notes are possible but thin and rest on user generated sources (Discogs, Last.fm) plus the band's own Bandcamp and a short Polish Wikipedia band page. Release year conflicts: Bandcamp says March 1996, Discogs and the YouTube upload say 1997 (QQRYQ cassette); recording was May to June 1996. No reviews or interviews found. Discogs public API worked without a token where discogs.com pages returned 403."
+ },
+ {
+  "rym_id": "Album8139633",
+  "artist": "Havukruunu",
+  "title": "Kelle surut soi",
+  "wikipedia_after_all": {
+   "found": false,
+   "lang": "fi",
+   "url": "https://fi.wikipedia.org/wiki/Havukruunu",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://fi.wikipedia.org/wiki/Havukruunu",
+    "type": "wikipedia_artist_section",
+    "lang": "fi",
+    "facts": [
+     "Band from Hausjärvi founded 2013; album only listed in the discography as a 2017 studio album (red link, no article)",
+     "A cited source gives 29 April 2017 as the release date"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/master/1279605",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "CD on Naturmacht Productions NP079, Germany, released 29 April 2017, digipak with 12 page booklet",
+     "Stefan Sorghammer wrote all music and lyrics, played electric and acoustic guitars, bass and synth, sang, and recorded and mixed it",
+     "Noitavalo on drums and percussion; choirs by Olli Sinisalo and Sorghammer",
+     "Illustration by Heidi Kosenius, mastering by Robert Brockmann",
+     "Booklet dedicates the album to the memory of Quorthon"
+    ]
+   },
+   {
+    "url": "https://www.angrymetalguy.com/havukruunu-kelle-surut-soi-review/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Reviewed 28 April 2017 by Dr. A.N. Grier, 4.0 of 5",
+     "Finnish duo, sung in Finnish",
+     "Compares it to Bathory, Immortal, Borknagar and Dissection and to their debut Havulinnaan",
+     "Picks out the title track, 'Vainovalkeat' and 'Vainajain valot'"
+    ]
+   },
+   {
+    "url": "http://www.sputnikmusic.com/album/250423/Havukruunu-Kelle-Surut-Soi/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Review posted 8 May 2017, eight tracks a little over 50 minutes",
+     "Acoustic fingerpicking is new for the band but used sparingly; opener continues the style of Havulinnaan",
+     "Closing title track drops the harsh vocals"
+    ]
+   },
+   {
+    "url": "https://metalcrypt.com/reviews/9621",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Review by Sargon the Terrible, 25 November 2017, 4.5 of 5",
+     "Title translated as 'For whom the sorrows sing'; 51:34 runtime",
+     "Hears Moonsorrow as a major influence"
+    ]
+   },
+   {
+    "url": "https://metalcrypt.com/interviews/840",
+    "type": "interview",
+    "lang": "en",
+    "facts": [
+     "July 2025 interview with drummer Kostajainen and bassist Humö",
+     "Kostajainen joined in 2016 when writing for this second album began",
+     "Usual method: Stefan demos raw versions and others add ideas"
+    ]
+   },
+   {
+    "url": "https://yourlastrites.com/2025/02/07/havukruunu-tavastland-review/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Svart Records brought the 2017 album back into print in September 2025"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Stefan Sorghammer wrote, played and recorded most of it, with Noitavalo on drums; the CD booklet is dedicated to Quorthon.",
+  "example_line_sources": [
+   "https://www.discogs.com/master/1279605"
+  ],
+  "notes": "No album article in any language; the Finnish band article only lists it. Bandcamp link redirects to havukruununp.bandcamp.com and that page returned 404. Three reviews, Discogs credits and a later interview give enough for notes. Drummer credit differs: Discogs says Noitavalo; Kostajainen says he joined in 2016 during writing, so check before naming the drummer."
+ },
+ {
+  "rym_id": "Album248847",
+  "artist": "Gustavo Santaolalla",
+  "title": "Ronroco",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Gustavo_Santaolalla",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Gustavo_Santaolalla",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "1998 solo album gathering pieces recorded over about 14 years",
+     "Centres on the ronroco, a ten string Andean instrument, plus charango and Andean pan flute",
+     "Its music drew filmmakers; Alejandro González Iñárritu then asked him to score Amores perros and 21 Grams",
+     "Nonesuch issued a 25th anniversary reissue on 26 January 2024"
+    ]
+   },
+   {
+    "url": "http://www.nonesuch.com/albums/ronroco",
+    "type": "label_page",
+    "lang": "en",
+    "facts": [
+     "Released 6 January 1998 on Nonesuch; first vinyl edition, remastered, 26 January 2024",
+     "Twelve instrumental pieces rooted in Argentine music with touches from Japan, Africa and Eastern Europe",
+     "Santaolalla plays charango, ronroco, maulincho, Andean pipes, tin whistle, harmonica, guitar and guitarrón",
+     "Aníbal Kerpel on vibraphone and melodica, associate producer, recorded it at La Casa in Los Angeles and co mixed it",
+     "Jaime Torres plays charango on 'Pampa'",
+     "A track was used in The Insider, which the label calls the start of his soundtrack work",
+     "Iñárritu wrote a new liner note for the 2024 edition"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/master/194760",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "Lists an earlier US CD on Soluna / Island Independent (162 531 030 2), dated 1996"
+    ]
+   },
+   {
+    "url": "https://www.jazztimes.com/archives/gustavo-santaolalla-ronroco/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "JazzTimes review exists (fetch returned 403, not read)"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Named after a ten string Andean lute, it was recorded at La Casa in Los Angeles with Aníbal Kerpel on vibraphone and melodica.",
+  "example_line_sources": [
+   "http://www.nonesuch.com/albums/ronroco",
+   "https://en.wikipedia.org/wiki/Gustavo_Santaolalla"
+  ],
+  "notes": "No album article in en or es Wikipedia (es 'Ronroco' is the instrument). The artist article has a solid passage. Year conflict: Nonesuch and Wikipedia say 1998, Discogs main release is a 1996 Soluna/Island CD; the RYM year is 1997. Film uses reported in search snippets (Iguazu in The Insider, De Ushuaia a La Quiaca in The Motorcycle Diaries) come from retailer text; the label page confirms only The Insider."
+ },
+ {
+  "rym_id": "Album729086",
+  "artist": "Mediavolo",
+  "title": "A Secret Sound",
+  "wikipedia_after_all": {
+   "found": false,
+   "lang": "",
+   "url": "",
+   "kind": ""
+  },
+  "sources": [
+   {
+    "url": "https://ecmreviews.com/tag/indie/",
+    "type": "blog",
+    "lang": "en",
+    "facts": [
+     "Post 'Mediavolo: Purveyors of Secret Sounds' by Tyran Grillo, 1 May 2014, based on exchanges with the band",
+     "Band from Brest; Géraldine Le Cocq sings and writes lyrics since 2000, Jacques Henry does all music, instruments and production; a duo since 2004",
+     "Jacques imagined scenes like films and Géraldine turned them into stories",
+     "Hidden track 'Trapped' was first written for a play, with new lyrics added",
+     "'Chimera' was briefly the opener and has Jacques' voice caught in the studio before the drums",
+     "Videos for 'Hoary Man' and 'Misunderstanding' directed by Nicolas Hervoches",
+     "Influences named: Cocteau Twins, Kate Bush, Blonde Redhead, Bowie, 1970s and 80s synth pop"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/release/965307",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "CD released 2006 in Germany on Zeitkristall Music (Zeitkristall 02), record company Kalinkaland Records, distributed by Nova MD",
+     "Lyrics by Géraldine Le Cocq; music, production and arrangement by Jacques Henry",
+     "Twelve listed tracks, hidden track after silence on track 12",
+     "Artist profile: formed 1999 in Brest, five piece until 2004, then a duo"
+    ]
+   },
+   {
+    "url": "https://everybodywiki.com/Mediavolo",
+    "type": "other_wiki",
+    "lang": "fr",
+    "facts": [
+     "Seen via search snippet only (fetch 403): after the 2004 lineup change the duo made A Secret Sound, their first album fully in English, signed to German label Kalinkaland",
+     "Moved to Prikosnovénie in 2008 for Unaltered Empire"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Made by the Brest duo of Géraldine Le Cocq, who wrote the words, and Jacques Henry, who wrote and produced the music.",
+  "example_line_sources": [
+   "https://ecmreviews.com/tag/indie/",
+   "https://www.discogs.com/release/965307"
+  ],
+  "notes": "No Wikipedia article in en or fr (only a mention via the Prikosnovénie article in en). The ECM blog post is the main narrative source and is enough for notes together with Discogs. A search snippet claimed 'Mass Anaesthesia' went viral on TikTok; the cited page did not say so, so not used."
+ },
+ {
+  "rym_id": "Album1529848",
+  "artist": "Juçara Marçal & Kiko Dinucci",
+  "title": "Padê",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "pt",
+   "url": "https://pt.wikipedia.org/wiki/Juçara_Marçal",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://pt.wikipedia.org/wiki/Juçara_Marçal",
+    "type": "wikipedia_artist_section",
+    "lang": "pt",
+    "facts": [
+     "In 2008, besides her band work, Marçal released Padê with Kiko Dinucci",
+     "Discography: February 2008, independent, digital download only; no album article"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Kiko_Dinucci",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Dinucci started as a songwriter by writing eight songs for Padê, recorded with Marçal",
+     "Discography dates it 2007"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/master/1467556",
+    "type": "discogs",
+    "lang": "pt",
+    "facts": [
+     "CD released 8 February 2008 in Brazil, distributed by Tratore",
+     "Notes describe Brazilian regional music with African roots; track 8 is public domain"
+    ]
+   },
+   {
+    "url": "https://shotgun.live/pt-br/events/infinupadeembsb",
+    "type": "other",
+    "lang": "pt",
+    "facts": [
+     "Concert listing (seen via search snippet): album first out in February 2008, the duo's first creative meeting, which later led to Metá Metá",
+     "Shows revisiting the album in full in Brasília and Goiânia"
+    ]
+   },
+   {
+    "url": "https://opopular.com.br/magazine/jucara-marcal-e-kiko-dinucci-revisitam-o-repertorio-do-disco-pade-em-show-em-goiania-1.3441978",
+    "type": "news",
+    "lang": "pt",
+    "facts": [
+     "Goiânia paper on a show revisiting the Padê songs (seen via snippet, fetch 403)",
+     "Mentions Afro Brazilian roots and songs 'Jatobá', 'Cabocla Jurema', 'Mar de Lágrima'"
+    ]
+   },
+   {
+    "url": "https://www.nsctotal.com.br/?p=6844466",
+    "type": "news",
+    "lang": "pt",
+    "facts": [
+     "Florianópolis preview with quotes (snippet only, fetch 403): Marçal is drawn to African derived religions without being initiated; Dinucci is initiated and calls the songs' inspiration earthly, not divine"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": false,
+  "example_line": "The first album Juçara Marçal and Kiko Dinucci made together, with eight songs by Dinucci; the pair later formed Metá Metá.",
+  "example_line_sources": [
+   "https://en.wikipedia.org/wiki/Kiko_Dinucci",
+   "https://pt.wikipedia.org/wiki/Juçara_Marçal",
+   "https://shotgun.live/pt-br/events/infinupadeembsb"
+  ],
+  "notes": "Mentioned in both artists' Wikipedia articles but no album article. Several Brazilian press pages blocked fetching (403/429), so several facts come from search snippets. No proper review or making of interview found. Dates conflict (2007 in en Wikipedia, February 2008 elsewhere, 2009 in one review). Notes of 150 words would need the blocked press pieces read properly; borderline."
+ },
+ {
+  "rym_id": "Album493977",
+  "artist": "Keith Hudson & Soul Syndicate",
+  "title": "Nuh Skin Up Dub",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Keith_Hudson",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Keith_Hudson",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "After Virgin dropped him, Hudson started his own Joint label and went back to working with Soul Syndicate",
+     "Nuh Skin Up Dub and its vocal partner From One Extreme to Another followed Rasta Communication in 1979",
+     "Discography lists it as 1982, contradicting the text; no album article"
+    ]
+   },
+   {
+    "url": "https://week-end.bandcamp.com/album/nuh-skin-up-dub",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "Cologne label Week-End reissued it 9 May 2025 on LP, CD and digital (WE14)",
+     "Says this was the first time Hudson gave his regular studio band Soul Syndicate top billing",
+     "Remastered by Stephan Mathieu, cut by Daniel Krieger at SST"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/master/86833",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "Original LP: Joint International GT 006, US, 1979, produced and arranged by Hudson; distributed by Disc Disk, Queens, New York",
+     "Cover stamp reads Nuh Skin Up Dub while the labels say Nuh Skin Up; some copies in plain white sleeve",
+     "Reissued by Pressure Sounds 2007, Jusic 2019, Week-End 2025"
+    ]
+   },
+   {
+    "url": "https://www.hhv-mag.com/review/keith-hudson-soul-syndicate-nuh-skin-up-dub/?lang=en",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Review by Tim Caspar Boehme, 11 July 2025",
+     "Puts it in the shadow of Pick a Dub (1974); notes the cover credit to Soul Syndicate",
+     "Vocals cut to fragments of seconds, mixes built on echo and reverb around heavy bass"
+    ]
+   },
+   {
+    "url": "https://exclaim.ca/music/article/keith_hudson-nuh_skin_up",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "David Dacks, 22 May 2007, on the Pressure Sounds reissue",
+     "Calls it the last of Hudson's key dub albums before his death from cancer a few years later",
+     "Players include Soul Syndicate and a white reggae group from Baltimore; some rhythms also appear on Brand from two years earlier",
+     "Picks out 'Troubles'"
+    ]
+   },
+   {
+    "url": "https://unitedreggae.com/discographies/2007-02/keith-hudson-nuh-skin-up;740/",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Pressure Sounds reissue February 2007; two dub bonus tracks on CD only"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Issued in 1979 on Hudson's own Joint label, with his studio band Soul Syndicate named on the cover for the first time.",
+  "example_line_sources": [
+   "https://en.wikipedia.org/wiki/Keith_Hudson",
+   "https://week-end.bandcamp.com/album/nuh-skin-up-dub",
+   "https://www.hhv-mag.com/review/keith-hudson-soul-syndicate-nuh-skin-up-dub/?lang=en"
+  ],
+  "notes": "Artist article paragraph plus two reissue reviews, label text and Discogs give enough for notes. 'First time' credit is the Week-End label's claim."
+ },
+ {
+  "rym_id": "Album5882664",
+  "artist": "戸張大輔",
+  "title": "ギター",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "ja",
+   "url": "https://ja.wikipedia.org/wiki/戸張大輔",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://ja.wikipedia.org/wiki/戸張大輔",
+    "type": "wikipedia_artist_section",
+    "lang": "ja",
+    "facts": [
+     "Singer songwriter with a cult following in the 1990s Kansai lo fi scene",
+     "Guitar came out on Bumblebee Records, run by Carnation's Masahiro Naoe",
+     "22 track CD mixing earlier cassette recordings with new ones",
+     "Word of mouth kept it selling for about ten years",
+     "2019 LP came with a 7 inch of new songs and unreleased live takes; cassette reissue 2022",
+     "Article carries warnings about missing sources"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/master/1530563",
+    "type": "discogs",
+    "lang": "ja",
+    "facts": [
+     "CD Bumblebee Records BBCDE-006, released 25 December 1999; repressed 2000, reissued 2016, LP 2019, cassette (Eye Vybe) 2022",
+     "Tobari wrote, performed and recorded it; produced by Atsushi Kaneno and Michinori Toyota; mastered by Souichirou Nakamura (Peace Music)",
+     "Executive producers include Masahiro Naoe",
+     "Artist profile: mysterious singer songwriter, probably born 1976"
+    ]
+   },
+   {
+    "url": "https://eyevyberecords.com/album/--2",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "US label Eye Vybe reissued it on cassette, 3 October 2022",
+     "Describes lo fi avant folk from Osaka; almost nothing known of Tobari beyond the recordings and a few photos",
+     "Downloads priced high because the artist asked that they not be sold"
+    ]
+   },
+   {
+    "url": "https://allnightflightrecords.com/products/3-3",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Retailer text (snippet): the 1999 debut has 22 untitled tracks of hermetic lo fi acoustic folk"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Tobari wrote, played and recorded the 22 tracks himself; Bumblebee Records released the CD on 25 December 1999.",
+  "example_line_sources": [
+   "https://www.discogs.com/master/1530563",
+   "https://ja.wikipedia.org/wiki/戸張大輔"
+  ],
+  "notes": "The automatic matcher missed a Japanese Wikipedia artist article with a real paragraph on this album. It is flagged as poorly sourced, so pair it with Discogs and the Eye Vybe text. The Japanese article calls it his first album though he had earlier self released cassettes."
+ },
+ {
+  "rym_id": "Album292409",
+  "artist": "Sun Ra and His Arkestra",
+  "title": "Sleeping Beauty",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Sleeping_Beauty_(Sun_Ra_album)",
+   "kind": "wikipedia_album"
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Sleeping_Beauty_(Sun_Ra_album)",
+    "type": "wikipedia_album",
+    "lang": "en",
+    "facts": [
+     "Credited to Sun Ra and His Intergalactic Myth Science Solar Arkestra, issued 1979 on El Saturn",
+     "Gives recording date 1 November 1979 (conflicts with June 1979 elsewhere)",
+     "Three tracks by Sun Ra, 29:53; Art Yard CD reissue 2008",
+     "Full personnel incl. John Gilmore, Marshall Allen, June Tyson, Disco Kid on electric guitar",
+     "AllMusic's Sean Westergaard, 4.5 stars, places it with the groove leaning Lanquidity and On Jupiter"
+    ]
+   },
+   {
+    "url": "https://sunramusic.bandcamp.com/album/sleeping-beauty-expanded",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "Recorded at Variety Recording Studio, New York, June 1979; engineer Mike Dacek; mixed by Sun Ra, Michael Ray and Mike Smith",
+     "Saturn 79 pressed in small numbers in hand decorated sleeves, sold mostly at concerts and via Rounder",
+     "Also known as Door of the Cosmos; some labels call the title track Black Beauty",
+     "Other tracks from the same sessions went to Strange Celestial Road (1982)",
+     "Expanded digital edition 19 July 2021 with two bonus tracks from Michael D. Anderson's archive; produced by Irwin Chusid",
+     "Sets it alongside Lanquidity and On Jupiter as Ra's response to late 1970s dance and New Age trends"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/master/143604",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "Saturn copies were hand assembled by the band at the Arkestra house on Morton Street, Philadelphia, with no proper cover",
+     "Full credits incl. Vincent Chancey French horn, Harry Wilson vibraphone"
+    ]
+   },
+   {
+    "url": "https://www.tinymixtapes.com/delorean/sun-ra-sleeping-beauty",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Retrospective (snippet): calls it among the quietest records in his catalogue; 'Door of the Cosmos' recalls 'Enlightenment' with chants and hand claps"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Recorded at Variety studio in New York in 1979, it was first sold in hand decorated sleeves, mostly at Arkestra concerts.",
+  "example_line_sources": [
+   "https://sunramusic.bandcamp.com/album/sleeping-beauty-expanded",
+   "https://www.discogs.com/master/143604"
+  ],
+  "notes": "Wikipedia album article exists (en). Recording date conflict: Wikipedia 1 November 1979 vs June 1979 on the Sun Ra LLC Bandcamp. Strut issued a 2025 reissue per retailer listings."
+ },
+ {
+  "rym_id": "Album8266",
+  "artist": "The Flying Burrito Bros",
+  "title": "The Gilded Palace of Sin",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/The_Gilded_Palace_of_Sin",
+   "kind": "wikipedia_album"
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/The_Gilded_Palace_of_Sin",
+    "type": "wikipedia_album",
+    "lang": "en",
+    "facts": [
+     "Debut album, A&M Records, 6 February 1969; recorded November to December 1968 at A&M Studios, Hollywood",
+     "Produced by the band, Larry Marks and Henry Lewy",
+     "Gram Parsons left the Byrds after refusing a South Africa tour; Chris Hillman followed and they formed the band",
+     "Lineup adds Sneaky Pete Kleinow (pedal steel) and Chris Ethridge (bass); several drummers",
+     "Covers 'Dark End of the Street' and 'Do Right Woman'",
+     "Nudie suit cover photographed by Barry Feinstein",
+     "Peaked at 164 on the Billboard 200; about 50,000 sold per liner notes",
+     "Rolling Stone 500 greatest albums lists (192nd in 2012)"
+    ]
+   },
+   {
+    "url": "https://www.rollingstone.com/feature/flying-burrito-brothers-gilded-palace-of-sin-gram-parsons-things-you-didnt-know-786448/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Feature: A&M promoted the release with a barn dance on a soundstage; postal inspectors held the hay laced invites to test for drugs"
+    ]
+   },
+   {
+    "url": "https://wxci.wcsu.edu/a-retrospective-review-of-the-flying-burrito-brothers-the-gilded-palace-of-sin/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "College radio retrospective (June 2021): Parsons and Hillman, roommates after the Byrds, co wrote six songs that became the core of the album"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Gram Parsons and Chris Hillman formed the band after leaving the Byrds; the album peaked at 164 on the Billboard 200.",
+  "example_line_sources": [
+   "https://en.wikipedia.org/wiki/The_Gilded_Palace_of_Sin"
+  ],
+  "notes": "Matcher miss caused by 'Bros' vs 'Brothers'; a full English album article exists. No further digging needed."
+ }
+]

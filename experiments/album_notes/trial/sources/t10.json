@@ -1,0 +1,63 @@
+{
+ "id": "t10",
+ "rym_id": "Album1545577",
+ "artist": "The Roy Hargrove Quintet",
+ "title": "Earfood",
+ "year": "2008",
+ "kind": "en",
+ "wikidata": {
+  "qid": "Q125958151",
+  "facts": {}
+ },
+ "source": {
+  "kind": "album_article",
+  "lang": "en",
+  "title": "Earfood",
+  "url": "https://en.wikipedia.org/wiki/Earfood",
+  "revid": 1290908840,
+  "fetched_via": "web.archive.org latest 2026 snapshot",
+  "infobox": {
+   "Released": "June 2, 2008",
+   "Recorded": "September 19–21, 2007",
+   "Studio": "Capitol Studios , Los Angeles",
+   "Genre": "Jazz",
+   "Length": "1 : 07 : 19",
+   "Label": "EmArcy",
+   "Producer": "Larry Clothier, Roy Hargrove"
+  },
+  "sections": [
+   {
+    "h": "Lead",
+    "text": [
+     "Earfood is a jazz album by the Roy Hargrove Quintet, issued by the EmArcy record label in 2008. The album was a return to Hargrove's enduring interest in hard bop, following several albums in which he explored jazz within a hip-hop and R&B context.",
+     "Earfood is notable for the inclusion of the composition, Strasbourg / St. Denis, which has since emerged as a modern-day jazz standard."
+    ]
+   },
+   {
+    "h": "Reception",
+    "text": [
+     "Critical perspectives of Earfood were largely positive upon its release. Writing for The New York Times, jazz critic Nate Chinen selected Earfood as his critics' choice. Chinen declared the album to \"attest to a classic jazz ideal\" while \"rarely sound[ing] as if [Hargrove] stepped out of a time machine\". Chinen attributed this to Hargrove's successful merging of his \"hard-bop and groove-orientated sides\". Hargrove's success at melding hard-bop with modern jazz was also observed in a positive AllAboutJazz review, which noted Hargrove's success was \"redefining the hard bop of the 1950s and 1960s through the post bop lense of the 1980s and 1990s\".",
+     "Texas Monthly deemed Earfood to be a \"fiery, sonically powerful, spontaneous\" session, but simulataneously criticized it for being \"too ballad-heavy\". The space Hargrove dedicated to ballads was nevertheless applauded by others. In a symposium about jazz published in The Threepenny Review, Hargrove was described by W.S. Di Piero as a \"peerless balladeer, the equal of Miles and Freddie \", with readers invited to \"listen to 'Joy Is Sorrow Unmasked' and 'Speak Low' on Earfood: shut your eyes and you hear the flugel's ancestors\". These opinions have been reflected in scholarly examinations of Hargrove's playing on Earfood, which has concluded to have \"identifiable components\" from Hubbard but \"enveloped\" by Hargrove to create his \"own decisive sound\".",
+     "Some jazz critics, though enthused by Hargrove's approach to Earfood, were less so by its execution, with John Fordham from The Guardian describing the exceptional musicianship as creating an \"atmosphere of infallibility\" and giving the session an \"unjazzy character\". This criticism was noted elsewhere, with others assessing the overall feel of the album to be \"too sterile\"."
+    ]
+   },
+   {
+    "h": "Track listing",
+    "text": [
+     "All compositions by Roy Hargrove except as indicated.",
+     "\"I'm Not So Sure\" ( Cedar Walton)– 5:46; \"Brown\" – 4:30; \"Strasbourg / St. Denis\" – 4:38; \"Starmaker\" ( Lou Marini) - 7:54; \"Joy Is Sorrow Unmasked\" – 4:46; \"The Stinger\" - 4:57; \"Rouge\" - 2:46; \"Mr. Clean\" ( Weldon Irvine Jr.)- 5:51; \"Style\" - 6:35; \"Divine\" – 5:10; \"To Wisdom The Prize\" ( Larry Willis) - 5:43; \"Speak Low\" ( Kurt Weill, Ogden Nash) – 5:16; \"Bring It On Home To Me ( Sam Cooke) – 3:00"
+    ]
+   },
+   {
+    "h": "Personnel",
+    "text": [
+     "Musicians",
+     "Roy Hargrove – trumpet, flugelhorn; Justin Robinson – alto saxophone, flute; Gerald Clayton – piano; Danton Boller – bass; Montez Coleman – drums",
+     "Production",
+     "Larry Clothier – producer; Roy Hargrove - producer; Jacques Muyal - executive producer; Al Schmitt - recorded & mixed; Steve Genewick - engineer"
+    ]
+   }
+  ],
+  "words": 474
+ }
+}

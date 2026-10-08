@@ -1,5 +1,7 @@
 # Album notes: sources, coverage and design
 
+> **9 October 2026:** the trial is in `REPORT-trial.md`. It supersedes this report's cost estimate (section 5): with the small Haiku model the notes cost about $0.002 an album, about $20 for the whole catalog. It also finds that most of the "nothing found" albums in section 3 do have usable sources.
+
 Issue #73. Research of 8 October 2026. Nothing in the site or the pipeline was changed.
 
 The question: can every album page get a short line about the album and, behind "Read more", its background (where it comes from, how it was made, what to listen for), from sources a public, possibly commercial site may use, without writing 10,000 texts by hand?

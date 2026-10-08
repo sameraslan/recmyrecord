@@ -1,0 +1,25 @@
+{
+  "tier": "thin",
+  "hook": {"text": "All four pieces are the saxophonist's own compositions, and the CD reissue adds an alternate take of one of them.", "src": ["Track listing", "Lead"]},
+  "facts": [
+    {"label": "Released", "value": "January 1967"},
+    {"label": "Recorded", "value": "21 May 1965, Van Gelder Studio, Englewood Cliffs, New Jersey"},
+    {"label": "Produced by", "value": "Alfred Lion"},
+    {"label": "Label", "value": "Blue Note BST 84206"},
+    {"label": "Players", "value": "Sam Rivers (tenor saxophone, soprano saxophone, flute), Freddie Hubbard (trumpet), Herbie Hancock (piano), Ron Carter (bass), Joe Chambers (drums)"}
+  ],
+  "sections": [
+    {
+      "heading": "Making it",
+      "sentences": [
+        {"text": "The album was recorded on 21 May 1965 at Van Gelder Studio in Englewood Cliffs, New Jersey.", "src": ["Infobox"]},
+        {"text": "Alfred Lion produced it.", "src": ["Infobox"]},
+        {"text": "Rivers played tenor saxophone, soprano saxophone and flute.", "src": ["Personnel"]},
+        {"text": "Freddie Hubbard played trumpet, Herbie Hancock the piano, Ron Carter the bass and Joe Chambers the drums.", "src": ["Personnel"]}
+      ]
+    }
+  ],
+  "listen_for": [
+    {"track": "Mellifluous Cacophony", "text": "The CD reissue also has a second take of this one, listed as a bonus.", "src": ["Track listing"]}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "items": [
+    {"where": "hook", "text": "This hardcore record runs 44 minutes and 15 seconds and was recorded at Tonteknik Studios in December 1998.", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox: 'Genre: Hardcore', 'Längd: 44:15', 'Inspelat: December 1998 , Tonteknik Studios'."},
+    {"where": "fact: Released", "text": "17 May 1999", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox: 'Utgivning: 17 maj 1999'."},
+    {"where": "fact: Recorded", "text": "December 1998, Tonteknik Studios", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox: 'Inspelat: December 1998 , Tonteknik Studios'."},
+    {"where": "fact: Produced by", "text": "Breach", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox: 'Producent: Breach'."},
+    {"where": "fact: Label", "text": "Burning Heart Records", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Infobox: 'Skivbolag: Burning Heart Records'."},
+    {"where": "section: What came after", "text": "Besides Burning Heart Records, Relapse Records released the record in the USA, and Trust No One Recordings put it out on vinyl.", "verdict": "supported", "generic": false, "evaluative": false, "copied": false, "why": "Lead: 'Skivan utgavs av Relapse Records i USA och på vinyl av Trust No One Recordings.' (heading 'What came after' is loose, but the sentence itself is accurate)."}
+  ],
+  "missed": "The lead says this is Breach's third studio album ('Breachs tredje studioalbum'); the notes leave that out. The pack's track list (opening with 'Helldrivers', including a song titled 'Black Sabbath') is not used in listen_for."
+}

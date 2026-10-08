@@ -1,0 +1,315 @@
+<title>Album Notes Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Schibsted+Grotesk:wght@400;500;600&display=swap">
+<style>
+/* Layout: one album at a time, two blind versions side by side (stacked on phones), ratings under each; recmyrecord's own dark tokens. */
+:root {
+  --room: #15110d; --room-2: #1c1712; --room-3: #262019; --room-4: #322a21;
+  --paper: #ede5d5; --dust: #b3a792; --ash: #a39887;
+  --rule: rgba(237, 229, 213, 0.11); --rule-2: rgba(237, 229, 213, 0.2);
+  --lamp: #e6a856; --lamp-ink: #1a130b; --moss: #97a077; --clay: #c4886f;
+  --serif: "Cormorant Garamond", "Iowan Old Style", "Palatino Linotype", Palatino, "Hiragino Mincho ProN", "Yu Mincho", serif;
+  --sans: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--room); color: var(--paper); font-family: var(--sans); font-size: 15px; line-height: 1.5; }
+button, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--lamp); outline-offset: 2px; border-radius: 2px; }
+ul, ol { list-style: none; margin: 0; padding: 0; }
+p, h1, h2, h3, dl, dd { margin: 0; }
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--rule-2); text-underline-offset: 3px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-inline: 24px; padding-block: 32px 64px; display: grid; gap: 28px; }
+@media (max-width: 600px) { .wrap { padding-inline: 16px; padding-block: 20px 48px; } }
+.cap { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ash); font-weight: 500; }
+
+.top { display: grid; gap: 10px; max-width: 50em; }
+.top h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(32px, 5vw, 46px); line-height: 1; letter-spacing: -.015em; }
+.top p { color: var(--dust); }
+.bar { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; justify-content: space-between; }
+.tabs { display: flex; gap: 6px; }
+.tab { padding: 7px 12px; border: 1px solid var(--rule-2); border-radius: 2px; color: var(--dust); font-size: 13.5px; }
+.tab[aria-selected="true"] { color: var(--paper); border-color: var(--lamp); background: color-mix(in srgb, var(--lamp) 12%, transparent); }
+.status { font-size: 13px; color: var(--ash); font-variant-numeric: tabular-nums; }
+.status b { color: var(--paper); font-weight: 500; }
+.notice { border-left: 2px solid var(--clay); padding: 8px 12px; color: var(--dust); font-size: 14px; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12.5px; padding: 5px 8px; border-radius: 2px; border: 1px solid var(--rule-2); color: var(--dust); max-width: 16em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip.done { border-color: color-mix(in srgb, var(--moss) 70%, transparent); color: var(--paper); }
+.chip.done::before { content: "\2713\00a0"; color: var(--moss); }
+.chip[aria-current="true"] { border-color: var(--lamp); color: var(--paper); background: color-mix(in srgb, var(--lamp) 12%, transparent); }
+
+.album-h { display: grid; gap: 2px; }
+.album-h .artist { color: var(--dust); }
+.album-h h2 { font-family: var(--serif); font-weight: 500; font-size: clamp(30px, 4.5vw, 42px); line-height: 1; letter-spacing: -.01em; text-wrap: balance; }
+.q { display: grid; gap: 8px; }
+.q-label { font-size: 14px; color: var(--paper); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { padding: 7px 11px; border: 1px solid var(--rule-2); border-radius: 2px; color: var(--dust); font-size: 13.5px; min-width: 40px; font-variant-numeric: tabular-nums; }
+.seg button[aria-pressed="true"] { color: var(--lamp-ink); background: var(--lamp); border-color: var(--lamp); }
+.seg button:hover { color: var(--paper); }
+.seg button[aria-pressed="true"]:hover { color: var(--lamp-ink); }
+.scale-ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--ash); max-width: 260px; }
+
+.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+@media (max-width: 860px) { .pair { grid-template-columns: minmax(0, 1fr); } }
+.ver { background: var(--room-2); border: 1px solid var(--rule); border-radius: 3px; padding: 18px 20px; display: grid; gap: 16px; min-width: 0; }
+.ver-h { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ver-h .letter { font-family: var(--serif); font-style: italic; font-size: 26px; color: var(--lamp); line-height: 1; }
+.body { display: grid; gap: 10px; font-size: 15px; line-height: 1.6; max-width: 38em; }
+.hook { font-family: var(--serif); font-size: 20px; line-height: 1.35; font-weight: 500; }
+.facts { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 4px 12px; font-size: 14px; }
+.facts dd { color: var(--dust); }
+.body h3 { margin-top: 6px; }
+.listen li { position: relative; padding-left: 12px; margin-top: 6px; }
+.listen li::before { content: ""; position: absolute; left: 0; top: 5px; bottom: 5px; width: 2px; background: var(--lamp); }
+.listen .trk { display: block; font-family: var(--serif); font-style: italic; font-size: 16.5px; color: var(--lamp); }
+.empty { color: var(--dust); }
+.ver-q { border-top: 1px solid var(--rule); padding-top: 14px; display: grid; gap: 14px; }
+textarea { width: 100%; min-height: 64px; resize: vertical; background: var(--room); border: 1px solid var(--rule-2); border-radius: 2px; padding: 8px 10px; font-size: 14px; line-height: 1.45; }
+textarea::placeholder { color: var(--ash); }
+
+.after { display: grid; gap: 18px; background: var(--room-2); border: 1px solid var(--rule); border-radius: 3px; padding: 18px 20px; }
+.nav { display: flex; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
+.btn { min-height: 40px; display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; border-radius: 2px; font-size: 14px; font-weight: 500; }
+.btn-lamp { background: var(--lamp); color: var(--lamp-ink); }
+.btn-ghost { border: 1px solid var(--rule-2); color: var(--dust); }
+.src { font-size: 12.5px; color: var(--ash); }
+
+/* Results */
+.res { display: grid; gap: 22px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.tile { background: var(--room-2); border: 1px solid var(--rule); border-radius: 3px; padding: 14px 16px; display: grid; gap: 4px; }
+.tile .n { font-family: var(--serif); font-size: 34px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tile .l { font-size: 13px; color: var(--dust); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-weight: 500; color: var(--ash); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
+td.flag { color: var(--clay); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="cap">recmyrecord · issue 73 · trial</span>
+    <h1>Album notes panel</h1>
+    <p>For each album you get two versions of the text the album page could show. They are labelled A and B in a random order. Rate each one, flag anything wrong if you know the record, and say which you would rather see. Your answers save as you go, and nobody else on the panel sees them.</p>
+  </header>
+
+  <div class="bar">
+    <div class="tabs" role="tablist" aria-label="View">
+      <button class="tab" role="tab" id="tab-rate" aria-selected="true" aria-controls="view-rate">Rate</button>
+      <button class="tab" role="tab" id="tab-res" aria-selected="false" aria-controls="view-res" hidden>Results</button>
+    </div>
+    <span class="status" id="status" aria-live="polite">Connecting…</span>
+  </div>
+  <p class="notice" id="notice" hidden></p>
+
+  <section id="view-rate" role="tabpanel" aria-labelledby="tab-rate" class="wrap" style="padding:0;gap:22px">
+    <nav aria-label="Albums"><ul class="chips" id="chips"></ul></nav>
+    <div class="album-h" id="album-h"></div>
+    <div class="q">
+      <span class="q-label" id="know-l">How well do you know this record?</span>
+      <div class="seg" role="group" aria-labelledby="know-l" data-field="know">
+        <button type="button" data-v="well">Well</button><button type="button" data-v="some">A little</button><button type="button" data-v="no">Not at all</button>
+      </div>
+    </div>
+    <div class="pair" id="pair"></div>
+    <div class="after">
+      <div class="q">
+        <span class="q-label" id="pref-l">Which would you rather see on the album page?</span>
+        <div class="seg" role="group" aria-labelledby="pref-l" data-field="prefer">
+          <button type="button" data-v="A">A</button><button type="button" data-v="B">B</button><button type="button" data-v="same">No difference</button>
+        </div>
+      </div>
+      <div class="q">
+        <label class="q-label" for="comment">Anything else? (optional)</label>
+        <textarea id="comment" placeholder="What you liked, what you missed, what felt off"></textarea>
+      </div>
+      <div class="nav">
+        <button type="button" class="btn btn-ghost" id="prev">Previous album</button>
+        <button type="button" class="btn btn-lamp" id="next">Next album</button>
+      </div>
+      <p class="src" id="src"></p>
+    </div>
+  </section>
+
+  <section id="view-res" role="tabpanel" aria-labelledby="tab-res" class="res" hidden></section>
+</div>
+
+<script>
+const DATA = /*DATA*/[];
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const state = { i: 0, mine: {}, uid: null, db: null, ref: null, all: [], saving: false, dirty: false, canSave: false };
+const $ = (id) => document.getElementById(id);
+
+function blank() { return { know: null, prefer: null, comment: '', A: { interest: null, wrong: false, note: '' }, B: { interest: null, wrong: false, note: '' } }; }
+function cur() { const a = DATA[state.i]; state.mine[a.id] = state.mine[a.id] || blank(); return state.mine[a.id]; }
+function isDone(r) { return r && r.prefer && r.A?.interest && r.B?.interest; }
+
+function renderVersion(v) {
+  if (v.kind === 'notes') {
+    const facts = v.facts.length ? `<dl class="facts">${v.facts.map((f) => `<dt class="cap">${esc(f.label)}</dt><dd>${esc(f.value)}</dd>`).join('')}</dl>` : '';
+    const secs = v.sections.map((s) => `<h3 class="cap">${esc(s.heading)}</h3><p>${esc(s.text)}</p>`).join('');
+    const lis = v.listen.length ? `<h3 class="cap">Listen for</h3><ul class="listen">${v.listen.map((l) => `<li><span class="trk">${esc(l.track)}</span>${esc(l.text)}</li>`).join('')}</ul>` : '';
+    return `<p class="hook">${esc(v.hook)}</p>${facts}${secs}${lis}`;
+  }
+  if (v.kind === 'empty') return `<p class="empty">${esc(v.paragraphs[0])}</p>`;
+  const LANGS = { pt: 'Portuguese', pl: 'Polish', ja: 'Japanese', sv: 'Swedish', fi: 'Finnish', es: 'Spanish', it: 'Italian', fr: 'French', de: 'German' };
+  const note = v.lang && v.lang !== 'en' ? `<p class="src">The original is in ${LANGS[v.lang] || v.lang}. On the site it would be shown in English translation; please judge what it says, not the language.</p>` : '';
+  return note + v.paragraphs.map((p) => `<p lang="${esc(v.lang || 'en')}">${esc(p)}</p>`).join('');
+}
+
+function render() {
+  const a = DATA[state.i], r = cur();
+  $('chips').innerHTML = DATA.map((x, k) => `<li><button type="button" class="chip${isDone(state.mine[x.id]) ? ' done' : ''}" data-k="${k}" aria-current="${k === state.i}">${esc(x.title)}</button></li>`).join('');
+  $('album-h').innerHTML = `<span class="artist">${esc(a.artist)} · ${esc(a.year)}</span><h2>${esc(a.title)}</h2>`;
+  $('pair').innerHTML = ['A', 'B'].map((L) => `
+    <article class="ver" aria-label="Version ${L}">
+      <div class="ver-h"><span class="letter">${L}</span></div>
+      <div class="body">${renderVersion(a[L])}</div>
+      <div class="ver-q">
+        <div class="q">
+          <span class="q-label" id="int-${L}">How interesting would this be while the record plays?</span>
+          <div class="seg" role="group" aria-labelledby="int-${L}" data-field="${L}.interest">${[1, 2, 3, 4, 5].map((n) => `<button type="button" data-v="${n}">${n}</button>`).join('')}</div>
+          <div class="scale-ends"><span>not at all</span><span>very</span></div>
+        </div>
+        <div class="q">
+          <span class="q-label" id="wr-${L}">Is anything in it wrong or off?</span>
+          <div class="seg" role="group" aria-labelledby="wr-${L}" data-field="${L}.wrong"><button type="button" data-v="no">No, or I can't tell</button><button type="button" data-v="yes">Yes</button></div>
+          <textarea id="note-${L}" data-field="${L}.note" placeholder="What is wrong or off?" ${r[L].wrong ? '' : 'hidden'}>${esc(r[L].note)}</textarea>
+        </div>
+      </div>
+    </article>`).join('');
+  document.querySelectorAll('[role="group"][data-field]').forEach((g) => {
+    const val = get(r, g.dataset.field);
+    g.querySelectorAll('button').forEach((b) => {
+      const v = g.dataset.field.endsWith('wrong') ? (val ? 'yes' : (val === false && r.__touched?.[g.dataset.field] ? 'no' : '')) : String(val ?? '');
+      b.setAttribute('aria-pressed', String(b.dataset.v === v));
+    });
+  });
+  $('comment').value = r.comment || '';
+  $('prev').disabled = state.i === 0;
+  $('next').textContent = state.i === DATA.length - 1 ? 'Back to the first album' : 'Next album';
+  const s = a.source;
+  $('src').innerHTML = s.url ? `Source for both versions: <a href="${esc(s.url)}${s.revid ? '' : ''}" target="_blank" rel="noopener">${esc(s.title)}</a> (${esc(s.lang)} Wikipedia${s.kind === 'artist_article' ? ', the artist’s article' : ''}), CC BY-SA 4.0. The written version was made with AI help from that article.` : '';
+  status();
+}
+
+function get(o, path) { return path.split('.').reduce((x, k) => (x == null ? x : x[k]), o); }
+function put(o, path, v) { const ks = path.split('.'); let x = o; ks.slice(0, -1).forEach((k) => { x[k] = x[k] || {}; x = x[k]; }); x[ks[ks.length - 1]] = v; }
+
+function status(msg) {
+  const done = DATA.filter((x) => isDone(state.mine[x.id])).length;
+  const save = msg || (!state.canSave ? 'Not saving in this view' : state.saving ? 'Saving…' : state.dirty ? 'Unsaved changes' : 'Saved');
+  $('status').innerHTML = `<b>${done}</b> of ${DATA.length} albums rated · ${esc(save)}`;
+}
+
+let timer = null;
+function changed() { state.dirty = true; status(); clearTimeout(timer); timer = setTimeout(save, 900); }
+async function save() {
+  if (!state.canSave || state.saving || !state.dirty) return;
+  state.saving = true; state.dirty = false; status();
+  try {
+    const clean = JSON.parse(JSON.stringify(state.mine, (k, v) => (k === '__touched' ? undefined : v)));
+    await state.ref.set({ v: 1, albums: clean, updatedAt: new Date().toISOString() });
+  } catch (e) {
+    state.dirty = true;
+    if (e && e.code === 'invalid_argument') { state.canSave = false; showNotice('Your answers cannot be saved with your access to this page. Ask Samer for Contributor access, then reload.'); }
+    else if (e && e.code === 'quota_exceeded') showNotice('The panel has run out of room for answers. Please tell Samer.');
+  } finally { state.saving = false; status(); if (state.dirty && state.canSave) { clearTimeout(timer); timer = setTimeout(save, 2000); } }
+}
+function showNotice(t) { const n = $('notice'); n.textContent = t; n.hidden = false; }
+
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if (chip) { state.i = +chip.dataset.k; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  const b = e.target.closest('[role="group"][data-field] button');
+  if (!b) return;
+  const f = b.closest('[data-field]').dataset.field, r = cur();
+  r.__touched = r.__touched || {}; r.__touched[f] = true;
+  let v = b.dataset.v;
+  if (f.endsWith('interest')) v = +v;
+  if (f.endsWith('wrong')) v = v === 'yes';
+  put(r, f, v);
+  render(); changed();
+});
+document.addEventListener('input', (e) => {
+  const t = e.target;
+  if (t.id === 'comment') { cur().comment = t.value; changed(); }
+  else if (t.dataset && t.dataset.field) { put(cur(), t.dataset.field, t.value); changed(); }
+});
+$('prev').addEventListener('click', () => { if (state.i > 0) { state.i--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); } });
+$('next').addEventListener('click', () => { state.i = (state.i + 1) % DATA.length; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+['tab-rate', 'tab-res'].forEach((id) => $(id).addEventListener('click', () => {
+  const res = id === 'tab-res';
+  $('tab-rate').setAttribute('aria-selected', String(!res)); $('tab-res').setAttribute('aria-selected', String(res));
+  $('view-rate').hidden = res; $('view-res').hidden = !res;
+  if (res) renderResults();
+}));
+
+async function renderResults() {
+  const box = $('view-res');
+  const raters = state.all.filter((d) => d.albums && Object.keys(d.albums).length);
+  if (!raters.length) { box.innerHTML = '<p class="notice">No answers yet. They appear here as the panel rates.</p>'; return; }
+  const user = state.user;
+  const ps = user ? await user.profiles(raters.map((d) => d.uid)) : {};
+  const kinds = { notes: [], excerpt: [], empty: [] }, pref = { notes: 0, other: 0, same: 0 }, flags = [], rows = [];
+  for (const d of raters) {
+    let n = 0;
+    for (const a of DATA) {
+      const r = d.albums[a.id]; if (!r) continue;
+      if (isDone(r)) n++;
+      for (const L of ['A', 'B']) {
+        const k = a[L].kind;
+        if (r[L]?.interest) kinds[k].push(r[L].interest);
+        if (r[L]?.wrong) flags.push({ who: d.uid, album: a.title, kind: k, note: r[L].note || '', know: r.know });
+      }
+      if (r.prefer) { const pk = r.prefer === 'same' ? 'same' : (a[r.prefer].kind === 'notes' ? 'notes' : 'other'); pref[pk]++; }
+    }
+    rows.push({ uid: d.uid, n, at: d.updatedAt });
+  }
+  const avg = (xs) => (xs.length ? (xs.reduce((s, x) => s + x, 0) / xs.length).toFixed(2) : '–');
+  const name = (uid) => (ps[uid] && ps[uid].name) || 'A panel member';
+  box.innerHTML = `
+    <div class="tiles">
+      <div class="tile"><span class="n">${avg(kinds.notes)}</span><span class="l">Interest, written notes (n ${kinds.notes.length})</span></div>
+      <div class="tile"><span class="n">${avg(kinds.excerpt)}</span><span class="l">Interest, Wikipedia excerpt (n ${kinds.excerpt.length})</span></div>
+      <div class="tile"><span class="n">${avg(kinds.empty)}</span><span class="l">Interest, the empty line (n ${kinds.empty.length})</span></div>
+      <div class="tile"><span class="n">${pref.notes} : ${pref.other} : ${pref.same}</span><span class="l">Preferred notes : the other : no difference</span></div>
+      <div class="tile"><span class="n">${flags.filter((f) => f.kind === 'notes').length}</span><span class="l">Flags of something wrong in the notes</span></div>
+    </div>
+    <div class="tbl"><table><thead><tr><th>Panel member</th><th>Albums done</th><th>Last saved</th></tr></thead><tbody>
+      ${rows.map((r) => `<tr><td data-uid="${esc(r.uid)}"></td><td>${r.n} of ${DATA.length}</td><td>${esc((r.at || '').slice(0, 16).replace('T', ' '))}</td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="tbl"><table><thead><tr><th>Album</th><th>Version</th><th>Knows it</th><th>What is wrong</th><th>Who</th></tr></thead><tbody>
+      ${flags.length ? flags.map((f) => `<tr><td>${esc(f.album)}</td><td class="flag">${f.kind === 'notes' ? 'Written notes' : f.kind === 'excerpt' ? 'Wikipedia excerpt' : 'Empty line'}</td><td>${esc(f.know || '')}</td><td>${esc(f.note)}</td><td data-uid="${esc(f.who)}"></td></tr>`).join('') : '<tr><td colspan="5">Nothing flagged yet.</td></tr>'}
+    </tbody></table></div>`;
+  box.querySelectorAll('[data-uid]').forEach((td) => { td.textContent = name(td.dataset.uid); });
+}
+
+render();
+(async () => {
+  const [db, user] = await Promise.all([window.claude?.use?.('db') ?? null, window.claude?.use?.('user') ?? null]);
+  state.user = user;
+  const uid = user ? await user.id() : null;
+  if (!db || !uid) { status('Not saving in this view'); showNotice('Your answers cannot be saved here. Open this page signed in to claude.ai with Contributor access.'); return; }
+  state.db = db; state.uid = uid; state.ref = db.doc('ratings/' + uid); state.canSave = true;
+  try {
+    const snap = await state.ref.get();
+    if (snap.exists) { const d = snap.data(); state.mine = JSON.parse(JSON.stringify(d.albums || {})); }
+  } catch (e) { /* first visit or unavailable: start empty */ }
+  render();
+  if (await user.isOwner()) {
+    $('tab-res').hidden = false;
+    db.collection('ratings').onSnapshot((s) => {
+      state.all = s.docs.filter((d) => d.exists).map((d) => ({ uid: d.id, ...JSON.parse(JSON.stringify(d.data())) }));
+      if (!$('view-res').hidden) renderResults();
+    }, () => {});
+  }
+})();
+</script>

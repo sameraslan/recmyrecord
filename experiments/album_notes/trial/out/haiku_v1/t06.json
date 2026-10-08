@@ -1,0 +1,46 @@
+{
+  "tier": "rich",
+  "hook": {"text": "Its themes draw on the Dollars trilogy and Seven Samurai, and the title is a metaphor for avoiding difficult topics.", "src": ["Background, promotion, and release"]},
+  "facts": [
+    {"label": "Released", "value": "25 March 2022"},
+    {"label": "Recorded", "value": "2019 to 2021"},
+    {"label": "Label", "value": "PH Loma Vista"}
+  ],
+  "sections": [
+    {
+      "heading": "Where it comes from",
+      "sentences": [
+        {"text": "Curry began thinking about the album's themes in 2018, and started work on it after finishing Zuu, his 2019 album.", "src": ["Background, promotion, and release"]},
+        {"text": "His first collaboration with Kenny Beats, the EP Unlocked, came out on 7 February 2020.", "src": ["Background, promotion, and release"]},
+        {"text": "Curry told XXL in 2020 that he planned to retire from music after three more full-length releases.", "src": ["Background, promotion, and release"]},
+        {"text": "The album also moved away from older alter egos, and he wanted the music to show who he is and how he feels.", "src": ["Background, promotion, and release"]},
+        {"text": "The title's second half, See Your Future, is about moving on and putting the past behind.", "src": ["Background, promotion, and release"]}
+      ]
+    },
+    {
+      "heading": "Making it",
+      "sentences": [
+        {"text": "It was recorded from 2019 to 2021.", "src": ["Infobox"]},
+        {"text": "Producers include Cardo, FnZ, Thundercat, JPEGMafia and Kenny Beats, among others.", "src": ["Lead"]},
+        {"text": "Guests include Robert Glasper, T-Pain, JID, 6lack and Slowthai.", "src": ["Lead"]},
+        {"text": "Four tracks contain samples of other recordings, including Walkin and Zatoichi.", "src": ["Track listing"]},
+        {"text": "Nathan Burgess handled mixing and engineering, and Chris Gehringer mastered the record.", "src": ["Personnel"]}
+      ]
+    },
+    {
+      "heading": "What came after",
+      "sentences": [
+        {"text": "The extended version was preceded by a Key Glock remix of Walkin, released on 1 June 2022.", "src": ["Extended edition"]},
+        {"text": "On 30 September 2022 the extended edition came out with ten new songs that Curry recorded with the Cold Blooded Soul Band.", "src": ["Extended edition"]},
+        {"text": "It also added two songs that had not been released before, Larger Than Life and Chrome Hearts, the second featuring Zacari.", "src": ["Extended edition"]},
+        {"text": "A livestream concert, Melt My Eyez: Live From the Komodo City Cafe, aired the day before to help promote it.", "src": ["Extended edition"]}
+      ]
+    }
+  ],
+  "listen_for": [
+    {"track": "Walkin", "text": "A sample of The Loving Touch runs through it, a song Keith Mansfield wrote and performed.", "src": ["Track listing"]},
+    {"track": "Melt Session #1", "text": "Robert Glasper plays the keyboards on it, and he is the featured guest.", "src": ["Track listing", "Personnel"]},
+    {"track": "Worst Comes to Worst", "text": "It samples Come Closer, which Salma Agha performed, and Anna Wise adds extra vocals.", "src": ["Track listing", "Personnel"]},
+    {"track": "Angelz", "text": "It samples Nothing Left to Do by After All, and Sharina Castillo adds extra vocals.", "src": ["Track listing", "Personnel"]}
+  ]
+}
