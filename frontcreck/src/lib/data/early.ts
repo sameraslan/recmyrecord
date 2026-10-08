@@ -36,7 +36,11 @@ async function fetchBitmap(url: string): Promise<ImageBitmap> {
   // The same request as the preload link's (CORS mode, same-origin credentials): the browser hands over that download.
   const res = await fetch(url, { credentials: 'same-origin' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const bitmap = await createImageBitmap(await res.blob(), GAS_BITMAP);
+  // Read as bytes, not with res.blob(): on a response that took over a preload still arriving, Chrome's blob()
+  // fails the moment the download ends ("Failed to fetch"; seen on every slow phone-sized load), while reading
+  // the bytes works, as json() does for the data files. The copy is 0.2 MB.
+  const type = res.headers.get('content-type') ?? 'image/webp';
+  const bitmap = await createImageBitmap(new Blob([await res.arrayBuffer()], { type }), GAS_BITMAP);
   markOnce('rmr-gas-decoded');
   return bitmap;
 }

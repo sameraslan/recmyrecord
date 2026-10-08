@@ -160,6 +160,37 @@ for (const route of ['/', '/map']) {
   });
 }
 
+test('on a slow connection the script takes the nebula image over while it is still arriving, and the map draws it', async ({ page, context }) => {
+  test.setTimeout(90_000);
+  // Lighthouse's slow 4G as DevTools applies it (scripts/perf/first-frame.mjs): the page's scripts run while the
+  // preloaded image is half downloaded. Chrome then fails response.blob() on it when the download ends, on a
+  // phone-sized page every time; the image is read as bytes instead (lib/data/early.ts).
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Network.enable');
+  await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 562.5, downloadThroughput: (1474.56 * 1024) / 8, uploadThroughput: (675 * 1024) / 8 });
+  const failed: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') failed.push(m.text());
+  });
+  const requested: string[] = [];
+  page.on('request', (r) => {
+    if (new URL(r.url()).pathname === GAS) requested.push(r.url());
+  });
+  await page.goto('/', { waitUntil: 'commit' });
+  await page.waitForFunction(() => typeof window.__rmr?.gasShownMs === 'number' || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off', null, { timeout: 80_000 });
+  const t = await page.evaluate((gas) => {
+    const res = performance.getEntriesByType('resource').find((r) => new URL(r.name).pathname === gas) as PerformanceResourceTiming;
+    return { asked: performance.getEntriesByName('rmr-gas-fetch')[0].startTime, start: res.startTime, end: res.responseEnd, decoded: performance.getEntriesByName('rmr-gas-decoded')[0]?.startTime ?? null, shown: window.__rmr!.gasShownMs ?? null };
+  }, GAS);
+  // The case this test is for: the script asked while the preload's download was under way.
+  expect(t.asked).toBeGreaterThan(t.start);
+  expect(t.asked).toBeLessThan(t.end);
+  expect(failed).toEqual([]);
+  expect(t.decoded, 'the image was decoded').not.toBeNull();
+  expect(t.shown, 'the nebula was drawn').not.toBeNull();
+  expect(requested).toHaveLength(1);
+});
+
 test('an album page shows a glow, not a picture, and it leaves when the map has drawn', async ({ page }) => {
   const release = await hold(page, '**/data/albums.json');
   await page.goto('/album/in-rainbows-radiohead');

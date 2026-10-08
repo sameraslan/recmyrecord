@@ -22,7 +22,8 @@ describe('the opening nebula image, asked for as the page opens', () => {
     resetEarlyGas();
     resetMarks();
     document.head.innerHTML = '';
-    fetchMock = vi.fn(async () => ({ ok: true, status: 200, blob: async () => new Blob(['x']), arrayBuffer: async () => new ArrayBuffer(1) }));
+    // No blob(): the image is read as bytes (see fetchBitmap in early.ts for why).
+    fetchMock = vi.fn(async () => ({ ok: true, status: 200, headers: new Headers({ 'content-type': 'image/webp' }), arrayBuffer: async () => new ArrayBuffer(3) }));
     decode = vi.fn(async () => bitmapOf('early'));
     vi.stubGlobal('fetch', fetchMock);
     vi.stubGlobal('createImageBitmap', decode);
@@ -49,6 +50,8 @@ describe('the opening nebula image, asked for as the page opens', () => {
     expect((bitmap as unknown as { name: string }).name).toBe('early');
     // the dust channel is data: never multiplied into the colour
     expect(decode).toHaveBeenCalledWith(expect.any(Blob), GAS_BITMAP);
+    const blob = decode.mock.calls[0][0] as Blob;
+    expect([blob.size, blob.type]).toEqual([3, 'image/webp']);
     expect(GAS_BITMAP.premultiplyAlpha).toBe('none');
     // the map owns it now: a second ask (a lost WebGL context) gets nothing and fetches for itself
     expect(takeEarlyGas(PRELOADED_GAS_URL)).toBeNull();
