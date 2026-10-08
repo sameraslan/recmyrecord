@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { act, cleanup, render, renderHook } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetMarks } from '@/lib/marks';
@@ -11,7 +12,8 @@ vi.mock('./state/webgl', () => webgl);
 // The map's code: three.js and the canvas. Here a stand-in that says what it was given.
 vi.mock('./MusicMap', () => ({ default: (props: { data: { n: number } }) => <div data-testid="map">{props.data.n} albums</div> }));
 
-import { MapWhenLoaded, loadMapChunk, openingStop, resetMapCode, useMapBoot, useMapCodeFailed } from './boot';
+import { MapWhenLoaded, loadMapChunk, noNebula, openingStop, resetMapCode, useMapBoot, useMapCodeFailed, useMapShown } from './boot';
+import { getMapReveal, resetMapReveal, setMapReveal } from './state/reveal';
 
 describe('starting everything the map needs at once', () => {
   let frames: FrameRequestCallback[];
@@ -30,6 +32,7 @@ describe('starting everything the map needs at once', () => {
     performance.clearMarks();
     resetMarks();
     resetMapCode();
+    resetMapReveal();
   });
   afterEach(() => {
     cleanup();
@@ -105,8 +108,43 @@ describe('starting everything the map needs at once', () => {
     await act(() => loadMapChunk());
     expect(performance.getEntriesByName('rmr-chunk-start')).toHaveLength(1);
     // React shows a lazy component 300 ms after its fallback: the map's code is not loaded that way.
-    const source = await import('node:fs').then((fs) => fs.readFileSync('src/components/map/MapStage.tsx', 'utf8') + fs.readFileSync('src/components/map/boot.ts', 'utf8'));
+    const source = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8') + fs.readFileSync('src/components/map/boot.ts', 'utf8');
     expect(source).not.toMatch(/from 'next\/dynamic'|\blazy\(|<Suspense/);
+  });
+
+  it('with no usable theme: the stand-in is told to go, and the image asked for early is freed (no gas layer will take it)', () => {
+    window.__rmr = { ...window.__rmr, gas: 'loading' } as typeof window.__rmr;
+    noNebula();
+    expect(getMapReveal()).toBe('sky');
+    expect(early.dropEarlyGas).toHaveBeenCalledTimes(1);
+    // freed whatever the theme names: called with no list of images to keep
+    expect(early.dropEarlyGas).toHaveBeenCalledWith();
+    expect(window.__rmr!.gas).toBe('off');
+    // MapStage calls it from the effect that sees the theme fail or not fit
+    const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
+    expect(stage).toMatch(/if \(themeStatus === 'error' \|\| \(mapData !== null && loadedTheme !== null && theme === null\)\) noNebula\(\);/);
+  });
+
+  it('the controls that stand on the map come in with the canvas, not before it', () => {
+    const { result } = renderHook(() => useMapShown());
+    expect(result.current).toBe(false);
+    act(() => setMapReveal('stars'));
+    expect(result.current).toBe(true);
+    act(() => setMapReveal('gas'));
+    expect(result.current).toBe(true);
+    const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
+    expect(stage).toContain("data-shown={shown ? '1' : '0'}");
+    const css = fs.readFileSync('src/styles/map.css', 'utf8');
+    expect(css).toContain('.map-pane[data-shown="0"] .map-zoom, .map-pane[data-shown="0"] .map-hint { opacity: 0; visibility: hidden; }');
+    // and they fade as the canvas does
+    expect(css).toMatch(/\.map-zoom \{[^}]*transition: opacity \.2s var\(--out\), visibility 0s;/);
+    expect(css).toMatch(/\.map-hint \{[^}]*transition: opacity \.25s var\(--out\), visibility 0s;/);
+  });
+
+  it('the stand-in is off behind the no-WebGL message and behind the error panel', () => {
+    const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
+    expect(stage).toContain("<GasPlaceholder view={view} off={webgl === 'unavailable' || failed} />");
+    expect(stage).toMatch(/const failed = webgl !== 'unavailable' && \(catalogStatus === 'error' \|\| positionsStatus === 'error' \|\| codeFailed\);/);
   });
 
   it('opens on the stop an album link names, and on the default everywhere else', () => {

@@ -6,6 +6,7 @@ import { markOnce } from '@/lib/marks';
 import { useAppStore } from '@/lib/store';
 import { DEFAULT_STOP, type StopId } from '@/lib/types';
 import { parseBy, slugFromPathname } from '@/lib/url-state';
+import { mapShown, setMapReveal, subscribeMapReveal } from './state/reveal';
 import { isWebGLAvailable, warmUpWebGL } from './state/webgl';
 import type { MusicMapProps } from './types';
 
@@ -78,6 +79,20 @@ export function MapWhenLoaded(props: MusicMapProps) {
 export function resetMapCode(): void {
   chunk = null;
   setCode(IDLE);
+}
+
+/** No nebula will come on this page load (theme.json failed, or is for another album list): the stand-in of the
+ * first paint fades out, the image asked for early is freed (no gas layer will mount to take it: it is 14 MB
+ * decoded), and the tests that wait for the gas to settle are told there is none (e2e/helpers.ts waitForMap). */
+export function noNebula(): void {
+  setMapReveal('sky');
+  dropEarlyGas();
+  if (window.__rmr) window.__rmr.gas = 'off';
+}
+
+/** True once the canvas is shown (state/reveal.ts mapShown), for the controls that come in with it. */
+export function useMapShown(): boolean {
+  return useSyncExternalStore(subscribeMapReveal, mapShown, () => false);
 }
 
 /** The stop a page load opens on: an album link can name one (`?by=`), every other page opens on the default. */

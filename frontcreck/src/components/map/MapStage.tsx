@@ -10,7 +10,7 @@ import { useAppStore } from '@/lib/store';
 import type { StopId } from '@/lib/types';
 import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-state';
 import { ErrorPanel } from '@/components/ErrorPanel';
-import { MapWhenLoaded, loadMapChunk, useMapBoot, useMapCodeFailed } from './boot';
+import { MapWhenLoaded, loadMapChunk, noNebula, useMapBoot, useMapCodeFailed, useMapShown } from './boot';
 import { buildMapData } from './data';
 import { DESKTOP_FIT_PADDING, DESKTOP_PADDING, PHONE_FIT_PADDING, PHONE_PADDING, PHONE_SLIDER_COVER_FALLBACK_PX, PHONE_SLIDER_MARGIN_PX } from './framing';
 import { ExploreHere } from './overlays/ExploreHere';
@@ -20,7 +20,6 @@ import { MapHint } from './overlays/MapHint';
 import { NoWebGL } from './overlays/NoWebGL';
 import { SimilaritySlider } from './overlays/SimilaritySlider';
 import { ZoomControls } from './overlays/ZoomControls';
-import { setMapReveal } from './state/reveal';
 import type { MapApi, MapCallbacks, MapInput } from './types';
 
 /** Space kept between a flown-to album and the top of the phone card (bottom sheet). */
@@ -129,11 +128,8 @@ export function MapStage() {
   const { status: themeStatus, theme: loadedTheme } = useThemeLoad(true);
   const theme = mapData ? themeFor(loadedTheme, mapData.n) : null;
   useEffect(() => {
-    // Tests wait for the gas to settle (e2e/helpers.ts waitForMap); tell them when there is none to wait for.
-    // No nebula will come either: the stand-in of the first paint fades out (state/reveal.ts).
-    if (themeStatus !== 'error' && (mapData === null || loadedTheme === null || theme !== null)) return;
-    setMapReveal('sky');
-    if (window.__rmr) window.__rmr.gas = 'off';
+    // The theme failed, or is for another album list: no nebula will come (boot.ts noNebula).
+    if (themeStatus === 'error' || (mapData !== null && loadedTheme !== null && theme === null)) noNebula();
   }, [themeStatus, mapData, loadedTheme, theme]);
 
   const interactive = view === 'explore' || (view === 'album' && (!narrow || mapMode));
@@ -308,16 +304,20 @@ export function MapStage() {
   // Without WebGL there is no map to miss its data: the no-WebGL message stands alone.
   const codeFailed = useMapCodeFailed();
   const failed = webgl !== 'unavailable' && (catalogStatus === 'error' || positionsStatus === 'error' || codeFailed);
+  // The hint line (with its dark band) and the zoom buttons come in with the canvas, never a frame ahead of it.
+  const shown = useMapShown();
   return (
     <div
       ref={paneRef}
       className={`map-pane${dimmed ? ' is-dimmed' : ''}`}
       data-view={view}
       data-mapmode={view === 'album' && narrow && mapMode ? 'true' : 'false'}
+      data-shown={shown ? '1' : '0'}
       // The phone zoom controls sit above the measured slider panel (styles/map.css).
       style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
     >
-      <GasPlaceholder view={view} off={webgl === 'unavailable'} />
+      {/* No stand-in behind the no-WebGL message or the error panel: neither has a map coming under it. */}
+      <GasPlaceholder view={view} off={webgl === 'unavailable' || failed} />
       <div className="map-host">
         {mountData ? (
           <MapWhenLoaded data={mountData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />

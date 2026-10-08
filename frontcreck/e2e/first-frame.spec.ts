@@ -191,6 +191,86 @@ test('on a slow connection the script takes the nebula image over while it is st
   expect(requested).toHaveLength(1);
 });
 
+test('when the album list fails the stand-in leaves with the error panel, and a retry that works shows the map', async ({ page }) => {
+  let failing = true;
+  await page.route('**/data/albums.json', (route) => (failing ? route.abort() : route.continue()));
+  await page.goto('/map');
+  const panel = page.locator('.map-msg');
+  await expect(panel).toBeVisible();
+  // No soft nebula behind a message that says the map could not load, and no canvas.
+  await expect(page.locator('.gas-ph')).toHaveCount(0);
+  await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
+  failing = false;
+  await panel.getByRole('button').click();
+  await waitForMap(page);
+  await expect(panel).toHaveCount(0);
+  await expect(page.locator('canvas.map-canvas')).toBeVisible();
+  expect(await page.locator('canvas.map-canvas').evaluate((c) => [c.classList.contains('is-veiled'), getComputedStyle(c).opacity])).toEqual([false, '1']);
+  expect(typeof (await page.evaluate(() => window.__rmr!.gasShownMs))).toBe('number');
+});
+
+test('when the map\'s code fails to download the error panel shows, and its retry downloads it and shows the map', async ({ page }) => {
+  // The map's code is the chunk with three.js in it. It is asked for right after first paint; here the first
+  // request for it is dropped, as a connection that breaks would.
+  let failing = true;
+  const dropped: string[] = [];
+  const asked: string[] = [];
+  await page.route('**/_next/static/chunks/*.js', async (route) => {
+    const res = await route.fetch();
+    const three = (await res.text()).includes('WebGLRenderer');
+    if (three) asked.push(new URL(route.request().url()).pathname);
+    if (three && failing) {
+      dropped.push(route.request().url());
+      await route.abort();
+    } else await route.fulfill({ response: res });
+  });
+  await page.goto('/map');
+  const panel = page.locator('.map-msg');
+  await expect(panel).toBeVisible({ timeout: 20_000 });
+  expect(dropped.length).toBeGreaterThanOrEqual(1);
+  await expect(page.locator('.gas-ph')).toHaveCount(0);
+  await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
+  failing = false;
+  const before = asked.length;
+  await panel.getByRole('button').click();
+  await waitForMap(page);
+  // The retry asked for the code again (a failed download is not remembered), and the map is there.
+  expect(asked.length).toBeGreaterThan(before);
+  await expect(panel).toHaveCount(0);
+  await expect(page.locator('canvas.map-canvas')).toBeVisible();
+  expect(typeof (await page.evaluate(() => window.__rmr!.gasShownMs))).toBe('number');
+});
+
+test('the hint line, its band and the zoom buttons come in with the map, never before it', async ({ page }, info) => {
+  // The nebula image is held back, so the map shows its stars over the stand-in: the moment the controls must wait for.
+  const release = await hold(page, `**${GAS}`);
+  await page.addInitScript(() => {
+    // Every frame: is the canvas shown, and are the controls? A control seen while the canvas is not is the bug.
+    const w = window as unknown as { __early: string[] };
+    w.__early = [];
+    const look = () => {
+      const canvas = document.querySelector('canvas.map-canvas');
+      const mapShown = !!canvas && !canvas.classList.contains('is-veiled');
+      for (const sel of ['.map-zoom', '.map-hint']) {
+        const el = document.querySelector<HTMLElement>(sel);
+        if (!el || mapShown) continue;
+        const cs = getComputedStyle(el);
+        if (cs.display !== 'none' && cs.visibility !== 'hidden' && Number(cs.opacity) > 0) w.__early.push(`${sel} at ${Math.round(performance.now())}`);
+      }
+      requestAnimationFrame(look);
+    };
+    requestAnimationFrame(look);
+  });
+  await page.goto('/map');
+  await expect.poll(() => page.locator('canvas.map-canvas').evaluate((c) => c.classList.contains('is-veiled')).catch(() => true), { timeout: 20_000 }).toBe(false);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-shown', '1');
+  await expect(page.locator('.map-zoom')).toBeVisible();
+  if (!isPhone(info)) await expect(page.locator('.map-hint')).toBeVisible();
+  expect(await page.evaluate(() => (window as unknown as { __early: string[] }).__early)).toEqual([]);
+  release();
+  await waitForMap(page);
+});
+
 test('an album page shows a glow, not a picture, and it leaves when the map has drawn', async ({ page }) => {
   const release = await hold(page, '**/data/albums.json');
   await page.goto('/album/in-rainbows-radiohead');
