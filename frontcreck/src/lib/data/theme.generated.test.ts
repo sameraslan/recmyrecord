@@ -53,12 +53,11 @@ describe('theme.generated.ts (what the page knows of the theme before theme.json
       expect(bytes.length, stop).toBeLessThanOrEqual(2048);
       const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
       expect(info.channels, stop).toBe(3);
-      expect(Math.max(info.width, info.height), stop).toBe(THEME_BAKE.picturePx);
-      expect(THEME_BAKE.picturePx, 'small enough to be blurred where it is shown, not sharp').toBeLessThanOrEqual(128);
+      expect(Math.max(info.width, info.height), stop).toBe(128);
       const [w, h] = theme.gas[stop].px;
       expect(info.width / info.height, stop).toBeCloseTo(w / h, 1);
-      // Where there is no gas the picture is the pane's own colour, rgb(7, 6, 10), to within what the display blur
-      // evens out, so its fading rim has nothing to show; the middle is lit.
+      // Its edges are the pane's own colour, rgb(7, 6, 10), to within what a lossy encode leaves, so the picture has
+      // no box on the pane; the middle is lit.
       let edge = 0;
       for (let y = 0; y < info.height; y++) {
         for (let x = 0; x < info.width; x++) {
@@ -67,7 +66,19 @@ describe('theme.generated.ts (what the page knows of the theme before theme.json
           edge = Math.max(edge, Math.abs(data[o] - 7), Math.abs(data[o + 1] - 6), Math.abs(data[o + 2] - 10));
         }
       }
-      expect(edge, `${stop}: levels off the pane's colour at the edges`).toBeLessThanOrEqual(6);
+      expect(edge, `${stop}: levels off the pane's colour at the edges`).toBeLessThanOrEqual(3);
+      // Nothing as fine as a texel is left in it: no texel differs from the mean of its two neighbours, along a row
+      // or a column, by more than 8 levels of 255 (a picture softened by one texel, not three, has kinks of over 20), so the browser's enlargement of it shows no grid.
+      let kink = 0;
+      for (let y = 1; y < info.height - 1; y++) {
+        for (let x = 1; x < info.width - 1; x++) {
+          for (let c = 0; c < 3; c++) {
+            const at = (dx: number, dy: number) => data[3 * ((y + dy) * info.width + x + dx) + c];
+            kink = Math.max(kink, Math.abs(at(0, 0) - (at(-1, 0) + at(1, 0)) / 2), Math.abs(at(0, 0) - (at(0, -1) + at(0, 1)) / 2));
+          }
+        }
+      }
+      expect(kink, `${stop}: the sharpest texel`).toBeLessThanOrEqual(8);
       const mid = 3 * (Math.floor(info.height / 2) * info.width + Math.floor(info.width / 2));
       expect(data[mid] + data[mid + 1] + data[mid + 2], stop).toBeGreaterThan(90);
       const tone = THEME_BAKE.stops[stop].tone;

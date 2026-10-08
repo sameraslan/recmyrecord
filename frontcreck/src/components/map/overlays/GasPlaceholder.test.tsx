@@ -8,7 +8,7 @@ import { DESKTOP_FIT_PADDING, PHONE_FIT_PADDING, PHONE_SLIDER_COVER_FALLBACK_PX 
 import { OVERVIEW_COVER_MAX_PX, OVERVIEW_NARROW_CLOSER, OVERVIEW_NARROW_COVER_PX, OVERVIEW_SIDE_PAD_PX } from '../state/bounds';
 import { MAP_REVEAL_FADE_MS, resetMapReveal, setMapReveal } from '../state/reveal';
 import { COVER_WORLD } from '../state/zoomLimits';
-import { BLUR, FADE, GasPlaceholder, OVER, placeholderLayout } from './GasPlaceholder';
+import { GasPlaceholder, OVER, placeholderLayout } from './GasPlaceholder';
 
 const css = fs.readFileSync(path.join(process.cwd(), 'src/styles/map.css'), 'utf8');
 const B = THEME_BAKE.stops.balanced;
@@ -85,35 +85,11 @@ describe('the stand-in nebula of the first paint', () => {
       expect(image.getAttribute('href')).toBe(GAS_PLACEHOLDER_BALANCED);
       // stretched to its rectangle (the image's own shape is that rectangle's, to a texel)
       expect(image.getAttribute('preserveAspectRatio')).toBe('none');
-      // Shown through a Gaussian blur of one texel of the picture, so its enlargement shows no grid: the filter is
-      // in the same <svg>, works in sRGB (the default, linear light, would brighten the picture's dark parts), and
-      // its region reaches past the picture, whose edges are see-through.
-      const filter = el.querySelector('filter')!;
-      expect(image.getAttribute('filter')).toBe(`url(#${filter.id})`);
-      expect(filter.getAttribute('color-interpolation-filters') ?? filter.getAttribute('colorInterpolationFilters')).toBe('sRGB');
-      expect([filter.getAttribute('x'), filter.getAttribute('y'), filter.getAttribute('width'), filter.getAttribute('height')]).toEqual(['-10%', '-10%', '120%', '120%']);
-      expect(Number(filter.querySelector('feGaussianBlur')!.getAttribute('stdDeviation') ?? filter.querySelector('feGaussianBlur')!.getAttribute('stddeviation'))).toBe(BLUR);
-      // one texel: the picture's longer side is picturePx texels over the longer side of the gas's rectangle
-      const texel = (Math.max(B.gas[2] - B.gas[0], B.gas[3] - B.gas[1]) * 1000) / THEME_BAKE.picturePx;
-      expect(BLUR).toBeCloseTo(THEME_BAKE.pictureBlur * texel, 1);
-      expect(BLUR / texel).toBeGreaterThanOrEqual(0.8);
-      // And through a round mask, applied after the blur (on a group round the picture): an ellipse that touches
-      // the picture's four edges, whole in the middle and nothing at its rim, so no straight edge is left.
-      const mask = el.querySelector('mask')!;
-      expect(image.parentElement!.getAttribute('mask')).toBe(`url(#${mask.id})`);
-      const ellipse = mask.querySelector('ellipse')!;
-      const box = placeholderLayout(view).image;
-      expect(Number(ellipse.getAttribute('cx'))).toBeCloseTo(box.x + box.width / 2, 2);
-      expect(Number(ellipse.getAttribute('cy'))).toBeCloseTo(box.y + box.height / 2, 2);
-      expect(Number(ellipse.getAttribute('rx'))).toBeCloseTo(box.width / 2, 2);
-      expect(Number(ellipse.getAttribute('ry'))).toBeCloseTo(box.height / 2, 2);
-      const gradient = el.querySelector('radialGradient')!;
-      expect(ellipse.getAttribute('fill')).toBe(`url(#${gradient.id})`);
-      const stops = [...gradient.querySelectorAll('stop')].map((s) => [Number(s.getAttribute('offset')), Number(s.getAttribute('stop-opacity'))]);
-      expect(stops).toEqual(FADE);
-      expect(stops[0]).toEqual([THEME_BAKE.pictureFadeFrom, 1]);
-      expect(stops.at(-1)).toEqual([1, 0]);
-      for (let i = 1; i < stops.length; i++) expect(stops[i][1]).toBeLessThan(stops[i - 1][1]);
+      // The picture alone: no filter and no mask to paint (it is blurred and faded to the pane's colour when it is
+      // baked, scripts/theme/build-module.mjs).
+      expect(el.querySelector('filter, mask, radialGradient')).toBeNull();
+      expect(image.getAttribute('filter')).toBeNull();
+      expect(el.querySelectorAll('svg *')).toHaveLength(1);
       unmount();
     }
     const { container } = render(<GasPlaceholder view="album" off={false} />);

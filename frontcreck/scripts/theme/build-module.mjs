@@ -8,8 +8,8 @@
  *   - where each stop's gas lies and what the map's opening views are fitted to, in world units, so a stand-in
  *     picture can be placed where the map will draw the nebula (src/components/map/overlays/GasPlaceholder.tsx);
  *   - that stand-in: per stop a tiny, soft copy of the nebula as the map shows it at its opening views (the dust
- *     and the glow applied, on the pane's colour), as a WebP data URI of about 1.3 KB. The page shows it
- *     enlarged, blurred and through a round mask.
+ *     and the glow applied), blurred and faded to the pane's colour along a round rim so that the page can show
+ *     it enlarged as it is, as a WebP data URI of about 1.2 KB.
  * Everything here is worked out from files, with sharp alone: the same input gives the same module. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -25,22 +25,21 @@ export const SKY = [0.024, 0.022, 0.034];
 export const GLOW = 0.18;
 /** A stand-in picture: its longer side in px, how much the source is softened before it is scaled down (a
  * Gaussian's sigma in px of the small picture), and the WebP quality.
- * /map opens on the middle third of the picture enlarged about twenty times. Whatever the picture holds, a
- * browser's plain (bilinear) enlargement of it shows the grid of its texels there, and a lossy encode's blocks
- * with it; so the page blurs the picture again where it shows it (PLACEHOLDER_DISPLAY_BLUR, applied by
- * overlays/GasPlaceholder.tsx as an SVG Gaussian blur), which leaves neither. The picture therefore needs no more
- * detail than that blur lets through: 96 px. Quality 96 keeps the codec's blocks under what the blur removes. */
-export const PLACEHOLDER_PX = 96;
-export const PLACEHOLDER_SOFTEN = 1.2;
+ * /map opens on the middle third of the picture enlarged twenty to forty times by the browser's plain (bilinear)
+ * scaling, which shows the grid of a picture's texels wherever neighbouring texels differ much, and a lossy
+ * encode's blocks with it. So the picture is made to hold nothing that fine: blurred at full size by three of its
+ * own texels before it is scaled down, at a quality whose blocks stay under a level. Measured on /map at 2560 px
+ * (the share of pixels that differ by two levels or more from the same frame blurred): 0.15% at 96 px softened
+ * 1.2, a visible grid; 0.03% at 128 px softened 2.4; 0.01% at 128 px softened 3, the same as with a Gaussian blur
+ * applied by the page, which was tried and is not needed. */
+export const PLACEHOLDER_PX = 128;
+export const PLACEHOLDER_SOFTEN = 3;
 export const PLACEHOLDER_QUALITY = 96;
-/** The blur the page applies when it shows the picture, as a Gaussian's sigma in texels of the picture. */
-export const PLACEHOLDER_DISPLAY_BLUR = 1;
-/** The page shows the picture through a round mask (overlays/GasPlaceholder.tsx): fully shown inside an ellipse
- * this share of the way from its middle to its edges, fading to nothing at the ellipse that touches its four
- * edges, so nothing of it ends in a straight line: the real nebula fades into the sky, and so does this. The gas
- * itself ends well inside (the image's rectangle is padded with sky), so the mask takes next to none of its light
- * (checked below, with `feather`, the same curve). The mask is the page's and not an alpha channel in the picture:
- * that cost 700 bytes a picture. */
+/** The picture is whole inside an ellipse this share of the way from its middle to its edges, and fades to the
+ * pane's own colour at the ellipse that touches its four edges, so nothing of it ends in a straight line: the real
+ * nebula fades into the sky, and so does this. The gas itself ends well inside (the image's rectangle is padded
+ * with sky), so the fade takes next to none of its light (checked below). The fade is in the picture's colours:
+ * a mask applied by the page looked the same and cost markup and paint, an alpha channel 700 bytes a picture. */
 export const PLACEHOLDER_FEATHER_FROM = 0.78;
 /** The pane's own colour, --color-pane #07060a (app/globals.css). The sky the map draws is a level darker in red
  * and blue; the picture's dark parts are lifted by that level, so where there is no gas it is the pane's colour
@@ -99,7 +98,7 @@ const smooth = (t) => {
   return k * k * (3 - 2 * k);
 };
 
-/** How much of the picture shows at texel (x, y) of a w x h picture: 1 inside the inner ellipse, 0 from the
+/** How much of its light a texel (x, y) of a w x h picture keeps: all of it inside the inner ellipse, none from the
  * ellipse that touches the picture's edges outwards (so at every edge texel and in the corners). */
 export function feather(x, y, w, h) {
   if (x === 0 || y === 0 || x === w - 1 || y === h - 1) return 0;
@@ -108,8 +107,8 @@ export function feather(x, y, w, h) {
 }
 
 /** The stand-in picture of a gas image (the bytes of a first image, a WebP with a dust channel): a WebP of at most
- * PLACEHOLDER_PX a side, softened (blurred at full size, then scaled down), on the pane's colour, with its mean colour where there is
- * gas and the share of its light the page's round mask takes. */
+ * PLACEHOLDER_PX a side, softened (blurred at full size, then scaled down), fading to the pane's colour along a round rim, with its
+ * mean colour where there is gas and the share of its light that fade takes. */
 export async function placeholder(webp) {
   const { data, info } = await sharp(webp).raw().toBuffer({ resolveWithObject: true });
   if (info.channels !== 4) throw new Error(`a gas image with ${info.channels} channels (4 expected)`);
@@ -144,16 +143,16 @@ export async function placeholder(webp) {
         lit++;
         for (let c = 0; c < 3; c++) tone[c] += small[3 * i + c];
       }
-      // (never under the pane's colour: the sky becomes the pane)
-      for (let c = 0; c < 3; c++) out[3 * i + c] = Math.max(small[3 * i + c], PANE[c]);
+      // Never under the pane's colour (the sky becomes the pane), and down to it along the round rim.
+      for (let c = 0; c < 3; c++) out[3 * i + c] = Math.round(PANE[c] + (Math.max(small[3 * i + c], PANE[c]) - PANE[c]) * a);
     }
   }
   const bytes = await sharp(out, { raw: { width: size[0], height: size[1], channels: 3 } }).webp({ quality: PLACEHOLDER_QUALITY, effort: 6, smartSubsample: true }).toBuffer();
   if (bytes.length > PLACEHOLDER_MAX_BYTES) throw new Error(`a stand-in picture of ${bytes.length} bytes (at most ${PLACEHOLDER_MAX_BYTES}): lower PLACEHOLDER_PX or PLACEHOLDER_QUALITY`);
-  // The mask must not dim the nebula: it may take a hundredth of the picture's light at most.
-  if (lost > light * 0.01) throw new Error(`the round mask takes ${((100 * lost) / light).toFixed(1)}% of a stand-in picture's light: the gas reaches its edge`);
-  // As a browser will decode it: where there is no gas (its edges) it must be the pane's colour to within what the
-  // display blur evens out, and never under it.
+  // The fade must not dim the nebula: it may take a hundredth of the picture's light at most.
+  if (lost > light * 0.01) throw new Error(`the round fade takes ${((100 * lost) / light).toFixed(1)}% of a stand-in picture's light: the gas reaches its edge`);
+  // As a browser will decode it: its edges must be the pane's colour (a lossy encode puts up to three levels there),
+  // or the picture would show as a box on the pane.
   const back = await sharp(bytes).removeAlpha().raw().toBuffer();
   let edge = 0;
   for (let y = 0; y < size[1]; y++) {
@@ -162,7 +161,7 @@ export async function placeholder(webp) {
       edge = Math.max(edge, Math.abs(back[o] - PANE[0]), Math.abs(back[o + 1] - PANE[1]), Math.abs(back[o + 2] - PANE[2]));
     }
   }
-  if (edge > 6) throw new Error(`the edge of a stand-in picture is ${edge} levels off the pane's colour`);
+  if (edge > 3) throw new Error(`the edge of a stand-in picture is ${edge} levels off the pane's colour: it would show as a box`);
   return { bytes, size, tone: tone.map((v) => Math.round(v / Math.max(lit, 1))), lost: lost / light };
 }
 
@@ -187,14 +186,8 @@ export async function themeModule(dataDir) {
     ' * two gas images (theme.json gas.<stop>.hash); and in world units (components/map/data.ts), y up: `gas`, the',
     ' * rectangle its images cover [west, south, east, north]; `cloud`, the full extent of its albums [minX, minY,',
     ' * maxX, maxY] (the Whole map is fitted to it); `span`, [x1, x99, medY]: the 1st and 99th percentile of x and the',
-    ' * median of y (the Overview is fitted to them). `tone`: the mean colour of its nebula, sRGB bytes.',
-    ' * `picturePx` is the longer side of every stand-in picture below; they are shown with a blur of `pictureBlur`',
-    ' * texels and through a round mask that fades out from `pictureFadeFrom` of the way to their edges',
-    ' * (overlays/GasPlaceholder.tsx). */',
+    ' * median of y (the Overview is fitted to them). `tone`: the mean colour of its nebula, sRGB bytes. */',
     'export const THEME_BAKE = {',
-    `  picturePx: ${PLACEHOLDER_PX},`,
-    `  pictureBlur: ${PLACEHOLDER_DISPLAY_BLUR},`,
-    `  pictureFadeFrom: ${PLACEHOLDER_FEATHER_FROM},`,
     `  n: ${theme.n},`,
     `  positionsHash: '${theme.positionsHash}',`,
     '  stops: {',
@@ -203,7 +196,8 @@ export async function themeModule(dataDir) {
     '} as const;',
     '',
     `/* A stand-in for each stop's nebula: a soft copy at most ${PLACEHOLDER_PX} px a side, as the map shows the gas at its opening`,
-    ' * views (dust and glow applied, on the pane\'s colour). Shown enlarged, blurred and through a round mask.',
+    ' * views (dust and glow applied), blurred so that its enlargement shows no grid, fading to the pane\'s colour',
+    ' * along a round rim.',
     ' * Separate exports, so a page ships only the one it shows. */',
     ...T.STOPS.flatMap((s) => [
       `/** ${pictures[s].size.join(' x ')} px, ${pictures[s].bytes.length} bytes. */`,
