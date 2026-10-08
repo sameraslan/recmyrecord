@@ -87,6 +87,30 @@ describe('committed theme data (public/data/theme)', () => {
     expect(b.length / at84.length).toBeGreaterThan(1.4);
   }, 60_000);
 
+  it('holds the brightest gas under the bake\'s peak in every image, so a star can be brighter than the gas behind it', async () => {
+    // scripts/theme/bake-core.js GAS.PEAK is 0.8 of 1 for the largest channel: 204 of 255. The lossy colour of the
+    // WebP may overshoot a little at a sharp edge (the bake checks a mean error of 2); 8 levels are allowed, and
+    // nearly every pixel is under the peak itself. Before the cap the densest gas was 255.
+    const t = theme();
+    for (const stop of STOP_IDS) {
+      const g = t.gas[stop];
+      for (const file of [`gas-${stop}.${g.hash[0]}.webp`, `gas-${stop}-sharp.${g.hash[1]}.webp`]) {
+        const { data, info } = await sharp(read(`theme/${file}`)).raw().toBuffer({ resolveWithObject: true });
+        let most = 0;
+        let over = 0;
+        for (let i = 0; i < data.length; i += info.channels) {
+          const m = Math.max(data[i], data[i + 1], data[i + 2]);
+          if (m > most) most = m;
+          if (m > 204) over++;
+        }
+        expect(most, `${file}: brightest channel`).toBeLessThanOrEqual(204 + 8);
+        expect(over / (info.width * info.height), `${file}: share of pixels over the peak`).toBeLessThan(0.001);
+        // and the cap did not flatten the picture: the brightest gas is still near the peak
+        expect(most, `${file}: brightest channel`).toBeGreaterThan(180);
+      }
+    }
+  }, 60_000);
+
   it('keeps every album inside its stop\'s gas rectangle, with the padding to spare', () => {
     const t = theme();
     const positions = JSON.parse(read('positions.json').toString('utf8')) as Record<string, number[]>;

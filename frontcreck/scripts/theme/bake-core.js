@@ -21,6 +21,11 @@
     BAKE_MARGIN: 0.6, // the bake reaches this far past the outermost album, where the gas has already ended
     RAW_MARGIN: 0.75, // the fields reach a little further, past the widest blur that still lights anything
     LUM_MAX: 0.6, // a byte of 255 in stars.bg
+    // The brightest gas is held under PEAK (of 1, the largest colour channel), eased in from KNEE: with 10,467
+    // albums the densest gas baked to white, the map adds its glow on top, and a star (white light, added) had
+    // nothing left to be brighter than. Below KNEE the bake is untouched.
+    KNEE: 0.5,
+    PEAK: 0.8,
   };
   const EMBER = { hues: [[232, 96, 60], [244, 190, 120], [150, 200, 214], [66, 110, 190], [120, 140, 220]], neutral: [138, 138, 146] };
   const STOPS = ['sonic', 'balanced', 'mood'];
@@ -138,6 +143,14 @@
     return { cx, cy, s: 0.55 / ext };
   }
 
+  /** The largest channel of a toned colour after the cap (the bake shader does the same and scales all three
+   * channels alike, so the hue stays): unchanged up to KNEE, then eased toward PEAK, which it never reaches. Smooth
+   * where the two meet (the slope there is 1). */
+  function capPeak(m) {
+    const k = GAS.KNEE, p = GAS.PEAK;
+    return m <= k ? m : k + (p - k) * (1 - Math.exp(-(m - k) / (p - k)));
+  }
+
   const srgb2lin = (v) => { v /= 255; return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
   const luminance = (c) => 0.2126 * srgb2lin(c[0]) + 0.7152 * srgb2lin(c[1]) + 0.0722 * srgb2lin(c[2]);
   /** Cell of the luminance copy that holds raw point (x, y). The copy covers the field square; row 0 is the south edge. */
@@ -185,6 +198,6 @@
   globalThis.RMR_THEME = Object.assign(globalThis.RMR_THEME || {}, {
     GAS_HASH_LEN, gasHash, gasFile, gasFiles,
     GAS, EMBER, STOPS, noiseTable, blur, at, halves, gasRect, gasSizes, fieldData, leadFamilies, positionsTransform,
-    luminance, lumCell, lumGrid, packLead, packBytes, assemble,
+    luminance, lumCell, lumGrid, packLead, packBytes, assemble, capPeak,
   });
 })();

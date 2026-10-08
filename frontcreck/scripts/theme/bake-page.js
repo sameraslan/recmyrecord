@@ -4,7 +4,8 @@
  * one), and once more at 512 px with sky and grain for the luminance that stars and names read. Loaded after bake-core.js by
  * build-theme.mjs. Ported from docs/design/trifid-theme/prototype/src/gas.js with the `swirl` numbers written in:
  * WARP 3.4, W2 1.6, TEX .3 + 2 b^2, FIL .5, CW .42 and .16, DW .14, DUST .8, DSOFT .7, DFINE .7, EX 1.18, P 2.6,
- * SAT 1.05, FAR 1, CORE .07, HI .25. */
+ * SAT 1.05, FAR 1, CORE .07, HI .25. Not the prototype's: the cap on the brightest gas (GAS.KNEE, GAS.PEAK in
+ * bake-core.js), added for the 10,467-album map. */
 (function () {
   'use strict';
   const T = globalThis.RMR_THEME, G = T.GAS;
@@ -22,6 +23,7 @@
   uniform float u_ppr, u_bake, u_rawHalf;
   uniform vec3 u_hue[6]; uniform vec3 u_neu;
   const float F=5.;
+  const float KNEE=${G.KNEE.toFixed(4)}, PEAK=${G.PEAK.toFixed(4)};
   const vec3 SKY=vec3(.024,.022,.034);
   float sm(float a,float b,float x){ float t=clamp((x-a)/(b-a),0.,1.); return t*t*(3.-2.*t); }
   // value noise from the 256 px random table; the smoothstep fraction makes LINEAR filtering do the interpolation
@@ -90,6 +92,11 @@
     const vec3 WARM=vec3(1.,.92,.78);
     float core=pow(dF,1.6)*.07*sm(.3,1.,dB), hi=pow(max(0.,Lm-.55),2.)*.25;
     vec3 col=1.-exp(-1.18*(c*Lm*.95+(core+hi)*WARM));
+    // the cap (bake-core.js capPeak): the brightest gas is eased under PEAK so stars stay brighter than it; all
+    // three channels by the same factor, so cream stays cream. The map scales the light afterwards as if the tone
+    // map were the exponential alone (shaders/gas.ts lit), which is exact below the knee and close above it.
+    float cm=max(col.r,max(col.g,col.b));
+    if(cm>KNEE) col*=(KNEE+(PEAK-KNEE)*(1.-exp(-(cm-KNEE)/(PEAK-KNEE))))/cm;
     if(u_bake>.5){ o=vec4(col,A); return; }
     // the luminance copy: the runtime's finish() at full strength with no dust and no pool, sky and grain included
     col=1.-max(1.-col,vec3(.002));

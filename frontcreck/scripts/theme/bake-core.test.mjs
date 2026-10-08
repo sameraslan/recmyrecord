@@ -107,6 +107,24 @@ describe('bake-core (the DOM-free half of the theme build)', () => {
     lum[T.lumCell(0.1, 0.1, 1.75)] = 0.4;
   });
 
+  it('caps the brightest gas: untouched up to the knee, eased under the peak, smooth where the two meet', () => {
+    expect([T.GAS.KNEE, T.GAS.PEAK]).toEqual([0.5, 0.8]);
+    for (const m of [0, 0.1, 0.3, 0.5]) expect(T.capPeak(m)).toBe(m);
+    // above the knee: lower than it was, never over the peak, and still rising (brighter gas stays brighter)
+    let last = 0.5;
+    for (let m = 0.51; m <= 1.0001; m += 0.01) {
+      const v = T.capPeak(m);
+      expect(v).toBeLessThan(m);
+      expect(v).toBeLessThan(0.8);
+      expect(v).toBeGreaterThan(last);
+      last = v;
+    }
+    // white comes down to 0.743; the slope at the knee is 1 (no visible edge where the cap starts)
+    expect(T.capPeak(1)).toBeCloseTo(0.5 + 0.3 * (1 - Math.exp(-0.5 / 0.3)), 12);
+    expect(T.capPeak(1)).toBeCloseTo(0.7433, 3);
+    expect((T.capPeak(0.501) - T.capPeak(0.5)) / 0.001).toBeCloseTo(1, 2);
+  });
+
   it('names a gas image after its own bytes, and lists every file a theme names', () => {
     expect(T.GAS_HASH_LEN).toBe(10);
     expect(T.gasHash('0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef')).toBe('0123456789');
