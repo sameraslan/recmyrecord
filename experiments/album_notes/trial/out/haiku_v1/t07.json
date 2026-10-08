@@ -1,0 +1,24 @@
+{
+  "tier": "rich",
+  "hook": {"text": "Recorded in Warsaw in January, and every track on it is written by the saxophonist who leads the group.", "src": ["Infobox", "Lead"]},
+  "facts": [
+    {"label": "Released", "value": "1966"},
+    {"label": "Recorded", "value": "January 1966"},
+    {"label": "Label", "value": "Polskie Nagrania „Muza” XL 0305"}
+  ],
+  "sections": [
+    {"heading": "Making it", "sentences": [
+      {"text": "Zbigniew Namysłowski plays alto saxophone and wrote every track on the record.", "src": ["Muzycy", "Lead"]},
+      {"text": "Adam Matyszkowicz plays piano, Janusz Kozłowski plays double bass and Czesław Bartkowski plays drums.", "src": ["Muzycy"]},
+      {"text": "The album was recorded in Warsaw in January 1966.", "src": ["Infobox", "Lead"]},
+      {"text": "Wojciech Piętowski directed the recording, and Halina Jastrzębska was the sound engineer.", "src": ["Informacje uzupełniające"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "Polskie Nagrania Muza issued the LP in 1966, in a mono version (XL 0305) and a stereo version (SXL).", "src": ["Lead"]},
+      {"text": "Both versions carry the matrix numbers XW-619 and XW-620.", "src": ["Lead"]},
+      {"text": "The record was the sixth volume in the Polish Jazz series.", "src": ["Lead"]},
+      {"text": "A CD reissue followed in 2004 as PNCD 306.", "src": ["Lead"]}
+    ]}
+  ],
+  "listen_for": []
+}

@@ -1,0 +1,37 @@
+{
+  "tier": "rich",
+  "hook": {"text": "Hendrix lost the side one master tape in a London taxi, and most of that side was remixed in one overnight session.", "src": ["Recording"]},
+  "facts": [
+    {"label": "Released", "value": "1 December 1967"},
+    {"label": "Recorded", "value": "May to June, October 1967, at Olympic Studios, London"},
+    {"label": "Produced by", "value": "Chas Chandler"},
+    {"label": "Label", "value": "Polydor, Track, Reprise, Barclay"},
+    {"label": "Players", "value": "Jimi Hendrix (vocals, electric guitar, piano, recorder), Noel Redding (bass guitars, backing vocals), Mitch Mitchell (drums, backing vocals)"}
+  ],
+  "sections": [
+    {"heading": "Where it comes from", "sentences": [
+      {"text": "The Jimi Hendrix Experience finished its debut, Are You Experienced, at the end of April 1967 and kept up a regular schedule of recording sessions.", "src": ["Recording"]},
+      {"text": "On May 4 the band was back at Olympic Studios in London and began writing songs for its next LP.", "src": ["Recording"]},
+      {"text": "The new record came out only seven months after that debut.", "src": ["Lead"]}
+    ]},
+    {"heading": "Making it", "sentences": [
+      {"text": "Eddie Kramer was the engineer, with George Chkiantz as second engineer.", "src": ["Recording"]},
+      {"text": "The band cut basic tracks on a four-track machine: drums in stereo on two channels, bass on a third, and Hendrix's rhythm guitar on the fourth.", "src": ["Recording"]},
+      {"text": "Those were mixed down to two tracks on a second four-track machine, leaving two free for things like lead guitar, vocals and extra percussion.", "src": ["Recording"]},
+      {"text": "Kramer stayed patient with Hendrix, who often asked for many retakes.", "src": ["Recording"]},
+      {"text": "By October 1967 Chas Chandler was tired of Hendrix's perfectionism, and Noel Redding began to resent Hendrix's instructions on what he played.", "src": ["Recording"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "In 2010 the posthumous album West Coast Seattle Boy: The Jimi Hendrix Anthology included \"Cat Talking to Me\", a song recorded in the June sessions but left off the album.", "src": ["Recording", "Track listing"]},
+      {"text": "On November 7, 2025 the Hendrix Estate released a box set called The Jimi Hendrix Experience: Bold As Love Sessions, with 66 tracks of demos and alternate takes.", "src": ["Release and reception"]},
+      {"text": "Some Hindus have since been angry about the religious images on the cover, and Malaysia's Home Ministry banned the album's art after complaints.", "src": ["Artwork and packaging"]}
+    ]}
+  ],
+  "listen_for": [
+    {"track": "EXP", "text": "Microphonic and harmonic feedback run through the track, and the guitar sounds move across the stereo image, circling the listener.", "src": ["Music and lyrics"]},
+    {"track": "Little Wing", "text": "Hendrix runs his guitar through a Leslie speaker here for the first time, a revolving speaker that gives a wavering sound.", "src": ["Music and lyrics"]},
+    {"track": "If 6 Was 9", "text": "Hendrix plays a recorder on it, and the percussion effect comes from Chas Chandler, Hendrix, Graham Nash and Gary Leeds stamping their feet on a drum riser.", "src": ["Recording", "Music and lyrics"]},
+    {"track": "Bold as Love", "text": "The chorus is built on tremolo-picked partial chords, and the coda has stereo phasing.", "src": ["Music and lyrics"]},
+    {"track": "Spanish Castle Magic", "text": "The lyrics were inspired by The Spanish Castle, a dance hall near Seattle where Hendrix played with local bands as a high school student.", "src": ["Music and lyrics"]}
+  ]
+}

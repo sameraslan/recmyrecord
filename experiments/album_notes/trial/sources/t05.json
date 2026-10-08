@@ -1,0 +1,48 @@
+{
+ "id": "t05",
+ "rym_id": "Album555786",
+ "artist": "3 Chairs",
+ "title": "3 Chairs",
+ "year": "2004",
+ "kind": "artist",
+ "wikidata": {
+  "qid": null,
+  "facts": {}
+ },
+ "source": {
+  "kind": "artist_article",
+  "lang": "en",
+  "title": "3 Chairs",
+  "url": "https://en.wikipedia.org/wiki/3_Chairs",
+  "revid": 1330616636,
+  "fetched_via": "web.archive.org latest 2026 snapshot",
+  "infobox": {},
+  "sections": [
+   {
+    "h": "Lead",
+    "text": [
+     "3 Chairs is a musical supergroup consisting of Detroit house music producers Kenny \"Moodymann\" Dixon Jr., Theo Parrish, Rick Wilhite, and Marcellus Pittman. The group began as a trio in 1997 before the addition of Pittman in 2003."
+    ]
+   },
+   {
+    "h": "History",
+    "text": [
+     "In 2021, the group released the 35-track retrospective compilation 3 Chairs Collection (1997-2013) for digital download."
+    ]
+   },
+   {
+    "h": "Albums",
+    "text": [
+     "3 Chairs (2004)"
+    ]
+   },
+   {
+    "h": "Compilations",
+    "text": [
+     "Spectrum (2009); 3 Chairs Collection (1997-2013) (2021)"
+    ]
+   }
+  ],
+  "words": 64
+ }
+}

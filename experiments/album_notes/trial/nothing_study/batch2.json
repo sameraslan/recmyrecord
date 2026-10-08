@@ -1,0 +1,633 @@
+[
+ {
+  "rym_id": "Album10782495",
+  "artist": "Daniel Lopatin",
+  "title": "Uncut Gems",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Uncut_Gems_(soundtrack)",
+   "kind": "wikipedia_album"
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Uncut_Gems_(soundtrack)",
+    "type": "wikipedia_album",
+    "lang": "en",
+    "facts": [
+     "Score for the Safdie brothers' 2019 film, released by Warp on 13 December 2019, 17 tracks, about 52 minutes",
+     "Produced by Lopatin; recorded at Electric Garden and Gaia Studios in Brooklyn",
+     "Josh Safdie first cut the film to a temp score of library and new age music before Lopatin wrote original pieces",
+     "Built around a Moog One synthesizer plus Omnisphere; saxophone, flute and choir also used; Eli Keszler drums on two tracks",
+     "Choral production by Conor Abbott Brown, mixing by Matt Cohn; film dialogue intercut on some tracks",
+     "Named touchstones: Isao Tomita, Tangerine Dream, Vangelis, Emerald Web; one track reworks Haydn's Symphony No. 88, another nods to the Akira theme",
+     "Metacritic 74; peaked at 44 on the UK soundtrack chart"
+    ]
+   },
+   {
+    "url": "https://mixmag.net/amp/behind-the-scenes-of-uncut-gems-soundtrack",
+    "type": "interview",
+    "lang": "en",
+    "facts": [
+     "Moog Music and Lopatin made a behind the scenes video on the score",
+     "Lopatin worked by trial and error on the Moog One, keeping accidents that worked; 1970s analog psychedelia as a reference"
+    ]
+   },
+   {
+    "url": "https://xlr8r.com/news/oneohtrix-point-nevers-daniel-lopatin-details-uncut-gems-original-soundtrack/",
+    "type": "news",
+    "lang": "en",
+    "facts": [
+     "Released the same day the film opened in US cinemas, on Warp",
+     "Second Safdie score after Good Time (2017), which won the Cannes soundtrack award"
+    ]
+   },
+   {
+    "url": "https://thefader.com/2019/10/29/daniel-lopatin-oneohtrix-point-never-uncut-gems-soundtrack-2019",
+    "type": "news",
+    "lang": "en",
+    "facts": [
+     "Credited to his birth name rather than Oneohtrix Point Never, unlike Good Time (per search snippet)"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Daniel Lopatin built this score for the Safdie brothers' film around a Moog One synthesizer, recording it in Brooklyn.",
+  "example_line_sources": [
+   "Moog One and Brooklyn studios: en Wikipedia album article; Moog One also Mixmag/Moog video",
+   "Safdie film: Wikipedia, XLR8R"
+  ],
+  "notes": "The automatic matcher missed the '(soundtrack)' disambiguation. Plenty of press (Fader, Consequence, DJ Mag, Film Music Reporter, Moog video). Notes are easy."
+ },
+ {
+  "rym_id": "Album31411",
+  "artist": "Leadbelly",
+  "title": "Leadbelly's Last Sessions Volume One",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Lead_Belly",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://folkways-media.si.edu/docs/folkways/artwork/SFW40068.pdf",
+    "type": "liner_notes",
+    "lang": "en",
+    "facts": [
+     "Recorded fall 1948 over three evenings (late September, October, November) in jazz writer Frederic Ramsey Jr.'s New York apartment, about a year before Lead Belly died on 6 December 1949",
+     "Probably his only commercial recordings made on magnetic tape; the long reels kept his spoken introductions and talk between songs",
+     "Aim was to record his whole repertoire; the LPs keep the songs in the order sung, mostly without bands between them",
+     "First evening he had no guitar with him, so he sang unaccompanied hollers, field calls, spirituals; his wife Martha joined some choruses",
+     "Charles Edward Smith attended the second evening; the third ended with 'Leaving Blues' and Ramsey never saw him again",
+     "Ramsey refused to license the tapes to any label that would not issue them complete and in sequence; only Moses Asch's Folkways agreed",
+     "Original issue: Folkways FP 241 / 242 (later 2941 / 2942), notes from 1953 by Ramsey and Asch; Peter Bartok prepared the 1953 production masters",
+     "Some tape began to peel soon after recording; first evening used a small vocal microphone, later evenings a dynamic microphone; drapes used to damp the room",
+     "1994 Smithsonian Folkways CD reissue (SF 40068 to 40071) adds two unissued songs; notes by Anthony Seeger, Jeff Place, Matt Walters, Sean Killeen"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Lead_Belly",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Posthumous discography lists Lead Belly's Last Sessions, recorded late 1948 in New York, his only commercial recording on magnetic tape",
+     "Legacy section: Kurt Cobain listed Last Session Vol. 1 among the 50 albums most influential on Nirvana's sound"
+    ]
+   },
+   {
+    "url": "https://search.alexanderstreet.com/view/work/bibliographic_entity%7Crecorded_cd%7C73313",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Library record: sessions dated 27 September, 15 October and 5 November 1948 at Ramsey's home"
+    ]
+   },
+   {
+    "url": "https://catalog.lib.ecu.edu/catalog/598802",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Library record dates Volume 1 to Folkways 1953, reissued 1957 and 1962"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Recorded on tape over three evenings in 1948 at Frederic Ramsey's New York home, a year before Lead Belly died.",
+  "example_line_sources": [
+   "Smithsonian Folkways liner notes SFW40068 (Seeger intro, Ramsey 1953 essay)",
+   "Lead Belly en Wikipedia, posthumous discography"
+  ],
+  "notes": "No album article; the Lead Belly article has a short mention plus the Cobain fact. The Smithsonian liner notes PDF is very rich (Ramsey's 1953 first person account). folkways.si.edu album page returned 403; the PDF text was extracted locally. Release year sources disagree (1953 vs 1954)."
+ },
+ {
+  "rym_id": "Album3344535",
+  "artist": "Gevende",
+  "title": "Sen Balık Değilsin ki",
+  "wikipedia_after_all": {
+   "found": false,
+   "lang": null,
+   "url": null,
+   "kind": null
+  },
+  "sources": [
+   {
+    "url": "https://www.discogs.com/release/3519025-Gevende-Sen-Bal%C4%B1k-De%C4%9Filsin-Ki",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "CD on Baykuş Müzik, catalogue BY0006, released 14 February 2011, gatefold digipak",
+     "Recorded, mixed and produced by Sinan Sakızlı",
+     "Nine tracks, including 'Vigeland', 'Akvaryum', 'Kadıbostan', 'Sustum'"
+    ]
+   },
+   {
+    "url": "https://www.discogs.com/release/33271275-Gevende-Sen-Bal%C4%B1k-De%C4%9Filsin-Ki",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "15th anniversary double LP reissue, February 2025, A.K. Müzik / Baykuş Müzik, 1000 numbered copies; cover design by Emir Özer"
+    ]
+   },
+   {
+    "url": "https://www.timeout.com/istanbul/tr/muzik/gevende",
+    "type": "other",
+    "lang": "tr",
+    "facts": [
+     "Band formed in Eskişehir in 2000",
+     "Norwegian guitarist Eivind Aarset is a guest on the 2011 album"
+    ]
+   },
+   {
+    "url": "https://saloniksv.com/en/gevende",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Venue bio (seen via search snippet; page now 404): debut Ev, then a 2006 trip from Istanbul to Nepal; 2011 album with Eivind Aarset as guest; Kırınardı (2017) followed"
+    ]
+   },
+   {
+    "url": "https://www.sputnikmusic.com/band/Gevende",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Discography lists Ev (2006), this album (2011), Kırınardı (2017)"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": false,
+  "example_line": "Released in 2011 on Baykuş Müzik, produced by Sinan Sakızlı, with Norwegian guitarist Eivind Aarset as a guest.",
+  "example_line_sources": [
+   "Discogs release 3519025 (label, producer)",
+   "Time Out Istanbul band page (Aarset)"
+  ],
+  "notes": "Discogs web pages and ProgArchives return 403 to WebFetch; Discogs data came from api.discogs.com. No review, interview or band member list found for the album itself; ProgArchives has reviews but could not be read. Not enough for 150 words without padding with band history."
+ },
+ {
+  "rym_id": "Album88585",
+  "artist": "椎名林檎 [Sheena Ringo]",
+  "title": "加爾基 精液 栗ノ花 (Kalk samen kuri no hana)",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Kalk_Samen_Kuri_no_Hana",
+   "kind": "wikipedia_album"
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Kalk_Samen_Kuri_no_Hana",
+    "type": "wikipedia_album",
+    "lang": "en",
+    "facts": [
+     "Third studio album, 23 February 2003, Toshiba EMI / Virgin; first released on copy controlled CD, normal CD in 2008",
+     "Produced by 'Bakeneko Killer', a pseudonym for Sheena and engineer Uni Inoue; her first fully self produced major release",
+     "Recorded at Toshiba EMI studio, Studio Terra, Tokyo Opera City Concert Hall and a ryokan in Atami, by overdubbing one instrument at a time on a Mac",
+     "Working title was 'Wonderful, Vulgar, Eccentric'; the final title came from staff arguing about what semen smells like",
+     "Lead single 'Stem' was her first Oricon number one; a companion short film Kaleidoscope came out a month earlier",
+     "Ranked second in a 2009 CNN Asia list of overlooked 2000s Japanese music"
+    ]
+   },
+   {
+    "url": "https://ja.wikipedia.org/wiki/加爾基_精液_栗ノ花",
+    "type": "wikipedia_album",
+    "lang": "ja",
+    "facts": [
+     "Track order, booklet and instrumentation of paired songs are symmetric around the sixth track 'Kuki'; running time edited to 44:44",
+     "Vocals recorded in a wooden room of an Atami inn; a plan to record in Germany was dropped",
+     "Seiji Kameda, her usual arranger, did not take part; two songs were left off for not fitting the concept",
+     "Booklet uses old kanji and historical kana spelling; vinyl bonus track written by guitarist Ukigumo"
+    ]
+   },
+   {
+    "url": "https://dailycampus.com/2025/02/24/no-skips-dont-play-this-next-to-your-teacup/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Student newspaper retrospective review (2025) focused on the sound, e.g. vocal processing on the opening track"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Ringo Sheena produced it herself, recording vocals in an Atami inn and editing the running time to exactly 44:44.",
+  "example_line_sources": [
+   "ja Wikipedia (Atami inn, 44:44)",
+   "en Wikipedia (self produced, Atami ryokan)"
+  ],
+  "notes": "Matcher likely missed it because the en title is romanised 'Kalk Samen Kuri no Hana'. Both en and ja articles exist; ja is very detailed."
+ },
+ {
+  "rym_id": "Album197048",
+  "artist": "M Efekt",
+  "title": "Svitanie",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "cs",
+   "url": "https://cs.wikipedia.org/wiki/Svitanie",
+   "kind": "wikipedia_album"
+  },
+  "sources": [
+   {
+    "url": "https://cs.wikipedia.org/wiki/Svitanie",
+    "type": "wikipedia_album",
+    "lang": "cs",
+    "facts": [
+     "Seventh studio album of Blue Effect, issued as M Efekt; Opus 9116 0541, 1977",
+     "Recorded January 1977 in a studio in Pezinok, Slovakia; 40:38",
+     "Lineup: Radim Hladík guitars, Fedor Frešo bass, bass mandolin, vocals, Oldřich Veselý keyboards and vocals, Vladimír Čech drums",
+     "'Ej, padá, padá rosenka' is an arranged folk song; the 19:35 title track fills side two with lyrics by Jaroslav Hutka",
+     "Opening of 'Vysoká stolička, dlhý popol' was sampled for The Alchemist's 'Take a Look Back'",
+     "Remastered CD on Opus 1998; included in the 2009 box 1969 to 1989 Alba & singly & bonusy",
+     "Prose is short (about three sentences); the rest is infobox and track list"
+    ]
+   },
+   {
+    "url": "https://cs.wikipedia.org/wiki/Modr%C3%BD_efekt",
+    "type": "wikipedia_artist_section",
+    "lang": "cs",
+    "facts": [
+     "Band article (via search snippet) says the members' collaboration peaked with this album, made for the Slovak label Opus, built from folk tunes arranged as long rock pieces"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Blue_Effect",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Made in 1977 for Opus in Slovakia during the band's art rock period under the name M. Efekt",
+     "Bassist Fedor Frešo left soon after over creative direction"
+    ]
+   },
+   {
+    "url": "https://www.progarchives.com/album.asp?id=7072",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Seen only via search snippets (403 on fetch): reviewers hear a Yes like sound; 1998 CD adds 'Golem' from 1976 as a bonus"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Recorded in Pezinok in January 1977; the 19 minute title track fills side two, with lyrics by Jaroslav Hutka.",
+  "example_line_sources": [
+   "cs Wikipedia album article Svitanie"
+  ],
+  "notes": "Czech album article exists; the matcher probably looked only at en or at the artist name 'M Efekt'. Notes of 150 words are reachable combining cs album and band articles and en Blue Effect, but would lean on lineup and track facts."
+ },
+ {
+  "rym_id": "Album3240308",
+  "artist": "Various Artists",
+  "title": "Bangs & Works Vol. 1: A Chicago Footwork Compilation",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Footwork_(genre)",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://planetmu.bandcamp.com/album/bangs-works-vol-1-a-chicago-footwork-compilation",
+    "type": "bandcamp_about",
+    "lang": "en",
+    "facts": [
+     "Released 6 December 2010 as Planet Mu's first footwork compilation, after singles by DJ Nate, DJ Roc and DJ Rashad",
+     "25 tracks from 14 producers (NPR says 16), mixing ghetto house veterans RP Boo, DJ Roc, DJ Spinn, Traxman, DJ Clent, DJ Rashad with younger online producers",
+     "Notes describe footwork as about 160 BPM, cut up samples, syncopated drum machines and sub bass, tied to Chicago dance battles"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Footwork_(genre)",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Genre article, Europe section: Vol. 1 (2010) and Vol. 2 (2011) brought Chicago DJs a wider audience and were the first internationally known juke compilations; quotes the Vol. 1 liner notes definition",
+     "Japan section: came about two years after DJ Fulltono started mixing footwork"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Planet_Mu",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Label article credits the compilation, with DJ Rashad, for drawing attention to footwork; Vol. 2 launched Jlin"
+    ]
+   },
+   {
+    "url": "https://www.npr.org/2010/12/16/131792022/first-listen-bangs-and-works-vol-1-a-chicago-footwork-compilation",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "NPR First Listen stream, December 2010 (seen via search snippet, 503 on fetch): 25 tracks from 16 Chicago producers"
+    ]
+   },
+   {
+    "url": "https://www.juno.co.uk/junodaily/2010/12/13/various-bangs-works-vol-1-review/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Snippet only (403): billed as the first official footwork compilation; credits Mike Paradinas with bringing the sound to the UK"
+    ]
+   },
+   {
+    "url": "https://www.vice.com/en/article/rashads-death-has-brought-everyone-together-a-rare-interview-with-mike-paradinas-the-guy-who-brought-footwork-to-britain/",
+    "type": "interview",
+    "lang": "en",
+    "facts": [
+     "Paradinas went through a few thousand tracks to choose his favourites (article says 24)",
+     "He says both volumes lost the label money"
+    ]
+   },
+   {
+    "url": "https://gscott.substack.com/p/bangs-and-works-vol-1-radiohead-car",
+    "type": "blog",
+    "lang": "en",
+    "facts": [
+     "Blog series on Pitchfork list albums; notes it was many listeners' first exposure to footwork"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Planet Mu's first footwork compilation: 25 tracks by Chicago producers including RP Boo, Traxman and DJ Rashad.",
+  "example_line_sources": [
+   "Planet Mu Bandcamp about text"
+  ],
+  "notes": "No album article, but the Footwork genre and Planet Mu label articles discuss it (kind recorded as artist_section since the label/genre stands in for an artist). Producer count conflicts: 14 (Bandcamp), 16 (NPR); track count 25 vs 24 (Vice). Vinyl Factory feature 'How Planet Mu introduced footwork' exists but returned 403/404."
+ },
+ {
+  "rym_id": "Album5569565",
+  "artist": "Kunteynir",
+  "title": "Основа",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "ru",
+   "url": "https://ru.wikipedia.org/wiki/Kunteynir",
+   "kind": "wikipedia_artist_section"
+  },
+  "sources": [
+   {
+    "url": "https://kunteynir.bandcamp.com/album/--5",
+    "type": "bandcamp_about",
+    "lang": "ru",
+    "facts": [
+     "Released 9 June 2014; copyright A+ (A Plus) and Studia SOYUZ; tagged Moscow",
+     "Vocals by Maxim Sinitsyn and Pasha Technique; 21 tracks",
+     "Guests include Tsena Smekha, Tumanniy Tiki, Iosan Massa, Danya Sharap, Raskolnikov; many beatmakers credited (Morfin, Kroozhevnoi, Portwave and others)"
+    ]
+   },
+   {
+    "url": "https://ru.wikipedia.org/wiki/Kunteynir",
+    "type": "wikipedia_artist_section",
+    "lang": "ru",
+    "facts": [
+     "History section: album released 2014 on the ЦАО label (cites RAP.RU)",
+     "A video for the title track followed in 2015"
+    ]
+   },
+   {
+    "url": "https://ru.wikipedia.org/wiki/Паша_Техник",
+    "type": "wikipedia_artist_section",
+    "lang": "ru",
+    "facts": [
+     "Biography section: released 9 June 2014 as the group's sixth album, part of the 2013 to 2016 reunion period"
+    ]
+   },
+   {
+    "url": "https://daily.afisha.ru/archive/volna/heroes/pasha-tehnik-iz-kunteynir-o-tyurme-narkotikah-smysle-hiphope-i-molodezhi/",
+    "type": "interview",
+    "lang": "ru",
+    "facts": [
+     "February 2014 interview after his release from prison: an untitled new album due mid spring, about 16 tracks nearly done, cleaner sound, themes like space and inner life, Technique and Sinitsyn as the core (likely this album, not named)"
+    ]
+   },
+   {
+    "url": "https://meduza.io/feature/2025/04/06/lyubimyy-reper-tvoego-lyubimogo-repera",
+    "type": "news",
+    "lang": "ru",
+    "facts": [
+     "Group context only: core lineup Technique, MC Blyov and later Maxim Sinitsyn"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": false,
+  "example_line": "Released in June 2014, a 21 track album rapped by Pasha Technique and Maxim Sinitsyn with guests such as Tumanniy Tiki.",
+  "example_line_sources": [
+   "Kunteynir Bandcamp (date, vocals, track count, guests)",
+   "ru Wikipedia Pasha Technique article (date)"
+  ],
+  "notes": "No album article, but ru Wikipedia articles on the group and on Pasha Technique mention it. Label conflict: Bandcamp says A+ and Studia SOYUZ, ru Wikipedia says ЦАО, the Afisha interview mentions Good Stuff as planned. No review found. Notes would mostly be artist biography (prison release, reunion), so judged not enough."
+ },
+ {
+  "rym_id": "Album44004",
+  "artist": "Buddy Guy & Junior Wells",
+  "title": "Play the Blues",
+  "wikipedia_after_all": {
+   "found": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Buddy_Guy",
+   "kind": "discography_list_only"
+  },
+  "sources": [
+   {
+    "url": "https://www.discogs.com/release/2989949-Buddy-Guy-Junior-Wells-Play-The-Blues",
+    "type": "discogs",
+    "lang": "en",
+    "facts": [
+     "Rhino 1992 CD notes: first released 14 August 1972 as Atco SD 33-364",
+     "Eight tracks cut at Criteria Studios, Miami, October 1970, produced by Eric Clapton, Ahmet Ertegun and Tom Dowd, engineered by Ron Albert",
+     "'This Old Fool' and 'Honeydripper' cut at Intermedia Studios, Boston, April 1972, produced by Michael Cuscuna with J. Geils, Magic Dick, Seth Justman, Danny Klein and Stephen Bladd",
+     "Clapton plays rhythm and bottleneck guitar; Dr. John piano on three tracks; A.C. Reed tenor sax; Carl Radle and Jim Gordon rhythm section on the opener",
+     "Overdubs at Atlantic Studios New York, remixed at The Kit Factory, May 1972; liner notes by Jean-Charles Costa"
+    ]
+   },
+   {
+    "url": "https://www.musicdirect.com/music/vinyl/buddy-guy-and-junior-wells-play-the-blues-180g-import-vinyl-lp",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Reissue seller text: Miami sessions started at Clapton's urging, stalled after eight tracks, and the album was finished two years later with the J. Geils Band"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Dr._John",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Discography credits him on 'A Man of Many Words', 'T-Bone Shuffle' and 'Messin' with the Kid' (search snippet)"
+    ]
+   },
+   {
+    "url": "https://www.allmusic.com/album/play-the-blues-mw0000273887",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Album page gives recording span October 1970 to April 1972 and the three studios (review text not retrieved)"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Begun at Miami's Criteria Studios in 1970 with Eric Clapton producing, then finished in Boston in 1972 with J. Geils Band members.",
+  "example_line_sources": [
+   "Discogs Rhino CD release notes and credits",
+   "Music Direct reissue description"
+  ],
+  "notes": "No album article in any language; only discography list entries in the Buddy Guy, Junior Wells and Dr. John articles. Discogs credits (via api.discogs.com) are detailed enough for notes. Rhino Handmade 2005 and Friday Music 2014 deluxe reissues also exist."
+ },
+ {
+  "rym_id": "Album15232219",
+  "artist": "SimpleJosh",
+  "title": "Thank God for Drugs",
+  "wikipedia_after_all": {
+   "found": false,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Yeezus",
+   "kind": "wikipedia_work"
+  },
+  "sources": [
+   {
+    "url": "https://musicbrainz.org/release-group/1276c24d-7cc9-47cb-b42c-dc1ee6dbc5b1",
+    "type": "other_wiki",
+    "lang": "en",
+    "facts": [
+     "Album by SimpleJosh, first released 14 January 2022, digital, about 84 minutes",
+     "20 tracks, all credited to Kanye West (e.g. 'I Am Not Home', 'Send It Up', 'Blood on the Leaves', 'Hollywood', 'Nobody to Love')",
+     "Links to a YouTube upload and a Genius album page"
+    ]
+   },
+   {
+    "url": "https://www.youtube.com/watch?v=Xjx4fjSrd6o",
+    "type": "youtube_description",
+    "lang": "en",
+    "facts": [
+     "Uploaded by channel 'prod. simplej' as 'Kanye West - Thank God For Drugs (2012-2013)' (title via oEmbed; description blocked)"
+    ]
+   },
+   {
+    "url": "https://www.last.fm/music/Kanye+West/Thank+God+For+Drugs",
+    "type": "other_wiki",
+    "lang": "en",
+    "facts": [
+     "Search snippet (406 on fetch): several fan made Thank God for Drugs compilations exist, the SimpleJosh one called the most definitive; Yeezus work began 2012"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Yeezus",
+    "type": "wikipedia_work",
+    "lang": "en",
+    "facts": [
+     "States Yeezus was originally titled Thank God for Drugs (cites NME); recording 2012 to June 2013, starting in West's Paris loft"
+    ]
+   },
+   {
+    "url": "https://thefader.com/2020/01/04/kanye-west-yeezus-original-title",
+    "type": "news",
+    "lang": "en",
+    "facts": [
+     "2020: former art director Joe Perez revealed the original title and a George Condo cover concept"
+    ]
+   },
+   {
+    "url": "https://www.albumoftheyear.org/album/944864-simplejosh-thank-god-for-drugs.php",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Snippet only (403): 14 January 2022, no label; a user notes an 'I Only Have Eyes' interlude"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": false,
+  "example_line": "A 2022 fan compilation of Kanye West's 2012 and 2013 recordings, named after the original title of Yeezus.",
+  "example_line_sources": [
+   "MusicBrainz (2022, Kanye West tracks)",
+   "YouTube upload title",
+   "Last.fm snippet (fan compilation)",
+   "en Wikipedia Yeezus (original title)"
+  ],
+  "notes": "Not an original album: a fan made compilation of leaked or unreleased Yeezus era Kanye West material, assembled by a YouTuber ('prod. simplej'). Nothing about SimpleJosh himself or how it was assembled. Copyright sensitive; the site may want to describe it as a fan compilation. Background for notes would be about Yeezus, not this release."
+ },
+ {
+  "rym_id": "Album8826",
+  "artist": "U.K.",
+  "title": "Danger Money",
+  "wikipedia_after_all": {
+   "found": true,
+   "lang": "en",
+   "url": "https://en.wikipedia.org/wiki/Danger_Money",
+   "kind": "wikipedia_album"
+  },
+  "sources": [
+   {
+    "url": "https://en.wikipedia.org/wiki/Danger_Money",
+    "type": "wikipedia_album",
+    "lang": "en",
+    "facts": [
+     "Second and last studio album; released 16 March 1979 on E.G. / Polydor",
+     "Recorded November 1978 to January 1979 at AIR Studios, London; produced by Eddie Jobson and John Wetton",
+     "Trio of Jobson (keyboards, violin), Wetton (bass, vocals), Terry Bozzio (drums); Bill Bruford and Allan Holdsworth had played early versions of three songs on the 1978 tour",
+     "Wetton brought in most of 'Nothing to Lose' and wrote its lyrics; Jobson's CS80 solo on 'Rendezvous 6:02' stacks all 16 oscillators",
+     "Reached 45 on the US Billboard 200; remastered in the 2016 Ultimate Collector's Edition box"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/U.K._(band)",
+    "type": "wikipedia_artist_section",
+    "lang": "en",
+    "facts": [
+     "Band article covers the lineup change from quartet to trio"
+    ]
+   },
+   {
+    "url": "https://theprogressiveaspect.net/blog/2019/09/06/u-k-danger-money/",
+    "type": "review",
+    "lang": "en",
+    "facts": [
+     "Holdsworth left over creative differences and Bruford followed; American drummer Bozzio joined",
+     "Song themes: a hitman on the title track, a train to Waterloo in 'Rendezvous 6:02', Las Vegas in 'Caesar's Palace Blues'; 'Carrying No Cross' is the 12 minute closer"
+    ]
+   },
+   {
+    "url": "https://en.wikipedia.org/wiki/Ultimate_Collector%27s_Edition",
+    "type": "other",
+    "lang": "en",
+    "facts": [
+     "Box set includes Jobson and Wetton interviews from New York 1978 and London 1979 (search snippet)"
+    ]
+   }
+  ],
+  "enough_for_line": true,
+  "enough_for_notes": true,
+  "example_line": "Made as a trio after Bruford and Holdsworth left, it was recorded at AIR Studios in London from late 1978.",
+  "example_line_sources": [
+   "en Wikipedia Danger Money (studio, dates, lineup)",
+   "The Progressive Aspect review (departures)"
+  ],
+  "notes": "Article title is plain 'Danger Money' (no '(album)' suffix), which the matcher may have missed or rejected."
+ }
+]

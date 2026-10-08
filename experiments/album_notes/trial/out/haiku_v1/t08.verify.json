@@ -1,0 +1,50 @@
+{
+ "items": [
+  {
+   "where": "hook",
+   "text": "A sparse solo record from Molina, released alongside a more conventional album with Magnolia Electric Co.",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Pack: \"In 2006, Molina released two more records: the sparse solo Let Me Go... and the more conventional Fading Trails\". It says only the same year; \"released alongside\" suggests they came out together."
+  },
+  {
+   "where": "Where it comes from 1",
+   "text": "In 2005 Magnolia Electric Co. put out a live album, a studio album and an EP.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"first official release was a live album, Trials and Errors, followed by a studio album ... and an EP ... all released in 2005\"."
+  },
+  {
+   "where": "Where it comes from 2",
+   "text": "The next year Molina released two more records.",
+   "verdict": "supported",
+   "generic": true,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"In 2006, Molina released two more records\"."
+  },
+  {
+   "where": "Where it comes from 3",
+   "text": "Let Me Go, Let Me Go, Let Me Go is the sparse solo record of the pair.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"the sparse solo Let Me Go, Let Me Go, Let Me Go\" (repeats the hook)."
+  },
+  {
+   "where": "Where it comes from 4",
+   "text": "Fading Trails, made with Magnolia Electric Co., is the more conventional of the two.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"the more conventional Fading Trails with Magnolia Electric Co.\"."
+  }
+ ],
+ "missed": "Nothing more about this album is in the pack. The voice-alone-with-piano-or-guitar detail belongs to Pyramid, so leaving it out is right. Fading Trails being \"culled from three separate sessions\" was also left out, but it is about the other record."
+}

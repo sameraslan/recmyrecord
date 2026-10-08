@@ -1,0 +1,140 @@
+{
+ "items": [
+  {
+   "where": "hook",
+   "text": "The quintet recorded it over three days in September 2007 at Capitol Studios in Los Angeles.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Recorded: September 19–21, 2007\", \"Studio: Capitol Studios, Los Angeles\"; five players in Personnel."
+  },
+  {
+   "where": "fact:Released",
+   "text": "2 June 2008",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Released: June 2, 2008\"."
+  },
+  {
+   "where": "fact:Recorded",
+   "text": "19 to 21 September 2007, Capitol Studios, Los Angeles",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox recorded and studio rows."
+  },
+  {
+   "where": "fact:Produced by",
+   "text": "Larry Clothier, Roy Hargrove",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Producer: Larry Clothier, Roy Hargrove\"."
+  },
+  {
+   "where": "fact:Label",
+   "text": "EmArcy",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Label: EmArcy\"."
+  },
+  {
+   "where": "Where it comes from 1",
+   "text": "The album was a return to hard bop for Roy Hargrove, a style he had long been drawn to.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"a return to Hargrove's enduring interest in hard bop\"."
+  },
+  {
+   "where": "Where it comes from 2",
+   "text": "Before it, he had made several albums that explored jazz within hip-hop and R&B.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"following several albums in which he explored jazz within a hip-hop and R&B context\"."
+  },
+  {
+   "where": "Where it comes from 3",
+   "text": "Hargrove wrote seven of the thirteen tracks, and the rest come from other writers, Sam Cooke among them.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Track listing: 13 titles, six credited to others (Walton, Marini, Irvine, Willis, Weill and Nash, Cooke), so seven by Hargrove."
+  },
+  {
+   "where": "Making it 1",
+   "text": "Roy Hargrove and Larry Clothier produced the record, with Jacques Muyal as executive producer.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Personnel: Clothier and Hargrove producers, \"Jacques Muyal - executive producer\"."
+  },
+  {
+   "where": "Making it 2",
+   "text": "Al Schmitt recorded and mixed it, and Steve Genewick was the engineer.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Al Schmitt - recorded & mixed; Steve Genewick - engineer\"."
+  },
+  {
+   "where": "Making it 3",
+   "text": "Hargrove played trumpet and flugelhorn, Justin Robinson played alto saxophone and flute, and Gerald Clayton played piano.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Personnel: Hargrove trumpet, flugelhorn; Robinson alto saxophone, flute; Clayton piano."
+  },
+  {
+   "where": "Making it 4",
+   "text": "Danton Boller played bass and Montez Coleman played drums, five players in all.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Danton Boller – bass; Montez Coleman – drums\"; five musicians listed."
+  },
+  {
+   "where": "listen_for:I'm Not So Sure",
+   "text": "Cedar Walton wrote it, and it opens the record.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "First in the track list, \"( Cedar Walton)\"."
+  },
+  {
+   "where": "listen_for:Speak Low",
+   "text": "Kurt Weill and Ogden Nash wrote it, so it is one of the tunes on the record that Hargrove did not write.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"'Speak Low' ( Kurt Weill, Ogden Nash)\"; not in the \"All compositions by Roy Hargrove except as indicated\" set."
+  },
+  {
+   "where": "listen_for:Bring It On Home To Me",
+   "text": "Sam Cooke wrote it, and it closes the record.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Last in the track list, \"( Sam Cooke)\"."
+  }
+ ],
+ "missed": "The pack's best fact is missing: Strasbourg / St. Denis \"has since emerged as a modern-day jazz standard\". Also the ballads Joy Is Sorrow Unmasked and Speak Low, which a critic singled out to hear his flugelhorn; the listen_for items say only who wrote each tune."
+}

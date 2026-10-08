@@ -1,0 +1,36 @@
+{
+  "tier": "rich",
+  "hook": {"text": "The title's first half is a metaphor for dodging hard topics, and the second urges leaving the past behind.", "src": ["Background, promotion, and release"]},
+  "facts": [
+    {"label": "Released", "value": "25 March 2022"},
+    {"label": "Recorded", "value": "2019 to 2021"},
+    {"label": "Label", "value": "PH Loma Vista"}
+  ],
+  "sections": [
+    {"heading": "Where it comes from", "sentences": [
+      {"text": "Denzel Curry first pictured the album's themes in 2018, and began work on it after finishing Zuu, his 2019 album.", "src": ["Background, promotion, and release"]},
+      {"text": "In a May 2020 interview he said he planned to retire from music after three more full-length projects.", "src": ["Background, promotion, and release"]},
+      {"text": "He talked about retiring past alter egos such as Zeltron, Aquarius Killa and Raven Miyagi, in favor of his own personality and feelings.", "src": ["Background, promotion, and release"]},
+      {"text": "The themes also drew on several works of cinema, among them the Dollars trilogy, Yojimbo, Seven Samurai and Ran.", "src": ["Background, promotion, and release"]}
+    ]},
+    {"heading": "Making it", "sentences": [
+      {"text": "Cardo, FnZ, Thundercat, JPEGMafia and Kenny Beats are among the producers.", "src": ["Lead"]},
+      {"text": "Nathan Burgess mixed and engineered the record, and Chris Gehringer mastered it.", "src": ["Personnel"]},
+      {"text": "Robert Glasper plays keyboards, A-Trak handles the sampler on two tracks, and Bridget Perez adds background vocals.", "src": ["Personnel"]},
+      {"text": "Anna Wise, Thundercat, Sharina Castillo, Gaby Duran and Shawn K add extra vocals.", "src": ["Personnel"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "A remix of Walkin featuring Key Glock was the first single from the extended edition, in June 2022.", "src": ["Extended edition"]},
+      {"text": "That edition followed in September 2022 with 10 new songs that Curry recorded with the Cold Blooded Soul Band.", "src": ["Extended edition"]},
+      {"text": "It also brought two previously unreleased tracks, Larger Than Life and Chrome Hearts, the second featuring Zacari.", "src": ["Extended edition"]},
+      {"text": "A livestream concert, Melt My Eyez: Live From the Komodo City Cafe, promoted it the day before.", "src": ["Extended edition"]}
+    ]}
+  ],
+  "listen_for": [
+    {"track": "Melt Session #1", "text": "Robert Glasper is the featured guest on it.", "src": ["Track listing"]},
+    {"track": "Walkin", "text": "It samples The Loving Touch, a song Keith Mansfield wrote and performed.", "src": ["Track listing"]},
+    {"track": "Worst Comes to Worst", "text": "It samples Come Closer, a song performed by Salma Agha.", "src": ["Track listing"]},
+    {"track": "Angelz", "text": "It samples Nothing Left to Do, performed by After All, and Karriem Riggins is a featured guest on it.", "src": ["Track listing"]},
+    {"track": "Zatoichi", "text": "It samples Amen, Brother, a song the Winstons performed, and Slowthai is a featured guest on it.", "src": ["Track listing"]}
+  ]
+}

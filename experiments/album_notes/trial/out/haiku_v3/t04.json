@@ -1,0 +1,20 @@
+{
+  "tier": "thin",
+  "hook": {"text": "Avant-garde jazz in four pieces, each over eight minutes long, the longest nearly twelve minutes.", "src": ["Infobox", "Track listing"]},
+  "facts": [
+    {"label": "Released", "value": "January 1967"},
+    {"label": "Recorded", "value": "21 May 1965, Van Gelder Studio, Englewood Cliffs, NJ"},
+    {"label": "Produced by", "value": "Alfred Lion"},
+    {"label": "Label", "value": "Blue Note"},
+    {"label": "Players", "value": "Sam Rivers (tenor saxophone, soprano saxophone, flute), Freddie Hubbard (trumpet), Herbie Hancock (piano), Ron Carter (bass), Joe Chambers (drums)"}
+  ],
+  "sections": [
+    {"heading": "Making it", "sentences": [
+      {"text": "Every piece on the record is by Sam Rivers.", "src": ["Track listing"]},
+      {"text": "The album runs 40 minutes and 8 seconds from start to finish.", "src": ["Infobox"]}
+    ]}
+  ],
+  "listen_for": [
+    {"track": "Mellifluous Cacophony", "text": "The bonus alternate take on the CD reissue runs 9:04, a little longer than the 8:58 version.", "src": ["Track listing"]}
+  ]
+}

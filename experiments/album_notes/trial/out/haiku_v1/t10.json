@@ -1,0 +1,34 @@
+{
+  "tier": "rich",
+  "hook": {"text": "The quintet recorded it over three days in September 2007 at Capitol Studios in Los Angeles.", "src": ["Infobox"]},
+  "facts": [
+    {"label": "Released", "value": "2 June 2008"},
+    {"label": "Recorded", "value": "19 to 21 September 2007, Capitol Studios, Los Angeles"},
+    {"label": "Produced by", "value": "Larry Clothier, Roy Hargrove"},
+    {"label": "Label", "value": "EmArcy"}
+  ],
+  "sections": [
+    {
+      "heading": "Where it comes from",
+      "sentences": [
+        {"text": "The album was a return to hard bop for Roy Hargrove, a style he had long been drawn to.", "src": ["Lead"]},
+        {"text": "Before it, he had made several albums that explored jazz within hip-hop and R&B.", "src": ["Lead"]},
+        {"text": "Hargrove wrote seven of the thirteen tracks, and the rest come from other writers, Sam Cooke among them.", "src": ["Track listing"]}
+      ]
+    },
+    {
+      "heading": "Making it",
+      "sentences": [
+        {"text": "Roy Hargrove and Larry Clothier produced the record, with Jacques Muyal as executive producer.", "src": ["Infobox", "Personnel"]},
+        {"text": "Al Schmitt recorded and mixed it, and Steve Genewick was the engineer.", "src": ["Personnel"]},
+        {"text": "Hargrove played trumpet and flugelhorn, Justin Robinson played alto saxophone and flute, and Gerald Clayton played piano.", "src": ["Personnel"]},
+        {"text": "Danton Boller played bass and Montez Coleman played drums, five players in all.", "src": ["Personnel"]}
+      ]
+    }
+  ],
+  "listen_for": [
+    {"track": "I'm Not So Sure", "text": "Cedar Walton wrote it, and it opens the record.", "src": ["Track listing"]},
+    {"track": "Speak Low", "text": "Kurt Weill and Ogden Nash wrote it, so it is one of the tunes on the record that Hargrove did not write.", "src": ["Track listing"]},
+    {"track": "Bring It On Home To Me", "text": "Sam Cooke wrote it, and it closes the record.", "src": ["Track listing"]}
+  ]
+}

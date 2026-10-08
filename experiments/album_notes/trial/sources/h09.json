@@ -1,0 +1,57 @@
+{
+ "id": "h09",
+ "rym_id": "Album95557",
+ "artist": "Grachan Moncur III",
+ "title": "Evolution",
+ "year": "1964",
+ "kind": "en",
+ "wikidata": {
+  "qid": "Q5418590",
+  "facts": {}
+ },
+ "source": {
+  "kind": "album_article",
+  "lang": "en",
+  "title": "Evolution (Grachan Moncur III album)",
+  "url": "https://en.wikipedia.org/wiki/Evolution_%28Grachan_Moncur_III_album%29",
+  "revid": 1292116858,
+  "fetched_via": "web.archive.org latest 2026 snapshot",
+  "infobox": {
+   "Released": "April 1964",
+   "Recorded": "November 21, 1963 Van Gelder Studio , Englewood Cliffs",
+   "Genre": "Avant-garde jazz , post-bop",
+   "Length": "41 : 16",
+   "Label": "Blue Note BST 84153",
+   "Producer": "Alfred Lion"
+  },
+  "sections": [
+   {
+    "h": "Lead",
+    "text": [
+     "Evolution is the debut album led by the American trombonist Grachan Moncur III, recorded in 1963 and released on the Blue Note label. Featuring alto saxophonist Jackie McLean, trumpeter Lee Morgan, vibraphonist Bobby Hutcherson, bassist Bob Cranshaw and drummer Tony Williams, Evolution is considered a significant contribution to the jazz avant-garde. Two McLean albums also recorded for Blue Note in 1963 ( One Step Beyond and Destination... Out!) featured Moncur and his compositions, and explored the same \"inside/outside\" musical approach."
+    ]
+   },
+   {
+    "h": "Reception",
+    "text": [
+     "The AllMusic review by Steve Huey stated: \"With such an inventive debut, it's a shame Moncur didn't record more as a leader, which makes Evolution an even more important item for fans of Blue Note's avant-garde to track down\".",
+     "The authors of The Penguin Guide to Jazz described as \"an invigorating and intellectually satisfying set,\" commenting \"the whole record has a dark, misterioso quality that the lowering trombone sound... strongly accentuates.\""
+    ]
+   },
+   {
+    "h": "Track listing",
+    "text": [
+     "All compositions by Grachan Moncur III",
+     "\"Air Raid\" - 9:19; \"Evolution\" - 12:24; \"The Coaster\" - 11:39; \"Monk in Wonderland\" - 7:54"
+    ]
+   },
+   {
+    "h": "Personnel",
+    "text": [
+     "Grachan Moncur III – trombone; Lee Morgan – trumpet; Jackie McLean – alto saxophone; Bobby Hutcherson – vibes; Bob Cranshaw – double bass; Tony Williams – drums"
+    ]
+   }
+  ],
+  "words": 200
+ }
+}

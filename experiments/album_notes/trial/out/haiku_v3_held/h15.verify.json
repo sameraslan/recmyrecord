@@ -1,0 +1,77 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "On this rock and fusion record, 坂本龍一 plays keyboards on RADIO RIO, just after joining YMO.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'ジャンル: ロック フュージョン'; A面: 'RADIO RIO キーボード に YMO に加入したばかりの 坂本龍一 が参加している'."
+    },
+    {
+      "where": "fact: Released",
+      "text": "1 December 1979",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'リリース: 1979年 12月1日'."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "POLDOR STUDIO, Izu and Tokyo",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: '録音: POLDOR STUDIO( IZU and TOKYO )'."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "高中正義",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'プロデュース: 高中正義'."
+    },
+    {
+      "where": "fact: Label",
+      "text": "Kitty Records",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'レーベル: Kitty Records'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "It is the fifth original album by the guitarist 高中正義, and it came out about a year and five months after BRASILIAN SKIES.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'ギタリスト である 高中正義 が ... 5枚目の オリジナルアルバム'; 解説: '前作『 BRASILIAN SKIES 』から約1年5ヵ月ぶり'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "In May 1980 BLUE LAGOON, the first track on side A, was cut as a single and used as the song for a Pioneer commercial.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "A面: 'BLUE LAGOON パイオニア ・ ステレオ CMソング 1980年 5月21日 に シングルカット された'; listed as A面 track 1."
+    },
+    {
+      "where": "listen_for: TAJ MAHAL",
+      "text": "It is a cover of a song included on the 1972 album Ben by the Brazilian guitarist ジョルジュ・ベン.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "B面: 'ブラジル の ギタリスト である ジョルジュ・ベン が 1972年 に発売されたアルバム『 Ben 』に収録されている楽曲のカバー'. Title matches."
+    }
+  ],
+  "missed": "That BLUE LAGOON became a hit through the Pioneer ad and this was the album that made Takanaka break through (解説: 'ヒットし、高中がブレイクしたきっかけとなったアルバム'); also パラレル・ターン was a single released alongside the album, with TAJ MAHAL as its B-side."
+}

@@ -1,0 +1,22 @@
+{
+  "tier": "rich",
+  "hook": {"text": "This album is notable for including Strasbourg / St. Denis, a Hargrove composition from its track list.", "src": ["Lead", "Track listing"]},
+  "facts": [
+    {"label": "Released", "value": "2 June 2008"},
+    {"label": "Recorded", "value": "19 to 21 September 2007, at Capitol Studios, Los Angeles"},
+    {"label": "Produced by", "value": "Larry Clothier, Roy Hargrove"},
+    {"label": "Label", "value": "EmArcy"},
+    {"label": "Players", "value": "Roy Hargrove (trumpet, flugelhorn), Justin Robinson (alto saxophone, flute), Gerald Clayton (piano), Danton Boller (bass), Montez Coleman (drums)"}
+  ],
+  "sections": [
+    {"heading": "Where it comes from", "sentences": [
+      {"text": "Before Earfood, Roy Hargrove had made several albums that explored jazz in a hip-hop and R&B setting.", "src": ["Lead"]},
+      {"text": "This record was a return to his long-running interest in hard bop.", "src": ["Lead"]}
+    ]},
+    {"heading": "Making it", "sentences": [
+      {"text": "Al Schmitt recorded and mixed the album, with Steve Genewick as engineer.", "src": ["Personnel"]},
+      {"text": "Jacques Muyal is credited as executive producer on the record.", "src": ["Personnel"]}
+    ]}
+  ],
+  "listen_for": []
+}

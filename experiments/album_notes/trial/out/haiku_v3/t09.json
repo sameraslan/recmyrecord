@@ -1,0 +1,39 @@
+{
+  "tier": "rich",
+  "hook": {"text": "Stephin Merritt first pictured it as a stage show with four drag queens, then settled on sixty-nine songs instead of a hundred.", "src": ["Conception and live performance"]},
+  "facts": [
+    {"label": "Released", "value": "7 September 1999"},
+    {"label": "Recorded", "value": "April 1999 at Polar West, Mother West, Polar Mother and Sonics"},
+    {"label": "Produced by", "value": "Stephin Merritt"},
+    {"label": "Label", "value": "Merge"}
+  ],
+  "sections": [
+    {"heading": "Where it comes from", "sentences": [
+      {"text": "Stephin Merritt was in a Manhattan gay piano bar, hearing a pianist's takes on Stephen Sondheim songs, when he resolved to move into theatre music.", "src": ["Conception and live performance"]},
+      {"text": "He believed he had a knack for it.", "src": ["Conception and live performance"]},
+      {"text": "He had also read about Charles Ives's 114 Songs that day, and it inspired him.", "src": ["Conception and live performance"]},
+      {"text": "Other influences included Fleetwood Mac, Billie Holiday and Orchestral Manoeuvres in the Dark.", "src": ["Conception and live performance"]}
+    ]},
+    {"heading": "Making it", "sentences": [
+      {"text": "Much of the writing was done in Dick's Bar, a New York bar, and Stephin Merritt said he spent eight hours a day there.", "src": ["Conception and live performance"]},
+      {"text": "He is credited on many instruments, from ukulele and autoharp to musical saw and thunder sheet.", "src": ["Personnel"]},
+      {"text": "Merritt also engineered the record, with help from Jon Berman, Chris Ewen, Claudia Gonson, Eric Masunaga and Charles Newman.", "src": ["Personnel"]},
+      {"text": "Other singers, among them Dudley Klute, LD Beghtol and Shirley Simms, sing on several songs.", "src": ["Personnel"]},
+      {"text": "The songs move between country, synth-pop and free jazz, with sorrowful ballads too.", "src": ["Genres and themes"]},
+      {"text": "Every song still deals with love, though often with irony or a quirky slant.", "src": ["Genres and themes"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "The band played all 69 songs in order seven times, five in the US and two in London.", "src": ["Conception and live performance"]},
+      {"text": "When played live, some of the big orchestrations were arranged more simply because of limited performers or equipment.", "src": ["Conception and live performance"]},
+      {"text": "Circus released it in Europe and Australia in May 2000, and Domino reissued it in the UK.", "src": ["Release"]},
+      {"text": "Other artists have covered several songs, among them Peter Gabriel with 'The Book of Love' and Superchunk with 'I Don't Want to Get Over You' in 2025.", "src": ["Notable cover versions"]}
+    ]}
+  ],
+  "listen_for": [
+    {"track": "The Luckiest Guy on the Lower East Side", "text": "Dudley Klute sings lead on it, and Ida Pearle plays violin.", "src": ["Personnel"]},
+    {"track": "Time Enough for Rocking When We're Old", "text": "John Woo plays banjo, lead guitar, mandolin and bass on it.", "src": ["Personnel"]},
+    {"track": "Papa Was a Rodeo", "text": "Shirley Simms duets with Merritt on it.", "src": ["Personnel"]},
+    {"track": "Asleep and Dreaming", "text": "Daniel Handler plays accordion and keyboards on it.", "src": ["Personnel"]},
+    {"track": "Blue You", "text": "Chris Ewen plays theremin on it.", "src": ["Personnel"]}
+  ]
+}

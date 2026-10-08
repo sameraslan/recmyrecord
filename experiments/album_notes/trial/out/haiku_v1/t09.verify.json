@@ -1,0 +1,230 @@
+{
+ "items": [
+  {
+   "where": "hook",
+   "text": "Dick's Bar in New York was where Merritt wrote much of its 69 love songs, and he said he spent eight hours a day there.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Merritt wrote much of the album at Dick's Bar in New York, saying that he was 'literally there eight hours a day, writing'\"."
+  },
+  {
+   "where": "fact:Released",
+   "text": "7 September 1999",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Released: September 7, 1999\"."
+  },
+  {
+   "where": "fact:Recorded",
+   "text": "April 1999 at Polar West, Mother West, Polar Mother and Sonics",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Recorded: April 1999\" and \"Studios: Polar West, Mother West, Polar Mother, and Sonics\"."
+  },
+  {
+   "where": "fact:Produced by",
+   "text": "Stephin Merritt",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Producer: Stephin Merritt\"."
+  },
+  {
+   "where": "fact:Label",
+   "text": "Merge",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Label: Merge\"."
+  },
+  {
+   "where": "Where it comes from 1",
+   "text": "In the first plan, four drag queens would star in a theatre revue, and the one the crowd liked most by the end of the evening would be paid.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"I'd have a theatrical revue with four drag queens. And whoever the audience liked best at the end of the night would get paid.\""
+  },
+  {
+   "where": "Where it comes from 2",
+   "text": "In a gay piano bar in Manhattan, Merritt heard a pianist play Stephen Sondheim songs and decided to move into theatre music.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"sitting in a gay piano bar in Manhattan, listening to the pianist's interpretations of Stephen Sondheim songs, when he decided he ought to get into theatre music\"."
+  },
+  {
+   "where": "Where it comes from 3",
+   "text": "He began with one hundred love songs, a way of introducing himself to the world.",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": true,
+   "why": "Pack: \"I decided I'd write one hundred love songs\". He planned a hundred; \"began with\" suggests he started writing them."
+  },
+  {
+   "where": "Where it comes from 4",
+   "text": "Working out how long that would take, he settled on sixty-nine.",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Pack: \"Then I realized how long that would be. So I settled on sixty-nine.\" That is the length of the work, not \"how long that would take\" to write."
+  },
+  {
+   "where": "Where it comes from 5",
+   "text": "He had read about Charles Ives's 114 Songs that day and thought he could do something similar.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"inspiration in Charles Ives' 114 Songs, about which he had read earlier in the day ... I could do something like that\"."
+  },
+  {
+   "where": "Where it comes from 6",
+   "text": "Fleetwood Mac, Billie Holiday and Orchestral Manoeuvres in the Dark were other influences.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Other influences on 69 Love Songs included Fleetwood Mac, Billie Holiday and Orchestral Manoeuvres in the Dark\"."
+  },
+  {
+   "where": "Making it 1",
+   "text": "Merritt wrote all 69 songs.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Lead: \"69 love songs, all written by Magnetic Fields frontman Stephin Merritt\"."
+  },
+  {
+   "where": "Making it 2",
+   "text": "He also produced and engineered the record, with five other people on engineering and Jeff Lipton on mastering.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Production: Merritt \"production, engineering\"; five others on engineering (Berman, Ewen, Gonson, Masunaga, Newman); \"Jeff Lipton – mastering\"."
+  },
+  {
+   "where": "Making it 3",
+   "text": "Recording happened in April 1999 at four studios: Polar West, Mother West, Polar Mother and Sonics.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Recorded: April 1999\", four studios listed (repeats the fact row)."
+  },
+  {
+   "where": "Making it 4",
+   "text": "Shirley Simms sang on several songs, and Dudley Klute took lead vocals on six.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Simms: duet on one song plus vocals on six; Klute: lead vocals on six listed songs."
+  },
+  {
+   "where": "Making it 5",
+   "text": "Sam Davol played cello and flute, and Daniel Handler added accordion and keyboards.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Sam Davol – cello, flute\"; \"Daniel Handler – accordion, keyboards, arrangement on 'Asleep and Dreaming'\"."
+  },
+  {
+   "where": "What came after 1",
+   "text": "In May 2000 Circus released it in Europe and Australia, without the booklet.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"On May 29, 2000, the album was released by Circus ... in Europe and Australia without the booklet insert\"."
+  },
+  {
+   "where": "What came after 2",
+   "text": "In April 2010 Merge issued a limited vinyl edition of 1,000 copies.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"On April 20, 2010, Merge released a limited edition 6×10\\\" vinyl version limited to 1,000 copies\"."
+  },
+  {
+   "where": "What came after 3",
+   "text": "In December 2006 LD Beghtol published a book on the album in Continuum's 33 1/3 series.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"LD Beghtol's explication ... released on December 15, 2006, by Continuum ... as part of their 33 1/3 series\" (Beghtol wrote it, Continuum published it)."
+  },
+  {
+   "where": "What came after 4",
+   "text": "The band played all 69 songs in order seven times, five in America and two in London.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"On seven occasions (five in the United States and two in London ...) the Magnetic Fields performed all 69 love songs, in order, over two nights\"."
+  },
+  {
+   "where": "What came after 5",
+   "text": "Peter Gabriel covered \"The Book of Love\", and Superchunk covered \"I Don't Want to Get Over You\" in 2025.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"'The Book of Love' was covered by Peter Gabriel\"; \"'I Don't Want to Get Over You' was covered by Superchunk in 2025\"."
+  },
+  {
+   "where": "listen_for:Reno Dakota",
+   "text": "Claudia Gonson takes the lead vocal on it.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Claudia Gonson: \"lead vocals on 'Reno Dakota'\"."
+  },
+  {
+   "where": "listen_for:Time Enough for Rocking When We're Old",
+   "text": "John Woo plays banjo, lead guitar, mandolin and bass on it.",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Pack: \"John Woo – banjo, lead guitar, mandolin, bass on 'Time Enough for Rocking When We're Old'\". Read naturally, the song is attached only to bass; the note puts all four instruments on that track."
+  },
+  {
+   "where": "listen_for:Blue You",
+   "text": "Chris Ewen plays theremin on it, and Dudley Klute sings lead.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Chris Ewen ... theremin on 'Blue You'\"; Dudley Klute lead vocals list includes \"Blue You\"."
+  },
+  {
+   "where": "listen_for:Papa Was a Rodeo",
+   "text": "Shirley Simms sings a duet with Merritt on it.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"Shirley Simms – duet with Merritt on 'Papa Was a Rodeo'\"."
+  }
+ ],
+ "missed": "What the songs are like: Merritt's line that it is \"not remotely an album about love. It's an album about love songs\", the spread of genres (country, synth-pop, free jazz, mournful ballads) and the lyrics about straight, gay and bisexual relationships. Also \"Yeah! Oh, Yeah!\", the Gonson and Merritt duet about a husband murdering his wife, which would make a strong listen_for item."
+}

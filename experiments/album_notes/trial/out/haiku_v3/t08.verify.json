@@ -1,0 +1,14 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "Sparse and solo, one of two records from the same year, the other a more conventional album with Magnolia Electric Co.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"In 2006, Molina released two more records: the sparse solo Let Me Go, Let Me Go, Let Me Go and the more conventional Fading Trails with Magnolia Electric Co.\""
+    }
+  ],
+  "missed": "The year (2006) is in the pack but there is no Released fact; the other record is not named (Fading Trails)."
+}

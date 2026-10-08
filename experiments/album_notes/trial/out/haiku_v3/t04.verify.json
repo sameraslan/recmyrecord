@@ -1,0 +1,86 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "Avant-garde jazz in four pieces, each over eight minutes long, the longest nearly twelve minutes.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Genre: Avant-garde jazz\"; four compositions at 9:20, 10:07, 11:43, 8:58 (the fifth entry is a CD bonus alternate take)."
+    },
+    {
+      "where": "fact: Released",
+      "text": "January 1967",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Released: January 1967\"."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "21 May 1965, Van Gelder Studio, Englewood Cliffs, NJ",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Recorded: May 21, 1965\"; \"Studio: Van Gelder Studio, Englewood Cliffs, NJ\"."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "Alfred Lion",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Producer: Alfred Lion\"."
+    },
+    {
+      "where": "fact: Label",
+      "text": "Blue Note",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Label: Blue Note BST 84206\"."
+    },
+    {
+      "where": "fact: Players",
+      "text": "Sam Rivers (tenor saxophone, soprano saxophone, flute), Freddie Hubbard (trumpet), Herbie Hancock (piano), Ron Carter (bass), Joe Chambers (drums)",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel lists exactly these five with these instruments."
+    },
+    {
+      "where": "Making it #1",
+      "text": "Every piece on the record is by Sam Rivers.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Track listing: \"All compositions by Sam Rivers.\""
+    },
+    {
+      "where": "Making it #2",
+      "text": "The album runs 40 minutes and 8 seconds from start to finish.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox \"Length: 40 : 08\"."
+    },
+    {
+      "where": "listen_for: Mellifluous Cacophony",
+      "text": "The bonus alternate take on the CD reissue runs 9:04, a little longer than the 8:58 version.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "\"'Mellifluous Cacophony' - 8:58; 'Mellifluous Cacophony' [Alternate Take] - 9:04 Bonus track on CD reissue\"."
+    }
+  ],
+  "missed": "That this is his second Blue Note album, where (AllMusic) he \"fully embraced the avant-garde\" but in a way that \"wouldn't be upsetting or confusing to hard bop loyalists\"; Rivers also plays soprano and flute, which could be a listen_for hint."
+}

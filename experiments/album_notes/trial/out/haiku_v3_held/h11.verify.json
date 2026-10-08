@@ -1,0 +1,158 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "The trio had no set approach beyond looking for unique moments in the music and capturing them.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'The group had no set approach to working beyond looking for and capturing unique moments'; 'trio' from 'The trio shared a house'."
+    },
+    {
+      "where": "fact: Released",
+      "text": "August 1984",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Released: August 1984'."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "1984, Grant Avenue Studio, Hamilton, Ontario",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'recorded in Hamilton, Ontario in 1984'; Infobox: 'Studios: Grant Avenue Studio, Hamilton, Ontario'."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "Brian Eno, Daniel Lanois",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Producers: Brian Eno Daniel Lanois'."
+    },
+    {
+      "where": "fact: Label",
+      "text": "Editions EG",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Label: Editions EG'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "The Pearl is the pair's second album together, after Ambient 2: The Plateaux of Mirror (1980).",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'second collaborative studio album by Harold Budd and Brian Eno'; 'previous collaboration, Ambient 2: The Plateaux of Mirror (1980)'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "Like Ambient 2, it is built mostly from subtly treated piano textures, with noticeable electronic treatments and recordings of nature added.",
+      "verdict": "partly",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'consisting mostly of subtly treated piano textures, but with more pronounced electronic treatments and nature recordings'. The pack says the treatments and nature recordings are MORE pronounced than on Ambient 2; 'added' implies they are new to The Pearl."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "Budd says the two albums are alike in sound and timbre, and that the likeness was there from the start of production.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Comparison: 'similar in terms of sounds and timbres, and those similarities were conceived even during the onset of production'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "Ambient 2 came together effortlessly, and the duo believed they could make similar music again without much trouble.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Comparison: 'The former album was produced effortlessly, and the duo thought they could produce similar music again with ease'."
+    },
+    {
+      "where": "section: Where it comes from",
+      "text": "Budd said The Pearl was harder to make. He put this down to the duo's naivety on Ambient 2, and to a musical language that had matured since.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Comparison: 'production on The Pearl was more challenging. Budd attributed this to naivety ... their musical language had matured since then'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "For the length of the sessions, the three stayed in one house and worked seven days a week.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'The trio shared a house during the recording sessions and worked on the record seven days per week'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Recording took two weeks, and finishing the record took 8 to 12 months, as they worked out which pieces suited each other.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'recorded over two weeks, and then it took 8-12 months to finish production and decide which tracks worked best together'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Eno made most of the aesthetic calls and spent hours working alone, recording pieces at varied speeds.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'Eno made most of the decisions on aesthetics, spending hours working solo and recording pieces at different speeds'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Among the pianos were an acoustic one and electric models by Yamaha and Rhodes.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'an acoustic piano, as well as Yamaha and Rhodes electric pianos'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "The treatments came from gear that included a Yamaha DX7, a Sequential Circuits Pro One, an AMS digital delay and an Eventide Harmonizer.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'For treatments, the group used a Yamaha DX7, ... a Sequential Circuits Pro One, AMS digital delay, Eventide Harmonizer'."
+    },
+    {
+      "where": "listen_for: Lost in the Humming Air",
+      "text": "Budd improvises over humming tones that Eno plays on a Yamaha CS-80, in a single take.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'Budd improvised to humming noises by Brian Eno played on a Yamaha CS-80 and recorded in one take'. Title matches the track list."
+    },
+    {
+      "where": "listen_for: Dark-Eyed Sister",
+      "text": "Budd laid it down first at a small studio, and Eno then reworked it, which Budd calls an extreme version of how the pair worked.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Production: 'Budd recorded it at a small studio beforehand and sent to Eno to develop further; this, according to Budd, was the \"extreme version\" of how they worked'. Title matches the track list."
+    }
+  ],
+  "missed": "How it sounds to listeners in the pack: Sound on Sound's oceanic imagery (galleons at the bottom of the sea, fish swimming silently) and Electronics & Music Maker's 'mix of Eno's melancholia and Budd's optimism'; also Budd's view that it is more 'cohesive' and 'focused' than Ambient 2."
+}

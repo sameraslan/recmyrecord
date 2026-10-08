@@ -1,0 +1,40 @@
+{
+  "tier": "rich",
+  "hook": {"text": "Side one's master tape was left in a London taxi, so most of that side was remixed overnight.", "src": ["Recording"]},
+  "facts": [
+    {"label": "Released", "value": "December 1, 1967"},
+    {"label": "Recorded", "value": "May to June and October 1967, Olympic Studios, London"},
+    {"label": "Produced by", "value": "Chas Chandler"},
+    {"label": "Label", "value": "Polydor, Track (UK), Reprise (US), Barclay (France)"},
+    {"label": "Players", "value": "Jimi Hendrix (vocals, electric guitar, piano, recorder), Noel Redding (bass guitars, backing vocals), Mitch Mitchell (drums, backing vocals)"}
+  ],
+  "sections": [
+    {"heading": "Where it comes from", "sentences": [
+      {"text": "The band finished its debut, Are You Experienced, in late April 1967.", "src": ["Recording"]},
+      {"text": "It kept its regular recording schedule and returned on May 4 to start writing songs for a follow-up LP.", "src": ["Recording"]},
+      {"text": "The album came out only seven months after the debut's release.", "src": ["Lead"]},
+      {"text": "The lyrics of Spanish Castle Magic were inspired by a dance hall near Seattle, where Hendrix jammed with other local bands in high school.", "src": ["Music and lyrics"]}
+    ]},
+    {"heading": "Making it", "sentences": [
+      {"text": "Eddie Kramer and George Chkiantz handled the engineering.", "src": ["Recording"]},
+      {"text": "The basic tracks went onto a four-track recorder, with stereo drums on two tracks, bass on a third and rhythm guitar on a fourth.", "src": ["Recording"]},
+      {"text": "They mixed that onto a second four-track recorder, leaving two more tracks for lead guitar, vocals and percussion.", "src": ["Recording"]},
+      {"text": "Hendrix often asked for many re-takes, and Kramer stayed patient with him.", "src": ["Recording"]},
+      {"text": "Hendrix and Mitchell had begun to voice their own views on creative choices that Chandler had handled on the debut.", "src": ["Recording"]},
+      {"text": "Chandler had grown tired of the guitarist's perfectionism by October 1967, and Redding began to resent Hendrix's instructions on what he played.", "src": ["Recording"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "Cat Talking to Me, from that June session, appeared in 2010 on the posthumous album West Coast Seattle Boy: The Jimi Hendrix Anthology.", "src": ["Recording"]},
+      {"text": "The Hendrix Estate released a box set called The Jimi Hendrix Experience: Bold As Love Sessions on November 7, 2025.", "src": ["Release and reception"]},
+      {"text": "The 66 tracks include demos and alternate takes, and the Blu-ray adds a Dolby Atmos mix.", "src": ["Release and reception"]},
+      {"text": "Malaysia's Home Ministry banned the album's art after complaints, and some Hindus have since voiced anger over the religious images on the cover.", "src": ["Artwork and packaging"]}
+    ]}
+  ],
+  "listen_for": [
+    {"track": "EXP", "text": "It opens with microphonic and harmonic feedback, and sounds from Hendrix's guitar pan across the stereo field to circle the listener.", "src": ["Music and lyrics"]},
+    {"track": "If 6 Was 9", "text": "Hendrix plays recorder on it, and the percussion effect comes from Chandler, Hendrix, Graham Nash and Gary Leeds stomping on a drum riser.", "src": ["Recording"]},
+    {"track": "Little Wing", "text": "On this track Hendrix first uses a Leslie speaker for his guitar, a revolving speaker that gives a wavering effect.", "src": ["Music and lyrics"]},
+    {"track": "You Got Me Floatin'", "text": "The song starts on a swirling, backwards guitar solo, and Roy Wood and Trevor Burton of the Move add backing vocals.", "src": ["Music and lyrics", "Personnel"]},
+    {"track": "Bold as Love", "text": "Hendrix plays harpsichord on it, and the coda uses stereo phasing for the first time on record.", "src": ["Personnel", "Music and lyrics"]}
+  ]
+}

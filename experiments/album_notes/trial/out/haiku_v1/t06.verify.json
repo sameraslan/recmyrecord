@@ -1,0 +1,203 @@
+{
+ "items": [
+  {
+   "where": "hook",
+   "text": "Its themes draw on the Dollars trilogy and Seven Samurai, and the title is a metaphor for avoiding difficult topics.",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Dollars trilogy and Seven Samurai are in the pack, but the metaphor belongs to the first half only: \"Melt My Eyez is a metaphor for people's tendency to avoid facing difficult topics\"; the note gives it to the whole title (and the next section gives See Your Future a different meaning)."
+  },
+  {
+   "where": "fact:Released",
+   "text": "25 March 2022",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Released: March 25, 2022\"."
+  },
+  {
+   "where": "fact:Recorded",
+   "text": "2019 to 2021",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Recorded: 2019–2021\"."
+  },
+  {
+   "where": "fact:Label",
+   "text": "PH Loma Vista",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Two labels run together from the infobox; the lead says \"released through PH and Loma Vista Recordings\". As written it reads as one label called PH Loma Vista."
+  },
+  {
+   "where": "Where it comes from 1",
+   "text": "Curry began thinking about the album's themes in 2018, and started work on it after finishing Zuu, his 2019 album.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"first began envisioning the album's themes in 2018, and began working on it after the completion of his 2019 album, Zuu\"."
+  },
+  {
+   "where": "Where it comes from 2",
+   "text": "His first collaboration with Kenny Beats, the EP Unlocked, came out on 7 February 2020.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"His first collaboration extended play with Kenny Beats, Unlocked, was released on February 7, 2020\"."
+  },
+  {
+   "where": "Where it comes from 3",
+   "text": "Curry told XXL in 2020 that he planned to retire from music after three more full-length releases.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"In a May 2020 interview with XXL, he shared his plans to retire from making music after releasing three more full-length bodies of work\"."
+  },
+  {
+   "where": "Where it comes from 4",
+   "text": "The album also moved away from older alter egos, and he wanted the music to show who he is and how he feels.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"retiring some of his past alter egos in favor of embracing his true personality and feelings through the music\"."
+  },
+  {
+   "where": "Where it comes from 5",
+   "text": "The title's second half, See Your Future, is about moving on and putting the past behind.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"See Your Future is motivation for moving on by putting one's past behind\"."
+  },
+  {
+   "where": "Making it 1",
+   "text": "It was recorded from 2019 to 2021.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Infobox \"Recorded: 2019–2021\" (repeats the fact row)."
+  },
+  {
+   "where": "Making it 2",
+   "text": "Producers include Cardo, FnZ, Thundercat, JPEGMafia and Kenny Beats, among others.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Lead: \"production from Cardo, FnZ, Thundercat, JPEGMafia, and Kenny Beats, among others\"."
+  },
+  {
+   "where": "Making it 3",
+   "text": "Guests include Robert Glasper, T-Pain, JID, 6lack and Slowthai.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Lead lists Robert Glasper, T-Pain, 6lack, JID and Slowthai among the features."
+  },
+  {
+   "where": "Making it 4",
+   "text": "Four tracks contain samples of other recordings, including Walkin and Zatoichi.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Sample credits list four tracks: Walkin, Worst Comes to Worst, Angelz, Zatoichi."
+  },
+  {
+   "where": "Making it 5",
+   "text": "Nathan Burgess handled mixing and engineering, and Chris Gehringer mastered the record.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Personnel: \"Chris Gehringer – mastering; Nathan Burgess – mixing, engineering\"."
+  },
+  {
+   "where": "What came after 1",
+   "text": "The extended version was preceded by a Key Glock remix of Walkin, released on 1 June 2022.",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Pack: \"a remix of 'Walkin' featuring Key Glock, was released as the first single for the extended version\". \"A Key Glock remix\" suggests Key Glock made the remix; the pack only says he is featured."
+  },
+  {
+   "where": "What came after 2",
+   "text": "On 30 September 2022 the extended edition came out with ten new songs that Curry recorded with the Cold Blooded Soul Band.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"the extended edition was released featuring 10 new songs recorded by Curry and the Cold Blooded Soul Band\" (the pack's own track list shows only 10 tracks in all, mostly new versions, but the note follows the prose)."
+  },
+  {
+   "where": "What came after 3",
+   "text": "It also added two songs that had not been released before, Larger Than Life and Chrome Hearts, the second featuring Zacari.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"two previously unreleased songs— 'Larger Than Life' and 'Chrome Hearts' (featuring Zacari)\"."
+  },
+  {
+   "where": "What came after 4",
+   "text": "A livestream concert, Melt My Eyez: Live From the Komodo City Cafe, aired the day before to help promote it.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "\"promoted with a livestream concert: Melt My Eyez: Live From the Komodo City Cafe, on September 29\", the day before 30 September."
+  },
+  {
+   "where": "listen_for:Walkin",
+   "text": "A sample of The Loving Touch runs through it, a song Keith Mansfield wrote and performed.",
+   "verdict": "partly",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Pack: \"'Walkin' contains a sample of 'The Loving Touch', written and performed by Keith Mansfield\". \"Runs through it\" adds a claim about how much of the track uses the sample."
+  },
+  {
+   "where": "listen_for:Melt Session #1",
+   "text": "Robert Glasper plays the keyboards on it, and he is the featured guest.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Track 1 \"(featuring Robert Glasper)\"; Personnel \"Robert Glasper – keyboards (1)\"."
+  },
+  {
+   "where": "listen_for:Worst Comes to Worst",
+   "text": "It samples Come Closer, which Salma Agha performed, and Anna Wise adds extra vocals.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Sample of \"Come Closer\" \"as performed by Salma Agha\"; Personnel \"Anna Wise – additional vocals (3)\"."
+  },
+  {
+   "where": "listen_for:Angelz",
+   "text": "It samples Nothing Left to Do by After All, and Sharina Castillo adds extra vocals.",
+   "verdict": "supported",
+   "generic": false,
+   "evaluative": false,
+   "copied": false,
+   "why": "Sample of \"Nothing Left to Do\" \"as performed by After All\"; Angelz is track 10 and Personnel has \"Sharina Castillo – additional vocals (10)\"."
+  }
+ ],
+ "missed": "The sound shift the pack describes: Pitchfork says Curry trades \"livewire energy for introspection and vulnerability\", and the Western and samurai film imagery shapes the singles (Zatoichi, named after the Japanese fictional character, features Slowthai and samples \"Amen, Brother\"). Also his line \"I'm Denzel. I'm a human being. I have feelings.\""
+}

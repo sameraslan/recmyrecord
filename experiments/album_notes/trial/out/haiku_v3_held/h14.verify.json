@@ -1,0 +1,113 @@
+{
+  "items": [
+    {
+      "where": "hook",
+      "text": "It was the band's first record with Barry Stern on drums, and four of its songs got music videos.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'the first Trouble album to have Barry Stern on drums. Music videos were made for' four named songs."
+    },
+    {
+      "where": "fact: Released",
+      "text": "13 February 1990",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Released: February 13, 1990'."
+    },
+    {
+      "where": "fact: Recorded",
+      "text": "1989",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Recorded: 1989'."
+    },
+    {
+      "where": "fact: Produced by",
+      "text": "Rick Rubin",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Producer: Rick Rubin'."
+    },
+    {
+      "where": "fact: Label",
+      "text": "Def American, Hammerheart",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Infobox: 'Labels: Def American , Hammerheart' (Hammerheart is the 2020 reissue label per the Lead)."
+    },
+    {
+      "where": "fact: Players",
+      "text": "Eric Wagner (vocals), Bruce Franklin (guitars), Rick Wartell (guitars), Ron Holzner (bass), Barry Stern (drums), Jeff Olson (keyboards)",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: band members as listed; 'Additional musicians: Jeff Olson – keyboards'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "David Bianco and Jimmy Heyson engineered the record, with Brian Jenkins as assistant engineer.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: 'David Bianco, Jimmy Heyson – engineers; Brian Jenkins – assistant engineer'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "Eric Wagner, Bruce Franklin and Rick Wartell wrote all of the tracks.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Track listing: 'All tracks are written by Eric Wagner, Bruce Franklin, and Rick Wartell'."
+    },
+    {
+      "where": "section: Making it",
+      "text": "The original version was mastered by Greg Fulginiti at Artisan Sound Recorders in Los Angeles.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: 'Greg Fulginiti – mastering at Artisan Sound Recorders in Los Angeles, California (original version)'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "Hammerheart Records reissued and remastered the album on 27 November 2020, working with Trouble, Inc.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'reissued and remastered by Hammerheart Records, cooperating alongside Trouble, Inc., on November 27, 2020'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "For that 2020 version, Erwin Hermsen remastered it at Toneshed Recording Studio in the Netherlands.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Personnel: 'Erwin Hermsen – remastering at Toneshed Recording Studio in The Netherlands (2020 version)'."
+    },
+    {
+      "where": "section: What came after",
+      "text": "A DVD of the videos came out in 2007 on the band's Trouble, Inc. label.",
+      "verdict": "supported",
+      "generic": false,
+      "evaluative": false,
+      "copied": false,
+      "why": "Lead: 'the music videos were released on the Videos DVD by the band's Trouble, Inc. label in 2007'."
+    }
+  ],
+  "missed": "Which four songs got videos ('At the End of My Daze', 'Psychotic Reaction', 'R.I.P.', 'The Misery Shows (Act II)', two directed by Adam Dubin): the obvious listen_for material, which is left empty."
+}

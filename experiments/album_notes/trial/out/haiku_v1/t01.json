@@ -1,0 +1,15 @@
+{
+  "tier": "thin",
+  "hook": {"text": "On this album Nelson plays the cavaquinho for the first time, an instrument he had given up for the guitar.", "src": ["Disco"]},
+  "facts": [{"label": "Released", "value": "1973"}],
+  "sections": [{"heading": "Making it", "sentences": [
+    {"text": "Songs recorded on the LP include 'Juízo Final', 'Folhas Secas', 'A Flor e o Espinho', 'Rugas' and 'Quando Eu Me Chamar Saudade'.", "src": ["Disco"]},
+    {"text": "Guilherme de Brito co-wrote several songs with Nelson, among them 'Minha festa', 'Mulher sem alma' and 'A flor e o espinho'.", "src": ["Faixas"]},
+    {"text": "He also appears as a special guest on the Potpourri, the second track on side B.", "src": ["Faixas"]},
+    {"text": "Nourival Bahia, Jair do Cavaquinho and Joaquim also share writing credits with Nelson.", "src": ["Faixas"]}
+  ]}],
+  "listen_for": [
+    {"track": "Caminhando", "text": "Nelson plays the cavaquinho himself on this choro.", "src": ["Disco"]},
+    {"track": "Potpourri", "text": "Guilherme de Brito is a special guest on this track.", "src": ["Faixas"]}
+  ]
+}

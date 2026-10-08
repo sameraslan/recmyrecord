@@ -1,0 +1,49 @@
+{
+  "tier": "rich",
+  "hook": {"text": "Dick's Bar in New York was where Merritt wrote much of its 69 love songs, and he said he spent eight hours a day there.", "src": ["Conception and live performance"]},
+  "facts": [
+    {"label": "Released", "value": "7 September 1999"},
+    {"label": "Recorded", "value": "April 1999 at Polar West, Mother West, Polar Mother and Sonics"},
+    {"label": "Produced by", "value": "Stephin Merritt"},
+    {"label": "Label", "value": "Merge"}
+  ],
+  "sections": [
+    {
+      "heading": "Where it comes from",
+      "sentences": [
+        {"text": "In the first plan, four drag queens would star in a theatre revue, and the one the crowd liked most by the end of the evening would be paid.", "src": ["Conception and live performance"]},
+        {"text": "In a gay piano bar in Manhattan, Merritt heard a pianist play Stephen Sondheim songs and decided to move into theatre music.", "src": ["Conception and live performance"]},
+        {"text": "He began with one hundred love songs, a way of introducing himself to the world.", "src": ["Conception and live performance"]},
+        {"text": "Working out how long that would take, he settled on sixty-nine.", "src": ["Conception and live performance"]},
+        {"text": "He had read about Charles Ives's 114 Songs that day and thought he could do something similar.", "src": ["Conception and live performance"]},
+        {"text": "Fleetwood Mac, Billie Holiday and Orchestral Manoeuvres in the Dark were other influences.", "src": ["Conception and live performance"]}
+      ]
+    },
+    {
+      "heading": "Making it",
+      "sentences": [
+        {"text": "Merritt wrote all 69 songs.", "src": ["Lead"]},
+        {"text": "He also produced and engineered the record, with five other people on engineering and Jeff Lipton on mastering.", "src": ["Production"]},
+        {"text": "Recording happened in April 1999 at four studios: Polar West, Mother West, Polar Mother and Sonics.", "src": ["Infobox"]},
+        {"text": "Shirley Simms sang on several songs, and Dudley Klute took lead vocals on six.", "src": ["Personnel"]},
+        {"text": "Sam Davol played cello and flute, and Daniel Handler added accordion and keyboards.", "src": ["Personnel"]}
+      ]
+    },
+    {
+      "heading": "What came after",
+      "sentences": [
+        {"text": "In May 2000 Circus released it in Europe and Australia, without the booklet.", "src": ["Release"]},
+        {"text": "In April 2010 Merge issued a limited vinyl edition of 1,000 copies.", "src": ["Release"]},
+        {"text": "In December 2006 LD Beghtol published a book on the album in Continuum's 33 1/3 series.", "src": ["69 Love Songs, A Field Guide"]},
+        {"text": "The band played all 69 songs in order seven times, five in America and two in London.", "src": ["Conception and live performance"]},
+        {"text": "Peter Gabriel covered \"The Book of Love\", and Superchunk covered \"I Don't Want to Get Over You\" in 2025.", "src": ["Notable cover versions"]}
+      ]
+    }
+  ],
+  "listen_for": [
+    {"track": "Reno Dakota", "text": "Claudia Gonson takes the lead vocal on it.", "src": ["Personnel"]},
+    {"track": "Time Enough for Rocking When We're Old", "text": "John Woo plays banjo, lead guitar, mandolin and bass on it.", "src": ["Personnel"]},
+    {"track": "Blue You", "text": "Chris Ewen plays theremin on it, and Dudley Klute sings lead.", "src": ["Personnel"]},
+    {"track": "Papa Was a Rodeo", "text": "Shirley Simms sings a duet with Merritt on it.", "src": ["Personnel"]}
+  ]
+}

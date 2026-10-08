@@ -1,0 +1,31 @@
+{
+  "tier": "rich",
+  "hook": {"text": "The riff that opens 'Ye Entrancemperium' was lifted from an unfinished Mayhem track that sits on a bootleg.", "src": ["Background"]},
+  "facts": [
+    {"label": "Released", "value": "19 May 1997"},
+    {"label": "Recorded", "value": "October to December 1996, Grieg Hall, Bergen, Norway"},
+    {"label": "Produced by", "value": "Eirik Hundvin, Ihsahn and Samoth"},
+    {"label": "Label", "value": "Candlelight, Century Black"},
+    {"label": "Players", "value": "Ihsahn (vocals, guitar, synthesizer), Samoth (guitar), Alver (bass), Trym (drums and percussion)"}
+  ],
+  "sections": [
+    {"heading": "Where it comes from", "sentences": [
+      {"text": "The liner notes credit Mayhem guitarist Euronymous all the same, though he had died three years earlier, before the album was made.", "src": ["Background"]},
+      {"text": "A 1996 EP called Reverence came out ahead of the album as its teaser, and it included 'The Loss and Curse of Reverence'.", "src": ["Release"]}
+    ]},
+    {"heading": "Making it", "sentences": [
+      {"text": "Ihsahn wrote all the lyrics.", "src": ["Track listing"]},
+      {"text": "Pytten handled the engineering and production.", "src": ["Additional personnel"]},
+      {"text": "Yens and David Palser did the sleeve photography, Stephen O'Malley did the sleeve design, and Christophe Szpajdel made the illustrations and logo.", "src": ["Additional personnel"]},
+      {"text": "Set against In the Nightside Eclipse, the band's previous album, this one plays faster and leans harder on guitar.", "src": ["Release"]},
+      {"text": "There are fewer keyboards, more clean singing and blast beats in the drums.", "src": ["Release"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "In 1998 a remastered version came out with the three Reverence tracks that had not made the album.", "src": ["Release"]},
+      {"text": "The band also made a promo video for 'The Loss and Curse of Reverence'.", "src": ["Release"]}
+    ]}
+  ],
+  "listen_for": [
+    {"track": "Opus a Satana", "text": "It is an orchestral version of 'Inno a Satana', so what you hear is an orchestra.", "src": ["Track listing"]}
+  ]
+}

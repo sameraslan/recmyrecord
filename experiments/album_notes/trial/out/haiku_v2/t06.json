@@ -1,0 +1,34 @@
+{
+  "tier": "rich",
+  "hook": {"text": "Its maker called it the end of an era, and its themes were inspired by films including Yojimbo and Seven Samurai.", "src": ["Background, promotion, and release"]},
+  "facts": [
+    {"label": "Released", "value": "25 March 2022"},
+    {"label": "Recorded", "value": "2019 to 2021"},
+    {"label": "Label", "value": "PH Loma Vista"}
+  ],
+  "sections": [
+    {"heading": "Where it comes from", "sentences": [
+      {"text": "Denzel Curry first started picturing the album's themes in 2018, and he got to work on it once he had finished Zuu, his 2019 album.", "src": ["Background, promotion, and release"]},
+      {"text": "In May 2020, Curry told XXL that he planned to retire from music after three more full-length projects.", "src": ["Background, promotion, and release"]},
+      {"text": "The title holds two ideas.", "src": ["Background, promotion, and release"]},
+      {"text": "Melt My Eyez stands for the way people dodge hard subjects in daily life, and See Your Future is about moving on from the past and looking ahead.", "src": ["Background, promotion, and release"]},
+      {"text": "He also talked about setting aside some old alter egos in favor of speaking as himself.", "src": ["Background, promotion, and release"]}
+    ]},
+    {"heading": "Making it", "sentences": [
+      {"text": "Nathan Burgess handled the mixing and engineering, and Chris Gehringer did the mastering.", "src": ["Personnel"]},
+      {"text": "Robert Glasper played keyboards and A-Trak is credited as a sampler.", "src": ["Personnel"]},
+      {"text": "Thundercat, Bridget Perez, Anna Wise and Buzzy Lee added vocals, while Denzel Curry is the only one credited for rap vocals.", "src": ["Personnel"]}
+    ]},
+    {"heading": "What came after", "sentences": [
+      {"text": "In June 2022, a remix of 'Walkin' with Key Glock became the first single for an extended version of the album.", "src": ["Extended edition"]},
+      {"text": "The extended edition arrived on 30 September 2022 with ten new songs, recorded by Curry with the Cold Blooded Soul Band, plus two songs that had never been released: 'Larger Than Life' and 'Chrome Hearts', which features Zacari.", "src": ["Extended edition"]},
+      {"text": "A livestream concert, Melt My Eyez: Live From the Komodo City Cafe, was held on 29 September to promote the album.", "src": ["Extended edition"]}
+    ]}
+  ],
+  "listen_for": [
+    {"track": "Walkin", "text": "It contains a sample of 'The Loving Touch', which Keith Mansfield wrote and performed.", "src": ["Track listing"]},
+    {"track": "Worst Comes to Worst", "text": "It contains a sample of 'Come Closer', as performed by Salma Agha.", "src": ["Track listing"]},
+    {"track": "Angelz", "text": "It contains a sample of 'Nothing Left to Do', as performed by After All.", "src": ["Track listing"]},
+    {"track": "Zatoichi", "text": "It contains a sample of 'Amen, Brother', as performed by the Winstons, and Slowthai is the featured guest.", "src": ["Track listing"]}
+  ]
+}
