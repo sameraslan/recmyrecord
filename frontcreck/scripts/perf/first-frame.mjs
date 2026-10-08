@@ -60,7 +60,7 @@ const PROFILES = {
 /** Luma (0 to 255) above which a pixel is not the empty sky (#07060a is about 6.5; JPEG noise adds a few). */
 const LIT_LUMA = 16;
 /** Share of the free pane that must be lit for the pane to count as showing a picture. */
-const LIT_SHARE = 0.02;
+const LIT_SHARE = 0.01;
 
 /** Runs in the page before its scripts: paint, largest contentful paint and long tasks, kept for the end. */
 function observe() {
@@ -89,15 +89,14 @@ function collect() {
     .getEntriesByType('resource')
     .filter((r) => /\/data\/|\/_next\/static\/chunks\//.test(r.name))
     .map((r) => ({ url: new URL(r.name).pathname, start: Math.round(r.startTime), end: Math.round(r.responseEnd), bytes: r.transferSize, type: r.initiatorType }));
-  // Where no panel, header or text lies over the pane: the pane is read only outside these rectangles.
-  const pad = { '.hero': 90, '.shelf': 40, '.shelf-now': 40 };
+  // Where no text, cover or control lies over the pane: the pane is read only outside these rectangles. The soft
+  // dark pads behind Home's text are not left out (the nebula shows through them, dimmed, as a visitor sees it).
   const covered = [];
-  for (const sel of ['header.top', '.hero', '.shelf', '.mode', '.map-zoom', '.map-hint', '.map-explore', '.card', '.map-msg', '.about']) {
+  for (const sel of ['header.top', '.hero h1', '.hero .lede', '.hero .combo', '.hero-row', '.shelf-now', '.mosaic', '.mode', '.map-zoom', '.map-hint', '.map-explore', '.card', '.map-msg', '.about']) {
     for (const el of document.querySelectorAll(sel)) {
       const r = el.getBoundingClientRect();
-      if (r.width === 0 || r.height === 0) continue;
-      const p = pad[sel] ?? 12;
-      covered.push([r.left - p, r.top - p, r.right + p, r.bottom + p]);
+      if (r.width === 0 || r.height === 0 || getComputedStyle(el).visibility === 'hidden') continue;
+      covered.push([r.left - 8, r.top - 8, r.right + 8, r.bottom + 8]);
     }
   }
   let renderer = 'n/a';
@@ -125,7 +124,8 @@ function collect() {
 
 /** Luma of every pixel of a frame, with its size. */
 async function lumaOf(jpeg) {
-  const { data, info } = await sharp(jpeg).greyscale().raw().toBuffer({ resolveWithObject: true });
+  const { data, info } = await sharp(jpeg).greyscale().toColourspace('b-w').raw().toBuffer({ resolveWithObject: true });
+  if (info.channels !== 1) throw new Error(`a frame decoded to ${info.channels} channels`);
   return { data, width: info.width, height: info.height };
 }
 
@@ -144,11 +144,14 @@ function freeMask(width, height, covered, viewport) {
   return mask;
 }
 
-/** What a frame shows in the free pane: the share of lit pixels, the mean luma, and how many pixels stand out of
- * their surroundings as points (stars): brighter by 28 or more than the mean of the 9 x 9 px around them. */
+/** What a frame shows in the free pane: the share of lit pixels, the mean luma, and the share of pixels that stand
+ * out of their surroundings as points (stars): brighter by 24 or more than the same frame blurred. The soft
+ * stand-in nebula has none; the map's stars are thousands. */
 async function readFrame(jpeg, covered, viewport) {
   const img = await lumaOf(jpeg);
-  const blurred = await sharp(img.data, { raw: { width: img.width, height: img.height, channels: 1 } }).blur(4).raw().toBuffer();
+  const soft = await sharp(img.data, { raw: { width: img.width, height: img.height, channels: 1 } }).blur(3).toColourspace('b-w').raw().toBuffer({ resolveWithObject: true });
+  if (soft.info.channels !== 1) throw new Error(`a blurred frame has ${soft.info.channels} channels`);
+  const blurred = soft.data;
   const mask = freeMask(img.width, img.height, covered, viewport);
   let free = 0;
   let lit = 0;
@@ -160,7 +163,7 @@ async function readFrame(jpeg, covered, viewport) {
     const v = img.data[i];
     sum += v;
     if (v >= LIT_LUMA) lit++;
-    if (v - blurred[i] >= 28) points++;
+    if (v - blurred[i] >= 24) points++;
   }
   return { lit: lit / free, mean: sum / free, points: points / free, free: free / mask.length, img, mask };
 }
@@ -240,17 +243,22 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
     const finalPng = await page.screenshot();
     await ctx.close();
 
-    const frames = shots.map((s) => ({ t: s.wall - info.origin, jpeg: s.jpeg })).filter((f) => f.t >= 0);
+    // Frames from before the page's first paint show the blank page the tab started on, not this page.
+    const painted = info.paint['first-paint'] ?? 0;
+    const frames = shots.map((s) => ({ t: s.wall - info.origin, jpeg: s.jpeg })).filter((f) => f.t >= painted - 4);
     const read = [];
     for (const f of frames) read.push({ t: f.t, ...(await readFrame(f.jpeg, info.covered, info.viewport)) });
     const last = read.at(-1);
     const firstLit = read.find((r) => r.lit >= LIT_SHARE) ?? null;
     // Stars: a quarter of the points the settled picture has.
-    const firstStars = read.find((r) => r.points >= last.points * 0.25) ?? null;
-    // The picture is the settled one from the first frame after which no frame differs from the last by more than 2.
+    const firstStars = last.points > 0 ? (read.find((r) => r.points >= last.points * 0.25) ?? null) : null;
+    // Settled: the first frame from which every frame is the settled picture, to within a tenth of the largest
+    // change any frame shows against it (and at least 0.25 of a level, the noise of the JPEG frames).
+    const diffs = read.map((r) => frameDiff(r, last));
+    const tolerance = Math.max(0.25, Math.max(...diffs) * 0.1);
     let settledAt = null;
     for (let i = read.length - 1; i >= 0; i--) {
-      if (frameDiff(read[i], last) > 2) break;
+      if (diffs[i] > tolerance) break;
       settledAt = read[i].t;
     }
     const round = (v) => (v === null || v === undefined ? null : Math.round(v));
@@ -280,7 +288,8 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
       duplicates,
       console: consoleLines,
       resources: info.resources.filter((r) => /\/data\//.test(r.url) || r.bytes > 150_000),
-      trace: read.map((r) => [Math.round(r.t), Math.round(r.lit * 1000) / 1000, Math.round(r.mean * 10) / 10, Math.round(r.points * 100000) / 1000]),
+      // per frame: time, share lit, mean luma, share of points (per cent), difference from the settled frame
+      trace: read.map((r, i) => [Math.round(r.t), Math.round(r.lit * 1000) / 1000, Math.round(r.mean * 10) / 10, Math.round(r.points * 100000) / 1000, Math.round(diffs[i] * 100) / 100]),
     };
     if (saveTo) {
       fs.mkdirSync(saveTo, { recursive: true });
@@ -291,6 +300,7 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
       save('1-first-paint', frames[0]);
       save('2-pane-lit', at(firstLit?.t ?? null));
       save('3-stars', at(firstStars?.t ?? null));
+      // (a frame is presented a moment after the mark of the script that drew it)
       save('4-nebula', at(info.marks['rmr-gas-drawn']));
       fs.writeFileSync(path.join(saveTo, '5-settled.png'), finalPng);
       if (frames.length) await filmstrip(frames, Math.min(settledAt ?? last.t, 30_000) + 300, path.join(saveTo, 'filmstrip.jpg'), vpName === 'phone' ? 110 : 260);
@@ -339,7 +349,7 @@ async function main() {
   fs.writeFileSync(file, JSON.stringify({ label: LABEL, mode: MODE, runs: RUNS, profiles: PROFILES, rows }, null, 1));
   const col = (r, pick) => spread(r.runs.map(pick));
   console.log(`\n${LABEL} (${MODE}; median of ${RUNS}, range in brackets; ms from navigation start)\n`);
-  console.log('page vp profile | first paint | FCP | LCP | search usable | pane lit | stars (frames) | map frame (mark) | nebula (mark) | settled (frames) | worst long task');
+  console.log('page vp profile | first paint | FCP | LCP | search usable | pane lit (frames) | stars (frames) | map frame (mark) | map shown (mark) | nebula (mark) | settled (frames) | worst long task');
   for (const r of rows) {
     console.log(
       [
@@ -351,6 +361,7 @@ async function main() {
         col(r, (x) => x.paneLit),
         col(r, (x) => x.paneStars),
         col(r, (x) => x.marks['rmr-map-frame']),
+        col(r, (x) => x.marks['rmr-map-shown']),
         col(r, (x) => x.marks['rmr-gas-drawn']),
         col(r, (x) => x.paneSettled),
         col(r, (x) => x.worstLongTask),
