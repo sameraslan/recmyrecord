@@ -43,11 +43,14 @@
 .recs { position: relative; margin-top: 18px; }
 .recs-h { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 21px; padding-bottom: 6px; border-bottom: 1px solid var(--color-rule); }
 .rec { position: relative; border-bottom: 1px solid var(--color-rule); }
+/* The cover is flush with the heading and the rules, and the listen icon ends where they end. The link's own box
+ * reaches into the panel's gutter (12 px left, 14 px right), so the highlight and its bar are drawn beside the
+ * cover, never on it, and the bar is as tall as the row. */
 .rec-main {
-  position: relative; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 14px; align-items: center; width: 100%;
-  padding: 11px 56px 11px 12px; text-align: left; color: inherit; text-decoration: none; transition: background-color .22s var(--out);
+  position: relative; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 14px; align-items: center;
+  margin: 0 -14px 0 -12px; padding: 11px 52px 11px 12px; text-align: left; color: inherit; text-decoration: none; transition: background-color .22s var(--out);
 }
-.rec-main::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 2px; background: var(--acc); opacity: 0; transition: opacity .22s var(--out); }
+.rec-main::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--acc); opacity: 0; transition: opacity .22s var(--out); }
 .rec.hot .rec-main { background: rgba(241, 236, 228, .06); }
 .rec.hot .rec-main::before { opacity: 1; }
 .rec-main:focus-visible { outline-offset: -2px; }
@@ -57,7 +60,7 @@
 .rec-artist { font-size: 14px; color: var(--color-dust); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .rec-shared { font-size: 13px; color: var(--color-ash); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rec-shared span { color: var(--color-dust); }
-.rec-sp { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-ash); border-radius: 2px; z-index: 2; }
+.rec-sp { position: absolute; right: -14px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-ash); border-radius: 2px; z-index: 2; }
 .rec-sp:hover { color: var(--color-paper); background: rgba(241, 236, 228, .07); }
 .rec-sp svg { width: 16px; height: 16px; }
 .show-more { margin: 8px 0 0 -10px; }

@@ -71,6 +71,78 @@ test('the map beside an open album has no hint line, as in the approved picture'
   await expect(page.locator('.map-hint')).toBeHidden();
 });
 
+test('the list rows are flush with the heading and its rule; the row highlight and its bar are beside the cover, in the gutter', async ({ page, isMobile }) => {
+  await page.goto(IR);
+  await expect(page.locator('li.rec')).toHaveCount(5);
+  await waitForAnimations(page);
+  const read = () =>
+    page.evaluate(() => {
+      const box = (el: Element) => {
+        const r = el.getBoundingClientRect();
+        return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height };
+      };
+      const scroll = document.querySelector('.album-scroll')!;
+      return {
+        heading: box(document.querySelector('.recs-h')!),
+        panel: box(scroll),
+        sideways: scroll.scrollWidth - scroll.clientWidth,
+        rows: [...document.querySelectorAll('li.rec')].map((li) => {
+          const main = li.querySelector('.rec-main')!;
+          const bar = getComputedStyle(main, '::before');
+          const link = li.querySelector('.rec-sp');
+          return {
+            hot: li.classList.contains('hot'),
+            row: box(li),
+            main: box(main),
+            cover: box(li.querySelector('.cover')!),
+            text: box(li.querySelector('.rec-text')!),
+            link: link ? box(link) : null,
+            icon: link ? box(link.querySelector('svg')!) : null,
+            fill: getComputedStyle(main).backgroundColor,
+            bar: { left: parseFloat(bar.left), top: parseFloat(bar.top), width: parseFloat(bar.width), height: parseFloat(bar.height), opacity: bar.opacity },
+          };
+        }),
+      };
+    });
+  const rest = await read();
+  const { heading, panel } = rest;
+  expect(rest.rows.some((r) => r.icon), 'a row with a listen link').toBe(true);
+  for (const r of rest.rows) {
+    // The cover starts where the heading and the rules start; the listen icon ends where they end.
+    expect(Math.abs(r.cover.l - heading.l), 'cover against the left end of the rule').toBeLessThanOrEqual(0.5);
+    expect(Math.abs(r.row.l - heading.l) + Math.abs(r.row.r - heading.r), 'the row rule is the heading rule').toBeLessThanOrEqual(0.5);
+    if (r.icon) expect(Math.abs(r.icon.r - heading.r), 'listen icon against the right end of the rule').toBeLessThanOrEqual(0.5);
+    if (r.link) expect(Math.min(r.link.w, r.link.h), 'the listen link is a 44 px target').toBeGreaterThanOrEqual(44);
+    // The layer that lights up (the link's own box) reaches 12 px left of the cover, inside the panel: nothing is cut.
+    expect(Math.abs(r.cover.l - r.main.l - 12), 'the highlight starts 12 px left of the cover').toBeLessThanOrEqual(0.5);
+    expect(r.main.l).toBeGreaterThanOrEqual(panel.l);
+    expect(r.main.r).toBeLessThanOrEqual(panel.r);
+    if (r.link) expect(r.link.r).toBeLessThanOrEqual(panel.r);
+    // The bar: 2 px at the left edge of that layer, so 10 px clear of the cover, and as tall as the row (the row is
+    // the link and the 1 px rule under it).
+    expect([r.bar.left, r.bar.top, r.bar.width]).toEqual([0, 0, 2]);
+    expect(Math.abs(r.bar.height - r.main.h)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(r.main.h + 1 - r.row.h)).toBeLessThanOrEqual(0.5);
+    expect(r.bar.height).toBeGreaterThan(r.cover.h);
+    expect(r.bar.opacity).toBe('0');
+    // The words stop short of the listen link.
+    if (r.link) expect(r.text.r).toBeLessThanOrEqual(r.link.l - 4);
+  }
+  expect(rest.sideways, 'the panel does not scroll sideways').toBeLessThanOrEqual(0);
+  if (isMobile) return; // a phone has no hover
+  await page.locator('li.rec').nth(1).locator('a.rec-main').hover();
+  await expect(page.locator('li.rec').nth(1)).toHaveClass(/hot/);
+  await waitForAnimations(page);
+  const lit = await read();
+  expect(lit.rows[1].fill).toBe('rgba(241, 236, 228, 0.06)');
+  expect(lit.rows[1].bar.opacity).toBe('1');
+  // Nothing moved: every box of every row is where it was at rest.
+  lit.rows.forEach((r, i) => {
+    for (const k of ['row', 'main', 'cover', 'text', 'link', 'icon'] as const) expect(r[k], `row ${i + 1} ${k}`).toEqual(rest.rows[i][k]);
+  });
+  expect(lit.sideways).toBeLessThanOrEqual(0);
+});
+
 test('?by=mood shows the mood list', async ({ page }) => {
   expect(recsOf(IR_SLUG, 'mood').slice(0, 5).map((r) => r.title), 'the pinned mood titles are the data\u2019s').toEqual(IR_MOOD);
   await page.goto(`${IR}?by=mood`);
