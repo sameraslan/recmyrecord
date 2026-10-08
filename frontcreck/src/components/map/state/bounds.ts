@@ -118,6 +118,15 @@ export const OVERVIEW_SIDE_PAD_PX = 24;
  * `BAND_B - 0.5`), so the opening view always has the full gas and never loads a cover sheet (ATLAS_LOAD_PX is 13). */
 export const OVERVIEW_COVER_MAX_PX = GAS_BAND_FULL_PX - 0.5;
 
+/** Overview on a narrow window (a phone: the slider panel lies across the bottom, `bottomCover` > 0). There the span
+ * rule alone shows nearly the whole cloud, and 10,467 stars fuse into glitter with nothing to tap. So it opens
+ * this many times closer, about the same point, but no closer than covers of OVERVIEW_NARROW_COVER_PX, where stars
+ * already read as separate points; a window whose span rule is closer than that (a tablet) is unchanged.
+ * 1.6, 1.8 and 2 were looked at on a 390 px phone at every stop: at 1.6 the densest parts still fuse at Sound, at
+ * 2 the view is all gas with little of the cloud's shape left. The fit button's Whole map is untouched. */
+export const OVERVIEW_NARROW_CLOSER = 1.8;
+export const OVERVIEW_NARROW_COVER_PX = 5.2;
+
 export interface OverviewExtent {
   /** 1st and 99th percentile of x, and the median of y, of one layout (world units). */
   x1: number;
@@ -158,7 +167,8 @@ export function overviewExtent(xy: Float32Array): OverviewExtent {
  * The Overview, the framing /map opens at (prototype camera.js L27-34, `Cam.fitOverview`): the 1st..99th
  * percentile x-span fills the width right of the album panel less 24 px a side, capped at 12.5 px covers, never
  * wider than the Whole map (`wholeZoom`, fitView's zoom). Centred on the span in x and on the median row in y; on a
- * phone the median row sits in the middle of the band above the slider panel (the prototype's free rectangle).
+ * phone the median row sits in the middle of the band above the slider panel (the prototype's free rectangle), and
+ * the view is closer than the span rule (OVERVIEW_NARROW_CLOSER), so the middle of the span fills the width.
  * Regions above and below run off screen. camera.position is the centre of the visible area (applyFrustum), which
  * is below the header's `insetTop`: the centre needs no term for it, and only the zoom ceiling does (MAX_ZOOM in
  * the size it has on screen when nothing covers the canvas).
@@ -166,7 +176,8 @@ export function overviewExtent(xy: Float32Array): OverviewExtent {
 export function fitOverview(ext: OverviewExtent, wholeZoom: number, area: OverviewArea): { zoom: number; center: { x: number; y: number } } {
   const { width, height, insetLeft, insetTop, bottomCover } = area;
   const whole = pxPerWorld(wholeZoom, height);
-  const across = Math.max(width - insetLeft - 2 * OVERVIEW_SIDE_PAD_PX, 40) / Math.max(ext.x99 - ext.x1, 1e-6);
+  const span = Math.max(width - insetLeft - 2 * OVERVIEW_SIDE_PAD_PX, 40) / Math.max(ext.x99 - ext.x1, 1e-6);
+  const across = bottomCover > 0 ? Math.max(span, Math.min(span * OVERVIEW_NARROW_CLOSER, OVERVIEW_NARROW_COVER_PX / COVER_WORLD)) : span;
   const cap = OVERVIEW_COVER_MAX_PX / COVER_WORLD;
   const zoom = Math.min(MAX_ZOOM * visibleScale(height, insetTop), zoomForPxPerWorld(Math.max(whole, Math.min(across, cap)), height));
   const ppw = pxPerWorld(zoom, height);

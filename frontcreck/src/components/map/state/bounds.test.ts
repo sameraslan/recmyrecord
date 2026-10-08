@@ -7,6 +7,8 @@ import { GAS_BAND_FULL_PX } from "../theme";
 import {
   coveredBottomPx,
   OVERVIEW_COVER_MAX_PX,
+  OVERVIEW_NARROW_CLOSER,
+  OVERVIEW_NARROW_COVER_PX,
   OVERVIEW_SIDE_PAD_PX,
   cloudCenter,
   fitOverview,
@@ -449,12 +451,34 @@ describe("fitOverview (prototype Cam.fitOverview, camera.js L27-34)", () => {
 
   it("on a phone sets the median row in the middle of the band above the slider panel", () => {
     const v = fitOverview(ext, zoomForPxPerWorld(100, 784), { width: 390, height: 784, insetLeft: 0, insetTop: 0, bottomCover: 165 });
-    const ppw = pxPerWorld(v.zoom, 784); // (390 - 48) / 1.0 = 342
-    expect(ppw).toBeCloseTo(342, 6);
+    const ppw = pxPerWorld(v.zoom, 784); // (390 - 48) / 1.0 = 342 for the span, and a phone opens 1.8 times closer
+    expect(ppw).toBeCloseTo(342 * 1.8, 6);
     // camera.position is the canvas centre (y 392 of 784); the median row sits at (784 - 165) / 2 = 309.5, 82.5 px higher.
     const medianRowScreenY = 784 / 2 - (ext.medY - v.center.y) * ppw;
     expect(medianRowScreenY).toBeCloseTo((784 - 165) / 2, 6);
     expect(v.center.x).toBeCloseTo(0.1, 12);
+  });
+
+  it("on a narrow window (the slider panel across the bottom) opens 1.8 times closer, so stars read apart, up to 5.2 px covers", () => {
+    expect([OVERVIEW_NARROW_CLOSER, OVERVIEW_NARROW_COVER_PX]).toEqual([1.8, 5.2]);
+    const phone = { width: 390, height: 784, insetLeft: 0, insetTop: 0, bottomCover: 165 };
+    const whole = zoomForPxPerWorld(100, 784);
+    const at = (a: typeof phone) => pxPerWorld(fitOverview(ext, whole, a).zoom, a.height);
+    // 390 px: the span alone gives 342 px per world unit (2.3 px covers, where 10,467 stars fuse); 615.6 now.
+    expect(at(phone)).toBeCloseTo(615.6, 6);
+    // The same window with no panel across the bottom (a desktop) is as it was.
+    expect(at({ ...phone, bottomCover: 0 })).toBeCloseTo(342, 6);
+    // A larger phone, 500 px: 452 for the span, 813.6 at 1.8 times, held at 5.2 px covers (764.7).
+    expect(at({ ...phone, width: 500 })).toBeCloseTo(5.2 / COVER_WORLD, 6);
+    // A tablet, 880 px: the span alone is already closer than that (832), and stays.
+    expect(at({ ...phone, width: 880 })).toBeCloseTo(832, 6);
+    // Closer about the same point: the middle of the span, the median row in the middle of the band.
+    const v = fitOverview(ext, whole, phone);
+    expect(v.center.x).toBeCloseTo(0.1, 12);
+    expect(784 / 2 - (ext.medY - v.center.y) * 615.6).toBeCloseTo((784 - 165) / 2, 6);
+    // The 12.5 px cap and the Whole map's floor still hold on a narrow window.
+    expect(at({ ...phone, width: 880 }) * COVER_WORLD).toBeLessThanOrEqual(12.5);
+    expect(pxPerWorld(fitOverview({ x1: -2, x99: 2, medY: 0 }, zoomForPxPerWorld(200, 784), phone).zoom, 784)).toBeCloseTo(200, 6);
   });
 
   it("fits the width right of the album panel", () => {
@@ -502,11 +526,13 @@ const PHONE_FIT = { top: 90, right: 40, bottom: 165 + 4, left: 40 }; // MapStage
 // they are what these functions give on that data, pinned so that a change to the framing code shows. On the
 // 4,081-album layouts they were whole 596.653 / 708.479 / 618.156 and Overview 1639.476 / 1534.717 / 1838.235 on
 // desktop (balanced / sonic / mood). They go stale with positions.json, not with the theme.
+// The phone's Overview scales are 1.8 times the span rule's 422.054 / 347.788 / 410.7 (OVERVIEW_NARROW_CLOSER, none
+// of them held by the 5.2 px limit, which is 764.706); its Whole map and every desktop number are as recorded.
 describe("the Overview on the real map (Task 0's recorded scales)", () => {
   const data = realData();
   const cases = [
     { name: "desktop 1440 x 900", width: 1440, height: 836, pad: DESKTOP_FIT, cover: 0, whole: { balanced: 504.782, sonic: 440.556, mood: 563.14 }, overview: { balanced: 1717.834, sonic: 1415.559, mood: 1671.621 } },
-    { name: "phone 390 x 844", width: 390, height: 784, pad: PHONE_FIT, cover: 165, whole: { balanced: 283.21, sonic: 238.307, mood: 341.249 }, overview: { balanced: 422.054, sonic: 347.788, mood: 410.7 } },
+    { name: "phone 390 x 844", width: 390, height: 784, pad: PHONE_FIT, cover: 165, whole: { balanced: 283.21, sonic: 238.307, mood: 341.249 }, overview: { balanced: 759.697, sonic: 626.019, mood: 739.26 } },
   ] as const;
 
   for (const c of cases) {

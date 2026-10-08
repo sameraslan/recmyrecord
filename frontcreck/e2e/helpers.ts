@@ -245,13 +245,16 @@ export async function albumSpread(page: Page): Promise<Spread> {
  * (1440 x 900 and 390 x 844 at Balanced): the 1st and 99th percentile albums 24 px inside the canvas sides, the
  * median row in the middle of the canvas above the slider panel, and some albums off screen (it is a crop, not the
  * whole map). Empty when it is the Overview. Tolerance 1 px. */
-export function overviewMiss(s: Spread): string[] {
+export function overviewMiss(s: Spread, closer = 1): string[] {
   const out: string[] = [];
   const near = (a: number, b: number, what: string) => {
     if (Math.abs(a - b) > 1) out.push(`${what}: ${a.toFixed(1)} px, expected ${b.toFixed(1)}`);
   };
-  near(s.x1, s.left + 24, '1st percentile x');
-  near(s.x99, s.right - 24, '99th percentile x');
+  // `closer`: a phone opens that many times closer about the same centre (bounds.ts OVERVIEW_NARROW_CLOSER), so
+  // the two percentiles are that many times further from the middle of the canvas. 1 is the span rule itself.
+  const mid = (s.left + s.right) / 2;
+  near(s.x1, mid - closer * (mid - s.left - 24), '1st percentile x');
+  near(s.x99, mid + closer * (s.right - 24 - mid), '99th percentile x');
   near(s.medY, s.top + (s.bottom - s.cover - s.top) / 2, 'median row y');
   if (s.minX >= s.left && s.maxX <= s.right && s.minY >= s.top && s.maxY <= s.bottom) out.push('every album is on screen: that is not a crop');
   return out;

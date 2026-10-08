@@ -13,8 +13,11 @@ import { act, albumSpread, camera, isPhone, overviewMiss, twinkleOff, waitForCam
  * Recorded again on 7 October 2026 for the 10,467-album layouts (positions.json e3093d62c5e6), after the tests'
  * own checks of where the albums sit (overviewMiss, wholeMapMiss) passed on them and the views were looked at.
  * On the 4,081-album layouts they were 2.15721 / 0.56516 and 0.78507 / 0.37581. The same numbers are pinned in
- * src/components/map/state/bounds.test.ts. */
-const OVERVIEW_ZOOM = { desktop: 2.26031, phone: 0.59217 };
+ * src/components/map/state/bounds.test.ts. The phone's Overview was 0.59217 until it opened closer (8 October 2026). */
+const OVERVIEW_ZOOM = { desktop: 2.26031, phone: 1.06591 };
+/** A phone opens 1.8 times closer than the span rule (bounds.ts OVERVIEW_NARROW_CLOSER; 0.59217 * 1.8), so its
+ * stars read as separate points: the middle of the span fills the width. Desktop is the span rule itself. */
+const closer = (phone: boolean): number => (phone ? 1.8 : 1);
 const WHOLE_ZOOM = { desktop: 0.66419, phone: 0.39736 };
 
 /** The camera's zoom as a canvas that starts below the header would have it: the scale on screen is the same. */
@@ -35,10 +38,10 @@ async function openMap(page: Page): Promise<void> {
 const same = (a: { x: number; y: number; zoom: number }, b: { x: number; y: number; zoom: number }) =>
   Math.hypot(a.x - b.x, a.y - b.y) + Math.abs(a.zoom - b.zoom);
 
-test('/map opens at the Overview: the 1st to 99th percentile span fills the pane less 24 px a side, the median row in the middle', async ({ page }, info) => {
+test('/map opens at the Overview: the 1st to 99th percentile span fills the pane less 24 px a side (on a phone, 1.8 times closer about the same centre), the median row in the middle', async ({ page }, info) => {
   await openMap(page);
   const s = await albumSpread(page);
-  expect(overviewMiss(s)).toEqual([]);
+  expect(overviewMiss(s, closer(isPhone(info)))).toEqual([]);
   const z = await zoomAsRecorded(page, (await camera(page)).zoom);
   expect(z).toBeCloseTo(OVERVIEW_ZOOM[isPhone(info) ? 'phone' : 'desktop'], 3);
   // covers stay dots and the gas is full: under 13 px (12.5 at most). `z` is the zoom of a canvas as tall as the
@@ -101,7 +104,14 @@ test('an album link opens on the album whatever the opening switch says', async 
   const switched = await openAlbum();
   expect(same(switched, plain)).toBeLessThan(1e-6);
   // and it is the album's own framing, not the Overview's
-  expect(Math.abs((await zoomAsRecorded(page, plain.zoom)) - OVERVIEW_ZOOM[isMobile ? 'phone' : 'desktop'])).toBeGreaterThan(0.05);
+  if (!isMobile) expect(Math.abs((await zoomAsRecorded(page, plain.zoom)) - OVERVIEW_ZOOM.desktop)).toBeGreaterThan(0.05);
+  else {
+    // On a phone the two zooms happen to be near each other since the Overview opens closer (1.104 and 1.066 as
+    // recorded), so the whole camera is compared with the one /map opens at: another place, by more than 0.05.
+    await openMap(page);
+    expect(Math.abs((await zoomAsRecorded(page, (await camera(page)).zoom)) - OVERVIEW_ZOOM.phone)).toBeLessThan(0.001);
+    expect(same(plain, await camera(page))).toBeGreaterThan(0.05);
+  }
 });
 
 test('from Home the map link glides to the Overview; a camera saved in Explore is kept', async ({ page, isMobile }) => {
@@ -112,7 +122,7 @@ test('from Home the map link glides to the Overview; a camera saved in Explore i
   await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
   await waitForMap(page); // the gas flag drops to 'loading' when Home turns into the map
   await waitForCameraIdle(page);
-  expect(overviewMiss(await albumSpread(page))).toEqual([]);
+  expect(overviewMiss(await albumSpread(page), closer(isMobile))).toEqual([]);
   // The visitor zooms, leaves for About and comes back: the map is where they left it, not the Overview again.
   await act(page.getByRole('button', { name: COPY.map.zoomIn }), isMobile);
   await waitForCameraIdle(page);
@@ -150,7 +160,7 @@ test('/map to Home with the Overview untouched shows Home\'s Whole map, and the 
   await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
   await waitForMap(page);
   await waitForCameraIdle(page);
-  expect(overviewMiss(await albumSpread(page))).toEqual([]);
+  expect(overviewMiss(await albumSpread(page), closer(isMobile))).toEqual([]);
   // Moved by the visitor: Home keeps the camera, as today.
   await act(page.getByRole('button', { name: COPY.map.zoomIn }), isMobile);
   await waitForCameraIdle(page);
@@ -198,7 +208,7 @@ test('/map (untouched) to About and then Home shows Home\'s Whole map, and the M
   await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
   await waitForMap(page);
   await waitForCameraIdle(page);
-  expect(overviewMiss(await albumSpread(page))).toEqual([]);
+  expect(overviewMiss(await albumSpread(page), closer(isMobile))).toEqual([]);
 });
 
 test('Home clicked while the glide to the Overview is still running counts as untouched: Home\'s Whole map, nothing saved', async ({ page, isMobile }) => {
@@ -232,7 +242,7 @@ test('Home clicked while the glide to the Overview is still running counts as un
   await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'explore');
   await waitForMap(page);
   await waitForCameraIdle(page);
-  expect(overviewMiss(await albumSpread(page))).toEqual([]);
+  expect(overviewMiss(await albumSpread(page), closer(isMobile))).toEqual([]);
 });
 
 test.describe('desktop', () => {

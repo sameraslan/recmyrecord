@@ -10,7 +10,10 @@ import { act, albumSpread, overviewMiss, visibleAlbumPoint, waitForAnimations, w
  * album somewhere else: the framings were first checked by eye and by this file's other tests (below the header,
  * inside the window), then written down as they were. So the record now pins the framing code on that data. It
  * goes stale when positions.json changes, and only then is it recorded again: visit the states of the tests
- * below and write `points` and `markers` as sameAsRecorded reads them. */
+ * below and write `points` and `markers` as sameAsRecorded reads them.
+ * `phone/opening` was recorded again on 8 October 2026, when the phone's opening view moved 1.8 times closer
+ * (bounds.ts OVERVIEW_NARROW_CLOSER): the new points are the old ones 1.8 times further from (195, 369.75), the
+ * middle of the band above the slider panel, to the thousandth of a pixel. Nothing else in the record changed. */
 const BASELINE = path.join(process.cwd(), 'e2e/fixtures/framing-baseline.json');
 const TOLERANCE_PX = 0.75;
 const IR = '/album/in-rainbows-radiohead';
@@ -211,8 +214,9 @@ test('after every fit nothing is behind the header', async ({ page, isMobile }) 
   await openMap(page);
   const bottom = await headerBottom(page);
   // The Overview is a crop: albums run off the top by design. Its median row sits in the middle of the area below
-  // the bar (and above the phone's slider panel), with the 24 px side margins.
-  expect(overviewMiss(await albumSpread(page))).toEqual([]);
+  // the bar (and above the phone's slider panel), with the 24 px side margins (a phone opens 1.8 times closer
+  // about the same centre: bounds.ts OVERVIEW_NARROW_CLOSER).
+  expect(overviewMiss(await albumSpread(page), isMobile ? 1.8 : 1)).toEqual([]);
   // The Whole map: every album is below the bar by the fit's top padding (55 px on desktop, 90 on a phone).
   await fit(page, isMobile);
   expect(await highestAlbum(page)).toBeGreaterThanOrEqual(bottom + (isMobile ? 90 : 55) - 1);
