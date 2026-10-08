@@ -1,29 +1,72 @@
-/** The favicon sources (the three SVGs that scripts/icons/build.mjs renders) use only the Trifid palette and keep the
- * mark, and the binaries a browser is served (favicon.ico, apple-icon.png) are renders of those sources as they are now. */
+/** The favicon sources (the three SVGs that scripts/icons/build.mjs renders) use only the Eddy mark's colours and are
+ * the Eddy mark, each in its own slot: three gas arms (teal, gold, salmon) curling into a cream core. The binaries a
+ * browser is served (favicon.ico, apple-icon.png) have the right sizes and were built from those sources as they are
+ * now: build.mjs records each source's SHA-256 in built.json, and a few coarse colour probes look at the renders. */
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { describe, expect, it } from 'vitest';
 
-describe('favicon', () => {
-  const ICONS = ['src/app/icon.svg', 'scripts/icons/icon-16.svg', 'scripts/icons/apple-icon.svg'];
-  const icon = (file) => fs.readFileSync(path.join(process.cwd(), file), 'utf8');
+const ROOT = process.cwd();
+const ICONS = ['src/app/icon.svg', 'scripts/icons/icon-16.svg', 'scripts/icons/apple-icon.svg'];
+const icon = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
+const count = (text, re) => [...text.matchAll(re)].length;
 
-  it('uses only the Trifid palette: no colour of the old warm theme', () => {
-    // Sky, raised edge, ash lines, dust stars, the lamp star (globals.css: room, room-4, ash, dust, lamp).
-    const ALLOWED = ['#07060a', '#24222c', '#aaa49d', '#c4beb6', '#f1ece4'];
+describe('favicon', () => {
+  it('uses only the colours of the Eddy mark', () => {
+    // The list in docs/design/trifid-theme-favicon/designs/a-trifid/eddy-final/NOTES.md, by family.
+    const ALLOWED = [
+      // The tile: sky and its raised edge (globals.css: room, room-4).
+      '#07060a', '#24222c',
+      // Teal arm, deep to pale.
+      '#3f8f9d', '#4f8fa6', '#74c3c6', '#d9f3ee', '#e6f8f3',
+      // Gold arm, deep to pale.
+      '#a9814a', '#c29c62', '#e2bd80', '#e9c98f', '#fdf3d8', '#fff8e4',
+      // Salmon arm, deep to pale.
+      '#a85a56', '#c46d55', '#e08a6a', '#fbd3bb', '#fde0cc',
+      // The cream core's glow, and star white for the core point and the stars.
+      '#e2b48e', '#efd9ae', '#fff6dc', '#fffaf4',
+    ];
+    const all = new Set();
     for (const f of ICONS) {
       const used = [...new Set([...icon(f).matchAll(/#[0-9a-fA-F]{6}\b/g)].map((m) => m[0].toLowerCase()))];
       expect(used.filter((c) => !ALLOWED.includes(c)), f).toEqual([]);
-      expect(used, f).toContain('#f1ece4');
+      // No colour written another way (a three digit hex, rgb(), hsl()).
+      expect(count(icon(f), /#[0-9a-fA-F]{3}\b(?![0-9a-fA-F])|rgba?\(|hsla?\(/g), f).toBe(0);
+      used.forEach((c) => all.add(c));
     }
+    // And the list holds nothing the sources do not use.
+    expect([...all].sort()).toEqual([...ALLOWED].sort());
   });
 
-  it('keeps the mark: three stars joined by lines', () => {
+  it('is the Eddy mark, each file in its own slot', () => {
+    const TILE = { 'src/app/icon.svg': [32, 31, '7'], 'scripts/icons/icon-16.svg': [16, 15, '3.5'] };
     for (const f of ICONS) {
-      expect([...icon(f).matchAll(/<circle /g)].length, f).toBe(3);
-      expect([...icon(f).matchAll(/<path /g)].length, f).toBe(1);
+      const svg = icon(f);
+      // Three arms, one per gradient, round a core gradient.
+      for (const id of ['t', 'g', 'r']) expect(count(svg, new RegExp(`<path fill="url\\(#${id}\\)"`, 'g')), `${f} arm ${id}`).toBe(1);
+      expect(count(svg, /<radialGradient /g), f).toBe(4);
+      expect(svg, f).toContain('fill="url(#k)"');
+      // Not the mark this replaced: three plain grey stars joined by one stroked line path.
+      expect(svg, f).not.toMatch(/<path d="M7 10|stroke="#aaa49d"|fill="#c4beb6"/);
+      if (TILE[f]) {
+        const [box, side, rx] = TILE[f];
+        expect(svg, f).toContain(`viewBox="0 0 ${box} ${box}"`);
+        // The dark rounded tile with its edge.
+        expect(svg, f).toContain(`<rect x=".5" y=".5" width="${side}" height="${side}" rx="${rx}" fill="#07060a" stroke="#24222c"/>`);
+      }
     }
+    // 16 px: drawn for the pixel grid, no filters. 32 px: blurs only. 180 px: full-bleed opaque sky (the phone rounds
+    // the corners itself), torn gas edges and a few stars.
+    expect(icon('scripts/icons/icon-16.svg')).not.toContain('<filter');
+    expect(count(icon('src/app/icon.svg'), /<filter /g)).toBe(3);
+    expect(icon('src/app/icon.svg')).not.toMatch(/feTurbulence|feDisplacementMap/);
+    const apple = icon('scripts/icons/apple-icon.svg');
+    expect(apple).toContain('viewBox="0 0 180 180"');
+    expect(apple).toContain('<rect width="180" height="180" fill="#07060a"/>');
+    expect(apple).not.toMatch(/\brx="|#24222c/);
+    expect(apple).toMatch(/<feTurbulence [^>]*\/><feDisplacementMap /);
   });
 });
 
@@ -72,38 +115,35 @@ function png(buf) {
 const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 const SKY = hex('#07060a');
 
-/** What a render of an icon source must show: each star's centre in its fill, and the middle of the first line
- * (the one joining the two small stars) in the stroke at its opacity over the sky. Points in the source's units. */
-function marks(svg) {
-  const num = (tag, name) => Number(new RegExp(`\\b${name}="([^"]+)"`).exec(tag)[1]);
-  const stars = [...svg.matchAll(/<circle [^>]*>/g)].map(([tag]) => ({ x: num(tag, 'cx'), y: num(tag, 'cy'), rgb: hex(/fill="(#[0-9a-f]{6})"/.exec(tag)[1]) }));
-  const path = /<path [^>]*>/.exec(svg)[0];
-  const alpha = /stroke-opacity/.test(path) ? num(path, 'stroke-opacity') : 1;
-  const stroke = hex(/stroke="(#[0-9a-f]{6})"/.exec(path)[1]);
-  // The first line runs from the first small star to the second.
-  const line = { x: (stars[0].x + stars[1].x) / 2, y: (stars[0].y + stars[1].y) / 2, rgb: stroke.map((c, i) => c * alpha + SKY[i] * (1 - alpha)) };
-  return [...stars, line];
-}
-
-/** Every mark of `svg` is in `image` where `place` puts it, within a few levels (antialiasing and rounding). */
-function expectRender(image, svg, place, label) {
-  for (const m of marks(svg)) {
-    const [x, y] = place(m.x, m.y);
-    const got = image.at(x, y);
-    const off = Math.max(...m.rgb.map((c, i) => Math.abs(c - got[i])));
-    expect(off, `${label} at ${m.x},${m.y}: ${got.slice(0, 3)} for ${m.rgb.map(Math.round)}`).toBeLessThanOrEqual(8);
-    expect(got[3], `${label} at ${m.x},${m.y} alpha`).toBe(255);
-  }
+/** Coarse probes of a render, at points in the source's units: the gas is blurred, so they ask only which way a
+ * colour leans, by a wide margin (the real gaps are 60 levels and more), never for an exact value. */
+function expectEddy(image, scale, { teal, salmon, core }, label) {
+  const at = ([x, y]) => image.at(x * scale, y * scale);
+  const [tr, tg, tb, ta] = at(teal);
+  expect(Math.min(tg, tb) - tr, `${label} teal arm ${[tr, tg, tb]}: more blue-green than red`).toBeGreaterThan(25);
+  const [sr, sg, sb, sa] = at(salmon);
+  expect(sr - Math.max(sg, sb), `${label} salmon arm ${[sr, sg, sb]}: more red than green or blue`).toBeGreaterThan(25);
+  const [cr, cg, cb, ca] = at(core);
+  expect(Math.min(cr, cg, cb), `${label} core ${[cr, cg, cb]}: near white`).toBeGreaterThan(200);
+  expect([ta, sa, ca], `${label} alpha`).toEqual([255, 255, 255]);
 }
 
 describe('favicon binaries', () => {
-  const ROOT = process.cwd();
-  const source = (file) => fs.readFileSync(path.join(ROOT, file), 'utf8');
+  it('were built from the sources as they are now (run node scripts/icons/build.mjs after changing one)', () => {
+    const built = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/icons/built.json'), 'utf8'));
+    const now = Object.fromEntries(ICONS.map((f) => [f, crypto.createHash('sha256').update(fs.readFileSync(path.join(ROOT, f))).digest('hex')]));
+    expect(built).toEqual(now);
+  });
 
-  it('favicon.ico holds 16, 32 and 48 px PNG entries rendered from the sources as they are now', () => {
+  it('favicon.ico holds 16, 32 and 48 px RGBA PNG entries of the mark with a clear corner', () => {
     const ico = fs.readFileSync(path.join(ROOT, 'src/app/favicon.ico'));
     expect([ico.readUInt16LE(0), ico.readUInt16LE(2), ico.readUInt16LE(4)]).toEqual([0, 1, 3]);
-    const SOURCES = { 16: ['scripts/icons/icon-16.svg', 16], 32: ['src/app/icon.svg', 32], 48: ['src/app/icon.svg', 32] };
+    // Probe points on each entry's source box: 16 units for icon-16.svg, 32 for icon.svg (the 32 and 48 px entries).
+    const PROBES = {
+      16: [16, { teal: [3.5, 8.5], salmon: [12.5, 9.5], core: [8.5, 8.5] }],
+      32: [32, { teal: [6.5, 16.5], salmon: [22.5, 20.5], core: [15.8, 17.6] }],
+      48: [32, { teal: [6.5, 16.5], salmon: [22.5, 20.5], core: [15.8, 17.6] }],
+    };
     const sizes = [];
     for (let i = 0; i < 3; i++) {
       const e = 6 + 16 * i;
@@ -114,19 +154,16 @@ describe('favicon binaries', () => {
       expect([image.width, image.height, image.colour], `entry ${px}`).toEqual([px, px, 6]);
       // The tile's rounded corner is clear.
       expect(image.at(0, 0)[3], `entry ${px} corner`).toBe(0);
-      const [file, box] = SOURCES[px];
-      expectRender(image, source(file), (x, y) => [(x * px) / box, (y * px) / box], `favicon.ico ${px} px from ${file}`);
+      const [box, probes] = PROBES[px];
+      expectEddy(image, px / box, probes, `favicon.ico ${px} px`);
     }
     expect(sizes).toEqual([16, 32, 48]);
   });
 
-  it('apple-icon.png is 180 x 180, opaque, and rendered from its source as it is now', () => {
+  it('apple-icon.png is 180 x 180 and opaque, the mark on the sky', () => {
     const image = png(fs.readFileSync(path.join(ROOT, 'src/app/apple-icon.png')));
     expect([image.width, image.height]).toEqual([180, 180]);
-    expect(image.at(0, 0)).toEqual([...SKY, 255]);
-    const svg = source('scripts/icons/apple-icon.svg');
-    // Its mark is drawn inside translate(tx ty) scale(k) translate(ux uy), on a 32 unit box.
-    const [tx, ty, k, ux, uy] = /transform="translate\(([\d.-]+) ([\d.-]+)\) scale\(([\d.]+)\) translate\(([\d.-]+) ([\d.-]+)\)"/.exec(svg).slice(1).map(Number);
-    expectRender(image, svg, (x, y) => [((tx + k * (x + ux)) * 180) / 32, ((ty + k * (y + uy)) * 180) / 32], 'apple-icon.png');
+    for (const [x, y] of [[0, 0], [179, 0], [0, 179], [179, 179]]) expect(image.at(x, y), `corner ${x},${y}`).toEqual([...SKY, 255]);
+    expectEddy(image, 1, { teal: [41.5, 97.5], salmon: [122.5, 115.5], core: [89.1, 98.4] }, 'apple-icon.png');
   });
 });
