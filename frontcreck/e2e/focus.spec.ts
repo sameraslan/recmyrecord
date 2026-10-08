@@ -612,10 +612,13 @@ for (const n of [5, 10]) {
     await sampleCovers(page);
     await touch('pointerdown', 1, cx - 40);
     await touch('pointerdown', 2, cx + 40);
+    // 150 ms a step: the software renderer of the suite takes about that long to draw the whole map of 10,467
+    // albums at a phone's two device pixels per px, which is the view ten recommendations open on. At 60 ms a step
+    // it drew 10 frames for the 20 steps (20 to 22 on 4,081 albums), and the bounds below ask for more than 10.
     for (let i = 1; i <= 20; i++) {
       await touch('pointermove', 1, cx - 40 - i * 5);
       await touch('pointermove', 2, cx + 40 + i * 5);
-      await page.waitForTimeout(60);
+      await page.waitForTimeout(150);
     }
     const pinchFrames = (await page.evaluate(() => window.__rmr!.frames ?? 0)) - f0;
     expect(pinchFrames, 'the pinch drew frames').toBeGreaterThan(10);
