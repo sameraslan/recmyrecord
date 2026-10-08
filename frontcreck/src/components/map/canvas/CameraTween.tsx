@@ -9,8 +9,10 @@ import { STOP_T, interpolated } from '../data';
 import { focusCamera } from '../state/focusLayout';
 import { useMapStore } from '../state/mapStore';
 import { worldToScreen } from '../state/projection';
-import { getOverviewFraming } from '../state/view';
+import { overviewView } from '../state/bounds';
+import { getFitCamera, getFitKind, getOverviewFraming, isFramed, openingKind, setFitKind, untouchedOverview } from '../state/view';
 import { COVER_FADE_END_PX, zoomForCoverPx } from '../state/zoomLimits';
+import { tweenCoord, tweenZoom } from '../state/zoomMath';
 import type { MapApi } from '../types';
 import { clampZoom, stopCameraRig } from './CameraRig';
 import { applyFrustum } from './InitialFrame';
@@ -73,13 +75,15 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       // Centred. On phones, where the Explore card is a bottom sheet (it raises framePadding bottom while open),
       // an album whose centred position would fall outside the framing band sits in the middle of the band,
       // above the sheet. Desktop keeps the centre: its card sits in the corner.
-      const pad = useMapStore.getState().input.framePadding;
+      const { framePadding: pad, insetTop } = useMapStore.getState().input;
+      // In px of the visible map (below the header): camera.position is drawn at its centre, visible / 2.
+      const visible = height - insetTop;
       const top = pad.top;
-      const bottom = height - pad.bottom;
+      const bottom = visible - pad.bottom;
       let y = p[2 * id + 1];
-      if (isNarrow() && bottom > top && (height / 2 < top || height / 2 > bottom)) {
+      if (isNarrow() && bottom > top && (visible / 2 < top || visible / 2 > bottom)) {
         const wpp = (camera.top - camera.bottom) / (height * zoom);
-        y -= (height / 2 - (top + bottom) / 2) * wpp;
+        y -= (visible / 2 - (top + bottom) / 2) * wpp;
       }
       return { x: p[2 * id], y, zoom };
     };
@@ -88,7 +92,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
       if (!input.focus || !data) return null;
       const { width, height } = get().size;
       const target = interpolated(data, STOP_T[input.stop]);
-      return focusCamera([input.focus.seed, ...input.focus.recs], target, width, height, input.insetLeft, input.framePadding, clampZoom);
+      return focusCamera([input.focus.seed, ...input.focus.recs], target, width, height, input.insetLeft, input.insetTop, input.framePadding, clampZoom);
     };
     const api: MapApi = {
       zoomBy: (factor) => {
@@ -108,14 +112,51 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
         const { input, rearmFocus } = useMapStore.getState();
         // Back to the focus framing, and FocusFramer follows stop and inset changes again.
         if (input.focus) rearmFocus();
-        start(focusTarget() ?? (input.selected !== null ? flyTarget(input.selected) : overview()), DURATION.camera);
+        const framed = focusTarget() ?? (input.selected !== null ? flyTarget(input.selected) : null);
+        // The fit button's whole map (Task 0): a resize before the visitor moves the map keeps it.
+        if (framed === null) setFitKind('whole', overview());
+        start(framed ?? overview(), DURATION.camera);
       },
       flyTo: (id) => start(flyTarget(id), FLY_MS),
+      opening: (animate = true) => {
+        const { input, data, sliderT, insetCurrent } = useMapStore.getState();
+        // Before InitialFrame has framed this data there is no whole fit to start from; its snap opens the map at
+        // the same framing (openingKind).
+        if (!data || !isFramed()) return;
+        const kind = openingKind(input, window.__rmrOpen);
+        const { width, height } = get().size;
+        const whole = overview();
+        const to = kind === 'overview' ? overviewView(data, sliderT, { width, height, insetLeft: insetCurrent, insetTop: input.insetTop, bottomCover: input.bottomCover }, whole.zoom) : null;
+        const target = to ? { x: to.center.x, y: to.center.y, zoom: to.zoom } : whole;
+        setFitKind(kind, target);
+        // Already there (About and back with the Overview untouched): no glide, no frames.
+        if (!tween.current && untouchedOverview(kind, target, current())) return;
+        start(target, animate ? DURATION.camera : 0);
+      },
+      homeBackdrop: (to) => {
+        // Called by MapStage on every route change (its logic lives here: MapStage.tsx sits just under the source size
+        // at which Turbopack splits its first-load chunk). Untouched: the camera, or the end of the tween running now
+        // (the glide to the opening view) with no grab cutting it short, is still the Overview the map opened at.
+        // Arriving at a page then keeps no Explore camera (true), so the Map link opens at the Overview again; on Home
+        // it also glides from where the camera is to the Whole map, as a fresh load of Home frames it (prototype
+        // app.js L114, final-home.jpg), also after About or 404. /map and albums never: an album's close restores
+        // the saved camera. A moved camera stays, as today.
+        if (to !== 'home' && to !== 'about' && to !== 'other') return false;
+        const t = tween.current;
+        if (t && useMapStore.getState().lastCameraGrab > t.startWall) return false;
+        if (!untouchedOverview(getFitKind(), getFitCamera(), t ? t.to : current())) return false;
+        if (to !== 'home') return true;
+        const whole = overview();
+        setFitKind('whole', whole);
+        start(whole, DURATION.camera);
+        return true;
+      },
       frameFocus: (animate = true) => {
         const t = focusTarget();
         if (t) start(t, animate ? DURATION.camera : 0);
       },
       getCamera: current,
+      getTarget: () => (tween.current ? tween.current.to : null),
       setCamera: (c, animate = false) => start(c, animate ? DURATION.camera : 0),
       screenPoint: (id) => {
         const p = positionsRef.current;
@@ -150,7 +191,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
     const ins = inset.current;
     if (ins.current < 0) {
       ins.current = ins.to = input.insetLeft;
-      applyFrustum(camera, width, height, ins.current);
+      applyFrustum(camera, width, height, ins.current, input.insetTop);
       useMapStore.getState().setInsetCurrent(ins.current);
     }
     if (input.insetLeft !== ins.to) {
@@ -162,7 +203,7 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
     if (ins.current !== ins.to) {
       const p = ins.duration ? Math.min(1, (performance.now() - ins.start) / ins.duration) : 1;
       ins.current = p >= 1 ? ins.to : ins.from + (ins.to - ins.from) * easeOutCubic(p);
-      applyFrustum(camera, width, height, ins.current);
+      applyFrustum(camera, width, height, ins.current, input.insetTop);
       useMapStore.getState().setInsetCurrent(ins.current);
       invalidate();
     }
@@ -177,10 +218,10 @@ export function CameraTween({ positionsRef, initialCamera, onApi }: { positionsR
     const p = Math.min(1, (performance.now() - t.start) / t.duration);
     const e = easeOutCubic(p);
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-    camera.position.x = t.from.x + (t.to.x - t.from.x) * e;
-    camera.position.y = t.from.y + (t.to.y - t.from.y) * e;
+    camera.position.x = tweenCoord(t.from.x, t.to.x, e);
+    camera.position.y = tweenCoord(t.from.y, t.to.y, e);
     // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
-    camera.zoom = Math.exp(Math.log(t.from.zoom) + (Math.log(t.to.zoom) - Math.log(t.from.zoom)) * e);
+    camera.zoom = tweenZoom(t.from.zoom, t.to.zoom, e);
     camera.updateProjectionMatrix();
     if (p < 1) invalidate();
     else {

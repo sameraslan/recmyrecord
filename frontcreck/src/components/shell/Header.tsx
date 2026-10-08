@@ -15,7 +15,7 @@ export function Header() {
       </Link>
       <HeaderSearch />
       <nav aria-label={COPY.nav.label}>
-        <Link className="navbtn" href="/map" aria-current={pathname === '/map' ? 'page' : undefined}>
+        <Link className="navbtn" href="/map" aria-current={pathname === '/map' || pathname.startsWith('/album/') ? 'page' : undefined}>
           {COPY.nav.map}
         </Link>
         <Link className="navbtn" href="/about" aria-current={pathname === '/about' ? 'page' : undefined}>

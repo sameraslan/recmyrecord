@@ -1,0 +1,372 @@
+{
+ "what": "strip",
+ "vp": "phone",
+ "n": 6,
+ "arms": [
+  "bitmap",
+  "canvas"
+ ],
+ "date": "2026-10-07T00:26:08.758Z",
+ "sessions": [
+  {
+   "round": 1,
+   "arm": "bitmap",
+   "vp": "phone",
+   "loadBefore": [
+    5.69,
+    5.66,
+    5.64
+   ],
+   "loadAfter": [
+    5.69,
+    5.66,
+    5.64
+   ],
+   "errors": [],
+   "copyMs": 36.2,
+   "longestGapMs": 17,
+   "framesDuring": 4,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 1,
+   "arm": "canvas",
+   "vp": "phone",
+   "loadBefore": [
+    5.69,
+    5.66,
+    5.64
+   ],
+   "loadAfter": [
+    6.28,
+    5.78,
+    5.68
+   ],
+   "errors": [],
+   "copyMs": 75.5,
+   "longestGapMs": 44.8,
+   "framesDuring": 4,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 2,
+   "arm": "canvas",
+   "vp": "phone",
+   "loadBefore": [
+    6.28,
+    5.78,
+    5.68
+   ],
+   "loadAfter": [
+    5.93,
+    5.72,
+    5.66
+   ],
+   "errors": [],
+   "copyMs": 75,
+   "longestGapMs": 45.1,
+   "framesDuring": 4,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 2,
+   "arm": "bitmap",
+   "vp": "phone",
+   "loadBefore": [
+    5.93,
+    5.72,
+    5.66
+   ],
+   "loadAfter": [
+    5.54,
+    5.64,
+    5.63
+   ],
+   "errors": [],
+   "copyMs": 46.8,
+   "longestGapMs": 17.2,
+   "framesDuring": 5,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 3,
+   "arm": "bitmap",
+   "vp": "phone",
+   "loadBefore": [
+    5.54,
+    5.64,
+    5.63
+   ],
+   "loadAfter": [
+    5.25,
+    5.58,
+    5.61
+   ],
+   "errors": [],
+   "copyMs": 38.4,
+   "longestGapMs": 20.5,
+   "framesDuring": 3,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 3,
+   "arm": "canvas",
+   "vp": "phone",
+   "loadBefore": [
+    5.25,
+    5.58,
+    5.61
+   ],
+   "loadAfter": [
+    5.25,
+    5.58,
+    5.61
+   ],
+   "errors": [],
+   "copyMs": 63.4,
+   "longestGapMs": 49.1,
+   "framesDuring": 3,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 4,
+   "arm": "canvas",
+   "vp": "phone",
+   "loadBefore": [
+    5.15,
+    5.55,
+    5.6
+   ],
+   "loadAfter": [
+    5.15,
+    5.55,
+    5.6
+   ],
+   "errors": [],
+   "copyMs": 58.2,
+   "longestGapMs": 45.5,
+   "framesDuring": 3,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 4,
+   "arm": "bitmap",
+   "vp": "phone",
+   "loadBefore": [
+    5.15,
+    5.55,
+    5.6
+   ],
+   "loadAfter": [
+    7.14,
+    5.96,
+    5.74
+   ],
+   "errors": [],
+   "copyMs": 35.7,
+   "longestGapMs": 16.7,
+   "framesDuring": 4,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 5,
+   "arm": "bitmap",
+   "vp": "phone",
+   "loadBefore": [
+    7.14,
+    5.96,
+    5.74
+   ],
+   "loadAfter": [
+    7.77,
+    6.11,
+    5.8
+   ],
+   "errors": [],
+   "copyMs": 29.6,
+   "longestGapMs": 16.9,
+   "framesDuring": 3,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 5,
+   "arm": "canvas",
+   "vp": "phone",
+   "loadBefore": [
+    7.77,
+    6.11,
+    5.8
+   ],
+   "loadAfter": [
+    7.47,
+    6.07,
+    5.79
+   ],
+   "errors": [],
+   "copyMs": 57.1,
+   "longestGapMs": 37.6,
+   "framesDuring": 4,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 6,
+   "arm": "canvas",
+   "vp": "phone",
+   "loadBefore": [
+    7.47,
+    6.07,
+    5.79
+   ],
+   "loadAfter": [
+    7.03,
+    6,
+    5.77
+   ],
+   "errors": [],
+   "copyMs": 70.8,
+   "longestGapMs": 50.6,
+   "framesDuring": 4,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  },
+  {
+   "round": 6,
+   "arm": "bitmap",
+   "vp": "phone",
+   "loadBefore": [
+    7.03,
+    6,
+    5.77
+   ],
+   "loadAfter": [
+    6.71,
+    5.95,
+    5.75
+   ],
+   "errors": [],
+   "copyMs": 31.6,
+   "longestGapMs": 16.8,
+   "framesDuring": 4,
+   "longestTaskMs": 0,
+   "copyPx": [
+    451,
+    512
+   ],
+   "copyBytes": 923648,
+   "sourcePx": [
+    1803,
+    2048
+   ],
+   "sourceDecodedBytes": 14770176
+  }
+ ]
+}

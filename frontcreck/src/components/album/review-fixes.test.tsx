@@ -22,7 +22,7 @@ const TITLE = 'アダンの風 [Windswept Adan]';
 const ARTIST = '青葉市子 [Ichiko Aoba]';
 const base = { id: 4103, slug: 'windswept-adan-ichiko-aoba', title: TITLE, artist: ARTIST, coverId: '', cluster: 1 };
 const seed = (extra: Partial<SeedData> = {}): SeedData => ({ ...base, spotifyId: '', tags: [], ambient: ['#222222', '#333333', '#d9a066'], ...extra });
-const row = (extra: Partial<Row> = {}): Row => ({ ...base, spotifyId: '', rank: 1, shared: [], ...extra });
+const row = (extra: Partial<Row> = {}): Row => ({ ...base, spotifyId: '', shared: [], ...extra });
 const S = 'A'.repeat(22);
 
 afterEach(() => {
@@ -215,6 +215,14 @@ describe('the cover tile', () => {
 });
 
 describe('the slider beside an album without audio', () => {
+  it('names its first stop "Sound": on the button and in what the slider reads out', () => {
+    render(<SimilaritySlider stop="sonic" onChange={() => {}} />);
+    expect([...document.querySelectorAll('.mode-stops button')].map((b) => b.textContent)).toEqual(['Sound', 'Balanced', 'Mood']);
+    expect(screen.getByRole('slider', { name: COPY.slider.label })).toHaveAttribute('aria-valuetext', 'Sound');
+    expect(screen.getByRole('button', { name: 'Sound' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByText('Sonic')).toBeNull();
+  });
+
   it('is as before for every other album', () => {
     render(<SimilaritySlider stop="balanced" onChange={() => {}} />);
     for (const s of ['sonic', 'balanced', 'mood'] as const) {

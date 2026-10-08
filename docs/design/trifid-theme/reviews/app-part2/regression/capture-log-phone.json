@@ -1,0 +1,673 @@
+{
+ "viewport": "phone",
+ "mode": "gpu",
+ "gasShader": "full",
+ "open": "whole",
+ "base": "http://127.0.0.1:3400",
+ "date": "2026-10-06T22:36:05.887Z",
+ "nodeArch": "arm64",
+ "browser": "154.0.8037.98",
+ "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+ "shots": [
+  {
+   "name": "home-top",
+   "file": "phone/home-top.jpg",
+   "url": "/",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23672395608117505,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "home-shelf",
+   "file": "phone/home-shelf.jpg",
+   "url": "/",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23672395608117505,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "map-overview",
+   "file": "phone/map-overview.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "map-whole",
+   "file": "phone/map-whole.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.27927199224339744
+   }
+  },
+  {
+   "name": "map-covers",
+   "file": "phone/map-covers.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.04520547762513161,
+    "y": -0.171548992395401,
+    "zoom": 6.133258990800111
+   }
+  },
+  {
+   "name": "map-covers-crop",
+   "file": "phone/map-covers-crop.png",
+   "clip": {
+    "x": 45,
+    "y": 302,
+    "width": 300,
+    "height": 300
+   }
+  },
+  {
+   "name": "map-covers-fade",
+   "file": "phone/map-covers-fade.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.04520547762513161,
+    "y": -0.171548992395401,
+    "zoom": 4.380899279142937
+   }
+  },
+  {
+   "name": "map-covers-fade-crop",
+   "file": "phone/map-covers-fade-crop.png",
+   "clip": {
+    "x": 45,
+    "y": 302,
+    "width": 300,
+    "height": 300
+   }
+  },
+  {
+   "name": "map-covers-in1",
+   "file": "phone/map-covers-in1.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.04520547762513161,
+    "y": -0.171548992395401,
+    "zoom": 9.813214385280178
+   }
+  },
+  {
+   "name": "map-covers-in2",
+   "file": "phone/map-covers-in2.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.04520547762513161,
+    "y": -0.171548992395401,
+    "zoom": 15.701143016448286
+   }
+  },
+  {
+   "name": "map-max-zoom",
+   "file": "phone/map-max-zoom.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.04520547762513161,
+    "y": -0.171548992395401,
+    "zoom": 26.009478672985786
+   }
+  },
+  {
+   "name": "map-opening",
+   "file": "phone/map-opening.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.033324554562568665,
+    "y": -0.2041944330939424,
+    "zoom": 0.5249793820248781
+   }
+  },
+  {
+   "name": "map-opening-fit",
+   "file": "phone/map-opening-fit.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "map-covers-dense",
+   "file": "phone/map-covers-dense.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.006954689044505358,
+    "y": -0.6041617093197369,
+    "zoom": 6.133258990800111
+   }
+  },
+  {
+   "name": "map-covers-dense-crop",
+   "file": "phone/map-covers-dense-crop.png",
+   "clip": {
+    "x": 45,
+    "y": 410,
+    "width": 300,
+    "height": 300
+   }
+  },
+  {
+   "name": "map-covers-dense-fade",
+   "file": "phone/map-covers-dense-fade.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.006954689044505358,
+    "y": -0.5708371538908183,
+    "zoom": 4.380899279142937
+   }
+  },
+  {
+   "name": "map-covers-dense-fade-crop",
+   "file": "phone/map-covers-dense-fade-crop.png",
+   "clip": {
+    "x": 45,
+    "y": 491,
+    "width": 300,
+    "height": 300
+   }
+  },
+  {
+   "name": "map-covers-dense-in2",
+   "file": "phone/map-covers-dense-in2.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.006954689044505358,
+    "y": -0.5708371538908183,
+    "zoom": 15.701143016448286
+   }
+  },
+  {
+   "name": "map-covers-dense-in2-crop",
+   "file": "phone/map-covers-dense-in2-crop.png",
+   "clip": {
+    "x": 45,
+    "y": 843,
+    "width": 300,
+    "height": 1
+   }
+  },
+  {
+   "name": "selected-cover-frame",
+   "file": "phone/selected-cover-frame.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.04520547762513161,
+    "y": -0.171548992395401,
+    "zoom": 6.133258990800111
+   }
+  },
+  {
+   "name": "selected-cover-frame-crop",
+   "file": "phone/selected-cover-frame-crop.png",
+   "clip": {
+    "x": 65,
+    "y": 322,
+    "width": 260,
+    "height": 260
+   }
+  },
+  {
+   "name": "selected-dot-ring",
+   "file": "phone/selected-dot-ring.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.04520547762513161,
+    "y": -0.171548992395401,
+    "zoom": 0.8145600194753185
+   }
+  },
+  {
+   "name": "selected-dot-ring-crop",
+   "file": "phone/selected-dot-ring-crop.png",
+   "clip": {
+    "x": 95,
+    "y": 352,
+    "width": 200,
+    "height": 200
+   }
+  },
+  {
+   "name": "map-card-crop",
+   "file": "phone/map-card-crop.png",
+   "clip": {
+    "x": 0,
+    "y": 534,
+    "width": 390,
+    "height": 162
+   }
+  },
+  {
+   "name": "album-list",
+   "file": "phone/album-list.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18807404852697468,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "album-list-scrolled",
+   "file": "phone/album-list-scrolled.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18807404852697468,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "album-list-strip",
+   "file": "phone/album-list-strip.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18807404852697468,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "album-list-strip-crop",
+   "file": "phone/album-list-strip-crop.png",
+   "clip": {
+    "x": 0,
+    "y": 506,
+    "width": 390,
+    "height": 236
+   }
+  },
+  {
+   "name": "album-mapmode",
+   "file": "phone/album-mapmode.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18773054818974202,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "album-mapmode-crop",
+   "file": "phone/album-mapmode-crop.png",
+   "clip": {
+    "x": 31,
+    "y": 306,
+    "width": 328,
+    "height": 203
+   }
+  },
+  {
+   "name": "slider-crop",
+   "file": "phone/slider-crop.png",
+   "clip": {
+    "x": 4,
+    "y": 672,
+    "width": 382,
+    "height": 169
+   }
+  },
+  {
+   "name": "album-open-dense",
+   "file": "phone/album-open-dense.jpg",
+   "url": "/album/milestones-miles-davis",
+   "camera": {
+    "x": 0.008778581472175122,
+    "y": -0.6597297745554486,
+    "zoom": 1.9462875197472358
+   }
+  },
+  {
+   "name": "album-open-dense-crop",
+   "file": "phone/album-open-dense-crop.png",
+   "clip": {
+    "x": 62,
+    "y": 277,
+    "width": 267,
+    "height": 261
+   }
+  },
+  {
+   "name": "album-long-title",
+   "file": "phone/album-long-title.jpg",
+   "url": "/album/the-rise-and-fall-of-ziggy-stardust-and-the-spiders-from-mars-david-bowie",
+   "camera": {
+    "x": 0.11754768604096309,
+    "y": 0.06706708487855656,
+    "zoom": 1.9462875197472358
+   }
+  },
+  {
+   "name": "search-suggestions",
+   "file": "phone/search-suggestions.jpg",
+   "url": "/",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23672395608117505,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "search-suggestions-crop",
+   "file": "phone/search-suggestions-crop.png",
+   "clip": {
+    "x": 0,
+    "y": 255,
+    "width": 390,
+    "height": 86
+   }
+  },
+  {
+   "name": "search-none",
+   "file": "phone/search-none.jpg",
+   "url": "/",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23672395608117505,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "search-typo",
+   "file": "phone/search-typo.jpg",
+   "url": "/",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23672395608117505,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "search-sheet-empty",
+   "file": "phone/search-sheet-empty.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "search-sheet",
+   "file": "phone/search-sheet.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "search-sheet-none",
+   "file": "phone/search-sheet-none.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "slider-balanced",
+   "file": "phone/slider-balanced.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18773054818974202,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "slider-sonic",
+   "file": "phone/slider-sonic.jpg",
+   "url": "/album/in-rainbows-radiohead?by=sonic",
+   "camera": {
+    "x": -0.08420662113096453,
+    "y": -0.23644386142659335,
+    "zoom": 1.687379474191285
+   }
+  },
+  {
+   "name": "slider-sonic-crop",
+   "file": "phone/slider-sonic-crop.png",
+   "clip": {
+    "x": 4,
+    "y": 672,
+    "width": 382,
+    "height": 169
+   }
+  },
+  {
+   "name": "slider-mood",
+   "file": "phone/slider-mood.jpg",
+   "url": "/album/in-rainbows-radiohead?by=mood",
+   "camera": {
+    "x": 0.08052286203154116,
+    "y": -0.19751478974697761,
+    "zoom": 1.9462875197472358
+   }
+  },
+  {
+   "name": "slider-mid",
+   "file": "phone/slider-mid.jpg",
+   "url": "/album/in-rainbows-radiohead?by=sonic",
+   "camera": {
+    "x": -0.07160351784138982,
+    "y": -0.23346548073889672,
+    "zoom": 1.7059087994110416
+   }
+  },
+  {
+   "name": "map-overview-sonic",
+   "file": "phone/map-overview-sonic.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "map-overview-mood",
+   "file": "phone/map-overview-mood.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "trail",
+   "file": "phone/trail.jpg",
+   "url": "/album/souvlaki-slowdive",
+   "camera": {
+    "x": -0.03428101207583366,
+    "y": -0.2106777545605428,
+    "zoom": 1.9462875197472358
+   }
+  },
+  {
+   "name": "trail-crop",
+   "file": "phone/trail-crop.png",
+   "clip": {
+    "x": 10,
+    "y": 62,
+    "width": 370,
+    "height": 64
+   }
+  },
+  {
+   "name": "trail-long",
+   "file": "phone/trail-long.jpg",
+   "url": "/album/the-head-on-the-door-the-cure",
+   "camera": {
+    "x": 0.09692487835093752,
+    "y": -0.038432417562403814,
+    "zoom": 1.9462875197472358
+   }
+  },
+  {
+   "name": "trail-long-crop",
+   "file": "phone/trail-long-crop.png",
+   "clip": {
+    "x": 10,
+    "y": 62,
+    "width": 370,
+    "height": 64
+   }
+  },
+  {
+   "name": "toast-link-copied",
+   "file": "phone/toast-link-copied.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18807404852697468,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "toast-link-copied-crop",
+   "file": "phone/toast-link-copied-crop.png",
+   "clip": {
+    "x": 116,
+    "y": 750,
+    "width": 158,
+    "height": 90
+   }
+  },
+  {
+   "name": "toast-copy-failed",
+   "file": "phone/toast-copy-failed.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18807404852697468,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "toast-copy-failed-crop",
+   "file": "phone/toast-copy-failed-crop.png",
+   "clip": {
+    "x": 74,
+    "y": 685,
+    "width": 243,
+    "height": 155
+   }
+  },
+  {
+   "name": "toast-surprise-error",
+   "file": "phone/toast-surprise-error.jpg",
+   "url": "/",
+   "camera": null
+  },
+  {
+   "name": "about",
+   "file": "phone/about.jpg",
+   "url": "/about",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23672395608117505,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "about-bottom",
+   "file": "phone/about-bottom.jpg",
+   "url": "/about",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23672395608117505,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "notfound",
+   "file": "phone/notfound.jpg",
+   "url": "/this-page-is-not-here",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23672395608117505,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "error-map",
+   "file": "phone/error-map.jpg",
+   "url": "/map",
+   "camera": null
+  },
+  {
+   "name": "explore-here",
+   "file": "phone/explore-here.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18773054818974202,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "rm-map-overview",
+   "file": "phone/rm-map-overview.jpg",
+   "url": "/map",
+   "camera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   }
+  },
+  {
+   "name": "rm-album-list",
+   "file": "phone/rm-album-list.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18807404852697468,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "rm-album-open",
+   "file": "phone/rm-album-open.jpg",
+   "url": "/album/in-rainbows-radiohead",
+   "camera": {
+    "x": 0.0854916205445195,
+    "y": -0.18773054818974202,
+    "zoom": 0.9485562270803871
+   }
+  },
+  {
+   "name": "rm-slider-sonic-60ms",
+   "file": "phone/rm-slider-sonic-60ms.jpg",
+   "url": "/album/in-rainbows-radiohead?by=sonic",
+   "camera": {
+    "x": -0.08420662113096451,
+    "y": -0.23644386142659335,
+    "zoom": 1.687379474191285
+   }
+  }
+ ],
+ "notes": {},
+ "failed": [
+  {
+   "state": "map-dense",
+   "error": "page.waitForFunction: Timeout 5000ms exceeded."
+  }
+ ],
+ "browserArch": "arm64"
+}

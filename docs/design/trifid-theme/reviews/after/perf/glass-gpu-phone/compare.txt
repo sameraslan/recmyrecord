@@ -1,0 +1,40 @@
+Baseline: /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/glass-gpu-phone/off (perf-run1.json, perf-run2.json, perf-run3.json)
+Current: /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/glass-gpu-phone/on (perf-run1.json, perf-run2.json, perf-run3.json)
+First-load JS of / (KB, per full run): baseline 190.8, 190.8, 190.8; now 190.8, 190.8, 190.8 (budget 200)
+three.js chunk in the first load (KB, per full run): baseline 0, 0, 0; now 0, 0, 0 (must be 0)
+Server HTML of / (KB, per full run): baseline 28.2, 28.2, 28.2; now 28.2, 28.2, 28.2 (budget 150)
+Server HTML of /album/in-rainbows-radiohead (KB, per full run): baseline 33.9, 33.9, 33.9; now 33.9, 33.9, 33.9 (budget 150)
+How the baseline runs were made: perf-run1.json: open=app glass=off; perf-run2.json: open=app glass=off; perf-run3.json: open=app glass=off
+How the current runs were made: perf-run1.json: open=app glass=on; perf-run2.json: open=app glass=on; perf-run3.json: open=app glass=on
+Only the column gpu phone is compared.
+
+| Where | Measure | Budget | Baseline median (min to max), runs | Now, median (min to max), runs | Difference | |
+|---|---|---|---|---|---|---|
+| gpu phone | searchUsableMs | 1000 | 104 (73 to 118), n=3 | 110 (91 to 140), n=3 | +6 (+6 %) | SLOWER |
+| gpu phone | startupLongTaskMs | 250 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu phone | mapFirstFrameMs | none | 658 (589 to 720), n=3 | 683 (614 to 718), n=3 | +25 (+4 %) | SLOWER |
+| gpu phone | typeToSuggestionsMs | 100 | 5 (4 to 6), n=3 | 5 (5 to 8), n=3 | 0 | |
+| gpu phone | selectToAlbumMs | 200 | 24 (24 to 34), n=3 | 32 (24 to 36), n=3 | +8 (+33 %) | SLOWER |
+| gpu phone | transitionGapMs | 50 | 18 (17 to 18), n=3 | 17 (17 to 18), n=3 | -1 (-6 %) | |
+| gpu phone | sliderToListMs | 150 | 9 (9 to 14), n=3 | 10 (10 to 13), n=3 | +1 (+11 %) | SLOWER |
+| gpu phone | morphGapMs | 50 | 22 (18 to 32), n=3 | 20 (18 to 21), n=3 | -2 (-9 %) | |
+| gpu phone | dragGapMs | 50 | 18 (18 to 19), n=3 | 18 (17 to 27), n=3 | 0 | |
+| gpu phone | zoomGapMs | 50 | 37 (36 to 53), n=3 | 40 (37 to 41), n=3 | +3 (+8 %) | SLOWER |
+| gpu phone | openingDragGapMs | none (yardstick 50) | 18 (17 to 19), n=3 | 18 (18 to 18), n=3 | 0 | |
+| gpu phone | openingZoomGapMs | none (yardstick 50) | 41 (30 to 43), n=3 | 40 (36 to 44), n=3 | -1 (-2 %) | |
+| gpu phone | idleLongTasks | 0 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu phone | idleFrames | 1 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu phone | deepDragGapMs | none (yardstick 50) | 18 (18 to 18), n=3 | 18 (17 to 18), n=3 | 0 | |
+| gpu phone | deepMorphGapMs | none (yardstick 50) | 18 (17 to 18), n=3 | 18 (17 to 18), n=3 | 0 | |
+| gpu phone | gasShownMs | none | 706 (696 to 805), n=3 | 751 (671 to 765), n=3 | +45 (+6 %) | SLOWER |
+
+Single runs over budget or with a failed check (each is named and explained in the write-up):
+none
+
+Findings (6):
+gpu phone searchUsableMs: median 110 is above the baseline median (104), inside the baseline spread (73 to 118)
+gpu phone mapFirstFrameMs: median 683 is above the baseline median (658), inside the baseline spread (589 to 720)
+gpu phone selectToAlbumMs: median 32 is above the baseline median (24), inside the baseline spread (24 to 34)
+gpu phone sliderToListMs: median 10 is above the baseline median (9), inside the baseline spread (9 to 14)
+gpu phone zoomGapMs: median 40 is above the baseline median (37), inside the baseline spread (36 to 53)
+gpu phone gasShownMs: median 751 is above the baseline median (706), inside the baseline spread (696 to 805)

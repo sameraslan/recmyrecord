@@ -1,0 +1,40 @@
+before: ## 20:38:15 4.38 5.99 6.01 | Now drawing from 'Battery Power'
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --mode gpu --viewport phone --glass on
+
+First-load JS of / (gzip): 190.8 KB with nomodule scripts (budget 200 KB), 152.2 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.2 KB, /album/in-rainbows-radiohead 33.9 KB (budget 150 KB each)
+
+| Measure | gpu phone |
+|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Gas shader (reported only) | full |
+| Search usable | 91 ms |
+| Startup worst long task | 0 ms |
+| WebGL warm-up end (reported only) | 146 ms (done) |
+| Map first frame (reported only) | 614 ms |
+| Nebula visible (reported only) | 671 ms |
+| Typing to suggestions | 5 ms |
+| Select to album | 24 ms |
+| Transition worst frame gap | 17 ms |
+| Slider to list | 13 ms |
+| Morph worst frame gap | 21 ms |
+| Drag worst frame gap | 17 ms |
+| Zoom worst frame gap | 40 ms |
+| Drag worst frame gap at the opening view (reported only) | 18 ms |
+| Zoom worst frame gap at the opening view (reported only) | 40 ms |
+| Deep zoom drag worst frame gap (reported only) | 17 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 17 ms |
+| Long tasks while idle (3 s) | 0 |
+| Frames rendered while idle (3 s) | 0 |
+
+Run with --glass on: an A/B run, not the site as a visitor gets it. Read back in the page:
+  gpu phone, album: {"at":"album","path":"/album/loveless-my-bloody-valentine","glassBlur":"blur(22px) saturate(1.2) brightness(0.58)","glassInline":"blur(22px) saturate(1.2) brightness(0.58)","header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":"blur(22px) saturate(1.2) brightness(0.58)","headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":null,"namesOn":true,"forcedMs":15,"firstPaintMs":84,"twinkleOn":true,"twinkleSpawned":1,"twinkleNodes":0}
+  gpu phone, map: {"at":"map","path":"/map","glassBlur":"blur(22px) saturate(1.2) brightness(0.58)","glassInline":"blur(22px) saturate(1.2) brightness(0.58)","header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":null,"headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":null,"namesOn":true,"forcedMs":13,"firstPaintMs":36,"twinkleOn":true,"twinkleSpawned":3,"twinkleNodes":0}
+  gpu phone, opening view: {"at":"opening view","path":"/map","glassBlur":"blur(22px) saturate(1.2) brightness(0.58)","glassInline":"blur(22px) saturate(1.2) brightness(0.58)","header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":null,"headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":null,"namesOn":true,"forcedMs":23,"firstPaintMs":88,"twinkleOn":true,"twinkleSpawned":1,"twinkleNodes":0}
+
+Glints made in the 3 s idle window, as a visitor gets the site: gpu phone 1
+
+All budgets met.
+after: ## 20:38:56 9.21 7.00 6.38 | Now drawing from 'Battery Power'

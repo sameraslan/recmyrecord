@@ -1,0 +1,1328 @@
+{
+ "s1": {
+  "lead_share": {
+   "fierce": 0.245,
+   "warm": 0.254,
+   "quiet": 0.221,
+   "dark": 0.154,
+   "urban": 0.094
+  },
+  "neutral_led": 0.032,
+  "mean_neutral": 0.12,
+  "knn15_same_lead": 0.711,
+  "knn15_same_lead_chance": 0.221,
+  "cos_neighbours": 0.847,
+  "cos_random_pairs": 0.429,
+  "gas_purity": 0.572,
+  "regions": {
+   "live": {
+    "name": "The Live Belt",
+    "lead": "fierce",
+    "share": 0.63,
+    "second": "urban",
+    "second_share": 0.1,
+    "neutral": 0.15,
+    "mix": {
+     "fierce": 0.63,
+     "warm": 0.09,
+     "quiet": 0.09,
+     "dark": 0.08,
+     "urban": 0.1
+    }
+   },
+   "urban": {
+    "name": "Urban Cluster",
+    "lead": "urban",
+    "share": 0.75,
+    "second": "fierce",
+    "second_share": 0.1,
+    "neutral": 0.01,
+    "mix": {
+     "fierce": 0.1,
+     "warm": 0.09,
+     "quiet": 0.03,
+     "dark": 0.03,
+     "urban": 0.75
+    }
+   },
+   "improv": {
+    "name": "Improv Arm",
+    "lead": "quiet",
+    "share": 0.57,
+    "second": "warm",
+    "second_share": 0.19,
+    "neutral": 0.16,
+    "mix": {
+     "fierce": 0.06,
+     "warm": 0.19,
+     "quiet": 0.57,
+     "dark": 0.08,
+     "urban": 0.11
+    }
+   },
+   "quiet": {
+    "name": "The Quiet Deep",
+    "lead": "quiet",
+    "share": 0.59,
+    "second": "dark",
+    "second_share": 0.37,
+    "neutral": 0.0,
+    "mix": {
+     "fierce": 0.01,
+     "warm": 0.03,
+     "quiet": 0.59,
+     "dark": 0.37,
+     "urban": 0.01
+    }
+   },
+   "pastoral": {
+    "name": "Pastoral Nebula",
+    "lead": "quiet",
+    "share": 0.59,
+    "second": "warm",
+    "second_share": 0.33,
+    "neutral": 0.04,
+    "mix": {
+     "fierce": 0.01,
+     "warm": 0.33,
+     "quiet": 0.59,
+     "dark": 0.03,
+     "urban": 0.04
+    }
+   },
+   "lonely": {
+    "name": "Lonely Drift",
+    "lead": "quiet",
+    "share": 0.54,
+    "second": "warm",
+    "second_share": 0.21,
+    "neutral": 0.07,
+    "mix": {
+     "fierce": 0.01,
+     "warm": 0.21,
+     "quiet": 0.54,
+     "dark": 0.18,
+     "urban": 0.07
+    }
+   },
+   "bittersweet": {
+    "name": "The Bittersweet Reach",
+    "lead": "warm",
+    "share": 0.6,
+    "second": "quiet",
+    "second_share": 0.18,
+    "neutral": 0.21,
+    "mix": {
+     "fierce": 0.08,
+     "warm": 0.6,
+     "quiet": 0.18,
+     "dark": 0.05,
+     "urban": 0.09
+    }
+   },
+   "warm": {
+    "name": "Warm Halo",
+    "lead": "warm",
+    "share": 0.56,
+    "second": "urban",
+    "second_share": 0.29,
+    "neutral": 0.07,
+    "mix": {
+     "fierce": 0.07,
+     "warm": 0.56,
+     "quiet": 0.06,
+     "dark": 0.02,
+     "urban": 0.29
+    }
+   },
+   "playful": {
+    "name": "Playful Way",
+    "lead": "warm",
+    "share": 0.49,
+    "second": "fierce",
+    "second_share": 0.39,
+    "neutral": 0.11,
+    "mix": {
+     "fierce": 0.39,
+     "warm": 0.49,
+     "quiet": 0.0,
+     "dark": 0.01,
+     "urban": 0.1
+    }
+   },
+   "eclectic": {
+    "name": "Eclectic Cloud",
+    "lead": "fierce",
+    "share": 0.37,
+    "second": "warm",
+    "second_share": 0.36,
+    "neutral": 0.25,
+    "mix": {
+     "fierce": 0.37,
+     "warm": 0.36,
+     "quiet": 0.04,
+     "dark": 0.11,
+     "urban": 0.12
+    }
+   },
+   "progressive": {
+    "name": "Progressive Spiral",
+    "lead": "warm",
+    "share": 0.27,
+    "second": "dark",
+    "second_share": 0.24,
+    "neutral": 0.31,
+    "mix": {
+     "fierce": 0.22,
+     "warm": 0.27,
+     "quiet": 0.23,
+     "dark": 0.24,
+     "urban": 0.03
+    }
+   },
+   "ethereal": {
+    "name": "Ethereal Veil",
+    "lead": "dark",
+    "share": 0.36,
+    "second": "warm",
+    "second_share": 0.35,
+    "neutral": 0.18,
+    "mix": {
+     "fierce": 0.05,
+     "warm": 0.35,
+     "quiet": 0.17,
+     "dark": 0.36,
+     "urban": 0.06
+    }
+   },
+   "aggressive": {
+    "name": "Aggressive Rift",
+    "lead": "fierce",
+    "share": 0.53,
+    "second": "dark",
+    "second_share": 0.41,
+    "neutral": 0.01,
+    "mix": {
+     "fierce": 0.53,
+     "warm": 0.0,
+     "quiet": 0.01,
+     "dark": 0.41,
+     "urban": 0.05
+    }
+   },
+   "raw": {
+    "name": "Raw Flare",
+    "lead": "fierce",
+    "share": 0.69,
+    "second": "dark",
+    "second_share": 0.13,
+    "neutral": 0.08,
+    "mix": {
+     "fierce": 0.69,
+     "warm": 0.07,
+     "quiet": 0.02,
+     "dark": 0.13,
+     "urban": 0.09
+    }
+   },
+   "epic": {
+    "name": "Epic Expanse",
+    "lead": "fierce",
+    "share": 0.55,
+    "second": "dark",
+    "second_share": 0.31,
+    "neutral": 0.11,
+    "mix": {
+     "fierce": 0.55,
+     "warm": 0.1,
+     "quiet": 0.02,
+     "dark": 0.31,
+     "urban": 0.02
+    }
+   },
+   "sombre": {
+    "name": "Sombre Void",
+    "lead": "dark",
+    "share": 0.46,
+    "second": "warm",
+    "second_share": 0.21,
+    "neutral": 0.1,
+    "mix": {
+     "fierce": 0.2,
+     "warm": 0.21,
+     "quiet": 0.07,
+     "dark": 0.46,
+     "urban": 0.06
+    }
+   },
+   "hypnotic": {
+    "name": "Hypnotic Orbit",
+    "lead": "dark",
+    "share": 0.5,
+    "second": "quiet",
+    "second_share": 0.18,
+    "neutral": 0.1,
+    "mix": {
+     "fierce": 0.08,
+     "warm": 0.16,
+     "quiet": 0.18,
+     "dark": 0.5,
+     "urban": 0.09
+    }
+   }
+  },
+  "contradictions": [],
+  "palettes": {
+   "current": {
+    "rgb_dist_neighbours": 25.4,
+    "rgb_dist_random": 59.8,
+    "ratio": 0.424,
+    "blend_passes_through": [
+     [
+      0,
+      3,
+      4
+     ],
+     [
+      2,
+      4,
+      3
+     ]
+    ]
+   },
+   "emission": {
+    "rgb_dist_neighbours": 42.3,
+    "rgb_dist_random": 101.5,
+    "ratio": 0.417,
+    "blend_passes_through": []
+   },
+   "dusty": {
+    "rgb_dist_neighbours": 21.6,
+    "rgb_dist_random": 50.4,
+    "ratio": 0.429,
+    "blend_passes_through": [
+     [
+      0,
+      2,
+      4
+     ],
+     [
+      0,
+      3,
+      4
+     ],
+     [
+      1,
+      3,
+      4
+     ],
+     [
+      1,
+      4,
+      0
+     ],
+     [
+      2,
+      4,
+      3
+     ]
+    ]
+   }
+  }
+ },
+ "s2": {
+  "lead_share": {
+   "bright": 0.168,
+   "exuberant": 0.108,
+   "fierce": 0.166,
+   "tense": 0.121,
+   "sombre": 0.151,
+   "serene": 0.167
+  },
+  "neutral_led": 0.12,
+  "mean_neutral": 0.155,
+  "knn15_same_lead": 0.52,
+  "knn15_same_lead_chance": 0.171,
+  "cos_neighbours": 0.636,
+  "cos_random_pairs": 0.24,
+  "gas_purity": 0.666,
+  "regions": {
+   "live": {
+    "name": "The Live Belt",
+    "lead": "exuberant",
+    "share": 0.39,
+    "second": "fierce",
+    "second_share": 0.21,
+    "neutral": 0.2,
+    "mix": {
+     "bright": 0.19,
+     "exuberant": 0.39,
+     "fierce": 0.21,
+     "tense": 0.09,
+     "sombre": 0.04,
+     "serene": 0.08
+    }
+   },
+   "urban": {
+    "name": "Urban Cluster",
+    "lead": "bright",
+    "share": 0.36,
+    "second": "fierce",
+    "second_share": 0.21,
+    "neutral": 0.22,
+    "mix": {
+     "bright": 0.36,
+     "exuberant": 0.21,
+     "fierce": 0.21,
+     "tense": 0.1,
+     "sombre": 0.04,
+     "serene": 0.07
+    }
+   },
+   "improv": {
+    "name": "Improv Arm",
+    "lead": "serene",
+    "share": 0.43,
+    "second": "bright",
+    "second_share": 0.25,
+    "neutral": 0.24,
+    "mix": {
+     "bright": 0.25,
+     "exuberant": 0.04,
+     "fierce": 0.06,
+     "tense": 0.04,
+     "sombre": 0.19,
+     "serene": 0.43
+    }
+   },
+   "quiet": {
+    "name": "The Quiet Deep",
+    "lead": "sombre",
+    "share": 0.6,
+    "second": "serene",
+    "second_share": 0.24,
+    "neutral": 0.03,
+    "mix": {
+     "bright": 0.01,
+     "exuberant": 0.0,
+     "fierce": 0.0,
+     "tense": 0.15,
+     "sombre": 0.6,
+     "serene": 0.24
+    }
+   },
+   "pastoral": {
+    "name": "Pastoral Nebula",
+    "lead": "serene",
+    "share": 0.52,
+    "second": "sombre",
+    "second_share": 0.46,
+    "neutral": 0.06,
+    "mix": {
+     "bright": 0.01,
+     "exuberant": 0.0,
+     "fierce": 0.0,
+     "tense": 0.01,
+     "sombre": 0.46,
+     "serene": 0.52
+    }
+   },
+   "lonely": {
+    "name": "Lonely Drift",
+    "lead": "sombre",
+    "share": 0.6,
+    "second": "serene",
+    "second_share": 0.2,
+    "neutral": 0.05,
+    "mix": {
+     "bright": 0.0,
+     "exuberant": 0.0,
+     "fierce": 0.01,
+     "tense": 0.19,
+     "sombre": 0.6,
+     "serene": 0.2
+    }
+   },
+   "bittersweet": {
+    "name": "The Bittersweet Reach",
+    "lead": "serene",
+    "share": 0.54,
+    "second": "bright",
+    "second_share": 0.28,
+    "neutral": 0.26,
+    "mix": {
+     "bright": 0.28,
+     "exuberant": 0.01,
+     "fierce": 0.01,
+     "tense": 0.06,
+     "sombre": 0.11,
+     "serene": 0.54
+    }
+   },
+   "warm": {
+    "name": "Warm Halo",
+    "lead": "bright",
+    "share": 0.71,
+    "second": "serene",
+    "second_share": 0.23,
+    "neutral": 0.07,
+    "mix": {
+     "bright": 0.71,
+     "exuberant": 0.05,
+     "fierce": 0.0,
+     "tense": 0.0,
+     "sombre": 0.01,
+     "serene": 0.23
+    }
+   },
+   "playful": {
+    "name": "Playful Way",
+    "lead": "exuberant",
+    "share": 0.48,
+    "second": "bright",
+    "second_share": 0.45,
+    "neutral": 0.11,
+    "mix": {
+     "bright": 0.45,
+     "exuberant": 0.48,
+     "fierce": 0.05,
+     "tense": 0.01,
+     "sombre": 0.0,
+     "serene": 0.01
+    }
+   },
+   "eclectic": {
+    "name": "Eclectic Cloud",
+    "lead": "exuberant",
+    "share": 0.34,
+    "second": "bright",
+    "second_share": 0.3,
+    "neutral": 0.34,
+    "mix": {
+     "bright": 0.3,
+     "exuberant": 0.34,
+     "fierce": 0.13,
+     "tense": 0.17,
+     "sombre": 0.02,
+     "serene": 0.03
+    }
+   },
+   "progressive": {
+    "name": "Progressive Spiral",
+    "lead": "tense",
+    "share": 0.27,
+    "second": "bright",
+    "second_share": 0.21,
+    "neutral": 0.33,
+    "mix": {
+     "bright": 0.21,
+     "exuberant": 0.09,
+     "fierce": 0.08,
+     "tense": 0.27,
+     "sombre": 0.2,
+     "serene": 0.16
+    }
+   },
+   "ethereal": {
+    "name": "Ethereal Veil",
+    "lead": "sombre",
+    "share": 0.45,
+    "second": "serene",
+    "second_share": 0.33,
+    "neutral": 0.2,
+    "mix": {
+     "bright": 0.04,
+     "exuberant": 0.01,
+     "fierce": 0.01,
+     "tense": 0.16,
+     "sombre": 0.45,
+     "serene": 0.33
+    }
+   },
+   "aggressive": {
+    "name": "Aggressive Rift",
+    "lead": "fierce",
+    "share": 0.89,
+    "second": "tense",
+    "second_share": 0.08,
+    "neutral": 0.0,
+    "mix": {
+     "bright": 0.0,
+     "exuberant": 0.03,
+     "fierce": 0.89,
+     "tense": 0.08,
+     "sombre": 0.0,
+     "serene": 0.0
+    }
+   },
+   "raw": {
+    "name": "Raw Flare",
+    "lead": "fierce",
+    "share": 0.75,
+    "second": "exuberant",
+    "second_share": 0.22,
+    "neutral": 0.01,
+    "mix": {
+     "bright": 0.0,
+     "exuberant": 0.22,
+     "fierce": 0.75,
+     "tense": 0.03,
+     "sombre": 0.0,
+     "serene": 0.0
+    }
+   },
+   "epic": {
+    "name": "Epic Expanse",
+    "lead": "fierce",
+    "share": 0.42,
+    "second": "exuberant",
+    "second_share": 0.3,
+    "neutral": 0.09,
+    "mix": {
+     "bright": 0.02,
+     "exuberant": 0.3,
+     "fierce": 0.42,
+     "tense": 0.25,
+     "sombre": 0.01,
+     "serene": 0.0
+    }
+   },
+   "sombre": {
+    "name": "Sombre Void",
+    "lead": "tense",
+    "share": 0.78,
+    "second": "sombre",
+    "second_share": 0.15,
+    "neutral": 0.13,
+    "mix": {
+     "bright": 0.0,
+     "exuberant": 0.0,
+     "fierce": 0.06,
+     "tense": 0.78,
+     "sombre": 0.15,
+     "serene": 0.01
+    }
+   },
+   "hypnotic": {
+    "name": "Hypnotic Orbit",
+    "lead": "sombre",
+    "share": 0.24,
+    "second": "serene",
+    "second_share": 0.24,
+    "neutral": 0.2,
+    "mix": {
+     "bright": 0.19,
+     "exuberant": 0.05,
+     "fierce": 0.05,
+     "tense": 0.23,
+     "sombre": 0.24,
+     "serene": 0.24
+    }
+   }
+  },
+  "contradictions": [],
+  "palettes": {
+   "emission": {
+    "rgb_dist_neighbours": 71.3,
+    "rgb_dist_random": 151.2,
+    "ratio": 0.472,
+    "blend_passes_through": [
+     [
+      0,
+      2,
+      1
+     ]
+    ]
+   },
+   "dusty": {
+    "rgb_dist_neighbours": 35.3,
+    "rgb_dist_random": 74.6,
+    "ratio": 0.473,
+    "blend_passes_through": [
+     [
+      0,
+      2,
+      1
+     ],
+     [
+      0,
+      4,
+      3
+     ],
+     [
+      1,
+      3,
+      2
+     ],
+     [
+      1,
+      4,
+      3
+     ],
+     [
+      2,
+      4,
+      3
+     ],
+     [
+      2,
+      5,
+      3
+     ],
+     [
+      3,
+      5,
+      4
+     ]
+    ]
+   }
+  }
+ },
+ "s3": {
+  "lead_share": {
+   "fierce": 0.158,
+   "joyful": 0.168,
+   "tender": 0.168,
+   "dark": 0.148,
+   "dreamy": 0.135,
+   "nocturnal": 0.085
+  },
+  "neutral_led": 0.139,
+  "mean_neutral": 0.155,
+  "knn15_same_lead": 0.434,
+  "knn15_same_lead_chance": 0.178,
+  "cos_neighbours": 0.563,
+  "cos_random_pairs": 0.279,
+  "gas_purity": 0.559,
+  "regions": {
+   "live": {
+    "name": "The Live Belt",
+    "lead": "joyful",
+    "share": 0.27,
+    "second": "fierce",
+    "second_share": 0.26,
+    "neutral": 0.47,
+    "mix": {
+     "fierce": 0.26,
+     "joyful": 0.27,
+     "tender": 0.16,
+     "dark": 0.07,
+     "dreamy": 0.14,
+     "nocturnal": 0.09
+    }
+   },
+   "urban": {
+    "name": "Urban Cluster",
+    "lead": "nocturnal",
+    "share": 0.48,
+    "second": "joyful",
+    "second_share": 0.17,
+    "neutral": 0.07,
+    "mix": {
+     "fierce": 0.12,
+     "joyful": 0.17,
+     "tender": 0.05,
+     "dark": 0.11,
+     "dreamy": 0.07,
+     "nocturnal": 0.48
+    }
+   },
+   "improv": {
+    "name": "Improv Arm",
+    "lead": "joyful",
+    "share": 0.32,
+    "second": "dreamy",
+    "second_share": 0.19,
+    "neutral": 0.35,
+    "mix": {
+     "fierce": 0.15,
+     "joyful": 0.32,
+     "tender": 0.09,
+     "dark": 0.08,
+     "dreamy": 0.19,
+     "nocturnal": 0.17
+    }
+   },
+   "quiet": {
+    "name": "The Quiet Deep",
+    "lead": "dreamy",
+    "share": 0.42,
+    "second": "dark",
+    "second_share": 0.23,
+    "neutral": 0.18,
+    "mix": {
+     "fierce": 0.01,
+     "joyful": 0.11,
+     "tender": 0.17,
+     "dark": 0.23,
+     "dreamy": 0.42,
+     "nocturnal": 0.06
+    }
+   },
+   "pastoral": {
+    "name": "Pastoral Nebula",
+    "lead": "tender",
+    "share": 0.62,
+    "second": "dreamy",
+    "second_share": 0.16,
+    "neutral": 0.11,
+    "mix": {
+     "fierce": 0.01,
+     "joyful": 0.09,
+     "tender": 0.62,
+     "dark": 0.07,
+     "dreamy": 0.16,
+     "nocturnal": 0.04
+    }
+   },
+   "lonely": {
+    "name": "Lonely Drift",
+    "lead": "dark",
+    "share": 0.39,
+    "second": "tender",
+    "second_share": 0.33,
+    "neutral": 0.11,
+    "mix": {
+     "fierce": 0.01,
+     "joyful": 0.03,
+     "tender": 0.33,
+     "dark": 0.39,
+     "dreamy": 0.16,
+     "nocturnal": 0.08
+    }
+   },
+   "bittersweet": {
+    "name": "The Bittersweet Reach",
+    "lead": "tender",
+    "share": 0.53,
+    "second": "joyful",
+    "second_share": 0.23,
+    "neutral": 0.16,
+    "mix": {
+     "fierce": 0.02,
+     "joyful": 0.23,
+     "tender": 0.53,
+     "dark": 0.05,
+     "dreamy": 0.12,
+     "nocturnal": 0.05
+    }
+   },
+   "warm": {
+    "name": "Warm Halo",
+    "lead": "joyful",
+    "share": 0.5,
+    "second": "tender",
+    "second_share": 0.17,
+    "neutral": 0.13,
+    "mix": {
+     "fierce": 0.05,
+     "joyful": 0.5,
+     "tender": 0.17,
+     "dark": 0.01,
+     "dreamy": 0.16,
+     "nocturnal": 0.1
+    }
+   },
+   "playful": {
+    "name": "Playful Way",
+    "lead": "joyful",
+    "share": 0.41,
+    "second": "fierce",
+    "second_share": 0.19,
+    "neutral": 0.09,
+    "mix": {
+     "fierce": 0.19,
+     "joyful": 0.41,
+     "tender": 0.17,
+     "dark": 0.07,
+     "dreamy": 0.02,
+     "nocturnal": 0.14
+    }
+   },
+   "eclectic": {
+    "name": "Eclectic Cloud",
+    "lead": "dreamy",
+    "share": 0.22,
+    "second": "joyful",
+    "second_share": 0.22,
+    "neutral": 0.18,
+    "mix": {
+     "fierce": 0.18,
+     "joyful": 0.22,
+     "tender": 0.17,
+     "dark": 0.13,
+     "dreamy": 0.22,
+     "nocturnal": 0.07
+    }
+   },
+   "progressive": {
+    "name": "Progressive Spiral",
+    "lead": "joyful",
+    "share": 0.26,
+    "second": "dreamy",
+    "second_share": 0.25,
+    "neutral": 0.27,
+    "mix": {
+     "fierce": 0.06,
+     "joyful": 0.26,
+     "tender": 0.19,
+     "dark": 0.18,
+     "dreamy": 0.25,
+     "nocturnal": 0.05
+    }
+   },
+   "ethereal": {
+    "name": "Ethereal Veil",
+    "lead": "dreamy",
+    "share": 0.4,
+    "second": "tender",
+    "second_share": 0.26,
+    "neutral": 0.1,
+    "mix": {
+     "fierce": 0.02,
+     "joyful": 0.08,
+     "tender": 0.26,
+     "dark": 0.17,
+     "dreamy": 0.4,
+     "nocturnal": 0.07
+    }
+   },
+   "aggressive": {
+    "name": "Aggressive Rift",
+    "lead": "fierce",
+    "share": 0.76,
+    "second": "dark",
+    "second_share": 0.19,
+    "neutral": 0.01,
+    "mix": {
+     "fierce": 0.76,
+     "joyful": 0.0,
+     "tender": 0.0,
+     "dark": 0.19,
+     "dreamy": 0.02,
+     "nocturnal": 0.03
+    }
+   },
+   "raw": {
+    "name": "Raw Flare",
+    "lead": "fierce",
+    "share": 0.81,
+    "second": "dark",
+    "second_share": 0.11,
+    "neutral": 0.03,
+    "mix": {
+     "fierce": 0.81,
+     "joyful": 0.01,
+     "tender": 0.01,
+     "dark": 0.11,
+     "dreamy": 0.01,
+     "nocturnal": 0.04
+    }
+   },
+   "epic": {
+    "name": "Epic Expanse",
+    "lead": "fierce",
+    "share": 0.36,
+    "second": "dark",
+    "second_share": 0.32,
+    "neutral": 0.12,
+    "mix": {
+     "fierce": 0.36,
+     "joyful": 0.12,
+     "tender": 0.05,
+     "dark": 0.32,
+     "dreamy": 0.11,
+     "nocturnal": 0.04
+    }
+   },
+   "sombre": {
+    "name": "Sombre Void",
+    "lead": "dark",
+    "share": 0.56,
+    "second": "tender",
+    "second_share": 0.16,
+    "neutral": 0.03,
+    "mix": {
+     "fierce": 0.04,
+     "joyful": 0.0,
+     "tender": 0.16,
+     "dark": 0.56,
+     "dreamy": 0.12,
+     "nocturnal": 0.12
+    }
+   },
+   "hypnotic": {
+    "name": "Hypnotic Orbit",
+    "lead": "dreamy",
+    "share": 0.38,
+    "second": "joyful",
+    "second_share": 0.18,
+    "neutral": 0.14,
+    "mix": {
+     "fierce": 0.03,
+     "joyful": 0.18,
+     "tender": 0.1,
+     "dark": 0.13,
+     "dreamy": 0.38,
+     "nocturnal": 0.18
+    }
+   }
+  },
+  "contradictions": [],
+  "palettes": {
+   "emission": {
+    "rgb_dist_neighbours": 84.8,
+    "rgb_dist_random": 120.7,
+    "ratio": 0.703,
+    "blend_passes_through": [
+     [
+      1,
+      5,
+      2
+     ],
+     [
+      2,
+      3,
+      5
+     ]
+    ]
+   },
+   "dusty": {
+    "rgb_dist_neighbours": 45.3,
+    "rgb_dist_random": 64.7,
+    "ratio": 0.701,
+    "blend_passes_through": [
+     [
+      0,
+      3,
+      5
+     ],
+     [
+      0,
+      4,
+      2
+     ],
+     [
+      0,
+      5,
+      2
+     ],
+     [
+      1,
+      3,
+      5
+     ],
+     [
+      1,
+      5,
+      2
+     ],
+     [
+      2,
+      3,
+      5
+     ],
+     [
+      2,
+      4,
+      5
+     ]
+    ]
+   }
+  }
+ },
+ "s4": {
+  "lead_share": {
+   "amber": 0.289,
+   "cream": 0.076,
+   "teal": 0.105,
+   "deep blue": 0.296,
+   "dusty rose": 0.092
+  },
+  "neutral_led": 0.141,
+  "mean_neutral": 0.167,
+  "knn15_same_lead": 0.463,
+  "knn15_same_lead_chance": 0.254,
+  "cos_neighbours": 0.548,
+  "cos_random_pairs": 0.316,
+  "gas_purity": 0.655,
+  "regions": {
+   "live": {
+    "name": "The Live Belt",
+    "lead": "amber",
+    "share": 0.5,
+    "second": "deep blue",
+    "second_share": 0.19,
+    "neutral": 0.22,
+    "mix": {
+     "amber": 0.5,
+     "cream": 0.07,
+     "teal": 0.17,
+     "deep blue": 0.19,
+     "dusty rose": 0.08
+    }
+   },
+   "urban": {
+    "name": "Urban Cluster",
+    "lead": "deep blue",
+    "share": 0.4,
+    "second": "amber",
+    "second_share": 0.27,
+    "neutral": 0.14,
+    "mix": {
+     "amber": 0.27,
+     "cream": 0.11,
+     "teal": 0.11,
+     "deep blue": 0.4,
+     "dusty rose": 0.11
+    }
+   },
+   "improv": {
+    "name": "Improv Arm",
+    "lead": "amber",
+    "share": 0.45,
+    "second": "deep blue",
+    "second_share": 0.19,
+    "neutral": 0.23,
+    "mix": {
+     "amber": 0.45,
+     "cream": 0.16,
+     "teal": 0.15,
+     "deep blue": 0.19,
+     "dusty rose": 0.05
+    }
+   },
+   "quiet": {
+    "name": "The Quiet Deep",
+    "lead": "deep blue",
+    "share": 0.4,
+    "second": "teal",
+    "second_share": 0.27,
+    "neutral": 0.12,
+    "mix": {
+     "amber": 0.13,
+     "cream": 0.19,
+     "teal": 0.27,
+     "deep blue": 0.4,
+     "dusty rose": 0.01
+    }
+   },
+   "pastoral": {
+    "name": "Pastoral Nebula",
+    "lead": "amber",
+    "share": 0.44,
+    "second": "deep blue",
+    "second_share": 0.26,
+    "neutral": 0.3,
+    "mix": {
+     "amber": 0.44,
+     "cream": 0.18,
+     "teal": 0.09,
+     "deep blue": 0.26,
+     "dusty rose": 0.03
+    }
+   },
+   "lonely": {
+    "name": "Lonely Drift",
+    "lead": "deep blue",
+    "share": 0.71,
+    "second": "teal",
+    "second_share": 0.12,
+    "neutral": 0.11,
+    "mix": {
+     "amber": 0.08,
+     "cream": 0.08,
+     "teal": 0.12,
+     "deep blue": 0.71,
+     "dusty rose": 0.0
+    }
+   },
+   "bittersweet": {
+    "name": "The Bittersweet Reach",
+    "lead": "amber",
+    "share": 0.58,
+    "second": "deep blue",
+    "second_share": 0.2,
+    "neutral": 0.2,
+    "mix": {
+     "amber": 0.58,
+     "cream": 0.12,
+     "teal": 0.07,
+     "deep blue": 0.2,
+     "dusty rose": 0.04
+    }
+   },
+   "warm": {
+    "name": "Warm Halo",
+    "lead": "amber",
+    "share": 0.82,
+    "second": "cream",
+    "second_share": 0.08,
+    "neutral": 0.1,
+    "mix": {
+     "amber": 0.82,
+     "cream": 0.08,
+     "teal": 0.03,
+     "deep blue": 0.03,
+     "dusty rose": 0.04
+    }
+   },
+   "playful": {
+    "name": "Playful Way",
+    "lead": "amber",
+    "share": 0.66,
+    "second": "dusty rose",
+    "second_share": 0.11,
+    "neutral": 0.24,
+    "mix": {
+     "amber": 0.66,
+     "cream": 0.1,
+     "teal": 0.04,
+     "deep blue": 0.09,
+     "dusty rose": 0.11
+    }
+   },
+   "eclectic": {
+    "name": "Eclectic Cloud",
+    "lead": "deep blue",
+    "share": 0.34,
+    "second": "amber",
+    "second_share": 0.3,
+    "neutral": 0.3,
+    "mix": {
+     "amber": 0.3,
+     "cream": 0.13,
+     "teal": 0.13,
+     "deep blue": 0.34,
+     "dusty rose": 0.11
+    }
+   },
+   "progressive": {
+    "name": "Progressive Spiral",
+    "lead": "deep blue",
+    "share": 0.33,
+    "second": "amber",
+    "second_share": 0.28,
+    "neutral": 0.2,
+    "mix": {
+     "amber": 0.28,
+     "cream": 0.19,
+     "teal": 0.18,
+     "deep blue": 0.33,
+     "dusty rose": 0.02
+    }
+   },
+   "ethereal": {
+    "name": "Ethereal Veil",
+    "lead": "deep blue",
+    "share": 0.43,
+    "second": "teal",
+    "second_share": 0.25,
+    "neutral": 0.19,
+    "mix": {
+     "amber": 0.13,
+     "cream": 0.19,
+     "teal": 0.25,
+     "deep blue": 0.43,
+     "dusty rose": 0.0
+    }
+   },
+   "aggressive": {
+    "name": "Aggressive Rift",
+    "lead": "dusty rose",
+    "share": 0.58,
+    "second": "deep blue",
+    "second_share": 0.41,
+    "neutral": 0.01,
+    "mix": {
+     "amber": 0.0,
+     "cream": 0.0,
+     "teal": 0.0,
+     "deep blue": 0.41,
+     "dusty rose": 0.58
+    }
+   },
+   "raw": {
+    "name": "Raw Flare",
+    "lead": "dusty rose",
+    "share": 0.68,
+    "second": "deep blue",
+    "second_share": 0.27,
+    "neutral": 0.05,
+    "mix": {
+     "amber": 0.05,
+     "cream": 0.0,
+     "teal": 0.0,
+     "deep blue": 0.27,
+     "dusty rose": 0.68
+    }
+   },
+   "epic": {
+    "name": "Epic Expanse",
+    "lead": "deep blue",
+    "share": 0.53,
+    "second": "amber",
+    "second_share": 0.21,
+    "neutral": 0.16,
+    "mix": {
+     "amber": 0.21,
+     "cream": 0.03,
+     "teal": 0.05,
+     "deep blue": 0.53,
+     "dusty rose": 0.18
+    }
+   },
+   "sombre": {
+    "name": "Sombre Void",
+    "lead": "deep blue",
+    "share": 0.9,
+    "second": "teal",
+    "second_share": 0.07,
+    "neutral": 0.07,
+    "mix": {
+     "amber": 0.0,
+     "cream": 0.0,
+     "teal": 0.07,
+     "deep blue": 0.9,
+     "dusty rose": 0.02
+    }
+   },
+   "hypnotic": {
+    "name": "Hypnotic Orbit",
+    "lead": "deep blue",
+    "share": 0.31,
+    "second": "teal",
+    "second_share": 0.29,
+    "neutral": 0.12,
+    "mix": {
+     "amber": 0.17,
+     "cream": 0.21,
+     "teal": 0.29,
+     "deep blue": 0.31,
+     "dusty rose": 0.02
+    }
+   }
+  },
+  "contradictions": [],
+  "palettes": {
+   "emission": {
+    "rgb_dist_neighbours": 98.4,
+    "rgb_dist_random": 142.8,
+    "ratio": 0.689,
+    "blend_passes_through": []
+   },
+   "dusty": {
+    "rgb_dist_neighbours": 58.4,
+    "rgb_dist_random": 84.0,
+    "ratio": 0.695,
+    "blend_passes_through": [
+     [
+      0,
+      3,
+      4
+     ]
+    ]
+   }
+  }
+ }
+}

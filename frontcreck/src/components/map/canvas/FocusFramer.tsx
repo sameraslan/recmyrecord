@@ -5,14 +5,15 @@ import { useEffect, useRef } from 'react';
 import { useMapStore, type MapStore } from '../state/mapStore';
 import { getCameraControl } from './CameraTween';
 
-function focusKey(s: MapStore): string {
+/** Everything the framing of an open album depends on, the header's height included (it changes at 900 px wide). */
+export function focusKey(s: Pick<MapStore, 'input'>): string {
   const f = s.input.focus;
   if (!f) return '';
   const p = s.input.framePadding;
-  return `${f.seed}|${f.recs.join(',')}|${s.input.stop}|${s.input.insetLeft}|${p.top},${p.right},${p.bottom},${p.left}`;
+  return `${f.seed}|${f.recs.join(',')}|${s.input.stop}|${s.input.insetLeft}|${s.input.insetTop}|${p.top},${p.right},${p.bottom},${p.left}`;
 }
 
-/** Frames the seed and visible recommendations whenever they, the stop, the inset or the padding change,
+/** Frames the seed and visible recommendations whenever they, the stop, the insets or the padding change,
  * unless the user has moved the camera since this seed was focused or since the last Reset
  * (`focusRearmedAt`). A new seed always frames. */
 export function FocusFramer() {

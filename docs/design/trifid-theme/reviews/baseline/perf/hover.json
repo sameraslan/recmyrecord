@@ -1,0 +1,1013 @@
+{
+ "date": "2026-10-05T02:55:50.733Z",
+ "base": "http://127.0.0.1:3500",
+ "nodeArch": "arm64",
+ "loads": 5,
+ "modes": {
+  "gpu": {
+   "browser": "154.0.8037.93",
+   "browserArch": "arm64",
+   "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+   "summary": [
+    {
+     "hover": 1,
+     "tipMs": {
+      "median": 150.3,
+      "min": 135.7,
+      "max": 169.3,
+      "values": [
+       135.7,
+       169.3,
+       150.2,
+       153.8,
+       150.3
+      ]
+     },
+     "tipDomMs": {
+      "median": 102,
+      "min": 95.7,
+      "max": 111.2,
+      "values": [
+       95.7,
+       102,
+       96.3,
+       105.9,
+       111.2
+      ]
+     },
+     "tipPaintMs": {
+      "median": 139.3,
+      "min": 123.3,
+      "max": 163.7,
+      "values": [
+       123.3,
+       163.7,
+       139.3,
+       146.1,
+       134.5
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 55,
+      "values": [
+       0,
+       55,
+       0,
+       0,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 33.3,
+      "min": 16.8,
+      "max": 50,
+      "values": [
+       33.3,
+       50,
+       33.3,
+       33.4,
+       16.8
+      ]
+     },
+     "eventMs": {
+      "median": 24,
+      "min": 16,
+      "max": 32,
+      "values": [
+       16,
+       24,
+       16,
+       24,
+       32
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    },
+    {
+     "hover": 2,
+     "tipMs": {
+      "median": 101.2,
+      "min": 90.6,
+      "max": 106.8,
+      "values": [
+       101.2,
+       106.8,
+       106.7,
+       92.4,
+       90.6
+      ]
+     },
+     "tipDomMs": {
+      "median": 100,
+      "min": 88.7,
+      "max": 104.6,
+      "values": [
+       100,
+       104.6,
+       104.3,
+       91,
+       88.7
+      ]
+     },
+     "tipPaintMs": {
+      "median": 115.2,
+      "min": 100.6,
+      "max": 116.2,
+      "values": [
+       116.2,
+       115.2,
+       116.2,
+       106.4,
+       100.6
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 16.8,
+      "min": 16.7,
+      "max": 16.8,
+      "values": [
+       16.7,
+       16.8,
+       16.8,
+       16.8,
+       16.8
+      ]
+     },
+     "eventMs": {
+      "median": 16,
+      "min": 0,
+      "max": 24,
+      "values": [
+       16,
+       24,
+       24,
+       0,
+       0
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    },
+    {
+     "hover": 3,
+     "tipMs": {
+      "median": 90.3,
+      "min": 89.7,
+      "max": 115.7,
+      "values": [
+       89.7,
+       90.2,
+       115.7,
+       101.7,
+       90.3
+      ]
+     },
+     "tipDomMs": {
+      "median": 89.6,
+      "min": 88.4,
+      "max": 100.2,
+      "values": [
+       88.4,
+       88.6,
+       99.2,
+       100.2,
+       89.6
+      ]
+     },
+     "tipPaintMs": {
+      "median": 105.3,
+      "min": 99.9,
+      "max": 130.3,
+      "values": [
+       101.2,
+       99.9,
+       130.3,
+       114.7,
+       105.3
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 16.8,
+      "min": 16.7,
+      "max": 16.8,
+      "values": [
+       16.8,
+       16.8,
+       16.8,
+       16.7,
+       16.8
+      ]
+     },
+     "eventMs": {
+      "median": 0,
+      "min": 0,
+      "max": 24,
+      "values": [
+       0,
+       0,
+       24,
+       16,
+       0
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    }
+   ],
+   "loads": [
+    {
+     "load": 1,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 135.7,
+       "tipDomMs": 95.7,
+       "tipPaintMs": 123.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 33.3,
+       "eventMs": 16,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 101.2,
+       "tipDomMs": 100,
+       "tipPaintMs": 116.2,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.7,
+       "eventMs": 16,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 89.7,
+       "tipDomMs": 88.4,
+       "tipPaintMs": 101.2,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 2,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 169.3,
+       "tipDomMs": 102,
+       "tipPaintMs": 163.7,
+       "longTaskMs": 55,
+       "longTasks": [
+        [
+         115,
+         55
+        ]
+       ],
+       "frameGapMs": 50,
+       "eventMs": 24,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 106.8,
+       "tipDomMs": 104.6,
+       "tipPaintMs": 115.2,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 24,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 90.2,
+       "tipDomMs": 88.6,
+       "tipPaintMs": 99.9,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 3,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 150.2,
+       "tipDomMs": 96.3,
+       "tipPaintMs": 139.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 33.3,
+       "eventMs": 16,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 106.7,
+       "tipDomMs": 104.3,
+       "tipPaintMs": 116.2,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 24,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 115.7,
+       "tipDomMs": 99.2,
+       "tipPaintMs": 130.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 24,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 4,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 153.8,
+       "tipDomMs": 105.9,
+       "tipPaintMs": 146.1,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 33.4,
+       "eventMs": 24,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 92.4,
+       "tipDomMs": 91,
+       "tipPaintMs": 106.4,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 101.7,
+       "tipDomMs": 100.2,
+       "tipPaintMs": 114.7,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.7,
+       "eventMs": 16,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 5,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 150.3,
+       "tipDomMs": 111.2,
+       "tipPaintMs": 134.5,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 32,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 90.6,
+       "tipDomMs": 88.7,
+       "tipPaintMs": 100.6,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 90.3,
+       "tipDomMs": 89.6,
+       "tipPaintMs": 105.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 16.8,
+       "eventMs": 0,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    }
+   ]
+  },
+  "software": {
+   "browser": "154.0.8037.93",
+   "browserArch": "arm64",
+   "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+   "summary": [
+    {
+     "hover": 1,
+     "tipMs": {
+      "median": 135.5,
+      "min": 133,
+      "max": 149.4,
+      "values": [
+       133.7,
+       149.4,
+       135.5,
+       133,
+       146.5
+      ]
+     },
+     "tipDomMs": {
+      "median": 93.5,
+      "min": 86.7,
+      "max": 103,
+      "values": [
+       86.7,
+       101.3,
+       93.5,
+       91.9,
+       103
+      ]
+     },
+     "tipPaintMs": {
+      "median": 122.1,
+      "min": 117.2,
+      "max": 148.4,
+      "values": [
+       117.2,
+       148.4,
+       121.7,
+       122.1,
+       132.4
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 66.7,
+      "min": 49.9,
+      "max": 66.7,
+      "values": [
+       49.9,
+       66.7,
+       66.7,
+       66.7,
+       66.7
+      ]
+     },
+     "eventMs": {
+      "median": 104,
+      "min": 88,
+      "max": 112,
+      "values": [
+       88,
+       112,
+       104,
+       96,
+       104
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    },
+    {
+     "hover": 2,
+     "tipMs": {
+      "median": 91.6,
+      "min": 85.9,
+      "max": 107.7,
+      "values": [
+       85.9,
+       93.1,
+       107.7,
+       91.6,
+       87
+      ]
+     },
+     "tipDomMs": {
+      "median": 90.7,
+      "min": 85,
+      "max": 92.5,
+      "values": [
+       85,
+       92.5,
+       90.7,
+       91.1,
+       86.3
+      ]
+     },
+     "tipPaintMs": {
+      "median": 106.3,
+      "min": 100.7,
+      "max": 122.4,
+      "values": [
+       100.7,
+       108.2,
+       122.4,
+       106.3,
+       102.5
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 66.7,
+      "min": 66.7,
+      "max": 83.3,
+      "values": [
+       66.7,
+       66.7,
+       66.7,
+       83.3,
+       83.3
+      ]
+     },
+     "eventMs": {
+      "median": 88,
+      "min": 80,
+      "max": 88,
+      "values": [
+       88,
+       80,
+       88,
+       88,
+       88
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    },
+    {
+     "hover": 3,
+     "tipMs": {
+      "median": 88.1,
+      "min": 84.9,
+      "max": 93.1,
+      "values": [
+       88.1,
+       93.1,
+       92.8,
+       85.3,
+       84.9
+      ]
+     },
+     "tipDomMs": {
+      "median": 87.2,
+      "min": 82.4,
+      "max": 92.3,
+      "values": [
+       87.2,
+       91.4,
+       92.3,
+       84,
+       82.4
+      ]
+     },
+     "tipPaintMs": {
+      "median": 103.5,
+      "min": 100.3,
+      "max": 108.8,
+      "values": [
+       103.5,
+       108.8,
+       107.9,
+       100.3,
+       100.3
+      ]
+     },
+     "longTaskMs": {
+      "median": 0,
+      "min": 0,
+      "max": 0,
+      "values": [
+       0,
+       0,
+       0,
+       0,
+       0
+      ]
+     },
+     "frameGapMs": {
+      "median": 66.7,
+      "min": 50.1,
+      "max": 83.4,
+      "values": [
+       50.1,
+       66.6,
+       66.7,
+       66.7,
+       83.4
+      ]
+     },
+     "eventMs": {
+      "median": 88,
+      "min": 80,
+      "max": 96,
+      "values": [
+       88,
+       80,
+       96,
+       88,
+       80
+      ]
+     },
+     "frames": {
+      "median": 3,
+      "min": 3,
+      "max": 3,
+      "values": [
+       3,
+       3,
+       3,
+       3,
+       3
+      ]
+     }
+    }
+   ],
+   "loads": [
+    {
+     "load": 1,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 133.7,
+       "tipDomMs": 86.7,
+       "tipPaintMs": 117.2,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 49.9,
+       "eventMs": 88,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 85.9,
+       "tipDomMs": 85,
+       "tipPaintMs": 100.7,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 88,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 88.1,
+       "tipDomMs": 87.2,
+       "tipPaintMs": 103.5,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 50.1,
+       "eventMs": 88,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 2,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 149.4,
+       "tipDomMs": 101.3,
+       "tipPaintMs": 148.4,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 112,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 93.1,
+       "tipDomMs": 92.5,
+       "tipPaintMs": 108.2,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 80,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 93.1,
+       "tipDomMs": 91.4,
+       "tipPaintMs": 108.8,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.6,
+       "eventMs": 80,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 3,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 135.5,
+       "tipDomMs": 93.5,
+       "tipPaintMs": 121.7,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 104,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 107.7,
+       "tipDomMs": 90.7,
+       "tipPaintMs": 122.4,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 88,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 92.8,
+       "tipDomMs": 92.3,
+       "tipPaintMs": 107.9,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 96,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 4,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 133,
+       "tipDomMs": 91.9,
+       "tipPaintMs": 122.1,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 96,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 91.6,
+       "tipDomMs": 91.1,
+       "tipPaintMs": 106.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 83.3,
+       "eventMs": 88,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 85.3,
+       "tipDomMs": 84,
+       "tipPaintMs": 100.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 88,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    },
+    {
+     "load": 5,
+     "startupLongTaskMs": 0,
+     "hovers": [
+      {
+       "n": 1,
+       "id": 11,
+       "title": "In Rainbows",
+       "tipMs": 146.5,
+       "tipDomMs": 103,
+       "tipPaintMs": 132.4,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 66.7,
+       "eventMs": 104,
+       "frames": 3
+      },
+      {
+       "n": 2,
+       "id": 42,
+       "title": "Vespertine",
+       "tipMs": 87,
+       "tipDomMs": 86.3,
+       "tipPaintMs": 102.5,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 83.3,
+       "eventMs": 88,
+       "frames": 3
+      },
+      {
+       "n": 3,
+       "id": 300,
+       "title": "Construção",
+       "tipMs": 84.9,
+       "tipDomMs": 82.4,
+       "tipPaintMs": 100.3,
+       "longTaskMs": 0,
+       "longTasks": [],
+       "frameGapMs": 83.4,
+       "eventMs": 80,
+       "frames": 3
+      }
+     ],
+     "errors": []
+    }
+   ]
+  }
+ }
+}

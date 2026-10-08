@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { camera, shot, waitForCameraIdle, waitForMap } from './helpers';
+import { camera, shot, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
 
 async function recsOf(page: Page, id: number, stop: 'sonic' | 'balanced' | 'mood', n = 5): Promise<number[]> {
   return page.evaluate(
@@ -33,17 +33,50 @@ async function openFocus(page: Page): Promise<number[]> {
   return recs;
 }
 
-test('focus draws numbered covers joined to the seed, framed on screen', async ({ page }, info) => {
+test('focus draws covers joined to the seed, framed on screen, with no number on them', async ({ page }, info) => {
   const recs = await openFocus(page);
   const markers = page.locator('.mk');
   await expect(markers).toHaveCount(6);
   await expect(page.locator('.mk--seed')).toHaveAttribute('data-album-id', '11');
-  await expect(page.locator('.mk-n')).toHaveText(['1', '2', '3', '4', '5']);
+  // The order of the closest albums is not written on the map: no badge element, and no text in the layer but
+  // the letter of a cover that has no image.
+  await expect(page.locator('.mk-n, .mk-badges')).toHaveCount(0);
+  expect(await page.locator('.mk-layer').evaluate((el) => /\d/.test(el.textContent ?? ''))).toBe(false);
   await expect(page.locator('svg.mk-lines line[data-to]')).toHaveCount(5);
+  // Every line is a dark casing under a white core, and all casings are drawn below all cores.
+  await expect(page.locator('svg.mk-lines g.mk-case line[data-case]')).toHaveCount(5);
+  expect(await page.locator('svg.mk-lines > g').evaluateAll((gs) => gs.map((g) => g.getAttribute('class')))).toEqual(['mk-case', 'mk-core']);
+  // The j-th casing lies under the j-th core (MarkerDriver pairs the two groups by their order): the same album,
+  // the same segment, and a leader's casing shown or hidden with its core. No casing among the cores or core
+  // among the casings.
+  const pairs = await page.locator('svg.mk-lines').evaluate((svg) => {
+    const read = (l: Element) => {
+      const d = (l as SVGLineElement).dataset;
+      return {
+        rec: d.to ?? d.case ?? null,
+        leader: d.leader ?? d.leaderCase ?? null,
+        role: d.to !== undefined || d.leader !== undefined ? 'core' : 'case',
+        at: ['x1', 'y1', 'x2', 'y2'].map((k) => l.getAttribute(k)),
+        display: (l as SVGLineElement).style.display,
+      };
+    };
+    const [cases, cores] = [...svg.children].map((g) => [...g.children].map(read));
+    return { cases, cores };
+  });
+  expect(pairs.cores.map((l) => l.role)).toEqual(Array(11).fill('core'));
+  expect(pairs.cases.map((l) => l.role)).toEqual(Array(11).fill('case'));
+  expect(pairs.cores.map((l) => l.rec).filter((id) => id !== null)).toEqual(recs.map(String));
+  expect(pairs.cores.map((l) => l.leader).filter((id) => id !== null)).toEqual([11, ...recs].map(String));
+  for (const [j, core] of pairs.cores.entries()) {
+    const casing = pairs.cases[j];
+    expect({ rec: casing.rec, leader: casing.leader }, `casing ${j} is its core's`).toEqual({ rec: core.rec, leader: core.leader });
+    expect(casing.display, `casing ${j} shows with its core`).toBe(core.display);
+    if (core.rec !== null) expect(core.at.every((v) => v !== null && Number.isFinite(Number(v))), `core ${j} is placed`).toBe(true);
+    if (core.rec !== null || core.display !== 'none') expect(casing.at, `casing ${j} lies under its core`).toEqual(core.at);
+  }
 
-  // (a) recommendation markers in list order, each with its own rank badge
+  // (a) recommendation markers in list order
   expect(await page.locator('.mk--rec').evaluateAll((els) => els.map((e) => Number((e as HTMLElement).dataset.albumId)))).toEqual(recs);
-  for (const [i, id] of recs.entries()) await expect(page.locator(`.mk-n[data-for="${id}"]`)).toHaveText(String(i + 1));
 
   const boxes = await markers.evaluateAll((els) =>
     els.map((e) => {
@@ -52,10 +85,12 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
     }),
   );
   const vp = page.viewportSize()!;
+  // The map runs under the header, so "on screen" means below the header's bottom edge, not below y = 0.
+  const headerBottom = await page.locator('header.top').evaluate((el) => el.getBoundingClientRect().bottom);
   for (const box of boxes) {
     expect(box.left).toBeGreaterThanOrEqual(0);
     expect(box.right).toBeLessThanOrEqual(vp.width);
-    expect(box.top).toBeGreaterThanOrEqual(0);
+    expect(box.top).toBeGreaterThanOrEqual(headerBottom);
     expect(box.bottom).toBeLessThanOrEqual(vp.height);
   }
   // (b) no two marker boxes closer than the 10 px gap (less a little rounding)
@@ -70,7 +105,9 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
   const seed = boxes.find((b) => b.id === 11)!;
   const seedPoint = (await page.evaluate(() => window.__rmr!.map!.screenPoint(11)))!;
   expect(Math.hypot(seed.cx - seedPoint.x, seed.cy - seedPoint.y)).toBeLessThan(40);
-  // (d) each line runs from the seed cover's centre to its recommendation's cover centre
+  // (d) each line runs from the edge of the seed's frame (4 px outside its cover) to the edge of its
+  // recommendation's frame (1 px outside), along the straight line between the two centres, and at least
+  // 23 px of it shows.
   const lines = await page.locator('svg.mk-lines line[data-to]').evaluateAll((els) => {
     const svg = (els[0] as SVGLineElement).ownerSVGElement!.getBoundingClientRect();
     return els.map((l) => ({
@@ -81,12 +118,17 @@ test('focus draws numbered covers joined to the seed, framed on screen', async (
       y2: svg.top + Number(l.getAttribute('y2')),
     }));
   });
+  const cheb = (x: number, y: number, b: { cx: number; cy: number }) => Math.max(Math.abs(x - b.cx), Math.abs(y - b.cy));
   for (const l of lines) {
     const end = boxes.find((b) => b.id === l.to)!;
-    expect(Math.abs(l.x1 - seed.cx), `line ${l.to} x1`).toBeLessThanOrEqual(2);
-    expect(Math.abs(l.y1 - seed.cy), `line ${l.to} y1`).toBeLessThanOrEqual(2);
-    expect(Math.abs(l.x2 - end.cx), `line ${l.to} x2`).toBeLessThanOrEqual(2);
-    expect(Math.abs(l.y2 - end.cy), `line ${l.to} y2`).toBeLessThanOrEqual(2);
+    expect(Math.abs(cheb(l.x1, l.y1, seed) - (seed.w / 2 + 4)), `line ${l.to} starts on the seed frame`).toBeLessThanOrEqual(1.5);
+    expect(Math.abs(cheb(l.x2, l.y2, end) - (end.w / 2 + 1)), `line ${l.to} ends on its cover's frame`).toBeLessThanOrEqual(1.5);
+    // Collinear with the two centres: the cross product of (end - seed) and (point - seed) is near zero.
+    const dx = end.cx - seed.cx;
+    const dy = end.cy - seed.cy;
+    const len = Math.hypot(dx, dy);
+    for (const [x, y] of [[l.x1, l.y1], [l.x2, l.y2]]) expect(Math.abs(dx * (y - seed.cy) - dy * (x - seed.cx)) / len, `line ${l.to} aims at the centres`).toBeLessThanOrEqual(1.5);
+    expect(Math.hypot(l.x2 - l.x1, l.y2 - l.y1), `line ${l.to} shows`).toBeGreaterThanOrEqual(23);
   }
   await shot(page, info, 'focus');
 });
@@ -97,13 +139,15 @@ test('hot album is highlighted and a hovered marker shows its label', async ({ p
   await page.evaluate((id) => window.__rmr!.getState().setHot(id), recs[1]);
   await expect(page.locator(`.mk[data-album-id="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator(`svg.mk-lines line[data-to="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
-  await expect(page.locator(`.mk-n[data-for="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
+  await expect(page.locator(`svg.mk-lines g.mk-case line[data-case="${recs[1]}"]`)).toHaveAttribute('data-hot', 'true');
+  await expect(page.locator('.mk-n')).toHaveCount(0);
   await page.evaluate(() => window.__rmr!.getState().setHot(null));
   // The markers take no pointer events: the canvas under them hit-tests their boxes.
   const p = await markerCentre(page, recs[2]);
   await page.mouse.move(p.x, p.y);
   await expect(page.locator(`.mk[data-album-id="${recs[2]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator(`svg.mk-lines line[data-to="${recs[2]}"]`)).toHaveAttribute('data-hot', 'true');
+  await expect(page.locator(`svg.mk-lines g.mk-case line[data-case="${recs[2]}"]`)).toHaveAttribute('data-hot', 'true');
   await expect(page.locator('canvas.map-canvas')).toHaveCSS('cursor', 'pointer');
   await expect(page.locator('.map-tip')).toHaveCSS('opacity', '1');
   await page.mouse.move(p.x + 200, 20);
@@ -163,6 +207,11 @@ test('the slider morphs the layout and changes the stop', async ({ page }, info)
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowLeft');
   expect(await page.evaluate(() => window.__rmr!.getState().stop)).toBe('sonic');
+  // The stop is named "Sound" to a visitor, in the button and in what the slider reads out; its id stays `sonic`.
+  await expect(slider).toHaveAttribute('aria-valuetext', 'Sound');
+  await expect(page.locator('.mode-stops button').first()).toHaveText('Sound');
+  await expect(page.getByRole('button', { name: 'Sound', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByRole('button', { name: 'Sonic', exact: true })).toHaveCount(0);
   await shot(page, info, 'slider-sonic');
 });
 
@@ -321,4 +370,313 @@ test('on a phone a larger bottom inset still keeps markers and zoom controls abo
   for (const b of bottoms) expect(b).toBeLessThanOrEqual(panelTop);
   const zoom = (await page.locator('.map-zoom').boundingBox())!;
   expect(zoom.y + zoom.height).toBeLessThanOrEqual(panelTop);
+});
+
+test('with an album open the map draws no frame at rest and its covers stay put', async ({ page }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(11);
+  // Part 1's sharper gas image may fade in about a second after the map settles: the one bounded exception.
+  await waitForGasSharpSettled(page);
+  const where = () => page.locator('.mk').evaluateAll((els) => els.map((e) => (e as HTMLElement).style.transform));
+  const before = await where();
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  expect(f2 - f1, 'frames drawn at rest with an album open').toBe(0);
+  expect(await where()).toEqual(before);
+});
+
+test('a frame in which no cover moved writes nothing to the lines', async ({ page }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(11);
+  await waitForGasSharpSettled(page);
+  await page.evaluate(() => {
+    const w = window as unknown as { __lineWrites: number };
+    w.__lineWrites = 0;
+    new MutationObserver((records) => (w.__lineWrites += records.length)).observe(document.querySelector('svg.mk-lines')!, { attributes: true, subtree: true });
+  });
+  const state = () => page.evaluate(() => ({ frames: window.__rmr!.frames ?? 0, writes: (window as unknown as { __lineWrites: number }).__lineWrites }));
+  // Marking the seed "hot" changes nothing on screen (the seed is never drawn hot) but asks for a frame.
+  const rest = await state();
+  await page.evaluate(() => window.__rmr!.getState().setHot(11));
+  await expect.poll(async () => (await state()).frames).toBeGreaterThan(rest.frames);
+  await page.evaluate(() => window.__rmr!.getState().setHot(null));
+  await page.waitForTimeout(300);
+  const still = await state();
+  expect(still.frames, 'frames drawn with nothing moved').toBeGreaterThan(rest.frames);
+  expect(still.writes, 'attribute writes to the lines with nothing moved').toBe(0);
+  // The observer does see the lines move: a zoom rewrites them, at most 8 attributes a line each frame (11 cores
+  // and casings, two style writes where a leader appears or goes).
+  await page.evaluate(() => window.__rmr!.map!.zoomBy(1.4));
+  await waitForCameraIdle(page);
+  const moved = await state();
+  const frames = moved.frames - still.frames;
+  const writes = moved.writes - still.writes;
+  console.log(`line writes while zooming: ${writes} in ${frames} frames (${(writes / frames).toFixed(1)} a frame)`);
+  expect(writes, 'the lines follow a zoom').toBeGreaterThan(0);
+  expect(writes).toBeLessThanOrEqual((frames + 12) * (10 * 8 + 11 * 10));
+});
+
+test('after a zoom with an album open the covers settle on the fresh layout and the map rests', async ({ page }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(11);
+  const canvas = page.locator('canvas.map-canvas');
+  await canvas.focus();
+  for (const key of ['+', '+', '-']) {
+    await page.keyboard.press(key);
+    await waitForCameraIdle(page);
+  }
+  // The covers ease onto the settled layout in the DOM; then the gas's sharper image may still fade in.
+  await waitForGasSharpSettled(page);
+  const settled = await page.evaluate(() => window.__rmr!.markerLayout!());
+  expect(settled, 'a focus is open and no ease is running').not.toBeNull();
+  expect(settled!.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
+  const box = (await canvas.boundingBox())!;
+  for (const m of settled!.placed) {
+    const r = (await page.locator(`.mk[data-album-id="${m.id}"]`).boundingBox())!;
+    expect(Math.abs(r.x + r.width / 2 - box.x - m.x), `cover ${m.id} x`).toBeLessThan(0.6);
+    expect(Math.abs(r.y + r.height / 2 - box.y - m.y), `cover ${m.id} y`).toBeLessThan(0.6);
+  }
+  const f1 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  await page.waitForTimeout(1200);
+  const f2 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+  expect(f2 - f1, 'frames drawn at rest after the settle').toBe(0);
+});
+
+test('an album opens with its covers laid out for the framed view: nothing eases when the framing lands', async ({ page }) => {
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  // The framing tween runs; its first frame lays out the view it lands on.
+  await expect.poll(() => page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
+  await waitForCameraIdle(page);
+  await expect(page.locator('.mk')).toHaveCount(11);
+  await page.waitForTimeout(400); // longer than an ease, had one run
+  const open = await page.evaluate(() => window.__rmr!.markerLayout!());
+  expect(open, 'a focus is open and no ease is running').not.toBeNull();
+  expect(open!.eases, 'eases run since the album opened').toBe(0);
+  expect(open!.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
+});
+
+/** One row per animation frame while a zoom runs: how far the covers on screen are from the layout of the very
+ * view on screen (`gap`, px; null while an ease moves them), the camera, and each cover's place. */
+type CoverRow = { gap: number | null; cam: string; drawn: number; at: number[] };
+type CoverWindow = Window & { __covers?: { rows: CoverRow[]; on: boolean } };
+
+async function sampleCovers(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const s = ((window as CoverWindow).__covers = { rows: [] as CoverRow[], on: true });
+    const tick = () => {
+      const h = window.__rmr!.markerLayout?.() ?? null;
+      const c = window.__rmr!.map!.getCamera();
+      const at: number[] = [];
+      for (const el of document.querySelectorAll<HTMLElement>('.mk')) {
+        const m = /translate3d\(([-\d.]+)px,\s*([-\d.]+)px/.exec(el.style.transform);
+        const w = parseFloat(el.style.width);
+        at.push(m ? Number(m[1]) + w / 2 : NaN, m ? Number(m[2]) + w / 2 : NaN);
+      }
+      s.rows.push({ gap: h ? h.freshGap : null, cam: `${c.x},${c.y},${c.zoom}`, drawn: window.__rmr!.frames ?? 0, at });
+      if (s.on) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
+/** Samples within which the frame that draws a camera move is due after the sample that saw the move. */
+const ARRIVES_WITHIN = 3;
+
+/** Stops the sampler and reports what the owner's eye sees: the covers behind the map while it zooms (`behind`,
+ * the largest gap in px on a frame where the camera moved), frames where an ease was moving them (`easing`), and
+ * how far any cover still moves once the map has drawn the view the camera stopped at (`after`, px, and
+ * `afterFrames`). A pinch moves the camera in its pointer event and the map draws it on the next frame, covers
+ * and stars together: that one frame is the view arriving, not a cover catching up, so `after` counts from it.
+ * A frame counter that moved since the sample before does not show that frame has been drawn: a pinch step is
+ * two pointer events, and a frame that lands between them moves the counter for the first finger while the
+ * second finger's move is still to be drawn. So the view has arrived at the first frame drawn after the sample
+ * that saw the camera's last move. It is due on the very next frame; `ARRIVES_WITHIN` samples are allowed, and a
+ * frame drawn later than that (a settle as the fingers lift, an ease) is counted as movement after the stop. */
+async function coverLag(page: Page) {
+  const rows = await page.evaluate(() => {
+    const s = (window as CoverWindow).__covers!;
+    s.on = false;
+    return s.rows;
+  });
+  let moving = 0;
+  let behind = 0;
+  let easing = 0;
+  let last = 0;
+  for (let k = 1; k < rows.length; k++) {
+    if (rows[k].gap === null) easing++;
+    if (rows[k].cam === rows[k - 1].cam) continue;
+    moving++;
+    last = k;
+    behind = Math.max(behind, rows[k].gap ?? Infinity);
+  }
+  // The first sample at which the map has drawn the camera's last move: the first frame drawn after the sample
+  // that saw it, or that sample itself when no frame follows (the move had been drawn by then).
+  let shown = last;
+  for (let k = last + 1; k < rows.length && k <= last + ARRIVES_WITHIN; k++) {
+    if (rows[k].drawn > rows[last].drawn) {
+      shown = k;
+      break;
+    }
+  }
+  let after = 0;
+  let afterFrames = 0;
+  for (let k = shown + 1; k < rows.length; k++) {
+    const d = Math.max(...rows[k].at.map((v, i) => Math.abs(v - rows[shown].at[i])));
+    after = Math.max(after, d);
+    if (Math.max(...rows[k].at.map((v, i) => Math.abs(v - rows[k - 1].at[i]))) > 0.05) afterFrames++;
+  }
+  return { frames: rows.length, moving, behind, easing, after, afterFrames, framesAfterStop: rows.length - 1 - shown };
+}
+
+// The site before the Trifid theme laid the covers out on every drawn frame. The theme first carried them rigidly
+// through a zoom and laid them out once it had ended, easing them over: they lagged behind the hand and then
+// caught up. Five recommendations, as an album opens, and ten.
+for (const n of [5, 10]) {
+  test(`a wheel zoom with an album open keeps every cover in its place for the view on screen, frame by frame, and nothing moves once it stops (${n} recommendations)`, async ({ page, isMobile }) => {
+    test.skip(isMobile, 'a mouse wheel');
+    await page.goto('/map');
+    await waitForMap(page);
+    await setFocus(page, 11, await recsOf(page, 11, 'balanced', n));
+    await waitForCameraIdle(page);
+    await expect(page.locator('.mk')).toHaveCount(n + 1);
+    const box = (await page.locator('canvas.map-canvas').boundingBox())!;
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    await page.waitForTimeout(300);
+    const before = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+    await sampleCovers(page);
+    // Notches a hand's pace apart, out and back in, then a run of small steps as a trackpad sends them.
+    for (const dy of [150, 150, 150, -150, -150, -150]) {
+      await page.mouse.wheel(0, dy);
+      await page.waitForTimeout(260);
+    }
+    for (let i = 0; i < 30; i++) {
+      await page.mouse.wheel(0, i < 15 ? 14 : -14);
+      await page.waitForTimeout(16);
+    }
+    await waitForCameraIdle(page);
+    await page.waitForTimeout(500);
+    const lag = await coverLag(page);
+    const after = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+    console.log(`wheel zoom, ${n} recs: ${JSON.stringify(lag)}`);
+    expect(lag.moving, 'frames on which the camera moved').toBeGreaterThan(30);
+    expect(lag.framesAfterStop, 'frames watched after the zoom stopped').toBeGreaterThan(10);
+    expect(lag.behind, 'px a cover was from its place for the view on screen, on a frame of the zoom').toBeLessThan(1);
+    expect(lag.easing, 'frames on which covers were easing over').toBe(0);
+    expect(after.eases - before.eases, 'eases run').toBe(0);
+    expect(lag.after, 'px a cover moved after the camera had stopped').toBeLessThan(0.5);
+    expect(after.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
+  });
+}
+
+// Five recommendations, as an album opens, and ten, as after "Show more": the same bounds for both.
+for (const n of [5, 10]) {
+  test(`a pinch with an album open keeps every cover in its place for the view on screen, frame by frame, with nothing to catch up on after the fingers lift (${n} recommendations)`, async ({ page, isMobile }) => {
+    test.skip(!isMobile, 'a two-finger pinch is a touch gesture');
+    await page.goto('/map');
+    await waitForMap(page);
+    await setFocus(page, 11, await recsOf(page, 11, 'balanced', n));
+    await waitForCameraIdle(page);
+    await waitForGasSharpSettled(page);
+    await expect(page.locator('.mk')).toHaveCount(n + 1);
+    const canvas = page.locator('canvas.map-canvas');
+    const box = (await canvas.boundingBox())!;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height * 0.35;
+    // Synthetic touch pointers: the canvas captures pointers, which needs a real pointer behind it.
+    await canvas.evaluate((c: HTMLCanvasElement) => {
+      c.setPointerCapture = () => {};
+      c.hasPointerCapture = () => false;
+      c.releasePointerCapture = () => {};
+    });
+    const touch = (type: string, id: number, x: number) =>
+      canvas.evaluate(
+        (c, [type, id, x, y]) => c.dispatchEvent(new PointerEvent(type as string, { pointerId: id as number, pointerType: 'touch', clientX: x as number, clientY: y as number, bubbles: true, isPrimary: id === 1, button: 0, buttons: 1 })),
+        [type, id, x, cy] as const,
+      );
+    const before = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+    const z0 = (await camera(page)).zoom;
+    const f0 = await page.evaluate(() => window.__rmr!.frames ?? 0);
+    await sampleCovers(page);
+    await touch('pointerdown', 1, cx - 40);
+    await touch('pointerdown', 2, cx + 40);
+    // 150 ms a step: the software renderer of the suite takes about that long to draw the whole map of 10,467
+    // albums at a phone's two device pixels per px, which is the view ten recommendations open on. At 60 ms a step
+    // it drew 10 frames for the 20 steps (20 to 22 on 4,081 albums), and the bounds below ask for more than 10.
+    for (let i = 1; i <= 20; i++) {
+      await touch('pointermove', 1, cx - 40 - i * 5);
+      await touch('pointermove', 2, cx + 40 + i * 5);
+      await page.waitForTimeout(150);
+    }
+    const pinchFrames = (await page.evaluate(() => window.__rmr!.frames ?? 0)) - f0;
+    expect(pinchFrames, 'the pinch drew frames').toBeGreaterThan(10);
+    const during = await page.evaluate(() => window.__rmr!.markerLayout!());
+    expect(during, 'no ease runs during the pinch').not.toBeNull();
+    expect(during!.freshGap, 'px from the layout of the view on screen, fingers still down').toBeLessThan(1);
+    await touch('pointerup', 1, cx - 140);
+    await touch('pointerup', 2, cx + 140);
+    await waitForCameraIdle(page);
+    await page.waitForTimeout(400);
+    const lag = await coverLag(page);
+    const after = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+    console.log(`pinch, ${n} recs: ${JSON.stringify(lag)}`);
+    expect((await camera(page)).zoom, 'the pinch zoomed in').toBeGreaterThan(z0 * 1.5);
+    expect(lag.moving, 'frames on which the camera moved').toBeGreaterThan(10);
+    expect(lag.behind, 'px a cover was from its place for the view on screen, on a frame of the pinch').toBeLessThan(1);
+    expect(lag.easing, 'frames on which covers were easing over').toBe(0);
+    expect(lag.after, 'px a cover moved after the camera had stopped').toBeLessThan(0.5);
+    expect(after.settles - before.settles, 'settles for the whole pinch').toBeLessThanOrEqual(1);
+    expect(after.eases - before.eases, 'eases for the whole pinch').toBe(0);
+    expect(after.freshGap, 'px from a fresh layout of the view at rest').toBeLessThan(0.01);
+  });
+}
+
+test('a wheel zoom with an album open draws no frame after it ends', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'a mouse wheel');
+  await page.goto('/map');
+  await waitForMap(page);
+  await setFocus(page, 11, await recsOf(page, 11, 'balanced', 10));
+  await waitForCameraIdle(page);
+  await waitForGasSharpSettled(page);
+  const box = (await page.locator('canvas.map-canvas').boundingBox())!;
+  const extra: number[] = [];
+  for (let r = 0; r < 4; r++) {
+    await page.mouse.move(box.x + box.width * 0.6, box.y + box.height * 0.5);
+    // Frames drawn in the 400 ms after the frame where the zoom easing ends (isAnimating turns false).
+    const after = page.evaluate(
+      () =>
+        new Promise<number>((done) => {
+          let seen = false;
+          const tick = () => {
+            const moving = window.__rmr!.map!.isAnimating();
+            if (moving) seen = true;
+            if (seen && !moving) {
+              const at = window.__rmr!.frames ?? 0;
+              setTimeout(() => done((window.__rmr!.frames ?? 0) - at), 400);
+              return;
+            }
+            requestAnimationFrame(tick);
+          };
+          requestAnimationFrame(tick);
+        }),
+    );
+    await page.mouse.wheel(0, r % 2 ? 150 : -150);
+    extra.push(await after);
+    await waitForCameraIdle(page);
+  }
+  expect(extra, 'frames after each wheel zoom ended').toEqual([0, 0, 0, 0]);
+  const rest = (await page.evaluate(() => window.__rmr!.markerLayout!()))!;
+  expect(rest.freshGap).toBeLessThan(0.01);
 });

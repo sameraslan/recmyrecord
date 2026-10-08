@@ -1,0 +1,110 @@
+Baseline: ../docs/design/trifid-theme/reviews/baseline/perf (perf-run1.json, perf-run2.json, perf-run3.json, perf-dpr2-run1.json, perf-dpr2-run2.json, perf-dpr2-run3.json)
+Current: ../docs/design/trifid-theme/reviews/after/perf/ab/new (perf-run1.json, perf-run2.json, perf-run3.json)
+First-load JS of / (KB, per full run): baseline 190.5, 190.5, 190.5; now 190.8, 190.8, 190.8 (budget 200): +0.3 KB against the baseline
+three.js chunk in the first load (KB, per full run): baseline 0, 0, 0; now 0, 0, 0 (must be 0)
+Server HTML of / (KB, per full run): baseline 28.3, 28.3, 28.3; now 28.2, 28.2, 28.2 (budget 150)
+Server HTML of /album/in-rainbows-radiohead (KB, per full run): baseline 34, 34, 34; now 33.9, 33.9, 33.9 (budget 150)
+How the current runs were made: perf-run1.json: open=whole; perf-run2.json: open=whole; perf-run3.json: open=whole
+
+| Where | Measure | Budget | Baseline median (min to max), runs | Now, median (min to max), runs | Difference | |
+|---|---|---|---|---|---|---|
+| software desktop | searchUsableMs | 1000 | 121 (92 to 137), n=3 | 109 (84 to 323), n=3 | -12 (-10 %) | |
+| software desktop | startupLongTaskMs | 250 | 57 (0 to 122), n=3 | 0 (0 to 0), n=3 | -57 (-100 %) | |
+| software desktop | mapFirstFrameMs | none | 4074 (3937 to 4267), n=3 | 4448 (4391 to 4638), n=3 | +374 (+9 %) | WORSE |
+| software desktop | typeToSuggestionsMs | 100 | 6 (5 to 6), n=3 | 5 (4 to 5), n=3 | -1 (-17 %) | |
+| software desktop | selectToAlbumMs | 200 | 24 (17 to 35), n=3 | 21 (21 to 22), n=3 | -3 (-12 %) | |
+| software desktop | transitionGapMs | none | 1355 (1296 to 1642), n=3 | 625 (622 to 640), n=3 | -730 (-54 %) | |
+| software desktop | sliderToListMs | 150 | 8 (7 to 13), n=3 | 6 (6 to 6), n=3 | -2 (-25 %) | |
+| software desktop | morphGapMs | none | 153 (141 to 219), n=3 | 178 (115 to 195), n=3 | +25 (+16 %) | SLOWER |
+| software desktop | dragGapMs | none | 95 (85 to 105), n=3 | 116 (116 to 120), n=3 | +21 (+22 %) | WORSE |
+| software desktop | zoomGapMs | none | 202 (189 to 226), n=3 | 287 (214 to 290), n=3 | +85 (+42 %) | WORSE |
+| software desktop | idleLongTasks | 0 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| software desktop | idleFrames | 1 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| software desktop | deepDragGapMs | none | n/a | 76 (73 to 77), n=3 | n/a | |
+| software desktop | deepMorphGapMs | none | n/a | 72 (67 to 74), n=3 | n/a | |
+| software desktop | gasShownMs | none | n/a | 4807 (4725 to 5009), n=3 | n/a | |
+| software phone | searchUsableMs | 1000 | 127 (80 to 179), n=3 | 117 (71 to 772), n=3 | -10 (-8 %) | |
+| software phone | startupLongTaskMs | 250 | 0 (0 to 0), n=3 | 0 (0 to 57), n=3 | 0 | |
+| software phone | mapFirstFrameMs | none | 2903 (2811 to 3028), n=3 | 2878 (2848 to 2959), n=3 | -25 (-1 %) | |
+| software phone | typeToSuggestionsMs | 100 | 5 (4 to 5), n=3 | 5 (4 to 5), n=3 | 0 | |
+| software phone | selectToAlbumMs | 200 | 18 (17 to 77), n=3 | 21 (21 to 27), n=3 | +3 (+17 %) | SLOWER |
+| software phone | transitionGapMs | none | 784 (738 to 892), n=3 | 848 (834 to 861), n=3 | +64 (+8 %) | SLOWER |
+| software phone | sliderToListMs | 150 | 16 (7 to 181), n=3 | 10 (8 to 12), n=3 | -6 (-37 %) | |
+| software phone | morphGapMs | none | 114 (112 to 119), n=3 | 121 (117 to 125), n=3 | +7 (+6 %) | WORSE |
+| software phone | dragGapMs | none | 79 (74 to 117), n=3 | 87 (87 to 88), n=3 | +8 (+10 %) | SLOWER |
+| software phone | zoomGapMs | none | 53 (49 to 55), n=3 | 52 (52 to 70), n=3 | -1 (-2 %) | |
+| software phone | idleLongTasks | 0 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| software phone | idleFrames | 1 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| software phone | deepDragGapMs | none | n/a | 45 (42 to 46), n=3 | n/a | |
+| software phone | deepMorphGapMs | none | n/a | 44 (42 to 49), n=3 | n/a | |
+| software phone | gasShownMs | none | n/a | 3158 (3118 to 3237), n=3 | n/a | |
+| gpu desktop | searchUsableMs | 1000 | 84 (83 to 97), n=3 | 73 (71 to 75), n=3 | -11 (-13 %) | |
+| gpu desktop | startupLongTaskMs | 250 | 0 (0 to 345), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | mapFirstFrameMs | none | 575 (574 to 907), n=3 | 581 (572 to 583), n=3 | +6 (+1 %) | SLOWER |
+| gpu desktop | typeToSuggestionsMs | 100 | 7 (6 to 10), n=3 | 6 (5 to 6), n=3 | -1 (-14 %) | |
+| gpu desktop | selectToAlbumMs | 200 | 22 (21 to 24), n=3 | 26 (24 to 27), n=3 | +4 (+18 %) | WORSE |
+| gpu desktop | transitionGapMs | 50 | 28 (27 to 28), n=3 | 24 (21 to 27), n=3 | -4 (-14 %) | |
+| gpu desktop | sliderToListMs | 150 | 12 (7 to 16), n=3 | 11 (6 to 19), n=3 | -1 (-8 %) | |
+| gpu desktop | morphGapMs | 50 | 18 (18 to 20), n=3 | 18 (18 to 19), n=3 | 0 | |
+| gpu desktop | dragGapMs | 50 | 19 (18 to 21), n=3 | 20 (19 to 34), n=3 | +1 (+5 %) | SLOWER |
+| gpu desktop | zoomGapMs | 50 | 38 (34 to 43), n=3 | 28 (28 to 34), n=3 | -10 (-26 %) | |
+| gpu desktop | idleLongTasks | 0 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | idleFrames | 1 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop | deepDragGapMs | none (yardstick 50) | n/a | 20 (18 to 21), n=3 | n/a | |
+| gpu desktop | deepMorphGapMs | none (yardstick 50) | n/a | 19 (18 to 19), n=3 | n/a | |
+| gpu desktop | gasShownMs | none | n/a | 623 (614 to 625), n=3 | n/a | |
+| gpu phone | searchUsableMs | 1000 | 74 (72 to 78), n=3 | 69 (69 to 72), n=3 | -5 (-7 %) | |
+| gpu phone | startupLongTaskMs | 250 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu phone | mapFirstFrameMs | none | 554 (551 to 562), n=3 | 551 (551 to 554), n=3 | -3 (-1 %) | |
+| gpu phone | typeToSuggestionsMs | 100 | 5 (4 to 6), n=3 | 4 (4 to 5), n=3 | -1 (-20 %) | |
+| gpu phone | selectToAlbumMs | 200 | 19 (18 to 19), n=3 | 25 (22 to 26), n=3 | +6 (+32 %) | WORSE |
+| gpu phone | transitionGapMs | 50 | 18 (18 to 18), n=3 | 18 (18 to 19), n=3 | 0 | |
+| gpu phone | sliderToListMs | 150 | 13 (12 to 15), n=3 | 15 (10 to 18), n=3 | +2 (+15 %) | SLOWER |
+| gpu phone | morphGapMs | 50 | 18 (17 to 18), n=3 | 19 (19 to 21), n=3 | +1 (+6 %) | WORSE |
+| gpu phone | dragGapMs | 50 | 19 (19 to 22), n=3 | 21 (20 to 22), n=3 | +2 (+11 %) | SLOWER |
+| gpu phone | zoomGapMs | 50 | 44 (42 to 53), n=3 | 30 (30 to 31), n=3 | -14 (-32 %) | |
+| gpu phone | idleLongTasks | 0 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu phone | idleFrames | 1 | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu phone | deepDragGapMs | none (yardstick 50) | n/a | 19 (19 to 20), n=3 | n/a | |
+| gpu phone | deepMorphGapMs | none (yardstick 50) | n/a | 18 (17 to 19), n=3 | n/a | |
+| gpu phone | gasShownMs | none | n/a | 597 (594 to 608), n=3 | n/a | |
+| gpu desktop2x | searchUsableMs | none | 106 (88 to 114), n=3 | 71 (70 to 77), n=3 | -35 (-33 %) | |
+| gpu desktop2x | startupLongTaskMs | none | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop2x | mapFirstFrameMs | none | 617 (577 to 640), n=3 | 564 (555 to 585), n=3 | -53 (-9 %) | |
+| gpu desktop2x | typeToSuggestionsMs | none | 6 (5 to 6), n=3 | 5 (4 to 6), n=3 | -1 (-17 %) | |
+| gpu desktop2x | selectToAlbumMs | none | 21 (19 to 25), n=3 | 23 (23 to 25), n=3 | +2 (+10 %) | SLOWER |
+| gpu desktop2x | transitionGapMs | none (yardstick 50) | 27 (26 to 28), n=3 | 18 (17 to 21), n=3 | -9 (-33 %) | |
+| gpu desktop2x | sliderToListMs | none | 6 (5 to 8), n=3 | 9 (7 to 14), n=3 | +3 (+50 %) | WORSE |
+| gpu desktop2x | morphGapMs | none (yardstick 50) | 18 (18 to 19), n=3 | 18 (17 to 18), n=3 | 0 | |
+| gpu desktop2x | dragGapMs | none (yardstick 50) | 18 (18 to 18), n=3 | 20 (18 to 34), n=3 | +2 (+11 %) | WORSE |
+| gpu desktop2x | zoomGapMs | none (yardstick 50) | 38 (30 to 39), n=3 | 30 (27 to 30), n=3 | -8 (-21 %) | |
+| gpu desktop2x | idleLongTasks | none | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop2x | idleFrames | none | 0 (0 to 0), n=3 | 0 (0 to 0), n=3 | 0 | |
+| gpu desktop2x | deepDragGapMs | none (yardstick 50) | 19 (18 to 19), n=3 | 19 (19 to 24), n=3 | 0 | |
+| gpu desktop2x | deepMorphGapMs | none (yardstick 50) | 17 (17 to 18), n=3 | 18 (17 to 19), n=3 | +1 (+6 %) | SLOWER |
+| gpu desktop2x | gasShownMs | none | n/a | 622 (596 to 643), n=3 | n/a | |
+
+Single runs over budget or with a failed check (each is named and explained in the write-up):
+none
+
+Findings (20):
+first-load JS 190.8 KB is above the baseline (190.5 KB) by 0.3 KB; the budget is 200 KB
+software desktop mapFirstFrameMs: median 4448 is above the worst baseline run (4267)
+software desktop morphGapMs: median 178 is above the baseline median (153), inside the baseline spread (141 to 219)
+software desktop dragGapMs: median 116 is above the worst baseline run (105)
+software desktop zoomGapMs: median 287 is above the worst baseline run (226)
+software phone selectToAlbumMs: median 21 is above the baseline median (18), inside the baseline spread (17 to 77)
+software phone transitionGapMs: median 848 is above the baseline median (784), inside the baseline spread (738 to 892)
+software phone morphGapMs: median 121 is above the worst baseline run (119)
+software phone dragGapMs: median 87 is above the baseline median (79), inside the baseline spread (74 to 117)
+gpu desktop mapFirstFrameMs: median 581 is above the baseline median (575), inside the baseline spread (574 to 907)
+gpu desktop selectToAlbumMs: median 26 is above the worst baseline run (24)
+gpu desktop dragGapMs: median 20 is above the baseline median (19), inside the baseline spread (18 to 21)
+gpu phone selectToAlbumMs: median 25 is above the worst baseline run (19)
+gpu phone sliderToListMs: median 15 is above the baseline median (13), inside the baseline spread (12 to 15)
+gpu phone morphGapMs: median 19 is above the worst baseline run (18)
+gpu phone dragGapMs: median 21 is above the baseline median (19), inside the baseline spread (19 to 22)
+gpu desktop2x selectToAlbumMs: median 23 is above the baseline median (21), inside the baseline spread (19 to 25)
+gpu desktop2x sliderToListMs: median 9 is above the worst baseline run (8)
+gpu desktop2x dragGapMs: median 20 is above the worst baseline run (18)
+gpu desktop2x deepMorphGapMs: median 18 is above the baseline median (17), inside the baseline spread (17 to 18)

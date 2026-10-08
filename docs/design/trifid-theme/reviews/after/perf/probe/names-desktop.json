@@ -1,0 +1,396 @@
+{
+ "what": "names",
+ "vp": "desktop",
+ "n": 8,
+ "arms": [
+  "on",
+  "off"
+ ],
+ "date": "2026-10-06T23:08:21.955Z",
+ "sessions": [
+  {
+   "round": 1,
+   "arm": "on",
+   "vp": "desktop",
+   "loadBefore": [
+    5.84,
+    6.12,
+    6.24
+   ],
+   "loadAfter": [
+    5.69,
+    6.09,
+    6.23
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 565,
+   "gasShownMs": 607,
+   "gasAfterFirstFrameMs": 42,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": true,
+   "namesShown": 30
+  },
+  {
+   "round": 1,
+   "arm": "off",
+   "vp": "desktop",
+   "loadBefore": [
+    5.69,
+    6.09,
+    6.23
+   ],
+   "loadAfter": [
+    5.48,
+    6.04,
+    6.21
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 546,
+   "gasShownMs": 588,
+   "gasAfterFirstFrameMs": 42,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": false,
+   "namesShown": null
+  },
+  {
+   "round": 2,
+   "arm": "off",
+   "vp": "desktop",
+   "loadBefore": [
+    5.48,
+    6.04,
+    6.21
+   ],
+   "loadAfter": [
+    5.44,
+    6.02,
+    6.21
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 564,
+   "gasShownMs": 606,
+   "gasAfterFirstFrameMs": 42,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": false,
+   "namesShown": null
+  },
+  {
+   "round": 2,
+   "arm": "on",
+   "vp": "desktop",
+   "loadBefore": [
+    5.44,
+    6.02,
+    6.21
+   ],
+   "loadAfter": [
+    5.32,
+    5.98,
+    6.19
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 552,
+   "gasShownMs": 595,
+   "gasAfterFirstFrameMs": 43,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": true,
+   "namesShown": 30
+  },
+  {
+   "round": 3,
+   "arm": "on",
+   "vp": "desktop",
+   "loadBefore": [
+    5.32,
+    5.98,
+    6.19
+   ],
+   "loadAfter": [
+    5.3,
+    5.97,
+    6.18
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 552,
+   "gasShownMs": 596,
+   "gasAfterFirstFrameMs": 44,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": true,
+   "namesShown": 30
+  },
+  {
+   "round": 3,
+   "arm": "off",
+   "vp": "desktop",
+   "loadBefore": [
+    5.3,
+    5.97,
+    6.18
+   ],
+   "loadAfter": [
+    5.19,
+    5.94,
+    6.17
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 552,
+   "gasShownMs": 594,
+   "gasAfterFirstFrameMs": 42,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": false,
+   "namesShown": null
+  },
+  {
+   "round": 4,
+   "arm": "off",
+   "vp": "desktop",
+   "loadBefore": [
+    5.19,
+    5.94,
+    6.17
+   ],
+   "loadAfter": [
+    5.18,
+    5.92,
+    6.16
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 551,
+   "gasShownMs": 595,
+   "gasAfterFirstFrameMs": 44,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": false,
+   "namesShown": null
+  },
+  {
+   "round": 4,
+   "arm": "on",
+   "vp": "desktop",
+   "loadBefore": [
+    5.18,
+    5.92,
+    6.16
+   ],
+   "loadAfter": [
+    5.8,
+    6.04,
+    6.2
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 553,
+   "gasShownMs": 596,
+   "gasAfterFirstFrameMs": 43,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": true,
+   "namesShown": 30
+  },
+  {
+   "round": 5,
+   "arm": "on",
+   "vp": "desktop",
+   "loadBefore": [
+    5.8,
+    6.04,
+    6.2
+   ],
+   "loadAfter": [
+    5.74,
+    6.02,
+    6.2
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 549,
+   "gasShownMs": 590,
+   "gasAfterFirstFrameMs": 41,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": true,
+   "namesShown": 30
+  },
+  {
+   "round": 5,
+   "arm": "off",
+   "vp": "desktop",
+   "loadBefore": [
+    5.74,
+    6.02,
+    6.2
+   ],
+   "loadAfter": [
+    5.6,
+    5.99,
+    6.18
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 557,
+   "gasShownMs": 600,
+   "gasAfterFirstFrameMs": 43,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": false,
+   "namesShown": null
+  },
+  {
+   "round": 6,
+   "arm": "off",
+   "vp": "desktop",
+   "loadBefore": [
+    5.6,
+    5.99,
+    6.18
+   ],
+   "loadAfter": [
+    5.55,
+    5.97,
+    6.18
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 536,
+   "gasShownMs": 579,
+   "gasAfterFirstFrameMs": 43,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": false,
+   "namesShown": null
+  },
+  {
+   "round": 6,
+   "arm": "on",
+   "vp": "desktop",
+   "loadBefore": [
+    5.55,
+    5.97,
+    6.18
+   ],
+   "loadAfter": [
+    5.35,
+    5.92,
+    6.16
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 538,
+   "gasShownMs": 580,
+   "gasAfterFirstFrameMs": 42,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": true,
+   "namesShown": 30
+  },
+  {
+   "round": 7,
+   "arm": "on",
+   "vp": "desktop",
+   "loadBefore": [
+    5.35,
+    5.92,
+    6.16
+   ],
+   "loadAfter": [
+    5.08,
+    5.85,
+    6.13
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 538,
+   "gasShownMs": 581,
+   "gasAfterFirstFrameMs": 43,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": true,
+   "namesShown": 30
+  },
+  {
+   "round": 7,
+   "arm": "off",
+   "vp": "desktop",
+   "loadBefore": [
+    5.08,
+    5.85,
+    6.13
+   ],
+   "loadAfter": [
+    4.99,
+    5.82,
+    6.12
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 538,
+   "gasShownMs": 580,
+   "gasAfterFirstFrameMs": 42,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": false,
+   "namesShown": null
+  },
+  {
+   "round": 8,
+   "arm": "off",
+   "vp": "desktop",
+   "loadBefore": [
+    4.99,
+    5.82,
+    6.12
+   ],
+   "loadAfter": [
+    4.75,
+    5.76,
+    6.1
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 539,
+   "gasShownMs": 580,
+   "gasAfterFirstFrameMs": 41,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": false,
+   "namesShown": null
+  },
+  {
+   "round": 8,
+   "arm": "on",
+   "vp": "desktop",
+   "loadBefore": [
+    4.75,
+    5.76,
+    6.1
+   ],
+   "loadAfter": [
+    4.61,
+    5.71,
+    6.08
+   ],
+   "errors": [],
+   "mapFirstFrameMs": 538,
+   "gasShownMs": 581,
+   "gasAfterFirstFrameMs": 43,
+   "longestTaskMs": 0,
+   "longTaskTotalMs": 0,
+   "longTasks": [],
+   "namesOn": true,
+   "namesShown": 30
+  }
+ ]
+}

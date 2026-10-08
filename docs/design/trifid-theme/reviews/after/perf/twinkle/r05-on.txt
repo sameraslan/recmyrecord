@@ -1,0 +1,19 @@
+before: ## 19:32:56 5.89 5.22 5.11 | Now drawing from 'Battery Power'
+
+Opening framing: the Overview (the app's own). Glints on first. Mouse warm-up: none.
+
+| Renderer | Viewport | Visitors get glints | Run | Glints | Made | Most alive | Longest task (ms) | Long tasks | Long tasks at a glint | Longest frame gap (ms) | Canvas frames | Longest glint write (ms) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| gpu | desktop | yes | still | on | 10 | 2 | 0 | 0 | 0 | 21 | 0 | 1.4 |
+| gpu | desktop | yes | still | off | 0 | 0 | 0 | 0 | 0 | 19 | 0 | 0 |
+| gpu | desktop | yes | mouse moving (first hover) | on | 3 | 2 | 0 | 0 | 0 | 57 | 353 | 2 |
+| gpu | desktop | yes | mouse moving | off | 0 | 0 | 0 | 0 | 0 | 21 | 347 | 0 |
+
+Frame gaps over 32 ms (reported; the table's longest gap is what is judged):
+  gpu desktop mouse moving (first hover), glints on: 57 ms at 732 ms; 1 alive; 7 ms after a glint was made or removed; hover label not shown yet
+
+gpu desktop mouse moving, glints on: 3 glints made while the mouse moved; the hover hold has skipped 7 ticks on this page so far.
+Saved scripts/perf/out/twinkle-cost-2026-10-06T23-34-29-013Z.json
+No rule of this script was broken where visitors get glints (the first hover is in the table but is not judged inside one session: judge it across sessions with --first-hover-verdict). One session is not a verdict: see docs/design/trifid-theme/reviews/app-twinkle-cost.md for the runs that are.
+exit 0
+after: ## 19:34:29 7.20 5.87 5.37 | Now drawing from 'Battery Power'

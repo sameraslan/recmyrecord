@@ -1,14 +1,11 @@
 /* Phones and narrow tablets (mockup lines 372 to 440), plus 44 px tap targets. The slider, zoom controls and
  * Explore card positions live in map.css, where they follow the measured slider cover (--slider-cover). */
 @media (max-width: 899px) {
-  /* Home: the fitted cloud is denser on a phone, and overlapping WebGL dots add up where the mockup's canvas
-   * fills each cluster once, so the veil is darker here and centred on the map to keep the backdrop as quiet. */
-  .veil { background: radial-gradient(60% 50% at 50% 55%, rgba(21, 17, 13, .8), rgba(21, 17, 13, .52) 70%, rgba(21, 17, 13, .4)); }
   .wordmark { display: inline-flex; align-items: center; min-height: 44px; }
   .skip { display: inline-flex; align-items: center; min-height: 44px; }
 
   /* The list is the album view; the Map button slides it away for the full map and back. */
-  .album { width: 100%; border-right: 0; transition: transform var(--dur) var(--out), visibility 0s; }
+  .album { width: 100%; border-right: 0; background: var(--color-room); transition: transform var(--dur) var(--out), visibility 0s; }
   .album.album--hidden { transform: translateX(-101%); visibility: hidden; transition: transform var(--dur) var(--out), visibility 0s linear var(--dur); }
   .album.album--hidden .album-scroll { content-visibility: hidden; transition: content-visibility 0s linear var(--dur); transition-behavior: allow-discrete; }
   .album-scroll { padding: 12px var(--gut) 110px; }
@@ -22,16 +19,17 @@
   .seed-title { font-size: clamp(32px, 9vw, 40px); }
   .seed-title.len-m { font-size: clamp(28px, 7.8vw, 34px); }
   .seed-title.len-l { font-size: clamp(24px, 6.6vw, 28px); }
-  .seed-actions { grid-area: auto; grid-column: 1 / -1; grid-row: 5; margin-top: 14px; }
+  /* The buttons across the page under the cover, then the tags (approved final-phone-list.jpg): the order of the document. */
+  .seed-actions { grid-area: auto; grid-column: 1 / -1; grid-row: 4; margin-top: 6px; }
+  .tags { grid-area: auto; grid-column: 1 / -1; grid-row: 5; }
   .seed-actions .btn { flex: 1; min-height: 44px; }
   .icon-quiet { width: 44px; height: 44px; }
-  .rec-main { grid-template-columns: 16px 56px minmax(0, 1fr); gap: 12px; padding: 12px 52px 12px 2px; }
+  .rec-main { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; padding: 12px 52px 12px 12px; }
   .rec .cover { width: 56px !important; }
   .rec-title { -webkit-line-clamp: 3; font-size: 22px; }
   .seed-title.len-l .seed-title-box { -webkit-line-clamp: 4; }
   .recs-note .btn { align-self: stretch; min-height: 44px; }
   .rec-shared { white-space: normal; }
-  .rec-sp { right: 0; }
 
   .strip { display: block; position: relative; height: 220px; margin: 22px calc(var(--gut) * -1) 0; border-top: 1px solid var(--color-rule); border-bottom: 1px solid var(--color-rule); background: var(--color-pane); }
   .strip-canvas { position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 48px); cursor: pointer; display: block; }
@@ -48,7 +46,8 @@
   .fab-map--away { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .2s var(--out), visibility 0s linear .2s; }
   .fab-map--on { top: 12px; bottom: auto; right: 12px; background: var(--color-float); color: var(--color-paper); border: 1px solid var(--color-rule-2); box-shadow: none; border-radius: 2px; }
 
-  .map-zoom button { width: 44px; height: 44px; }
+  /* The zoom buttons (styles/map.css) follow this. */
+  .map-zoom { --zb: 44px; }
 }
 
 /* Reduced motion: the global rule only shortens transitions to .01ms, which still leaves the panel's first frame at

@@ -4,11 +4,13 @@ import { useLayoutEffect, useRef } from "react";
 import { useThree } from "@react-three/fiber";
 import type * as THREE from "three";
 
+import type { MapCamera } from "@/lib/types";
 import type { MapData } from "../data";
-import { fitView, getCloudBounds } from "../state/bounds";
+import { fitView, getCloudBounds, overviewView } from "../state/bounds";
 import { useMapStore } from "../state/mapStore";
-import { setFramed, setOverviewFraming } from "../state/view";
-import { FRUSTUM_HALF_HEIGHT } from "../state/zoomLimits";
+import { setFitKind, setFramed, setOverviewFraming, setVisibleScale, snapKind } from "../state/view";
+import type { OrthoCameraLike } from "../state/projection";
+import { FRUSTUM_HALF_HEIGHT, visibleScale } from "../state/zoomLimits";
 
 /**
  * Half the frustum height in world units (state/zoomLimits.ts). Fixed; the
@@ -16,22 +18,56 @@ import { FRUSTUM_HALF_HEIGHT } from "../state/zoomLimits";
  */
 export { FRUSTUM_HALF_HEIGHT };
 
+/** The camera as applyFrustum would set it for `view`, a panel inset and the header's top inset, for projecting a
+ * view the camera is not at yet (the end of a tween). */
+export function frustumCamera(view: MapCamera, width: number, height: number, insetPx: number, insetTopPx: number): OrthoCameraLike {
+  const halfW = FRUSTUM_HALF_HEIGHT * (width / height);
+  const inset = Math.min(Math.max(insetPx, 0), width * 0.9);
+  const top = Math.min(Math.max(insetTopPx, 0), height * 0.5);
+  return {
+    position: { x: view.x, y: view.y },
+    zoom: view.zoom,
+    left: -halfW,
+    right: halfW,
+    top: FRUSTUM_HALF_HEIGHT,
+    bottom: -FRUSTUM_HALF_HEIGHT,
+    view: inset > 0 || top > 0 ? { enabled: true, fullWidth: width, fullHeight: height, offsetX: -inset / 2, offsetY: -top / 2, width, height } : null,
+  };
+}
+
 /**
  * Symmetric frustum for a `width` x `height` CSS px canvas, with the drawing shifted so `camera.position`
- * lands at the centre of the area right of `insetPx` (the album panel). state/projection.ts mirrors this.
+ * lands at the centre of the visible map: right of `insetPx` (the album panel) and below `insetTopPx` (the
+ * header, which the canvas runs under). state/projection.ts mirrors this.
  */
-export function applyFrustum(camera: THREE.OrthographicCamera, width: number, height: number, insetPx: number): void {
+export function applyFrustum(camera: THREE.OrthographicCamera, width: number, height: number, insetPx: number, insetTopPx: number): void {
   const halfW = FRUSTUM_HALF_HEIGHT * (width / height);
   camera.left = -halfW;
   camera.right = halfW;
   camera.top = FRUSTUM_HALF_HEIGHT;
   camera.bottom = -FRUSTUM_HALF_HEIGHT;
   const inset = Math.min(Math.max(insetPx, 0), width * 0.9);
-  // Draw the canvas shifted left by half the inset (CSS px of the full canvas). three scales a view offset by
-  // 1 / zoom itself, so camera.position stays at the centre of the visible area right of the inset at every zoom.
-  if (inset > 0) camera.setViewOffset(width, height, -inset / 2, 0, width, height);
+  const top = Math.min(Math.max(insetTopPx, 0), height * 0.5);
+  // Draw the canvas shifted left by half the inset and down by half the top inset (CSS px of the full canvas).
+  // three scales a view offset by 1 / zoom itself, so camera.position stays at the centre of the visible area at
+  // every zoom.
+  if (inset > 0 || top > 0) camera.setViewOffset(width, height, -inset / 2, -top / 2, width, height);
   else if (camera.view) camera.view.enabled = false;
   camera.updateProjectionMatrix();
+}
+
+/** What the framing was last fitted for. */
+export interface FramedSize {
+  width: number;
+  height: number;
+  insetTop: number;
+}
+
+/** True when the canvas or the header over it is not the size the framing was last fitted for: a new header
+ * height (the window crossed 900 px wide) counts as a new size, also when it arrives without a canvas resize.
+ * False the first time (nothing was fitted yet). */
+export function sizeChanged(last: FramedSize | null, width: number, height: number, insetTop: number): boolean {
+  return last !== null && (last.width !== width || last.height !== height || last.insetTop !== insetTop);
 }
 
 /**
@@ -45,9 +81,12 @@ export function applyFrustum(camera: THREE.OrthographicCamera, width: number, he
  *   inside the visible area less MapInput.fitPadding, and publishes them (state/view.ts) for
  *   CameraRig, AlbumField, AtlasManager, CameraBounds and CameraTween. Recomputed on data, sliderT and size changes.
  * - Snap: once per MapData the camera jumps, without animation, to the
- *   framing centre and fitted zoom. A resize re-snaps only while the user
- *   has not yet grabbed the camera and no album is in focus; a slider change
- *   never moves the camera.
+ *   opening framing (state/view.ts openingKind): the Overview on /map
+ *   (state/bounds.ts fitOverview), the whole-cloud fit everywhere else. The
+ *   published framing stays the whole-cloud fit. A resize re-snaps only while
+ *   the user has not yet grabbed the camera and no album is in focus: on /map
+ *   to the framing last applied (getFitKind), elsewhere to the whole-cloud
+ *   fit (state/view.ts snapKind). A slider change never moves the camera.
  *
  * A layout effect, so all of this lands before R3F draws the first frame.
  *
@@ -66,8 +105,10 @@ export function InitialFrame() {
   const height = useThree((s) => s.size.height);
   const data = useMapStore((s) => s.data);
   const sliderT = useMapStore((s) => s.sliderT);
+  // The header's height over the canvas (64 px, or 60 px under 900 px wide): followed like the canvas size.
+  const insetTop = useMapStore((s) => s.input.insetTop);
   const framedData = useRef<MapData | null>(null);
-  const lastSize = useRef<{ width: number; height: number } | null>(null);
+  const lastSize = useRef<FramedSize | null>(null);
   const rafId = useRef<number | null>(null);
   // The sliderT value the most recent recompute (synchronous or throttled)
   // already accounted for; lets the sliderT effect below skip scheduling a
@@ -86,12 +127,14 @@ export function InitialFrame() {
     }
 
     const bounds = getCloudBounds(data, currentSliderT);
-    // Fit the whole cloud inside the visible area (right of the album panel), less the overview padding.
+    // Fit the whole cloud inside the visible area (right of the album panel, below the header), less the overview
+    // padding.
     const { input } = useMapStore.getState();
     const { zoom, center } = fitView(bounds, {
       width,
       height,
       insetLeft: useMapStore.getState().insetCurrent,
+      insetTop: input.insetTop,
       padding: input.fitPadding,
     });
     setOverviewFraming({ zoom, center, bounds });
@@ -103,11 +146,19 @@ export function InitialFrame() {
     const untouched = lastCameraGrab === 0 && input.focus === null;
     if (newData || (sizeChanged && untouched)) {
       framedData.current = data;
+      // A page load opens at the route's framing; a resize on /map re-fits the framing on screen (the fit button
+      // may have turned the Overview into the whole map), and on any other route the whole map.
+      const kind = snapKind(newData, input, window.__rmrOpen);
+      const view =
+        kind === "overview"
+          ? overviewView(data, currentSliderT, { width, height, insetLeft: useMapStore.getState().insetCurrent, insetTop: input.insetTop, bottomCover: input.bottomCover }, zoom)
+          : { zoom, center };
+      setFitKind(kind, { x: view.center.x, y: view.center.y, zoom: view.zoom });
       // eslint-disable-next-line react-hooks/immutability -- mutating the R3F camera in place (position/zoom/frustum) is the standard R3F pattern; the camera is a long-lived GPU-backed object, not React-owned state, and this is not itself inside a hook callback.
-      camera.position.x = center.x;
-      camera.position.y = center.y;
+      camera.position.x = view.center.x;
+      camera.position.y = view.center.y;
       // eslint-disable-next-line react-hooks/immutability -- see the comment above.
-      camera.zoom = zoom;
+      camera.zoom = view.zoom;
       camera.updateProjectionMatrix();
       setFramed(true);
     }
@@ -120,16 +171,16 @@ export function InitialFrame() {
   // eslint-disable-next-line react-hooks/immutability -- this effect mutates the R3F camera's frustum/position/zoom in place (see the mutation sites inside); the standard R3F pattern.
   useLayoutEffect(() => {
     if (width > 0 && height > 0) {
-      applyFrustum(camera, width, height, useMapStore.getState().insetCurrent);
+      applyFrustum(camera, width, height, useMapStore.getState().insetCurrent, insetTop);
+      // Before the fit below and before any clampZoom: the zoom limits in this canvas's own scale.
+      setVisibleScale(visibleScale(height, insetTop));
     }
-    const sizeChanged =
-      lastSize.current !== null &&
-      (lastSize.current.width !== width || lastSize.current.height !== height);
-    lastSize.current = { width, height };
+    const resized = sizeChanged(lastSize.current, width, height, insetTop);
+    lastSize.current = { width, height, insetTop };
 
-    recomputeFraming(sizeChanged);
+    recomputeFraming(resized);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data, width, height, camera, invalidate]);
+  }, [data, width, height, insetTop, camera, invalidate]);
 
   // Throttled: pure sliderT changes (the effect above already handled the
   // sliderT value in effect at mount/data/size time, so this skips that

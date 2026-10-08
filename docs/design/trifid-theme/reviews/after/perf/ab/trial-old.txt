@@ -1,0 +1,40 @@
+before: ## 18:42:42 14.25 7.42 7.25 | Now drawing from 'AC Power'
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --no-gas --open whole --mode gpu --viewport phone
+
+First-load JS of / (gzip): 190.5 KB with nomodule scripts (budget 200 KB), 151.9 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.3 KB, /album/in-rainbows-radiohead 34 KB (budget 150 KB each)
+
+| Measure | gpu phone |
+|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Gas shader (reported only) | n/a |
+| Search usable | 82 ms |
+| Startup worst long task | 0 ms |
+| WebGL warm-up end (reported only) | 136 ms (done) |
+| Map first frame (reported only) | 582 ms |
+| Nebula visible (reported only) | n/a |
+| Typing to suggestions | 5 ms |
+| Select to album | 19 ms |
+| Transition worst frame gap | 19 ms |
+| Slider to list | 7 ms |
+| Morph worst frame gap | 18 ms |
+| Drag worst frame gap | 20 ms |
+| Zoom worst frame gap | 43 ms |
+| Drag worst frame gap at the opening view (reported only) | n/a |
+| Zoom worst frame gap at the opening view (reported only) | n/a |
+| Deep zoom drag worst frame gap (reported only) | 19 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 19 ms |
+| Long tasks while idle (3 s) | 0 |
+| Frames rendered while idle (3 s) | 0 |
+
+Run with --no-gas: the script did not wait for a gas layer.
+
+Run with --open whole: the opening view rows were not measured (n/a). The budget rows are measured at the whole map in every run.
+
+Glints made in the 3 s idle window, as a visitor gets the site: gpu phone n/a
+
+FAIL
+gpu phone: no glint was made while the map was idle, on a GPU (ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)) with motion allowed and no --twinkle flag: visitors with a GPU get none. The app reads the renderer as software: unknown
+after: ## 18:43:13 11.41 7.38 7.24 | Now drawing from 'AC Power'

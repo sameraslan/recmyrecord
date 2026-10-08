@@ -29,6 +29,7 @@ Pick an album and the site lists the albums closest to it, by sound and by mood.
 | `npm run test:e2e` | Playwright end-to-end and accessibility tests at desktop and phone sizes, plus a run with WebGL turned off. Builds and serves the site on port 3100 first. `E2E_DEV=1 npm run test:e2e` runs them against a dev server instead. |
 | `npm run perf` | Measures the performance budgets of the design spec (section 7) at 1440 x 900 and 390 x 844, in software and GPU rendering, and fails when a budget is missed. Needs a build. |
 | `npm run shots` | Screenshots of every reviewed state at 1440 x 900, 1280 x 800 and 390 x 844, written to `test-results/review/`. Needs a build. Pass part of a name to shoot only some, for example `npm run shots -- d1440-d1`. |
+| `npm run theme` | Bakes the map theme into `public/data/theme/`: the gas of each slider stop as two images, plus `theme.json`. Uses Playwright's own Chromium on software rendering. Run it after `albums.json` or `positions.json` change (see "Map theme data"). |
 
 ## Trying another data set
 
@@ -50,12 +51,50 @@ Routes:
 
 - `/`: search, "Explore the map", "Surprise me" and a shelf of albums to start from, over the dimmed map.
 - `/map`: the map to explore. Hovering an album shows its title and artist; clicking it opens a card with a link to its closest albums.
-- `/album/[slug]`: the album, its closest albums and the map framed around them. "Explore this area" on the map drops the album and opens Explore with the map left where it is. `?by=sonic`, `?by=balanced` (the default) or `?by=mood` picks the slider stop.
+- `/album/[slug]`: the album, its closest albums and the map framed around them. "Explore this area" on the map drops the album and opens Explore with the map left where it is. `?by=sound`, `?by=balanced` (the default) or `?by=mood` picks the slider stop. `sound` is the address of the stop the code and the data files call `sonic`; `src/lib/url-state.ts` is the one place that translates.
 - `/about`: how the recommendations work, and the credits.
 
 One map stays mounted in the root layout for every route (`src/components/map/`). It is a WebGL point-sprite map ported from an earlier map of the same catalog. three.js loads on the client after first paint, cover sheets load only when zoom reaches the point where covers show, and the canvas draws only when something changes. Without WebGL the map shows a short message while search, lists and links keep working.
 
 App state (current stop, focus, hover, selection and the trail of visited albums) lives in one Zustand store, `src/lib/store.ts`. Every visible string, including labels read by screen readers, is in `src/lib/copy.ts`.
+
+## Map theme data
+
+The gas behind the albums is painted once, at build time, not in the visitor's browser. `npm run theme` starts one headless Chromium on software WebGL and writes seven files to `public/data/theme/`, which are committed:
+
+- `gas-sonic.<hash>.webp`, `gas-balanced.<hash>.webp`, `gas-mood.<hash>.webp`: the gas of each slider stop, 2048 px on its longer side. This is the image every map visit loads first (230 to 290 KB), and the only one Home, About, the 404 page and phones and tablets used by touch ever load.
+- `gas-sonic-sharp.<hash>.webp`, `gas-balanced-sharp.<hash>.webp`, `gas-mood-sharp.<hash>.webp`: the same gas at the resolution of the approved design (about 2800 by 3300 px, 500 to 550 KB). A desktop or laptop with a real GPU fetches the one for the stop on screen once the map is idle and frees it when the slider comes to rest at another stop. The test is a main pointer that is a mouse or a trackpad and can hover, so a laptop with a touch screen gets it too.
+- `theme.json`: for every album its colour family and the gas brightness under it at each stop (both packed as text, which `src/lib/data/theme.ts` reads back), and for each stop the rectangle its two gas images cover, their sizes and their hashes.
+
+`<hash>` is the first 10 hex characters of the SHA-256 of the image's own bytes. Browsers keep everything under `/data` for a day, so an image whose content changes must change its name: `theme.json` names the images it was baked with, and the map draws no others. It also refuses an image whose size is not the one `theme.json` gives, and shows plain sky for that stop. A bake that changes nothing writes the same names again. One that changes an image writes a new name and deletes the old file.
+
+An image covers only the rectangle that holds its stop's gas, with a little empty sky around it, not the whole layout square. The build finds that rectangle itself and refuses to write an image whose edge is not plain sky. The smaller image is the sharper one scaled down, so the two always show the same gas.
+
+It reads `public/data/albums.json`, `public/data/positions.json` and one input file, `../data-pipeline/theme/weights.json` (described in that folder's README). It changes none of them.
+
+### When the theme goes stale
+
+The baked files describe one album list and one set of layouts. `theme.json` records which: `n` is the album count and `positionsHash` is the first 12 hex characters of the SHA-256 of `positions.json`. When the album count or `positions.json` changes, the committed theme no longer matches the data and `npm test` fails in `src/lib/data/theme.data.test.ts`, in the test named "was built for the committed albums and layouts (run npm run theme after either changes)". The inputs have their own guard: in `../data-pipeline`, `.venv/bin/python -m rmr_pipeline.theme --check` and `tests/test_theme.py` fail when the albums were added, removed or reordered, and `npm run theme` refuses to run until they pass.
+
+To bake again:
+
+1. Refresh the inputs, following `../data-pipeline/theme/README.md`. Its last step is `cd ../data-pipeline && .venv/bin/python -m rmr_pipeline.theme`.
+2. `npm run theme`, on arm64 Node with nothing else heavy running.
+3. Look at the previews it writes to `test-results/theme/`, run `npm test`, and commit `public/data/theme/` as it now is: the seven files, and the removal of any image the bake replaced. `src/lib/data/theme.data.test.ts` also checks the file sizes (under 400 KB for a first image, under 1 MB for a sharper one) and the GPU memory the images need, so a bake that outgrows those limits fails there.
+
+A stale or missing theme never breaks the map for a visitor: the map checks the album count, and without a matching theme it shows plain sky.
+
+## Theme
+
+The look is the Trifid nebula theme. The decisions behind it are in [`../docs/design/trifid-theme/HANDOFF.md`](../docs/design/trifid-theme/HANDOFF.md), and what was built is in [`../docs/design/trifid-theme/IMPLEMENTATION-NOTES.md`](../docs/design/trifid-theme/IMPLEMENTATION-NOTES.md). The colour tokens are in `src/app/globals.css`.
+
+Every star on the map is an album. Star size and brightness are picked at random on each page load. A few bright stars glint while the map is still. The glints are off on software renderers and wait while an album is hovered.
+
+Panels over the map are see-through glass on wide screens. On phones, in browsers without `backdrop-filter`, and when the system asks for reduced transparency, they are fully solid instead: three one-line rules next to the tokens do this. The first of them is the phone glass switch: removing that one line gives phones glass.
+
+The map canvas starts at the top of the window, behind the header, and the header is glass over it. The camera knows the header's height as `MapInput.insetTop` (`HEADER_PX`, and `HEADER_NARROW_PX` under 900 px wide, in `src/lib/media.ts`: the two values of `--hdr`), so albums are framed in the area below the header. `e2e/framing.spec.ts` holds every framing to recorded positions (`e2e/fixtures/framing-baseline.json`). The record was first made before that change, and last made on 7 October 2026 for the 10,467-album layouts (`positions.json` with hash `e3093d62c5e6`). Record it again only when `positions.json` changes, after checking the framings by eye; the pinned scales in `src/components/map/state/bounds.test.ts` go stale at the same time.
+
+`npm run perf -- --glass on` and `--glass off` force glass or solid panels, and `--twinkle on` and `--twinkle off` the glints, to measure what each costs. `node scripts/perf/compare.mjs <baselineDir> <currentDir>` sets one set of runs beside another. `src/lib/contrast.test.ts` checks that every text colour keeps 4.5:1 on glass over a white backdrop and on the solid fallback.
 
 ## Deployment
 

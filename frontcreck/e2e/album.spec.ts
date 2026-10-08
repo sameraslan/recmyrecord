@@ -1,7 +1,7 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
 import { ARCHIVE_HOST_RE, HOSTED_COVER_RE, THUMB_SHEET_RE, albumOnAnotherService, albumWithArchiveCover, albumWhoseFirstRecHasNoLink, albumWhoseFirstRecIsOnAnotherService, albumWithBracketedTitle, albumWithNoLink, albumWithoutAudio, recsOf } from './data';
-import { act, shot, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
+import { act, shot, visibleAlbumPoint, waitForAnimations, waitForCameraIdle, waitForMap } from './helpers';
 
 const IR_SLUG = 'in-rainbows-radiohead';
 const IR = `/album/${IR_SLUG}`;
@@ -38,13 +38,109 @@ test('renders the seed, tags and the closest albums (balanced by default)', asyn
   await shot(page, info, 'album');
 });
 
-test('the map beside an album shows the hint line on desktop, as in the mockup', async ({ page, isMobile }) => {
+test('the map beside an open album has no hint line, as in the approved picture', async ({ page, isMobile }) => {
   test.skip(isMobile, 'the hint is desktop only');
+  // The approved picture (docs/design/trifid-theme/options/final-album.jpg) has no line and no band along the bottom
+  // of the map beside an album. The hint stays in Explore (explore.spec.ts), and comes back there.
   await page.goto(IR);
   await waitForMap(page);
   await waitForCameraIdle(page);
-  await expect(page.locator('.map-hint')).toHaveText(COPY.map.hintAlbum);
+  await waitForAnimations(page);
+  await expect(page.locator('.map-hint')).toBeHidden();
+  await expect(page.getByText(COPY.map.hint, { exact: false })).toBeHidden();
+  // Nothing of the band is painted either: no element of the map's controls draws a gradient along the bottom.
+  const band = await page.evaluate(() => {
+    const el = document.querySelector('.map-hint');
+    if (!el) return 'none';
+    const cs = getComputedStyle(el);
+    return cs.visibility === 'hidden' || cs.display === 'none' || cs.opacity === '0' ? 'none' : cs.backgroundImage;
+  });
+  expect(band).toBe('none');
+  // Reached from Explore, where the hint shows: opening the album takes it away.
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
   await expect(page.locator('.map-hint')).toBeVisible();
+  const p = await visibleAlbumPoint(page);
+  await page.mouse.click(p.x, p.y);
+  await page.getByRole('link', { name: COPY.map.cardPrimary }).click();
+  await expect(page).toHaveURL(/\/album\//);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-view', 'album');
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  await expect(page.locator('.map-hint')).toBeHidden();
+});
+
+test('the list rows are flush with the heading and its rule; the row highlight and its bar are beside the cover, in the gutter', async ({ page, isMobile }) => {
+  await page.goto(IR);
+  await expect(page.locator('li.rec')).toHaveCount(5);
+  await waitForAnimations(page);
+  const read = () =>
+    page.evaluate(() => {
+      const box = (el: Element) => {
+        const r = el.getBoundingClientRect();
+        return { l: r.left, r: r.right, t: r.top, b: r.bottom, w: r.width, h: r.height };
+      };
+      const scroll = document.querySelector('.album-scroll')!;
+      return {
+        heading: box(document.querySelector('.recs-h')!),
+        panel: box(scroll),
+        sideways: scroll.scrollWidth - scroll.clientWidth,
+        rows: [...document.querySelectorAll('li.rec')].map((li) => {
+          const main = li.querySelector('.rec-main')!;
+          const bar = getComputedStyle(main, '::before');
+          const link = li.querySelector('.rec-sp');
+          return {
+            hot: li.classList.contains('hot'),
+            row: box(li),
+            main: box(main),
+            cover: box(li.querySelector('.cover')!),
+            text: box(li.querySelector('.rec-text')!),
+            link: link ? box(link) : null,
+            icon: link ? box(link.querySelector('svg')!) : null,
+            fill: getComputedStyle(main).backgroundColor,
+            bar: { left: parseFloat(bar.left), top: parseFloat(bar.top), width: parseFloat(bar.width), height: parseFloat(bar.height), opacity: bar.opacity },
+          };
+        }),
+      };
+    });
+  const rest = await read();
+  const { heading, panel } = rest;
+  expect(rest.rows.some((r) => r.icon), 'a row with a listen link').toBe(true);
+  for (const r of rest.rows) {
+    // The cover starts where the heading and the rules start; the listen icon ends where they end.
+    expect(Math.abs(r.cover.l - heading.l), 'cover against the left end of the rule').toBeLessThanOrEqual(0.5);
+    expect(Math.abs(r.row.l - heading.l) + Math.abs(r.row.r - heading.r), 'the row rule is the heading rule').toBeLessThanOrEqual(0.5);
+    if (r.icon) expect(Math.abs(r.icon.r - heading.r), 'listen icon against the right end of the rule').toBeLessThanOrEqual(0.5);
+    if (r.link) expect(Math.min(r.link.w, r.link.h), 'the listen link is a 44 px target').toBeGreaterThanOrEqual(44);
+    // The layer that lights up (the link's own box) reaches 12 px left of the cover, inside the panel: nothing is cut.
+    expect(Math.abs(r.cover.l - r.main.l - 12), 'the highlight starts 12 px left of the cover').toBeLessThanOrEqual(0.5);
+    expect(r.main.l).toBeGreaterThanOrEqual(panel.l);
+    expect(r.main.r).toBeLessThanOrEqual(panel.r);
+    if (r.link) expect(r.link.r).toBeLessThanOrEqual(panel.r);
+    // The bar: 2 px at the left edge of that layer, so 10 px clear of the cover, and as tall as the row (the row is
+    // the link and the 1 px rule under it).
+    expect([r.bar.left, r.bar.top, r.bar.width]).toEqual([0, 0, 2]);
+    expect(Math.abs(r.bar.height - r.main.h)).toBeLessThanOrEqual(0.5);
+    expect(Math.abs(r.main.h + 1 - r.row.h)).toBeLessThanOrEqual(0.5);
+    expect(r.bar.height).toBeGreaterThan(r.cover.h);
+    expect(r.bar.opacity).toBe('0');
+    // The words stop short of the listen link.
+    if (r.link) expect(r.text.r).toBeLessThanOrEqual(r.link.l - 4);
+  }
+  expect(rest.sideways, 'the panel does not scroll sideways').toBeLessThanOrEqual(0);
+  if (isMobile) return; // a phone has no hover
+  await page.locator('li.rec').nth(1).locator('a.rec-main').hover();
+  await expect(page.locator('li.rec').nth(1)).toHaveClass(/hot/);
+  await waitForAnimations(page);
+  const lit = await read();
+  expect(lit.rows[1].fill).toBe('rgba(241, 236, 228, 0.06)');
+  expect(lit.rows[1].bar.opacity).toBe('1');
+  // Nothing moved: every box of every row is where it was at rest.
+  lit.rows.forEach((r, i) => {
+    for (const k of ['row', 'main', 'cover', 'text', 'link', 'icon'] as const) expect(r[k], `row ${i + 1} ${k}`).toEqual(rest.rows[i][k]);
+  });
+  expect(lit.sideways).toBeLessThanOrEqual(0);
 });
 
 test('?by=mood shows the mood list', async ({ page }) => {
@@ -77,7 +173,7 @@ test.describe('desktop split view', () => {
     await waitForMap(page);
     const historyBefore = await page.evaluate(() => history.length);
     await page.getByRole('button', { name: COPY.slider.stops.sonic, exact: true }).click();
-    await expect(page).toHaveURL(`${IR}?by=sonic`);
+    await expect(page).toHaveURL(`${IR}?by=sound`);
     expect(IR_SONIC.slice(0, 5), 'the data gives the sonic stop its own list').not.toEqual(IR_BALANCED.slice(0, 5));
     await expect.poll(() => titles(page)).toEqual(IR_SONIC.slice(0, 5));
     expect(await page.evaluate(() => history.length)).toBe(historyBefore);
@@ -107,7 +203,7 @@ test.describe('desktop split view', () => {
       };
     });
     await page.keyboard.press('ArrowRight'); // balanced -> mood, and at once mood -> sonic
-    await expect(page).toHaveURL(`${IR}?by=sonic`);
+    await expect(page).toHaveURL(`${IR}?by=sound`);
     await expect(range).toHaveValue('0');
     await expect(page.getByRole('button', { name: COPY.slider.stops.sonic, exact: true })).toHaveAttribute('aria-pressed', 'true');
     await expect.poll(() => titles(page)).toEqual(IR_SONIC.slice(0, 5));
@@ -350,7 +446,7 @@ test('an album without audio says so at the sonic and balanced stops, and its bu
   expect(recsOf(quiet.slug, 'balanced')).toEqual([]);
   expect(recsOf(quiet.slug, 'sonic')).toEqual([]);
   expect(mood).toHaveLength(10);
-  for (const by of ['', '?by=sonic']) {
+  for (const by of ['', '?by=sound']) {
     const res = await page.goto(url + by);
     expect(res?.status()).toBe(200);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(quiet.title);
@@ -361,7 +457,7 @@ test('an album without audio says so at the sonic and balanced stops, and its bu
     await expect(page.getByRole('button', { name: COPY.album.showMore })).toHaveCount(0);
     await expect(page.getByRole('button', { name: COPY.album.noAudioAction })).toBeVisible();
   }
-  // The page is live before the tap: the client has read ?by=sonic into the store and the panel's effects have
+  // The page is live before the tap: the client has read ?by=sound into the store and the panel's effects have
   // run (the accent is set). A tap on the server-rendered button before that would do nothing.
   await expect.poll(() => page.evaluate(() => window.__rmr?.getState().stop)).toBe('sonic');
   await expect.poll(() => page.evaluate(() => document.documentElement.style.getPropertyValue('--acc'))).not.toBe('');
@@ -519,4 +615,37 @@ test.describe('a Cover Art Archive cover', () => {
 test('unknown album slugs are 404s', async ({ page }) => {
   const res = await page.goto('/album/not-an-album');
   expect(res?.status()).toBe(404);
+});
+
+test("the header's Map tab is the current one on an album page, as in the approved picture, and only there and on the map", async ({ page }) => {
+  const nav = page.getByRole('navigation', { name: COPY.nav.label });
+  const tabs = () =>
+    nav.locator('.navbtn').evaluateAll((els) =>
+      els.map((a) => {
+        const s = getComputedStyle(a);
+        return { text: a.textContent!.trim(), current: a.getAttribute('aria-current'), ink: s.color, line: s.boxShadow !== 'none' };
+      }),
+    );
+  // An album is a place on the map: Map is bright with the underline (final-album.jpg, final-phone-list.jpg).
+  await page.goto(IR);
+  await expect(page.getByRole('heading', { level: 1, name: 'In Rainbows' })).toBeVisible();
+  const onAlbum = await tabs();
+  expect(onAlbum.map((t) => [t.text, t.current, t.line])).toEqual([
+    [COPY.nav.map, 'page', true],
+    [COPY.nav.about, null, false],
+  ]);
+  // The same look as on the map itself, and with a slider stop in the address too.
+  await page.goto('/map');
+  const onMap = await tabs();
+  expect(onMap).toEqual(onAlbum);
+  await page.goto(`${IR}?by=mood`);
+  expect(await tabs()).toEqual(onAlbum);
+  // Home and a page that does not exist have no current tab; About has its own.
+  for (const [url, current] of [['/', [null, null]], ['/about', [null, 'page']], ['/no-such-page', [null, null]]] as const) {
+    await page.goto(url);
+    const here = await tabs();
+    expect(here.map((t) => t.current), url).toEqual(current);
+    expect(here.map((t) => t.line), url).toEqual(current.map((c) => c !== null));
+    expect(here.map((t) => t.ink), url).toEqual(current.map((c) => (c ? onAlbum[0].ink : onAlbum[1].ink)));
+  }
 });

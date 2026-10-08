@@ -1,0 +1,600 @@
+{
+ "when": "2026-10-05T13:13:27.043Z",
+ "power": "Now drawing from 'AC Power'",
+ "rounds": 3,
+ "variants": [
+  {
+   "name": "baseline",
+   "base": "http://127.0.0.1:3301",
+   "lite": null
+  },
+  {
+   "name": "full",
+   "base": "http://127.0.0.1:3302",
+   "lite": "off"
+  },
+  {
+   "name": "lighter",
+   "base": "http://127.0.0.1:3302",
+   "lite": null
+  }
+ ],
+ "rows": [
+  {
+   "round": 1,
+   "variant": "baseline",
+   "vp": "desktop",
+   "loadBefore": "4.15 6.23 6.12",
+   "drag": {
+    "n": 38,
+    "mean": 80.3,
+    "median": 66.8,
+    "p95": 150.1,
+    "worst": 400,
+    "frames": 39
+   },
+   "zoom": {
+    "n": 59,
+    "mean": 50.8,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 66.7,
+    "frames": 59
+   },
+   "morph": {
+    "n": 48,
+    "mean": 38.2,
+    "median": 50,
+    "p95": 50.1,
+    "worst": 50.1,
+    "frames": 34
+   },
+   "idleFrames": 0,
+   "gasLite": null
+  },
+  {
+   "round": 1,
+   "variant": "baseline",
+   "vp": "phone",
+   "loadBefore": "6.25 6.54 6.23",
+   "drag": {
+    "n": 48,
+    "mean": 62.8,
+    "median": 66.7,
+    "p95": 83.3,
+    "worst": 83.4,
+    "frames": 48
+   },
+   "zoom": {
+    "n": 66,
+    "mean": 45.7,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 66.7,
+    "frames": 66
+   },
+   "morph": {
+    "n": 50,
+    "mean": 36.3,
+    "median": 49.9,
+    "p95": 66.7,
+    "worst": 66.8,
+    "frames": 33
+   },
+   "idleFrames": 0,
+   "gasLite": null
+  },
+  {
+   "round": 1,
+   "variant": "full",
+   "vp": "desktop",
+   "loadBefore": "7.44 6.79 6.33",
+   "drag": {
+    "n": 33,
+    "mean": 92.9,
+    "median": 83.4,
+    "p95": 166.7,
+    "worst": 416.5,
+    "frames": 34
+   },
+   "zoom": {
+    "n": 51,
+    "mean": 59.1,
+    "median": 66.6,
+    "p95": 83.3,
+    "worst": 83.4,
+    "frames": 51
+   },
+   "morph": {
+    "n": 36,
+    "mean": 50.9,
+    "median": 66.6,
+    "p95": 83.3,
+    "worst": 83.4,
+    "frames": 27
+   },
+   "idleFrames": 0,
+   "gasLite": false
+  },
+  {
+   "round": 1,
+   "variant": "full",
+   "vp": "phone",
+   "loadBefore": "8.51 7.08 6.44",
+   "drag": {
+    "n": 41,
+    "mean": 74,
+    "median": 83.3,
+    "p95": 100,
+    "worst": 116.6,
+    "frames": 41
+   },
+   "zoom": {
+    "n": 59,
+    "mean": 51.7,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 83.4,
+    "frames": 59
+   },
+   "morph": {
+    "n": 47,
+    "mean": 39,
+    "median": 33.4,
+    "p95": 66.7,
+    "worst": 83.4,
+    "frames": 30
+   },
+   "idleFrames": 0,
+   "gasLite": false
+  },
+  {
+   "round": 1,
+   "variant": "lighter",
+   "vp": "desktop",
+   "loadBefore": "8.91 7.28 6.53",
+   "drag": {
+    "n": 37,
+    "mean": 82,
+    "median": 83.3,
+    "p95": 150,
+    "worst": 400,
+    "frames": 38
+   },
+   "zoom": {
+    "n": 63,
+    "mean": 48.1,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 66.7,
+    "frames": 63
+   },
+   "morph": {
+    "n": 58,
+    "mean": 31.3,
+    "median": 16.8,
+    "p95": 50.1,
+    "worst": 66.7,
+    "frames": 32
+   },
+   "idleFrames": 0,
+   "gasLite": true
+  },
+  {
+   "round": 1,
+   "variant": "lighter",
+   "vp": "phone",
+   "loadBefore": "10.16 7.66 6.68",
+   "drag": {
+    "n": 46,
+    "mean": 66.3,
+    "median": 66.7,
+    "p95": 83.4,
+    "worst": 83.4,
+    "frames": 46
+   },
+   "zoom": {
+    "n": 69,
+    "mean": 44,
+    "median": 49.9,
+    "p95": 66.7,
+    "worst": 66.8,
+    "frames": 69
+   },
+   "morph": {
+    "n": 49,
+    "mean": 37.4,
+    "median": 49.9,
+    "p95": 66.7,
+    "worst": 66.7,
+    "frames": 32
+   },
+   "idleFrames": 0,
+   "gasLite": true
+  },
+  {
+   "round": 2,
+   "variant": "baseline",
+   "vp": "desktop",
+   "loadBefore": "10.06 7.79 6.75",
+   "drag": {
+    "n": 37,
+    "mean": 82.4,
+    "median": 66.7,
+    "p95": 150,
+    "worst": 416.7,
+    "frames": 38
+   },
+   "zoom": {
+    "n": 64,
+    "mean": 47.1,
+    "median": 50,
+    "p95": 66.6,
+    "worst": 66.7,
+    "frames": 64
+   },
+   "morph": {
+    "n": 58,
+    "mean": 30.7,
+    "median": 33.2,
+    "p95": 50,
+    "worst": 50.1,
+    "frames": 34
+   },
+   "idleFrames": 0,
+   "gasLite": null
+  },
+  {
+   "round": 2,
+   "variant": "baseline",
+   "vp": "phone",
+   "loadBefore": "12.70 8.66 7.10",
+   "drag": {
+    "n": 48,
+    "mean": 63.5,
+    "median": 66.7,
+    "p95": 83.4,
+    "worst": 83.4,
+    "frames": 48
+   },
+   "zoom": {
+    "n": 74,
+    "mean": 41.2,
+    "median": 49.9,
+    "p95": 66.7,
+    "worst": 66.8,
+    "frames": 74
+   },
+   "morph": {
+    "n": 58,
+    "mean": 31.3,
+    "median": 33.3,
+    "p95": 50,
+    "worst": 50.1,
+    "frames": 41
+   },
+   "idleFrames": 0,
+   "gasLite": null
+  },
+  {
+   "round": 2,
+   "variant": "full",
+   "vp": "desktop",
+   "loadBefore": "13.67 9.12 7.30",
+   "drag": {
+    "n": 33,
+    "mean": 93.4,
+    "median": 83.3,
+    "p95": 166.5,
+    "worst": 416.7,
+    "frames": 34
+   },
+   "zoom": {
+    "n": 50,
+    "mean": 60.3,
+    "median": 66.6,
+    "p95": 83.3,
+    "worst": 83.5,
+    "frames": 50
+   },
+   "morph": {
+    "n": 30,
+    "mean": 62.2,
+    "median": 66.7,
+    "p95": 83.4,
+    "worst": 83.4,
+    "frames": 28
+   },
+   "idleFrames": 0,
+   "gasLite": false
+  },
+  {
+   "round": 2,
+   "variant": "full",
+   "vp": "phone",
+   "loadBefore": "16.00 10.00 7.67",
+   "drag": {
+    "n": 43,
+    "mean": 70.2,
+    "median": 83.2,
+    "p95": 83.4,
+    "worst": 83.4,
+    "frames": 43
+   },
+   "zoom": {
+    "n": 67,
+    "mean": 45.5,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 66.7,
+    "frames": 67
+   },
+   "morph": {
+    "n": 43,
+    "mean": 42.2,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 66.7,
+    "frames": 31
+   },
+   "idleFrames": 0,
+   "gasLite": false
+  },
+  {
+   "round": 2,
+   "variant": "lighter",
+   "vp": "desktop",
+   "loadBefore": "16.17 10.42 7.87",
+   "drag": {
+    "n": 36,
+    "mean": 85.6,
+    "median": 83.3,
+    "p95": 150.1,
+    "worst": 383.3,
+    "frames": 37
+   },
+   "zoom": {
+    "n": 65,
+    "mean": 46.4,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 66.8,
+    "frames": 65
+   },
+   "morph": {
+    "n": 60,
+    "mean": 30.6,
+    "median": 16.8,
+    "p95": 50.1,
+    "worst": 50.1,
+    "frames": 34
+   },
+   "idleFrames": 0,
+   "gasLite": true
+  },
+  {
+   "round": 2,
+   "variant": "lighter",
+   "vp": "phone",
+   "loadBefore": "15.77 10.75 8.06",
+   "drag": {
+    "n": 45,
+    "mean": 67.4,
+    "median": 66.7,
+    "p95": 99.9,
+    "worst": 133.4,
+    "frames": 45
+   },
+   "zoom": {
+    "n": 49,
+    "mean": 62.6,
+    "median": 66.6,
+    "p95": 83.4,
+    "worst": 83.5,
+    "frames": 49
+   },
+   "morph": {
+    "n": 46,
+    "mean": 39.5,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 66.7,
+    "frames": 29
+   },
+   "idleFrames": 0,
+   "gasLite": true
+  },
+  {
+   "round": 3,
+   "variant": "baseline",
+   "vp": "desktop",
+   "loadBefore": "19.81 11.98 8.56",
+   "drag": {
+    "n": 40,
+    "mean": 75.4,
+    "median": 66.7,
+    "p95": 150,
+    "worst": 400,
+    "frames": 41
+   },
+   "zoom": {
+    "n": 65,
+    "mean": 46.2,
+    "median": 50,
+    "p95": 50.1,
+    "worst": 66.8,
+    "frames": 65
+   },
+   "morph": {
+    "n": 65,
+    "mean": 27.9,
+    "median": 33.2,
+    "p95": 50,
+    "worst": 50,
+    "frames": 39
+   },
+   "idleFrames": 0,
+   "gasLite": null
+  },
+  {
+   "round": 3,
+   "variant": "baseline",
+   "vp": "phone",
+   "loadBefore": "17.99 12.07 8.67",
+   "drag": {
+    "n": 49,
+    "mean": 62.2,
+    "median": 66.7,
+    "p95": 83.3,
+    "worst": 83.3,
+    "frames": 49
+   },
+   "zoom": {
+    "n": 80,
+    "mean": 37.9,
+    "median": 33.4,
+    "p95": 66.7,
+    "worst": 66.7,
+    "frames": 80
+   },
+   "morph": {
+    "n": 55,
+    "mean": 32.7,
+    "median": 33.3,
+    "p95": 50.1,
+    "worst": 50.1,
+    "frames": 35
+   },
+   "idleFrames": 0,
+   "gasLite": null
+  },
+  {
+   "round": 3,
+   "variant": "full",
+   "vp": "desktop",
+   "loadBefore": "16.51 12.10 8.76",
+   "drag": {
+    "n": 32,
+    "mean": 95.3,
+    "median": 83.4,
+    "p95": 150,
+    "worst": 416.7,
+    "frames": 33
+   },
+   "zoom": {
+    "n": 48,
+    "mean": 62.8,
+    "median": 66.7,
+    "p95": 83.4,
+    "worst": 83.4,
+    "frames": 48
+   },
+   "morph": {
+    "n": 32,
+    "mean": 57.3,
+    "median": 66.7,
+    "p95": 133.3,
+    "worst": 166.7,
+    "frames": 24
+   },
+   "idleFrames": 0,
+   "gasLite": false
+  },
+  {
+   "round": 3,
+   "variant": "full",
+   "vp": "phone",
+   "loadBefore": "17.96 12.77 9.10",
+   "drag": {
+    "n": 42,
+    "mean": 73.4,
+    "median": 83.3,
+    "p95": 83.4,
+    "worst": 100.1,
+    "frames": 42
+   },
+   "zoom": {
+    "n": 42,
+    "mean": 71.8,
+    "median": 83.3,
+    "p95": 83.4,
+    "worst": 100.1,
+    "frames": 42
+   },
+   "morph": {
+    "n": 33,
+    "mean": 55,
+    "median": 66.6,
+    "p95": 100,
+    "worst": 116.7,
+    "frames": 25
+   },
+   "idleFrames": 0,
+   "gasLite": false
+  },
+  {
+   "round": 3,
+   "variant": "lighter",
+   "vp": "desktop",
+   "loadBefore": "15.04 12.43 9.06",
+   "drag": {
+    "n": 37,
+    "mean": 81.5,
+    "median": 83.3,
+    "p95": 150,
+    "worst": 383.4,
+    "frames": 38
+   },
+   "zoom": {
+    "n": 63,
+    "mean": 48.1,
+    "median": 50,
+    "p95": 66.7,
+    "worst": 66.8,
+    "frames": 63
+   },
+   "morph": {
+    "n": 55,
+    "mean": 33,
+    "median": 33.3,
+    "p95": 50.1,
+    "worst": 66.6,
+    "frames": 33
+   },
+   "idleFrames": 0,
+   "gasLite": true
+  },
+  {
+   "round": 3,
+   "variant": "lighter",
+   "vp": "phone",
+   "loadBefore": "13.74 12.30 9.11",
+   "drag": {
+    "n": 43,
+    "mean": 70.9,
+    "median": 83.3,
+    "p95": 83.4,
+    "worst": 83.4,
+    "frames": 43
+   },
+   "zoom": {
+    "n": 68,
+    "mean": 44.1,
+    "median": 49.9,
+    "p95": 66.7,
+    "worst": 83.4,
+    "frames": 68
+   },
+   "morph": {
+    "n": 55,
+    "mean": 33,
+    "median": 33.4,
+    "p95": 50.1,
+    "worst": 50.1,
+    "frames": 32
+   },
+   "idleFrames": 0,
+   "gasLite": true
+  }
+ ]
+}

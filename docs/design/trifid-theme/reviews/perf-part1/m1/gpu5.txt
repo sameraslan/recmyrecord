@@ -1,0 +1,26 @@
+First-load JS of / (gzip): 191.2 KB with nomodule scripts (budget 200 KB), 152.6 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.3 KB, /album/in-rainbows-radiohead 34 KB (budget 150 KB each)
+
+| Measure | gpu desktop | gpu phone | gpu desktop2x |
+|---|---|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Search usable | 69 ms | 76 ms | 100 ms |
+| Startup worst long task | 0 ms | 0 ms | 0 ms |
+| WebGL warm-up end (reported only) | 113 ms (done) | 121 ms (done) | 144 ms (done) |
+| Map first frame (reported only) | 546 ms | 560 ms | 619 ms |
+| Nebula visible (reported only) | 594 ms | 616 ms | 671 ms |
+| Typing to suggestions | 5 ms | 5 ms | 5 ms |
+| Select to album | 21 ms | 19 ms | 25 ms |
+| Transition worst frame gap | 19 ms | 18 ms | 23 ms |
+| Slider to list | 9 ms | 18 ms | 19 ms |
+| Morph worst frame gap | 18 ms | 18 ms | 18 ms |
+| Drag worst frame gap | 19 ms | 20 ms | 19 ms |
+| Zoom worst frame gap | 40 ms | 33 ms | 31 ms |
+| Deep zoom drag worst frame gap (reported only) | 18 ms | 19 ms | 19 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 17 ms | 18 ms | 19 ms |
+| Long tasks while idle (3 s) | 0 | 0 | 0 |
+| Frames rendered while idle (3 s) | 0 | 0 | 0 |
+
+The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.
+
+All budgets met.

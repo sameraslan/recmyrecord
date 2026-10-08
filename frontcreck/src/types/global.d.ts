@@ -1,3 +1,4 @@
+import type { TwinkleStats } from '@/components/map/state/twinkle';
 import type { MapApi } from '@/components/map/types';
 import type { AppState } from '@/lib/store';
 
@@ -13,7 +14,58 @@ declare global {
       map?: MapApi | null;
       /** Frames the map has rendered. */
       frames?: number;
+      /** With an album open on the map (canvas/MarkerDriver.tsx): the covers as last placed, and how far they
+       * are from a fresh layoutMarkers of the same view (0 once settled). Null without a focus or while the
+       * covers ease onto a settled layout. `settles` and `eases` count the layout's settles and the eases run. */
+      markerLayout?: () => { placed: { id: number; x: number; y: number; drawn: number }[]; freshGap: number; settles: number; eases: number } | null;
+      /** The seed of this page load's random star sizes (components/map/state/stars.ts), published once the
+       * stars are dealt. A test may set it before the map loads to get a repeatable sky. */
+      starSeed?: number;
+      /** The star glints (components/map/canvas/TwinkleDriver.tsx), there while the map is mounted: their
+       * counters, whether their switch (window.__rmrTwinkle) last said on, and whether the renderer is a
+       * software one (undefined while no graphics context has said: state/renderer.ts). */
+      twinkle?: { stats: TwinkleStats; enabled: () => boolean; software: () => boolean | undefined };
+      /** The gas layer. A stop is started from the moment it is scheduled: the stop on screen always, the other
+       * two as soon as the map is interactive (also while their fetch waits for an idle slot). 'loading' while any
+       * started stop is unsettled, 'ready' once every started stop is uploaded or has failed, 'off' when there is
+       * no gas to wait for (no theme data, a stale theme, textures too large). So on the map 'ready' means all
+       * three are in, and on Home, About and 404 it means the one shown is in. */
+      gas?: 'loading' | 'ready' | 'off';
+      /** performance.now() of the first drawn frame with a gas texture on screen. Written once per page load. */
+      gasShownMs?: number;
+      /** The sharper gas image (ordinary desktops and laptops with a real GPU): 'off' when this map does not use
+       * it (the device is not one of those, which is known when the map mounts except for a software renderer,
+       * known a moment later; or its image failed to load twice), 'waiting' while none is held or wanted,
+       * 'loading' while one is on its way, else the stop whose sharper image is on the GPU. Absent when no gas
+       * layer is mounted. */
+      gasSharp?: 'off' | 'waiting' | 'loading' | 'sonic' | 'balanced' | 'mood';
+      /** True when the gas is drawn with the lighter shader (a software renderer), false with the full one. Set
+       * when the first image of a map goes in; absent before that and when no gas layer is mounted. */
+      gasLite?: boolean;
+      /** The mip level the lighter shader read in the last drawn frame (a fraction; it rises in deep zoom). Absent
+       * with the full shader. */
+      gasLiteLod?: number;
+      /** Eased pool amount of the last drawn frame: 0 with no album open, 1 fully dimmed around the open one. */
+      gasPool?: number;
+      /** Deep zoom amount of the last drawn frame: 0 up to 32 px covers, 1 once covers are 56 px or larger. */
+      gasDeep?: number;
     };
+    /** Set before the map loads by review captures and tests: 'force' loads the sharper gas image on a software
+     * renderer too, 'off' never loads it. */
+    __rmrGasSharp?: 'force' | 'off';
+    /** Set before the map loads by review captures, measurements and tests: 'force' draws the gas with the lighter
+     * shader on any renderer, 'off' with the full shader on any renderer. */
+    __rmrGasLite?: 'force' | 'off';
+    /** Set before the map loads by review captures, measurements and tests: the framing /map opens at on this
+     * page load ('whole': the opening view of the site before the Trifid theme; 'overview': the default). It
+     * changes nothing on Home, About, 404 or an album. */
+    __rmrOpen?: 'whole' | 'overview';
+    /** The star glints' switch, for tests, measurements and still pictures: 'off' means none, 'on' means glints
+     * on any renderer, a forced state no visitor has (unset, a software renderer gets none: state/twinkle.ts
+     * twinkleShown). Set before the map
+     * loads or at any time after; a change takes effect inside the assignment (state/twinkle.ts
+     * watchTwinkleSwitch). Not saved, and there is no control for it on screen. */
+    __rmrTwinkle?: 'off' | 'on';
   }
 }
 

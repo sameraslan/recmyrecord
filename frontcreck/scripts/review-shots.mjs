@@ -17,7 +17,7 @@ const SIZES = {
   m390: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
 };
 
-const mapReady = (p) => p.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 20000 });
+const mapReady = (p) => p.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), null, { timeout: 20000 });
 
 const STATES = {
   'a1-home': async (p) => p.goto(`${BASE}/`),
@@ -59,7 +59,7 @@ const STATES = {
     if (pt) await p.mouse.move(pt.x, pt.y);
   },
   'd1-album': async (p) => p.goto(`${BASE}${IR}`),
-  'd2-album-sonic': async (p) => p.goto(`${BASE}${IR}?by=sonic`),
+  'd2-album-sonic': async (p) => p.goto(`${BASE}${IR}?by=sound`),
   'd3-album-mood': async (p) => p.goto(`${BASE}${IR}?by=mood`),
   'd4-album-deeper': async (p) => {
     await p.goto(`${BASE}${IR}`);

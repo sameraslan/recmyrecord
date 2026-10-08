@@ -13,7 +13,7 @@ vi.mock('next/link', () => ({ default: ({ children, href, ...rest }: { children:
 
 const base = { id: 4200, slug: 'ys-joanna-newsom', title: 'Ys', artist: 'Joanna Newsom', coverId: '', cluster: 1 };
 const seed = (extra: Partial<SeedData>): SeedData => ({ ...base, spotifyId: '', tags: [], ambient: ['#222222', '#333333', '#d9a066'], ...extra });
-const row = (extra: Partial<Row>): Row => ({ ...base, spotifyId: '', rank: 1, shared: [], ...extra });
+const row = (extra: Partial<Row>): Row => ({ ...base, spotifyId: '', shared: [], ...extra });
 const S = 'A'.repeat(22);
 
 describe('the one listen link, wherever the Spotify link shows', () => {
@@ -55,6 +55,22 @@ describe('the one listen link, wherever the Spotify link shows', () => {
     cleanup();
     render(<ol><RecRow row={row({})} stop="balanced" /></ol>);
     expect(screen.getAllByRole('link')).toHaveLength(1); // only the row's own link
+  });
+
+  it('shows no number on a row: the cover comes first, and neither the words nor the accessible name count', () => {
+    const rows = ['Ys', 'Divers', 'Ys Street Band'].map((title, n) => row({ id: 4200 + n, slug: `s${n}`, title, shared: n === 1 ? ['lush', 'warm'] : [] }));
+    const { container } = render(<ol>{rows.map((r) => <RecRow key={r.id} row={r} stop="balanced" />)}</ol>);
+    const links = [...container.querySelectorAll<HTMLAnchorElement>('a.rec-main')];
+    expect(links).toHaveLength(3);
+    expect(container.querySelector('.rec-n')).toBeNull();
+    for (const [n, a] of links.entries()) {
+      // Two columns: the cover, then the words. No element is left in front of the cover.
+      expect([...a.children].map((el) => el.getAttribute('class')!.split(' ')[0])).toEqual(['cover', 'rec-text']);
+      expect(a.textContent).not.toMatch(/\d/);
+      expect(a).toHaveAttribute('aria-label', COPY.album.rowLabel(rows[n].title, 'Joanna Newsom', rows[n].shared));
+      expect(a.getAttribute('aria-label')).not.toMatch(/\d/);
+      expect(a).not.toHaveAttribute('title');
+    }
   });
 
   it('is named for its service on the map card', () => {

@@ -1,11 +1,10 @@
-.album { position: absolute; left: 0; top: 0; bottom: 0; width: var(--panel); z-index: 10; background: var(--color-room); border-right: 1px solid var(--color-rule); }
-.amb { position: absolute; left: 0; right: 0; top: 0; height: 440px; pointer-events: none; }
-.amb i, .map-amb i { position: absolute; inset: 0; opacity: 0; }
-.amb i.on, .map-amb i.on { opacity: 1; animation: amb-in .42s ease both; }
-.amb i.off, .map-amb i.off { animation: amb-out .42s ease both; }
+.album { position: absolute; left: 0; top: 0; bottom: 0; width: var(--panel); z-index: 10; background: var(--panel-bg); border-right: 1px solid var(--color-rule); }
+.amb { position: absolute; left: 0; right: 0; top: 0; height: 440px; pointer-events: none; opacity: .9; }
+.amb i { position: absolute; inset: 0; opacity: 0; }
+.amb i.on { opacity: 1; animation: amb-in .42s ease both; }
+.amb i.off { animation: amb-out .42s ease both; }
 @keyframes amb-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes amb-out { from { opacity: 1; } to { opacity: 0; } }
-.map-amb { position: absolute; inset: 0; pointer-events: none; }
 .album-scroll { position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain; padding: 18px var(--gut) 20px; scrollbar-width: thin; scrollbar-color: var(--color-room-4) transparent; }
 .album-close { position: absolute; right: 10px; top: 8px; z-index: 3; width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-dust); border-radius: 2px; }
 .album-close:hover { color: var(--color-paper); }
@@ -35,7 +34,7 @@
 /* The copy-link button by itself (an album with no link): labelled, in the bordered style. */
 .seed-actions--solo .btn svg { color: var(--color-dust); }
 .icon-quiet { width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--color-rule-2); border-radius: 2px; color: var(--color-dust); }
-.icon-quiet:hover { color: var(--color-paper); border-color: rgba(237, 229, 213, .4); }
+.icon-quiet:hover { color: var(--color-paper); border-color: var(--color-rule-3); }
 .icon-quiet svg { width: 17px; height: 17px; }
 .tags { grid-area: tags; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
 .tags li { font-size: 12.5px; line-height: 1; padding: 6px 8px; border-radius: 2px; color: var(--color-dust); border: 1px solid var(--color-rule-2); transition: color .2s var(--out), border-color .2s var(--out), background-color .2s var(--out); }
@@ -44,23 +43,25 @@
 .recs { position: relative; margin-top: 18px; }
 .recs-h { font-family: var(--font-serif); font-style: italic; font-weight: 500; font-size: 21px; padding-bottom: 6px; border-bottom: 1px solid var(--color-rule); }
 .rec { position: relative; border-bottom: 1px solid var(--color-rule); }
+/* The cover is flush with the heading and the rules, and the listen icon ends where they end. The link's own box
+ * reaches into the panel's gutter (12 px left, 14 px right), so the highlight and its bar are drawn beside the
+ * cover, never on it, and the bar is as tall as the row. */
 .rec-main {
-  position: relative; display: grid; grid-template-columns: 18px 60px minmax(0, 1fr); gap: 14px; align-items: center; width: 100%;
-  padding: 11px 56px 11px 6px; text-align: left; color: inherit; text-decoration: none; transition: background-color .22s var(--out);
+  position: relative; display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 14px; align-items: center;
+  margin: 0 -14px 0 -12px; padding: 11px 52px 11px 12px; text-align: left; color: inherit; text-decoration: none; transition: background-color .22s var(--out);
 }
-.rec-main::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 2px; background: var(--acc); opacity: 0; transition: opacity .22s var(--out); }
-.rec.hot .rec-main { background: rgba(237, 229, 213, .045); }
+.rec-main::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--acc); opacity: 0; transition: opacity .22s var(--out); }
+.rec.hot .rec-main { background: rgba(241, 236, 228, .06); }
 .rec.hot .rec-main::before { opacity: 1; }
 .rec-main:focus-visible { outline-offset: -2px; }
-.rec-n { font-family: var(--font-serif); font-style: italic; font-size: 20px; color: var(--color-ash); text-align: right; line-height: 1; }
 .rec-text { min-width: 0; display: grid; }
 /* Up to 2 lines each (the title 3 on a phone), then an ellipsis; a single long word wraps instead of being cut. */
 .rec-title { font-family: var(--font-serif); font-weight: 600; font-size: 23px; line-height: 1.08; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .rec-artist { font-size: 14px; color: var(--color-dust); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .rec-shared { font-size: 13px; color: var(--color-ash); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rec-shared span { color: var(--color-dust); }
-.rec-sp { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-ash); border-radius: 2px; z-index: 2; }
-.rec-sp:hover { color: var(--color-paper); background: rgba(237, 229, 213, .06); }
+.rec-sp { position: absolute; right: -14px; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-ash); border-radius: 2px; z-index: 2; }
+.rec-sp:hover { color: var(--color-paper); background: rgba(241, 236, 228, .07); }
 .rec-sp svg { width: 16px; height: 16px; }
 .show-more { margin: 8px 0 0 -10px; }
 /* In place of the list: an album without audio at the sonic and balanced stops. */

@@ -38,7 +38,7 @@ describe('showStop', () => {
   });
 
   it('writes no ?by= for the default stop', () => {
-    window.history.replaceState(null, '', '/album/ys-joanna-newsom?by=sonic');
+    window.history.replaceState(null, '', '/album/ys-joanna-newsom?by=sound');
     useAppStore.getState().setStop('sonic');
     showStop('balanced');
     runFrame();

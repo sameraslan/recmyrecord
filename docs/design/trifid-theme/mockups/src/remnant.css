@@ -1,0 +1,6 @@
+:root{--bg:#05060a;--panel:rgba(7,8,12,.94);--float:rgba(9,10,15,.94);--hdr-bg:linear-gradient(rgba(5,6,10,.95),rgba(5,6,10,.84));--text:#efebe4;--dust:#b7b3ad;--ash:#959189;--lamp:#efe9dc;--lamp-ink:#101014;--rule:rgba(239,235,228,.11);--rule2:rgba(239,235,228,.24)}
+.amb{background:radial-gradient(120% 90% at 0% 0%,color-mix(in srgb,var(--acc) 13%,transparent),transparent 62%)}
+.mc .cv{box-shadow:0 0 0 1px rgba(255,255,255,.8),0 0 0 3px rgba(5,6,10,.7),0 8px 26px rgba(0,0,0,.8)}
+.mc.sd .cv{box-shadow:0 0 0 2px #05060a,0 0 0 3.5px #fff,0 0 34px 4px rgba(255,255,255,.28)}
+.mc.hot .cv{box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(5,6,10,.7),0 8px 26px rgba(0,0,0,.8)}
+.badge{--badge-bg:#f4f1ea;--badge-ink:#0c0d12;--badge-rule:#05060a}

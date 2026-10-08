@@ -1,0 +1,32 @@
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --mode gpu --viewport desktop2x --no-gas
+
+First-load JS of / (gzip): 190.5 KB with nomodule scripts (budget 200 KB), 151.9 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.3 KB, /album/in-rainbows-radiohead 34 KB (budget 150 KB each)
+
+| Measure | gpu desktop2x |
+|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Search usable | 88 ms |
+| Startup worst long task | 0 ms |
+| WebGL warm-up end (reported only) | 129 ms (done) |
+| Map first frame (reported only) | 577 ms |
+| Nebula visible (reported only) | n/a |
+| Typing to suggestions | 6 ms |
+| Select to album | 21 ms |
+| Transition worst frame gap | 27 ms |
+| Slider to list | 6 ms |
+| Morph worst frame gap | 19 ms |
+| Drag worst frame gap | 18 ms |
+| Zoom worst frame gap | 39 ms |
+| Deep zoom drag worst frame gap (reported only) | 19 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 17 ms |
+| Long tasks while idle (3 s) | 0 |
+| Frames rendered while idle (3 s) | 0 |
+
+The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.
+
+Run with --no-gas: the script did not wait for a gas layer.
+
+All budgets met.

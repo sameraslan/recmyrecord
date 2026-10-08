@@ -59,7 +59,7 @@ describe('catalog helpers', () => {
     const page = buildAlbumPageData(catalog, recs, 0);
     expect(page.seed).toMatchObject({ id: 0, title: 'The Alpha', tags: ['lush', 'melancholic', 'warm', 'noisy', 'calm', 'dark'], ambient: W });
     expect(page.recs.sonic.map((r) => r.id)).toEqual([1, 2]);
-    expect(page.recs.balanced.map((r) => [r.id, r.rank])).toEqual([[2, 1], [1, 2]]);
+    expect(page.recs.balanced.map((r) => r.id)).toEqual([2, 1]);
     expect(page.recs.mood.map((r) => r.id)).toEqual([1]);
     expect(page.recs.sonic[0].shared).toEqual(['melancholic', 'warm', 'calm']);
     for (const stop of ['sonic', 'balanced', 'mood'] as const) {
@@ -67,10 +67,11 @@ describe('catalog helpers', () => {
     }
   });
 
-  it('drops duplicate recommendation ids and keeps ranks contiguous', () => {
+  it('drops duplicate recommendation ids and keeps the order, with no rank number on a row', () => {
     const dup: Recs = { sonic: [[1, 1, 2, 2, 1]], balanced: [[2, 0, 2]], mood: [[]] };
     const page = buildAlbumPageData(catalog, dup, 0);
-    expect(page.recs.sonic.map((r) => [r.id, r.rank])).toEqual([[1, 1], [2, 2]]);
+    expect(page.recs.sonic.map((r) => r.id)).toEqual([1, 2]);
+    for (const row of page.recs.sonic) expect(row).not.toHaveProperty('rank');
     expect(page.recs.balanced.map((r) => r.id)).toEqual([2]);
     expect(page.recs.mood).toEqual([]);
   });

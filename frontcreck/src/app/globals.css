@@ -7,22 +7,21 @@
 @import "../styles/phone.css";
 
 @theme {
-  --color-room: #15110d;
-  --color-room-2: #1c1712;
-  --color-room-3: #262019;
-  --color-room-4: #322a21;
-  --color-paper: #ede5d5;
-  --color-dust: #b3a792;
-  --color-ash: #a39887;
-  --color-rule: rgba(237, 229, 213, 0.11);
-  --color-rule-2: rgba(237, 229, 213, 0.2);
-  --color-lamp: #e6a856;
-  --color-lamp-ink: #1a130b;
-  --color-clay: #c4886f;
-  --color-moss: #97a077;
-  --color-ochre: #c8a560;
-  --color-pane: #17120e;
-  --color-float: #1a1511;
+  --color-room: #07060a;
+  --color-room-2: #0e0d13;
+  --color-room-3: #17161d;
+  --color-room-4: #24222c;
+  --color-paper: #f3eee7;
+  --color-dust: #c4beb6;
+  --color-ash: #aaa49d;
+  --color-rule: rgba(241, 236, 228, 0.14);
+  --color-rule-2: rgba(241, 236, 228, 0.26);
+  --color-rule-3: rgba(241, 236, 228, 0.45);
+  --color-lamp: #f1ece4;
+  --color-lamp-hover: #ffffff;
+  --color-lamp-ink: #121016;
+  --color-pane: #07060a;
+  --color-float: rgba(10, 9, 14, 0.66);
   /* After the Latin fallbacks, so Latin and Cyrillic fall back as before: serif faces for Japanese, Chinese and
    * Korean that the systems ship (no download), so that text is not set in the system's heavy sans beside the
    * light display serif. */
@@ -37,8 +36,31 @@
   --gut: 32px;
   --panel: min(45vw, 660px);
   --acc: #d9a066;
+  /* Glass: the album panel and the header are see-through like --color-float, and every glass surface blurs and
+     dims the map behind it with --glass-blur (the one rule that uses it is in styles/shell.css). The numbers are
+     checked for 4.5:1 text contrast over a white backdrop in src/lib/contrast.test.ts. */
+  --panel-bg: rgba(8, 7, 11, 0.7);
+  --top-bg: rgba(7, 6, 10, 0.58);
+  /* A surface that is solid everywhere (the hover label, which moves with the pointer): the value the three solid
+     fallbacks below give the glass surfaces. styles/glass.test.ts keeps them equal. */
+  --color-float-solid: rgba(10, 9, 14, 1);
+  /* Speed fallback 1, a lighter blur: blur(22px) to blur(14px) here. Pins that move: GLASS in e2e/glass.spec.ts and
+     the FILTER regex in src/lib/contrast.test.ts. */
+  --glass-blur: blur(22px) saturate(1.2) brightness(0.58);
   color-scheme: dark;
 }
+
+/* Solid panels instead of glass, in three cases, the same four values in each. Solid is fully solid (alpha 1, kept
+   in rgba() form so the tests and the perf script read one format): nothing of the map shows through. The first
+   line is the phone glass switch: phones launch with solid panels, and deleting that one line is the whole change
+   that gives them glass. It stays until the owner has tried glass on his own phone and the blur timings show no
+   slowdown. */
+@media (max-width: 899px) { :root { --glass-blur: none; --color-float: rgba(10, 9, 14, 1); --panel-bg: rgba(10, 9, 14, 1); --top-bg: rgba(10, 9, 14, 1); } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { :root { --glass-blur: none; --color-float: rgba(10, 9, 14, 1); --panel-bg: rgba(10, 9, 14, 1); --top-bg: rgba(10, 9, 14, 1); } }
+@media (prefers-reduced-transparency: reduce) { :root { --glass-blur: none; --color-float: rgba(10, 9, 14, 1); --panel-bg: rgba(10, 9, 14, 1); --top-bg: rgba(10, 9, 14, 1); } }
+/* Speed fallback 3, no glass on desktop either: one more line here with the same four values and no condition,
+   `:root { ... }`. Pins that turn red by design: the three desktop expectations of "panels are glass on wide
+   screens" in e2e/glass.spec.ts. (Fallback 2, a solid header, is noted at the glass rule in styles/shell.css.) */
 
 @media (max-width: 1100px) and (min-width: 900px) {
   :root { --gut: 24px; --panel: 480px; }

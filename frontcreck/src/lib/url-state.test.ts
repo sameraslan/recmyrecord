@@ -16,7 +16,11 @@ afterEach(() => window.history.replaceState(null, '', '/'));
 
 describe('url state', () => {
   it('parses by, defaulting to balanced', () => {
-    expect(parseBy('sonic')).toBe('sonic');
+    // the address bar says "sound" for the stop the code and the data files call sonic
+    expect(parseBy('sound')).toBe('sonic');
+    // and "sonic" is not an address: like any unknown value it gives the default stop, without an error
+    expect(parseBy('sonic')).toBe('balanced');
+    expect(parseBy('Sound')).toBe('balanced');
     expect(parseBy('mood')).toBe('mood');
     expect(parseBy('balanced')).toBe('balanced');
     expect(parseBy(null)).toBe('balanced');
@@ -33,12 +37,23 @@ describe('url state', () => {
 
   it('encodes special characters in album hrefs', () => {
     expect(albumHref('a b/c?d#e%')).toBe('/album/a%20b%2Fc%3Fd%23e%25');
-    expect(albumHref('sigur-r\u00f3s', 'sonic')).toBe('/album/sigur-r%C3%B3s?by=sonic');
+    expect(albumHref('sigur-r\u00f3s', 'sonic')).toBe('/album/sigur-r%C3%B3s?by=sound');
   });
 
   it('rewrites by while keeping other params and the hash', () => {
-    expect(hrefWithBy('/album/x?by=mood&q=1#top', 'sonic')).toBe('/album/x?by=sonic&q=1#top');
+    expect(hrefWithBy('/album/x?by=mood&q=1#top', 'sonic')).toBe('/album/x?by=sound&q=1#top');
     expect(hrefWithBy('/album/x?by=mood', 'balanced')).toBe('/album/x');
+  });
+
+  it('round trips every stop through the address: what choosing a stop writes is what selects it', () => {
+    window.history.replaceState(null, '', '/album/x');
+    replaceBy('sonic');
+    expect(window.location.search).toBe('?by=sound');
+    expect(parseBy(new URLSearchParams(window.location.search).get('by'))).toBe('sonic');
+    for (const stop of ['sonic', 'balanced', 'mood'] as const) {
+      expect(parseBy(new URL(albumHref('x', stop), 'http://x.invalid').searchParams.get('by'))).toBe(stop);
+      expect(parseBy(new URL(hrefWithBy('/album/x', stop), 'http://x.invalid').searchParams.get('by'))).toBe(stop);
+    }
   });
 
   it('replaces the URL without adding history', () => {

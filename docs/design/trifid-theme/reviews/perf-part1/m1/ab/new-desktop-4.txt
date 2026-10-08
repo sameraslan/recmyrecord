@@ -1,0 +1,24 @@
+First-load JS of / (gzip): 191.2 KB with nomodule scripts (budget 200 KB), 152.6 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.3 KB, /album/in-rainbows-radiohead 34 KB (budget 150 KB each)
+
+| Measure | gpu desktop |
+|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Search usable | 71 ms |
+| Startup worst long task | 0 ms |
+| WebGL warm-up end (reported only) | 113 ms (done) |
+| Map first frame (reported only) | 545 ms |
+| Nebula visible (reported only) | 592 ms |
+| Typing to suggestions | 5 ms |
+| Select to album | 21 ms |
+| Transition worst frame gap | 23 ms |
+| Slider to list | 10 ms |
+| Morph worst frame gap | 18 ms |
+| Drag worst frame gap | 21 ms |
+| Zoom worst frame gap | 37 ms |
+| Deep zoom drag worst frame gap (reported only) | 18 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 17 ms |
+| Long tasks while idle (3 s) | 0 |
+| Frames rendered while idle (3 s) | 0 |
+
+All budgets met.

@@ -4,9 +4,9 @@ import { useEffect, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
-import { nudgeVector, viewportWorldRect, visibleFractionThreshold } from "../state/bounds";
+import { coveredBottomPx, nudgeVector, visibleFractionThreshold, visibleWorldRect } from "../state/bounds";
 import { useMapStore } from "../state/mapStore";
-import { getOverviewFraming, isFramed } from "../state/view";
+import { getOverviewFraming, getVisibleScale, isFramed } from "../state/view";
 
 // How hard to pull the camera back toward the album box each frame. Soft so a
 // manual over-pan eases back in instead of snapping.
@@ -99,7 +99,8 @@ export function CameraBounds() {
     if (now - lastCameraGrab < RELEASE_MS) return settle();
 
     const cam = state.camera as THREE.OrthographicCamera;
-    const viewport = viewportWorldRect(cam);
+    // Only what is below the header counts as in view; cam.position is the centre of that area.
+    const viewport = visibleWorldRect(cam, getVisibleScale());
     // The cloud's full extent, the same box the overview framing fits
     // (published by InitialFrame, recomputed on every sliderT change).
     const framing = getOverviewFraming();
@@ -113,6 +114,9 @@ export function CameraBounds() {
       cloud,
       MARGIN,
       visibleFractionThreshold(cam.zoom, framing.zoom),
+      // On a phone the slider panel, and the picked album's card on it, cover the bottom of the map: the camera
+      // may rest that much lower, or an album at the cloud's lower edge is pulled under them (world units).
+      (coveredBottomPx(input) * (cam.top - cam.bottom)) / (state.size.height * cam.zoom),
     );
     if (!nudge) return settle();
 

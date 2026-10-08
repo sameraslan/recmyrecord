@@ -1,0 +1,211 @@
+{
+ "js": {
+  "kb": 190.8,
+  "modernKb": 152.2,
+  "threeKb": 0,
+  "files": [
+   {
+    "src": "/_next/static/chunks/2mmpezlrfmbu5.js",
+    "gzKb": 8.5,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/1rj7ns8rte9vc.js",
+    "gzKb": 69.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/3un1mb5bx4x8k.js",
+    "gzKb": 42.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/turbopack-29-tawvx8tojb.js",
+    "gzKb": 3.8,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/2qc4id1vjnl39.js",
+    "gzKb": 13.5,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/322--wn80st_0.js",
+    "gzKb": 10.4,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0_8zpjvu_b1ry.js",
+    "gzKb": 0.2,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/3fgf7ruzmfpg3.js",
+    "gzKb": 0.3,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0em8pai484f8q.js",
+    "gzKb": 1,
+    "isThree": false,
+    "nomodule": false
+   },
+   {
+    "src": "/_next/static/chunks/0cz1d0mv5g_q7.js",
+    "gzKb": 38.6,
+    "isThree": false,
+    "nomodule": true
+   },
+   {
+    "src": "/_next/static/chunks/310vm2bl3xxpt.js",
+    "gzKb": 1.9,
+    "isThree": false,
+    "nomodule": false
+   }
+  ]
+ },
+ "pages": [
+  {
+   "path": "/",
+   "kb": 28.2,
+   "unrelatedSlug": null
+  },
+  {
+   "path": "/album/in-rainbows-radiohead",
+   "kb": 33.9,
+   "unrelatedSlug": null
+  }
+ ],
+ "rows": [
+  {
+   "mode": "gpu",
+   "vp": "phone",
+   "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+   "errors": [],
+   "longTasksSupported": true,
+   "thumbsOnFirstLoad": false,
+   "searchUsableMs": 118,
+   "startupLongTaskMs": 0,
+   "mapFirstFrameMs": 658,
+   "gasShownMs": 706,
+   "warmUp": {
+    "ms": 181,
+    "why": "done"
+   },
+   "startupLongTasks": [],
+   "settled": [
+    true,
+    true
+   ],
+   "typeToSuggestionsMs": 5,
+   "selectToAlbumMs": 24,
+   "transitionGapMs": 18,
+   "sliderToListMs": 9,
+   "morphGapMs": 32,
+   "wholeCamera": {
+    "x": 0.15677028894424438,
+    "y": -0.23579058820201507,
+    "zoom": 0.3490899903042468
+   },
+   "dragGapMs": 18,
+   "zoomGapMs": 53,
+   "deepDragGapMs": 18,
+   "deepZoom": 1,
+   "deepMorphGapMs": 18,
+   "hoverBeforeIdle": false,
+   "idleSharpSettled": true,
+   "sharpFlag": "off",
+   "idleLongTasks": 0,
+   "idleFrames": 0,
+   "idleGlints": 2,
+   "idleTwinkle": {
+    "ticks": 2,
+    "notResting": 0,
+    "hoverHeld": 0,
+    "capped": 0,
+    "alive": 1
+   },
+   "twinkleSoftware": false,
+   "reducedMotion": false,
+   "effectsSeen": [
+    {
+     "at": "album",
+     "path": "/album/loveless-my-bloody-valentine",
+     "glassBlur": "none",
+     "glassInline": "none",
+     "header": "none",
+     "panel": "none",
+     "album": "none",
+     "headerBackground": "rgb(10, 9, 14)",
+     "namesSaved": null,
+     "namesOn": true,
+     "forcedMs": 36,
+     "firstPaintMs": 100,
+     "twinkleOn": true,
+     "twinkleSpawned": 1,
+     "twinkleNodes": 0
+    },
+    {
+     "at": "map",
+     "path": "/map",
+     "glassBlur": "none",
+     "glassInline": "none",
+     "header": "none",
+     "panel": "none",
+     "album": null,
+     "headerBackground": "rgb(10, 9, 14)",
+     "namesSaved": null,
+     "namesOn": true,
+     "forcedMs": 13,
+     "firstPaintMs": 36,
+     "twinkleOn": true,
+     "twinkleSpawned": 3,
+     "twinkleNodes": 1
+    }
+   ],
+   "openingSharpSettled": true,
+   "openingCamera": {
+    "x": 0.033324554562568665,
+    "y": -0.2041944330939424,
+    "zoom": 0.5249793820248781
+   },
+   "openingDragGapMs": 19,
+   "openingZoomGapMs": 41,
+   "openingEffectsSeen": {
+    "at": "opening view",
+    "path": "/map",
+    "glassBlur": "none",
+    "glassInline": "none",
+    "header": "none",
+    "panel": "none",
+    "album": null,
+    "headerBackground": "rgb(10, 9, 14)",
+    "namesSaved": null,
+    "namesOn": true,
+    "forcedMs": 72,
+    "firstPaintMs": 108,
+    "twinkleOn": true,
+    "twinkleSpawned": 1,
+    "twinkleNodes": 0
+   },
+   "gasLite": false
+  }
+ ],
+ "fails": [
+  "gpu phone: zoom frame gap 53 ms > 50 ms"
+ ],
+ "open": "app",
+ "effects": {
+  "glass": "off",
+  "twinkle": null,
+  "names": null
+ }
+}

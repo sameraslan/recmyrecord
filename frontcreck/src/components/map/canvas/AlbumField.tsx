@@ -6,8 +6,9 @@ import * as THREE from "three";
 
 import { atlasSlot } from "@/lib/data/sprites";
 import { prefersReducedMotion } from "@/lib/media";
-import { CLUSTER_RGB, interpolateInto, type MapData } from "../data";
-import { DOT_ALPHA, DOT_ALPHA_DIMMED, MAX_SPRITE_VIEWPORT_FRACTION, SELECTION_DIM, albumFragmentShader, albumVertexShader, shaderSheetCount } from "../shaders/album";
+import { interpolateInto, type MapData } from "../data";
+import { buildStarAttributes, pageStarClasses } from "../state/stars";
+import { DOT_ALPHA, DOT_ALPHA_DIMMED, SELECTION_DIM, albumFragmentShader, albumVertexShader, shaderSheetCount, spriteCapDevicePx } from "../shaders/album";
 import { useMapStore } from "../state/mapStore";
 
 interface AlbumFieldProps {
@@ -30,14 +31,16 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
   const gl = useThree((s) => s.gl);
   const camera = useThree((s) => s.camera);
   const invalidate = useThree((s) => s.invalidate);
+  // Colour families and the gas luminance under each album; null until loaded, or when the load failed.
+  const theme = useMapStore((s) => s.theme);
   // Tracks the previous frame's hover uniform so we only invalidate() (under
   // frameloop="demand") on an actual change, not every frame.
   const prevHoverRef = useRef(-1);
   // The dot alpha eases between the dimmed (Home, About, 404) and the full map; -1 until the first frame.
   const dotAlpha = useRef(-1);
 
-  const { geometry, material, sheets } = useMemo(() => {
-    // One texture unit per atlas sheet of this data set (four today, eleven for 10,467 albums).
+  const { geometry, material, classes, sheets } = useMemo(() => {
+    // One texture unit per atlas sheet of this data set (eleven for 10,467 albums).
     const sheets = shaderSheetCount(data.atlasUrls.length, gl.capabilities.maxTextures);
     const atlasUniforms: Record<string, { value: THREE.Texture | null }> = {};
     for (let i = 0; i < sheets; i++) atlasUniforms[`u_atlas${i}`] = { value: null };
@@ -48,7 +51,6 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     const n = data.n;
     const atlasUV = new Float32Array(n * 4);
     const atlasIdx = new Float32Array(n);
-    const clusterIds = new Float32Array(n);
     for (let i = 0; i < n; i++) {
       const slot = atlasSlot(i);
       atlasUV[i * 4 + 0] = slot.u;
@@ -56,26 +58,40 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
       atlasUV[i * 4 + 2] = slot.size;
       atlasUV[i * 4 + 3] = slot.size;
       atlasIdx[i] = slot.sheet;
-      clusterIds[i] = data.albums[i].k;
     }
+    // Star size and brightness: this page load's one random deal (state/stars.ts), the same array however
+    // often this geometry is rebuilt. White, with no under-disc, until the theme data arrives (the effect
+    // below fills tint and gas).
+    const classes = pageStarClasses(n);
+    const stars = buildStarAttributes(classes, null);
 
     pointsGeom.setAttribute("a_pos_sonic", new THREE.InstancedBufferAttribute(data.pos.sonic, 2));
     pointsGeom.setAttribute("a_pos_balanced", new THREE.InstancedBufferAttribute(data.pos.balanced, 2));
     pointsGeom.setAttribute("a_pos_mood", new THREE.InstancedBufferAttribute(data.pos.mood, 2));
     pointsGeom.setAttribute("a_atlasUV", new THREE.InstancedBufferAttribute(atlasUV, 4));
     pointsGeom.setAttribute("a_atlasIndex", new THREE.InstancedBufferAttribute(atlasIdx, 1));
-    pointsGeom.setAttribute("a_clusterId", new THREE.InstancedBufferAttribute(clusterIds, 1));
+    pointsGeom.setAttribute("a_star", new THREE.InstancedBufferAttribute(stars.star, 4));
+    pointsGeom.setAttribute("a_tint", new THREE.InstancedBufferAttribute(stars.tint, 3, true));
+    pointsGeom.setAttribute("a_bg", new THREE.InstancedBufferAttribute(stars.bg, 3, true));
     pointsGeom.instanceCount = n;
 
     const mat = new THREE.ShaderMaterial({
       vertexShader: albumVertexShader(sheets),
       fragmentShader: albumFragmentShader(sheets),
       transparent: true,
+      // The fragment shader writes premultiplied colour: a star adds its light and darkens with its
+      // under-disc in one fragment (rgb = light, a = under-disc), a cover is ordinary alpha (rgb * a, a).
+      blending: THREE.CustomBlending,
+      blendEquation: THREE.AddEquation,
+      blendSrc: THREE.OneFactor,
+      blendDst: THREE.OneMinusSrcAlphaFactor,
+      blendSrcAlpha: THREE.OneFactor,
+      blendDstAlpha: THREE.OneMinusSrcAlphaFactor,
       // Depth carries the focus/hover draw-order layers (see `layer` in the
       // vertex shader). Three's default depthFunc is LessEqual, so sprites
-      // in the same layer still draw in plain instance order; the fragment
-      // shader discards outside the disc, so the sprite quad's corners never
-      // write depth.
+      // in the same layer still draw in plain instance order. Only layer-0
+      // sprites have a glow; an elevated sprite keeps its own shape and
+      // discards the rest, so its quad never writes depth over a neighbour.
       depthWrite: true,
       depthTest: true,
       depthFunc: THREE.LessEqualDepth,
@@ -94,10 +110,9 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
         u_focusDim: { value: FOCUS_DIM },
         ...atlasUniforms,
         u_atlasLoaded: { value: new Float32Array(sheets) },
-        u_clusterColors: { value: CLUSTER_RGB.map((c) => new THREE.Vector3(...c)) },
       },
     });
-    return { geometry: pointsGeom, material: mat, sheets };
+    return { geometry: pointsGeom, material: mat, classes, sheets };
   }, [data, gl]);
 
   // Interpolated positions used for hit-testing and overlay placement: a
@@ -131,6 +146,19 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     invalidate();
   }, [atlasTextures, material, sheets, invalidate]);
 
+  // The theme data arrives after the albums (or not at all): rewrite the tint and gas attributes in place.
+  // The star sizes are not touched: they were dealt once for this page load.
+  useEffect(() => {
+    const stars = buildStarAttributes(classes, theme);
+    const tint = geometry.getAttribute("a_tint") as THREE.InstancedBufferAttribute;
+    const bg = geometry.getAttribute("a_bg") as THREE.InstancedBufferAttribute;
+    (tint.array as Uint8Array).set(stars.tint);
+    (bg.array as Uint8Array).set(stars.bg);
+    tint.needsUpdate = true;
+    bg.needsUpdate = true;
+    invalidate();
+  }, [theme, classes, geometry, invalidate]);
+
   // eslint-disable-next-line react-hooks/immutability -- three.js objects are mutated in place by design
   useFrame((state, delta) => {
     const { input, sliderT, hoveredIndex } = useMapStore.getState();
@@ -147,7 +175,8 @@ export function AlbumField({ data, atlasTextures, positionsRef }: AlbumFieldProp
     const dpr = gl.getPixelRatio();
     u.u_pixelRatio.value = dpr;
     u.u_canvasHeight.value = state.size.height;
-    u.u_maxSpritePx.value = state.size.height * MAX_SPRITE_VIEWPORT_FRACTION * dpr;
+    // The cap follows the visible map, below the header: the canvas is taller than that by the header's height.
+    u.u_maxSpritePx.value = spriteCapDevicePx(state.size.height - input.insetTop, dpr);
     const targetAlpha = input.dimmed ? DOT_ALPHA_DIMMED : DOT_ALPHA;
     // With frameloop="demand", the first frame after an idle period has a delta of seconds; clamp it, or the
     // dim would jump to its target instead of easing. Settled (or reduced motion), no further frame is asked for.

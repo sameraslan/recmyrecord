@@ -1,0 +1,739 @@
+{
+ "albums": 10467,
+ "albums_with_true_weights": 4081,
+ "model": "discogs-effnet-bs1-1",
+ "with_embedding": {
+  "old": 4042,
+  "new": 6200
+ },
+ "words_per_album_first_eight": {
+  "old": 5.78,
+  "new": 6.3,
+  "old_full_lists": 10.7
+ },
+ "holdout": {
+  "seed1": {
+   "train": 2832,
+   "test": 1210,
+   "ceiling_full_words_true_traits": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.992,
+    "decisive": 796,
+    "leading_same_decisive": 1.0,
+    "true_leader_in_predicted_top2_clear": 1.0,
+    "mean_abs_share_error": 0.0016,
+    "neutral_mean": [
+     0.129,
+     0.129
+    ],
+    "leading_mean": [
+     0.527,
+     0.527
+    ]
+   },
+   "ceiling_first_eight_words_true_traits": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.922,
+    "decisive": 796,
+    "leading_same_decisive": 0.979,
+    "true_leader_in_predicted_top2_clear": 0.984,
+    "mean_abs_share_error": 0.0323,
+    "neutral_mean": [
+     0.19,
+     0.129
+    ],
+    "leading_mean": [
+     0.504,
+     0.527
+    ]
+   },
+   "words_only_frozen": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.617,
+    "decisive": 796,
+    "leading_same_decisive": 0.7,
+    "true_leader_in_predicted_top2_clear": 0.824,
+    "mean_abs_share_error": 0.1347,
+    "neutral_mean": [
+     0.342,
+     0.129
+    ],
+    "leading_mean": [
+     0.464,
+     0.527
+    ]
+   },
+   "a_predicted_traits_frozen": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.757,
+    "decisive": 796,
+    "leading_same_decisive": 0.858,
+    "true_leader_in_predicted_top2_clear": 0.93,
+    "mean_abs_share_error": 0.0927,
+    "neutral_mean": [
+     0.304,
+     0.129
+    ],
+    "leading_mean": [
+     0.457,
+     0.527
+    ],
+    "alpha": 3000,
+    "trait_r2": {
+     "energy": 0.77,
+     "loudness": 0.66,
+     "acousticness": 0.76,
+     "valence": 0.71,
+     "danceability": 0.72,
+     "instrumentalness": 0.57,
+     "speechiness": 0.61,
+     "liveness": 0.21,
+     "tempo": 0.25
+    }
+   },
+   "b_20_nearest": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.732,
+    "decisive": 796,
+    "leading_same_decisive": 0.812,
+    "true_leader_in_predicted_top2_clear": 0.922,
+    "mean_abs_share_error": 0.089,
+    "neutral_mean": [
+     0.126,
+     0.129
+    ],
+    "leading_mean": [
+     0.463,
+     0.527
+    ]
+   },
+   "b_20_nearest_blend_0.3_words": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.756,
+    "decisive": 796,
+    "leading_same_decisive": 0.829,
+    "true_leader_in_predicted_top2_clear": 0.922,
+    "mean_abs_share_error": 0.0886,
+    "neutral_mean": [
+     0.191,
+     0.129
+    ],
+    "leading_mean": [
+     0.443,
+     0.527
+    ]
+   },
+   "c_direct": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.762,
+    "decisive": 796,
+    "leading_same_decisive": 0.858,
+    "true_leader_in_predicted_top2_clear": 0.942,
+    "mean_abs_share_error": 0.0798,
+    "neutral_mean": [
+     0.123,
+     0.129
+    ],
+    "leading_mean": [
+     0.456,
+     0.527
+    ],
+    "alpha": 1000,
+    "gamma": 1.399
+   },
+   "c_direct_calibrated": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.762,
+    "decisive": 796,
+    "leading_same_decisive": 0.858,
+    "true_leader_in_predicted_top2_clear": 0.942,
+    "mean_abs_share_error": 0.0777,
+    "neutral_mean": [
+     0.124,
+     0.129
+    ],
+    "leading_mean": [
+     0.527,
+     0.527
+    ]
+   },
+   "a_c_average": {
+    "n": 1210,
+    "clear": 1162,
+    "leading_same_clear": 0.768,
+    "decisive": 796,
+    "leading_same_decisive": 0.864,
+    "true_leader_in_predicted_top2_clear": 0.939,
+    "mean_abs_share_error": 0.0791,
+    "neutral_mean": [
+     0.214,
+     0.129
+    ],
+    "leading_mean": [
+     0.455,
+     0.527
+    ]
+   },
+   "shape": {
+    "true": {
+     "n": 1210,
+     "neutral_mean": 0.129,
+     "neutral_q10_25_50_75_90": [
+      0.0,
+      0.0,
+      0.04,
+      0.23,
+      0.38
+     ],
+     "neutral_over_half": 0.04,
+     "leading_mean": 0.527,
+     "leading_q10_25_50_75_90": [
+      0.31,
+      0.42,
+      0.53,
+      0.64,
+      0.74
+     ],
+     "star_coloured": 0.869,
+     "coloured_stars_by_family": {
+      "fierce": 0.245,
+      "warm": 0.263,
+      "quiet": 0.241,
+      "dark": 0.161,
+      "urban": 0.09
+     }
+    },
+    "a": {
+     "n": 1210,
+     "neutral_mean": 0.304,
+     "neutral_q10_25_50_75_90": [
+      0.0,
+      0.123,
+      0.317,
+      0.469,
+      0.577
+     ],
+     "neutral_over_half": 0.21,
+     "leading_mean": 0.457,
+     "leading_q10_25_50_75_90": [
+      0.217,
+      0.31,
+      0.445,
+      0.584,
+      0.718
+     ],
+     "star_coloured": 0.616,
+     "coloured_stars_by_family": {
+      "fierce": 0.285,
+      "warm": 0.17,
+      "quiet": 0.279,
+      "dark": 0.145,
+      "urban": 0.121
+     }
+    },
+    "c_direct": {
+     "n": 1210,
+     "neutral_mean": 0.123,
+     "neutral_q10_25_50_75_90": [
+      0.0,
+      0.047,
+      0.114,
+      0.191,
+      0.249
+     ],
+     "neutral_over_half": 0.0,
+     "leading_mean": 0.456,
+     "leading_q10_25_50_75_90": [
+      0.293,
+      0.356,
+      0.447,
+      0.543,
+      0.634
+     ],
+     "star_coloured": 0.88,
+     "coloured_stars_by_family": {
+      "fierce": 0.26,
+      "warm": 0.285,
+      "quiet": 0.217,
+      "dark": 0.154,
+      "urban": 0.084
+     }
+    },
+    "c_direct_calibrated": {
+     "n": 1210,
+     "neutral_mean": 0.124,
+     "neutral_q10_25_50_75_90": [
+      0.0,
+      0.0,
+      0.029,
+      0.229,
+      0.379
+     ],
+     "neutral_over_half": 0.026,
+     "leading_mean": 0.527,
+     "leading_q10_25_50_75_90": [
+      0.296,
+      0.398,
+      0.519,
+      0.649,
+      0.766
+     ],
+     "star_coloured": 0.851,
+     "coloured_stars_by_family": {
+      "fierce": 0.254,
+      "warm": 0.265,
+      "quiet": 0.226,
+      "dark": 0.168,
+      "urban": 0.086
+     }
+    }
+   }
+  },
+  "seed2": {
+   "train": 2831,
+   "test": 1211,
+   "ceiling_full_words_true_traits": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.996,
+    "decisive": 792,
+    "leading_same_decisive": 1.0,
+    "true_leader_in_predicted_top2_clear": 1.0,
+    "mean_abs_share_error": 0.0016,
+    "neutral_mean": [
+     0.126,
+     0.126
+    ],
+    "leading_mean": [
+     0.528,
+     0.528
+    ]
+   },
+   "ceiling_first_eight_words_true_traits": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.911,
+    "decisive": 792,
+    "leading_same_decisive": 0.972,
+    "true_leader_in_predicted_top2_clear": 0.989,
+    "mean_abs_share_error": 0.0327,
+    "neutral_mean": [
+     0.19,
+     0.126
+    ],
+    "leading_mean": [
+     0.504,
+     0.528
+    ]
+   },
+   "words_only_frozen": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.581,
+    "decisive": 792,
+    "leading_same_decisive": 0.668,
+    "true_leader_in_predicted_top2_clear": 0.806,
+    "mean_abs_share_error": 0.1382,
+    "neutral_mean": [
+     0.335,
+     0.126
+    ],
+    "leading_mean": [
+     0.471,
+     0.528
+    ]
+   },
+   "a_predicted_traits_frozen": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.75,
+    "decisive": 792,
+    "leading_same_decisive": 0.848,
+    "true_leader_in_predicted_top2_clear": 0.924,
+    "mean_abs_share_error": 0.0936,
+    "neutral_mean": [
+     0.301,
+     0.126
+    ],
+    "leading_mean": [
+     0.455,
+     0.528
+    ],
+    "alpha": 3000,
+    "trait_r2": {
+     "energy": 0.77,
+     "loudness": 0.67,
+     "acousticness": 0.76,
+     "valence": 0.68,
+     "danceability": 0.7,
+     "instrumentalness": 0.59,
+     "speechiness": 0.61,
+     "liveness": 0.19,
+     "tempo": 0.28
+    }
+   },
+   "b_20_nearest": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.723,
+    "decisive": 792,
+    "leading_same_decisive": 0.808,
+    "true_leader_in_predicted_top2_clear": 0.899,
+    "mean_abs_share_error": 0.0884,
+    "neutral_mean": [
+     0.125,
+     0.126
+    ],
+    "leading_mean": [
+     0.465,
+     0.528
+    ]
+   },
+   "b_20_nearest_blend_0.3_words": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.732,
+    "decisive": 792,
+    "leading_same_decisive": 0.817,
+    "true_leader_in_predicted_top2_clear": 0.912,
+    "mean_abs_share_error": 0.0885,
+    "neutral_mean": [
+     0.188,
+     0.126
+    ],
+    "leading_mean": [
+     0.442,
+     0.528
+    ]
+   },
+   "c_direct": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.748,
+    "decisive": 792,
+    "leading_same_decisive": 0.856,
+    "true_leader_in_predicted_top2_clear": 0.926,
+    "mean_abs_share_error": 0.0792,
+    "neutral_mean": [
+     0.125,
+     0.126
+    ],
+    "leading_mean": [
+     0.455,
+     0.528
+    ],
+    "alpha": 1000,
+    "gamma": 1.388
+   },
+   "c_direct_calibrated": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.748,
+    "decisive": 792,
+    "leading_same_decisive": 0.856,
+    "true_leader_in_predicted_top2_clear": 0.926,
+    "mean_abs_share_error": 0.0768,
+    "neutral_mean": [
+     0.125,
+     0.126
+    ],
+    "leading_mean": [
+     0.524,
+     0.528
+    ]
+   },
+   "a_c_average": {
+    "n": 1211,
+    "clear": 1174,
+    "leading_same_clear": 0.758,
+    "decisive": 792,
+    "leading_same_decisive": 0.864,
+    "true_leader_in_predicted_top2_clear": 0.929,
+    "mean_abs_share_error": 0.0792,
+    "neutral_mean": [
+     0.213,
+     0.126
+    ],
+    "leading_mean": [
+     0.453,
+     0.528
+    ]
+   },
+   "shape": {
+    "true": {
+     "n": 1211,
+     "neutral_mean": 0.126,
+     "neutral_q10_25_50_75_90": [
+      0.0,
+      0.0,
+      0.04,
+      0.23,
+      0.36
+     ],
+     "neutral_over_half": 0.031,
+     "leading_mean": 0.528,
+     "leading_q10_25_50_75_90": [
+      0.31,
+      0.42,
+      0.53,
+      0.64,
+      0.75
+     ],
+     "star_coloured": 0.87,
+     "coloured_stars_by_family": {
+      "fierce": 0.241,
+      "warm": 0.283,
+      "quiet": 0.235,
+      "dark": 0.144,
+      "urban": 0.097
+     }
+    },
+    "a": {
+     "n": 1211,
+     "neutral_mean": 0.301,
+     "neutral_q10_25_50_75_90": [
+      0.0,
+      0.129,
+      0.305,
+      0.467,
+      0.573
+     ],
+     "neutral_over_half": 0.195,
+     "leading_mean": 0.455,
+     "leading_q10_25_50_75_90": [
+      0.221,
+      0.311,
+      0.441,
+      0.584,
+      0.703
+     ],
+     "star_coloured": 0.631,
+     "coloured_stars_by_family": {
+      "fierce": 0.288,
+      "warm": 0.161,
+      "quiet": 0.3,
+      "dark": 0.137,
+      "urban": 0.114
+     }
+    },
+    "c_direct": {
+     "n": 1211,
+     "neutral_mean": 0.125,
+     "neutral_q10_25_50_75_90": [
+      0.0,
+      0.045,
+      0.118,
+      0.193,
+      0.25
+     ],
+     "neutral_over_half": 0.0,
+     "leading_mean": 0.455,
+     "leading_q10_25_50_75_90": [
+      0.292,
+      0.36,
+      0.443,
+      0.531,
+      0.633
+     ],
+     "star_coloured": 0.879,
+     "coloured_stars_by_family": {
+      "fierce": 0.261,
+      "warm": 0.276,
+      "quiet": 0.232,
+      "dark": 0.155,
+      "urban": 0.076
+     }
+    },
+    "c_direct_calibrated": {
+     "n": 1211,
+     "neutral_mean": 0.125,
+     "neutral_q10_25_50_75_90": [
+      0.0,
+      0.0,
+      0.029,
+      0.231,
+      0.371
+     ],
+     "neutral_over_half": 0.034,
+     "leading_mean": 0.524,
+     "leading_q10_25_50_75_90": [
+      0.302,
+      0.391,
+      0.519,
+      0.638,
+      0.765
+     ],
+     "star_coloured": 0.858,
+     "coloured_stars_by_family": {
+      "fierce": 0.254,
+      "warm": 0.263,
+      "quiet": 0.236,
+      "dark": 0.166,
+      "urban": 0.082
+     }
+    }
+   }
+  }
+ },
+ "final": {
+  "alpha": 1000,
+  "gamma": 1.382,
+  "fitted_on": 4042,
+  "source": {
+   "true": 4081,
+   "predicted": 6200,
+   "words": 185,
+   "none": 1
+  }
+ },
+ "seam": {
+  "old_true": {
+   "n": 4081,
+   "neutral_mean": 0.12,
+   "neutral_q10_25_50_75_90": [
+    0.0,
+    0.0,
+    0.02,
+    0.22,
+    0.37
+   ],
+   "neutral_over_half": 0.032,
+   "leading_mean": 0.531,
+   "leading_q10_25_50_75_90": [
+    0.31,
+    0.42,
+    0.53,
+    0.64,
+    0.75
+   ],
+   "star_coloured": 0.872,
+   "coloured_stars_by_family": {
+    "fierce": 0.251,
+    "warm": 0.248,
+    "quiet": 0.237,
+    "dark": 0.162,
+    "urban": 0.103
+   }
+  },
+  "new_predicted_before_calibration": {
+   "n": 6200,
+   "neutral_mean": 0.095,
+   "neutral_q10_25_50_75_90": [
+    0.0,
+    0.023,
+    0.082,
+    0.15,
+    0.215
+   ],
+   "neutral_over_half": 0.0,
+   "leading_mean": 0.47,
+   "leading_q10_25_50_75_90": [
+    0.304,
+    0.372,
+    0.463,
+    0.556,
+    0.649
+   ],
+   "star_coloured": 0.907,
+   "coloured_stars_by_family": {
+    "fierce": 0.249,
+    "warm": 0.238,
+    "quiet": 0.235,
+    "dark": 0.21,
+    "urban": 0.068
+   }
+  },
+  "new_predicted": {
+   "n": 6200,
+   "neutral_mean": 0.077,
+   "neutral_q10_25_50_75_90": [
+    0.0,
+    0.0,
+    0.0,
+    0.13,
+    0.285
+   ],
+   "neutral_over_half": 0.014,
+   "leading_mean": 0.551,
+   "leading_q10_25_50_75_90": [
+    0.329,
+    0.434,
+    0.547,
+    0.668,
+    0.774
+   ],
+   "star_coloured": 0.912,
+   "coloured_stars_by_family": {
+    "fierce": 0.244,
+    "warm": 0.234,
+    "quiet": 0.234,
+    "dark": 0.219,
+    "urban": 0.07
+   }
+  },
+  "new_words_only": {
+   "n": 185,
+   "neutral_mean": 0.249,
+   "neutral_q10_25_50_75_90": [
+    0.0,
+    0.017,
+    0.197,
+    0.434,
+    0.569
+   ],
+   "neutral_over_half": 0.168,
+   "leading_mean": 0.508,
+   "leading_q10_25_50_75_90": [
+    0.257,
+    0.364,
+    0.473,
+    0.669,
+    0.792
+   ],
+   "star_coloured": 0.724,
+   "coloured_stars_by_family": {
+    "fierce": 0.149,
+    "warm": 0.075,
+    "quiet": 0.358,
+    "dark": 0.216,
+    "urban": 0.201
+   }
+  },
+  "all": {
+   "n": 10467,
+   "neutral_mean": 0.097,
+   "neutral_q10_25_50_75_90": [
+    0.0,
+    0.0,
+    0.0,
+    0.168,
+    0.327
+   ],
+   "neutral_over_half": 0.024,
+   "leading_mean": 0.542,
+   "leading_q10_25_50_75_90": [
+    0.321,
+    0.429,
+    0.54,
+    0.659,
+    0.764
+   ],
+   "star_coloured": 0.893,
+   "coloured_stars_by_family": {
+    "fierce": 0.245,
+    "warm": 0.237,
+    "quiet": 0.237,
+    "dark": 0.197,
+    "urban": 0.084
+   }
+  }
+ }
+}

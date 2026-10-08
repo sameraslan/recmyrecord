@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import type { ThemeData } from '@/lib/data/theme';
 import type { MapData } from '../data';
-import type { MapCallbacks, MapInput } from '../types';
+import { HEADER_PX, type MapCallbacks, type MapInput } from '../types';
 import { requestRender } from './invalidate';
 
 export const DEFAULT_INPUT: MapInput = {
@@ -9,8 +10,10 @@ export const DEFAULT_INPUT: MapInput = {
   hot: null,
   selected: null,
   interactive: false,
+  explore: false,
   dimmed: true,
   insetLeft: 0,
+  insetTop: HEADER_PX,
   framePadding: { top: 96, right: 96, bottom: 96, left: 96 },
   fitPadding: { top: 55, right: 40, bottom: 115, left: 40 },
   bottomCover: 0,
@@ -20,6 +23,8 @@ const NO_CALLBACKS: MapCallbacks = { onHover: () => {}, onPick: () => {}, onEmpt
 
 export interface MapStore {
   data: MapData | null;
+  /** Gas and star colours; null while it loads and when there is none (plain sky, white stars). */
+  theme: ThemeData | null;
   input: MapInput;
   callbacks: MapCallbacks;
   /** Animated slider position: 0 sonic, 0.5 balanced, 1 mood. */
@@ -31,6 +36,8 @@ export interface MapStore {
   lastInteraction: number;
   lastCameraGrab: number;
   dragging: boolean;
+  /** True while two fingers pinch the map (CameraRig). */
+  pinching: boolean;
   animating: boolean;
   /** True while CameraBounds eases the camera back towards the cloud. */
   nudging: boolean;
@@ -41,6 +48,7 @@ export interface MapStore {
   /** Date.now() of the last Reset while focused: camera grabs before it no longer stop the focus framing. */
   focusRearmedAt: number;
   setData: (data: MapData | null) => void;
+  setTheme: (theme: ThemeData | null) => void;
   setInput: (input: MapInput) => void;
   setCallbacks: (callbacks: MapCallbacks) => void;
   setSliderT: (t: number) => void;
@@ -49,6 +57,7 @@ export interface MapStore {
   registerInteraction: () => void;
   registerCameraGrab: () => void;
   setDragging: (dragging: boolean) => void;
+  setPinching: (pinching: boolean) => void;
   setAnimating: (animating: boolean) => void;
   setNudging: (nudging: boolean) => void;
   setRigMoving: (rigMoving: boolean) => void;
@@ -56,8 +65,9 @@ export interface MapStore {
   rearmFocus: () => void;
 }
 
-export const useMapStore = create<MapStore>()((set) => ({
+export const useMapStore = create<MapStore>()((set, get) => ({
   data: null,
+  theme: null,
   input: DEFAULT_INPUT,
   callbacks: NO_CALLBACKS,
   sliderT: 0.5,
@@ -66,12 +76,18 @@ export const useMapStore = create<MapStore>()((set) => ({
   lastInteraction: 0,
   lastCameraGrab: 0,
   dragging: false,
+  pinching: false,
   animating: false,
   nudging: false,
   rigMoving: false,
   morphing: false,
   focusRearmedAt: 0,
   setData: (data) => set({ data }),
+  setTheme: (theme) => {
+    if (get().theme === theme) return;
+    set({ theme });
+    requestRender();
+  },
   setInput: (input) => {
     set({ input });
     requestRender();
@@ -86,6 +102,7 @@ export const useMapStore = create<MapStore>()((set) => ({
   registerInteraction: () => set({ lastInteraction: Date.now() }),
   registerCameraGrab: () => set({ lastCameraGrab: Date.now() }),
   setDragging: (dragging) => set({ dragging }),
+  setPinching: (pinching) => set((s) => (s.pinching === pinching ? s : { pinching })),
   setAnimating: (animating) => set((s) => (s.animating === animating ? s : { animating })),
   setNudging: (nudging) => set((s) => (s.nudging === nudging ? s : { nudging })),
   setRigMoving: (rigMoving) => set((s) => (s.rigMoving === rigMoving ? s : { rigMoving })),

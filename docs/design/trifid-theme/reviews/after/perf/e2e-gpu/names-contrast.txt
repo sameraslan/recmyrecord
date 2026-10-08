@@ -1,0 +1,28 @@
+## 20:41:42 7.56 7.42 6.67 | Now drawing from 'Battery Power'
+
+Running 7 tests using 1 worker
+
+[names contrast] desktop Overview, 9 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.95 (Epic Expanse). Worst over the brightest pixel (not asserted): 5.83 (Epic Expanse). Worst against the painted halo: 4.68 (The Bittersweet Reach). Halos 0.65, 0.7, 0.75, 0.8.
+[names contrast] desktop Whole map, 17 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 7.04 (The Quiet Deep). Worst over the brightest pixel (not asserted): 4.93 (Hypnotic Orbit). Worst against the painted halo: 5.72 (Eclectic Cloud). Halos 0.65, 0.7, 0.75, 0.8.
+  ✓  1 [desktop] › e2e/names.spec.ts:1682:3 › 1440 x 900: every name holds 4.5:1 over the gas really under it, at the Overview and at the Whole map (10.2s)
+[names contrast] desktop Overview, 9 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.22 (Epic Expanse). Worst over the brightest pixel (not asserted): 5.83 (Epic Expanse). Worst against the painted halo: 4.98 (The Bittersweet Reach). Halos 0.65, 0.7, 0.75, 0.8.
+[names contrast] desktop Whole map, 17 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.99 (The Quiet Deep). Worst over the brightest pixel (not asserted): 4.94 (Hypnotic Orbit). Worst against the painted halo: 5.83 (Eclectic Cloud). Halos 0.65, 0.7, 0.75, 0.8.
+  ✓  2 [desktop] › e2e/names.spec.ts:1682:3 › 1600 x 1000: every name holds 4.5:1 over the gas really under it, at the Overview and at the Whole map (10.3s)
+  -  3 [desktop] › e2e/names.spec.ts:1689:1 › on a phone the four names hold 4.5:1 over the gas really under them, at the Overview and at the Whole map
+[names contrast] desktop Overview, 9 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.84 (Epic Expanse). Worst over the brightest pixel (not asserted): 5.83 (Epic Expanse). Worst against the painted halo: 4.63 (The Bittersweet Reach). Halos 0.65, 0.7, 0.75, 0.8.
+[names contrast] desktop Whole map, 17 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.91 (The Quiet Deep). Worst over the brightest pixel (not asserted): 4.93 (Hypnotic Orbit). Worst against the painted halo: 5.75 (Eclectic Cloud). Halos 0.65, 0.7, 0.75, 0.8.
+  ✓  4 [desktop] › e2e/names.spec.ts:1695:1 › every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside its letters, at the Overview and at the Whole map (10.0s)
+[names contrast] desktop Overview, 9 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.47 (Urban Cluster). Worst over the brightest pixel (not asserted): 5.83 (Epic Expanse). Worst against the painted halo: 4.69 (The Bittersweet Reach). Halos 0.65, 0.7, 0.75, 0.8.
+[names contrast] desktop Whole map, 17 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.85 (The Quiet Deep). Worst over the brightest pixel (not asserted): 5.91 (Epic Expanse). Worst against the painted halo: 6.72 (Eclectic Cloud). Halos 0.65, 0.7, 0.75, 0.8.
+  ✓  5 [desktop] › e2e/names.spec.ts:1706:3 › 1366 x 768: every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside its letters, at the Overview and at the Whole map (9.8s)
+[names contrast] desktop Overview, 9 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.46 (Urban Cluster). Worst over the brightest pixel (not asserted): 5.83 (Epic Expanse). Worst against the painted halo: 4.66 (The Bittersweet Reach). Halos 0.65, 0.7, 0.75, 0.8.
+[names contrast] desktop Whole map, 17 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.61 (Epic Expanse). Worst over the brightest pixel (not asserted): 5.84 (Epic Expanse). Worst against the painted halo: 6.72 (Eclectic Cloud). Halos 0.65, 0.7, 0.75, 0.8.
+  ✓  6 [desktop] › e2e/names.spec.ts:1706:3 › 1440 x 790: every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside its letters, at the Overview and at the Whole map (10.0s)
+[names contrast] desktop Overview, 9 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.47 (Epic Expanse). Worst over the brightest pixel (not asserted): 5.83 (Epic Expanse). Worst against the painted halo: 4.90 (The Bittersweet Reach). Halos 0.65, 0.7, 0.75, 0.8.
+[names contrast] desktop Whole map, 17 names, renderer ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version). Worst over the 99th percentile under the letters: 6.94 (The Quiet Deep). Worst over the brightest pixel (not asserted): 5.59 (Hypnotic Orbit). Worst against the painted halo: 5.78 (Eclectic Cloud). Halos 0.65, 0.7, 0.75, 0.8.
+  ✓  7 [desktop] › e2e/names.spec.ts:1706:3 › 1600 x 1000: every name holds 4.5:1 against the halo as it is painted 2 to 3 px outside its letters, at the Overview and at the Whole map (10.5s)
+
+  1 skipped
+  6 passed (1.5m)
+exit 0
+## 20:43:10 16.71 12.54 8.85 | Now drawing from 'Battery Power'

@@ -1,0 +1,500 @@
+// Cost of the focus cover layout (state/focusLayout.ts), in two parts.
+//
+// 1. Per call, over every album: for each album at every stop, on a desktop and a phone viewport, the seed and
+//    its ten recommendations are framed as CameraTween frames them (focusCamera, once when an album opens or
+//    changes), projected to CSS px and laid out from scratch with the visible bounds (layoutMarkers). Each call
+//    runs 5 times and the fastest is kept, so the numbers are the code's cost, not the machine's noise.
+// 2. Per drawn frame, as MarkerDriver lays an open album out: frame sequences replayed for the worst albums
+//    (phone 3278 at Balanced, desktop 2436 at Mood) and a seeded random sample: hover only (nothing moves,
+//    30 frames), a pan (60 frames of 8 px; again at twice the zoom), a zoom (30 frames to 2.5 times), a slider
+//    morph to the next stop (30 frames) and, on the desktop, the album panel sliding in (20 frames). The
+//    current file is timed through its MarkerLayout (one per sequence, as one MarkerDriver keeps one; motion
+//    frames drawn "moving", then one frame at rest that settles), each older file passed with --old through
+//    its layoutMarkers on every frame, as MarkerDriver used to call it. Each sequence runs 3 times and each
+//    frame's fastest run is kept. Also reported: the settle frame's cost, how far covers jump between frames
+//    beyond their own album's (and the seed's) move, now and with a fresh solve every frame, and frames with an
+//    overlap or a cover outside the bounds where a fresh solve has none.
+//
+//   node scripts/perf/layout-cost.mjs [--old path/to/focusLayout.ts ...] [--no-calls] [--sample N]
+//
+// --crowded runs one more part instead of the two above: bounds too small for a clean layout (a phone held
+// sideways leaves about 828x209 above the slider). Eleven markers, 20 seeded clusters per bounds, each panned
+// for 300 moving frames (out for 150, then most of the way back) and then settled by one frame at rest. Reported per bounds:
+// the moving frames that ran a fresh solve and those that returned a new items array (both exact, the same
+// on any machine), the cost of a moving frame and of the settle frame (3 runs, each frame's fastest kept),
+// the gap between the settled layout and a cold solve of the same view, and what the covers look like while
+// they move: pairs of covers closer than the gap, how far one cover lies over another (px along the axis of
+// least overlap), and the largest jump of a cover between two frames beyond its own album's move. With --old,
+// the same for each older file's MarkerLayout. Then moving walls: clusters that open clean at 828x400, drawn
+// "moving" while the bottom wall rises 4 px a frame to 209 and comes back (as the album panel or the slider
+// cover does), with the frames that solve, that return a new array, and that show one cover over another or
+// over the picked cover.
+//
+// Run from frontcreck/. An older focusLayout.ts (git show <rev>:frontcreck/src/components/map/state/focusLayout.ts)
+// must import zoomLimits by an absolute path when it lies outside src/.
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { performance } from 'node:perf_hooks';
+import { fileURLToPath } from 'node:url';
+import { createJiti } from 'jiti';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const args = process.argv.slice(2);
+const olds = args.flatMap((a, i) => (args[i - 1] === '--old' ? [path.resolve(a)] : []));
+const calls = !args.includes('--no-calls');
+const crowded = args.includes('--crowded');
+const sampleAt = args.indexOf('--sample');
+const SAMPLE = sampleAt >= 0 ? Number(args[sampleAt + 1]) : 300;
+
+const jiti = createJiti(import.meta.url, { alias: { '@': path.join(root, 'src') } });
+const current = await jiti.import(path.join(root, 'src/components/map/state/focusLayout.ts'));
+const older = [];
+for (const file of olds) older.push({ name: path.basename(file), mod: await jiti.import(file) });
+const { normalizePositions } = await jiti.import(path.join(root, 'src/components/map/data.ts'));
+const { FRUSTUM_HALF_HEIGHT, MIN_ZOOM, MAX_ZOOM } = await jiti.import(path.join(root, 'src/components/map/state/zoomLimits.ts'));
+const { MARKER_SIZE, layoutMarkers, MarkerLayout } = current;
+
+const positions = normalizePositions(JSON.parse(readFileSync(path.join(root, 'public/data/positions.json'), 'utf8')));
+const recs = JSON.parse(readFileSync(path.join(root, 'public/data/recs.json'), 'utf8'));
+const STOPS = Object.keys(positions);
+const RECS_SHOWN = 10;
+const MARKER_EDGE = 8;
+// MapStage's DESKTOP_PADDING and an open album panel; PHONE_PADDING above the slider's fallback cover.
+const VIEWS = {
+  desktop: { width: 1440, height: 900, inset: 648, pad: { top: 262, right: 96, bottom: 90, left: 96 }, bottomCover: 0, worst: ['mood', 2436] },
+  phone: { width: 390, height: 844, inset: 0, pad: { top: 80, right: 60, bottom: 169, left: 60 }, bottomCover: 165, worst: ['balanced', 3278] },
+};
+const clampZoom = (z) => Math.min(Math.max(z, MIN_ZOOM), MAX_ZOOM);
+// focusCamera takes the header's top inset as its sixth argument since the map runs under the header; a file passed
+// with --old may predate it (seven parameters). This model's canvas has nothing over its top: 0.
+const frameCamera = (mod, ids, pos, v) =>
+  mod.focusCamera.length >= 8 ? mod.focusCamera(ids, pos, v.width, v.height, v.inset, 0, v.pad, clampZoom) : mod.focusCamera(ids, pos, v.width, v.height, v.inset, v.pad, clampZoom);
+const boundsFor = (v, inset) => ({ left: inset + MARKER_EDGE, top: MARKER_EDGE, right: v.width - MARKER_EDGE, bottom: Math.min(v.height - MARKER_EDGE, v.height - v.bottomCover - MARKER_EDGE) });
+const pct = (sorted, q) => sorted[Math.min(sorted.length - 1, Math.floor(q * (sorted.length - 1)))];
+const us = (ms) => `${(ms * 1000).toFixed(1)} us`;
+const summary = (xs) => {
+  const s = Float64Array.from(xs).sort();
+  return `mean ${us(xs.reduce((a, b) => a + b, 0) / xs.length)}, p99 ${us(pct(s, 0.99))}, max ${us(s[s.length - 1])}`;
+};
+function seeded(seed) {
+  let s = seed;
+  return () => (s = (s * 16807) % 2147483647) / 2147483647;
+}
+
+// Warm up the JIT on a few hundred cases first.
+for (const mod of [current, ...older.map((o) => o.mod)]) {
+  for (let i = 0; i < 300; i++) mod.layoutMarkers([{ id: 0, x: 300, y: 300 }, ...recs.balanced[i].slice(0, RECS_SHOWN).map((id, k) => ({ id, x: 300 + k * 7, y: 300 + (k % 3) }))], 64, 46);
+}
+
+if (crowded) {
+  const CASES = [[150, 150], [250, 200], [828, 209], [360, 684], [300, 500]];
+  const CLUSTERS = 20;
+  const FRAMES = 300;
+  const ms = (x) => `${x.toFixed(3)} ms`;
+  console.log(`\n## Crowded bounds: 11 markers, ${CLUSTERS} clusters per bounds, a ${FRAMES}-frame pan each (moving), then one frame at rest`);
+  console.log(`fresh solves and new arrays are counts over the ${CLUSTERS * FRAMES} moving frames (worst cluster of ${FRAMES} in brackets); 3 runs, each frame's fastest kept`);
+  for (const { name: label, mod } of [{ name: 'current', mod: current }, ...older]) {
+    if (!mod.MarkerLayout) continue;
+    console.log(`\n### ${label}`);
+    console.log(`| Bounds | Opens that overlap | Frames with a fresh solve | Frames with a new array | Mean per frame | Worst frame | Settle solves | Settle frame mean / worst | Gap to a cold solve | Pairs too close, mean per frame | Cover over cover, mean of each frame's worst / worst | Worst jump |`);
+    console.log(`|---|---|---|---|---|---|---|---|---|---|---|---|`);
+    for (const [w, h] of CASES) {
+      const bounds = { left: MARKER_EDGE, top: MARKER_EDGE, right: MARKER_EDGE + w, bottom: MARKER_EDGE + h };
+      const rand = seeded(4100 + w);
+      const spread = Math.min(w, h) * 0.9;
+      const t = [];
+      const settle = [];
+      let solves = 0;
+      let worstSolves = 0;
+      let arrays = 0;
+      let worstArrays = 0;
+      let settleSolves = 0;
+      let gap = 0;
+      let crowdedOpens = 0;
+      let pairs = 0;
+      let cover = 0;
+      let coverWorst = 0;
+      let jump = 0;
+      for (let c = 0; c < CLUSTERS; c++) {
+        const x0 = bounds.left + w / 2;
+        const y0 = bounds.top + h / 2;
+        const start = Array.from({ length: RECS_SHOWN + 1 }, (_, i) => ({ id: i, x: x0 + (i ? (rand() - 0.5) * spread : 0), y: y0 + (i ? (rand() - 0.5) * spread : 0) }));
+        const a = Math.PI * 2 * rand();
+        const frames = Array.from({ length: FRAMES + 1 }, (_, f) => {
+          const d = f <= FRAMES / 2 ? 2.5 * f : 1.25 * FRAMES - 2 * (f - FRAMES / 2);
+          return start.map((p) => ({ id: p.id, x: p.x + Math.cos(a) * d, y: p.y + Math.sin(a) * d }));
+        });
+        // The pan ends short of where it began, so the frame at rest settles a view that was never solved.
+        const rest = frames[FRAMES];
+        if (faults(mod.layoutMarkers(start, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds }), bounds)) crowdedOpens++;
+        const best = new Float64Array(FRAMES + 2).fill(Infinity);
+        for (let run = 0; run < 3; run++) {
+          const cache = new mod.MarkerLayout();
+          let prev = cache.layout(frames[0], MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+          let shot = run === 0 ? snap(prev) : null;
+          let s = 0;
+          let n = 0;
+          for (let f = 1; f <= FRAMES; f++) {
+            const before = cache.stats.solves;
+            const t0 = performance.now();
+            const got = cache.layout(frames[f], MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+            best[f] = Math.min(best[f], performance.now() - t0);
+            if (cache.stats.solves !== before) s++;
+            if (got !== prev) n++;
+            prev = got;
+            if (!shot) continue;
+            let deepest = 0;
+            for (let i = 0; i < got.length; i++) {
+              for (let j = i + 1; j < got.length; j++) {
+                const reach = (got[i].size + got[j].size) / 2;
+                const ox = reach - Math.abs(got[j].x - got[i].x);
+                const oy = reach - Math.abs(got[j].y - got[i].y);
+                if (ox + 10 > 1 && oy + 10 > 1) pairs++;
+                deepest = Math.max(deepest, Math.min(ox, oy));
+              }
+            }
+            cover += deepest;
+            coverWorst = Math.max(coverWorst, deepest);
+            jump = Math.max(jump, jumps(shot, got)[0]);
+            shot = snap(got);
+          }
+          const before = cache.stats.solves + cache.stats.settles;
+          const t0 = performance.now();
+          const got = cache.layout(rest, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+          best[FRAMES + 1] = Math.min(best[FRAMES + 1], performance.now() - t0);
+          if (run > 0) continue;
+          solves += s;
+          worstSolves = Math.max(worstSolves, s);
+          arrays += n;
+          worstArrays = Math.max(worstArrays, n);
+          settleSolves += cache.stats.solves + cache.stats.settles - before;
+          const cold = mod.layoutMarkers(rest, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+          got.forEach((m, i) => (gap = Math.max(gap, Math.abs(m.x - cold[i].x), Math.abs(m.y - cold[i].y))));
+        }
+        for (let f = 1; f <= FRAMES; f++) t.push(best[f]);
+        settle.push(best[FRAMES + 1]);
+      }
+      const mean = (xs) => xs.reduce((p, q) => p + q, 0) / xs.length;
+      console.log(
+        `| ${w}x${h} | ${crowdedOpens} of ${CLUSTERS} | ${solves} of ${t.length} (${worstSolves}) | ${arrays} of ${t.length} (${worstArrays}) | ${ms(mean(t))} | ${ms(Math.max(...t))} | ${settleSolves} in ${CLUSTERS} | ${ms(mean(settle))} / ${ms(Math.max(...settle))} | ${gap.toExponential(1)} px | ${(pairs / t.length).toFixed(2)} | ${(cover / t.length).toFixed(1)} / ${coverWorst.toFixed(1)} px | ${jump.toFixed(1)} px |`,
+      );
+    }
+  }
+  console.log(`\n## Moving walls: clusters that open clean at 828x400, the bottom wall rising 4 px a frame to 209 and back, every frame moving`);
+  for (const { name: label, mod } of [{ name: 'current', mod: current }, ...older]) {
+    if (!mod.MarkerLayout) continue;
+    const rand = seeded(977);
+    const WIDE = 828;
+    const TALL = 400;
+    const SHORT = 209;
+    const STEPS = Math.ceil((TALL - SHORT) / 4);
+    const wall = (f) => MARKER_EDGE + Math.max(SHORT, f <= STEPS ? TALL - 4 * f : SHORT + 4 * (f - STEPS));
+    const r = { clusters: 0, frames: 0, solves: 0, arrays: 0, outside: 0, over: 0, overSeed: 0, deep: 0, deepSeed: 0, closeOpening: 0, opening: 0, restGap: 0, settles: 0, ms: 0, worstMs: 0, overMs: 0, worstOverMs: 0 };
+    for (let c = 0; c < 200; c++) {
+      const anchors = Array.from({ length: RECS_SHOWN + 1 }, (_, i) => ({ id: i, x: MARKER_EDGE + WIDE / 2 + (i ? (rand() - 0.5) * 360 : 0), y: MARKER_EDGE + TALL / 2 + (i ? (rand() - 0.5) * 360 : 0) }));
+      const bounds = { left: MARKER_EDGE, top: MARKER_EDGE, right: MARKER_EDGE + WIDE, bottom: wall(0) };
+      if (faults(mod.layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds }), bounds)) continue;
+      r.clusters++;
+      const cache = new mod.MarkerLayout();
+      let prev = cache.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+      for (let f = 1; f <= 2 * STEPS; f++) {
+        bounds.bottom = wall(f);
+        const before = cache.stats.solves;
+        // One timing per frame, not the fastest of several: the layout keeps state, so a frame cannot be replayed.
+        const t0 = performance.now();
+        const got = cache.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true });
+        const ms = performance.now() - t0;
+        r.ms += ms;
+        r.worstMs = Math.max(r.worstMs, ms);
+        r.frames++;
+        if (cache.stats.solves !== before) r.solves++;
+        if (got !== prev) r.arrays++;
+        prev = got;
+        let deep = 0;
+        let deepSeed = 0;
+        let close = false;
+        for (let i = 0; i < got.length; i++) {
+          const p = got[i];
+          if (p.x - p.size / 2 < bounds.left - 0.01 || p.x + p.size / 2 > bounds.right + 0.01 || p.y - p.size / 2 < bounds.top - 0.01 || p.y + p.size / 2 > bounds.bottom + 0.01) r.outside++;
+          for (let j = i + 1; j < got.length; j++) {
+            const reach = (p.size + got[j].size) / 2;
+            const d = Math.min(reach - Math.abs(got[j].x - p.x), reach - Math.abs(got[j].y - p.y));
+            deep = Math.max(deep, d);
+            if (i === 0) deepSeed = Math.max(deepSeed, d);
+            if (d + 10 > 1) close = true;
+          }
+        }
+        if (deep > 0.01) {
+          // The separation left an overlap: with the walls still moving it is tried again on the next frame.
+          r.over++;
+          r.overMs += ms;
+          r.worstOverMs = Math.max(r.worstOverMs, ms);
+        }
+        if (deepSeed > 0.01) r.overSeed++;
+        r.deep = Math.max(r.deep, deep);
+        r.deepSeed = Math.max(r.deepSeed, deepSeed);
+        if (f > STEPS) {
+          r.opening++;
+          if (close) r.closeOpening++;
+        }
+      }
+      const at = cache.stats.solves + cache.stats.settles;
+      const rest = cache.layout(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+      r.settles += cache.stats.solves + cache.stats.settles - at;
+      const cold = mod.layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+      rest.forEach((m, i) => (r.restGap = Math.max(r.restGap, Math.abs(m.x - cold[i].x), Math.abs(m.y - cold[i].y))));
+    }
+    console.log(
+      `${label}: ${r.clusters} clusters, ${r.frames} moving frames; fresh solves ${r.solves}, new arrays ${r.arrays}, covers outside the walls ${r.outside};` +
+        ` frames with one cover over another ${r.over} (deepest ${r.deep.toFixed(1)} px), over the picked cover ${r.overSeed} (deepest ${r.deepSeed.toFixed(1)} px);` +
+        ` frames with a pair too close while the wall comes back ${r.closeOpening} of ${r.opening}; at rest ${r.settles} solves, gap to a cold solve ${r.restGap.toExponential(1)} px;` +
+        ` cost of a moving frame (one timing each): mean ${(r.ms / Math.max(1, r.frames)).toFixed(3)} ms, worst ${r.worstMs.toFixed(3)} ms; of the ${r.over} frames that kept an overlap: mean ${(r.overMs / Math.max(1, r.over)).toFixed(3)} ms, worst ${r.worstOverMs.toFixed(3)} ms`,
+    );
+  }
+  process.exit(0);
+}
+
+if (calls) {
+  for (const { name: label, mod } of [{ name: 'current', mod: current }, ...older]) {
+    console.log(`\n## Per call, every album (${label}), 5 runs per call, fastest kept`);
+    for (const [name, v] of Object.entries(VIEWS)) {
+      const bounds = boundsFor(v, v.inset);
+      const cam = [];
+      const lay = [];
+      let worst = null;
+      for (const stop of STOPS) {
+        const pos = positions[stop];
+        recs[stop].forEach((list, seed) => {
+          const ids = [seed, ...list.slice(0, RECS_SHOWN)];
+          const fastest = (fn) => {
+            let best = Infinity;
+            let out;
+            for (let r = 0; r < 5; r++) {
+              const t0 = performance.now();
+              out = fn();
+              best = Math.min(best, performance.now() - t0);
+            }
+            return [best, out];
+          };
+          const [tc, c] = fastest(() => frameCamera(mod, ids, pos, v));
+          const k = (v.height * c.zoom) / (2 * FRUSTUM_HALF_HEIGHT);
+          const cx = v.inset + (v.width - v.inset) / 2;
+          const anchors = ids.map((id) => ({ id, x: cx + (pos[2 * id] - c.x) * k, y: v.height / 2 - (pos[2 * id + 1] - c.y) * k }));
+          const [tl] = fastest(() => mod.layoutMarkers(anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds }));
+          cam.push(tc);
+          lay.push(tl);
+          if (!worst || tl > worst.tl) worst = { stop, seed, tl };
+        });
+      }
+      console.log(`${name} focusCamera (once per album open): n ${cam.length}, ${summary(cam)}`);
+      console.log(`${name} layoutMarkers with bounds (a full solve): n ${lay.length}, ${summary(lay)}; worst album ${worst.seed} at ${worst.stop}`);
+    }
+  }
+}
+
+/** The frames of one sequence: each is { anchors, bounds }. */
+function sequences(v, stop, seed) {
+  const ids = [seed, ...recs[stop][seed].slice(0, RECS_SHOWN)];
+  const pos = positions[stop];
+  const c = frameCamera(current, ids, pos, v);
+  const k0 = (v.height * c.zoom) / (2 * FRUSTUM_HALF_HEIGHT);
+  const frame = (p, camX, camY, k, inset) => {
+    const cx = inset + (v.width - inset) / 2;
+    return { anchors: ids.map((id) => ({ id, x: cx + (p[2 * id] - camX) * k, y: v.height / 2 - (p[2 * id + 1] - camY) * k })), bounds: boundsFor(v, inset) };
+  };
+  const out = {};
+  out.hover = Array.from({ length: 31 }, () => frame(pos, c.x, c.y, k0, v.inset));
+  // 8 px a frame, down and to the right, so the group runs into the walls on a phone.
+  out.pan = Array.from({ length: 61 }, (_, f) => frame(pos, c.x - (f * 8 * 0.894) / k0, c.y + (f * 8 * 0.447) / k0, k0, v.inset));
+  // The same pan zoomed in twice as far: more groups are wider than the bounds and held at a wall.
+  out['pan at 2x zoom'] = Array.from({ length: 61 }, (_, f) => frame(pos, c.x - (f * 8 * 0.894) / k0 / 2, c.y + (f * 8 * 0.447) / k0 / 2, k0 * 2, v.inset));
+  out.zoom = Array.from({ length: 31 }, (_, f) => frame(pos, c.x, c.y, k0 * 2.5 ** (f / 30), v.inset));
+  const next = STOPS[(STOPS.indexOf(stop) + 1) % STOPS.length];
+  const to = positions[next];
+  const mix = new Float32Array(pos.length);
+  out.morph = Array.from({ length: 31 }, (_, f) => {
+    const t = f / 30;
+    const e = t * t * (3 - 2 * t);
+    for (let i = 0; i < pos.length; i++) mix[i] = pos[i] + (to[i] - pos[i]) * e;
+    return frame(mix, c.x, c.y, k0, v.inset);
+  });
+  if (v.inset > 0) out.panel = Array.from({ length: 21 }, (_, f) => frame(pos, c.x, c.y, k0, (v.inset * f) / 20));
+  return out;
+}
+
+console.log(`\n## Per drawn frame, an open album, 3 runs per sequence, fastest kept`);
+console.log(`albums: the worst album of each viewport plus ${SAMPLE} random (album, stop) pairs (seed 2026)`);
+console.log(`frame 0 (the album opening, a fresh solve) is not counted; every motion frame is drawn "moving", and one more`);
+console.log(`frame at the same view, not moving, ends it (the settle: pointerup, or the motion's flags clearing).`);
+/** Overlapping boxes (gap 10, 1 px slack) and boxes outside the bounds (0.01 px slack) in one layout. */
+function faults(items, b) {
+  let bad = 0;
+  for (let i = 0; i < items.length; i++) {
+    const p = items[i];
+    if (p.x - p.size / 2 < b.left - 0.01 || p.x + p.size / 2 > b.right + 0.01 || p.y - p.size / 2 < b.top - 0.01 || p.y + p.size / 2 > b.bottom + 0.01) bad++;
+    for (let j = i + 1; j < items.length; j++) {
+      const q = items[j];
+      const need = (p.size + q.size) / 2 + 10;
+      if (Math.abs(q.x - p.x) < need - 1 && Math.abs(q.y - p.y) < need - 1) bad++;
+    }
+  }
+  return bad;
+}
+/** Largest jump of a cover between two frames beyond its own album's move, and beyond the seed's move. */
+function jumps(prev, cur) {
+  let own = 0;
+  let seed = 0;
+  const ds = [cur[0].ax - prev[0].ax, cur[0].ay - prev[0].ay];
+  cur.forEach((m, i) => {
+    const dx = m.x - prev[i].x;
+    const dy = m.y - prev[i].y;
+    own = Math.max(own, Math.hypot(dx - (m.ax - prev[i].ax), dy - (m.ay - prev[i].ay)));
+    seed = Math.max(seed, Math.hypot(dx - ds[0], dy - ds[1]));
+  });
+  return [own, seed];
+}
+function snap(items) {
+  return items.map((m) => ({ x: m.x, y: m.y, ax: m.ax, ay: m.ay }));
+}
+for (const [name, v] of Object.entries(VIEWS)) {
+  const rand = seeded(2026);
+  const picks = [v.worst, ...Array.from({ length: SAMPLE }, () => [STOPS[Math.floor(rand() * 3)], Math.floor(rand() * recs.balanced.length)])];
+  const rows = {};
+  const settle = { t: [], worst: null, gap: 0, faultsFresh: 0 };
+  for (const [pi, [stop, seed]] of picks.entries()) {
+    for (const [kind, frames] of Object.entries(sequences(v, stop, seed))) {
+      const row = (rows[`${kind}${pi === 0 ? ' (worst album)' : ''}`] ??= { cur: [], old: older.map(() => []), jumpNow: [], jumpFresh: [], jumpOld: older.map(() => []), faults: 0, faultsFresh: 0, frames: 0 });
+      const motion = kind !== 'hover';
+      const best = new Float64Array(frames.length + 1).fill(Infinity);
+      const oldBest = older.map(() => new Float64Array(frames.length).fill(Infinity));
+      for (let run = 0; run < 3; run++) {
+        const cache = new MarkerLayout();
+        let prevNow = null;
+        let prevFresh = null;
+        frames.forEach((fr, f) => {
+          const t0 = performance.now();
+          const got = cache.layout(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds, moving: motion && f > 0 });
+          best[f] = Math.min(best[f], performance.now() - t0);
+          if (run > 0) return;
+          const fresh = layoutMarkers(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds });
+          if (f > 0) {
+            row.frames++;
+            const fFresh = faults(fresh, fr.bounds);
+            if (fFresh) row.faultsFresh++;
+            else if (faults(got, fr.bounds)) row.faults++;
+            row.jumpNow.push(jumps(prevNow, got));
+            row.jumpFresh.push(jumps(prevFresh, fresh));
+          }
+          prevNow = snap(got);
+          prevFresh = snap(fresh);
+        });
+        // The frame that ends the motion: the same view, not moving.
+        const lastFr = frames[frames.length - 1];
+        const t0 = performance.now();
+        const rest = cache.layout(lastFr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: lastFr.bounds });
+        const t = performance.now() - t0;
+        best[frames.length] = Math.min(best[frames.length], t);
+        if (run === 0) {
+          const fresh = layoutMarkers(lastFr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: lastFr.bounds });
+          rest.forEach((m, i) => (settle.gap = Math.max(settle.gap, Math.abs(m.x - fresh[i].x), Math.abs(m.y - fresh[i].y))));
+        }
+        older.forEach(({ mod }, oi) => {
+          let prevOld = null;
+          frames.forEach((fr, f) => {
+            const t1 = performance.now();
+            const got = mod.layoutMarkers(fr.anchors, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds: fr.bounds });
+            oldBest[oi][f] = Math.min(oldBest[oi][f], performance.now() - t1);
+            if (run === 0 && prevOld) row.jumpOld[oi].push(jumps(prevOld, got)[0]);
+            prevOld = snap(got);
+          });
+        });
+      }
+      for (let f = 1; f < frames.length; f++) {
+        row.cur.push(best[f]);
+        older.forEach((_, oi) => row.old[oi].push(oldBest[oi][f]));
+      }
+      if (motion) {
+        settle.t.push(best[frames.length]);
+        if (!settle.worst || best[frames.length] > settle.worst.t) settle.worst = { t: best[frames.length], stop, seed, kind };
+      }
+    }
+  }
+  console.log(`\n### ${name}`);
+  const q = (xs, p) => Float64Array.from(xs).sort()[Math.min(xs.length - 1, Math.floor(p * (xs.length - 1)))];
+  for (const [kind, r] of Object.entries(rows)) {
+    console.log(`${kind}: ${r.frames} frames; now (MarkerLayout) ${summary(r.cur)}`);
+    older.forEach((o, oi) => console.log(`  ${o.name} (layoutMarkers every frame) ${summary(r.old[oi])}`));
+    const jn = r.jumpNow;
+    const jf = r.jumpFresh;
+    console.log(
+      `  steadiness, cover jump beyond its album's move p99 / max: now ${q(jn.map((j) => j[0]), 0.99).toFixed(1)} / ${q(jn.map((j) => j[0]), 1).toFixed(1)} px, fresh every frame ${q(jf.map((j) => j[0]), 0.99).toFixed(1)} / ${q(jf.map((j) => j[0]), 1).toFixed(1)} px;` +
+        ` beyond the seed's move: now ${q(jn.map((j) => j[1]), 0.99).toFixed(1)} / ${q(jn.map((j) => j[1]), 1).toFixed(1)} px, fresh ${q(jf.map((j) => j[1]), 0.99).toFixed(1)} / ${q(jf.map((j) => j[1]), 1).toFixed(1)} px`,
+    );
+    older.forEach((o, oi) => {
+      if (r.jumpOld[oi].length) console.log(`  steadiness of ${o.name} every frame, beyond its album's move p99 / max: ${q(r.jumpOld[oi], 0.99).toFixed(1)} / ${q(r.jumpOld[oi], 1).toFixed(1)} px`);
+    });
+    if (jn.length) {
+      const nowMax = q(jn.map((j) => j[0]), 1);
+      const nowP99 = q(jn.map((j) => j[0]), 0.99);
+      const others = [jf.map((j) => j[0]), ...r.jumpOld].filter((xs) => xs.length);
+      const bestMax = Math.min(...others.map((xs) => q(xs, 1)));
+      const bestP99 = Math.min(...others.map((xs) => q(xs, 0.99)));
+      if (nowMax > bestMax + 0.05 || nowP99 > bestP99 + 0.05) console.log(`  (!) now jumps more than the steadiest of the others: p99 ${nowP99.toFixed(1)} against ${bestP99.toFixed(1)}, max ${nowMax.toFixed(1)} against ${bestMax.toFixed(1)} px`);
+    }
+    console.log(`  frames with an overlap or a cover outside the bounds: now ${r.faults} where a fresh solve has none; fresh solve itself ${r.faultsFresh}`);
+  }
+  console.log(`settle frame (the motion's end, a fresh solve): n ${settle.t.length}, ${summary(settle.t)}; worst ${settle.worst.kind} of album ${settle.worst.seed} at ${settle.worst.stop}; largest gap to a fresh solve ${settle.gap.toExponential(2)} px`);
+}
+
+console.log(`\n## Album open: a 26-frame framing tween (ease-out, from 2.5 times further out and off to one side), then rest`);
+console.log(`"no target": the opening frame solves the view it starts from and the group rides, settling at rest;`);
+console.log(`"target": the opening frame solves the view the tween lands on (MarkerDriver passes it), so the rest frame has nothing to move.`);
+for (const [name, v] of Object.entries(VIEWS)) {
+  const rand = seeded(7);
+  const picks = [v.worst, ...Array.from({ length: SAMPLE }, () => [STOPS[Math.floor(rand() * 3)], Math.floor(rand() * recs.balanced.length)])];
+  const out = { target: { open: [], frame: [], rest: [], ease: [] }, 'no target': { open: [], frame: [], rest: [], ease: [] } };
+  for (const [stop, seed] of picks) {
+    const ids = [seed, ...recs[stop][seed].slice(0, RECS_SHOWN)];
+    const pos = positions[stop];
+    const to = frameCamera(current, ids, pos, v);
+    const from = { x: to.x + 0.2, y: to.y - 0.1, zoom: to.zoom / 2.5 };
+    const bounds = boundsFor(v, v.inset);
+    const view = (c) => {
+      const k = (v.height * c.zoom) / (2 * FRUSTUM_HALF_HEIGHT);
+      const cx = v.inset + (v.width - v.inset) / 2;
+      return ids.map((id) => ({ id, x: cx + (pos[2 * id] - c.x) * k, y: v.height / 2 - (pos[2 * id + 1] - c.y) * k }));
+    };
+    const frames = Array.from({ length: 26 }, (_, f) => {
+      const e = 1 - (1 - f / 25) ** 3;
+      return view({ x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e, zoom: Math.exp(Math.log(from.zoom) + (Math.log(to.zoom) - Math.log(from.zoom)) * e) });
+    });
+    for (const mode of ['target', 'no target']) {
+      const r = out[mode];
+      let best = null;
+      for (let run = 0; run < 3; run++) {
+        const cache = new MarkerLayout();
+        const t = [];
+        frames.forEach((a, f) => {
+          const t0 = performance.now();
+          cache.layout(a, MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true, target: f === 0 && mode === 'target' ? { anchors: view(to), bounds } : undefined });
+          t.push(performance.now() - t0);
+        });
+        const before = cache.layout(frames[25], MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds, moving: true }).map((m) => [m.x, m.y]);
+        const t0 = performance.now();
+        const rest = cache.layout(frames[25], MARKER_SIZE.seed, MARKER_SIZE.rec, { bounds });
+        t.push(performance.now() - t0);
+        const ease = Math.max(...rest.map((m, i) => Math.hypot(m.x - before[i][0], m.y - before[i][1])));
+        best = best ? best.map((x, i) => Math.min(x, t[i])) : t;
+        if (run === 0) r.ease.push(ease);
+      }
+      r.open.push(best[0]);
+      r.frame.push(...best.slice(1, 26));
+      r.rest.push(best[26]);
+    }
+  }
+  console.log(`\n### ${name} (${picks.length} albums)`);
+  for (const [mode, r] of Object.entries(out)) {
+    const eased = r.ease.filter((d) => d >= 0.5).length;
+    console.log(`${mode}: opening frame ${summary(r.open)}; tween frames ${summary(r.frame)}; rest frame ${summary(r.rest)}; covers eased at rest in ${eased} of ${r.ease.length} opens, largest move ${Math.max(...r.ease).toFixed(1)} px`);
+  }
+}

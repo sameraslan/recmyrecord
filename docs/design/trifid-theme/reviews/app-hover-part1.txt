@@ -1,0 +1,22 @@
+gpu load 1: #1 tip 134 ms, long task 0 ms, gap 16.8 ms | #2 tip 93.3 ms, long task 0 ms, gap 16.8 ms | #3 tip 92.7 ms, long task 0 ms, gap 16.7 ms
+gpu load 2: #1 tip 134.8 ms, long task 0 ms, gap 16.8 ms | #2 tip 95.8 ms, long task 0 ms, gap 16.7 ms | #3 tip 92.5 ms, long task 0 ms, gap 16.8 ms
+gpu load 3: #1 tip 136.4 ms, long task 0 ms, gap 33.2 ms | #2 tip 94 ms, long task 0 ms, gap 16.8 ms | #3 tip 94.1 ms, long task 0 ms, gap 16.8 ms
+gpu load 4: #1 tip 118.7 ms, long task 0 ms, gap 16.8 ms | #2 tip 109.9 ms, long task 0 ms, gap 16.7 ms | #3 tip 92.9 ms, long task 0 ms, gap 16.8 ms
+gpu load 5: #1 tip 142.2 ms, long task 0 ms, gap 33.3 ms | #2 tip 89.1 ms, long task 0 ms, gap 16.7 ms | #3 tip 91.1 ms, long task 0 ms, gap 16.8 ms
+software load 1: #1 tip 137.3 ms, long task 0 ms, gap 66.7 ms | #2 tip 93.3 ms, long task 0 ms, gap 99.9 ms | #3 tip 101.7 ms, long task 0 ms, gap 100 ms
+software load 2: #1 tip 125.1 ms, long task 0 ms, gap 66.8 ms | #2 tip 94.3 ms, long task 0 ms, gap 83.3 ms | #3 tip 96.6 ms, long task 0 ms, gap 100 ms
+software load 3: #1 tip 115.5 ms, long task 0 ms, gap 83.3 ms | #2 tip 94.4 ms, long task 0 ms, gap 83.4 ms | #3 tip 94 ms, long task 0 ms, gap 83.3 ms
+software load 4: #1 tip 137 ms, long task 0 ms, gap 66.6 ms | #2 tip 93.8 ms, long task 0 ms, gap 83.4 ms | #3 tip 94 ms, long task 0 ms, gap 83.3 ms
+software load 5: #1 tip 119.6 ms, long task 0 ms, gap 83.3 ms | #2 tip 93.7 ms, long task 0 ms, gap 100 ms | #3 tip 105.2 ms, long task 0 ms, gap 83.2 ms
+
+gpu (ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version))
+  hover 1: tip 134.8 ms (118.7 to 142.2), longest long task 0 ms (0 to 0), frame gap 16.8 ms (16.8 to 33.3)
+  hover 2: tip 94 ms (89.1 to 109.9), longest long task 0 ms (0 to 0), frame gap 16.7 ms (16.7 to 16.8)
+  hover 3: tip 92.7 ms (91.1 to 94.1), longest long task 0 ms (0 to 0), frame gap 16.8 ms (16.7 to 16.8)
+
+software (ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver))
+  hover 1: tip 125.1 ms (115.5 to 137.3), longest long task 0 ms (0 to 0), frame gap 66.8 ms (66.6 to 83.3)
+  hover 2: tip 93.8 ms (93.3 to 94.4), longest long task 0 ms (0 to 0), frame gap 83.4 ms (83.3 to 100)
+  hover 3: tip 96.6 ms (94 to 105.2), longest long task 0 ms (0 to 0), frame gap 83.3 ms (83.2 to 100)
+
+wrote /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/laughing-sinoussi-95fc12/docs/design/trifid-theme/reviews/app-hover-part1.json

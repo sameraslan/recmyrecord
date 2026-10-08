@@ -4,12 +4,12 @@ import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toSummary } from '@/lib/data/catalog';
-import { useCatalog, usePositions } from '@/lib/data/useData';
-import { useIsNarrow } from '@/lib/media';
+import { themeFor } from '@/lib/data/theme';
+import { useCatalog, usePositions, useThemeLoad } from '@/lib/data/useData';
+import { HEADER_NARROW_PX, HEADER_PX, useIsNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
 import type { StopId } from '@/lib/types';
 import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-state';
-import { AmbientLayers } from '@/components/album/AmbientWash';
 import { ErrorPanel } from '@/components/ErrorPanel';
 import { buildMapData } from './data';
 import { ExploreHere } from './overlays/ExploreHere';
@@ -150,7 +150,6 @@ export function MapStage() {
   const mapModeFor = useAppStore((s) => s.mapModeFor);
   // Phone map mode belongs to one album: on a pick the new URL turns it off before the old panel unmounts.
   const mapMode = mapModeFor !== null && pathname === `/album/${mapModeFor}`;
-  const ambient = useAppStore((s) => s.ambient);
   const noAudio = useAppStore((s) => s.noAudio);
 
   useEffect(() => {
@@ -169,6 +168,14 @@ export function MapStage() {
   const { status: catalogStatus, catalog, retry: retryCatalog } = useCatalog(enabled);
   const { status: positionsStatus, positions, retry: retryPositions } = usePositions(enabled);
   const mapData = useMemo(() => (catalog && positions ? buildMapData(catalog.albums, positions) : null), [catalog, positions]);
+  // The theme is optional. Missing, failed or built for another album count, the map goes on with plain sky.
+  const { status: themeStatus, theme: loadedTheme } = useThemeLoad(enabled);
+  const theme = mapData ? themeFor(loadedTheme, mapData.n) : null;
+  useEffect(() => {
+    // Tests wait for the gas to settle (e2e/helpers.ts waitForMap); tell them when there is none to wait for.
+    if (!window.__rmr) return;
+    if (themeStatus === 'error' || (mapData !== null && loadedTheme !== null && theme === null)) window.__rmr.gas = 'off';
+  }, [themeStatus, mapData, loadedTheme, theme]);
 
   const interactive = view === 'explore' || (view === 'album' && (!narrow || mapMode));
   const dimmed = view === 'home' || view === 'about' || view === 'other';
@@ -193,8 +200,10 @@ export function MapStage() {
       hot,
       selected: view === 'explore' ? selected : null,
       interactive,
+      explore: view === 'explore',
       dimmed,
       insetLeft: view === 'album' && !narrow ? panelInset : 0,
+      insetTop: narrow ? HEADER_NARROW_PX : HEADER_PX,
       framePadding: narrow ? phonePadding.frame : DESKTOP_PADDING,
       fitPadding: narrow ? phonePadding.fit : DESKTOP_FIT_PADDING,
       // The full-width phone slider panel; the desktop corner card stays out of the marker bounds.
@@ -214,11 +223,14 @@ export function MapStage() {
   }, []);
 
   // Explore camera memory (mockup render: exploreCam). Leaving Explore saves the camera and drops the card;
-  // coming back from an album (its close control, Escape or the header nav) restores it, or frames the whole map.
+  // coming back from an album (its close control, Escape or the header nav) restores it, or frames the whole map;
+  // coming from Home, About or 404 with nothing saved glides to the opening view (the Overview); leaving for Home
+  // with the Overview untouched glides back to the whole map and keeps nothing.
   // "Explore this area" is the exception: it asks for Explore with the camera left where the album had it.
   const prevView = useRef<View>(view);
   const pendingReturn = useRef(false);
   const exploreHere = useRef(false);
+  const pendingOpening = useRef(false);
   // A layout effect, declared before the one below, so both see the same commit.
   useLayoutEffect(() => {
     const prev = prevView.current;
@@ -229,14 +241,27 @@ export function MapStage() {
       if (apiRef.current) s.saveExploreCamera(apiRef.current.getCamera());
       s.setSelected(null);
     }
+    if (apiRef.current?.homeBackdrop(view)) s.saveExploreCamera(null);
     pendingReturn.current = view === 'explore' && prev === 'album' && !exploreHere.current;
+    // Home, About or 404 to the map, with no camera saved in Explore: the map glides to its opening view (Task 0,
+    // prototype app.js L118). A saved camera stays where the visitor left it.
+    pendingOpening.current = view === 'explore' && (prev === 'home' || prev === 'about' || prev === 'other') && s.exploreCamera === null;
     exploreHere.current = false;
   }, [view]);
   // The pathname can change a commit before the album panel unmounts and clears the focus, so the camera moves
   // only once the map input has no focus (MusicMap applies the input in its layout effect, before this one);
   // otherwise Reset would frame the album just left and the album framing could follow the restore.
+  // The opening glide (Home, About or 404 to the map) runs in the same commit. Without a map yet there is nothing to
+  // move: when the map mounts, InitialFrame opens it at the same framing. pendingReturn (from an album) and
+  // pendingOpening (from a page) never hold together. Keep this file under 20,000 bytes: past that Turbopack splits
+  // its first-load chunk in two (+0.6 KB, measured in Task 0).
   useLayoutEffect(() => {
-    if (!pendingReturn.current || view !== 'explore' || input.focus !== null || !apiRef.current) return;
+    if (view !== 'explore' || input.focus !== null) return;
+    if (pendingOpening.current) {
+      pendingOpening.current = false;
+      apiRef.current?.opening(true);
+    }
+    if (!pendingReturn.current || !apiRef.current) return;
     pendingReturn.current = false;
     const saved = useAppStore.getState().exploreCamera;
     if (saved) apiRef.current.setCamera(saved, true);
@@ -331,11 +356,9 @@ export function MapStage() {
       // The phone zoom controls sit above the measured slider panel (styles/map.css).
       style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
     >
-      {/* Under the transparent canvas: the album's ambient wash shows beneath the dots. */}
-      <AmbientLayers ambient={view === 'album' ? ambient : null} variant="map" />
       <div className="map-host">
         {enabled && mapData ? (
-          <MusicMap data={mapData} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
+          <MusicMap data={mapData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
         ) : null}
       </div>
       {/* Home (mockup .veil): dims the map further round the hero; a click on empty map area opens the map. Always
@@ -359,7 +382,7 @@ export function MapStage() {
             {mapData && view === 'album' && focus ? <ExploreHere onClick={onExploreHere} /> : null}
             {mapData ? <ZoomControls api={apiRef} /> : null}
             {/* No hint over an empty map: the data is still loading or failed to load. */}
-            {mapData && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'explore' && selected !== null} album={view === 'album'} /> : null}
+            {mapData && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'album' || selected !== null} /> : null}
             {cardShown && selected !== null && catalog ? (
               <MapCard
                 key={selected}

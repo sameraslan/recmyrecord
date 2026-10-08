@@ -53,6 +53,96 @@ test.describe('phone album', () => {
     await expect(page).toHaveURL(IR);
   });
 
+  test('the map strip draws sparse specks over the gas, never a carpet: at most 5 stars in any 32 px square', async ({ page }, info) => {
+    // Every draw of the strip, as the canvas was told it: the dots, and how long the draw took (the script, plus
+    // the painting where the canvas may be read back, which is until a cover from another site is drawn on it).
+    await page.addInitScript(() => {
+      type Draw = { at: number; arcs: number[]; ms: number; painted: boolean };
+      const w = window as unknown as { __strip: Draw[] };
+      w.__strip = [];
+      const P = CanvasRenderingContext2D.prototype;
+      const fillRect = P.fillRect;
+      const arc = P.arc;
+      P.fillRect = function (this: CanvasRenderingContext2D, x: number, y: number, ww: number, hh: number) {
+        // The sky fill starts a draw.
+        if (this.canvas.classList.contains('strip-canvas') && x === 0 && y === 0 && ww > 100) {
+          const t0 = performance.now();
+          const d: Draw = { at: t0, arcs: [], ms: -1, painted: false };
+          w.__strip.push(d);
+          queueMicrotask(() => {
+            try {
+              this.getImageData(0, 0, 1, 1);
+              d.painted = true;
+            } catch {
+              // a cover from another site is on the canvas: only the script is timed
+            }
+            d.ms = performance.now() - t0;
+          });
+        }
+        return fillRect.call(this, x, y, ww, hh);
+      };
+      P.arc = function (this: CanvasRenderingContext2D, x: number, y: number, r: number, a0: number, a1: number, ccw?: boolean) {
+        if (this.canvas.classList.contains('strip-canvas')) w.__strip.at(-1)?.arcs.push(x, y, r);
+        return arc.call(this, x, y, r, a0, a1, ccw);
+      };
+    });
+    await page.goto(IR);
+    const strip = page.getByRole('img', { name: COPY.map.preview });
+    await strip.scrollIntoViewIfNeeded();
+    await expect(strip).toBeVisible();
+    // Until the strip has drawn with its dots and then rested for a second (the gas and the covers have arrived).
+    await page.waitForFunction(() => {
+      const d = (window as unknown as { __strip: { at: number; arcs: number[] }[] }).__strip;
+      return d.length > 0 && d.at(-1)!.arcs.length > 0 && performance.now() - d.at(-1)!.at > 1000;
+    }, null, { timeout: 20_000 });
+    const draws = await page.evaluate(() => (window as unknown as { __strip: { arcs: number[]; ms: number; painted: boolean }[] }).__strip);
+    const box = (await strip.boundingBox())!;
+    // Not judged (a shared laptop): printed for the record.
+    const line = `strip draws: ${draws.map((d) => `${d.arcs.length / 3} stars in ${d.ms.toFixed(1)} ms${d.painted ? ' (painted)' : ' (script only)'}`).join('; ')}`;
+    console.log(line);
+    info.annotations.push({ type: 'strip', description: line });
+    for (const d of draws) {
+      const perSquare = new Map<string, number>();
+      const radii = new Set<number>();
+      for (let i = 0; i < d.arcs.length; i += 3) {
+        const key = `${Math.floor((d.arcs[i] + 4) / 32)},${Math.floor((d.arcs[i + 1] + 4) / 32)}`;
+        perSquare.set(key, (perSquare.get(key) ?? 0) + 1);
+        radii.add(d.arcs[i + 2]);
+      }
+      expect(Math.max(...perSquare.values()), 'stars in the fullest 32 px square').toBeLessThanOrEqual(5);
+      // In Rainbows sits in a crowd (over 4,000 albums in the strip's window): a few hundred fine dots of one size.
+      expect(d.arcs.length / 3).toBeGreaterThan(100);
+      expect(d.arcs.length / 3).toBeLessThanOrEqual(Math.ceil((box.width + 8) / 32 + 1) * Math.ceil((box.height + 8) / 32 + 1) * 5);
+      expect([...radii]).toHaveLength(1);
+      expect([...radii][0]).toBeLessThan(0.75);
+    }
+    // The same dots on every draw: a cover that arrives does not move a star.
+    for (const d of draws) expect(d.arcs).toEqual(draws[0].arcs);
+    await shot(page, info, 'album-strip');
+  });
+
+  test('"Open in Spotify" and the link button sit above the mood tags, as in the approved picture, and the page reads in that order', async ({ page }) => {
+    await page.goto('/album/the-stone-roses-the-stone-roses');
+    const box = async (selector: string) => (await page.locator(selector).boundingBox())!;
+    const cover = await box('section.album .seed .cover');
+    const title = await box('#seed-title');
+    const actions = await box('.seed-actions');
+    const tags = await box('.seed .tags');
+    // final-phone-list.jpg: the cover and the title, then the buttons across the page, then the tags.
+    expect(actions.y).toBeGreaterThanOrEqual(Math.max(cover.y + cover.height, title.y + title.height));
+    expect(tags.y).toBeGreaterThanOrEqual(actions.y + actions.height);
+    // The buttons 6 px under the cover and the tags 14 px under the buttons (the prototype's phone rules).
+    expect(actions.y - (cover.y + cover.height)).toBe(6);
+    expect(tags.y - (actions.y + actions.height)).toBe(14);
+    // The button row is as wide as the page's text column, and both controls are still 44 px tall.
+    expect(actions.x).toBe(cover.x);
+    expect(actions.width).toBe(tags.width);
+    for (const control of await page.locator('.seed-actions > *').all()) expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    // What is seen is what is read and tabbed: in the document the buttons come before the tags too.
+    expect(await page.locator('.seed').evaluate((el) => [...el.children].map((c) => c.className.split(' ')[0]))).toEqual(['cover', 'seed-artist', 'seed-title', 'seed-actions', 'tags']);
+    await noHorizontalScroll(page);
+  });
+
   test('an album entered from Home still slides away for the map', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('list', { name: COPY.home.shelfListLabel }).locator('a').first().tap();
@@ -204,4 +294,109 @@ test.describe('motion', () => {
     expect(x).toBe(0);
     expect(await page.evaluate(() => window.__rmr!.map!.isAnimating())).toBe(false);
   });
+});
+
+test('the "Link copied" toast keeps clear of the bottom edge and of the Map button', async ({ page, context, isMobile }) => {
+  test.skip(!isMobile, 'phone layout');
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await page.goto(IR);
+  await expect(page.locator('li.rec')).toHaveCount(5);
+  // The copy button is in the album list; the slider panel is not on screen here (it belongs to map mode).
+  await expect(page.locator('.mode')).toHaveCount(0);
+  await page.getByRole('button', { name: COPY.album.copyLinkLabel }).tap();
+  const toast = page.getByRole('status').filter({ hasText: COPY.album.linkCopied });
+  await expect(toast).toBeVisible();
+  await waitForAnimations(page);
+  const t = (await toast.boundingBox())!;
+  const vp = page.viewportSize()!;
+  // 28 px above the bottom edge plus the safe area inset (0 in this emulation; glass.test.ts pins the env() term).
+  expect(vp.height - (t.y + t.height)).toBeGreaterThanOrEqual(27.5);
+  const fab = (await page.getByRole('button', { name: COPY.phone.mapLabel }).boundingBox())!;
+  const apart = t.x + t.width <= fab.x || fab.x + fab.width <= t.x || t.y + t.height <= fab.y || fab.y + fab.height <= t.y;
+  expect(apart, 'the toast and the Map button do not overlap').toBe(true);
+});
+
+test('the zoom corner is one closed stack of three buttons that clears the slider below it and whatever is above it', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone layout');
+  // The smallest phone the layout is checked on.
+  await page.setViewportSize({ width: 360, height: 640 });
+  /** The buttons of the bottom right corner (zoom in, zoom out, whole map), top to bottom. */
+  const corner = () =>
+    page.locator('.map-zoom button').evaluateAll((els) =>
+      els
+        .map((e) => e.getBoundingClientRect())
+        .filter((r) => r.width > 0 && r.height > 0)
+        .map((r) => ({ x: r.x, y: r.y, w: Math.round(r.width), h: Math.round(r.height) }))
+        .sort((a, b) => a.y - b.y),
+    );
+  const check = async (ceiling: number, label: string) => {
+    // Nothing but the three buttons is in the corner, and the corner is exactly as tall as they are: no place
+    // is kept above them.
+    expect(await page.locator('.map-zoom > *').count(), label).toBe(3);
+    const buttons = await corner();
+    const box = (await page.locator('.map-zoom').boundingBox())!;
+    expect(box.height, label).toBeCloseTo(buttons.reduce((sum, b) => sum + b.h, 0), 0);
+    expect(buttons[0].y - box.y, label).toBeCloseTo(0, 0);
+    const mode = (await page.locator('.mode').boundingBox())!;
+    for (const b of buttons) {
+      expect(b.w, label).toBeGreaterThanOrEqual(44);
+      expect(b.h, label).toBeGreaterThanOrEqual(44);
+      // Wholly on the screen.
+      expect(b.x, label).toBeGreaterThanOrEqual(0);
+      expect(b.x + b.w, label).toBeLessThanOrEqual(360);
+    }
+    // No two overlap and none stands apart from the one above it, the lowest ends 8 px above the slider panel
+    // (map.css: --slider-cover + 8px), the highest starts at least 8 px under what is above it.
+    for (let i = 1; i < buttons.length; i++) {
+      expect(buttons[i].y - (buttons[i - 1].y + buttons[i - 1].h), label).toBeGreaterThanOrEqual(-1);
+      expect(buttons[i].y - (buttons[i - 1].y + buttons[i - 1].h), label).toBeLessThanOrEqual(1);
+    }
+    const last = buttons[buttons.length - 1];
+    expect(mode.y - (last.y + last.h), label).toBeGreaterThanOrEqual(7);
+    expect(buttons[0].y - ceiling, label).toBeGreaterThanOrEqual(8);
+    return buttons.length;
+  };
+  // Explore at the opening view: the three zoom buttons, under the header.
+  await page.goto('/map');
+  await waitForMap(page);
+  await waitForCameraIdle(page);
+  const header = (await page.locator('header.top').boundingBox())!;
+  expect(await check(header.y + header.height, 'explore')).toBe(3);
+  // An album's map mode: the corner must also clear the Explore and List buttons of the top row.
+  await page.goto(IR);
+  await waitForMap(page);
+  await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
+  await expect(page.locator('.mode')).toBeVisible();
+  await waitForMap(page); // map mode starts the other two stops' gas (part 1): settled before anything is measured
+  await waitForCameraIdle(page);
+  await waitForAnimations(page);
+  const list = (await page.locator('.fab-map--on').boundingBox())!;
+  const explore = (await page.locator('.map-explore').boundingBox())!;
+  expect(await check(Math.max(list.y + list.height, explore.y + explore.height), 'album map mode')).toBe(3);
+});
+
+test('the List button keeps its place and its layer under keyboard focus, with the dark casing round its ring', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone layout');
+  await page.goto(IR);
+  await waitForMap(page);
+  await page.getByRole('button', { name: COPY.phone.mapLabel }).tap();
+  const list = page.locator('.fab-map--on');
+  await expect(list).toBeVisible();
+  await expect(page.locator('.mode')).toBeVisible();
+  await waitForAnimations(page);
+  const before = (await list.boundingBox())!;
+  // The tap left the focus on the button without a ring. Away and back by keyboard, so :focus-visible holds.
+  await page.keyboard.press('Shift+Tab');
+  await expect(list).not.toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(list).toBeFocused();
+  expect(await list.evaluate((el) => el.matches(':focus-visible'))).toBe(true);
+  await waitForAnimations(page);
+  expect(await list.boundingBox(), 'the casing rule does not move or resize the List button').toEqual(before);
+  // Still above the album panel and the map (phone.css .fab-map), which a z-index in the casing rule would undo.
+  await expect(list).toHaveCSS('z-index', '12');
+  // The band from the button's edge to 7 px out, under the 2 px ring that starts 3 px out.
+  await expect(list).toHaveCSS('box-shadow', /^rgba\(4, 4, 8, 0\.8\) 0px 0px 0px 7px$/);
+  await expect(list).toHaveCSS('outline-width', '2px');
+  await expect(list).toHaveCSS('outline-offset', '3px');
 });

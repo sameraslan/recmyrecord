@@ -1,0 +1,3 @@
+sonic: image rectangle on screen x 238 to 1233, y 1 to 958; largest luma step across each edge: west 0.33 (sky 0.37), east 0.38 (sky 0.27), north not on screen (sky not on screen), south 0.33 (sky not on screen)
+balanced: image rectangle on screen x 337 to 1157, y 39 to 971; largest luma step across each edge: west 0.33 (sky 0.33), east 0.36 (sky 0.24), north not on screen (sky not on screen), south 0.28 (sky not on screen)
+mood: image rectangle on screen x 386 to 1081, y 61 to 986; largest luma step across each edge: west 0.26 (sky 0.25), east 0.23 (sky 0.25), north not on screen (sky not on screen), south 0.27 (sky not on screen)

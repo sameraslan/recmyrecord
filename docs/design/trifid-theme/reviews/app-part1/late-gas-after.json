@@ -1,0 +1,664 @@
+[
+ {
+  "mode": "gpu",
+  "vp": "desktop",
+  "gesture": "drag",
+  "rows": [
+   {
+    "gesture": "drag",
+    "late": false,
+    "worstGapMs": 17.8,
+    "worstGapInWindowMs": 17.8,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 0,
+    "releasedAfterStartMs": null,
+    "readyAfterStartMs": -1504,
+    "gestureMs": 3513
+   },
+   {
+    "gesture": "drag",
+    "late": false,
+    "worstGapMs": 18,
+    "worstGapInWindowMs": 18,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 0,
+    "releasedAfterStartMs": null,
+    "readyAfterStartMs": -1504,
+    "gestureMs": 3514
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 17.9,
+    "worstGapInWindowMs": 17.6,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      7223,
+      14.1
+     ],
+     [
+      "texSubImage2D",
+      7489,
+      6.2
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 20.3,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 5444,
+    "gestureMs": 3510
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 18.5,
+    "worstGapInWindowMs": 18.5,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      7222,
+      10.4
+     ],
+     [
+      "texSubImage2D",
+      7489,
+      7.3
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 17.7,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 5447,
+    "gestureMs": 3515
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 17.6,
+    "worstGapInWindowMs": 17.6,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      7303,
+      25.3
+     ],
+     [
+      "texSubImage2D",
+      7586,
+      8
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 33.3,
+    "releasedAfterStartMs": 702,
+    "readyAfterStartMs": 5460,
+    "gestureMs": 3511
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 17.7,
+    "worstGapInWindowMs": 17.6,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      7225,
+      21.7
+     ],
+     [
+      "texSubImage2D",
+      7508,
+      7
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 28.7,
+    "releasedAfterStartMs": 702,
+    "readyAfterStartMs": 5463,
+    "gestureMs": 3514
+   }
+  ]
+ },
+ {
+  "mode": "gpu",
+  "vp": "desktop",
+  "gesture": "wheel",
+  "rows": [
+   {
+    "gesture": "wheel",
+    "late": false,
+    "worstGapMs": 38.9,
+    "worstGapInWindowMs": 38.9,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      3209,
+      20.2
+     ],
+     [
+      "texSubImage2D",
+      3390,
+      15.5
+     ],
+     [
+      "texSubImage2D",
+      3573,
+      18.4
+     ],
+     [
+      "texSubImage2D",
+      3757,
+      16.1
+     ]
+    ],
+    "uploadMsDuringGesture": 70.2,
+    "uploadMsAfterGesture": 0,
+    "releasedAfterStartMs": null,
+    "readyAfterStartMs": -1504,
+    "gestureMs": 3513
+   },
+   {
+    "gesture": "wheel",
+    "late": false,
+    "worstGapMs": 35.7,
+    "worstGapInWindowMs": 35.7,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      3207,
+      18.7
+     ],
+     [
+      "texSubImage2D",
+      3391,
+      16
+     ],
+     [
+      "texSubImage2D",
+      3574,
+      17.9
+     ],
+     [
+      "texSubImage2D",
+      3724,
+      15.4
+     ]
+    ],
+    "uploadMsDuringGesture": 68,
+    "uploadMsAfterGesture": 0,
+    "releasedAfterStartMs": null,
+    "readyAfterStartMs": -1504,
+    "gestureMs": 3513
+   },
+   {
+    "gesture": "wheel",
+    "late": true,
+    "worstGapMs": 52,
+    "worstGapInWindowMs": 33.6,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      2711,
+      34.6
+     ],
+     [
+      "texSubImage2D",
+      2877,
+      13.9
+     ],
+     [
+      "texSubImage2D",
+      3060,
+      16.9
+     ],
+     [
+      "texSubImage2D",
+      3211,
+      16
+     ],
+     [
+      "texSubImage2D",
+      6776,
+      17
+     ],
+     [
+      "texSubImage2D",
+      7061,
+      18.8
+     ]
+    ],
+    "uploadMsDuringGesture": 81.4,
+    "uploadMsAfterGesture": 35.8,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 4950,
+    "gestureMs": 3513
+   },
+   {
+    "gesture": "wheel",
+    "late": true,
+    "worstGapMs": 32.8,
+    "worstGapInWindowMs": 32.8,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      2639,
+      14.3
+     ],
+     [
+      "texSubImage2D",
+      2792,
+      12.8
+     ],
+     [
+      "texSubImage2D",
+      2972,
+      17.3
+     ],
+     [
+      "texSubImage2D",
+      3122,
+      13.4
+     ],
+     [
+      "texSubImage2D",
+      6708,
+      15.3
+     ],
+     [
+      "texSubImage2D",
+      6990,
+      17
+     ]
+    ],
+    "uploadMsDuringGesture": 57.8,
+    "uploadMsAfterGesture": 32.3,
+    "releasedAfterStartMs": 700,
+    "readyAfterStartMs": 4950,
+    "gestureMs": 3513
+   },
+   {
+    "gesture": "wheel",
+    "late": true,
+    "worstGapMs": 34.9,
+    "worstGapInWindowMs": 34.9,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      2642,
+      13.3
+     ],
+     [
+      "texSubImage2D",
+      2792,
+      13.6
+     ],
+     [
+      "texSubImage2D",
+      2942,
+      13.2
+     ],
+     [
+      "texSubImage2D",
+      3092,
+      17.9
+     ],
+     [
+      "texSubImage2D",
+      6694,
+      15.3
+     ],
+     [
+      "texSubImage2D",
+      6976,
+      15.9
+     ]
+    ],
+    "uploadMsDuringGesture": 58,
+    "uploadMsAfterGesture": 31.2,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 4946,
+    "gestureMs": 3512
+   },
+   {
+    "gesture": "wheel",
+    "late": true,
+    "worstGapMs": 34.1,
+    "worstGapInWindowMs": 34.1,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      2646,
+      12.3
+     ],
+     [
+      "texSubImage2D",
+      2813,
+      12
+     ],
+     [
+      "texSubImage2D",
+      2979,
+      17
+     ],
+     [
+      "texSubImage2D",
+      3129,
+      13.9
+     ],
+     [
+      "texSubImage2D",
+      6696,
+      15.3
+     ],
+     [
+      "texSubImage2D",
+      6979,
+      7.8
+     ]
+    ],
+    "uploadMsDuringGesture": 55.2,
+    "uploadMsAfterGesture": 23.1,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 4946,
+    "gestureMs": 3512
+   }
+  ]
+ },
+ {
+  "mode": "gpu",
+  "vp": "phone",
+  "gesture": "drag",
+  "rows": [
+   {
+    "gesture": "drag",
+    "late": false,
+    "worstGapMs": 20.2,
+    "worstGapInWindowMs": 20.2,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 0,
+    "releasedAfterStartMs": null,
+    "readyAfterStartMs": -1506,
+    "gestureMs": 3511
+   },
+   {
+    "gesture": "drag",
+    "late": false,
+    "worstGapMs": 17.8,
+    "worstGapInWindowMs": 17.8,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 0,
+    "releasedAfterStartMs": null,
+    "readyAfterStartMs": -1502,
+    "gestureMs": 3515
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 18.5,
+    "worstGapInWindowMs": 18.5,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      7350,
+      8.9
+     ],
+     [
+      "texSubImage2D",
+      7617,
+      6.1
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 15,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 5579,
+    "gestureMs": 3513
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 18.3,
+    "worstGapInWindowMs": 18.3,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      7390,
+      19.7
+     ],
+     [
+      "texSubImage2D",
+      7674,
+      7.4
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 27.1,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 5613,
+    "gestureMs": 3514
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 18.5,
+    "worstGapInWindowMs": 18.5,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      7371,
+      25.6
+     ],
+     [
+      "texSubImage2D",
+      7655,
+      8.6
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 34.2,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 5614,
+    "gestureMs": 3514
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 20.3,
+    "worstGapInWindowMs": 20.3,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      7386,
+      12.5
+     ],
+     [
+      "texSubImage2D",
+      7653,
+      6.8
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 19.3,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 5612,
+    "gestureMs": 3513
+   }
+  ]
+ },
+ {
+  "mode": "software",
+  "vp": "desktop",
+  "gesture": "drag",
+  "rows": [
+   {
+    "gesture": "drag",
+    "late": false,
+    "worstGapMs": 412.4,
+    "worstGapInWindowMs": 412.4,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 0,
+    "releasedAfterStartMs": null,
+    "readyAfterStartMs": -1503,
+    "gestureMs": 3554
+   },
+   {
+    "gesture": "drag",
+    "late": false,
+    "worstGapMs": 108.4,
+    "worstGapInWindowMs": 108.4,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 0,
+    "releasedAfterStartMs": null,
+    "readyAfterStartMs": -1503,
+    "gestureMs": 3592
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 107.6,
+    "worstGapInWindowMs": 107.3,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      6110,
+      91.4
+     ],
+     [
+      "texSubImage2D",
+      6640,
+      7
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 98.4,
+    "releasedAfterStartMs": 701,
+    "readyAfterStartMs": 4345,
+    "gestureMs": 3535
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 101.5,
+    "worstGapInWindowMs": 94,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      6101,
+      90.3
+     ],
+     [
+      "texSubImage2D",
+      6618,
+      6.8
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 97.1,
+    "releasedAfterStartMs": 702,
+    "readyAfterStartMs": 4312,
+    "gestureMs": 3505
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 107.8,
+    "worstGapInWindowMs": 98.3,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      6165,
+      96.3
+     ],
+     [
+      "texSubImage2D",
+      6690,
+      12.2
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 108.5,
+    "releasedAfterStartMs": 700,
+    "readyAfterStartMs": 4380,
+    "gestureMs": 3569
+   },
+   {
+    "gesture": "drag",
+    "late": true,
+    "worstGapMs": 98,
+    "worstGapInWindowMs": 98,
+    "longTasks": [],
+    "longTasksInWindow": [],
+    "uploads": [
+     [
+      "texSubImage2D",
+      6226,
+      100.5
+     ],
+     [
+      "texSubImage2D",
+      6739,
+      7.4
+     ]
+    ],
+    "uploadMsDuringGesture": 0,
+    "uploadMsAfterGesture": 107.9,
+    "releasedAfterStartMs": 702,
+    "readyAfterStartMs": 4396,
+    "gestureMs": 3588
+   }
+  ]
+ }
+]

@@ -1,0 +1,42 @@
+before: ## 21:12:29 12.47 11.94 9.90 | Now drawing from 'Battery Power'
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --mode gpu --viewport desktop2x --glass on
+
+First-load JS of / (gzip): 190.8 KB with nomodule scripts (budget 200 KB), 152.2 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.2 KB, /album/in-rainbows-radiohead 33.9 KB (budget 150 KB each)
+
+| Measure | gpu desktop2x |
+|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Gas shader (reported only) | full |
+| Search usable | 85 ms |
+| Startup worst long task | 0 ms |
+| WebGL warm-up end (reported only) | 138 ms (done) |
+| Map first frame (reported only) | 627 ms |
+| Nebula visible (reported only) | 699 ms |
+| Typing to suggestions | 5 ms |
+| Select to album | 22 ms |
+| Transition worst frame gap | 46 ms |
+| Slider to list | 6 ms |
+| Morph worst frame gap | 20 ms |
+| Drag worst frame gap | 18 ms |
+| Zoom worst frame gap | 33 ms |
+| Drag worst frame gap at the opening view (reported only) | 18 ms |
+| Zoom worst frame gap at the opening view (reported only) | 31 ms |
+| Deep zoom drag worst frame gap (reported only) | 18 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 17 ms |
+| Long tasks while idle (3 s) | 0 |
+| Frames rendered while idle (3 s) | 0 |
+
+The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.
+
+Run with --glass on: an A/B run, not the site as a visitor gets it. Read back in the page:
+  gpu desktop2x, album: {"at":"album","path":"/album/loveless-my-bloody-valentine","glassBlur":"blur(22px) saturate(1.2) brightness(0.58)","glassInline":"blur(22px) saturate(1.2) brightness(0.58)","header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":"blur(22px) saturate(1.2) brightness(0.58)","headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":null,"namesOn":true,"forcedMs":21,"firstPaintMs":96,"twinkleOn":true,"twinkleSpawned":1,"twinkleNodes":0}
+  gpu desktop2x, map: {"at":"map","path":"/map","glassBlur":"blur(22px) saturate(1.2) brightness(0.58)","glassInline":"blur(22px) saturate(1.2) brightness(0.58)","header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":null,"headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":null,"namesOn":true,"forcedMs":14,"firstPaintMs":40,"twinkleOn":true,"twinkleSpawned":5,"twinkleNodes":2}
+  gpu desktop2x, opening view: {"at":"opening view","path":"/map","glassBlur":"blur(22px) saturate(1.2) brightness(0.58)","glassInline":"blur(22px) saturate(1.2) brightness(0.58)","header":"blur(22px) saturate(1.2) brightness(0.58)","panel":"blur(22px) saturate(1.2) brightness(0.58)","album":null,"headerBackground":"rgba(7, 6, 10, 0.58)","namesSaved":null,"namesOn":true,"forcedMs":18,"firstPaintMs":60,"twinkleOn":true,"twinkleSpawned":2,"twinkleNodes":0}
+
+Glints made in the 3 s idle window, as a visitor gets the site: gpu desktop2x 2
+
+All budgets met.
+after: ## 21:13:08 10.37 11.49 9.82 | Now drawing from 'Battery Power'

@@ -19,11 +19,13 @@ import { CameraTween } from "./CameraTween";
 import { CursorTracker } from "./CursorTracker";
 import { FrameCounter } from "./FrameCounter";
 import { FocusFramer } from "./FocusFramer";
+import { GasField } from "./GasField";
 import { FRUSTUM_HALF_HEIGHT, InitialFrame } from "./InitialFrame";
 import { MarkerDriver } from "./MarkerDriver";
 import { MorphDriver } from "./MorphDriver";
 import { OverlayDriver } from "./OverlayDriver";
 import { PickController } from "./PickController";
+import { TwinkleDriver } from "./TwinkleDriver";
 
 // Bridges R3F's demand-mode invalidate() out to state/invalidate.ts, so DOM
 // overlays and stores outside the <Canvas> can request a render without
@@ -137,6 +139,7 @@ export function Scene({ initialCamera, onApi }: { initialCamera: MapCamera | nul
 
 function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null; onApi: (api: MapApi | null) => void }) {
   const data = useMapStore((s) => s.data)!;
+  const theme = useMapStore((s) => s.theme);
   // Hot-path pointer state lives in refs, not React state: pointermove and
   // zoom frames must never trigger a SceneInner re-render.
   // Canvas-relative CSS px of the mouse, written by CursorTracker.
@@ -166,9 +169,14 @@ function SceneInner({ initialCamera, onApi }: { initialCamera: MapCamera | null;
       <PickController positionsRef={positionsRef} hoverRef={hoverRef} />
       {/* Before AlbumField: its frame callback moves sliderT, which AlbumField draws in the same frame. */}
       <MorphDriver />
+      {/* The gas reads the slider position MorphDriver has just written and is drawn under the album points.
+          Without a theme there is no gas: the pane's sky colour shows through the transparent canvas. */}
+      {theme ? <GasField data={data} theme={theme} /> : null}
       <AlbumField data={data} atlasTextures={textures} positionsRef={positionsRef} />
       <OverlayDriver positionsRef={positionsRef} />
       <MarkerDriver positionsRef={positionsRef} />
+      {/* After MarkerDriver: a glint keeps clear of the covers it placed. It never asks for a frame. */}
+      <TwinkleDriver positionsRef={positionsRef} />
       <FrameCounter />
       {/* Mounted last so its frame callback runs after every other camera
           writer, reining the idle camera back into the album cloud. */}

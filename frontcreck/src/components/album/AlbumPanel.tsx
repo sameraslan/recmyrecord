@@ -134,7 +134,7 @@ export function AlbumPanel({ data, stop }: { data: AlbumPageData; stop: StopId }
         aria-hidden={mapMode || undefined}
         inert={mapMode || undefined}
       >
-        <AmbientLayers ambient={seed.ambient} variant="panel" />
+        <AmbientLayers ambient={seed.ambient} />
         <button type="button" className="album-close" aria-label={COPY.album.close} onClick={close}>
           <Icon name="x" strokeWidth={1.6} />
         </button>

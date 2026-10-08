@@ -1,0 +1,218 @@
+{
+ "distilled_word_table": {
+  "full_presence": [
+   {
+    "leading_same_as_stored_clear": 0.65,
+    "mean_abs_weight_diff": 0.107
+   },
+   {
+    "leading_same_as_stored_clear": 0.663,
+    "mean_abs_weight_diff": 0.1064
+   }
+  ],
+  "t8_presence": [
+   {
+    "leading_same_as_stored_clear": 0.607,
+    "mean_abs_weight_diff": 0.1102
+   },
+   {
+    "leading_same_as_stored_clear": 0.622,
+    "mean_abs_weight_diff": 0.111
+   }
+  ]
+ },
+ "t8_more": {
+  "0.29_0.24": {
+   "regions": 15,
+   "strong": 12,
+   "unnamed": 0.335,
+   "merged_blobs": 18,
+   "region_words_kept": [
+    10,
+    15
+   ],
+   "album_word_same_named": 0.653,
+   "words": [
+    "aggressive",
+    "atmospheric",
+    "bittersweet",
+    "epic",
+    "ethereal",
+    "improvisation",
+    "lonely",
+    "passionate",
+    "pastoral",
+    "playful",
+    "progressive",
+    "psychedelic",
+    "raw",
+    "rhythmic",
+    "urban"
+   ]
+  },
+  "0.25_0.20_lift2.5": {
+   "regions": 15,
+   "strong": 12,
+   "unnamed": 0.326,
+   "merged_blobs": 19,
+   "region_words_kept": [
+    10,
+    15
+   ],
+   "album_word_same_named": 0.653,
+   "words": [
+    "aggressive",
+    "atmospheric",
+    "bittersweet",
+    "epic",
+    "ethereal",
+    "hypnotic",
+    "improvisation",
+    "lonely",
+    "pastoral",
+    "playful",
+    "progressive",
+    "psychedelic",
+    "raw",
+    "rhythmic",
+    "urban"
+   ]
+  },
+  "0.25_0.20_cos0.65": {
+   "regions": 14,
+   "strong": 13,
+   "unnamed": 0.33,
+   "merged_blobs": 17,
+   "region_words_kept": [
+    9,
+    15
+   ],
+   "album_word_same_named": 0.571,
+   "words": [
+    "aggressive",
+    "atmospheric",
+    "bittersweet",
+    "epic",
+    "ethereal",
+    "improvisation",
+    "lonely",
+    "passionate",
+    "playful",
+    "progressive",
+    "psychedelic",
+    "raw",
+    "rhythmic",
+    "urban"
+   ]
+  },
+  "0.29_0.24_lift2.5": {
+   "regions": 15,
+   "strong": 11,
+   "unnamed": 0.326,
+   "merged_blobs": 19,
+   "region_words_kept": [
+    10,
+    15
+   ],
+   "album_word_same_named": 0.653,
+   "words": [
+    "aggressive",
+    "atmospheric",
+    "bittersweet",
+    "epic",
+    "ethereal",
+    "hypnotic",
+    "improvisation",
+    "lonely",
+    "pastoral",
+    "playful",
+    "progressive",
+    "psychedelic",
+    "raw",
+    "rhythmic",
+    "urban"
+   ]
+  }
+ },
+ "t8_merges_default": [
+  {
+   "into": 18,
+   "from": 23,
+   "adjacency": 0.26,
+   "cosine": 0.78,
+   "same_word": true
+  },
+  {
+   "into": 21,
+   "from": 22,
+   "adjacency": 0.4,
+   "cosine": 0.77,
+   "same_word": true
+  },
+  {
+   "into": 16,
+   "from": 21,
+   "adjacency": 0.33,
+   "cosine": 0.72,
+   "same_word": true
+  },
+  {
+   "into": 3,
+   "from": 5,
+   "adjacency": 0.23,
+   "cosine": 0.54,
+   "same_word": true
+  },
+  {
+   "into": 13,
+   "from": 15,
+   "adjacency": 0.33,
+   "cosine": 0.53,
+   "same_word": true
+  },
+  {
+   "into": 1,
+   "from": 18,
+   "adjacency": 0.46,
+   "cosine": 0.41,
+   "same_word": true
+  },
+  {
+   "into": 11,
+   "from": 12,
+   "adjacency": 0.57,
+   "cosine": 0.94,
+   "same_word": false
+  }
+ ],
+ "full_merges": [
+  {
+   "into": 11,
+   "from": 12,
+   "adjacency": 0.57,
+   "cosine": 0.93,
+   "same_word": true
+  },
+  {
+   "into": 15,
+   "from": 16,
+   "adjacency": 0.29,
+   "cosine": 0.76,
+   "same_word": true
+  },
+  {
+   "into": 13,
+   "from": 15,
+   "adjacency": 0.22,
+   "cosine": 0.51,
+   "same_word": true
+  },
+  {
+   "into": 21,
+   "from": 22,
+   "adjacency": 0.4,
+   "cosine": 0.75,
+   "same_word": false
+  }
+ ]
+}

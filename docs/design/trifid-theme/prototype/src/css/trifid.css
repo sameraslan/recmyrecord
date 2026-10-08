@@ -1,0 +1,46 @@
+/* What the Trifid theme adds to the map: region lettering and the hint line. Plus the prototype-only drawer. */
+
+/* --- region names: plain lettering, never italic, nothing to click; the face comes from src/labels.js FONTS --- */
+#labels { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+.rl { position: absolute; left: 0; top: 0; text-align: center; white-space: nowrap; padding: 4px 8px;
+  transition: opacity .2s var(--out), visibility 0s; will-change: transform; }
+.rl.off { opacity: 0; visibility: hidden; transition: opacity .2s var(--out), visibility 0s linear .2s; }
+.rl b { display: block; font-family: var(--rl-font), var(--serif); font-weight: var(--rl-weight, 600); font-style: normal; letter-spacing: var(--rl-track, .17em); text-transform: var(--rl-case, uppercase); line-height: 1.05; color: var(--lc); padding-left: var(--rl-track, .17em); opacity: var(--a, 1);
+  /* the halo: a hairline dark stroke under the fill and soft stacked shadows, as strong as the gas behind needs (--h) */
+  -webkit-text-stroke: var(--rl-stroke, 2px) rgba(4, 4, 8, calc(var(--h, .85) * .85)); paint-order: stroke fill;
+  text-shadow: 0 0 2px rgba(4, 4, 8, var(--h, .85)), 0 0 4px rgba(4, 4, 8, var(--h, .85)), 0 0 4px rgba(4, 4, 8, var(--h, .85)), 0 0 8px rgba(4, 4, 8, var(--h, .85)), 0 0 8px rgba(4, 4, 8, var(--h, .85)), 0 0 14px rgba(4, 4, 8, var(--h, .85)), 0 0 14px rgba(4, 4, 8, var(--h, .85)), 0 0 26px rgba(4, 4, 8, calc(var(--h, .85) * .85)), 0 0 44px rgba(4, 4, 8, calc(var(--h, .85) * .6)); }
+.rl.fair b { opacity: calc(var(--a, 1) * .82); }
+#map[data-view="home"] #labels, #map[data-view="about"] #labels, #map[data-view="notfound"] #labels { display: none; }
+
+/* --- the hint, bottom left (desktop) --- */
+.map-hint { position: absolute; left: 0; right: 0; bottom: 0; padding: 44px 120px 18px 20px; font-size: 13.5px; line-height: 1.55; color: #f0ece4; pointer-events: none;
+  /* a full-width soft band, so the line holds on any gas */
+  background: linear-gradient(rgba(4, 4, 8, 0), rgba(4, 4, 8, .62) 55%, rgba(4, 4, 8, .78)); transition: opacity .25s var(--out), visibility 0s;
+  -webkit-text-stroke: 2.6px rgba(4, 4, 8, .9); paint-order: stroke fill; }
+.map-hint.is-hidden { opacity: 0; visibility: hidden; transition: none; }
+
+/* --- stress-test banner and prototype drawer: deliberately not in the design's voice --- */
+.stress { position: absolute; left: 50%; top: 20px; margin: 0; transform: translateX(-50%); padding: 6px 12px; font: 500 12px/1.3 ui-monospace, Menlo, monospace; color: #ffe9a8; background: rgba(40, 30, 0, .9); border: 1px dashed #c9a23a; border-radius: 2px; }
+.proto { position: fixed; right: 0; top: calc(var(--hdr) + 76px); z-index: 120; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; color: #cfd6e4; }
+.proto-tab { position: absolute; right: 0; top: 0; transform-origin: right top; transform: rotate(-90deg) translateY(-100%); padding: 4px 10px; background: #10131c; border: 1px dashed #5b6b8c; border-bottom: 0; color: #9fb0d0; letter-spacing: .08em; text-transform: uppercase; font-size: 10.5px; }
+.proto-tab:focus-visible { outline: 2px solid #9fb0d0; }
+.proto-body { position: absolute; right: 26px; top: 0; width: 230px; padding: 10px 12px; background: #10131c; border: 1px dashed #5b6b8c; display: grid; gap: 8px; }
+.proto-body fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.proto-body legend { padding: 0; color: #7f8ba3; text-transform: uppercase; letter-spacing: .08em; font-size: 10px; margin-bottom: 2px; }
+.proto-body label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.proto-body input { accent-color: #9fb0d0; margin: 0; }
+.proto-note { color: #e2b34a; }
+.hud { position: fixed; right: 70px; bottom: 22px; z-index: 120; padding: 4px 8px; font: 11px/1.3 ui-monospace, Menlo, monospace; color: #cfd6e4; background: rgba(16, 19, 28, .9); border: 1px dashed #5b6b8c; white-space: pre; pointer-events: none; }
+#proto-errors { position: fixed; left: 8px; top: 70px; z-index: 400; margin: 0; max-width: 90vw; white-space: pre-wrap; font: 12px/1.4 ui-monospace, Menlo, monospace; color: #ff8f8f; background: rgba(30, 0, 0, .9); padding: 0; }
+#proto-errors:not(:empty) { padding: 8px 10px; }
+
+
+/* --- slider, phone-only pieces (shown in pages.css), small fixes --- */
+.mode input[type=range]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 1px var(--lamp), 0 0 0 3px #07060a, 0 0 0 5px var(--lamp); }
+button, a, [role=option], label { touch-action: manipulation; }   /* fast repeat taps never zoom the page */
+.plate, .sheet-grab { display: none; }
+.mode-track::before { background: var(--rule-3); }
+.mode-track { height: 24px; } .mode input[type=range] { height: 24px; }
+.mode input[type=range]::-webkit-slider-runnable-track { height: 24px; } .mode input[type=range]::-moz-range-track { height: 24px; }
+.mode input[type=range]::-webkit-slider-thumb { margin-top: 4px; } .mode-track::before { top: 11px; } .mode-track i { top: 8px; }
+.combo-pop [role=listbox][hidden] { display: none; }

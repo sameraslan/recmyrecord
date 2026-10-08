@@ -1,6 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
-import { contrastRatio } from '../src/lib/contrast';
 import { COPY } from '../src/lib/copy';
 import { camera, coversSettled, tabTo, visibleAlbumPoint, waitForCameraIdle, waitForMap } from './helpers';
 
@@ -12,7 +11,17 @@ async function audit(page: Page, label: string) {
   // 10,467 albums a map frame takes a few hundred ms in software rendering, and a card or a list that would
   // settle in well under a second on a GPU was seen to take 2 to 3.5 s here.
   await page
-    .waitForFunction(() => document.getAnimations().every((a) => a.playState !== 'running'), null, { timeout: 5000 })
+    .waitForFunction(
+      () =>
+        document.getAnimations().every((a) => {
+          // The star glints never settle (one starts every 1.2 to 3 s). They are aria-hidden decoration over
+          // the canvas and change no colour that axe reads, so the audit does not wait for them.
+          const target = (a.effect as KeyframeEffect | null)?.target;
+          return a.playState !== 'running' || (target instanceof Element && target.closest('.tw-layer') !== null);
+        }),
+      null,
+      { timeout: 5000 },
+    )
     .catch(async () => {
       const running = await page.evaluate(() =>
         document.getAnimations().filter((a) => a.playState === 'running').map((a) => {
@@ -86,23 +95,16 @@ test('open states pass axe', async ({ page, isMobile }) => {
   }
 });
 
-test('the hot rank badge on the map passes axe', async ({ page, isMobile }) => {
+test('a hot album on the map passes axe and carries no number', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a row turns its marker hot on hover or focus; the phone list and map are not shown together');
-  // The accent with the lowest contrast against the badge's old dark text.
   await page.goto('/album/making-movies-dire-straits');
   await waitForMap(page);
   await waitForCameraIdle(page);
   await page.locator('li.rec').first().locator('a.rec-main').hover();
-  const badge = page.locator('.mk-n[data-hot]');
-  await expect(badge).toBeVisible();
-  await audit(page, 'album, hot rank badge');
-  // axe leaves the badge "incomplete" (a transformed overlay over a canvas), so measure its own two colours too.
-  const [fg, bg] = await badge.evaluate((el) => {
-    const hex = (c: string) => `#${(c.match(/\d+/g) ?? []).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`;
-    const cs = getComputedStyle(el);
-    return [hex(cs.color), hex(cs.backgroundColor)];
-  });
-  expect(contrastRatio(fg, bg), `${fg} on ${bg}`).toBeGreaterThanOrEqual(4.5);
+  await expect(page.locator('.mk[data-hot]')).toBeVisible();
+  await audit(page, 'album, hot album on the map');
+  // Neither the map's covers nor the list's rows show their place in the order.
+  await expect(page.locator('.mk-n, .mk-badges, .rec-n')).toHaveCount(0);
 });
 
 test('the data error state passes axe', async ({ page }) => {

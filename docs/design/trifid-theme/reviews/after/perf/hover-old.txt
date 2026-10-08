@@ -1,0 +1,13 @@
+gpu load 1: #1 tip 121.5 ms, long task 0 ms, gap 16.7 ms | #2 tip 88.9 ms, long task 0 ms, gap 16.7 ms | #3 tip 89.4 ms, long task 0 ms, gap 16.8 ms
+gpu load 2: #1 tip 117 ms, long task 0 ms, gap 33.3 ms | #2 tip 92.3 ms, long task 0 ms, gap 16.7 ms | #3 tip 92.9 ms, long task 0 ms, gap 16.8 ms
+gpu load 3: #1 tip 121.7 ms, long task 0 ms, gap 33.4 ms | #2 tip 94.8 ms, long task 0 ms, gap 16.8 ms | #3 tip 93.3 ms, long task 0 ms, gap 16.8 ms
+gpu load 4: #1 tip 124.8 ms, long task 0 ms, gap 33.3 ms | #2 tip 94 ms, long task 0 ms, gap 16.8 ms | #3 tip 92.3 ms, long task 0 ms, gap 16.8 ms
+gpu load 5: #1 tip 149.2 ms, long task 0 ms, gap 16.8 ms | #2 tip 95.8 ms, long task 0 ms, gap 16.8 ms | #3 tip 90.8 ms, long task 0 ms, gap 16.8 ms
+
+gpu (ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version))
+  hover 1: tip 121.7 ms (117 to 149.2), longest long task 0 ms (0 to 0), frame gap 33.3 ms (16.7 to 33.4)
+  hover 2: tip 94 ms (88.9 to 95.8), longest long task 0 ms (0 to 0), frame gap 16.8 ms (16.7 to 16.8)
+  hover 3: tip 92.3 ms (89.4 to 93.3), longest long task 0 ms (0 to 0), frame gap 16.8 ms (16.8 to 16.8)
+
+wrote /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/hover-old.json
+## 20:27:23 4.19 5.29 5.51 | Now drawing from 'Battery Power'

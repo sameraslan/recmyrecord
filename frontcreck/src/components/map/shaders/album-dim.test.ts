@@ -6,9 +6,9 @@ import { albumFragmentShader } from './album';
 describe('the other covers while an album is picked', () => {
   const src = albumFragmentShader(11);
 
-  it('move toward the map background colour (#17120e) by u_selDim, the cover part only', () => {
-    expect(src).toContain('const vec3 PANE = vec3(0.090, 0.071, 0.055);');
-    expect(src).toContain('if (v_selDim > 0.5) col = mix(PANE, col, mix(1.0, u_selDim, v_coverT));');
+  it('move toward the map background colour (the Trifid page colour, #07060a) by u_selDim, the cover part only', () => {
+    expect(src).toContain('const vec3 BACKING = vec3(0.0275, 0.0235, 0.0392);');
+    expect(src).toContain('if (v_selDim > 0.5) col = mix(BACKING, col, mix(1.0, u_selDim, v_coverT));');
   });
 
   it('keep their alpha: u_selDim never scales it', () => {

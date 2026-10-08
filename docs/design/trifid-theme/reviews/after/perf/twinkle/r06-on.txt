@@ -1,0 +1,20 @@
+before: ## 19:36:02 5.37 5.78 5.39 | Now drawing from 'Battery Power'
+
+Opening framing: the Overview (the app's own). Glints on first. Mouse warm-up: none.
+
+| Renderer | Viewport | Visitors get glints | Run | Glints | Made | Most alive | Longest task (ms) | Long tasks | Long tasks at a glint | Longest frame gap (ms) | Canvas frames | Longest glint write (ms) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| gpu | desktop | yes | still | on | 8 | 1 | 0 | 0 | 0 | 19 | 0 | 1.4 |
+| gpu | desktop | yes | still | off | 0 | 0 | 0 | 0 | 0 | 19 | 0 | 0 |
+| gpu | desktop | yes | mouse moving (first hover) | on | 2 | 1 | 53 | 1 | 1 | 68 | 351 | 5.5 |
+| gpu | desktop | yes | mouse moving | off | 0 | 0 | 0 | 0 | 0 | 22 | 353 | 0 |
+
+Frame gaps over 32 ms (reported; the table's longest gap is what is judged):
+  gpu desktop mouse moving (first hover), glints on: 68 ms at 931 ms; 1 alive; -6 ms after a glint was made or removed; hover label not shown yet
+
+gpu desktop mouse moving, glints on: 2 glints made while the mouse moved; the hover hold has skipped 7 ticks on this page so far.
+Saved scripts/perf/out/twinkle-cost-2026-10-06T23-37-35-031Z.json
+FAIL
+gpu desktop mouse moving: 1 long tasks began around a glint being made
+exit 1
+after: ## 19:37:35 4.86 5.41 5.28 | Now drawing from 'Battery Power'

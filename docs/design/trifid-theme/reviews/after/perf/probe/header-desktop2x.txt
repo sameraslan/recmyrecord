@@ -1,0 +1,33 @@
+header desktop2x round 1 glass: load 4.64 -> 4.78
+header desktop2x round 1 solid: load 4.78 -> 4.44
+header desktop2x round 2 solid: load 4.44 -> 4.13
+header desktop2x round 2 glass: load 4.13 -> 4.3
+header desktop2x round 3 glass: load 4.3 -> 4.02
+header desktop2x round 3 solid: load 4.02 -> 4.02
+header desktop2x round 4 solid: load 4.02 -> 5.42
+header desktop2x round 4 glass: load 5.42 -> 5.16
+header desktop2x round 5 glass: load 5.16 -> 5.37
+header desktop2x round 5 solid: load 5.37 -> 5.77
+header desktop2x round 6 solid: load 5.55 -> 7.82
+header desktop2x round 6 glass: load 7.82 -> 10.6
+
+header, desktop2x, 6 sessions per arm, median (best to worst). Load average over the run: 4.02 to 10.6.
+
+| Measure | glass | solid |
+|---|---|---|
+| drag: longest gap | 18.5 (17.2 to 19.4) | 18.3 (17.9 to 19) |
+| drag: p95 gap | 17.6 (17 to 18.5) | 17.4 (17 to 18.1) |
+| drag: gaps over 20 ms | 0 (0 to 0) | 0 (0 to 0) |
+| drag: frames | 120.5 (120 to 121) | 120 (120 to 121) |
+| zoom: longest gap | 19.1 (18.3 to 20.7) | 19 (18.1 to 19.3) |
+| zoom: p95 gap | 18.1 (17.3 to 19.1) | 17.9 (17.4 to 18.5) |
+| zoom: gaps over 20 ms | 0 (0 to 2) | 0 (0 to 0) |
+| zoom: frames | 120 (120 to 121) | 120 (120 to 120) |
+| fling: longest gap | 18.6 (17.6 to 18.9) | 18.4 (17.6 to 19.5) |
+| fling: p95 gap | 17.5 (16.9 to 18.4) | 17.5 (17 to 18) |
+| fling: gaps over 20 ms | 0 (0 to 0) | 0 (0 to 0) |
+| fling: map frames drawn | 91 (91 to 91) | 91 (90 to 91) |
+
+Read back in the page, per arm: glass: blur(22px) saturate(1.2) brightness(0.58) / rgba(7, 6, 10, 0.58) / fling animating true | solid: none / rgb(10, 9, 14) / fling animating true
+Saved /Users/saslan.19/Desktop/Tengs/reCreck/recmyrecord/.claude/worktrees/wt-perf/docs/design/trifid-theme/reviews/after/perf/probe/header-desktop2x.json
+## 19:11:11 10.60 6.79 6.37 | Now drawing from 'AC Power'

@@ -1,15 +1,47 @@
 /* Home: the hero over the dimmed map (mockup Home A) with the cover shelf at the bottom (Home B).
    Mockup lines 218 to 252 and 360 to 399, adapted to the combined layout. */
-.home { position: absolute; inset: 0; z-index: 8; overflow-y: auto; pointer-events: none; display: flex; flex-direction: column; }
+.home { position: absolute; inset: 0; z-index: 8; overflow-x: hidden; overflow-y: auto; pointer-events: none; display: flex; flex-direction: column; }
 .home > * { pointer-events: auto; }
-.hero { position: relative; width: min(640px, calc(100% - 32px)); margin: 0 auto; padding: clamp(32px, 10vh, 112px) 0 0; text-align: center; }
+.hero { position: relative; width: min(640px, calc(100% - 32px)); margin: 0 auto; padding: clamp(32px, 10vh, 112px) 0 0; text-align: center; --pad-top: clamp(18px, 8vh, 92px); }
+/* A soft dark pad behind the hero, so its text holds over the nebula: the prototype's (pages.css line 22), .72 dark,
+ * from --pad-top below the hero's top to 4 px below the two links, 6 px wider than the hero, corners 40 px, blurred
+ * 26 px. Static. It ends 4 px below the links, so the brightest gas, just under them, stays bright.
+ * The box is 80 px larger all round than the dark shape (a clear border; 120 - 80 = 40 px corners), so the mask has
+ * the blur's halo inside it. The mask takes the halo to nothing at the hero's top, which is where the Home layer is
+ * clipped under the header (the map runs on behind the clear header): without it the halo is cut there and draws a
+ * line under the bar wherever --pad-top is small (phones, short windows). It is full again 30 px lower, above the
+ * heading. */
+.hero::before {
+  content: ""; position: absolute; inset: calc(var(--pad-top) - 80px) -86px -84px; z-index: -1; pointer-events: none;
+  border: 80px solid transparent; border-radius: 120px; background: rgba(5, 4, 8, .72); background-clip: padding-box; filter: blur(26px);
+  -webkit-mask-image: linear-gradient(transparent calc(80px - var(--pad-top)), #000 calc(110px - var(--pad-top)));
+  mask-image: linear-gradient(transparent calc(80px - var(--pad-top)), #000 calc(110px - var(--pad-top)));
+}
 .hero h1 { font-family: var(--font-serif); font-weight: 500; font-size: clamp(42px, 5.8vw, 80px); line-height: .98; letter-spacing: -.015em; }
 .hero .lede { margin: 16px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
-.hero-row { margin-top: 14px; display: flex; justify-content: center; gap: 4px; align-items: center; flex-wrap: wrap; }
+.hero-row { position: relative; margin-top: 14px; display: flex; justify-content: center; gap: 4px; align-items: center; flex-wrap: wrap; }
+/* The two links are dust and sit in the thin edge of the hero's pad: a small pad of their own, 280 px wide behind
+ * the words, instead of a darker and longer hero pad that dims the hero's whole width. Static. .38 is the ladder's
+ * value: the words measure 5.1:1 with the brightest gas under them (.29 gives 4.5, .32 gives 4.7;
+ * e2e/pages.spec.ts). */
+.hero-row::before { content: ""; position: absolute; inset: 6px calc(50% - 140px) -2px; z-index: -1; background: rgba(5, 4, 8, .38); border-radius: 20px; filter: blur(10px); pointer-events: none; }
 .hero-row .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-ash); opacity: .6; }
 
-.shelf { margin: auto auto 0; width: 100%; max-width: calc(1240px + 2 * var(--gut)); padding: 36px var(--gut) 28px; }
-.shelf-now { height: 30px; display: flex; align-items: baseline; justify-content: center; gap: 12px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; }
+.shelf { position: relative; margin: auto auto 0; width: 100%; max-width: calc(1240px + 2 * var(--gut)); padding: 36px var(--gut) 28px; }
+/* The prototype's scrim (pages.css line 27): the shelf's own width, from 10 px below its top, reaching .7 at 40 %
+ * of its height, which is inside the first row of covers. So the nebula's core runs on behind the caption and
+ * between the covers, as in the approved picture, and nothing draws a floor line across it at any window size.
+ * It is too light for the caption by itself: the shelf's line has its own pad (below). */
+.shelf::before { content: ""; position: absolute; inset: 10px 0 0; z-index: -1; pointer-events: none; background: linear-gradient(rgba(5, 4, 8, 0), rgba(5, 4, 8, .7) 40%); }
+/* The line is as wide as its words (the caption, or the title and artist of the cover under the pointer), so the
+ * pad behind it follows them. No overflow: hidden here, which would cut the pad's blur: the title shortens by
+ * itself inside max-width. */
+.shelf-now { position: relative; width: fit-content; max-width: 100%; height: 30px; margin: 0 auto 12px; display: flex; align-items: baseline; gap: 12px; white-space: nowrap; }
+/* A small blurred pad behind the line, as the hero links have. Static. The caption is ash, the weakest text on the
+ * page, and the scrim is only about .15 where it stands, so the pad carries it: .82 measures 5.2:1 or more with the
+ * brightest gas under the caption, and under a title and an artist (e2e/pages.spec.ts). It reaches 10 px above
+ * the line, where the caption is, and 4 px below it, where an artist's name ends. */
+.shelf-now::before { content: ""; position: absolute; inset: -10px -24px -4px; z-index: -1; pointer-events: none; background: rgba(5, 4, 8, .82); border-radius: 22px; filter: blur(8px); }
 .shelf-now .t { font-family: var(--font-serif); font-size: 21px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 .shelf-now .a { font-size: 14px; color: var(--color-dust); }
 .mosaic { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; }
@@ -20,29 +52,26 @@
 .mosaic a:hover .cover img, .mosaic a:focus-visible .cover img { filter: none; }
 .mosaic a:hover .cover, .mosaic a:focus-visible .cover { opacity: 1; }
 
-/* About: a short page over the dimmed map (mockup lines 326 to 340, without the data list and the axis figures). */
-.about-page { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; place-items: center; padding: 24px; background: rgba(12, 10, 8, .72); }
-.about { position: relative; width: min(680px, 100%); background: var(--color-room); border: 1px solid var(--color-rule-2); border-radius: 2px; padding: 44px 48px 40px; box-shadow: 0 30px 80px -30px #000; }
+/* About: a short page over the map as a backdrop (mockup lines 326 to 340, without the data list and the axis figures). */
+.about-page { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; place-items: center; padding: 24px; background: rgba(5, 4, 8, .3); }
+.about { position: relative; width: min(680px, 100%); background: var(--panel-bg); border: 1px solid var(--color-rule-2); border-radius: 2px; padding: 44px 48px 40px; box-shadow: 0 30px 80px -30px #000; }
 .about .x { position: absolute; right: 8px; top: 8px; width: 44px; height: 44px; display: grid; place-items: center; color: var(--color-dust); }
 .about .x:hover { color: var(--color-paper); }
 .about .x svg { width: 18px; height: 18px; }
 .about h1 { font-family: var(--font-serif); font-weight: 500; font-size: 48px; line-height: 1; letter-spacing: -.015em; padding-right: 32px; }
-.about p { font-size: 16.5px; line-height: 1.65; color: #d9d0bf; margin-top: 16px; }
+.about p { font-size: 16.5px; line-height: 1.65; color: #e0dbd3; margin-top: 16px; }
 .about .about-h2 { margin-top: 36px; margin-bottom: -4px; }
 .about .about-signoff { margin-top: 24px; font-family: var(--font-serif); font-style: italic; font-size: 20px; line-height: 1.3; color: var(--color-lamp); }
 .about .about-credits { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--color-rule); font-size: 14.5px; color: var(--color-dust); }
 
-/* 404 and the route error boundary: a message over the dimmed map. */
-.notfound, .page-msg { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 24px; text-align: center; background: rgba(12, 10, 8, .55); }
+/* 404 and the route error boundary: a message over the map as a backdrop. The scrim is About's light .3; the text
+ * sits on a blurred pad, as the hero's does, so the nebula round it stays bright. Static. .62 is the ladder's value:
+ * the link measures 5.0:1 with the brightest gas under it (.59 gives 4.6; e2e/pages.spec.ts). */
+.notfound, .page-msg { position: absolute; inset: 0; z-index: 8; overflow-y: auto; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 24px; text-align: center; background: rgba(5, 4, 8, .3); }
+.notfound::before, .page-msg::before { content: ""; position: absolute; left: 50%; top: 50%; width: min(600px, 100%); height: 320px; transform: translate(-50%, -50%); z-index: -1; background: rgba(5, 4, 8, .62); border-radius: 40px; filter: blur(26px); pointer-events: none; }
 .notfound h1 { max-width: 20em; font-family: var(--font-serif); font-weight: 500; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; }
 .notfound .notfound-sub { margin: 14px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
 .notfound .combo { width: min(480px, 100%); text-align: left; }
-
-/* Short laptop screens (1280x800, 1366x768): a smaller hero top so the full shelf stays on screen without the home
-   layer scrolling, and the gap between the buttons and the shelf stays close to the gap above the heading. */
-@media (min-width: 900px) and (max-height: 860px) {
-  .hero { padding-top: clamp(24px, 6vh, 112px); }
-}
 
 @media (max-width: 1179px) {
   .mosaic { grid-template-columns: repeat(8, minmax(0, 1fr)); }
@@ -51,7 +80,8 @@
 }
 
 @media (max-width: 899px) {
-  .hero { padding-top: 40px; }
+  .hero { padding-top: 40px; --pad-top: 22px; }
+  .hero::before { inset: calc(var(--pad-top) - 80px) -80px -84px; }
   .hero h1 { font-size: clamp(38px, 11vw, 52px); }
   .hero .lede, .notfound .notfound-sub { font-size: 15.5px; }
   .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -63,4 +93,37 @@
   .about-page { padding: 0; display: block; }
   .about { width: 100%; min-height: 100%; border: 0; padding: 28px 20px calc(40px + env(safe-area-inset-bottom)); }
   .about h1 { font-size: 40px; }
+}
+
+/* Short windows: a compact hero. A laptop gives a window about 790 px tall (1440 x 900 screen) or 720 (1280 x 800),
+   and the whole-map view puts the nebula's bright core at about 0.63 of the height, where the two rows of covers
+   begin. With the full-size hero the links met the shelf there and the core was behind the covers. So in a desktop
+   window 860 px tall or less the heading is smaller and on one line (it fits the hero's 640 px at 56 px; the
+   margins let a wider fallback font stay centred) with 3vh above it, and the pad's dark shape starts 16 px above
+   the heading. The hero loses nothing. These rules come after the phone block, whose .hero rule the second overrides. */
+@media (min-width: 900px) and (max-height: 860px) {
+  .hero { padding-top: clamp(20px, 3vh, 28px); --pad-top: clamp(4px, calc(3vh - 16px), 12px); }
+  .hero h1 { margin: 0 -40px; font-size: clamp(42px, min(5.8vw, 8.1vh), 56px); white-space: nowrap; }
+}
+/* A phone under 700 px tall (360 x 640): the same tightening. On a narrow one the smaller heading would leave its
+   last word alone on the second line, so its width is held to two even lines. */
+@media (max-width: 899px) and (max-height: 699px) {
+  .hero { padding-top: 22px; --pad-top: 6px; }
+  .hero h1 { font-size: clamp(32px, 9.4vw, 52px); }
+}
+@media (max-width: 479px) and (max-height: 699px) {
+  .hero h1 { max-width: 8.6em; margin-inline: auto; }
+}
+/* Short windows: one row of covers (the owner's ruling), at the same heights as the compact hero. The second row is
+   not shown, so the shelf is one row lower and the nebula's core stands clear between the links and the covers:
+   about 259 px of it at 1440 x 790, 193 at 1280 x 720 and 115 at 360 x 640 (with two rows: 154, 90 and 31). The
+   row is as long as the grid has columns. All 24 picks stay in the page; a taller window shows both rows. */
+@media (min-width: 1180px) and (max-height: 860px) {
+  .mosaic li:nth-child(n+13) { display: none; }
+}
+@media (min-width: 900px) and (max-width: 1179px) and (max-height: 860px) {
+  .mosaic li:nth-child(n+9) { display: none; }
+}
+@media (max-width: 899px) and (max-height: 699px) {
+  .mosaic li:nth-child(n+5) { display: none; }
 }

@@ -1,6 +1,7 @@
 import { interpolated, type MapData } from "../data";
-import type { MapPadding } from "../types";
-import { FIT_ZOOM_MAX, FIT_ZOOM_MIN, pxPerWorld, zoomForPxPerWorld } from "./zoomLimits";
+import { GAS_BAND_FULL_PX } from "../theme";
+import type { MapInput, MapPadding } from "../types";
+import { COVER_WORLD, FIT_ZOOM_MAX, FIT_ZOOM_MIN, MAX_ZOOM, pxPerWorld, visibleScale, zoomForPxPerWorld } from "./zoomLimits";
 
 export interface Bounds {
   minX: number;
@@ -76,33 +77,116 @@ export interface FitArea {
   height: number;
   /** CSS px covered by the album panel on the left. */
   insetLeft: number;
+  /** CSS px covered by the header along the top. */
+  insetTop: number;
   /** CSS px kept clear around the cloud inside the visible area. */
   padding: MapPadding;
 }
 
 /**
  * The overview camera: the zoom at which the `cloud` box fits the visible
- * area (right of `insetLeft`) less `padding`, clamped to
- * [FIT_ZOOM_MIN, FIT_ZOOM_MAX], and the camera position that centres the box
+ * area (right of `insetLeft`, below `insetTop`) less `padding`, clamped to
+ * [FIT_ZOOM_MIN, FIT_ZOOM_MAX] in the size that range has on screen when
+ * nothing covers the canvas, and the camera position that centres the box
  * in the padded area. camera.position is the centre of the visible area
- * (canvas/InitialFrame.tsx applyFrustum), so uneven padding shifts it.
+ * (canvas/InitialFrame.tsx applyFrustum), so uneven padding shifts it and the
+ * insets do not.
  */
 export function fitView(cloud: Bounds, area: FitArea): { zoom: number; center: { x: number; y: number } } {
-  const { width, height, insetLeft, padding: pad } = area;
+  const { width, height, insetLeft, insetTop, padding: pad } = area;
   // Guard against a degenerate (zero-size) cloud so a single-point dataset
   // never divides by zero; the clamp then caps it at FIT_ZOOM_MAX.
   const w = Math.max(cloud.maxX - cloud.minX, 1e-6);
   const h = Math.max(cloud.maxY - cloud.minY, 1e-6);
   const availW = Math.max(width - insetLeft - pad.left - pad.right, 40);
-  const availH = Math.max(height - pad.top - pad.bottom, 40);
+  const availH = Math.max(height - insetTop - pad.top - pad.bottom, 40);
   const scale = Math.min(availW / w, availH / h);
-  const zoom = Math.max(FIT_ZOOM_MIN, Math.min(FIT_ZOOM_MAX, zoomForPxPerWorld(scale, height)));
+  // The fit range in the size it has on screen when nothing covers the canvas (zoomLimits visibleScale).
+  const s = visibleScale(height, insetTop);
+  const zoom = Math.max(FIT_ZOOM_MIN * s, Math.min(FIT_ZOOM_MAX * s, zoomForPxPerWorld(scale, height)));
   const wpp = 1 / pxPerWorld(zoom, height);
   const c = cloudCenter(cloud);
   return {
     zoom,
     center: { x: c.x - ((pad.left - pad.right) / 2) * wpp, y: c.y + ((pad.top - pad.bottom) / 2) * wpp },
   };
+}
+
+/** Overview: CSS px kept clear at each side of the 1st..99th percentile span (prototype camera.js L31, `- 48`). */
+export const OVERVIEW_SIDE_PAD_PX = 24;
+/** Overview: the closest it frames, half a pixel under the covers at which the gas starts to thin (prototype
+ * `BAND_B - 0.5`), so the opening view always has the full gas and never loads a cover sheet (ATLAS_LOAD_PX is 13). */
+export const OVERVIEW_COVER_MAX_PX = GAS_BAND_FULL_PX - 0.5;
+
+/** Overview on a narrow window (a phone: the slider panel lies across the bottom, `bottomCover` > 0). There the span
+ * rule alone shows nearly the whole cloud, and 10,467 stars fuse into glitter with nothing to tap. So it opens
+ * this many times closer, about the same point, but no closer than covers of OVERVIEW_NARROW_COVER_PX, where stars
+ * already read as separate points; a window whose span rule is closer than that (a tablet) is unchanged.
+ * 1.6, 1.8 and 2 were looked at on a 390 px phone at every stop: at 1.6 the densest parts still fuse at Sound, at
+ * 2 the view is all gas with little of the cloud's shape left. The fit button's Whole map is untouched. */
+export const OVERVIEW_NARROW_CLOSER = 1.8;
+export const OVERVIEW_NARROW_COVER_PX = 5.2;
+
+export interface OverviewExtent {
+  /** 1st and 99th percentile of x, and the median of y, of one layout (world units). */
+  x1: number;
+  x99: number;
+  medY: number;
+}
+
+export interface OverviewArea {
+  /** Canvas size in CSS px. */
+  width: number;
+  height: number;
+  /** CSS px covered by the album panel on the left. */
+  insetLeft: number;
+  /** CSS px covered by the header along the top. */
+  insetTop: number;
+  /** CSS px covered by the phone slider panel at the bottom (MapInput.bottomCover; 0 on desktop). */
+  bottomCover: number;
+}
+
+/** The Overview's percentiles of a flat [x0, y0, ...] layout, with the prototype's quantile rule
+ * (`sorted[floor(q * (n - 1))]`, prototype data.js L7 and L122). Sorts copies, never the caller's array. */
+export function overviewExtent(xy: Float32Array): OverviewExtent {
+  const n = Math.floor(xy.length / 2);
+  if (n === 0) return { x1: 0, x99: 0, medY: 0 };
+  const xs = new Float32Array(n);
+  const ys = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    xs[i] = xy[i * 2];
+    ys[i] = xy[i * 2 + 1];
+  }
+  xs.sort();
+  ys.sort();
+  const at = (arr: Float32Array, q: number) => arr[Math.min(n - 1, Math.max(0, Math.floor(q * (n - 1))))];
+  return { x1: at(xs, 0.01), x99: at(xs, 0.99), medY: at(ys, 0.5) };
+}
+
+/**
+ * The Overview, the framing /map opens at (prototype camera.js L27-34, `Cam.fitOverview`): the 1st..99th
+ * percentile x-span fills the width right of the album panel less 24 px a side, capped at 12.5 px covers, never
+ * wider than the Whole map (`wholeZoom`, fitView's zoom). Centred on the span in x and on the median row in y; on a
+ * phone the median row sits in the middle of the band above the slider panel (the prototype's free rectangle), and
+ * the view is closer than the span rule (OVERVIEW_NARROW_CLOSER), so the middle of the span fills the width.
+ * Regions above and below run off screen. camera.position is the centre of the visible area (applyFrustum), which
+ * is below the header's `insetTop`: the centre needs no term for it, and only the zoom ceiling does (MAX_ZOOM in
+ * the size it has on screen when nothing covers the canvas).
+ */
+export function fitOverview(ext: OverviewExtent, wholeZoom: number, area: OverviewArea): { zoom: number; center: { x: number; y: number } } {
+  const { width, height, insetLeft, insetTop, bottomCover } = area;
+  const whole = pxPerWorld(wholeZoom, height);
+  const span = Math.max(width - insetLeft - 2 * OVERVIEW_SIDE_PAD_PX, 40) / Math.max(ext.x99 - ext.x1, 1e-6);
+  const across = bottomCover > 0 ? Math.max(span, Math.min(span * OVERVIEW_NARROW_CLOSER, OVERVIEW_NARROW_COVER_PX / COVER_WORLD)) : span;
+  const cap = OVERVIEW_COVER_MAX_PX / COVER_WORLD;
+  const zoom = Math.min(MAX_ZOOM * visibleScale(height, insetTop), zoomForPxPerWorld(Math.max(whole, Math.min(across, cap)), height));
+  const ppw = pxPerWorld(zoom, height);
+  return { zoom, center: { x: (ext.x1 + ext.x99) / 2, y: ext.medY - bottomCover / 2 / ppw } };
+}
+
+/** The Overview of the layout at `sliderT` (the positions on screen). */
+export function overviewView(data: MapData, sliderT: number, area: OverviewArea, wholeZoom: number): { zoom: number; center: { x: number; y: number } } {
+  return fitOverview(overviewExtent(interpolatedPositions(data, sliderT)), wholeZoom, area);
 }
 
 export interface ViewportWorldRect {
@@ -133,6 +217,15 @@ export function viewportWorldRect(cam: OrthoFrustum): ViewportWorldRect {
   };
 }
 
+/** viewportWorldRect of the part of the canvas below the header, which the camera's position is the centre of.
+ * `scale` is the visible share of the canvas height (state/zoomLimits.ts visibleScale): what is behind the header
+ * does not count as in view. */
+export function visibleWorldRect(cam: OrthoFrustum, scale: number): ViewportWorldRect {
+  const rect = viewportWorldRect(cam);
+  rect.halfH *= scale;
+  return rect;
+}
+
 // Below this fraction of the cloud's bounding-box area actually inside the
 // viewport, the idle camera is considered to have wandered off the cloud and
 // gets nudged back. Above it (including "zoomed out enough to see the whole
@@ -159,6 +252,16 @@ export function visibleFractionThreshold(zoom: number, fitZoom: number): number 
 }
 
 /**
+ * CSS px along the bottom of the visible map where a full-width panel hides the albums, for `nudgeVector`'s
+ * `coveredBottom`. On a phone that is the slider panel (`bottomCover`), or the picked album's card on top of it:
+ * `framePadding.bottom`, the same line a pick's fly-to keeps the album above (canvas/CameraTween.tsx flyTarget).
+ * 0 on desktop, where no panel spans the map (`bottomCover` is 0 there).
+ */
+export function coveredBottomPx(input: Pick<MapInput, "bottomCover" | "framePadding">): number {
+  return input.bottomCover > 0 ? Math.max(input.bottomCover, input.framePadding.bottom) : 0;
+}
+
+/**
  * Decides whether the idle camera should be nudged back toward the album
  * cloud, and by how much. Returns `null` when no correction is needed: the
  * cloud's bounding box is at least `threshold` visible in the viewport (by
@@ -166,6 +269,12 @@ export function visibleFractionThreshold(zoom: number, fitZoom: number): number 
  * `visibleFractionThreshold(zoom, fitZoom)`), or the camera is already sitting at the clamp
  * target. Otherwise returns the raw (un-eased) correction vector; the caller
  * eases into it rather than snapping.
+ *
+ * `coveredBottom` (world units; `coveredBottomPx` in px) is the height of the viewport's bottom that a panel
+ * covers. The camera may rest up to that much lower, so the cloud's lowest albums can stand above the panel: without
+ * it the clamp holds them within `margin` of the viewport's bottom edge, under a panel taller than that. The lowest
+ * album rests no higher than the middle of the band above the panel, so the band never shows only empty sky because
+ * of the panel. It only widens the range a camera may rest in; the coverage test and the upper limit do not change.
  */
 export function nudgeVector(
   camPos: { x: number; y: number },
@@ -173,6 +282,7 @@ export function nudgeVector(
   cloud: Bounds,
   margin: number,
   threshold: number = VISIBLE_FRACTION_THRESHOLD,
+  coveredBottom = 0,
 ): { x: number; y: number } | null {
   const { halfW, halfH } = viewport;
   const cloudW = cloud.maxX - cloud.minX;
@@ -207,7 +317,12 @@ export function nudgeVector(
   const tx = loX <= hiX ? Math.max(loX, Math.min(hiX, camPos.x)) : (cloud.minX + cloud.maxX) / 2;
   const loY = cloud.minY - margin + halfH;
   const hiY = cloud.maxY + margin - halfH;
-  const ty = loY <= hiY ? Math.max(loY, Math.min(hiY, camPos.y)) : (cloud.minY + cloud.maxY) / 2;
+  // Under a panel the lowest album may rest `margin` above the panel, but no higher than the middle of the band
+  // left above it: in a short viewport (a phone on its side) the margin is taller than the band, and the whole
+  // margin would put every album behind the header.
+  const band = 2 * halfH - coveredBottom;
+  const lower = coveredBottom > 0 && band > 0 ? Math.max(coveredBottom - Math.max(margin - band / 2, 0), 0) : 0;
+  const ty = loY <= hiY ? Math.max(loY - lower, Math.min(hiY, camPos.y)) : (cloud.minY + cloud.maxY) / 2;
 
   const dx = tx - camPos.x;
   const dy = ty - camPos.y;

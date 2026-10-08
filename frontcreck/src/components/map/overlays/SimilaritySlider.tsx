@@ -10,7 +10,7 @@ const TRACK_LEFT = [8, '50%', 'calc(100% - 8px)'] as const;
 
 /** Three-stop similarity control (mockup `.mode`): a native range for keyboard and assistive tech,
  * clickable stop names, and one line describing the current stop.
- * `noAudio` (beside an album without audio): the Sonic and Balanced stops and their names are dimmed and say
+ * `noAudio` (beside an album without audio): the Sound and Balanced stops and their names are dimmed and say
  * why (the list's own note, as their accessible description and tooltip); they stay operable and keep their names. At
  * those stops the line under them is that note instead of the stop's caption. */
 export function SimilaritySlider({ stop, onChange, noAudio = false }: { stop: StopId; onChange: (stop: StopId) => void; noAudio?: boolean }) {

@@ -84,3 +84,12 @@ export function dotCssPx(zoom: number, canvasHeightCssPx: number): number {
   const d = DOT_BASE_PX + (pxPerWorld(zoom, canvasHeightCssPx) * COVER_WORLD) / DOT_SCALE_PX;
   return Math.min(DOT_MAX_PX, Math.max(DOT_MIN_PX, d));
 }
+
+/** Visible map height over canvas height. The absolute zoom limits of this file (MAX_ZOOM, FIT_ZOOM_MIN,
+ * FIT_ZOOM_MAX) were set for a canvas that is all visible; with the top `insetTopCssPx` of it under the header, a
+ * limit times this is the same size on screen as it was. Sizes in px need no such factor: `pxPerWorld` takes the
+ * canvas height, and that is still what the frustum spans. */
+export function visibleScale(canvasHeightCssPx: number, insetTopCssPx: number): number {
+  const h = Math.max(canvasHeightCssPx, 1);
+  return Math.min(1, Math.max(0.5, (h - Math.max(insetTopCssPx, 0)) / h));
+}

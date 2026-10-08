@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { anchoredZoom, flingStopSpeedSq, FLING_STOP_REF_ZOOM, FLING_STOP_SPEED, MAX_ZOOM, MIN_ZOOM, pinchZoom } from "./zoomMath";
-import { pxPerWorld } from "./zoomLimits";
+import { anchoredZoom, flingStopSpeedSq, FLING_STOP_REF_ZOOM, FLING_STOP_SPEED, MAX_ZOOM, MIN_ZOOM, pinchZoom, tweenCoord, tweenZoom } from "./zoomMath";
+import { COVER_FADE_END_PX, coverCssPx, pxPerWorld, zoomForCoverPx } from "./zoomLimits";
 
 /** Orthographic screen offset from centre, in the camera's frustum units. */
 function project(world: [number, number], cam: { x: number; y: number; zoom: number }) {
@@ -80,5 +80,32 @@ describe("flingStopSpeedSq", () => {
     // Without the scaling the map would stop at 0.9 px per frame at the maximum zoom.
     expect(1e-5 * pxPerWorld(MAX_ZOOM, 836)).toBeGreaterThan(0.9);
     expect(flingStopSpeedSq(MAX_ZOOM)).toBeGreaterThan(0);
+  });
+});
+
+describe("tweenZoom and tweenCoord (a camera glide)", () => {
+  it("a glide's zoom is a straight line in the logarithm, its position a straight line", () => {
+    expect(tweenZoom(2, 8, 0)).toBe(2);
+    expect(tweenZoom(2, 8, 0.5)).toBeCloseTo(4, 12);
+    expect(tweenZoom(8, 2, 0.25)).toBeCloseTo(8 / Math.SQRT2, 12);
+    expect(tweenCoord(0.1, 0.5, 0)).toBe(0.1);
+    expect(tweenCoord(0.1, 0.5, 0.25)).toBeCloseTo(0.2, 12);
+    expect(tweenCoord(0.5, -0.5, 0.5)).toBeCloseTo(0, 12);
+  });
+
+  it("ends on the target itself, whatever zoom the glide began at", () => {
+    // A fly-to ends where covers are 32 px, the start of deep zoom (canvas/CameraTween.tsx flyTarget). The sum
+    // in the logarithm can end one step of the float away from it: from zoom 2 on a 900 px canvas it gave
+    // 5.751633986928106 for 5.7516339869281055, covers of 32.00000000000001 px, and the gas a first trace of
+    // deep zoom at rest (gasCurve). Which starts miss depends on the catalog's opening zoom.
+    const to = zoomForCoverPx(COVER_FADE_END_PX, 900);
+    expect(Math.exp(Math.log(2) + (Math.log(to) - Math.log(2)) * 1), "the bare sum misses from this start").not.toBe(to);
+    for (const from of [0.2, 0.66419, 2, (2.15721 * 836) / 900, (2.26031 * 836) / 900, 3.9453, 5]) {
+      expect(tweenZoom(from, to, 1), `from ${from}`).toBe(to);
+      expect(coverCssPx(tweenZoom(from, to, 1), 900), `covers after a glide from ${from}`).toBe(COVER_FADE_END_PX);
+    }
+    for (const [from, target] of [[0.1, 0.7], [0.13865870237350464, -0.33705245472233875], [1e-3, 0.1 + 0.2], [-0.4, 1 / 3]]) {
+      expect(tweenCoord(from, target, 1), `from ${from}`).toBe(target);
+    }
   });
 });

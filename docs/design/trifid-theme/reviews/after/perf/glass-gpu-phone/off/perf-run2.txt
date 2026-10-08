@@ -1,0 +1,40 @@
+before: ## 20:36:13 5.10 6.50 6.16 | Now drawing from 'Battery Power'
+
+> frontcreck@2.0.0 perf
+> node scripts/perf/perf.mjs --mode gpu --viewport phone --glass off
+
+First-load JS of / (gzip): 190.8 KB with nomodule scripts (budget 200 KB), 152.2 KB without; three.js chunk on first load: 0 KB
+Server HTML: / 28.2 KB, /album/in-rainbows-radiohead 33.9 KB (budget 150 KB each)
+
+| Measure | gpu phone |
+|---|---|
+| Renderer | ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version) |
+| Gas shader (reported only) | full |
+| Search usable | 104 ms |
+| Startup worst long task | 0 ms |
+| WebGL warm-up end (reported only) | 215 ms (done) |
+| Map first frame (reported only) | 720 ms |
+| Nebula visible (reported only) | 805 ms |
+| Typing to suggestions | 6 ms |
+| Select to album | 34 ms |
+| Transition worst frame gap | 17 ms |
+| Slider to list | 14 ms |
+| Morph worst frame gap | 22 ms |
+| Drag worst frame gap | 19 ms |
+| Zoom worst frame gap | 37 ms |
+| Drag worst frame gap at the opening view (reported only) | 18 ms |
+| Zoom worst frame gap at the opening view (reported only) | 43 ms |
+| Deep zoom drag worst frame gap (reported only) | 18 ms |
+| Deep zoom, slider between stops, worst frame gap (reported only) | 17 ms |
+| Long tasks while idle (3 s) | 0 |
+| Frames rendered while idle (3 s) | 0 |
+
+Run with --glass off: an A/B run, not the site as a visitor gets it. Read back in the page:
+  gpu phone, album: {"at":"album","path":"/album/loveless-my-bloody-valentine","glassBlur":"none","glassInline":"none","header":"none","panel":"none","album":"none","headerBackground":"rgb(10, 9, 14)","namesSaved":null,"namesOn":true,"forcedMs":20,"firstPaintMs":88,"twinkleOn":true,"twinkleSpawned":1,"twinkleNodes":0}
+  gpu phone, map: {"at":"map","path":"/map","glassBlur":"none","glassInline":"none","header":"none","panel":"none","album":null,"headerBackground":"rgb(10, 9, 14)","namesSaved":null,"namesOn":true,"forcedMs":14,"firstPaintMs":32,"twinkleOn":true,"twinkleSpawned":4,"twinkleNodes":0}
+  gpu phone, opening view: {"at":"opening view","path":"/map","glassBlur":"none","glassInline":"none","header":"none","panel":"none","album":null,"headerBackground":"rgb(10, 9, 14)","namesSaved":null,"namesOn":true,"forcedMs":27,"firstPaintMs":64,"twinkleOn":true,"twinkleSpawned":2,"twinkleNodes":0}
+
+Glints made in the 3 s idle window, as a visitor gets the site: gpu phone 1
+
+All budgets met.
+after: ## 20:36:54 5.60 6.49 6.17 | Now drawing from 'Battery Power'

@@ -7,7 +7,7 @@ import zlib from 'node:zlib';
 import { chromium } from '@playwright/test';
 import { assertNativeChrome } from '../check-native.mjs';
 import { startServer } from '../serve.mjs';
-import { checkBudgets, checkPages, formatTable } from './lib.mjs';
+import { checkBudgets, checkDefaultGlints, checkEffects, checkPages, formatTable, glassVars, jsonExtras, parseEffectFlags } from './lib.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 const BUDGETS = JSON.parse(fs.readFileSync(path.join(ROOT, 'scripts/perf/budgets.json'), 'utf8'));
@@ -25,7 +25,119 @@ const MODES = {
 const VIEWPORTS = {
   desktop: { viewport: { width: 1440, height: 900 } },
   phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+  // Reported only and gpu only: a desktop screen at device pixel ratio 2, where the map shades four times the pixels.
+  desktop2x: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 },
 };
+// --no-gas: do not wait for window.__rmr.gas, so a build without the gas layer can be measured with this script.
+const NO_GAS = args.includes('--no-gas');
+// --gas-lite off|force: measure with the full gas shader on a software renderer too ('off'), or with the lighter
+// one on a GPU too ('force'), to compare the two on one build. Without it the app chooses, as for a visitor.
+const GAS_LITE = opt('--gas-lite');
+// --open whole: skip the fresh /map load at the opening view (the Overview since part 2's Task 0). The budget rows
+// are measured at the whole map in every run, as the baseline measured them.
+const OPEN = opt('--open');
+if (OPEN !== null && OPEN !== 'whole') {
+  console.error('--open takes whole');
+  process.exit(2);
+}
+// --glass on|off, --twinkle on|off: force one effect for the whole run, for an A/B of what it
+// costs. Each is read back in the page and the run fails when the page did not have what was forced.
+let EFFECTS;
+try {
+  EFFECTS = parseEffectFlags(args);
+} catch (e) {
+  console.error(e.message);
+  process.exit(2);
+}
+// --glass: glass or solid panels at any width. The four custom properties are read from globals.css (first value
+// glass, last value the stylesheet's own solid fallback) and set inline on <html> before the page first paints.
+const GLASS_WANT = EFFECTS.glass;
+let GLASS = null;
+if (GLASS_WANT) {
+  try {
+    GLASS = glassVars(fs.readFileSync(path.join(ROOT, 'src/app/globals.css'), 'utf8'), GLASS_WANT);
+  } catch (e) {
+    console.error(`--glass ${GLASS_WANT}: ${e.message}. Measure a build that has the glass tokens; nothing was run.`);
+    process.exit(2);
+  }
+}
+// --twinkle: the glints, through the app's own switch for tests and measurements: window.__rmrTwinkle, set before
+// the page's scripts run ('off' = no glints; 'on' = glints on any renderer, also the software one, where a visitor
+// gets none: src/components/map/state/twinkle.ts twinkleShown and watchTwinkleSwitch; the run says so when it
+// measured that state). With no flag, a GPU run fails when the idle map made no glint (checkDefaultGlints in
+// lib.mjs): the only automated check that visitors with a GPU get them. TWINKLE_READBACK reads what the app did with it, never the global this script
+// set: whether the glints' own timer says it is enabled, how many glints it has made on this page, and how many
+// are in the DOM. An app that ignored the switch, or has no twinkle, reads back as that (checkEffects in lib.mjs).
+const TWINKLE = EFFECTS.twinkle;
+function twinkleSwitch(v) {
+  window.__rmrTwinkle = v;
+}
+/** Runs in the page. */
+const TWINKLE_READBACK = () => {
+  const tw = window.__rmr?.twinkle;
+  return {
+    twinkleOn: typeof tw?.enabled === 'function' ? tw.enabled() : null,
+    twinkleSpawned: tw?.stats?.spawned ?? null,
+    twinkleNodes: document.querySelector('.tw-layer')?.childElementCount ?? null,
+  };
+};
+const ANY_EFFECT = !!(GLASS || TWINKLE);
+
+/** Sets the forced effects up for every page of a browser context, before any script of the page runs. Called for
+ * every context the run opens. With no flag it adds nothing.
+ *
+ * Glass is forced without touching a loaded page: the init script sets the four properties inline on <html> the
+ * moment the parser creates the element, which is before the stylesheet applies and before first paint. So the
+ * page computes its styles once, with the forced values, exactly as it would have with other values in the
+ * stylesheet; there is no restyle of a finished page inside the window the startup rows cover (a restyle after
+ * `load` was the first version; it invalidated the whole tree during the startup long task window). The time the
+ * properties were set is kept and checked against first paint. An in-page navigation keeps inline properties (as it
+ * keeps AlbumPanel's --acc); a full load runs the init script again. */
+async function presetEffects(ctx) {
+  if (GLASS) {
+    await ctx.addInitScript((vars) => {
+      const apply = () => {
+        const el = document.documentElement;
+        if (!el) return false;
+        for (const [name, value] of Object.entries(vars)) el.style.setProperty(name, value);
+        window.__perfGlassAt = performance.now();
+        return true;
+      };
+      if (!apply()) {
+        const mo = new MutationObserver(() => {
+          if (apply()) mo.disconnect();
+        });
+        mo.observe(document, { childList: true });
+      }
+    }, GLASS);
+  }
+  if (TWINKLE) await ctx.addInitScript(twinkleSwitch, TWINKLE);
+}
+
+/** What the page actually has, read back so a run proves its flags took effect (checkEffects in lib.mjs judges
+ * it). Only called when a flag is set, and only after the measures of the page it reads. */
+const effectsSeen = async (page, at) => ({ ...(await effectsSeenBase(page, at)), ...(await page.evaluate(TWINKLE_READBACK)) });
+const effectsSeenBase = (page, at) =>
+  page.evaluate((where) => {
+    const backdrop = (sel) => {
+      const el = document.querySelector(sel);
+      return el ? getComputedStyle(el).backdropFilter : null;
+    };
+    const paint = performance.getEntriesByType('paint').find((e) => e.name === 'first-paint');
+    const html = document.documentElement;
+    return {
+      at: where,
+      path: location.pathname,
+      glassBlur: getComputedStyle(html).getPropertyValue('--glass-blur').trim() || null,
+      glassInline: html.style.getPropertyValue('--glass-blur') || null,
+      header: backdrop('header.top'),
+      panel: backdrop('.panel'),
+      album: backdrop('.album'),
+      headerBackground: document.querySelector('header.top') ? getComputedStyle(document.querySelector('header.top')).backgroundColor : null,
+      forcedMs: typeof window.__perfGlassAt === 'number' ? Math.round(window.__perfGlassAt) : null,
+      firstPaintMs: paint ? Math.round(paint.startTime) : null,
+    };
+  }, at);
 
 function sh(cmd, cmdArgs) {
   return new Promise((resolve, reject) => {
@@ -117,6 +229,27 @@ const PAGE_HELPERS = () => {
       }
       return Math.round(longest);
     },
+    /** Waits until part 1's sharper gas image has settled: the flag is not 'loading' and neither it nor the frame
+     * count changed for `quietMs` (longer than the 2 s retry wait of a failed load, shaders/gas.ts
+     * GAS_SHARP_RETRY_MS). Phones say 'off', software renderers 'waiting' or 'off', a page with no gas layer has no
+     * flag. Resolves false after `max`. */
+    async sharpSettled(quietMs = 2500, max = 45000) {
+      const t0 = performance.now();
+      let flag = String(window.__rmr?.gasSharp);
+      let frames = window.__rmr?.frames ?? 0;
+      let since = t0;
+      while (performance.now() - t0 < max) {
+        await new Promise((r) => setTimeout(r, 50));
+        const f = String(window.__rmr?.gasSharp);
+        const m = window.__rmr?.frames ?? 0;
+        if (f === 'loading' || f !== flag || m !== frames) {
+          flag = f;
+          frames = m;
+          since = performance.now();
+        } else if (performance.now() - since >= quietMs) return true;
+      }
+      return false;
+    },
   };
   // When the map first draws (after the WebGL warm-up, the probe and the data): reported, not budgeted.
   window.__mapFirstFrame = null;
@@ -165,7 +298,7 @@ async function albumFlow(page, isPhone) {
     }
     const list = () => [...document.querySelectorAll('ol.rec-list .rec-title')].map((e) => e.textContent).join('|');
     const before = list();
-    const sonic = [...document.querySelectorAll('.mode-stops button')].find((b) => P.vis(b) && b.textContent.trim() === 'Sonic');
+    const sonic = [...document.querySelectorAll('.mode-stops button')].find((b) => P.vis(b) && b.textContent.trim() === 'Sound');
     if (!sonic) return res;
     t = performance.now();
     sonic.click();
@@ -176,13 +309,84 @@ async function albumFlow(page, isPhone) {
   }, isPhone);
 }
 
-async function exploreFlow(page, isPhone) {
+/** The opening view, reported only: a fresh /map as a visitor opens it (the Overview since part 2's Task 0), its
+ * first drag and first wheel zoom, the same gestures as exploreFlow's. Runs last, in its own browser context (cold
+ * HTTP cache, no __rmrOpen), so the budget rows before it meet the network exactly as in the baseline; its wheel
+ * zoom fetches cover sheets and, on a GPU desktop, the sharper gas image, which must not warm their cache. */
+async function openingFlow(browser, vpName, errors) {
+  const ctx = await browser.newContext(VIEWPORTS[vpName]);
+  try {
+    await presetEffects(ctx);
+    const page = await ctx.newPage();
+    page.on('pageerror', (e) => errors.push(e.message));
+    page.on('console', (m) => {
+      if (m.type() === 'error') errors.push(m.text());
+    });
+    await page.addInitScript(PAGE_HELPERS);
+    if (GAS_LITE) await page.addInitScript((v) => (window.__rmrGasLite = v), GAS_LITE);
+    const res = await openingSteps(page, vpName === 'phone');
+    if (ANY_EFFECT) res.openingEffectsSeen = await effectsSeen(page, 'opening view');
+    return res;
+  } finally {
+    await ctx.close();
+  }
+}
+
+async function openingSteps(page, isPhone) {
   await page.goto(`${BASE}/map`, { waitUntil: 'load' });
-  await page.waitForFunction(() => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0, null, { timeout: 20000 });
+  await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
   await page.waitForTimeout(1500);
   return page.evaluate(async (phone) => {
     const P = window.__perf;
-    const res = {};
+    const res = { openingSharpSettled: await P.sharpSettled(), openingCamera: window.__rmr.map.getCamera() };
+    const c = document.querySelector('canvas.map-canvas');
+    const r = c.getBoundingClientRect();
+    const cx = r.left + r.width / 2;
+    const cy = r.top + r.height / 2;
+    const type = phone ? 'touch' : 'mouse';
+    const fire = (t, x, y) => c.dispatchEvent(new PointerEvent(t, { bubbles: true, cancelable: true, pointerType: type, pointerId: 1, isPrimary: true, button: 0, clientX: x, clientY: y }));
+    fire('pointerdown', cx, cy);
+    let longest = 0;
+    let last = performance.now();
+    const t0 = last;
+    while (performance.now() - t0 < 2000) {
+      const k = (performance.now() - t0) / 2000;
+      fire('pointermove', cx + Math.sin(k * 6.28) * 140, cy + Math.cos(k * 6.28) * 100);
+      const now = await P.raf();
+      longest = Math.max(longest, now - last);
+      last = now;
+    }
+    fire('pointerup', cx, cy);
+    res.openingDragGapMs = Math.round(longest);
+    await new Promise((r2) => setTimeout(r2, 500));
+    longest = 0;
+    last = performance.now();
+    const t1 = last;
+    while (performance.now() - t1 < 2000) {
+      const k = (performance.now() - t1) / 2000;
+      c.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: cx + 60, clientY: cy - 40, deltaY: k < 0.5 ? -40 : 40 }));
+      const now = await P.raf();
+      longest = Math.max(longest, now - last);
+      last = now;
+    }
+    res.openingZoomGapMs = Math.round(longest);
+    return res;
+  }, isPhone);
+}
+
+async function exploreFlow(page, isPhone) {
+  // The budget rows are measured where the baseline measured them: a fresh /map at the whole map (the site's
+  // opening view before part 2's Task 0). The init script applies to this load and any later one of this page.
+  await page.addInitScript(() => {
+    window.__rmrOpen = 'whole';
+  });
+  await page.goto(`${BASE}/map`, { waitUntil: 'load' });
+  await page.waitForFunction((noGas) => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (noGas || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'), NO_GAS, { timeout: 20000 });
+  await page.waitForTimeout(1500);
+  return page.evaluate(async (phone) => {
+    const P = window.__perf;
+    // The camera the budget rows start from: the whole map (__rmrOpen above), as in the baseline.
+    const res = { wholeCamera: window.__rmr.map.getCamera() };
     const c = document.querySelector('canvas.map-canvas');
     const r = c.getBoundingClientRect();
     const cx = r.left + r.width / 2;
@@ -214,12 +418,65 @@ async function exploreFlow(page, isPhone) {
       last = now;
     }
     res.zoomGapMs = Math.round(longest);
+    // Deep zoom, reported only: the same drag with covers at full size, where the gas is read from a blurred
+    // copy. setCamera clamps the zoom to its maximum. The camera is put back before the idle window is measured.
+    const api = window.__rmr.map;
+    const home = api.getCamera();
+    api.setCamera({ ...home, zoom: 1000 }, false);
+    await P.settled();
+    fire('pointerdown', cx, cy);
+    longest = 0;
+    last = performance.now();
+    const t2 = last;
+    while (performance.now() - t2 < 2000) {
+      const k = (performance.now() - t2) / 2000;
+      fire('pointermove', cx + Math.sin(k * 6.28) * 140, cy + Math.cos(k * 6.28) * 100);
+      const now = await P.raf();
+      longest = Math.max(longest, now - last);
+      last = now;
+    }
+    fire('pointerup', cx, cy);
+    res.deepDragGapMs = Math.round(longest);
+    res.deepZoom = window.__rmr.gasDeep ?? null;
+    // The worst case for the gas, reported only: still at full zoom, another stop is chosen, so both stops are
+    // bound and the blurred copy is read from both while the albums morph. Then the stop is put back.
+    await P.settled();
+    const stop0 = window.__rmr.getState().stop;
+    window.__rmr.getState().setStop(stop0 === 'sonic' ? 'mood' : 'sonic');
+    res.deepMorphGapMs = await P.gaps(700);
+    await P.settled();
+    window.__rmr.getState().setStop(stop0);
+    await P.settled();
+    api.setCamera(home, false);
+    // The script's own mouse is still where the drag ended, over the map, and may rest on an album: the app makes
+    // no glint while an album is hovered, so the idle window would then say nothing about glints. The pointer
+    // leaves the canvas here, before the settle, so the frame it draws is not in the idle window. What the hover
+    // was is kept for the report.
+    res.hoverBeforeIdle = document.querySelector('.map-tip')?.style.opacity === '1';
+    fire('pointerleave', cx, cy);
+    // Full zoom makes the atlas fetch cover sheets; wait until the map has stopped drawing so a late sheet
+    // cannot land in the idle window measured below.
+    await P.settled();
     await new Promise((r2) => setTimeout(r2, 1500));
+    // Part 1's sharper gas image: the deep zoom and the stop change above make it be fetched (or freed and fetched
+    // again) at rest, and its fade draws up to 14 frames. The idle window starts once it has settled.
+    res.idleSharpSettled = await P.sharpSettled();
+    res.sharpFlag = String(window.__rmr?.gasSharp);
     window.__lt.length = 0;
     const f0 = window.__rmr.frames;
+    // The glints the app's timer makes in the idle window (null when the app publishes no count), for
+    // checkDefaultGlints: the timer waits under 3 s, so a resting map that plays glints makes at least one here.
+    const tw = window.__rmr.twinkle;
+    const g0 = tw?.stats?.spawned ?? null;
+    const tw0 = tw?.stats ? { ...tw.stats } : null;
     await new Promise((r2) => setTimeout(r2, 3000));
     res.idleLongTasks = window.__lt.length;
     res.idleFrames = window.__rmr.frames - f0;
+    res.idleGlints = g0 === null ? null : tw.stats.spawned - g0;
+    // Why none, if none: what the timer's ticks in the window were skipped for.
+    res.idleTwinkle = tw0 === null ? null : { ticks: tw.stats.ticks - tw0.ticks, notResting: tw.stats.notResting - tw0.notResting, hoverHeld: (tw.stats.hoverHeld ?? 0) - (tw0.hoverHeld ?? 0), capped: tw.stats.capped - tw0.capped, alive: tw.stats.alive };
+    res.twinkleSoftware = typeof tw?.software === 'function' ? (tw.software() ?? null) : null;
+    res.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     return res;
   }, isPhone);
 }
@@ -228,6 +485,7 @@ async function measure(mode, vpName) {
   const browser = await chromium.launch({ channel: 'chrome', headless: true, args: MODES[mode] });
   await assertNativeChrome(browser); // a translated (x86_64) Chrome inflates every timing about 50x
   const ctx = await browser.newContext(VIEWPORTS[vpName]);
+  await presetEffects(ctx);
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -235,6 +493,7 @@ async function measure(mode, vpName) {
     if (m.type() === 'error') errors.push(m.text());
   });
   await page.addInitScript(PAGE_HELPERS);
+  if (GAS_LITE) await page.addInitScript((v) => (window.__rmrGasLite = v), GAS_LITE);
   let thumbsOnFirstLoad = false;
   const onRequest = (r) => {
     if (/\/data\/thumbs(-\d+)?\.webp$/.test(r.url())) thumbsOnFirstLoad = true;
@@ -253,7 +512,11 @@ async function measure(mode, vpName) {
   });
   // A slow start (a cold software renderer) can draw the map after the 4 s window; wait for it so it is reported.
   await page.waitForFunction(() => window.__mapFirstFrame !== null, null, { timeout: 20000 }).catch(() => {});
+  // The gas of the stop Home shows arrives after the first frame; wait for it so its upload is inside the startup
+  // long tasks and its time can be reported. A page with no gas (or --no-gas) is not waited for.
+  if (!NO_GAS) await page.waitForFunction(() => typeof window.__rmr?.gasShownMs === 'number' || window.__rmr?.gas === 'off', null, { timeout: 20000 }).catch(() => {});
   const startup = await page.evaluate(() => ({
+    gasShown: window.__rmr?.gasShownMs ?? null,
     lt: window.__lt.slice(),
     supported: window.__ltSupported,
     ready: performance.getEntriesByName('rmr-search-ready')[0]?.startTime ?? null,
@@ -270,11 +533,22 @@ async function measure(mode, vpName) {
     searchUsableMs: startup.ready === null ? null : Math.round(startup.ready),
     startupLongTaskMs: Math.max(0, ...startup.lt.map((x) => x[1])),
     mapFirstFrameMs: startup.mapFirstFrame,
+    gasShownMs: typeof startup.gasShown === 'number' ? Math.round(startup.gasShown) : null,
     warmUp: startup.warm,
     startupLongTasks: startup.lt,
     ...(await albumFlow(page, vpName === 'phone')),
-    ...(await exploreFlow(page, vpName === 'phone')),
   };
+  // What the forced effects look like in the page (only with a flag): on the album, after its measures, where the
+  // header, a panel and the album panel all exist; then on /map after the budget rows; then at the opening view.
+  const seen = ANY_EFFECT ? [await effectsSeen(page, 'album')] : null;
+  Object.assign(result, {
+    ...(await exploreFlow(page, vpName === 'phone')),
+    ...(seen ? { effectsSeen: [...seen, await effectsSeen(page, 'map')] } : {}),
+    // The opening rows last, in a fresh context: the budget rows above are measured exactly as in the baseline.
+    ...(OPEN ? {} : await openingFlow(browser, vpName, errors)),
+  });
+  // Which gas shader drew the map (reported only): the lighter one on a software renderer, the full one on a GPU.
+  result.gasLite = await page.evaluate(() => window.__rmr?.gasLite ?? null);
   await browser.close();
   return result;
 }
@@ -297,19 +571,40 @@ async function main() {
     fails.push(...checkPages(pages, BUDGETS));
     for (const mode of opt('--mode') ? [opt('--mode')] : Object.keys(MODES)) {
       for (const vp of opt('--viewport') ? [opt('--viewport')] : Object.keys(VIEWPORTS)) {
+        if (vp === 'desktop2x' && mode !== 'gpu') continue; // dpr 2 is measured on the GPU only
         const r = await measure(mode, vp);
         rows.push(r);
-        fails.push(...checkBudgets(r, mode, BUDGETS, { allowSoftwareGpu: args.includes('--allow-software-gpu') }));
+        // The dpr 2 column is reported only: it has no budget and is never checked.
+        if (vp !== 'desktop2x') fails.push(...checkBudgets(r, mode, BUDGETS, { allowSoftwareGpu: args.includes('--allow-software-gpu') }));
+        // A forced effect the page did not have fails the run in every column: its numbers are not an A/B.
+        if (ANY_EFFECT) fails.push(...checkEffects(`${mode} ${vp}`, [...r.effectsSeen, ...(r.openingEffectsSeen ? [r.openingEffectsSeen] : [])], EFFECTS, GLASS));
+        // With no --twinkle flag: a GPU must have made a glint while the map was idle, a software renderer none.
+        fails.push(...checkDefaultGlints(r, TWINKLE));
       }
     }
     console.log(`\n${formatTable(rows)}\n`);
+    if (rows.some((r) => r.vp === 'desktop2x')) console.log('The desktop2x column (1440 x 900 at device pixel ratio 2, gpu only) is reported only: it has no budget and cannot fail the run.\n');
+    if (NO_GAS) console.log('Run with --no-gas: the script did not wait for a gas layer.\n');
+    if (GAS_LITE) console.log(`Run with --gas-lite ${GAS_LITE}: the gas shader was not the app's own choice.\n`);
+    if (ANY_EFFECT) {
+      console.log(`Run with${GLASS ? ` --glass ${GLASS_WANT}` : ''}${TWINKLE ? ` --twinkle ${TWINKLE}` : ''}: an A/B run, not the site as a visitor gets it. Read back in the page:`);
+      for (const r of rows) for (const e of [...r.effectsSeen, ...(r.openingEffectsSeen ? [r.openingEffectsSeen] : [])]) console.log(`  ${r.mode} ${r.vp}, ${e.at}: ${JSON.stringify(e)}`);
+      const forcedOnSoftware = TWINKLE === 'on' ? rows.filter((r) => r.twinkleSoftware === true || /swiftshader|llvmpipe|software|basic render/i.test(r.renderer ?? '')) : [];
+      if (forcedOnSoftware.length) {
+        console.log(`--twinkle on with a software renderer (${forcedOnSoftware.map((r) => `${r.mode} ${r.vp}`).join(', ')}): a forced state no visitor has. The app plays no glints on a software renderer; these columns show what glints would cost there, not the site.`);
+      }
+      console.log('');
+    }
+    if (OPEN) console.log('Run with --open whole: the opening view rows were not measured (n/a). The budget rows are measured at the whole map in every run.\n');
+    if (!TWINKLE) console.log(`Glints made in the 3 s idle window, as a visitor gets the site: ${rows.map((r) => `${r.mode} ${r.vp} ${r.idleGlints ?? 'n/a'}`).join(', ')}\n`);
     for (const r of rows) {
       // settled() gives up after 6 s; the next step then measures a map that is still animating.
       if (r.settled?.includes(false)) console.warn(`WARNING ${r.mode} ${r.vp}: the map did not settle before a step (settled: ${JSON.stringify(r.settled)})`);
+      if (r.openingSharpSettled === false || r.idleSharpSettled === false) console.warn(`WARNING ${r.mode} ${r.vp}: the sharper gas image did not settle before a step (opening ${r.openingSharpSettled}, idle ${r.idleSharpSettled})`);
     }
     const outDir = path.join(ROOT, 'scripts/perf/out');
     fs.mkdirSync(outDir, { recursive: true });
-    fs.writeFileSync(path.join(outDir, `perf-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ js, rows, fails }, null, 1));
+    fs.writeFileSync(path.join(outDir, `perf-${new Date().toISOString().replace(/[:.]/g, '-')}.json`), JSON.stringify({ js, pages, rows, fails, ...jsonExtras({ open: OPEN, ...EFFECTS, noGas: NO_GAS, gasLite: GAS_LITE, allowSoftwareGpu: args.includes('--allow-software-gpu') }) }, null, 1));
   } finally {
     await server.stop();
   }

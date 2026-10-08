@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<title>recmyrecord — round two concept</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Schibsted+Grotesk:wght@400;500;600&family=IBM+Plex+Mono:ital,wght@0,400;0,500;1,400&family=Caveat:wght@400;500;600&display=block">
+<style>
+:root{
+  --bg:#0b0a09; --panel:#0e0d0c; --float:#121110; --text:#ece8df; --dust:#aaa59b; --ash:#918c83;
+  --rule:rgba(236,232,223,.11); --rule2:rgba(236,232,223,.22); --lamp:#e8e2d4; --lamp-ink:#12100d; --acc:#d9a066;
+  --serif:"Cormorant Garamond","Iowan Old Style","Palatino Linotype",Palatino,serif;
+  --sans:"Schibsted Grotesk",ui-sans-serif,system-ui,-apple-system,"Helvetica Neue",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:2px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;-webkit-font-smoothing:antialiased}
+ol,ul{list-style:none}
+#stage{position:absolute;left:0;top:0;overflow:hidden;background:var(--bg)}
+canvas#c{position:absolute;left:0;top:0}
+#ov{position:absolute;inset:0;pointer-events:none}
+.hdr{position:absolute;left:0;right:0;top:0;height:64px;z-index:20;display:flex;align-items:center;padding:0 32px;border-bottom:1px solid var(--rule);background:var(--hdr-bg,var(--bg))}
+.wm{font-family:var(--serif);font-style:italic;font-weight:500;font-size:27px;letter-spacing:.005em;color:var(--text)}
+.search{position:absolute;left:50%;top:12px;transform:translateX(-50%);width:490px;height:40px;border:1px solid var(--rule2);border-radius:var(--r);display:flex;align-items:center;gap:12px;padding:0 12px 0 16px;color:var(--dust);font-size:15px;background:var(--search-bg,transparent)}
+.search svg{width:16px;height:16px;flex:none}
+.search span{flex:1}
+.search kbd{font-family:var(--sans);font-size:12px;border:1px solid var(--rule2);border-radius:var(--r);width:22px;height:22px;display:grid;place-items:center;color:var(--ash)}
+.nav{margin-left:auto;display:flex;gap:26px;font-size:15px;color:var(--dust)}
+.nav a{padding:21px 2px;position:relative}
+.nav a.on{color:var(--text)}
+.nav a.on::after{content:"";position:absolute;left:0;right:0;bottom:8px;height:1px;background:var(--nav-line,var(--lamp))}
+.album{position:absolute;left:0;top:64px;bottom:0;width:660px;z-index:10;background:var(--panel);border-right:1px solid var(--rule);overflow:hidden}
+.amb{position:absolute;left:0;right:0;top:0;height:440px;pointer-events:none}
+.album-in{position:absolute;inset:0;padding:18px 32px 0}
+.close{position:absolute;right:10px;top:8px;width:44px;height:44px;display:grid;place-items:center;color:var(--dust)}
+.close svg{width:18px;height:18px}
+.trail{display:flex;align-items:center;gap:10px;height:28px;margin:0 48px 10px 0;font-size:13.5px;color:var(--dust);white-space:nowrap;overflow:hidden}
+.trail .l{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ash)}
+.trail ol{display:flex;align-items:center;min-width:0}
+.trail li{display:flex;align-items:center}
+.trail li+li::before{content:"";width:5px;height:5px;margin:0 9px;border-top:1px solid var(--ash);border-right:1px solid var(--ash);transform:rotate(45deg)}
+.trail li:last-child{color:var(--text)}
+.seed{position:relative;display:grid;grid-template-columns:116px minmax(0,1fr);column-gap:22px;align-items:end;grid-template-areas:"cover artist" "cover title" "cover actions" "tags tags";grid-template-rows:1fr auto auto auto}
+.seed .cv{grid-area:cover;align-self:start;width:116px;height:116px;box-shadow:0 18px 40px -20px rgba(0,0,0,.85)}
+.seed-artist{grid-area:artist;font-size:15px;color:var(--dust)}
+.seed-title{grid-area:title;font-family:var(--serif);font-weight:500;line-height:.96;letter-spacing:-.015em;margin-top:2px;font-size:48px}
+.seed-title.m{font-size:40px}.seed-title.lg{font-size:30px;line-height:1.04}
+.seed-actions{grid-area:actions;display:flex;align-items:center;gap:6px;margin-top:12px}
+.btn{height:40px;padding:0 14px;display:inline-flex;align-items:center;gap:8px;background:var(--lamp);color:var(--lamp-ink);font-weight:600;font-size:14px;border-radius:var(--r)}
+.btn svg{width:14px;height:14px}
+.iq{width:40px;height:40px;display:grid;place-items:center;border:1px solid var(--rule2);border-radius:var(--r);color:var(--dust)}
+.iq svg{width:17px;height:17px}
+.tags{grid-area:tags;display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.tags li{font-size:12.5px;line-height:1;padding:6px 8px;border-radius:var(--r);color:var(--dust);border:1px solid var(--rule2)}
+.tags li.lit{color:var(--text);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.recs{position:relative;margin-top:18px}
+.recs-h{font-family:var(--serif);font-style:italic;font-weight:500;font-size:21px;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.rec{position:relative;border-bottom:1px solid var(--rule);display:grid;grid-template-columns:18px 60px minmax(0,1fr);gap:14px;align-items:center;padding:11px 56px 11px 6px}
+.rec.hot{background:var(--hot,rgba(236,232,223,.045))}
+.rec.hot::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:2px;background:var(--acc)}
+.rec-n{font-family:var(--serif);font-style:italic;font-size:20px;color:var(--ash);text-align:right;line-height:1}
+.rec .cv{width:60px;height:60px}
+.rec-text{min-width:0;display:grid}
+.rec-title{font-family:var(--serif);font-weight:600;font-size:23px;line-height:1.08;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-artist{font-size:14px;color:var(--dust);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-shared{font-size:13px;color:var(--ash);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-shared span{color:var(--dust)}
+.rec-sp{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:44px;height:44px;display:grid;place-items:center;color:var(--ash)}
+.rec-sp svg{width:16px;height:16px}
+.sim{position:absolute;z-index:12;width:268px;padding:14px 18px 13px;border:1px solid var(--rule);background:var(--float);border-radius:var(--r)}
+.sim-l{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dust)}
+.sim-track{position:relative;height:28px;margin:4px 8px 0}
+.sim-track::before{content:"";position:absolute;left:0;right:0;top:13px;height:1px;background:var(--rule2)}
+.sim-track i{position:absolute;top:10px;width:7px;height:7px;border-radius:50%;border:1px solid var(--ash);background:var(--float);transform:translateX(-50%)}
+.sim-track i.on{top:5px;width:17px;height:17px;border:1px solid var(--lamp);background:var(--float)}
+.sim-track i.on::after{content:"";position:absolute;inset:4px;border-radius:50%;background:var(--lamp)}
+.sim-stops{display:flex;justify-content:space-between;font-size:14px;color:var(--dust);margin-top:2px}
+.sim-stops b{font-weight:500;color:var(--text)}
+.sim-d{margin-top:10px;padding-top:10px;border-top:1px solid var(--rule);font-size:13.5px;color:var(--dust)}
+.zoom{position:absolute;right:22px;bottom:22px;z-index:12;display:grid;gap:6px}
+.zoom b{width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--rule);background:var(--float);color:var(--dust);border-radius:var(--r)}
+.zoom svg{width:16px;height:16px}
+.hint{position:absolute;left:22px;bottom:22px;z-index:12;font-size:14px;color:var(--dust)}
+.cv{background-repeat:no-repeat;background-color:#222;flex:none}
+.mc{position:absolute;transform:translate(-50%,-50%)}
+.badge{position:absolute;left:-9px;top:-9px;min-width:20px;height:20px;padding:0 5px;display:grid;place-items:center;font-size:12px;font-weight:600;line-height:1;border-radius:10px;background:var(--badge-bg,var(--bg));color:var(--badge-ink,var(--text));border:1px solid var(--badge-rule,var(--rule2))}
+.hov{position:absolute;z-index:14;display:flex;align-items:center;gap:10px;padding:7px 14px 7px 7px;background:var(--float);border:1px solid var(--rule2);border-radius:var(--r);white-space:nowrap}
+.hov .cv{width:40px;height:40px}
+.hov b{display:block;font-family:var(--serif);font-weight:600;font-size:18px;line-height:1.1}
+.hov span{font-size:13px;color:var(--dust)}
+/*CSS*/
+</style></head>
+<body>
+<div id="stage"><canvas id="c"></canvas><div id="ov"></div></div>
+<script>
+const D=/*DATA*/;
+const W=D.W,H=D.H,PANEL=D.PANEL,HDR=D.HDR,N=D.p.length/2,ALBUM=D.mode==='album';
+const stage=document.getElementById('stage');stage.style.width=W+'px';stage.style.height=H+'px';
+const cv=document.getElementById('c');cv.width=W;cv.height=H;const ctx=cv.getContext('2d');
+const ov=document.getElementById('ov');
+const CX=PANEL+(W-PANEL)/2,CY=HDR+(H-HDR)/2;
+const PX=new Float32Array(N),PY=new Float32Array(N);
+for(let i=0;i<N;i++){PX[i]=CX+(D.p[2*i]-D.view.x)*D.view.s;PY[i]=CY-(D.p[2*i+1]-D.view.y)*D.view.s;}
+const hex=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+const ACC=D.acc.map(hex);
+// seeded rng + value noise
+function mulberry(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rnd=mulberry(7);
+const NT=new Float32Array(256*256);for(let i=0;i<NT.length;i++)NT[i]=rnd();
+function vnoise(x,y){const xi=Math.floor(x),yi=Math.floor(y);let fx=x-xi,fy=y-yi;fx=fx*fx*(3-2*fx);fy=fy*fy*(3-2*fy);const a=NT[(yi&255)*256+(xi&255)],b=NT[(yi&255)*256+((xi+1)&255)],c=NT[((yi+1)&255)*256+(xi&255)],d=NT[((yi+1)&255)*256+((xi+1)&255)];return a+(b-a)*fx+(c-a)*fy+(a-b-c+d)*fx*fy}
+function fbm(x,y,o){let s=0,a=.5,f=1;for(let i=0;i<o;i++){s+=a*vnoise(x*f+i*17.3,y*f+i*9.1);a*=.5;f*=2.03}return s}
+// scalar grid helpers: grid covers the stage plus a margin, cell px
+function Grid(cell,margin){this.c=cell;this.m=margin;this.w=Math.ceil((W+2*margin)/cell)+1;this.h=Math.ceil((H+2*margin)/cell)+1;this.d=new Float32Array(this.w*this.h)}
+Grid.prototype.splat=function(x,y,v){const gx=(x+this.m)/this.c,gy=(y+this.m)/this.c;const xi=Math.floor(gx),yi=Math.floor(gy);if(xi<0||yi<0||xi>=this.w-1||yi>=this.h-1)return;const fx=gx-xi,fy=gy-yi,o=yi*this.w+xi;this.d[o]+=v*(1-fx)*(1-fy);this.d[o+1]+=v*fx*(1-fy);this.d[o+this.w]+=v*(1-fx)*fy;this.d[o+this.w+1]+=v*fx*fy};
+Grid.prototype.blur=function(sigmaPx){const r=Math.max(1,Math.round(sigmaPx/this.c*1.0));const w=this.w,h=this.h,t=new Float32Array(w*h);for(let pass=0;pass<3;pass++){for(let y=0;y<h;y++){let s=0;const o=y*w;for(let x=-r;x<=r;x++)s+=this.d[o+Math.min(w-1,Math.max(0,x))];for(let x=0;x<w;x++){t[o+x]=s/(2*r+1);s+=this.d[o+Math.min(w-1,x+r+1)]-this.d[o+Math.max(0,x-r)]}}for(let x=0;x<w;x++){let s=0;for(let y=-r;y<=r;y++)s+=t[Math.min(h-1,Math.max(0,y))*w+x];for(let y=0;y<h;y++){this.d[y*w+x]=s/(2*r+1);s+=t[Math.min(h-1,y+r+1)*w+x]-t[Math.max(0,y-r)*w+x]}}}return this};
+Grid.prototype.at=function(x,y){let gx=(x+this.m)/this.c,gy=(y+this.m)/this.c;if(gx<0)gx=0;if(gy<0)gy=0;if(gx>this.w-1.001)gx=this.w-1.001;if(gy>this.h-1.001)gy=this.h-1.001;const xi=gx|0,yi=gy|0,fx=gx-xi,fy=gy-yi,o=yi*this.w+xi,d=this.d;return d[o]*(1-fx)*(1-fy)+d[o+1]*fx*(1-fy)+d[o+this.w]*(1-fx)*fy+d[o+this.w+1]*fx*fy};
+Grid.prototype.max=function(){let m=0;for(let i=0;i<this.d.length;i++)if(this.d[i]>m)m=this.d[i];return m};
+Grid.prototype.copy=function(){const g=new Grid(this.c,this.m);g.d.set(this.d);return g};
+function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e}
+function coverCSS(i,size){const sheet=Math.floor(i/1024),cell=i%1024,col=cell%32,row=Math.floor(cell/32);return `background-image:url(${D.atlas}atlas-${sheet}.webp);background-size:${32*size}px ${32*size}px;background-position:${-col*size}px ${-row*size}px;`}
+function cover(i,size,cls){const e=el('div','cv '+(cls||''));e.style.cssText=coverCSS(i,size)+`width:${size}px;height:${size}px;`;return e}
+const IC={search:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="7" cy="7" r="4.6"/><path d="M10.5 10.5 14 14"/></svg>',
+ x:'<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 4l10 10M14 4 4 14"/></svg>',
+ ext:'<svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.5 2.5h-3v9h9v-3M8 2.5h3.5V6M11.5 2.5 6.5 7.5"/></svg>',
+ link:'<svg viewBox="0 0 17 17" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7.2 9.8a3 3 0 0 0 4.2 0l2.3-2.3a3 3 0 0 0-4.2-4.2l-.9.9M9.8 7.2a3 3 0 0 0-4.2 0L3.3 9.5a3 3 0 0 0 4.2 4.2l.9-.9"/></svg>',
+ sp:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6.4"/><path d="M4.6 6.3c2.3-.7 4.9-.5 6.9.7M5 8.4c1.9-.5 3.9-.3 5.5.6M5.5 10.3c1.4-.3 2.8-.2 4 .5" stroke-linecap="round"/></svg>',
+ plus:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 3v10M3 8h10"/></svg>',
+ minus:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8h10"/></svg>',
+ fit:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10"/></svg>'};
+function chrome(){
+  const h=el('header','hdr',`<a class="wm">recmyrecord</a><div class="search">${IC.search}<span>Search albums or artists</span><kbd>/</kbd></div><nav class="nav"><a class="on">Map</a><a>About</a></nav>`);stage.appendChild(h);
+  const sim=el('div','sim',`<div class="sim-l">Similarity</div><div class="sim-track"><i style="left:0"></i><i class="on" style="left:50%"></i><i style="left:100%"></i></div><div class="sim-stops"><span>Sonic</span><b>Balanced</b><span>Mood</span></div><div class="sim-d">Sound and mood together.</div>`);
+  sim.style.left=(PANEL+22)+'px';sim.style.top=(HDR+22)+'px';stage.appendChild(sim);
+  stage.appendChild(el('div','zoom',`<b>${IC.plus}</b><b>${IC.minus}</b><b>${IC.fit}</b>`));
+  if(!ALBUM){stage.appendChild(el('div','hint','Albums that sit close together sound or feel alike.'));return}
+  const s=D.seed,tl=s.t.length>22?'lg':s.t.length>13?'m':'';
+  const a=el('aside','album');a.style.setProperty('--acc',s.w[2]);
+  a.innerHTML=`<div class="amb"></div><div class="close">${IC.x}</div><div class="album-in">
+  <nav class="trail"><span class="l">Visited</span><ol>${D.trail.map(t=>`<li>${t}</li>`).join('')}<li>${s.t}</li></ol></nav>
+  <section class="seed"><div class="cv" style="${coverCSS(s.i,116)}"></div><p class="seed-artist">${s.a}</p><h1 class="seed-title ${tl}">${s.t}</h1>
+  <div class="seed-actions"><span class="btn">Open in Spotify ${IC.ext}</span><span class="iq">${IC.link}</span></div>
+  <ul class="tags">${s.tags.map((t,i)=>`<li class="${(D.recs[0].sh.includes(t))?'lit':''}">${t}</li>`).join('')}</ul></section>
+  <section class="recs"><h2 class="recs-h">Closest albums</h2>${D.recs.map((r,i)=>`<div class="rec ${i==0?'hot':''}"><span class="rec-n">${i+1}</span><div class="cv" style="${coverCSS(r.i,60)}"></div><div class="rec-text"><span class="rec-title">${r.t}</span><span class="rec-artist">${r.a}</span><span class="rec-shared">${r.sh.length?'Shares <span>'+r.sh.join(', ')+'</span>':'&nbsp;'}</span></div><span class="rec-sp">${IC.sp}</span></div>`).join('')}</section></div>`;
+  stage.appendChild(a);
+}
+function mapCovers(seedSize,recSize){
+  if(!ALBUM)return;
+  D.recs.forEach((r,n)=>{const m=el('div','mc rc');m.style.left=PX[r.i]+'px';m.style.top=PY[r.i]+'px';m.appendChild(cover(r.i,recSize));m.appendChild(el('span','badge',String(n+1)));if(n==0)m.classList.add('hot');ov.appendChild(m)});
+  const m=el('div','mc sd');m.style.left=PX[D.seed.i]+'px';m.style.top=PY[D.seed.i]+'px';m.appendChild(cover(D.seed.i,seedSize));ov.appendChild(m);
+}
+function pickHover(){const ids=[D.seed.i].concat(D.recs.map(r=>r.i));let best=-1;for(let i=0;i<N&&best<0;i++){const x=PX[i],y=PY[i];if(x<PANEL+60||x>W-330||y<HDR+250||y>H-90||D.t[i][0].length>20)continue;let ok=true;for(const j of ids){if(j==i||(Math.abs(PX[j]-x-120)<170&&Math.abs(PY[j]-y)<64))ok=false}
+  const sx=PX[D.seed.i],sy=PY[D.seed.i];for(const r of D.recs){const ex=PX[r.i],ey=PY[r.i];for(let t=0;t<=1;t+=.05){const lx=sx+(ex-sx)*t,ly=sy+(ey-sy)*t;if(lx>x-20&&lx<x+260&&Math.abs(ly-y)<44)ok=false}}
+  if(ok)best=i}return best}
+function hoverLabel(i,dx,dy){const hv=el('div','hov');hv.appendChild(cover(i,40));hv.appendChild(el('div','',`<b>${D.t[i][0]}</b><span>${D.t[i][1]}</span>`));hv.style.left=(PX[i]+(dx||14))+'px';hv.style.top=(PY[i]+(dy||-28))+'px';stage.appendChild(hv)}
+/*JS*/
+</script></body></html>

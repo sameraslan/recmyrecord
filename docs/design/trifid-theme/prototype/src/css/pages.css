@@ -1,0 +1,252 @@
+/* Home, About, 404 and the phone layout: the app's home.css, search.css (sheet) and phone.css, with tokens as
+ * variables, plus what the theme adds (the nebula strip, the phone's Explore sheet and name plate). */
+
+/* the map as a still backdrop */
+#map[data-view="home"] #ov, #map[data-view="about"] #ov, #map[data-view="notfound"] #ov { cursor: default; }
+.veil { position: absolute; inset: 0; z-index: 4; pointer-events: none; display: block; background: rgba(7, 6, 10, .1); transition: opacity var(--dur) var(--out), visibility 0s; }
+html[data-chrome="site"] .veil { background: radial-gradient(50% 55% at 50% 45%, rgba(21, 17, 13, .78), rgba(21, 17, 13, .42) 70%, rgba(21, 17, 13, .3)); }
+.veil--off { opacity: 0; visibility: hidden; pointer-events: none; transition: opacity var(--dur) var(--out), visibility 0s linear var(--dur); }
+.top { transition: background-color var(--dur) var(--out), border-color var(--dur) var(--out); }
+.top.top--home { background: transparent; border-color: transparent; }
+.top.top--home .top-search { visibility: hidden; opacity: 0; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; padding: 0 12px; color: var(--dust); border-radius: 2px; }
+.icon-btn:hover { color: var(--paper); }
+.icon-btn svg { width: 20px; height: 20px; }
+.search-toggle { display: none; }
+
+/* Home */
+.home { position: absolute; left: 0; right: 0; top: var(--hdr); bottom: 0; z-index: 8; overflow-y: auto; pointer-events: none; display: flex; flex-direction: column; }
+.home > * { pointer-events: auto; }
+.hero { position: relative; width: min(640px, calc(100% - 32px)); margin: 0 auto; padding: clamp(32px, 10vh, 112px) 0 0; text-align: center; }
+/* a local scrim behind the text block, so the nebula still glows around it */
+.hero::before { content: ""; position: absolute; inset: clamp(18px, 8vh, 92px) -6px -4px; z-index: -1; background: rgba(5, 4, 8, .72); border-radius: 40px; filter: blur(26px); pointer-events: none; }
+.hero .cap { color: var(--dust); }
+.hero-row .textbtn, .shelf-now .cap { text-shadow: 0 0 3px rgba(5, 4, 8, .95), 0 0 10px rgba(5, 4, 8, .85); }
+.shelf-now .cap { color: var(--dust); }
+.shelf { position: relative; }
+.shelf::before { content: ""; position: absolute; inset: 10px 0 0; z-index: -1; background: linear-gradient(rgba(5, 4, 8, 0), rgba(5, 4, 8, .7) 40%); pointer-events: none; }
+.hero h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(42px, 5.8vw, 80px); line-height: .98; letter-spacing: -.015em; }
+.hero .lede { margin: 16px auto 0; max-width: 34em; font-size: 16.5px; color: var(--dust); text-wrap: balance; }
+.hero-row { margin-top: 14px; display: flex; justify-content: center; gap: 4px; align-items: center; flex-wrap: wrap; }
+.hero-row .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ash); opacity: .6; }
+.combo--hero { margin: 32px auto 0; width: auto; max-width: 580px; text-align: left; }
+.combo--hero .combo-field { height: 58px; padding: 0 16px 0 18px; }
+.combo--hero input { font-size: 17px; }
+.combo--hero .combo-field svg { width: 20px; height: 20px; }
+.combo--hero .combo-pop { max-height: min(420px, 50vh); }
+.shelf { margin: auto auto 0; width: 100%; max-width: calc(1240px + 2 * var(--gut)); padding: 36px var(--gut) 28px; }
+.shelf-now { height: 30px; display: flex; align-items: baseline; justify-content: center; gap: 12px; margin-bottom: 12px; white-space: nowrap; overflow: hidden; }
+.shelf-now .t { font-family: var(--serif); font-size: 21px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.shelf-now .a { font-size: 14px; color: var(--dust); }
+.mosaic { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 10px; }
+.mosaic a { display: block; border-radius: 2px; }
+.mosaic .cover { width: 100% !important; height: auto !important; transition: opacity .25s var(--out); }
+.mosaic .cover .spr { filter: saturate(.5) brightness(.52); transition: filter .25s var(--out); }
+.mosaic li:nth-child(n+13) .cover { opacity: .55; }
+.mosaic a:hover .cover .spr, .mosaic a:focus-visible .cover .spr { filter: none; }
+.mosaic a:hover .cover, .mosaic a:focus-visible .cover { opacity: 1; }
+
+/* About and 404 */
+.about-page { position: absolute; left: 0; right: 0; top: var(--hdr); bottom: 0; z-index: 8; overflow-y: auto; display: grid; place-items: center; padding: 24px; background: rgba(5, 4, 8, .72); }
+html[data-chrome="site"] .about-page { background: rgba(12, 10, 8, .72); }
+.about { position: relative; width: min(680px, 100%); background: var(--room); border: 1px solid var(--rule-2); border-radius: 2px; padding: 44px 48px 40px; box-shadow: 0 30px 80px -30px #000; }
+.about .x { position: absolute; right: 8px; top: 8px; width: 44px; height: 44px; display: grid; place-items: center; color: var(--dust); }
+.about .x:hover { color: var(--paper); }
+.about .x svg { width: 18px; height: 18px; }
+.about h1 { font-family: var(--serif); font-weight: 500; font-size: 48px; line-height: 1; letter-spacing: -.015em; padding-right: 32px; }
+.about p { font-size: 16.5px; line-height: 1.65; color: #d9d0bf; margin-top: 16px; }
+html[data-chrome="trifid"] .about p { color: #dbd6ce; }
+.about .about-h2 { margin-top: 36px; margin-bottom: -4px; }
+.about .about-signoff { margin-top: 24px; font-family: var(--serif); font-style: italic; font-size: 20px; line-height: 1.3; color: var(--lamp); }
+.about .about-credits { margin-top: 32px; padding-top: 14px; border-top: 1px solid var(--rule); font-size: 14.5px; color: var(--dust); }
+.about b { font-weight: 600; }
+.notfound { position: absolute; left: 0; right: 0; top: var(--hdr); bottom: 0; z-index: 8; overflow-y: auto; display: grid; align-content: center; justify-items: center; gap: 22px; padding: 24px; text-align: center; background: rgba(5, 4, 8, .55); }
+html[data-chrome="site"] .notfound { background: rgba(12, 10, 8, .55); }
+.notfound h1 { max-width: 20em; font-family: var(--serif); font-weight: 500; font-size: clamp(28px, 4vw, 40px); line-height: 1.1; }
+.notfound .notfound-sub { margin: 14px auto 0; max-width: 34em; font-size: 16.5px; color: var(--dust); text-wrap: balance; }
+.notfound .combo { width: min(480px, 100%); text-align: left; }
+@media (min-width: 900px) and (max-height: 860px) { .hero { padding-top: clamp(24px, 6vh, 112px); } }
+@media (max-width: 1179px) {
+  .mosaic { grid-template-columns: repeat(8, minmax(0, 1fr)); }
+  .mosaic li:nth-child(n+17) { display: none; }
+  .mosaic li:nth-child(n+9) .cover { opacity: .55; }
+}
+
+/* phone search sheet */
+.search-sheet { position: fixed; inset: 0; z-index: 200; background: var(--room); color: var(--paper); padding: 8px 6px 0 16px; overflow-y: auto; overscroll-behavior: contain; }
+.search-sheet-top { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 6px; align-items: start; }
+.search-sheet .combo { display: contents; }
+.search-sheet .combo-field { grid-column: 1; grid-row: 1; height: 48px; }
+.search-sheet-top > .icon-btn { grid-column: 2; grid-row: 1; }
+.search-sheet .combo-pop { grid-column: 1 / -1; grid-row: 2; position: static; margin-top: 10px; border: 0; box-shadow: none; padding: 0 10px 20px 0; background: transparent; max-height: none; }
+.strip, .fab-map { display: none; }
+
+/* Phones and narrow tablets */
+@media (max-width: 899px) {
+  .top { gap: 6px; padding: 0 6px 0 var(--gut); }
+  .navbtn { padding: 0 10px; font-size: 14.5px; }
+  .wordmark { font-size: 24px; display: inline-flex; align-items: center; min-height: 44px; }
+  .top-search { display: none; }
+  .search-toggle { display: inline-flex; margin-left: auto; }
+  .top.top--home .search-toggle { display: none; }
+  .top nav { margin-left: 0; }
+  .top.top--home nav { margin-left: auto; }
+  .hero::before { inset: 22px 0 -4px; }
+  .hero { padding-top: 40px; }
+  .hero h1 { font-size: clamp(38px, 11vw, 52px); }
+  .hero .lede, .notfound .notfound-sub { font-size: 15.5px; }
+  .combo--hero { margin-top: 24px; }
+  .combo--hero .combo-field { height: 54px; }
+  .combo--hero .kbd, .notfound .kbd { display: none; }
+  .notfound .combo-field { height: 48px; }
+  .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .mosaic li:nth-child(n+9) { display: none; }
+  .mosaic li:nth-child(n+5) .cover { opacity: .55; }
+  .shelf { padding: 32px 16px calc(28px + env(safe-area-inset-bottom)); }
+  .shelf-now .t { font-size: 19px; }
+  .about-page { padding: 0; display: block; }
+  .about { width: 100%; min-height: 100%; border: 0; padding: 28px 20px calc(40px + env(safe-area-inset-bottom)); }
+  .about h1 { font-size: 40px; }
+
+  /* the list is the album view; the Map button slides it away for the full map and back */
+  .album { width: 100%; border-right: 0; background: var(--room); }
+  .album.album--hidden { transform: translateX(-101%); visibility: hidden; transition: transform var(--dur) var(--out), visibility 0s linear var(--dur); }
+  .album-scroll { padding: 12px var(--gut) 110px; }
+  .album-close { display: none; }
+  .trail { margin-right: 0; }
+  nav.trail { height: 44px; }
+  .trail a { min-height: 44px; }
+  .seed { grid-template-columns: 92px minmax(0, 1fr); column-gap: 16px; grid-template-areas: "cover artist" "cover title" "actions actions" "tags tags"; grid-template-rows: 1fr auto auto auto; }
+  .seed > .cover { width: 92px !important; height: 92px !important; }
+  .seed-title { font-size: clamp(32px, 9vw, 40px); }
+  .seed-title.len-m { font-size: clamp(28px, 7.8vw, 34px); }
+  .seed-title.len-l { font-size: clamp(24px, 6.6vw, 28px); }
+  .seed-actions { margin-top: 6px; }
+  .seed-actions .btn { flex: 1; min-height: 44px; }
+  .icon-quiet { width: 44px; height: 44px; }
+  .rec-main { grid-template-columns: 16px 56px minmax(0, 1fr); gap: 12px; padding: 12px 52px 12px 2px; }
+  .rec .cover { width: 56px !important; height: 56px !important; }
+  .rec-title { white-space: normal; font-size: 22px; }
+  .rec-shared { white-space: normal; }
+  .rec-sp { right: 0; }
+  .strip { display: block; position: relative; height: 220px; margin: 22px calc(var(--gut) * -1) 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); background: var(--pane); }
+  .strip-canvas { position: absolute; left: 0; top: 0; width: 100%; height: calc(100% - 48px); cursor: pointer; display: block; }
+  .strip-open { position: absolute; left: 0; right: 0; bottom: 0; height: 48px; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--gut); border-top: 1px solid var(--rule); background: var(--float); font-weight: 500; font-size: 15px; }
+  .strip-open svg { width: 17px; height: 17px; color: var(--dust); }
+  .fab-map { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); z-index: 12; display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px;
+    background: var(--paper); color: var(--lamp-ink); font-weight: 600; font-size: 15px; border-radius: 24px; box-shadow: 0 10px 26px -8px rgba(0, 0, 0, .8); }
+  .fab-map[hidden] { display: none !important; }
+  .fab-map svg { width: 17px; height: 17px; }
+  .fab-map--on { top: calc(var(--hdr) + 12px); bottom: auto; right: 12px; background: var(--float); color: var(--paper); border: 1px solid var(--rule-2); box-shadow: none; border-radius: 2px; }
+
+  /* map mode and Explore: one compact similarity row across the bottom, zoom above it, sheets resting on it.
+     Bottom-anchored chrome keeps clear of the home indicator (viewport-fit=cover makes the insets real). */
+  .mode { left: 12px; right: 12px; top: auto; bottom: calc(10px + env(safe-area-inset-bottom)); width: auto; padding: 5px 5px 6px; text-align: center; }
+  .mode > .cap { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .mode-track { display: none; }
+  .mode-stops { gap: 4px; }
+  .mode-stops button, .mode-stops button:nth-child(n) { min-height: 44px; margin: 0; text-align: center; font-size: 14.5px; border: 1px solid transparent; border-radius: 2px; color: var(--dust); }
+  .mode-stops button[aria-checked="true"] { background: var(--room-4); border-color: var(--rule-3); color: var(--paper); font-weight: 600; }
+  .mode-stops button:focus-visible { outline: 2px solid var(--lamp); outline-offset: -2px; }
+  .mode-note { display: inline; margin: 0; padding: 0; border: 0; font-size: 11.5px; line-height: 1.3; color: var(--dust); white-space: nowrap; }
+  .map-zoom { right: 12px; bottom: calc(var(--sheet-cover, var(--slider-cover, 96px)) + 8px); transition: bottom .2s var(--out); }
+  .map-zoom button { width: 44px; height: 44px; }
+  /* beside an album the top row is "Explore this area" and List */
+  .map-explore { right: auto; left: 12px; top: 10px; min-height: 48px; padding: 0 16px 0 14px; font-size: 15px; font-weight: 500; border-color: var(--rule-2); box-shadow: none; }
+  .fab-map--on { top: calc(var(--hdr) + 10px); }
+  /* the Explore sheet: peek and full heights, a grabber, a close button; the zoom buttons stay above it */
+  .card { left: 12px; right: 12px; bottom: calc(var(--slider-cover, 96px) - 1px); width: auto; max-height: calc(100vh - var(--hdr) - var(--slider-cover, 96px) - var(--free-top, 60px) - 150px); overflow-y: auto; overscroll-behavior: contain; }
+  .card { grid-template-columns: 64px minmax(0, 1fr); padding: 22px 12px 12px; gap: 12px; }
+  .card > .cover { width: 64px !important; height: 64px !important; }
+  .card .t { font-size: 21px; padding-right: 36px; }
+  .card .btn { min-height: 44px; padding: 0 12px; font-size: 14px; }
+  .card .row { margin-top: 8px; }
+  .card .x, .plate .x { position: absolute; width: 44px; height: 44px; right: 2px; top: 2px; display: grid; place-items: center; color: var(--dust); }
+  .plate .x svg { width: 16px; height: 16px; }
+  .sheet-grab { display: flex; align-items: flex-start; justify-content: center; position: absolute; left: 50%; top: 0; width: 120px; height: 44px; margin-left: -60px; z-index: 1; touch-action: none; }
+  .sheet-grab i { display: block; width: 40px; height: 4px; margin: 8px 0 0; border-radius: 2px; background: var(--rule-3); }
+  .sheet-grab:focus-visible { outline: 2px solid var(--lamp); outline-offset: -4px; }
+  .card.is-peek .sheet-full { display: none; }
+  /* the name plate: what a first tap on an album shows; "Open" or a second tap opens it */
+  .plate { position: absolute; left: 12px; right: 12px; bottom: calc(var(--slider-cover, 96px) + 8px); display: grid; grid-template-columns: 48px minmax(0, 1fr) auto 36px; gap: 12px; align-items: center; padding: 8px; pointer-events: auto; border-color: var(--rule-2); }
+  .plate[hidden] { display: none; }
+  .plate .t { font-family: var(--serif); font-weight: 600; font-size: 19px; line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plate .a { font-size: 13.5px; color: var(--dust); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .plate .btn { min-height: 44px; min-width: 64px; padding: 0 16px; font-size: 14.5px; }
+  .plate .x { top: 50%; margin-top: -22px; }
+  .map-hint { display: none; }
+  .stress { top: auto; bottom: calc(var(--sheet-cover, 96px) + 8px); font-size: 10.5px; }
+  .proto { top: calc(var(--hdr) + 130px); }
+  .combo input, .search-sheet input { font-size: 16px; }   /* 16 px: iOS Safari does not zoom the page on focus */
+  .search-sheet { padding-bottom: env(safe-area-inset-bottom); padding-left: max(16px, env(safe-area-inset-left)); }
+  .toast { bottom: calc(28px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 899px) and (prefers-reduced-motion: reduce) { .album, .album.album--hidden { transition-property: none !important; } }
+
+/* --- chrome options (tokens in app.css): what a token cannot say --- */
+html[data-chrome="starlight"] .mode input[type=range]::-webkit-slider-thumb, html[data-chrome="plum"] .mode input[type=range]::-webkit-slider-thumb, html[data-chrome="ink"] .mode input[type=range]::-webkit-slider-thumb { border-color: var(--room-2); }
+html[data-chrome="starlight"] .about-page { background: rgba(12, 10, 8, .72); }
+html[data-chrome="starlight"] .notfound { background: rgba(12, 10, 8, .55); }
+html[data-chrome="ink"] .map-tip { background: #0d0f1a; }
+html[data-chrome="plum"] .map-tip { background: #19111c; }
+html[data-chrome="ink"] .about p { color: #d9d7dc; }
+html[data-chrome="plum"] .about p { color: #dcd2d2; }
+html[data-chrome="glass"] .about p { color: #e0dbd3; }
+/* glass: every panel blurs and dims the nebula behind it, so text keeps its contrast over the brightest gas */
+html[data-chrome="glass"] .top, html[data-chrome="glass"] .panel, html[data-chrome="glass"] .album, html[data-chrome="glass"] .map-zoom button, html[data-chrome="glass"] .map-tip, html[data-chrome="glass"] .about, html[data-chrome="glass"] .combo--hero .combo-field {
+  -webkit-backdrop-filter: blur(22px) saturate(1.2) brightness(.58); backdrop-filter: blur(22px) saturate(1.2) brightness(.58); }
+html[data-chrome="glass"] .top.top--home { -webkit-backdrop-filter: none; backdrop-filter: none; }
+html[data-chrome="glass"] .map-tip { background: var(--float); }
+html[data-chrome="glass"] .about { background: rgba(8, 7, 11, .66); }
+html[data-chrome="glass"] .about-page { background: rgba(5, 4, 8, .3); }
+html[data-chrome="glass"] .combo--hero .combo-field { background: rgba(10, 9, 14, .5); }
+html[data-chrome="glass"] .combo-pop { background: #0e0d13; }
+@media (max-width: 899px) { html[data-chrome="glass"] .album { background: var(--room); } }
+
+/* --- region names on/off, built by namesToggle() in app.js. Default b: an icon button 8 px above the zoom stack
+   (toggle=a|c are the other options, toggle=0 none). Off: dimmed letters cut along a thin slash. --- */
+#names-toggle .tg-off, #names-toggle[aria-pressed="false"] .tg-on { display: none; }
+#names-toggle[aria-pressed="false"] .tg-off { display: inline; }
+#names-toggle .tg-dim { opacity: .42; }
+#names-toggle .tg-slash { stroke-width: 1.2; opacity: .95; }
+html[data-toggle="b"] #names-toggle { margin-bottom: 8px; }
+html[data-toggle="b"] #zoom-in, html[data-toggle="c"] #zoom-in { border-top: 1px solid var(--rule); }
+html[data-toggle="c"] #names-toggle { position: absolute; right: 100%; bottom: 0; width: auto; padding: 0 12px 0 14px; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none;
+  font: 400 10.5px/1 "Tenor Sans", var(--sans, sans-serif); letter-spacing: .26em; text-transform: uppercase; color: var(--paper); }
+html[data-toggle="c"] #names-toggle span { position: relative; display: block; padding-left: .26em; opacity: .8; transition: opacity .15s var(--out);
+  text-shadow: 0 0 3px rgba(4, 4, 8, .9), 0 0 8px rgba(4, 4, 8, .8), 0 0 16px rgba(4, 4, 8, .6); }
+html[data-toggle="c"] #names-toggle span::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: currentColor; opacity: 0; }
+html[data-toggle="c"] #names-toggle:hover span { opacity: 1; }
+html[data-toggle="c"] #names-toggle[aria-pressed="false"] span { opacity: .4; }
+html[data-toggle="c"] #names-toggle[aria-pressed="false"]:hover span { opacity: .6; }
+html[data-toggle="c"] #names-toggle[aria-pressed="false"] span::after { opacity: 1; }
+html[data-toggle="c"] #names-toggle:focus-visible { outline-offset: -6px; }
+
+/* --- twinkle (src/twinkle.js): a layer over the star canvas and under the names; only opacity and transform animate --- */
+#twinkle { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+#map[data-view="about"] #twinkle, #map[data-view="notfound"] #twinkle { display: none; }
+.tw { position: absolute; left: 0; top: 0; display: block; }
+.tw b { position: relative; display: block; width: 100%; height: 100%; border-radius: 50%; opacity: 0; will-change: opacity, transform; animation: tw-glint 1.5s ease-in-out both; }
+/* the two brightest star classes: a thin four-point flare, --fl long from tip to tip */
+.tw b.tw-flare::before, .tw b.tw-flare::after { content: ""; position: absolute; left: 50%; top: 50%; width: var(--fl, 40px); height: 1px; margin: -.5px 0 0 calc(var(--fl, 40px) / -2); background: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, .9) 50%, rgba(255, 255, 255, 0)); }
+.tw b.tw-flare::after { transform: rotate(90deg); }
+.tw b.tw-hold { animation: none; opacity: var(--peak, 1); }                      /* glints=<n>: frozen at its peak for a screenshot */
+.tw b.tw-ring { animation: none; opacity: 1; border: 1px solid #f0f; }             /* glints=<n>: a debug ring, to check the position */
+@keyframes tw-glint { 0% { opacity: 0; transform: scale(.4); } 40% { opacity: var(--peak, 1); transform: scale(1); } 58% { opacity: var(--peak, 1); transform: scale(1); } 100% { opacity: 0; transform: scale(.6); } }
+@media (prefers-reduced-motion: reduce) { #twinkle { display: none; } }
+
+/* --- header=below: as the site is today, the map starts under the header, which has nothing behind it --- */
+html[data-header="below"]:not([data-route="home"]) .map-canvas, html[data-header="below"]:not([data-route="home"]) #labels, html[data-header="below"]:not([data-route="home"]) #twinkle { clip-path: inset(var(--hdr) 0 0 0); }
+html[data-header="below"] .top:not(.top--home) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+
+/* --- grain=1: the site's film grain (frontcreck/src/styles/shell.css .grain), with a neutral tint in place of the warm one --- */
+.grain {
+  position: fixed; inset: 0; z-index: 150; pointer-events: none; opacity: .035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- phoneglass=0: on the phone layout the header, slider row, zoom buttons and map pill are near-solid, with no blur --- */
+@media (max-width: 899px) {
+  html[data-phoneglass="0"] .top:not(.top--home), html[data-phoneglass="0"] .panel, html[data-phoneglass="0"] .map-zoom button, html[data-phoneglass="0"] .fab-map--on, html[data-phoneglass="0"] .strip-open {
+    background: rgba(10, 9, 14, .92); -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
