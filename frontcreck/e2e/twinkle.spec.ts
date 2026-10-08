@@ -112,12 +112,35 @@ test('a glint sits on an album star, is two nodes, and takes no pointer events',
 test('a pan clears the glints at once and none is made while the map moves', async ({ page, isMobile }) => {
   test.skip(isMobile, 'mouse drag');
   await openAtRest(page);
-  const vp = page.viewportSize()!;
-  await page.mouse.move(vp.width / 2, vp.height / 2);
+  // The pointer rests on bare sky: no glint is made while an album is hovered, and with 10,467 albums the middle
+  // of the opening view is on one. The point of the canvas furthest from every album, away from the edges: 27 px
+  // from the nearest, where the pointer finds an album within 14 px (state/hitTest.ts MOUSE_HIT_RADIUS_CSS_PX).
+  // The drag below carries the map with the pointer, so the pointer is over the same bare sky when it ends.
+  const sky = await page.evaluate(() => {
+    const api = window.__rmr!.map!;
+    const pts: { x: number; y: number }[] = [];
+    for (let id = 0; ; id++) {
+      const p = api.screenPoint(id);
+      if (!p) break;
+      pts.push(p);
+    }
+    let best = { x: 0, y: 0, d: -1 };
+    for (let y = 200; y <= innerHeight - 200; y += 10) {
+      for (let x = 400; x <= innerWidth - 400; x += 10) {
+        if (!document.elementFromPoint(x, y)?.classList.contains('map-canvas')) continue;
+        let d = Infinity;
+        for (const p of pts) d = Math.min(d, Math.hypot(p.x - x, p.y - y));
+        if (d > best.d) best = { x, y, d };
+      }
+    }
+    return best;
+  });
+  expect(sky.d, 'px from the resting pointer to the nearest album').toBeGreaterThan(20);
+  await page.mouse.move(sky.x, sky.y);
   // A glint that has more than a second left to play: if the pan did not clear it, it would still be there.
   const cleared0 = await freshGlint(page);
   await page.mouse.down();
-  await page.mouse.move(vp.width / 2 + 30, vp.height / 2 + 10, { steps: 3 });
+  await page.mouse.move(sky.x + 30, sky.y + 10, { steps: 3 });
   // Two frames on (the pan's own), read in one call with no retry: the layer is empty because it was cleared,
   // not because the glint played out.
   const at = await page.evaluate(async () => {
@@ -128,7 +151,7 @@ test('a pan clears the glints at once and none is made while the map moves', asy
   const during = (await stats(page)).spawned;
   // Keep panning for 4 s: longer than the longest wait between two glints.
   for (let i = 0; i < 40; i++) {
-    await page.mouse.move(vp.width / 2 + 30 + (i % 2 ? 40 : -40), vp.height / 2 + 10 + (i % 3) * 8, { steps: 2 });
+    await page.mouse.move(sky.x + 30 + (i % 2 ? 40 : -40), sky.y + 10 + (i % 3) * 8, { steps: 2 });
     await page.waitForTimeout(100);
   }
   expect((await stats(page)).spawned).toBe(during);

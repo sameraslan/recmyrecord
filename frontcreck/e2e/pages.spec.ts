@@ -642,7 +642,12 @@ test('Home shows the nebula nearly as bright as the map does: only the veil dims
     window.__rmrGasLite = 'off';
     window.__rmrOpen = 'whole';
   });
-  /** Mean luma (0 to 255) of each 40 px cell of the screen. */
+  /** The gas in each 40 px cell of the screen: the lower quartile of the cell's luma (0 to 255), which is the
+   * nebula between the stars. The stars are drawn fainter on Home than on the map (canvas/AlbumField.tsx), and on
+   * the map of 10,467 albums the brightest cells of the whole map hold 100 to 240 of them each (136, 107 and 242
+   * a cell at the three sizes), so a cell's mean is as much stars as gas: the means read 0.983, 0.988 and 0.966
+   * without the veil, the lower quartiles 0.997, 0.998 and 0.989 (on 4,081 albums the means read 0.996, 0.998
+   * and 0.991). */
   const cells = async (): Promise<number[]> => {
     const png = (await page.screenshot()).toString('base64');
     return page.evaluate(async (data) => {
@@ -658,9 +663,10 @@ test('Home shows the nebula nearly as bright as the map does: only the veil dims
       for (let y = 0; y + 40 <= img.height; y += 40) {
         for (let x = 0; x + 40 <= img.width; x += 40) {
           const d = ctx.getImageData(x, y, 40, 40).data;
-          let sum = 0;
-          for (let i = 0; i < d.length; i += 4) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-          out.push(sum / 1600);
+          const luma: number[] = [];
+          for (let i = 0; i < d.length; i += 4) luma.push(0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]);
+          luma.sort((a, b) => a - b);
+          out.push(luma[luma.length / 4]);
         }
       }
       return out;
@@ -704,17 +710,18 @@ test('Home shows the nebula nearly as bright as the map does: only the veil dims
     console.log(`nebula on Home against the map at ${size.width} x ${size.height}: ${mean(onHome).toFixed(1)} / ${mean(onMap).toFixed(1)} = ${(mean(onHome) / mean(onMap)).toFixed(3)}`);
     expect(mean(onMap), 'the compared cells are gas').toBeGreaterThan(40);
     // Only the veil is over these cells on Home: a tenth of near black (styles/map.css .veil, pinned in
-    // styles/glass.test.ts), so the nebula at full strength reads 0.90 of the map's. Measured: 0.900 at
-    // 1440 x 900 (174.0 against 193.4). With the gas at 0.6 of its strength (the dimmed backdrop this replaced)
-    // Home's cells were 126.8 there, which is 0.66. The bound is the veil less 0.03 for rounding and the stars,
-    // which are dealt afresh on each load. (While the map had region names their dark halos lay on these cells
+    // styles/glass.test.ts), so the nebula at full strength reads 0.90 of the map's. Measured: 0.902, 0.902 and
+    // 0.896 at the three sizes (as cell means on 4,081 albums: 0.900 at 1440 x 900, 174.0 against 193.4). With
+    // the gas at 0.6 of its strength (the dimmed backdrop this replaced) Home's cells were 126.8 there, which is
+    // 0.66. The bound is the veil less 0.03 for rounding and the stars, which are dealt afresh on each load. (While the map had region names their dark halos lay on these cells
     // of the map and not of Home, which read as 0.989; the bound was 0.9 then.)
     // Two-sided: above the veil's 0.90 by as much would mean the veil had gone or thinned.
     expect(mean(onHome) / mean(onMap), `${size.width} x ${size.height}`).toBeGreaterThanOrEqual(0.87);
     expect(mean(onHome) / mean(onMap), `${size.width} x ${size.height}`).toBeLessThanOrEqual(0.93);
     // Without the veil the same cells are the gas itself, which must be at the map's strength. This pins the gas
     // apart from the veil: a gas dimmed by a tenth under a missing veil would pass the bounds above.
-    // Measured 0.996, 0.998 and 0.991 at the three sizes (the stars are fainter on Home, hence not quite 1).
+    // Measured 0.997, 0.998 and 0.989 at the three sizes (the fainter stars of Home still reach a little into
+    // the lower quartile, hence not quite 1).
     await page.addStyleTag({ content: '.map-pane .veil { visibility: hidden !important; }' });
     await expect(page.locator('.map-pane .veil')).toBeHidden();
     const bare = await cells();

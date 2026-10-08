@@ -377,11 +377,21 @@ export async function glRenderer(page: Page): Promise<string> {
  * screenshot with `hide` hidden: the camera is clamped to the cloud (state/bounds.ts), so a pan can stop short,
  * and the brightness found before the pan would then describe gas that never arrived. Throws when less than 0.8 of
  * the brightness found has arrived; assert on the return value that it is gas at all.
+ *
+ * `hold` is for the map itself (/map), where the idle camera is eased back half a second after a pan that left
+ * most of the cloud out of view (canvas/CameraBounds.tsx). On the map of 10,467 albums the brightest gas is far
+ * enough from the middle for that, so the gas found was sliding away again while it was measured (0.898 found,
+ * 0.457 arrived). With `hold` the mouse button goes down on the map before anything is read and stays down: a
+ * drag that is held, during which the camera is the visitor's. (A zero pan every 150 ms, which the callers used
+ * before, does not hold it: a screenshot read in the page keeps the page busy for longer than the half second, the
+ * timer is late and the camera has moved by the next frame.) The caller ends it with `releaseMap` once it has
+ * measured; until then further calls keep the same press.
  */
 export async function panBrightestGasUnder(
   page: Page,
   target: string | { x: number; y: number; width: number; height: number },
   hide = '.map-ui, header.top',
+  opts: { hold?: boolean } = {},
 ): Promise<number> {
   const selector = typeof target === 'string' ? target : `a ${target.width} x ${target.height} px rectangle`;
   /** A screenshot without `hide`, and in the page: the words' rectangle and what `pick` makes of the pixels. */
@@ -435,6 +445,7 @@ export async function panBrightestGasUnder(
       [png, target, mode] as const,
     );
   };
+  if (opts.hold) await holdMap(page, target);
   const move = await look('find');
   // Already there (less than a pixel to go): nothing would draw, and waiting for a frame would time out.
   if (Math.abs(move.dx) >= 1 || Math.abs(move.dy) >= 1) {
@@ -446,4 +457,45 @@ export async function panBrightestGasUnder(
   // A pan that stopped short is an error here, not a number for the caller to interpret.
   if (under < 0.8 * move.m) throw new Error(`panBrightestGasUnder: the pan stopped short under ${selector}: gas of luminance ${move.m.toFixed(3)} was found, ${under.toFixed(3)} arrived`);
   return under;
+}
+
+/** Where the mouse button is held down on each page's map (holdMap). */
+const heldAt = new WeakMap<Page, { x: number; y: number }>();
+
+/** Presses the mouse on the map and keeps it down, at the point of the bare canvas furthest from `target` (so a
+ * hover mark under the pointer is nowhere near what is measured). Nothing if this page's map is held already. */
+async function holdMap(page: Page, target: string | { x: number; y: number; width: number; height: number }): Promise<void> {
+  if (heldAt.has(page)) return;
+  const at = await page.evaluate((where) => {
+    let t: { x: number; y: number; width: number; height: number };
+    if (typeof where === 'string') t = document.querySelector(where)!.getBoundingClientRect();
+    else t = where;
+    const cx = t.x + t.width / 2;
+    const cy = t.y + t.height / 2;
+    let best: { x: number; y: number; d: number } | null = null;
+    for (let y = 100; y <= innerHeight - 100; y += 50) {
+      for (let x = 100; x <= innerWidth - 100; x += 50) {
+        if (!document.elementFromPoint(x, y)?.classList.contains('map-canvas')) continue;
+        const d = Math.hypot(x - cx, y - cy);
+        if (!best || d > best.d) best = { x, y, d };
+      }
+    }
+    return best;
+  }, target);
+  if (!at) throw new Error('holdMap: no bare canvas to press on');
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  heldAt.set(page, at);
+}
+
+/** Ends the hold `panBrightestGasUnder` began with `hold`: the idle camera is free again. The pointer moves 8 px
+ * before the button goes up, so the release is the end of a small drag and not a click on an album, and waits a
+ * moment first, so it flings nothing. */
+export async function releaseMap(page: Page): Promise<void> {
+  const at = heldAt.get(page);
+  if (!at) return;
+  heldAt.delete(page);
+  await page.mouse.move(at.x + 8, at.y, { steps: 2 });
+  await page.waitForTimeout(150);
+  await page.mouse.up();
 }

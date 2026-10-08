@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
-import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, tabTo, twinkleOff, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
+import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, releaseMap, tabTo, twinkleOff, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
 
 const GLASS = 'blur(22px) saturate(1.2) brightness(0.58)';
 /** Solid is fully solid; the browser reports rgba(10, 9, 14, 1) as rgb(10, 9, 14). */
@@ -188,16 +188,19 @@ test.describe('the hint band and the hover label', () => {
     await waitForCameraIdle(page);
     await waitForAnimations(page);
     await expect(page.locator('.map-hint')).toBeVisible();
-    // A star in the bottom 60 px of the map, on the canvas itself (not under a panel or the zoom buttons).
+    // A star in the bottom 60 px of the map, on the canvas itself (not under a panel or the zoom buttons): the
+    // lowest one, since the label stands above its star and only a star low in the band puts the label in it.
     const star = await page.evaluate(() => {
       const api = window.__rmr!.map!;
       const bottom = document.querySelector('canvas.map-canvas')!.getBoundingClientRect().bottom;
-      for (let id = 0; id < 4100; id++) {
+      let low: { x: number; y: number } | null = null;
+      for (let id = 0; ; id++) {
         const p = api.screenPoint(id);
-        if (!p || p.y < bottom - 60 || p.y > bottom - 12 || p.x < 320 || p.x > innerWidth - 320) continue;
-        if (document.elementFromPoint(p.x, p.y)?.classList.contains('map-canvas')) return p;
+        if (!p) break;
+        if (p.y < bottom - 60 || p.y > bottom - 12 || p.x < 320 || p.x > innerWidth - 320) continue;
+        if ((!low || p.y > low.y) && document.elementFromPoint(p.x, p.y)?.classList.contains('map-canvas')) low = p;
       }
-      return null;
+      return low;
     });
     expect(star, 'an album in the bottom 60 px of the map').not.toBeNull();
     await page.mouse.move(star!.x, star!.y);
@@ -284,17 +287,17 @@ test('header text keeps 4.5:1 with the brightest gas on screen behind the bar', 
     : ['.wordmark', '.top nav .navbtn[aria-current="page"]', '.top nav .navbtn:not([aria-current])'];
   const results: Array<{ selector: string; ratio: number; gas: number }> = [];
   for (const selector of selectors) {
-    // The brightest gas on screen, found with the header hidden, slid behind this item's words.
-    const gas = await panBrightestGasUnder(page, selector);
-    // A zero pan every 150 ms counts as the visitor's hand on the map, which keeps the idle recentring away while
-    // the screenshot is taken with much of the cloud off screen.
-    await page.evaluate(() => {
-      (window as unknown as { __hold: number }).__hold = window.setInterval(() => window.__rmr!.map!.panBy(0, 0), 150);
-    });
+    // The brightest gas on screen, found with the header hidden, slid behind this item's words and held there
+    // (the visitor's hand on the map: it keeps the idle recentring away while the gas is read and the screenshot
+    // is taken with much of the cloud off screen).
+    const gas = await panBrightestGasUnder(page, selector, undefined, { hold: true });
     const [r] = await contrastOverBackdrop(page, 'header.top', [selector]);
-    await page.evaluate(() => window.clearInterval((window as unknown as { __hold: number }).__hold));
+    // Still there when the contrast was read: the gas behind the words now is the gas that was reported.
+    const after = await gasBehind(page, selector, '.map-ui, header.top');
+    expect(after, `the gas stayed behind ${selector} while its contrast was read`).toBeCloseTo(gas, 1);
     results.push({ ...r, gas });
   }
+  await releaseMap(page);
   console.log(`header over the brightest gas: ${results.map((r) => `${r.selector} ${r.ratio.toFixed(2)} (gas ${r.gas.toFixed(2)})`).join(', ')}`);
   for (const r of results) {
     // Cream gas, not sky: otherwise this measures nothing.
@@ -506,20 +509,14 @@ test('the keyboard focus ring of the controls that stand on the map reads on the
   await page.addInitScript(() => {
     window.__rmrGasLite = 'off';
   });
-  const hold = () =>
-    page.evaluate(() => {
-      (window as unknown as { __hold: number }).__hold = window.setInterval(() => window.__rmr!.map!.panBy(0, 0), 150);
-    });
-  const release = () => page.evaluate(() => window.clearInterval((window as unknown as { __hold: number }).__hold));
   /** Slides the brightest gas under `selector` (or, with `white`, puts white in place of the map), focuses it by
    * keyboard (so :focus-visible holds) and reads its ring. */
   const measure = async (selector: string, white = false) => {
     const control = page.locator(selector);
     await expect(control).toBeVisible();
     if (white) await page.addStyleTag({ content: '.map-host { visibility: hidden !important; } .map-pane { background: #fff !important; }' });
-    else await panBrightestGasUnder(page, selector);
-    // A zero pan every 150 ms counts as the visitor's hand on the map and keeps the idle recentring away.
-    await hold();
+    // Held there: the visitor's hand on the map keeps the idle recentring away (helpers.ts panBrightestGasUnder).
+    else await panBrightestGasUnder(page, selector, undefined, { hold: true });
     const before = (await control.boundingBox())!;
     await tabTo(page, (el, sel) => el.matches(sel), 80, selector);
     await expect(control).toBeFocused();
@@ -539,7 +536,7 @@ test('the keyboard focus ring of the controls that stand on the map reads on the
     // The same points with the controls and the header out of the picture: the gas the casing lies on.
     const bare = await rgbAt(page, samples, '.map-ui, header.top');
     await expect(control).toBeFocused();
-    await release();
+    await releaseMap(page);
     return [0, 2].map((i) => ({ selector, side: i ? 'right' : 'left', ring: rgb[i], casing: rgb[i + 1], gas: bare[i + 1] }));
   };
   await page.goto('/map');
