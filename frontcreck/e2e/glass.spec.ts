@@ -1,8 +1,21 @@
 import { expect, test, type Page } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
+import '../scripts/theme/bake-core.js';
 import { act, contrastOverBackdrop, mapFrames, panBrightestGasUnder, releaseMap, tabTo, twinkleOff, waitForAnimations, waitForCameraIdle, waitForGasSharpSettled, waitForMap } from './helpers';
 
 const GLASS = 'blur(22px) saturate(1.2) brightness(0.58)';
+
+/** "Bright gas, not sky", for the two places where the gas the test can reach is what the bake's cap left of the
+ * brightest gas (Home's wordmark over a moved map, the casing of a zoom button's focus ring). The other tests in
+ * this file keep the plain 0.4: they read 0.65 or more.
+ * The floor was 0.4 when the bake could reach white, relative luminance 1. Since 2026-10-08 the bake holds the
+ * largest channel of the gas under GAS.PEAK (bake-core.js capPeak; 0.8 of 1, 204 of 255, and at most 212 in the
+ * lossy images, theme.data.test.ts), so the brightest gas it can produce is a grey of that level: luminance 0.604.
+ * The floor stays the same share, 0.4, of the brightest gas there can be: 0.4 x 0.604 = 0.242. Sky is about 0.003.
+ * Measured with the cap, software renderer, desktop: 0.39 to 0.40 at both places (0.52, and 0.55 to 0.79, before). */
+const GAS_PEAK: number = (globalThis as unknown as { RMR_THEME: { GAS: { PEAK: number } } }).RMR_THEME.GAS.PEAK;
+const BRIGHT_SHARE = 0.4;
+const BRIGHT_GAS_UNDER_CAP = BRIGHT_SHARE * (GAS_PEAK <= 0.04045 ? GAS_PEAK / 12.92 : ((GAS_PEAK + 0.055) / 1.055) ** 2.4);
 /** Solid is fully solid; the browser reports rgba(10, 9, 14, 1) as rgb(10, 9, 14). */
 const SOLID = 'rgb(10, 9, 14)';
 /** The album whose accent has the lowest contrast on the page colour in the catalog of 10,467 (#d84b4c, 4.84:1). */
@@ -375,8 +388,8 @@ test('on Home the header text keeps 4.5:1 over the brightest gas a moved map can
   }
   console.log(`Home header over the brightest gas: ${results.map((r) => `${r.selector} ${r.ratio.toFixed(2)} (gas ${r.gas.toFixed(2)})`).join(', ')}`);
   for (const r of results) {
-    // Bright gas, not sky: otherwise this measures nothing.
-    expect(r.gas, `mean luminance of the gas behind ${r.selector}`).toBeGreaterThan(0.4);
+    // Bright gas, not sky: otherwise this measures nothing. A share of the capped bake's peak (BRIGHT_GAS_UNDER_CAP).
+    expect(r.gas, `mean luminance of the gas behind ${r.selector}`).toBeGreaterThan(BRIGHT_GAS_UNDER_CAP);
     // The rule is 4.5:1. The owner's ruling asks for more on Home: the text clearly apart from the gas behind it,
     // between the first scrim (5.96 for the two links here, 9.5 for the wordmark) and the glass bar of the other
     // pages (about 7.7 to 9.4 for the links on a GPU). So the weakest item, a link in the dust colour, holds 6.6.
@@ -563,7 +576,7 @@ test('the keyboard focus ring of the controls that stand on the map reads on the
   console.log(`focus rings over the brightest gas (white for .map-explore): ${rows.map((q) => `${q.selector} ${q.side} ring/casing ${over(q.ring, q.casing).toFixed(2)} gas/casing ${over(q.gas, q.casing).toFixed(2)} (gas ${lumOf(q.gas).toFixed(2)})`).join(', ')}`);
   for (const q of rows) {
     const name = `${q.selector}, ${q.side}`;
-    expect(lumOf(q.gas), `bright gas (or white) under the casing of ${name}`).toBeGreaterThan(BRIGHT_GAS);
+    expect(lumOf(q.gas), `bright gas (or white) under the casing of ${name}`).toBeGreaterThan(BRIGHT_GAS_UNDER_CAP);
     expect(offLamp(q.ring), `ring colour of ${name}`).toBeLessThanOrEqual(12);
     expect(over(q.ring, q.casing), `the focus ring against its casing, ${name}`).toBeGreaterThanOrEqual(3);
     expect(over(q.gas, q.casing), `the gas against the casing, ${name}`).toBeGreaterThanOrEqual(3);
