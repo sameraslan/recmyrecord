@@ -5,7 +5,9 @@
  * or a visitor could draw an old image into a new rectangle. Images of an earlier bake are deleted.
  * One headless Chromium on software WebGL does the shading, so the output is the same on every machine.
  * Inputs: data-pipeline/theme/weights.json and public/data/{albums,positions}.json. It refuses to run when the
- * weights were made for another album list. Previews for a human go to test-results/theme/. */
+ * weights were made for another album list. Previews for a human go to test-results/theme/.
+ * Last, it writes src/lib/data/theme.generated.ts from the files it has just written (build-module.mjs): the
+ * images' hashes, where the opening views put the nebula, and a tiny stand-in picture of each stop. */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,6 +15,7 @@ import { chromium } from '@playwright/test';
 import sharp from 'sharp';
 import { assertNativeChrome } from '../check-native.mjs';
 import './bake-core.js';
+import { writeThemeModule } from './build-module.mjs';
 
 const T = globalThis.RMR_THEME;
 const HERE = import.meta.dirname;
@@ -206,6 +209,8 @@ async function main() {
     if (/^gas-.*\.webp$/.test(f) && !keep.has(f)) fs.rmSync(path.join(OUT, f));
   }
   console.log(`theme.json ${Math.round(fs.statSync(path.join(OUT, 'theme.json')).size / 1024)} KB (${theme.n} albums; positions ${theme.positionsHash})`);
+  const { pictures } = await writeThemeModule(DATA);
+  console.log(`theme.generated.ts: stand-in pictures of ${T.STOPS.map((s) => `${pictures[s].bytes.length}`).join(', ')} bytes`);
 }
 
 main().catch((e) => {
