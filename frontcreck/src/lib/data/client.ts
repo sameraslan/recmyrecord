@@ -1,4 +1,5 @@
 import { buildCatalog } from '@/lib/data/catalog';
+import { markOnce } from '@/lib/marks';
 import { STOP_IDS } from '@/lib/types';
 import type { AlbumRecord, Catalog, Positions, Vocab } from '@/lib/types';
 
@@ -95,6 +96,7 @@ export function load<T>(get: () => Resource<T>, fetcher: () => Promise<T>): Prom
       if (res !== get() || res.promise !== p) return;
       res.value = v;
       res.state = { status: 'ready', attempt: res.state.attempt };
+      if (catalog.value && positions.value) markOnce('rmr-data-end');
       emit();
     },
     () => {
@@ -123,11 +125,13 @@ function buildOrFail(albums: AlbumRecord[], vocab: Vocab): Catalog {
 export function loadCatalog(): Promise<Catalog> {
   return load(
     () => catalog,
-    () =>
-      Promise.all([
+    () => {
+      markOnce('rmr-data-start');
+      return Promise.all([
         fetchJson<AlbumRecord[]>('/data/albums.json', isArray),
         fetchJson<Vocab>('/data/vocab.json', isArray),
-      ]).then(([albums, vocab]) => buildOrFail(albums, vocab)),
+      ]).then(([albums, vocab]) => buildOrFail(albums, vocab));
+    },
   );
 }
 
@@ -138,7 +142,10 @@ export function loadCatalog(): Promise<Catalog> {
 export function loadPositions(): Promise<Positions> {
   return load(
     () => positions,
-    () => fetchJson<Positions>('/data/positions.json', isPositions),
+    () => {
+      markOnce('rmr-data-start');
+      return fetchJson<Positions>('/data/positions.json', isPositions);
+    },
   );
 }
 

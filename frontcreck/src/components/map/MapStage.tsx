@@ -6,6 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { toSummary } from '@/lib/data/catalog';
 import { themeFor } from '@/lib/data/theme';
 import { useCatalog, usePositions, useThemeLoad } from '@/lib/data/useData';
+import { markOnce } from '@/lib/marks';
 import { HEADER_NARROW_PX, HEADER_PX, useIsNarrow } from '@/lib/media';
 import { useAppStore } from '@/lib/store';
 import type { StopId } from '@/lib/types';
@@ -21,7 +22,7 @@ import { ZoomControls } from './overlays/ZoomControls';
 import { isWebGLAvailable, warmUpWebGL } from './state/webgl';
 import type { MapApi, MapCallbacks, MapInput, MapPadding } from './types';
 
-const MusicMap = dynamic(() => import('./MusicMap'), { ssr: false, loading: () => null });
+const MusicMap = dynamic(() => (markOnce('rmr-chunk-start'), import('./MusicMap')), { ssr: false, loading: () => null });
 
 /** Space kept between framed albums and the top of the phone slider panel. */
 const PHONE_SLIDER_MARGIN_PX = 4;

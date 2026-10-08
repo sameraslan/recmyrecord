@@ -5,6 +5,7 @@ import { addAfterEffect, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
 import type { ThemeData } from "@/lib/data/theme";
+import { markOnce } from "@/lib/marks";
 import { easeOutCubic, prefersReducedMotion } from "@/lib/media";
 import { STOP_IDS, type StopId } from "@/lib/types";
 import { STOP_T, type MapData } from "../data";
@@ -89,6 +90,7 @@ function loadGas(url: string): Promise<LoadedGas> {
         texture.magFilter = THREE.LinearFilter;
         texture.generateMipmaps = true; // the glow and the deep zoom blur read the mips
         texture.needsUpdate = true;
+        markOnce("rmr-gas-decoded");
         resolve({ texture, bitmap });
       },
       undefined,
@@ -339,6 +341,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       fetching.add(stop);
       const mine = gen;
       const url = gasUrl(stop, theme.gas[stop].hash);
+      markOnce("rmr-gas-fetch");
       loadGas(url)
         .then((g) => {
           // (the context can be lost a moment before its event arrives)
@@ -930,7 +933,10 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     if (!pair) return;
     // When the nebula first showed, on the page clock. Written once; the perf script reports it. A stop that
     // shows plain sky for want of an image is not the nebula.
-    if (window.__rmr && window.__rmr.gasShownMs === undefined && !(empty.current.has(pair.a) && empty.current.has(pair.b))) window.__rmr.gasShownMs = performance.now();
+    if (window.__rmr && window.__rmr.gasShownMs === undefined && !(empty.current.has(pair.a) && empty.current.has(pair.b))) {
+      window.__rmr.gasShownMs = performance.now();
+      markOnce("rmr-gas-drawn");
+    }
     const u = material.uniforms;
     // The sharper image stands in for its stop's first image wherever that stop is bound, also as one end of a
     // morph, so nothing changes on screen when the slider starts to move.
