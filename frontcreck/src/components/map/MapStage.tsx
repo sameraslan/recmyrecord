@@ -15,6 +15,7 @@ import { useMapBoot } from './boot';
 import { buildMapData } from './data';
 import { DESKTOP_FIT_PADDING, DESKTOP_PADDING, PHONE_FIT_PADDING, PHONE_PADDING, PHONE_SLIDER_COVER_FALLBACK_PX, PHONE_SLIDER_MARGIN_PX } from './framing';
 import { ExploreHere } from './overlays/ExploreHere';
+import { GasPlaceholder } from './overlays/GasPlaceholder';
 import { MapCard } from './overlays/MapCard';
 import { MapHint } from './overlays/MapHint';
 import { NoWebGL } from './overlays/NoWebGL';
@@ -312,6 +313,7 @@ export function MapStage() {
       // The phone zoom controls sit above the measured slider panel (styles/map.css).
       style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
     >
+      <GasPlaceholder view={view} off={webgl === 'unavailable'} />
       <div className="map-host">
         {mapData ? (
           <MusicMap data={mapData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />

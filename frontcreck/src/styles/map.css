@@ -4,10 +4,33 @@
  * 60, in lib/media.ts: the two values of --hdr). */
 .map-pane { position: absolute; left: 0; right: 0; top: calc(-1 * var(--hdr)); bottom: 0; overflow: hidden; background: var(--color-pane); transition: opacity var(--dur) var(--out); }
 .map-host { position: absolute; inset: 0; }
+/* The stand-in nebula of the first paint (overlays/GasPlaceholder.tsx): under the canvas, which is see-through
+ * until the map draws. It takes no input and moves nothing. Its <svg> fills the area the map's opening view is
+ * fitted into, so the picture lands where the map will draw the nebula; the numbers come from the component, as
+ * custom properties (the map's own paddings). Percentages are of the pane. */
+.gas-ph { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: opacity .2s var(--out); }
+.gas-ph.is-leaving { opacity: 0; }
+.gas-ph svg { position: absolute; display: block; overflow: visible; }
+/* Home, About, 404: the Whole map, fitted below the header less the fit padding. */
+.gas-ph--fit svg { left: var(--l); top: calc(var(--hdr) + var(--t)); width: calc(100% - var(--l) - var(--r)); height: calc(100% - var(--hdr) - var(--t) - var(--b)); }
+/* /map: the Overview. The span fills the width less the side padding, up to the zoom's cap; its row is in the
+ * middle of what is below the header. */
+.gas-ph--over svg { --w: min(100% - 2 * var(--pad), var(--max)); left: calc(50% - var(--w) / 2); top: var(--hdr); width: var(--w); height: calc(100% - var(--hdr)); }
+/* An album page (the map frames that album, wherever it is), and any window too short for the fits above: no
+ * picture, a soft glow in the nebula's mean tone around the middle of the visible map. */
+.gas-ph--glow { background: radial-gradient(ellipse 62% 58% at 50% calc(50% + var(--hdr) / 2), rgb(var(--tone) / .5), rgb(var(--tone) / .22) 45%, rgb(var(--tone) / 0)); }
+@media (min-width: 900px) { .gas-ph--glow { left: var(--panel); } }
+@media (max-height: 480px) {
+  .gas-ph svg { display: none; }
+  .gas-ph--fit, .gas-ph--over { background: radial-gradient(ellipse 62% 58% at 50% calc(50% + var(--hdr) / 2), rgb(var(--tone) / .5), rgb(var(--tone) / .22) 45%, rgb(var(--tone) / 0)); }
+}
 .map-pane[data-view="home"] .map-host,
 .map-pane[data-view="about"] .map-host,
 .map-pane[data-view="other"] .map-host { pointer-events: none; }
-.map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+.map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; transition: opacity .2s var(--out); }
+/* Until the map has something to show (state/reveal.ts) the canvas is see-through over the stand-in; then it fades
+ * in once, opacity only (with reduced motion in one step: shell.css). */
+.map-canvas.is-veiled { opacity: 0; transition: none; }
 .map-canvas:active { cursor: grabbing; }
 /* The canvas runs under the header, so its focus ring is drawn on the host instead, 4 px inside the visible map
  * (the same place as the old outline), with a dark casing so it reads on bright gas. */
@@ -136,6 +159,9 @@
 @media (prefers-reduced-motion: reduce) { .tw-layer { display: none; } }
 
 @media (max-width: 899px) {
+  .gas-ph--fit svg { left: var(--nl); top: calc(var(--hdr) + var(--nt)); width: calc(100% - var(--nl) - var(--nr)); height: calc(100% - var(--hdr) - var(--nt) - var(--nb)); }
+  /* A phone opens closer (up to its own cap), and the row is in the middle of what is above the slider panel. */
+  .gas-ph--over svg { --w: min(max(100% - 2 * var(--pad), min(var(--closer) * (100% - 2 * var(--pad)), var(--nmax))), var(--max)); height: calc(100% - var(--hdr) - var(--cover) - env(safe-area-inset-bottom)); }
   .mode { left: 12px; right: 12px; top: auto; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; }
   /* 8 px above the slider panel: --slider-cover is its measured cover of the pane (MapStage), safe-area inset
    * included; the fallback is the panel's 12 px offset plus its 152.5 px height. */
