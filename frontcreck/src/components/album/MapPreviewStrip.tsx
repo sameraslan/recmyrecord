@@ -25,11 +25,52 @@ const LINE = 'rgba(255,255,255,.92)';
 /** Strip covers are smaller than the map's markers (64 / 46): the mockup's compact MapView sizes. */
 export const STRIP_SEED = 38;
 export const STRIP_REC = 28;
-/** Every album is one dot of this radius (CSS px) and this strength: the strip has no star sizes, so none can
- * follow order or rank. Specks, not a star chart: the gas is the picture and the covers are the subject. */
+/** A cover's dark casing, outside its frame (the map's markers have the same, map.css .mk::after): it keeps a pale
+ * cover apart from pale gas. */
+const COVER_CASING = 'rgba(6,6,10,.7)';
+/** A star is one dot of this radius (CSS px) and this strength: the strip has no star sizes, so none can follow
+ * order or rank. Specks, not a star chart: the gas is the picture and the covers are the subject. */
 export const STRIP_STAR_PX = 1;
 export const STRIP_STAR_ALPHA = 0.55;
-const STAR = rgba(STAR_WHITE, STRIP_STAR_ALPHA);
+/** The strip's window can hold thousands of albums (4,323 of 10,467 round In Rainbows), which at one dot each is a
+ * grey carpet over the gas. So the strip is cut into squares of STRIP_STAR_CELL px and each square draws at most
+ * STRIP_STAR_CELL_MAX of its albums: sparse specks at any density, and a thin part of the map is drawn whole. */
+export const STRIP_STAR_CELL = 32;
+export const STRIP_STAR_CELL_MAX = 5;
+/** The dots of a strip that left albums out are finer and quieter, down to this radius and strength as the share
+ * drawn goes to nothing. One size for every dot of a strip. */
+export const STRIP_STAR_FINE_PX = 0.7;
+export const STRIP_STAR_FINE_ALPHA = 0.42;
+/** Which albums of a crowded square are drawn: those with the lowest value of this, a fixed scramble of the album's
+ * number (Knuth's multiplicative hash, 0 to 1). The same albums on every draw, so a redraw (a cover that finished
+ * loading) changes no dot; and nothing about the album decides it, least of all its place in any list. */
+export const stripStarOrder = (id: number): number => (Math.imul(id + 1, 2654435761) >>> 0) / 4294967296;
+
+/** The dots of the strip: for the albums at flat [x0, y0, ...] screen points `at` (CSS px, only those in the window),
+ * the indexes into `ids` to draw, and the radius and strength of every dot. */
+export function stripStars(ids: ArrayLike<number>, at: ArrayLike<number>, n: number, w: number): { draw: number[]; px: number; alpha: number } {
+  const cols = Math.ceil((w + 8) / STRIP_STAR_CELL) + 1;
+  const M = STRIP_STAR_CELL_MAX;
+  // Per square: the (up to M) albums with the lowest order, highest first at slot 0.
+  const kept = new Map<number, number[]>();
+  for (let j = 0; j < n; j++) {
+    const cell = Math.floor((at[2 * j + 1] + 4) / STRIP_STAR_CELL) * cols + Math.floor((at[2 * j] + 4) / STRIP_STAR_CELL);
+    let list = kept.get(cell);
+    if (!list) kept.set(cell, (list = []));
+    if (list.length < M) list.push(j);
+    else {
+      // Replace the kept album with the highest order if this one's is lower.
+      let worst = 0;
+      for (let q = 1; q < M; q++) if (stripStarOrder(ids[list[q]]) > stripStarOrder(ids[list[worst]])) worst = q;
+      if (stripStarOrder(ids[j]) < stripStarOrder(ids[list[worst]])) list[worst] = j;
+    }
+  }
+  const draw: number[] = [];
+  for (const list of kept.values()) for (const j of list) draw.push(j);
+  draw.sort((a, b) => a - b);
+  const share = n ? draw.length / n : 1;
+  return { draw, px: STRIP_STAR_PX - (STRIP_STAR_PX - STRIP_STAR_FINE_PX) * (1 - share), alpha: STRIP_STAR_ALPHA - (STRIP_STAR_ALPHA - STRIP_STAR_FINE_ALPHA) * (1 - share) };
+}
 
 /** The gas of one slider stop, drawn under the strip's stars. */
 export interface StripGas {
@@ -162,9 +203,9 @@ function readyImage(url: string, onReady: () => void): HTMLImageElement | null {
   return null;
 }
 
-/** The compact map of the phone album list: the sky, the stop's gas when it has loaded, a star per album, cased
+/** The compact map of the phone album list: the sky, the stop's gas when it has loaded, the albums as stars, cased
  * lines to the closest albums and small covers (seed 38 px, recs 28 px, kept inside the canvas), the seed's
- * drawn last. Without `gas` everything else is still drawn. */
+ * drawn last. Where albums crowd, only some get a star (stripStars). Without `gas` everything else is still drawn. */
 export function drawStrip(
   ctx: CanvasRenderingContext2D,
   w: number,
@@ -208,15 +249,29 @@ export function drawStrip(
       ctx.globalCompositeOperation = 'source-over';
     }
   }
-  ctx.beginPath();
+  // The albums in the window, then the dots drawn for them (stripStars).
+  const inIds = new Int32Array(albums.length);
+  const inAt = new Float32Array(2 * albums.length);
+  let n = 0;
   for (let i = 0; i < albums.length; i++) {
     const x = sx(pos[2 * i]);
     const y = sy(pos[2 * i + 1]);
     if (x < -4 || y < -4 || x > w + 4 || y > h + 4) continue;
-    ctx.moveTo(x + STRIP_STAR_PX, y);
-    ctx.arc(x, y, STRIP_STAR_PX, 0, Math.PI * 2);
+    inIds[n] = i;
+    inAt[2 * n] = x;
+    inAt[2 * n + 1] = y;
+    n++;
   }
-  ctx.fillStyle = STAR;
+  const stars = stripStars(inIds, inAt, n, w);
+  ctx.beginPath();
+  for (const j of stars.draw) {
+    const x = inAt[2 * j];
+    const y = inAt[2 * j + 1];
+    ctx.moveTo(x + stars.px, y);
+    ctx.arc(x, y, stars.px, 0, Math.PI * 2);
+  }
+  // Rounded to a thousandth, so the colour reads as written (0.55 for a strip drawn whole).
+  ctx.fillStyle = rgba(STAR_WHITE, Math.round(stars.alpha * 1000) / 1000);
   ctx.fill();
   const placed = layoutMarkers(ids.map((id) => ({ id, x: sx(pos[2 * id]), y: sy(pos[2 * id + 1]) })), STRIP_SEED, STRIP_REC, {
     // 6 px: room for the seed's frame (5 px out).
@@ -257,6 +312,12 @@ export function drawStrip(
     else {
       ctx.fillStyle = TILE[a.k % 3];
       ctx.fillRect(x, y, s, s);
+    }
+    if (!it.seed) {
+      // The casing first, 1 px outside the frame; the seed's frame has its dark backing instead.
+      ctx.strokeStyle = COVER_CASING;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x - 1.5, y - 1.5, s + 3, s + 3);
     }
     ctx.strokeStyle = it.seed ? FRAME : FRAME_QUIET;
     ctx.lineWidth = it.seed ? 2 : 1;

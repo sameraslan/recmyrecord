@@ -53,6 +53,74 @@ test.describe('phone album', () => {
     await expect(page).toHaveURL(IR);
   });
 
+  test('the map strip draws sparse specks over the gas, never a carpet: at most 5 stars in any 32 px square', async ({ page }, info) => {
+    // Every draw of the strip, as the canvas was told it: the dots, and how long the draw took (the script, plus
+    // the painting where the canvas may be read back, which is until a cover from another site is drawn on it).
+    await page.addInitScript(() => {
+      type Draw = { at: number; arcs: number[]; ms: number; painted: boolean };
+      const w = window as unknown as { __strip: Draw[] };
+      w.__strip = [];
+      const P = CanvasRenderingContext2D.prototype;
+      const fillRect = P.fillRect;
+      const arc = P.arc;
+      P.fillRect = function (this: CanvasRenderingContext2D, x: number, y: number, ww: number, hh: number) {
+        // The sky fill starts a draw.
+        if (this.canvas.classList.contains('strip-canvas') && x === 0 && y === 0 && ww > 100) {
+          const t0 = performance.now();
+          const d: Draw = { at: t0, arcs: [], ms: -1, painted: false };
+          w.__strip.push(d);
+          queueMicrotask(() => {
+            try {
+              this.getImageData(0, 0, 1, 1);
+              d.painted = true;
+            } catch {
+              // a cover from another site is on the canvas: only the script is timed
+            }
+            d.ms = performance.now() - t0;
+          });
+        }
+        return fillRect.call(this, x, y, ww, hh);
+      };
+      P.arc = function (this: CanvasRenderingContext2D, x: number, y: number, r: number, a0: number, a1: number, ccw?: boolean) {
+        if (this.canvas.classList.contains('strip-canvas')) w.__strip.at(-1)?.arcs.push(x, y, r);
+        return arc.call(this, x, y, r, a0, a1, ccw);
+      };
+    });
+    await page.goto(IR);
+    const strip = page.getByRole('img', { name: COPY.map.preview });
+    await strip.scrollIntoViewIfNeeded();
+    await expect(strip).toBeVisible();
+    // Until the strip has drawn with its dots and then rested for a second (the gas and the covers have arrived).
+    await page.waitForFunction(() => {
+      const d = (window as unknown as { __strip: { at: number; arcs: number[] }[] }).__strip;
+      return d.length > 0 && d.at(-1)!.arcs.length > 0 && performance.now() - d.at(-1)!.at > 1000;
+    }, null, { timeout: 20_000 });
+    const draws = await page.evaluate(() => (window as unknown as { __strip: { arcs: number[]; ms: number; painted: boolean }[] }).__strip);
+    const box = (await strip.boundingBox())!;
+    // Not judged (a shared laptop): printed for the record.
+    const line = `strip draws: ${draws.map((d) => `${d.arcs.length / 3} stars in ${d.ms.toFixed(1)} ms${d.painted ? ' (painted)' : ' (script only)'}`).join('; ')}`;
+    console.log(line);
+    info.annotations.push({ type: 'strip', description: line });
+    for (const d of draws) {
+      const perSquare = new Map<string, number>();
+      const radii = new Set<number>();
+      for (let i = 0; i < d.arcs.length; i += 3) {
+        const key = `${Math.floor((d.arcs[i] + 4) / 32)},${Math.floor((d.arcs[i + 1] + 4) / 32)}`;
+        perSquare.set(key, (perSquare.get(key) ?? 0) + 1);
+        radii.add(d.arcs[i + 2]);
+      }
+      expect(Math.max(...perSquare.values()), 'stars in the fullest 32 px square').toBeLessThanOrEqual(5);
+      // In Rainbows sits in a crowd (over 4,000 albums in the strip's window): a few hundred fine dots of one size.
+      expect(d.arcs.length / 3).toBeGreaterThan(100);
+      expect(d.arcs.length / 3).toBeLessThanOrEqual(Math.ceil((box.width + 8) / 32 + 1) * Math.ceil((box.height + 8) / 32 + 1) * 5);
+      expect([...radii]).toHaveLength(1);
+      expect([...radii][0]).toBeLessThan(0.75);
+    }
+    // The same dots on every draw: a cover that arrives does not move a star.
+    for (const d of draws) expect(d.arcs).toEqual(draws[0].arcs);
+    await shot(page, info, 'album-strip');
+  });
+
   test('"Open in Spotify" and the link button sit above the mood tags, as in the approved picture, and the page reads in that order', async ({ page }) => {
     await page.goto('/album/the-stone-roses-the-stone-roses');
     const box = async (selector: string) => (await page.locator(selector).boundingBox())!;

@@ -15,12 +15,18 @@ import {
   STRIP_REC,
   STRIP_SEED,
   STRIP_STAR_ALPHA,
+  STRIP_STAR_CELL,
+  STRIP_STAR_CELL_MAX,
+  STRIP_STAR_FINE_ALPHA,
+  STRIP_STAR_FINE_PX,
   STRIP_STAR_PX,
   drawStrip,
   forgetStripGas,
   gasCopySize,
   loadStripGas,
   stripGasUrl,
+  stripStarOrder,
+  stripStars,
   webpSize,
 } from './MapPreviewStrip';
 
@@ -83,7 +89,15 @@ describe('drawStrip', () => {
     expect(sizes).toEqual(['390,172', '28,28', '28,28', '28,28', '48,48', '38,38']);
     // The covers are drawn last, the seed's after the others: nothing is drawn over a cover but its own frame.
     expect(calls[calls.length - 1]).toMatch(/^strokeRect\(/);
-    expect(count(calls, 'strokeRect(')).toBe(4);
+    // Four frames, and a dark casing round each of the three other covers (the seed has its backing): each casing
+    // is stroked just before its own cover's frame, 1 px outside it, so nothing but a cover's own frame and casing
+    // is drawn after the cover.
+    const strokes = calls.filter((c) => c.startsWith('strokeRect(')).map((c) => c.slice(11, -1).split(',').slice(2).join(','));
+    expect(strokes).toEqual(['31,31', '29,29', '31,31', '29,29', '31,31', '29,29', '46,46']);
+    expect(count(calls, 'strokeStyle=rgba(6,6,10,.7)')).toBe(3);
+    const casing = calls.indexOf('strokeStyle=rgba(6,6,10,.7)');
+    expect(calls.slice(casing, casing + 3).map((c) => c.split('(')[0])).toEqual(['strokeStyle=rgba', 'lineWidth=1', 'strokeRect']);
+    expect(calls[casing + 3]).toBe(`strokeStyle=rgba(${FRAME_RGB.join(',')},0.6)`);
   });
 
   it("draws the gas under the stars, placed by the stop's own rectangle in the strip's scale", () => {
@@ -148,6 +162,119 @@ describe('drawStrip', () => {
     // The tiles are drawn at those sizes: three of 28 px and the seed's of 38 px, last.
     const tiles = calls.filter((c) => /^fillRect\(-?\d+,-?\d+,(28,28|38,38)\)$/.test(c)).map((c) => c.split(',')[2]);
     expect(tiles).toEqual(['28', '28', '28', '38']);
+  });
+});
+
+describe('the strip’s stars where albums crowd', () => {
+  /** `n` points spread over a `w` by `h` window by a small seeded generator. */
+  const crowd = (n: number, w: number, h: number) => {
+    let a = 12345;
+    const rnd = () => ((a = (Math.imul(a, 1664525) + 1013904223) >>> 0) / 4294967296);
+    const at = new Float32Array(2 * n);
+    for (let i = 0; i < n; i++) {
+      at[2 * i] = rnd() * w;
+      at[2 * i + 1] = rnd() * h;
+    }
+    return at;
+  };
+  const cellOf = (x: number, y: number) => `${Math.floor((x + 4) / STRIP_STAR_CELL)},${Math.floor((y + 4) / STRIP_STAR_CELL)}`;
+  const perCell = (at: ArrayLike<number>, js: Iterable<number>) => {
+    const m = new Map<string, number>();
+    for (const j of js) m.set(cellOf(at[2 * j], at[2 * j + 1]), (m.get(cellOf(at[2 * j], at[2 * j + 1])) ?? 0) + 1);
+    return m;
+  };
+
+  it('draws at most 5 stars in any 32 px square, and every album of a square that holds 5 or fewer', () => {
+    expect([STRIP_STAR_CELL, STRIP_STAR_CELL_MAX]).toEqual([32, 5]);
+    const n = 4000;
+    const at = crowd(n, 390, 172);
+    // A thin corner as well: 3 albums alone in the square at the far right of a wider window.
+    const all = Float32Array.from([...at, 600, 10, 610, 20, 620, 30]);
+    const ids = Int32Array.from({ length: n + 3 }, (_, i) => i);
+    const stars = stripStars(ids, all, n + 3, 640);
+    const had = perCell(all, ids);
+    const drawn = perCell(all, stars.draw);
+    for (const [cell, k] of had) expect(drawn.get(cell), `square ${cell} of ${k} albums`).toBe(Math.min(k, 5));
+    expect(stars.draw.slice(-3)).toEqual([n, n + 1, n + 2]);
+    // 4,000 albums in 78 squares: a few hundred dots, not thousands.
+    expect(stars.draw.length).toBeLessThanOrEqual(5 * had.size);
+    expect(stars.draw.length).toBeLessThan(n / 8);
+  });
+
+  it('draws the same albums whatever order they come in, and none by its place in the list', () => {
+    const n = 3000;
+    const at = crowd(n, 390, 172);
+    const ids = Int32Array.from({ length: n }, (_, i) => i);
+    const first = stripStars(ids, at, n, 390).draw;
+    // The same albums at the same points, listed backwards.
+    const back = Int32Array.from(ids).reverse();
+    const atBack = new Float32Array(2 * n);
+    for (let j = 0; j < n; j++) {
+      atBack[2 * j] = at[2 * back[j]];
+      atBack[2 * j + 1] = at[2 * back[j] + 1];
+    }
+    const second = stripStars(back, atBack, n, 390).draw.map((j) => back[j]).sort((a, b) => a - b);
+    expect(second).toEqual(first);
+    // The order that decides is a scramble of the album's number: the first 1,000 albums are spread evenly over it
+    // (so the low numbers are not the ones kept), and a number always gives the same value.
+    const low = Array.from({ length: 1000 }, (_, i) => stripStarOrder(i));
+    expect(low.filter((v) => v < 0.5).length).toBeGreaterThan(450);
+    expect(low.filter((v) => v < 0.5).length).toBeLessThan(550);
+    expect(first.filter((j) => j < n / 2).length / first.length).toBeGreaterThan(0.4);
+    expect(first.filter((j) => j < n / 2).length / first.length).toBeLessThan(0.6);
+    expect(stripStarOrder(11)).toBe(stripStarOrder(11));
+  });
+
+  it('makes the dots finer and quieter by the share left out, one size for the whole strip; a strip drawn whole keeps 1 px and 0.55', () => {
+    expect([STRIP_STAR_FINE_PX, STRIP_STAR_FINE_ALPHA]).toEqual([0.7, 0.42]);
+    const whole = stripStars(Int32Array.from([0, 1, 2]), Float32Array.from([10, 10, 100, 40, 300, 90]), 3, 390);
+    expect([whole.draw, whole.px, whole.alpha]).toEqual([[0, 1, 2], 1, 0.55]);
+    const n = 4000;
+    const thinned = stripStars(Int32Array.from({ length: n }, (_, i) => i), crowd(n, 390, 172), n, 390);
+    const share = thinned.draw.length / n;
+    expect(thinned.px).toBeCloseTo(0.7 + 0.3 * share, 10);
+    expect(thinned.alpha).toBeCloseTo(0.42 + 0.13 * share, 10);
+    expect(thinned.px).toBeLessThan(0.75);
+    expect(stripStars(new Int32Array(0), new Float32Array(0), 0, 390)).toEqual({ draw: [], px: 1, alpha: 0.55 });
+  });
+
+  it('on the real map: round In Rainbows thousands of albums are in the window and a few hundred fine specks are drawn', () => {
+    const dir = path.join(process.cwd(), 'public/data');
+    // Without their cover ids: this is about the stars, and a tile needs no image.
+    const real = (JSON.parse(fs.readFileSync(path.join(dir, 'albums.json'), 'utf8')) as AlbumRecord[]).map((a) => ({ ...a, c: '' }));
+    const xy = (JSON.parse(fs.readFileSync(path.join(dir, 'positions.json'), 'utf8')) as Record<string, number[]>).balanced;
+    const recs = (JSON.parse(fs.readFileSync(path.join(dir, 'recs.json'), 'utf8')) as Record<string, number[][]>).balanced;
+    const seed = real.findIndex((a) => a.slug === 'in-rainbows-radiohead');
+    const focus = { seed, recs: recs[seed].slice(0, 5) };
+    // The window drawStrip frames: the same scale and centre, from the focus albums.
+    const xs = [seed, ...focus.recs].map((i) => xy[2 * i]);
+    const ys = [seed, ...focus.recs].map((i) => xy[2 * i + 1]);
+    const k = Math.min((390 - 60) / Math.max(Math.max(...xs) - Math.min(...xs), 0.3), (172 - 60) / Math.max(Math.max(...ys) - Math.min(...ys), 0.3));
+    const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+    const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+    let inWindow = 0;
+    for (let i = 0; i < real.length; i++) {
+      const x = 195 + (xy[2 * i] - cx) * k;
+      const y = 86 - (xy[2 * i + 1] - cy) * k;
+      if (x >= -4 && y >= -4 && x <= 394 && y <= 176) inWindow++;
+    }
+    expect(inWindow).toBeGreaterThan(3000);
+    const { ctx, calls } = fakeCtx();
+    drawStrip(ctx, 390, 172, real, xy, focus, null, vi.fn());
+    const arcs = calls.filter((c) => c.startsWith('arc('));
+    // 13 by 6 squares of 32 px cover the window and its 4 px margin.
+    expect(arcs.length).toBeLessThanOrEqual(13 * 6 * 5);
+    expect(arcs.length).toBeGreaterThan(150);
+    expect(arcs.length).toBeLessThan(inWindow / 10);
+    const radii = [...new Set(arcs.map((c) => c.split(',')[2]))];
+    expect(radii).toHaveLength(1);
+    expect(Number(radii[0])).toBeLessThan(0.75);
+    const fill = calls.find((c) => c.startsWith(`fillStyle=rgba(${STAR_WHITE.join(',')},`))!;
+    expect(Number(fill.slice(0, -1).split(',')[3])).toBeLessThan(0.45);
+    // Drawn again (a cover finished loading), the dots are the same.
+    const again = fakeCtx();
+    drawStrip(again.ctx, 390, 172, real, xy, focus, null, vi.fn());
+    expect(again.calls.filter((c) => c.startsWith('arc('))).toEqual(arcs);
   });
 });
 
