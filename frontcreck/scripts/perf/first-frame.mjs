@@ -5,8 +5,10 @@
  *
  * For Home and /map, at 1440 x 900 and at 390 x 844 (device pixel ratio 2, touch), with no throttling and on two
  * throttled connections, each `--runs` times (3) in a fresh browser with an empty cache, it records:
- *   - the page's own marks (src/lib/marks.ts), first paint, first and largest contentful paint, search usable,
- *     long tasks, and every request for a data file, a nebula image or the map's code;
+ *   - the page's own marks (src/lib/marks.ts), first paint, first and largest contentful paint, long tasks, every
+ *     request with its first priority, and two times for search: "search field usable", when the search box is
+ *     hydrated and takes focus and keystrokes (the mark rmr-search-ready), and "search answers", when the search
+ *     code and the album list are in and the index is built (Home at desktop size starts that by itself);
  *   - a screencast (the frames the browser presented, each with its time), from which it reads when the map pane
  *     first showed anything but the empty sky ("lit"), when stars first showed, and when the picture stopped
  *     changing. The pane is read only where no panel, header or text lies over it.
@@ -16,7 +18,7 @@
  * Options: --label <name> (required), --runs <n>, --mode gpu|software (gpu: the installed Chrome on Metal, as
  * `npm run perf`; software: SwiftShader), --only <page>:<viewport>:<profile> (for a single case), --port <n>,
  * --hold-gas <ms> (the opening nebula image is held back that long, to see the stars arrive before it),
- * --profiles none,fast4g (only these), --base <url> (a server already running; none is started), --stills (no timing: full-resolution PNGs of the stand-in alone, with the
+ * --profiles none,fast4g (only these), --pages home (only these), --base <url> (a server already running; none is started), --stills (no timing: full-resolution PNGs of the stand-in alone, with the
  * album list held back, for Home, /map and an album page at 1440 x 900, 390 x 844 and 2560 x 1440, and of the drawn
  * Home and /map at 2560 x 1440, into <label>/png/ or --out <dir>).
  * Each run also lists the frames that were darker than the one before them (mean luma of the whole frame, panels
@@ -55,6 +57,7 @@ const PORT = Number(opt('--port', '3210'));
 const ONLY = opt('--only');
 const HOLD_GAS = Number(opt('--hold-gas', '0'));
 const ONLY_PROFILES = opt('--profiles')?.split(',') ?? null;
+const ONLY_PAGES = opt('--pages')?.split(',') ?? null;
 const STILLS = args.includes('--stills');
 // --base <url>: measure a server that is already running (several builds side by side) instead of starting one.
 const BASE_URL = opt('--base');
@@ -85,7 +88,14 @@ const LIT_SHARE = 0.01;
 /** Runs in the page before its scripts: paint, largest contentful paint and long tasks, kept for the end. */
 function observe() {
   const w = window;
-  w.__ff = { paint: {}, lcp: null, lt: [] };
+  w.__ff = { paint: {}, lcp: null, lt: [], searchIndex: null };
+  // When search can answer: the search code and the album list are in and the index is built
+  // (components/search/searchIndex.ts sets data-search-index on <html>). On Home at desktop size the field takes
+  // focus as the page hydrates, which starts this; elsewhere it starts at the first focus, so there it stays null.
+  const seen = () => {
+    if (w.__ff.searchIndex === null && document.documentElement?.dataset.searchIndex === 'ready') w.__ff.searchIndex = performance.now();
+  };
+  new MutationObserver(seen).observe(document, { attributes: true, subtree: true, attributeFilter: ['data-search-index'] });
   try {
     new PerformanceObserver((l) => {
       for (const e of l.getEntries()) w.__ff.paint[e.name] = e.startTime;
@@ -132,6 +142,8 @@ function collect() {
     paint: window.__ff.paint,
     lcp: window.__ff.lcp,
     longTasks: window.__ff.lt,
+    searchIndex: window.__ff.searchIndex,
+    allResources: performance.getEntriesByType('resource').map((r) => [new URL(r.name).host === location.host ? new URL(r.name).pathname : new URL(r.name).host, Math.round(r.startTime), Math.round(r.responseEnd), r.transferSize, r.initiatorType]),
     gasShownMs: window.__rmr?.gasShownMs ?? null,
     gas: window.__rmr?.gas ?? null,
     frames: window.__rmr?.frames ?? 0,
@@ -257,6 +269,15 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
     await cdp.send('Network.enable');
     await cdp.send('Network.setCacheDisabled', { cacheDisabled: false });
     if (PROFILES[profileName]) await cdp.send('Network.emulateNetworkConditions', PROFILES[profileName]);
+    const priorities = {};
+    cdp.on('Network.requestWillBeSent', (e) => {
+      try {
+        const u = new URL(e.request.url);
+        priorities[u.host === new URL(base).host ? u.pathname : u.host] ??= e.request.initialPriority;
+      } catch {
+        // a data: or blob: address
+      }
+    });
     const shots = [];
     cdp.on('Page.screencastFrame', (f) => {
       shots.push({ wall: f.metadata.timestamp * 1000, jpeg: Buffer.from(f.data, 'base64') });
@@ -320,7 +341,15 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
       fcp: round(info.paint['first-contentful-paint']),
       lcp: round(info.lcp?.at),
       lcpWhat: info.lcp?.what ?? null,
+      // The search field is hydrated (it takes focus and keystrokes): the first SearchBox's first effect.
       searchReady: round(info.marks['rmr-search-ready']),
+      // Search can answer (see the observer above).
+      searchIndex: round(info.searchIndex),
+      // When the nebula was first drawn, as the page itself notes it (also on builds without the marks).
+      nebulaShown: round(info.gasShownMs),
+      // Every request: [path or host, start, end, bytes, initiator], and what priority the browser gave it at first.
+      waterfall: info.allResources,
+      priorities,
       worstLongTask: Math.max(0, ...info.longTasks.map((l) => l[1])),
       marks: Object.fromEntries(Object.entries(info.marks).map(([k, v]) => [k, round(v)])),
       // read from the presented frames
@@ -428,6 +457,7 @@ async function main() {
         for (const profileName of Object.keys(PROFILES)) {
           if (ONLY && ONLY !== `${pageName}:${vpName}:${profileName}`) continue;
           if (ONLY_PROFILES && !ONLY_PROFILES.includes(profileName)) continue;
+          if (ONLY_PAGES && !ONLY_PAGES.includes(pageName)) continue;
           const runs = [];
           for (let i = 0; i < RUNS; i++) {
             // The frames of the first run of every case are kept: the stills and a filmstrip.
@@ -447,7 +477,7 @@ async function main() {
   fs.writeFileSync(file, JSON.stringify({ label: LABEL, mode: MODE, runs: RUNS, profiles: PROFILES, rows }, null, 1));
   const col = (r, pick) => spread(r.runs.map(pick));
   console.log(`\n${LABEL} (${MODE}; median of ${RUNS}, range in brackets; ms from navigation start)\n`);
-  console.log('page vp profile | first paint | FCP | LCP | search usable | pane lit (frames) | stars (frames) | map frame (mark) | map shown (mark) | nebula (mark) | settled (frames) | worst long task');
+  console.log('page vp profile | first paint | FCP | LCP | search field usable | search answers | pane lit (frames) | stars (frames) | map frame (mark) | map shown (mark) | nebula (mark) | settled (frames) | worst long task');
   for (const r of rows) {
     console.log(
       [
@@ -456,6 +486,7 @@ async function main() {
         col(r, (x) => x.fcp),
         col(r, (x) => x.lcp),
         col(r, (x) => x.searchReady),
+        col(r, (x) => x.searchIndex),
         col(r, (x) => x.paneLit),
         col(r, (x) => x.paneStars),
         col(r, (x) => x.marks['rmr-map-frame']),
