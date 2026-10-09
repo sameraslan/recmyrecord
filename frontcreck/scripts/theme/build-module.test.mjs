@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { GAS_GLOW, GAS_SKY } from '../../src/components/map/shaders/gas.ts';
-import { GLOW, PLACEHOLDER_MAX_BYTES, PLACEHOLDER_PX, SKY, feather, shownColour, stopFraming, themeModule, worldRect } from './build-module.mjs';
+import { GLOW, GRAIN_DOWN, GRAIN_PX, GRAIN_UP, PLACEHOLDER_MAX_BYTES, PLACEHOLDER_PX, SKY, feather, grainPixels, grainUri, shownColour, stopFraming, themeModule, worldRect } from './build-module.mjs';
 
 const ROOT = path.resolve(import.meta.dirname, '../..');
 
@@ -52,6 +52,36 @@ describe('build-module (theme.generated.ts)', () => {
       // the round fade takes next to none of the nebula's light: the stand-in is no dimmer for it
       expect(p.lost, stop).toBeLessThan(0.01);
     }
+  });
+
+  it('the grain over the stand-in is the tile in the stylesheet: a quarter of its pixels a touch lighter, a quarter a touch darker, the rest untouched', async () => {
+    const px = grainPixels();
+    const counts = { up: 0, down: 0, none: 0 };
+    for (let i = 0; i < GRAIN_PX * GRAIN_PX; i++) {
+      const [v, a] = [px[4 * i], px[4 * i + 3]];
+      if (a === 0) counts.none++;
+      else if (v === 255 && a === GRAIN_UP) counts.up++;
+      else if (v === 0 && a === GRAIN_DOWN) counts.down++;
+      else throw new Error(`a grain pixel of value ${v} at alpha ${a}`);
+    }
+    const n = GRAIN_PX * GRAIN_PX;
+    expect(counts.up / n).toBeGreaterThan(0.22);
+    expect(counts.up / n).toBeLessThan(0.28);
+    expect(counts.down / n).toBeGreaterThan(0.22);
+    expect(counts.down / n).toBeLessThan(0.28);
+    // Too faint to see as noise, and next to neutral: over the pane's colour (about 7 of 255) a lighter pixel adds
+    // GRAIN_UP levels and a darker one takes nothing, so the pane rises by under a level on average; over a
+    // mid-bright picture (120) the two cancel to within a third of a level.
+    expect(GRAIN_UP).toBeLessThanOrEqual(3);
+    expect(GRAIN_DOWN).toBeLessThanOrEqual(5);
+    const shift = (base) => (counts.up * (255 - base) * (GRAIN_UP / 255) - counts.down * base * (GRAIN_DOWN / 255)) / n;
+    expect(shift(7)).toBeLessThan(1);
+    expect(Math.abs(shift(120))).toBeLessThan(0.35);
+    // The stylesheet holds this tile, at its own size, on the stand-in's own layer.
+    const uri = await grainUri();
+    expect(uri.length).toBeLessThan(2048);
+    const css = fs.readFileSync(path.join(ROOT, 'src/styles/map.css'), 'utf8');
+    expect(css).toContain(`.gas-ph::after { content: ""; position: absolute; inset: 0; background: url("${uri}") 0 0 / ${GRAIN_PX}px ${GRAIN_PX}px; }`);
   });
 
   it('a stand-in keeps none of its light at its edges and in its corners, all of it in the middle, along a round rim', () => {

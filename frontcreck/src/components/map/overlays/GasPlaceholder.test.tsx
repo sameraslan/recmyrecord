@@ -96,7 +96,11 @@ describe('the stand-in nebula of the first paint', () => {
     const glow = container.querySelector('.gas-ph')!;
     expect(glow.className).toBe('gas-ph gas-ph--glow');
     expect(glow.querySelector('svg')).toBeNull();
-    expect((glow as HTMLElement).style.getPropertyValue('--tone')).toBe(B.tone.join(' '));
+    // a wash in the nebula's own two tones, not an invented colour
+    expect((glow as HTMLElement).style.getPropertyValue('--warm')).toBe(B.warm.join(' '));
+    expect((glow as HTMLElement).style.getPropertyValue('--cool')).toBe(B.cool.join(' '));
+    expect(css).toMatch(/\.gas-ph \{ --glow: radial-gradient\([^;]*rgb\(var\(--warm\) \/ [^;]*radial-gradient\([^;]*rgb\(var\(--cool\) \/ /);
+    expect(css).toContain('.gas-ph--glow { background: var(--glow); }');
   });
 
   it('stays while the map shows nothing or only its stars, and is taken out once the nebula has been drawn over it', () => {

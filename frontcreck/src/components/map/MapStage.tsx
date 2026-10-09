@@ -306,18 +306,19 @@ export function MapStage() {
   const failed = webgl !== 'unavailable' && (catalogStatus === 'error' || positionsStatus === 'error' || codeFailed);
   // The zoom buttons, which need the map, come in with the canvas, never a frame ahead of it.
   const shown = useMapShown();
+  // No stand-in where no map is coming: behind the no-WebGL message or the error panel.
+  const off = webgl === 'unavailable' || failed;
   return (
     <div
       ref={paneRef}
       className={`map-pane${dimmed ? ' is-dimmed' : ''}`}
       data-view={view}
       data-mapmode={view === 'album' && narrow && mapMode ? 'true' : 'false'}
-      data-shown={shown ? '1' : '0'}
+      data-shown={shown || off ? '1' : '0'}
       // The phone zoom controls sit above the measured slider panel (styles/map.css).
       style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
     >
-      {/* No stand-in behind the no-WebGL message or the error panel: neither has a map coming under it. */}
-      <GasPlaceholder view={view} off={webgl === 'unavailable' || failed} />
+      <GasPlaceholder view={view} off={off} />
       <div className="map-host">
         {mountData ? (
           <MapWhenLoaded data={mountData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />

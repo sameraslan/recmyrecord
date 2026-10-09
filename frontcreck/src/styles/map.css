@@ -10,6 +10,11 @@
  * custom properties (the map's own paddings). Percentages are of the pane. */
 .gas-ph { position: absolute; inset: 0; overflow: hidden; pointer-events: none; transition: opacity .2s var(--out); }
 .gas-ph.is-leaving { opacity: 0; }
+/* A fine static grain over the stand-in, gone with it: a 64 px tile whose pixels are a touch lighter, a touch
+ * darker or untouched (scripts/theme/build-module.mjs grainUri writes it and says why; build-module.test.mjs keeps
+ * this copy equal). It dithers what a smooth picture shows and the drawn map's own grain and stars hide: the steps
+ * of 8-bit levels, the edges of the soft pads behind Home's text and of the hint line's band. Painted once. */
+.gas-ph::after { content: ""; position: absolute; inset: 0; background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABAAgMAAADXB5lNAAAACVBMVEUAAAD///9MaXGZe2aRAAAAA3RSTlMFAwDXkFX2AAAACXBIWXMAAAPoAAAD6AG1e1JrAAADbUlEQVQ4yw2SQW+qTBiF35pbU1n1mnuNsmoJEphfoU1rlNVX02soK0uUyPwKnaiBWVmiBljJBCbD+yu/rs7yPCfPAXZ7tpnDCJmO2ZSHCgYHzr3oi69ocSSeTqE3Js0+uoos/HcfG1YK7D215P5T6j1ye7EUArY/URywHmxMquj7E4y7NsaX1X1VHS1PzV9BeYpvRXE8f4bRcLFxQFg3y855VCZ3TBJPAe5e+pq6RO5kq+iQl3DVopEuOUaonKWbaTCh1YicR6l8NIPXfy2Elsg8U/NjtOLN1PZKYN4XeUsygyy4HZrPEdBJ//hpi6a66MjCfQWNKC7bCqvt2haiH0nQbWo7ee+9vN51Tt3dHcR5EpXDX/FvF/VdSSW4uySyD/cHVh6K1WFFoSNa/W11XPiPw4f5IkMwpYuDlbJUuylKUxZwWg43aq2VnMzq6FL4MLS9JuplaJtuv+SKwIOpJ5epPZzaAa0rYYAmPgrPdZ/9xkeeqhVIQpScD2WwC954vbShna5n7EqSQdX3pGreQRq/e3vERz5C/7huEKK86BxxocWIZpmRGIKx/7Mo08URTX7GnxbO66BsJ1msitPXjcLigZ2qangVDQr2Yv2AcYGfBRFpRhInbHFg/TymX4OcGYX/QVYRbPRaYmTIJmtCb6RtISrs79KxHhENQ6udCrbB1OlUA3/WVLnRHF2gKMTPA3C8Z21m7M+gOZtuyPwnmeltd6Q0CM7ldDlJ9aJjYmURCvOSaKxRmO6XCSkpApcBqWesxNe/G1QNgW39xP9iHiaWFXePvTO0nVR7xnpOxNLkp2gO9c1QrqNXmkGzfrMyoNcflHTWOzsLjaPux5DdCDKRNRG6bZ82beDUCiwtLbwo4TQfCbglVXq7rkkgds3eYAL+CEp+p8uOQSvzGQsTbjwRgfUtmnnBiepnsMMYL+P4+COGrPmbD3dI81294xmS2ybAFjBiZRMmRORdX5uim0BQcPUThlzP9I3uE2jp6iG0zkuD3zI3hBooHVl5E0023PkVijiERRLEkxfeDbIq4mhLEOI+ig6rb03oszTEJ7BDeevKv+EIMXhW7AQPcthKiCedL33T2PgNvfvcXtMiALk8/mF7BrvrsLim6g8+de7/43wBH4M3FpB07nL91Mp0AiQxKafFtECRixUf/w/m7prkqQ76AQAAAABJRU5ErkJggg==") 0 0 / 64px 64px; }
 .gas-ph svg { position: absolute; display: block; overflow: visible; }
 /* Home, About, 404: the Whole map, fitted below the header less the fit padding. */
 .gas-ph--fit svg { left: var(--l); top: calc(var(--hdr) + var(--t)); width: calc(100% - var(--l) - var(--r)); height: calc(100% - var(--hdr) - var(--t) - var(--b)); }
@@ -17,12 +22,16 @@
  * middle of what is below the header. */
 .gas-ph--over svg { --w: min(100% - 2 * var(--pad), var(--max)); left: calc(50% - var(--w) / 2); top: var(--hdr); width: var(--w); height: calc(100% - var(--hdr)); }
 /* An album page (the map frames that album, wherever it is), and any window too short for the fits above: no
- * picture, a soft glow in the nebula's mean tone around the middle of the visible map. */
-.gas-ph--glow { background: radial-gradient(ellipse 62% 58% at 50% calc(50% + var(--hdr) / 2), rgb(var(--tone) / .5), rgb(var(--tone) / .22) 45%, rgb(var(--tone) / 0)); }
+ * picture, a soft two-tone wash around the middle of the visible map. */
+/* The wash is this nebula's two sides, in its own mean colours (theme.generated.ts `warm` and `cool`): the warm
+ * side up and to the left, the cool side down and to the right, as the nebula lies; each fades to nothing. The grain
+ * above keeps the soft gradients from showing rings. */
+.gas-ph { --glow: radial-gradient(ellipse 44% 50% at 40% calc(42% + var(--hdr) / 2), rgb(var(--warm) / .46), rgb(var(--warm) / .16) 55%, rgb(var(--warm) / 0)), radial-gradient(ellipse 46% 54% at 63% calc(60% + var(--hdr) / 2), rgb(var(--cool) / .58), rgb(var(--cool) / .2) 55%, rgb(var(--cool) / 0)); }
+.gas-ph--glow { background: var(--glow); }
 @media (min-width: 900px) { .gas-ph--glow { left: var(--panel); } }
 @media (max-height: 480px) {
   .gas-ph svg { display: none; }
-  .gas-ph--fit, .gas-ph--over { background: radial-gradient(ellipse 62% 58% at 50% calc(50% + var(--hdr) / 2), rgb(var(--tone) / .5), rgb(var(--tone) / .22) 45%, rgb(var(--tone) / 0)); }
+  .gas-ph--fit, .gas-ph--over { background: var(--glow); }
 }
 .map-pane[data-view="home"] .map-host,
 .map-pane[data-view="about"] .map-host,
@@ -72,7 +81,8 @@
 .map-zoom { position: absolute; right: 20px; bottom: 20px; display: grid; --zb: 40px; transition: opacity .2s var(--out), visibility 0s; }
 /* Until the canvas is shown (MapStage data-shown, state/reveal.ts) the controls that need the map are held back,
  * and then come in with its fade. The hint line and its band are not held back: they are in the server HTML, over
- * the stand-in, from the first paint (so no frame of a load is darker than the one before it for their arrival). */
+ * the stand-in, from the first paint (so no frame of a load is darker than the one before it for their arrival).
+ * data-shown is also "1" when no map is coming (no WebGL, an error): nothing is held back for a stand-in then. */
 .map-pane[data-shown="0"] .map-zoom { opacity: 0; visibility: hidden; }
 .map-zoom button { width: var(--zb); height: var(--zb); display: grid; place-items: center; background: var(--color-float); border: 1px solid var(--color-rule); color: var(--color-dust); }
 .map-zoom button + button { border-top: 0; }
@@ -110,7 +120,13 @@
 /* Text straight on the nebula: a soft full-width band under it (z-index -1 keeps it under the zoom buttons and the
  * card), dark enough from 44 px down that paper holds 4.5:1 over a white backdrop. 44 px is the top padding, so
  * the first line is on the dark part however many lines the hint wraps to (contrast.test.ts ties the two). */
-.map-hint { position: absolute; left: 0; right: 0; bottom: 0; z-index: -1; padding: 44px 120px 18px 20px; font-size: 13px; color: var(--color-paper); pointer-events: none; background: linear-gradient(rgba(4, 4, 8, 0), rgba(4, 4, 8, .62) 44px, rgba(4, 4, 8, .78)); transition: opacity .25s var(--out), visibility 0s; }
+.map-hint { position: absolute; left: 0; right: 0; bottom: 0; z-index: -1; padding: 44px 120px 18px 20px; font-size: 13px; color: var(--color-paper); pointer-events: none; background: linear-gradient(rgba(4, 4, 8, 0), rgba(4, 4, 8, .62) 44px, rgba(4, 4, 8, .78)); transition: opacity .25s var(--out), visibility 0s, -webkit-mask-position .2s var(--out), mask-position .2s var(--out); -webkit-mask: linear-gradient(transparent, rgb(0 0 0 / .13) 10px, rgb(0 0 0 / .5) 22px, rgb(0 0 0 / .87) 34px, #000 44px) 0 -44px / 100% calc(100% + 44px) no-repeat; mask: linear-gradient(transparent, rgb(0 0 0 / .13) 10px, rgb(0 0 0 / .5) 22px, rgb(0 0 0 / .87) 34px, #000 44px) 0 -44px / 100% calc(100% + 44px) no-repeat; }
+/* While the stand-in nebula is up, the band's top edge would start as a faint shelf across its smooth picture (it
+ * rises by 3 levels a px from its first px; the drawn nebula's texture hides that). The band's first 44 px, above
+ * the text, are therefore eased in and out by a mask (a smooth step, so the band neither starts nor ends on a
+ * line) until the map shows, and the mask then slides off with the reveal: at rest it lies wholly above the band
+ * and changes nothing. */
+.map-pane[data-shown="0"] .map-hint { -webkit-mask-position: 0 0; mask-position: 0 0; }
 .map-hint.is-hidden, .map-hint[data-zoomed="1"] { opacity: 0; visibility: hidden; transition: opacity .25s var(--out), visibility 0s linear .25s; }
 /* 400 px, not the mockup's 380: "See closest albums" is longer than the mockup's label, and both actions stay on one row. */
 .card { position: absolute; left: 20px; bottom: 20px; width: 400px; padding: 14px; display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; animation: rise .3s var(--out) both; }

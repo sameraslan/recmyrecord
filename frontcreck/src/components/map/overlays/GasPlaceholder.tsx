@@ -16,7 +16,9 @@ import { MAP_REVEAL_FADE_MS, getMapReveal, subscribeMapReveal, type MapReveal } 
  * filter and no mask: `npm run theme` blurs it enough at full size that nothing as fine as one of its texels is
  * left in it (so its enlargement shows no grid and no codec block), and fades it to the pane's own colour along a
  * round rim (so no edge of it is straight). Measured against a blur and a mask applied here, it looks the same and
- * costs nothing to paint (scripts/theme/build-module.mjs has the numbers).
+ * costs nothing to paint (scripts/theme/build-module.mjs has the numbers). A fine static grain lies over it
+ * (styles/map.css `.gas-ph::after`), as the drawn map has grain and stars: it hides the steps of 8-bit levels and
+ * the edges of the soft pads behind the page's text, which a smooth picture shows and a textured one does not.
  *
  * Where it goes follows from the window's size alone, so it is placed in CSS (styles/map.css `.gas-ph`), before
  * any script runs. The two framings a page can open at, both of state/bounds.ts:
@@ -27,7 +29,8 @@ import { MAP_REVEAL_FADE_MS, getMapReveal, subscribeMapReveal, type MapReveal } 
  *           side (a phone: 1.8 times closer), the median row in the middle of what is below the header (a phone:
  *           and above the slider panel). The viewBox is that span and has almost no height, so it fits by width.
  *   'glow'  An album page frames its own album, wherever that is: no picture could be placed, so the pane gets a
- *           soft glow in the nebula's mean tone instead. Windows too short for the two fits get it too.
+ *           soft wash in the nebula's two tones instead (its warm side and its cool side, the mean colours of the
+ *           baked picture). Windows too short for the two fits get it too.
  * The numbers are the map's own: the paddings from ../framing, the layout's extents from theme.generated.ts, and
  * the Overview's three constants, repeated below because state/bounds.ts belongs to the map's chunk
  * (GasPlaceholder.test.tsx keeps them equal). e2e/first-frame.spec.ts measures the picture against the drawn map.
@@ -53,7 +56,7 @@ export function placeholderLayout(view: View): { kind: 'fit' | 'over' | 'glow'; 
   const [west, south, east, north] = BAKE.gas;
   // The picture is stored upright and <svg> y runs down: north is the top.
   const image = { x: r(west), y: r(-north), width: r(east - west), height: r(north - south) };
-  const vars: Record<string, string> = { '--tone': BAKE.tone.join(' ') };
+  const vars: Record<string, string> = { '--warm': BAKE.warm.join(' '), '--cool': BAKE.cool.join(' ') };
   if (view === 'album') return { kind: 'glow', viewBox: null, image, vars };
   if (view === 'explore') {
     const [x1, x99, medY] = BAKE.span;

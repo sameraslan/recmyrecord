@@ -304,6 +304,35 @@ test('the hint line reads over the stand-in as well as it does over the drawn ma
   expect(early.ratio).toBeGreaterThanOrEqual(settled.ratio - 0.3);
 });
 
+test('Home while the stand-in is up: one soft pad behind the text, which reads as well as on the drawn page; then the page\'s own pads', async ({ page }) => {
+  const release = await hold(page, '**/data/albums.json');
+  await page.goto('/');
+  await expect(page.locator('.gas-ph image')).toBeVisible();
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-shown', '0');
+  const pads = () =>
+    page.evaluate(() => {
+      const hero = document.querySelector('.hero')!;
+      const row = document.querySelector('.hero-row')!;
+      const o = (el: Element, pseudo: string) => getComputedStyle(el, pseudo).opacity;
+      return { soft: o(hero, '::after'), softShown: getComputedStyle(hero, '::after').visibility, own: o(hero, '::before'), links: o(row, '::before') };
+    });
+  expect(await pads()).toEqual({ soft: '1', softShown: 'visible', own: '0', links: '0' });
+  await page.evaluate(() => document.fonts.ready);
+  const texts = ['.hero .lede', '.hero-row a', '.hero-row button'];
+  const early = await contrastOverBackdrop(page, '.home', texts, { box: 'text' });
+  // The grain lies over the stand-in only, on its own layer.
+  expect(await page.locator('.gas-ph').evaluate((el) => getComputedStyle(el, '::after').backgroundImage)).toContain('data:image/png');
+  release();
+  await waitForMap(page);
+  await waitForAnimations(page);
+  await expect(page.locator('.map-pane')).toHaveAttribute('data-shown', '1');
+  // Settled: the page's own two pads, and the soft one not painted.
+  expect(await pads()).toEqual({ soft: '0', softShown: 'hidden', own: '1', links: '1' });
+  const settled = await contrastOverBackdrop(page, '.home', texts, { box: 'text' });
+  console.log(`home text contrast, stand-in / drawn: ${texts.map((t, i) => `${t} ${early[i].ratio.toFixed(1)} / ${settled[i].ratio.toFixed(1)}`).join(', ')}`);
+  for (const r of early) expect(r.ratio, r.selector).toBeGreaterThanOrEqual(4.5);
+});
+
 test('an album page shows a glow, not a picture, and it leaves when the map has drawn', async ({ page }) => {
   const release = await hold(page, '**/data/albums.json');
   await page.goto('/album/in-rainbows-radiohead');

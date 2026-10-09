@@ -41,10 +41,57 @@ export const PLACEHOLDER_QUALITY = 96;
  * with sky), so the fade takes next to none of its light (checked below). The fade is in the picture's colours:
  * a mask applied by the page looked the same and cost markup and paint, an alpha channel 700 bytes a picture. */
 export const PLACEHOLDER_FEATHER_FROM = 0.78;
+/** Where the fade has left under this share of a texel's light, the texel also goes see-through, in proportion,
+ * down to nothing at the picture's edges (see `placeholder`). */
+export const PLACEHOLDER_SEE_THROUGH_UNDER = 0.12;
 /** The pane's own colour, --color-pane #07060a (app/globals.css). The sky the map draws is a level darker in red
  * and blue; the picture's dark parts are lifted by that level, so where there is no gas it is the pane's colour
  * and its fading edge has nothing to show. */
 export const PANE = [7, 6, 10];
+/**
+ * A fine static grain laid over the stand-in while it is up (styles/map.css `.gas-ph::after`, as a tiled picture).
+ * The drawn map has grain of its own (the gas shader adds 1.5 levels of it) and thousands of stars, which hide
+ * what a smooth picture shows: the steps of 8-bit levels in a soft gradient, the edges of the soft dark pads behind
+ * Home's text and of the hint line's band, and the faint lines a lossy picture leaves when it is enlarged. The
+ * grain does the same for the stand-in: a quarter of its pixels are white and a quarter black at a very low alpha,
+ * which adds GRAIN_UP levels over the pane's colour and takes about two from a mid-bright picture, too fine to see
+ * as noise. It is neutral at mid brightness and lifts the pane's own colour by three quarters of a level on
+ * average (the sky the map then draws differs from the pane by as much).
+ * GRAIN_PX: the side of the tile in px; GRAIN_UP and GRAIN_DOWN: the alpha (of 255) of a white and of a black
+ * pixel.
+ */
+export const GRAIN_PX = 64;
+export const GRAIN_UP = 3;
+export const GRAIN_DOWN = 5;
+
+/** The grain tile as RGBA rows, from a seeded generator (the same tile on every machine). */
+export function grainPixels() {
+  let a = 78;
+  const rnd = () => {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const out = Buffer.alloc(4 * GRAIN_PX * GRAIN_PX);
+  for (let i = 0; i < GRAIN_PX * GRAIN_PX; i++) {
+    // A quarter of the pixels a touch lighter, a quarter a touch darker, half untouched: three values, which a
+    // palette PNG holds in a few hundred bytes.
+    const r = rnd();
+    const v = r < 0.25 ? 255 : 0;
+    out[4 * i] = out[4 * i + 1] = out[4 * i + 2] = v;
+    out[4 * i + 3] = r < 0.25 ? GRAIN_UP : r < 0.5 ? GRAIN_DOWN : 0;
+  }
+  return out;
+}
+
+/** The grain tile as a PNG data URI (lossless: a lossy encode would smear single pixels). */
+export async function grainUri() {
+  const png = await sharp(grainPixels(), { raw: { width: GRAIN_PX, height: GRAIN_PX, channels: 4 } }).png({ compressionLevel: 9, palette: true, colours: 4, dither: 0 }).toBuffer();
+  return `data:image/png;base64,${png.toString('base64')}`;
+}
+
 /** A stand-in is refused when it is not this small (bytes of the WebP, before base64). */
 export const PLACEHOLDER_MAX_BYTES = 3072;
 
@@ -127,42 +174,55 @@ export async function placeholder(webp) {
   const soft = await sharp(rgb, raw).blur(PLACEHOLDER_SOFTEN / scale).raw().toBuffer();
   const small = await sharp(soft, raw).resize(size[0], size[1], { kernel: 'cubic', fit: 'fill' }).raw().toBuffer();
   const sky = SKY.map((v) => Math.round(v * 255));
-  const out = Buffer.alloc(3 * size[0] * size[1]);
   const tone = [0, 0, 0];
+  const warm = [0, 0, 0, 0];
+  const cool = [0, 0, 0, 0];
   let lit = 0;
   let light = 0;
   let lost = 0;
+  const keep = new Float32Array(size[0] * size[1]);
   for (let y = 0; y < size[1]; y++) {
     for (let x = 0; x < size[0]; x++) {
       const i = y * size[0] + x;
       const a = feather(x, y, size[0], size[1]);
+      keep[i] = a;
       const over = Math.max(0, small[3 * i] - sky[0]) + Math.max(0, small[3 * i + 1] - sky[1]) + Math.max(0, small[3 * i + 2] - sky[2]);
       light += over;
       lost += over * (1 - a);
       if (over > 60) {
         lit++;
         for (let c = 0; c < 3; c++) tone[c] += small[3 * i + c];
+        // The nebula's two sides: where red leads and where blue does (weighted by how lit the texel is).
+        const side = small[3 * i] >= small[3 * i + 2] ? warm : cool;
+        for (let c = 0; c < 3; c++) side[c] += small[3 * i + c] * over;
+        side[3] += over;
       }
-      // Never under the pane's colour (the sky becomes the pane), and down to it along the round rim.
-      for (let c = 0; c < 3; c++) out[3 * i + c] = Math.round(PANE[c] + (Math.max(small[3 * i + c], PANE[c]) - PANE[c]) * a);
     }
   }
-  const bytes = await sharp(out, { raw: { width: size[0], height: size[1], channels: 3 } }).webp({ quality: PLACEHOLDER_QUALITY, effort: 6, smartSubsample: true }).toBuffer();
-  if (bytes.length > PLACEHOLDER_MAX_BYTES) throw new Error(`a stand-in picture of ${bytes.length} bytes (at most ${PLACEHOLDER_MAX_BYTES}): lower PLACEHOLDER_PX or PLACEHOLDER_QUALITY`);
   // The fade must not dim the nebula: it may take a hundredth of the picture's light at most.
   if (lost > light * 0.01) throw new Error(`the round fade takes ${((100 * lost) / light).toFixed(1)}% of a stand-in picture's light: the gas reaches its edge`);
-  // As a browser will decode it: its edges must be the pane's colour (a lossy encode puts up to three levels there),
-  // or the picture would show as a box on the pane.
-  const back = await sharp(bytes).removeAlpha().raw().toBuffer();
+  // The picture's light fades down to the pane's colour along the round rim, in its own colours. A lossy encode
+  // still leaves a level or so of difference from the pane at the picture's edges, which showed as a step of one
+  // level along its box (the full height of a large screen). So the outermost part of the fade, where the picture
+  // is already within a few levels of the pane, also goes see-through, down to nothing at the edge texels: there
+  // the pane itself shows. (An alpha channel for that last ring costs about 0.2 KB; one for the whole fade 0.7.)
+  const out = Buffer.alloc(4 * size[0] * size[1]);
+  for (let i = 0; i < size[0] * size[1]; i++) {
+    // Never under the pane's colour (the sky becomes the pane), and down to it along the round rim.
+    for (let c = 0; c < 3; c++) out[4 * i + c] = Math.round(PANE[c] + (Math.max(small[3 * i + c], PANE[c]) - PANE[c]) * keep[i]);
+    out[4 * i + 3] = Math.round(255 * Math.min(1, keep[i] / PLACEHOLDER_SEE_THROUGH_UNDER));
+  }
+  const bytes = await sharp(out, { raw: { width: size[0], height: size[1], channels: 4 } }).webp({ quality: PLACEHOLDER_QUALITY, alphaQuality: 0, effort: 6, smartSubsample: true }).toBuffer();
+  if (bytes.length > PLACEHOLDER_MAX_BYTES) throw new Error(`a stand-in picture of ${bytes.length} bytes (at most ${PLACEHOLDER_MAX_BYTES}): lower PLACEHOLDER_PX or PLACEHOLDER_QUALITY`);
+  // As a browser will decode it: every edge texel fully see-through.
+  const back = await sharp(bytes).ensureAlpha().raw().toBuffer();
   let edge = 0;
   for (let y = 0; y < size[1]; y++) {
-    for (let x = 0; x < size[0]; x += y === 0 || y === size[1] - 1 ? 1 : size[0] - 1) {
-      const o = 3 * (y * size[0] + x);
-      edge = Math.max(edge, Math.abs(back[o] - PANE[0]), Math.abs(back[o + 1] - PANE[1]), Math.abs(back[o + 2] - PANE[2]));
-    }
+    for (let x = 0; x < size[0]; x += y === 0 || y === size[1] - 1 ? 1 : size[0] - 1) edge = Math.max(edge, back[4 * (y * size[0] + x) + 3]);
   }
-  if (edge > 3) throw new Error(`the edge of a stand-in picture is ${edge} levels off the pane's colour: it would show as a box`);
-  return { bytes, size, tone: tone.map((v) => Math.round(v / Math.max(lit, 1))), lost: lost / light };
+  if (edge > 0) throw new Error(`the edge of a stand-in picture is not see-through (alpha ${edge}): its box would show on the pane`);
+  const mean = (t) => [0, 1, 2].map((c) => Math.round(t[c] / Math.max(t[3], 1)));
+  return { bytes, size, tone: tone.map((v) => Math.round(v / Math.max(lit, 1))), warm: mean(warm), cool: mean(cool), lost: lost / light };
 }
 
 /** The text of theme.generated.ts for the theme in `dataDir`. */
@@ -175,7 +235,7 @@ export async function themeModule(dataDir) {
   for (const stop of T.STOPS) {
     const gas = theme.gas[stop];
     const made = await placeholder(fs.readFileSync(path.join(dataDir, 'theme', T.gasFile(`gas-${stop}`, gas.hash[0]))));
-    stops[stop] = { hash: gas.hash, gas: worldRect(gas.rect, tx), ...stopFraming(positions[stop], tx), tone: made.tone };
+    stops[stop] = { hash: gas.hash, gas: worldRect(gas.rect, tx), ...stopFraming(positions[stop], tx), tone: made.tone, warm: made.warm, cool: made.cool };
     pictures[stop] = made;
   }
   const lines = [
@@ -186,12 +246,13 @@ export async function themeModule(dataDir) {
     ' * two gas images (theme.json gas.<stop>.hash); and in world units (components/map/data.ts), y up: `gas`, the',
     ' * rectangle its images cover [west, south, east, north]; `cloud`, the full extent of its albums [minX, minY,',
     ' * maxX, maxY] (the Whole map is fitted to it); `span`, [x1, x99, medY]: the 1st and 99th percentile of x and the',
-    ' * median of y (the Overview is fitted to them). `tone`: the mean colour of its nebula, sRGB bytes. */',
+    ' * median of y (the Overview is fitted to them). `tone`: the mean colour of its nebula, `warm` and `cool` the mean',
+    ' * colours of its red-led and its blue-led parts, sRGB bytes. */',
     'export const THEME_BAKE = {',
     `  n: ${theme.n},`,
     `  positionsHash: '${theme.positionsHash}',`,
     '  stops: {',
-    ...T.STOPS.map((s) => `    ${s}: { hash: ${JSON.stringify(stops[s].hash).replace(/"/g, "'").replace(',', ', ')}, gas: [${stops[s].gas.join(', ')}], cloud: [${stops[s].cloud.join(', ')}], span: [${stops[s].span.join(', ')}], tone: [${stops[s].tone.join(', ')}] },`),
+    ...T.STOPS.map((s) => `    ${s}: { hash: ${JSON.stringify(stops[s].hash).replace(/"/g, "'").replace(',', ', ')}, gas: [${stops[s].gas.join(', ')}], cloud: [${stops[s].cloud.join(', ')}], span: [${stops[s].span.join(', ')}], tone: [${stops[s].tone.join(', ')}], warm: [${stops[s].warm.join(', ')}], cool: [${stops[s].cool.join(', ')}] },`),
     '  },',
     '} as const;',
     '',

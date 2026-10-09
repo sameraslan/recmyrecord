@@ -205,7 +205,7 @@ describe('starting everything the map needs at once', () => {
     act(() => setMapReveal('gas'));
     expect(result.current).toBe(true);
     const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
-    expect(stage).toContain("data-shown={shown ? '1' : '0'}");
+    expect(stage).toContain("data-shown={shown || off ? '1' : '0'}");
     const css = fs.readFileSync('src/styles/map.css', 'utf8');
     expect(css).toContain('.map-pane[data-shown="0"] .map-zoom { opacity: 0; visibility: hidden; }');
     // and they fade as the canvas does
@@ -215,12 +215,18 @@ describe('starting everything the map needs at once', () => {
   it('the hint line is not one of them: it is rendered before any data, for the first paint, unless no map is coming', () => {
     const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
     expect(stage).toContain("{webgl !== 'unavailable' && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'album' || selected !== null} /> : null}");
-    expect(fs.readFileSync('src/styles/map.css', 'utf8')).not.toMatch(/data-shown="0"\] \.map-hint/);
+    // Nothing hides it while the stand-in is up; only its band's top edge is eased in by a mask until the map shows.
+    const css = fs.readFileSync('src/styles/map.css', 'utf8');
+    expect(css).toContain('.map-pane[data-shown="0"] .map-hint { -webkit-mask-position: 0 0; mask-position: 0 0; }');
+    expect(css).not.toMatch(/data-shown="0"\] \.map-hint[^{]*\{[^}]*(opacity|visibility|display)/);
+    // At rest the mask lies wholly above the band (44 px, the band's own ramp and the text's top padding).
+    expect(css).toMatch(/\.map-hint \{[^}]*padding: 44px [^}]*mask: linear-gradient\(transparent, [^;]*#000 44px\) 0 -44px \/ 100% calc\(100% \+ 44px\) no-repeat;/);
   });
 
   it('the stand-in is off behind the no-WebGL message and behind the error panel', () => {
     const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
-    expect(stage).toContain("<GasPlaceholder view={view} off={webgl === 'unavailable' || failed} />");
+    expect(stage).toContain("const off = webgl === 'unavailable' || failed;");
+    expect(stage).toContain('<GasPlaceholder view={view} off={off} />');
     expect(stage).toMatch(/const failed = webgl !== 'unavailable' && \(catalogStatus === 'error' \|\| positionsStatus === 'error' \|\| codeFailed\);/);
   });
 

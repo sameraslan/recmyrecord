@@ -43,7 +43,7 @@ describe('theme.generated.ts (what the page knows of the theme before theme.json
     }
   });
 
-  it('has a stand-in picture per stop: a small opaque WebP in the shape of the stop\'s gas image, the pane\'s colour at its edges', async () => {
+  it('has a stand-in picture per stop: a small WebP in the shape of the stop\'s gas image, fading to the pane\'s colour and see-through at its very edges', async () => {
     for (const stop of STOP_IDS) {
       const uri = PICTURES[stop];
       expect(uri.startsWith('data:image/webp;base64,'), stop).toBe(true);
@@ -52,37 +52,46 @@ describe('theme.generated.ts (what the page knows of the theme before theme.json
       expect(bytes.length, stop).toBeGreaterThanOrEqual(1024);
       expect(bytes.length, stop).toBeLessThanOrEqual(2048);
       const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
-      expect(info.channels, stop).toBe(3);
+      expect(info.channels, stop).toBe(4);
       expect(Math.max(info.width, info.height), stop).toBe(128);
       const [w, h] = theme.gas[stop].px;
       expect(info.width / info.height, stop).toBeCloseTo(w / h, 1);
-      // Its edges are the pane's own colour, rgb(7, 6, 10), to within what a lossy encode leaves, so the picture has
-      // no box on the pane; the middle is lit.
+      // Every texel of its four edges is fully see-through, so the pane itself shows there and the picture's box
+      // cannot show as a step (a lossy picture's own edge was a level off the pane's colour); just inside, where it
+      // is opaque, it is within a few levels of the pane's colour, rgb(7, 6, 10).
       let edge = 0;
+      let near = 0;
       for (let y = 0; y < info.height; y++) {
         for (let x = 0; x < info.width; x++) {
-          if (x !== 0 && y !== 0 && x !== info.width - 1 && y !== info.height - 1) continue;
-          const o = 3 * (y * info.width + x);
-          edge = Math.max(edge, Math.abs(data[o] - 7), Math.abs(data[o + 1] - 6), Math.abs(data[o + 2] - 10));
+          const o = 4 * (y * info.width + x);
+          if (x === 0 || y === 0 || x === info.width - 1 || y === info.height - 1) edge = Math.max(edge, data[o + 3]);
+          const r = Math.hypot((x + 0.5 - info.width / 2) / (info.width / 2), (y + 0.5 - info.height / 2) / (info.height / 2));
+          if (r > 0.9 && r < 0.95) near = Math.max(near, Math.abs(data[o] - 7), Math.abs(data[o + 1] - 6), Math.abs(data[o + 2] - 10));
         }
       }
-      expect(edge, `${stop}: levels off the pane's colour at the edges`).toBeLessThanOrEqual(3);
+      expect(edge, `${stop}: alpha at the edges`).toBe(0);
+      expect(near, `${stop}: levels off the pane's colour just inside the rim`).toBeLessThanOrEqual(8);
       // Nothing as fine as a texel is left in it: no texel differs from the mean of its two neighbours, along a row
       // or a column, by more than 8 levels of 255 (a picture softened by one texel, not three, has kinks of over 20), so the browser's enlargement of it shows no grid.
       let kink = 0;
       for (let y = 1; y < info.height - 1; y++) {
         for (let x = 1; x < info.width - 1; x++) {
           for (let c = 0; c < 3; c++) {
-            const at = (dx: number, dy: number) => data[3 * ((y + dy) * info.width + x + dx) + c];
+            const at = (dx: number, dy: number) => data[4 * ((y + dy) * info.width + x + dx) + c];
             kink = Math.max(kink, Math.abs(at(0, 0) - (at(-1, 0) + at(1, 0)) / 2), Math.abs(at(0, 0) - (at(0, -1) + at(0, 1)) / 2));
           }
         }
       }
       expect(kink, `${stop}: the sharpest texel`).toBeLessThanOrEqual(8);
-      const mid = 3 * (Math.floor(info.height / 2) * info.width + Math.floor(info.width / 2));
+      const mid = 4 * (Math.floor(info.height / 2) * info.width + Math.floor(info.width / 2));
       expect(data[mid] + data[mid + 1] + data[mid + 2], stop).toBeGreaterThan(90);
-      const tone = THEME_BAKE.stops[stop].tone;
-      expect(tone.every((v) => v > 30 && v < 200), stop).toBe(true);
+      expect(data[mid + 3], stop).toBe(255);
+      // Its mean tone, and the mean colours of its warm and its cool side (the album page's wash): red leads the
+      // one, blue the other.
+      const { tone, warm, cool } = THEME_BAKE.stops[stop];
+      for (const t of [tone, warm, cool]) expect(t.every((v) => v > 30 && v < 200), stop).toBe(true);
+      expect(warm[0], stop).toBeGreaterThan(warm[2]);
+      expect(cool[2], stop).toBeGreaterThan(cool[0]);
     }
   });
 });
