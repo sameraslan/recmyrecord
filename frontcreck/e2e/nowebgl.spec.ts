@@ -4,10 +4,11 @@ import { THEME_BAKE } from '../src/lib/data/theme.generated';
 import { contrastOverBackdrop, waitForAnimations } from './helpers';
 
 // Until issue 78 this test said "asks for no theme file": nothing of the map was fetched before the WebGL probe had
-// answered. Now everything is asked for as the page opens, by preload links in the server HTML, so that visitors
-// with WebGL (nearly all) do not wait for the probe; a browser without it downloads theme.json and one nebula image
-// for nothing. What still holds: nothing more than those two, each once, no canvas, and the stand-in nebula leaves.
-test('without WebGL the map shows a message, asks for no theme file beyond the two the page preloads, and search still works', async ({ page }) => {
+// answered. Now the page's script asks for the map's files right after first paint, beside the probe, so that
+// visitors with WebGL (nearly all) do not wait for it; a browser without it downloads theme.json and one nebula
+// image for nothing. What still holds: nothing more than those two, each once, no canvas, and the stand-in nebula
+// leaves.
+test('without WebGL the map shows a message, asks for no theme file beyond the two the page starts with, and search still works', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const themeRequests: string[] = [];

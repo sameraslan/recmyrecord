@@ -7,7 +7,11 @@ import type { MusicMapProps } from './types';
 
 const early = vi.hoisted(() => ({ startEarlyGas: vi.fn(), dropEarlyGas: vi.fn() }));
 const webgl = vi.hoisted(() => ({ warmUpWebGL: vi.fn(), isWebGLAvailable: vi.fn() }));
+const search = vi.hoisted(() => ({ searchWanted: vi.fn(() => false) }));
+const data = vi.hoisted(() => ({ loadCatalog: vi.fn(), peekCatalog: vi.fn(() => null as unknown) }));
 vi.mock('@/lib/data/early', () => early);
+vi.mock('@/components/search/searchIndex', () => search);
+vi.mock('@/lib/data/client', () => data);
 vi.mock('./state/webgl', () => webgl);
 // The map's code: three.js and the canvas. Here a stand-in that says what it was given.
 vi.mock('./MusicMap', () => ({ default: (props: { data: { n: number } }) => <div data-testid="map">{props.data.n} albums</div> }));
@@ -18,6 +22,7 @@ import { getMapReveal, resetMapReveal, setMapReveal } from './state/reveal';
 describe('starting everything the map needs at once', () => {
   let frames: FrameRequestCallback[];
   let warm: () => void;
+  let catalogIn: () => void;
 
   beforeEach(() => {
     frames = [];
@@ -25,6 +30,12 @@ describe('starting everything the map needs at once', () => {
     vi.stubGlobal('cancelAnimationFrame', () => {});
     early.startEarlyGas.mockClear();
     early.dropEarlyGas.mockClear();
+    search.searchWanted.mockReset();
+    search.searchWanted.mockReturnValue(false);
+    data.peekCatalog.mockReset();
+    data.peekCatalog.mockReturnValue(null);
+    data.loadCatalog.mockReset();
+    data.loadCatalog.mockImplementation(() => new Promise((resolve) => (catalogIn = () => resolve({}))));
     webgl.warmUpWebGL.mockReset();
     webgl.warmUpWebGL.mockImplementation(() => new Promise<void>((resolve) => (warm = resolve)));
     webgl.isWebGLAvailable.mockReset();
@@ -41,24 +52,29 @@ describe('starting everything the map needs at once', () => {
 
   const frame = () => frames.shift()!(performance.now());
 
-  it('asks for the nebula image in the first effect, before first paint, the WebGL warm-up and the probe', () => {
-    renderHook(() => useMapBoot());
-    expect(early.startEarlyGas).toHaveBeenCalledTimes(1);
-    expect(early.startEarlyGas).toHaveBeenCalledWith('balanced');
+  it('asks for nothing of the map before first paint: the page\'s scripts and the album list have the line', () => {
+    const { result } = renderHook(() => useMapBoot());
+    expect(result.current).toBe(false);
+    expect(early.startEarlyGas).not.toHaveBeenCalled();
+    expect(performance.getEntriesByName('rmr-chunk-start')).toHaveLength(0);
     expect(webgl.warmUpWebGL).not.toHaveBeenCalled();
-    expect(useAppStore.getState().webgl).toBe('unknown');
+    frame();
+    expect(result.current).toBe(false);
+    expect(early.startEarlyGas).not.toHaveBeenCalled();
   });
 
-  it('after first paint (two frames) asks for the map\'s code and starts the warm-up side by side: neither waits for the other, nor for data', async () => {
-    renderHook(() => useMapBoot());
+  it('after first paint (two frames) starts the nebula image, the map\'s code, the other data and the warm-up side by side: none waits for another, nor for the album list', async () => {
+    const { result } = renderHook(() => useMapBoot());
     frame();
-    expect(webgl.warmUpWebGL).not.toHaveBeenCalled();
-    expect(performance.getEntriesByName('rmr-chunk-start')).toHaveLength(0);
-    frame();
-    // The code is asked for while the warm-up has not answered and WebGL is not known to work.
+    act(() => frame());
+    // All of it while the album list is still on its way, the warm-up has not answered and WebGL is not known to work.
+    expect(early.startEarlyGas).toHaveBeenCalledTimes(1);
+    expect(early.startEarlyGas).toHaveBeenCalledWith('balanced');
     expect(performance.getEntriesByName('rmr-chunk-start').length).toBeGreaterThan(0);
+    expect(result.current, 'MapStage loads the positions and the theme from now').toBe(true);
     expect(webgl.warmUpWebGL).toHaveBeenCalledTimes(1);
     expect(webgl.isWebGLAvailable).not.toHaveBeenCalled();
+    expect(data.loadCatalog).not.toHaveBeenCalled();
     expect(useAppStore.getState().webgl).toBe('unknown');
     // Only drawing waits for the probe.
     webgl.isWebGLAvailable.mockReturnValue(true);
@@ -67,10 +83,66 @@ describe('starting everything the map needs at once', () => {
     expect(early.dropEarlyGas).not.toHaveBeenCalled();
   });
 
+  it('with a visitor at the search field, the map\'s downloads wait for the album list, which search needs; the warm-up does not', async () => {
+    search.searchWanted.mockReturnValue(true);
+    const { result } = renderHook(() => useMapBoot());
+    frame();
+    act(() => frame());
+    expect(data.loadCatalog).toHaveBeenCalledTimes(1);
+    expect(early.startEarlyGas).not.toHaveBeenCalled();
+    expect(performance.getEntriesByName('rmr-chunk-start')).toHaveLength(0);
+    expect(result.current).toBe(false);
+    // (the warm-up is no download)
+    expect(webgl.warmUpWebGL).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      catalogIn();
+      await Promise.resolve();
+    });
+    expect(early.startEarlyGas).toHaveBeenCalledTimes(1);
+    expect(performance.getEntriesByName('rmr-chunk-start').length).toBeGreaterThan(0);
+    expect(result.current).toBe(true);
+  });
+
+  it('a search field with the album list already in holds nothing back, and an album list that fails does not hold the map for good', async () => {
+    search.searchWanted.mockReturnValue(true);
+    data.peekCatalog.mockReturnValue({});
+    const ready = renderHook(() => useMapBoot());
+    frame();
+    act(() => frame());
+    expect(early.startEarlyGas).toHaveBeenCalledTimes(1);
+    expect(ready.result.current).toBe(true);
+    ready.unmount();
+    early.startEarlyGas.mockClear();
+    data.peekCatalog.mockReturnValue(null);
+    data.loadCatalog.mockImplementation(() => Promise.reject(new Error('offline')));
+    const failed = renderHook(() => useMapBoot());
+    frame();
+    await act(async () => {
+      frame();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(early.startEarlyGas).toHaveBeenCalledTimes(1);
+    expect(failed.result.current).toBe(true);
+  });
+
+  it('the page asks for the map\'s files from its script, never by a preload link in the HTML (they took bandwidth from the page\'s own scripts)', () => {
+    expect(fs.existsSync('src/components/map/MapPreloads.tsx')).toBe(false);
+    for (const f of ['src/app/layout.tsx', 'src/components/map/MapStage.tsx', 'src/components/map/boot.ts', 'src/lib/data/early.ts']) {
+      expect(fs.readFileSync(f, 'utf8'), f).not.toMatch(/from 'react-dom'|\bpreload\(/);
+    }
+    // MapStage switches the positions and the theme on with the hook's result; the album list is never held back.
+    const stage = fs.readFileSync('src/components/map/MapStage.tsx', 'utf8');
+    expect(stage).toContain('const started = useMapBoot();');
+    expect(stage).toContain('useCatalog();');
+    expect(stage).toContain('usePositions(started);');
+    expect(stage).toContain('useThemeLoad(started);');
+  });
+
   it('without WebGL says so and frees the image no map will take', async () => {
     renderHook(() => useMapBoot());
     frame();
-    frame();
+    act(() => frame());
     webgl.isWebGLAvailable.mockReturnValue(false);
     warm();
     await vi.waitFor(() => expect(useAppStore.getState().webgl).toBe('unavailable'));
@@ -80,7 +152,7 @@ describe('starting everything the map needs at once', () => {
   it('an unmount before the warm-up ends leaves the store alone', async () => {
     const { unmount } = renderHook(() => useMapBoot());
     frame();
-    frame();
+    act(() => frame());
     const signal = (webgl.warmUpWebGL.mock.calls[0][0] as { signal: AbortSignal }).signal;
     unmount();
     expect(signal.aborted).toBe(true);

@@ -1,6 +1,8 @@
 'use client';
 
-import { createElement, useEffect, useSyncExternalStore, type ComponentType } from 'react';
+import { createElement, useEffect, useState, useSyncExternalStore, type ComponentType } from 'react';
+import { searchWanted } from '@/components/search/searchIndex';
+import { loadCatalog, peekCatalog } from '@/lib/data/client';
 import { dropEarlyGas, startEarlyGas } from '@/lib/data/early';
 import { markOnce } from '@/lib/marks';
 import { useAppStore } from '@/lib/store';
@@ -100,24 +102,49 @@ export function openingStop(pathname: string, search: string): StopId {
   return slugFromPathname(pathname) === null ? DEFAULT_STOP : parseBy(new URLSearchParams(search).get('by'));
 }
 
+// The album list first, as soon as the page's script runs (before it hydrates): search needs it and so does the
+// map, and it is the largest file by far. (Not in tests, which load what they mean to.)
+if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'test') {
+  queueMicrotask(() => void loadCatalog().catch(() => {}));
+}
+
 /**
- * Starts everything the map needs, side by side, as the page opens. MapStage's data hooks ask for the album list,
- * the positions and the theme in the same commit (the server HTML has already asked for them: app/MapPreloads.tsx).
- *   - At once: the opening stop's nebula image, fetched and decoded off the main thread (lib/data/early.ts).
- *   - After first paint (two animation frames): the map's code, and the WebGL warm-up and probe. Running three.js
- *     and starting a graphics context are main-thread and GPU work, which must not compete with the page's first
- *     paint; a download alone does not, so nothing waits for an idle slot any more, nor for each other.
- * Only drawing waits for the probe: MapStage mounts the map (MapWhenLoaded) once `webgl` is 'ok'. Without WebGL the downloads were
- * for nothing; that is the price of not making every other visitor wait for the probe.
+ * Starts what the map needs as the page opens, in this order of claim on the connection:
+ *   1. The page's own scripts. Nothing of the map is asked for by the HTML: preload links for its data started with
+ *      the scripts, at their priority, and on a slow connection took bandwidth from them. With Home's 24 covers
+ *      doing the same, the search field was usable 0.8 s later than without them (issue 78, measured on a throttled
+ *      line; the stand-in nebula covers the wait instead and costs no request).
+ *   2. The album list, asked for above the moment this script runs.
+ *   3. After first paint (two animation frames), side by side: the opening stop's nebula image, fetched and
+ *      decoded off the main thread (lib/data/early.ts); the map's code; the positions and the theme (MapStage's
+ *      hooks, switched on by this hook's result). And the WebGL warm-up and probe, which are main-thread and GPU
+ *      work that must not compete with the first paint, and no download at all.
+ *      But when a visitor is at the search field (searchWanted: Home at desktop size focuses it as the page
+ *      opens), step 3's downloads wait until the album list is in: search answers once it and the search code
+ *      are, and on a slow line every byte beside it makes that later (0.4 s on a fast 4G line, 2 s on a slow one).
+ * Nothing waits for an idle slot, for the probe or for each other beyond that. Only drawing waits for the probe:
+ * MapStage mounts the map (MapWhenLoaded) once `webgl` is 'ok'. Without WebGL the downloads were for nothing; that
+ * is the price of not making every other visitor wait for the probe.
+ *
+ * Returns true once step 3 has started: MapStage's positions and theme hooks load from then.
  */
-export function useMapBoot(): void {
+export function useMapBoot(): boolean {
+  const [started, setStarted] = useState(false);
   useEffect(() => {
-    startEarlyGas(openingStop(window.location.pathname, window.location.search));
+    let live = true;
     const warmUp = new AbortController();
     let raf2 = 0;
+    const start = () => {
+      if (!live) return;
+      startEarlyGas(openingStop(window.location.pathname, window.location.search));
+      void loadMapChunk();
+      setStarted(true);
+    };
     const raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
-        void loadMapChunk();
+        // The album list is asked for above; here in case that was skipped or failed. It settles either way.
+        if (searchWanted() && !peekCatalog()) loadCatalog().then(start, start);
+        else start();
         // A worker starts the GPU backend first, so neither the probe (which creates and releases a WebGL context)
         // nor the renderer blocks the main thread on it.
         void warmUpWebGL({ signal: warmUp.signal }).then(() => {
@@ -129,10 +156,12 @@ export function useMapBoot(): void {
       });
     });
     return () => {
+      live = false;
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
       // On unmount the worker is terminated.
       warmUp.abort();
     };
   }, []);
+  return started;
 }

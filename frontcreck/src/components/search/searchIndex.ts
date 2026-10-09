@@ -39,6 +39,13 @@ export function getSearch(): Promise<LoadedSearch> {
   return pending;
 }
 
+/** True once a search field has asked for the index (a visitor is at the field: Home at desktop size focuses it
+ * as the page opens). The map's own downloads then wait for the album list, which search needs
+ * (components/map/boot.ts). */
+export function searchWanted(): boolean {
+  return pending !== null;
+}
+
 /** Tests only. */
 export function resetSearchCache(): void {
   pending = null;

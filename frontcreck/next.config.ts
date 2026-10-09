@@ -58,6 +58,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Inlined into the page's code: the committed theme (whose image hashes are in src/lib/data/theme.generated.ts)
+  // is the one this build serves, so the opening nebula image can be asked for before theme.json is in
+  // (src/lib/data/early.ts). A build that serves another data set (RMR_DATA_DIR) has other images.
+  env: { RMR_EARLY_GAS: dataDir === 'data' ? '1' : '' },
   reactStrictMode: true,
   devIndicators: false,
   poweredByHeader: false,

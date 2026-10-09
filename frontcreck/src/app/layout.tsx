@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Cormorant_Garamond, Schibsted_Grotesk } from 'next/font/google';
-import { MapPreloads } from '@/components/map/MapPreloads';
 import { MapStage } from '@/components/map/MapStage';
 import { Header } from '@/components/shell/Header';
 import { RouteTracker } from '@/components/shell/RouteTracker';
@@ -41,7 +40,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable}`}>
       <body>
-        <MapPreloads />
         <a className="skip" href="#main">
           {COPY.skip}
         </a>

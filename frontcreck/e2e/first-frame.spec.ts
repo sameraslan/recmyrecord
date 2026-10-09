@@ -2,8 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import { THEME_BAKE } from '../src/lib/data/theme.generated';
 import { albumSpread, contrastOverBackdrop, isPhone, waitForAnimations, waitForCameraIdle, waitForMap } from './helpers';
 
-/** Issue 78: the map's first picture. The server HTML asks for everything the map needs at once and carries a soft
- * stand-in nebula, placed where the map will draw the real one; the canvas shows once it has the nebula. */
+/** Issue 78: the map's first picture. The server HTML carries a soft stand-in nebula, placed where the map will
+ * draw the real one; the page's script asks for what the map needs side by side, behind the page's own scripts and
+ * the album list that search needs; the canvas shows once it has the nebula. */
 
 const B = THEME_BAKE.stops.balanced;
 const GAS = `/data/theme/gas-balanced.${B.hash[0]}.webp`;
@@ -35,20 +36,13 @@ async function standIn(page: Page): Promise<{ at: (x: number, y: number) => { x:
   return { box, at: (x, y) => ({ x: box.x + ((x - west) / (east - west)) * box.width, y: box.y + ((north - y) / (north - south)) * box.height }) };
 }
 
-test('the server HTML asks for the map\'s files at once and carries the stand-in nebula', async ({ request }) => {
+test('the server HTML carries the stand-in nebula and asks for none of the map\'s files itself', async ({ request }) => {
   for (const [route, kind] of [['/', 'fit'], ['/map', 'over'], ['/about', 'fit'], ['/album/in-rainbows-radiohead', 'glow']] as const) {
     const html = await (await request.get(route)).text();
-    for (const href of EARLY) {
-      const link = new RegExp(`<link[^>]*href="${href.replace(/[.]/g, '\\.')}"[^>]*>`).exec(html)?.[0];
-      expect(link, `${route}: a preload link for ${href}`).toBeTruthy();
-      expect(link, `${route} ${href}`).toContain('rel="preload"');
-      // The request fetch() makes later: CORS mode, same-origin credentials. Low priority, behind the page itself.
-      expect(link, `${route} ${href}`).toContain('as="fetch"');
-      expect(link, `${route} ${href}`).toMatch(/crossorigin(="(anonymous)?")?/i);
-      expect(link, `${route} ${href}`).toMatch(/fetchpriority="low"/i);
-    }
-    // No other nebula image is asked for early, and the map's code is still no script of the page.
-    expect(html.match(/gas-(sonic|mood)\.|gas-[a-z]+-sharp\./g) ?? [], route).toEqual([]);
+    // No preload link for a data file or a nebula image: a preload starts with the page's own scripts, at their
+    // priority, and on a slow connection the search field was usable 0.8 s later for it. The page's script asks.
+    expect(html.match(/<link[^>]*rel="preload"[^>]*as="fetch"[^>]*>/g) ?? [], route).toEqual([]);
+    expect(html.match(/<link[^>]*href="\/data\/[^"]*"[^>]*>/g) ?? [], route).toEqual([]);
     const ph = /<div class="gas-ph gas-ph--(\w+)"[^>]*>/.exec(html);
     expect(ph?.[1], `${route}: the stand-in`).toBe(kind);
     // Before the canvas host, so the canvas lies over it.
@@ -73,7 +67,7 @@ test('the nebula images are kept for good; theme.json and the data files keep th
 });
 
 for (const route of ['/', '/map']) {
-  test(`${route}: every file is downloaded once, nothing waits for the WebGL probe, and no preload goes unused`, async ({ page }) => {
+  test(`${route}: every file is downloaded once, by the page's script, and nothing waits for the WebGL probe`, async ({ page }, info) => {
     const requested: string[] = [];
     page.on('request', (r) => {
       const p = new URL(r.url()).pathname;
@@ -81,22 +75,21 @@ for (const route of ['/', '/map']) {
     });
     const complaints: string[] = [];
     page.on('console', (m) => {
-      // Chrome says so when a preloaded file was not used, or was asked for again in another way.
+      // (Chrome says so when a preloaded file was not used, or was asked for again in another way: there is none.)
       if (/preload/i.test(m.text())) complaints.push(m.text());
       if (m.type() === 'error') complaints.push(m.text());
     });
     page.on('pageerror', (e) => complaints.push(e.message));
     await page.goto(route, { waitUntil: 'load' });
     await waitForMap(page);
-    // Chrome reports an unused preload a few seconds after the page has loaded.
-    await page.waitForTimeout(4500);
+    await page.waitForTimeout(1500);
     for (const p of EARLY) expect(requested.filter((r) => r === p), p).toHaveLength(1);
     // Home loads one nebula image; the map all three, the other two after the first is on screen. No sharper one
     // on this software renderer.
     const others = requested.filter((r) => !EARLY.includes(r));
     expect(others.sort()).toEqual(route === '/' ? [] : [`/data/theme/gas-mood.${THEME_BAKE.stops.mood.hash[0]}.webp`, `/data/theme/gas-sonic.${THEME_BAKE.stops.sonic.hash[0]}.webp`]);
     expect(complaints).toEqual([]);
-    const t = await page.evaluate(() => {
+    const t = await page.evaluate((gasPath) => {
       const mark = (name: string) => performance.getEntriesByName(name)[0]?.startTime ?? null;
       const res = (suffix: string) => performance.getEntriesByType('resource').find((r) => new URL(r.name).pathname === suffix) as PerformanceResourceTiming | undefined;
       return {
@@ -109,17 +102,27 @@ for (const route of ['/', '/map']) {
         gasDrawn: mark('rmr-gas-drawn'),
         shown: mark('rmr-map-shown'),
         albums: res('/data/albums.json')?.startTime ?? null,
+        albumsEnd: res('/data/albums.json')?.responseEnd ?? null,
         albumsBy: res('/data/albums.json')?.initiatorType ?? null,
-        gas: (document.querySelector('link[rel="preload"][href*="gas-balanced"]') && res(document.querySelector('link[rel="preload"][href*="gas-balanced"]')!.getAttribute('href')!)?.startTime) ?? null,
+        gas: res(gasPath)?.startTime ?? null,
+        gasBy: res(gasPath)?.initiatorType ?? null,
+        searchFocused: document.activeElement?.getAttribute('role') === 'combobox',
       };
-    });
+    }, GAS);
     for (const [name, v] of Object.entries(t)) expect(v, name).not.toBeNull();
-    // The preload links started the downloads, before any script of the page asked.
-    expect(t.albumsBy).toBe('link');
-    expect(t.albums!).toBeLessThan(t.dataStart!);
-    // Nothing waits for the WebGL warm-up and probe any more: the data, the nebula image and the map's code were
-    // all asked for before it ended.
-    for (const k of ['albums', 'gas', 'dataStart', 'gasFetch', 'chunkStart'] as const) expect(t[k]!, k).toBeLessThan(t.warm!);
+    // Asked for by the page's script, the album list first.
+    expect([t.albumsBy, t.gasBy]).toEqual(['fetch', 'fetch']);
+    expect(t.albums!).toBeLessThanOrEqual(t.gas!);
+    expect(t.dataStart!).toBeLessThan(t.warm!);
+    if (route === '/' && !isPhone(info)) {
+      // Home at desktop size puts the visitor in the search field: the map's downloads wait for the album list.
+      expect(t.searchFocused).toBe(true);
+      for (const k of ['gas', 'gasFetch', 'chunkStart'] as const) expect(t[k]!, k).toBeGreaterThanOrEqual(t.albumsEnd!);
+    } else {
+      // Nothing waits for the WebGL warm-up and probe, nor for the album list: the nebula image and the map's code
+      // were asked for before the probe ended.
+      for (const k of ['albums', 'gas', 'gasFetch', 'chunkStart'] as const) expect(t[k]!, k).toBeLessThan(t.warm!);
+    }
     // The nebula image was decoded before the canvas drew anything, and the canvas was not shown before its first frame.
     expect(t.gasDecoded!).toBeLessThan(t.mapFrame!);
     expect(t.shown!).toBeGreaterThanOrEqual(t.mapFrame!);
@@ -160,35 +163,41 @@ for (const route of ['/', '/map']) {
   });
 }
 
-test('on a slow connection the script takes the nebula image over while it is still arriving, and the map draws it', async ({ page, context }) => {
-  test.setTimeout(90_000);
-  // Lighthouse's slow 4G as DevTools applies it (scripts/perf/first-frame.mjs): the page's scripts run while the
-  // preloaded image is half downloaded. Chrome then fails response.blob() on it when the download ends, on a
-  // phone-sized page every time; the image is read as bytes instead (lib/data/early.ts).
-  const cdp = await context.newCDPSession(page);
-  await cdp.send('Network.enable');
-  await cdp.send('Network.emulateNetworkConditions', { offline: false, latency: 562.5, downloadThroughput: (1474.56 * 1024) / 8, uploadThroughput: (675 * 1024) / 8 });
-  const failed: string[] = [];
-  page.on('console', (m) => {
-    if (m.type() === 'error') failed.push(m.text());
-  });
-  const requested: string[] = [];
+test('the search path comes first: with a visitor at the search field the map\'s downloads wait for the album list; otherwise they run beside it', async ({ page }, info) => {
+  // The album list is held back for a while, as a slow connection would hold it.
+  const release = await hold(page, '**/data/albums.json');
+  const asked: string[] = [];
   page.on('request', (r) => {
-    if (new URL(r.url()).pathname === GAS) requested.push(r.url());
+    const p = new URL(r.url()).pathname;
+    if (/^\/data\//.test(p)) asked.push(p);
   });
-  await page.goto('/', { waitUntil: 'commit' });
-  await page.waitForFunction(() => typeof window.__rmr?.gasShownMs === 'number' || window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off', null, { timeout: 80_000 });
-  const t = await page.evaluate((gas) => {
-    const res = performance.getEntriesByType('resource').find((r) => new URL(r.name).pathname === gas) as PerformanceResourceTiming;
-    return { asked: performance.getEntriesByName('rmr-gas-fetch')[0].startTime, start: res.startTime, end: res.responseEnd, decoded: performance.getEntriesByName('rmr-gas-decoded')[0]?.startTime ?? null, shown: window.__rmr!.gasShownMs ?? null };
-  }, GAS);
-  // The case this test is for: the script asked while the preload's download was under way.
-  expect(t.asked).toBeGreaterThan(t.start);
-  expect(t.asked).toBeLessThan(t.end);
-  expect(failed).toEqual([]);
-  expect(t.decoded, 'the image was decoded').not.toBeNull();
-  expect(t.shown, 'the nebula was drawn').not.toBeNull();
-  expect(requested).toHaveLength(1);
+  const mapFiles = [GAS, '/data/positions.json', '/data/theme/theme.json'];
+  // Home at desktop size focuses the search field as the page opens.
+  await page.goto('/');
+  const focused = !isPhone(info);
+  if (focused) await expect(page.getByRole('combobox', { name: 'Search albums or artists' }).first()).toBeFocused();
+  await page.waitForFunction(() => performance.getEntriesByName('rmr-webgl-warm').length > 0, null, { timeout: 20_000 });
+  await page.waitForTimeout(600);
+  if (focused) {
+    // Nothing of the map is on the wire beside the album list (and the tiny list of descriptor names with it), and
+    // the map's code has not been asked for.
+    expect(asked.filter((p) => mapFiles.includes(p))).toEqual([]);
+    expect(await page.evaluate(() => performance.getEntriesByName('rmr-chunk-start').length)).toBe(0);
+  } else {
+    // Nobody is at the search field: everything runs beside the album list.
+    await expect.poll(() => mapFiles.every((p) => asked.includes(p))).toBe(true);
+    expect(await page.evaluate(() => performance.getEntriesByName('rmr-chunk-start').length)).toBe(1);
+  }
+  expect(asked).toContain('/data/albums.json');
+  release();
+  await waitForMap(page);
+  for (const p of [...mapFiles, '/data/albums.json']) expect(asked.filter((a) => a === p), p).toHaveLength(1);
+  // On /map nobody is at the search field at either size: everything beside the album list.
+  const release2 = await hold(page, '**/data/albums.json');
+  asked.length = 0;
+  await page.goto('/map');
+  await expect.poll(() => mapFiles.every((p) => asked.includes(p)), { timeout: 20_000 }).toBe(true);
+  release2();
 });
 
 test('when the album list fails the stand-in leaves with the error panel, and a retry that works shows the map', async ({ page }) => {

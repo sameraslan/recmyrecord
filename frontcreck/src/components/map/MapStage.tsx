@@ -111,13 +111,13 @@ export function MapStage() {
   const mapMode = mapModeFor !== null && pathname === `/album/${mapModeFor}`;
   const noAudio = useAppStore((s) => s.noAudio);
 
-  // Everything the map needs is asked for at once, as the page opens: the data by the three hooks below (the
-  // server HTML has preload links for it), the nebula image, the map's code and the WebGL probe by useMapBoot.
-  // Only drawing waits for the probe.
-  useMapBoot();
+  // The album list is asked for as the page's script runs; the rest of what the map needs (positions, theme, the
+  // nebula image, the map's code) right after first paint, side by side, or after the album list when a visitor is
+  // at the search field (boot.ts says why). Only drawing waits for the WebGL probe.
+  const started = useMapBoot();
   const enabled = webgl === 'ok';
   const { status: catalogStatus, catalog, retry: retryCatalog } = useCatalog();
-  const { status: positionsStatus, positions, retry: retryPositions } = usePositions();
+  const { status: positionsStatus, positions, retry: retryPositions } = usePositions(started);
   // No map without WebGL, so no map data either (and none of the controls that stand on it).
   const mapData = useMemo(() => (enabled && catalog && positions ? buildMapData(catalog.albums, positions) : null), [enabled, catalog, positions]);
   // The map mounts in a render of its own, after the one the data arrived in: reading the album list and starting
@@ -125,7 +125,7 @@ export function MapStage() {
   // where the album list is the last thing to arrive.
   const mountData = useDeferredValue(mapData);
   // The theme is optional. Missing, failed or built for another album count, the map goes on with plain sky.
-  const { status: themeStatus, theme: loadedTheme } = useThemeLoad(true);
+  const { status: themeStatus, theme: loadedTheme } = useThemeLoad(started);
   const theme = mapData ? themeFor(loadedTheme, mapData.n) : null;
   useEffect(() => {
     // The theme failed, or is for another album list: no nebula will come (boot.ts noNebula).
