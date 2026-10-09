@@ -17,6 +17,21 @@
   -webkit-mask-image: linear-gradient(transparent calc(80px - var(--pad-top)), #000 calc(110px - var(--pad-top)));
   mask-image: linear-gradient(transparent calc(80px - var(--pad-top)), #000 calc(110px - var(--pad-top)));
 }
+/* While the stand-in nebula is up (the map pane's data-shown is "0": components/map/MapStage.tsx), the two pads
+ * above and below would cut their clean shapes into its smooth picture; over the drawn nebula its texture hides
+ * their edges. So until the map shows, a far softer pad stands in for both (the same dark, the same place, blurred
+ * 60 px and reaching 20 px lower, over the links), and the two cross-fade to their own look with the map's reveal:
+ * opacity only, on layers painted once. Once the map shows this pad is not painted, and the page is as it was. */
+.hero::after {
+  content: ""; position: absolute; inset: calc(var(--pad-top) - 200px) -206px -224px; z-index: -1; pointer-events: none;
+  border: 200px solid transparent; border-radius: 300px; background: rgba(5, 4, 8, .72); background-clip: padding-box; filter: blur(60px);
+  -webkit-mask-image: linear-gradient(transparent calc(200px - var(--pad-top)), #000 calc(270px - var(--pad-top)));
+  mask-image: linear-gradient(transparent calc(200px - var(--pad-top)), #000 calc(270px - var(--pad-top)));
+  opacity: 0; visibility: hidden; transition: opacity .2s var(--out), visibility 0s linear .2s;
+}
+.hero::before, .hero-row::before { transition: opacity .2s var(--out); }
+.map-pane[data-shown="0"] ~ .home .hero::after { opacity: 1; visibility: visible; transition: none; }
+.map-pane[data-shown="0"] ~ .home .hero::before, .map-pane[data-shown="0"] ~ .home .hero-row::before { opacity: 0; }
 .hero h1 { font-family: var(--font-serif); font-weight: 500; font-size: clamp(42px, 5.8vw, 80px); line-height: .98; letter-spacing: -.015em; }
 .hero .lede { margin: 16px auto 0; max-width: 34em; font-size: 16.5px; color: var(--color-dust); text-wrap: balance; }
 .hero-row { position: relative; margin-top: 14px; display: flex; justify-content: center; gap: 4px; align-items: center; flex-wrap: wrap; }
@@ -82,6 +97,7 @@
 @media (max-width: 899px) {
   .hero { padding-top: 40px; --pad-top: 22px; }
   .hero::before { inset: calc(var(--pad-top) - 80px) -80px -84px; }
+  .hero::after { inset: calc(var(--pad-top) - 200px) -200px -224px; }
   .hero h1 { font-size: clamp(38px, 11vw, 52px); }
   .hero .lede, .notfound .notfound-sub { font-size: 15.5px; }
   .mosaic { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }

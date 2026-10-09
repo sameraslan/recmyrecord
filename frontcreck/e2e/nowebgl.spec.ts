@@ -1,8 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { COPY } from '../src/lib/copy';
+import { THEME_BAKE } from '../src/lib/data/theme.generated';
 import { contrastOverBackdrop, waitForAnimations } from './helpers';
 
-test('without WebGL the map shows a message, asks for no theme file, and search still works', async ({ page }) => {
+// Until issue 78 this test said "asks for no theme file": nothing of the map was fetched before the WebGL probe had
+// answered. Now the page's script asks for the map's files right after first paint, beside the probe, so that
+// visitors with WebGL (nearly all) do not wait for it; a browser without it downloads theme.json and one nebula
+// image for nothing. What still holds: nothing more than those two, each once, no canvas, and the stand-in nebula
+// leaves.
+test('without WebGL the map shows a message, asks for no theme file beyond the two the page starts with, and search still works', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   const themeRequests: string[] = [];
@@ -13,14 +19,17 @@ test('without WebGL the map shows a message, asks for no theme file, and search 
   await expect(page.getByText(COPY.map.noWebgl)).toBeVisible();
   await expect(page.getByText(COPY.map.noWebglHint)).toBeVisible();
   await expect(page.locator('canvas.map-canvas')).toHaveCount(0);
-  // No map, so no map data and no zoom corner.
+  // No map, so no map data, no zoom corner and no hint line (it is in the first paint, and goes with the verdict).
   await expect(page.locator('.map-zoom')).toHaveCount(0);
+  await expect(page.locator('.map-hint')).toHaveCount(0);
   expect(await page.evaluate(() => window.__rmr!.getState().webgl)).toBe('unavailable');
   const input = page.getByRole('combobox', { name: COPY.search.label });
   await input.click();
   await input.pressSequentially('loveless');
   await expect(page.getByRole('option').first()).toContainText('Loveless');
-  expect(themeRequests).toEqual([]);
+  expect(themeRequests.map((u) => new URL(u).pathname).sort()).toEqual([`/data/theme/gas-balanced.${THEME_BAKE.stops.balanced.hash[0]}.webp`, '/data/theme/theme.json']);
+  // The soft nebula of the first paint has gone: the pane is the plain sky, as it was.
+  await expect(page.locator('.gas-ph')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

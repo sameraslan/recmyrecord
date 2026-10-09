@@ -1,3 +1,4 @@
+import { gasUrl } from "@/lib/data/theme";
 import { STOP_IDS, type StopId } from "@/lib/types";
 import { isSoftwareRenderer } from "../state/renderer";
 import { smoothstep } from "../state/zoomLimits";
@@ -48,11 +49,8 @@ export const POOL_MIN_PX = 170;
 /** The empty sky as the shader writes it; rounds to SKY_RGB (../theme). */
 export const GAS_SKY: [number, number, number] = [0.024, 0.022, 0.034];
 
-/** Where a stop's image is. `hash` is theme.json's gas.<stop>.hash: the first 10 hex characters of the SHA-256
- * of the first image and of the sharper one. The name changes whenever the content does, so a browser's cached
- * copy (/data is cached for a day) can never be an image of another bake. */
-export const gasUrl = (stop: StopId, hash: readonly [string, string], sharp = false): string =>
-  `/data/theme/gas-${stop}${sharp ? "-sharp" : ""}.${hash[sharp ? 1 : 0]}.webp`;
+/** Where a stop's image is (lib/data/theme.ts, which the page loads before this file's shaders). */
+export { gasUrl };
 
 /** True when a decoded image is the size theme.json says. Any other size is an image of another bake (or not
  * the image at all): drawn into this bake's rectangle it would put the gas beside the albums, so it is refused. */

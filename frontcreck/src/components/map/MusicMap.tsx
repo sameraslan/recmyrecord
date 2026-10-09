@@ -1,6 +1,7 @@
 'use client';
 
 import { useLayoutEffect } from 'react';
+import { markOnce } from '@/lib/marks';
 import { Scene } from './canvas/Scene';
 import { FocusMarkers } from './overlays/FocusMarkers';
 import { HoverLabel } from './overlays/HoverLabel';
@@ -9,6 +10,9 @@ import { useMapStore } from './state/mapStore';
 import { setOverlayEl } from './state/overlayEls';
 import { setStageTop } from './state/stageTop';
 import type { MusicMapProps } from './types';
+
+// The map's code has run (lib/marks.ts).
+markOnce('rmr-chunk-end');
 
 /** Off-white ring (the lamp token) on a dark casing around the album selected in Explore; positioned by OverlayDriver. */
 function SelectedRing() {
@@ -23,7 +27,7 @@ function SelectedRing() {
   );
 }
 
-/** Loaded with next/dynamic (ssr: false) after first paint, so three.js is its own chunk. */
+/** Imported by boot.ts loadMapChunk right after first paint and never by the page itself, so three.js is its own chunk. */
 export default function MusicMap({ data, theme, input, callbacks, initialCamera, onApi }: MusicMapProps) {
   useLayoutEffect(() => {
     useMapStore.getState().setData(data);

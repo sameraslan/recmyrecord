@@ -4,7 +4,9 @@ import { useEffect, useMemo, useRef } from "react";
 import { addAfterEffect, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 
+import { GAS_BITMAP, dropEarlyGas, takeEarlyGas } from "@/lib/data/early";
 import type { ThemeData } from "@/lib/data/theme";
+import { markOnce } from "@/lib/marks";
 import { easeOutCubic, prefersReducedMotion } from "@/lib/media";
 import { STOP_IDS, type StopId } from "@/lib/types";
 import { STOP_T, type MapData } from "../data";
@@ -49,14 +51,12 @@ import {
   stopsShown,
 } from "../shaders/gas";
 import { useMapStore } from "../state/mapStore";
+import { setMapReveal } from "../state/reveal";
 import { rendererName } from "../state/renderer";
 import { coverCssPx, pxPerWorld } from "../state/zoomLimits";
 
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
 
-// Decoded off the main thread. The alpha channel is data (what the dust lets through), so it must not be
-// multiplied into the colour: premultiplyAlpha "none", and never a 2D canvas.
-const GAS_BITMAP: ImageBitmapOptions = { imageOrientation: "none", premultiplyAlpha: "none", colorSpaceConversion: "none" };
 const loader = new THREE.ImageBitmapLoader();
 loader.setOptions(GAS_BITMAP);
 
@@ -74,26 +74,29 @@ interface LoadedGas {
   bitmap: ImageBitmap;
 }
 
+/** A decoded gas image as a texture that is not on the GPU yet. */
+function asGas(bitmap: ImageBitmap): LoadedGas {
+  const texture = new THREE.Texture(bitmap as unknown as HTMLImageElement);
+  // Row 0 of the image (north) stays at v = 0; the shader flips v itself.
+  texture.flipY = false;
+  // The shader writes display-referred values straight to the framebuffer (Scene.tsx onCreated).
+  texture.colorSpace = THREE.NoColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true; // the glow and the deep zoom blur read the mips
+  texture.needsUpdate = true;
+  markOnce("rmr-gas-decoded");
+  return { texture, bitmap };
+}
+
+/** Loads a stop's first image. The image of the stop the page opened on was asked for as the page opened
+ * (lib/data/early.ts) and is taken over here, decoded or still on its way: no second download. Every other image,
+ * and that one again after a lost WebGL context, is fetched and decoded now. */
 function loadGas(url: string): Promise<LoadedGas> {
+  const early = takeEarlyGas(url);
+  if (early) return early.then(asGas);
   return new Promise((resolve, reject) => {
-    loader.load(
-      url,
-      (result) => {
-        const bitmap = result as unknown as ImageBitmap;
-        const texture = new THREE.Texture(bitmap as unknown as HTMLImageElement);
-        // Row 0 of the image (north) stays at v = 0; the shader flips v itself.
-        texture.flipY = false;
-        // The shader writes display-referred values straight to the framebuffer (Scene.tsx onCreated).
-        texture.colorSpace = THREE.NoColorSpace;
-        texture.minFilter = THREE.LinearMipmapLinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        texture.generateMipmaps = true; // the glow and the deep zoom blur read the mips
-        texture.needsUpdate = true;
-        resolve({ texture, bitmap });
-      },
-      undefined,
-      (err) => reject(err),
-    );
+    loader.load(url, (result) => resolve(asGas(result as unknown as ImageBitmap)), undefined, (err) => reject(err));
   });
 }
 
@@ -250,8 +253,13 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
   useEffect(() => {
     if (!enabled) {
       setGasFlag("off");
+      dropEarlyGas();
+      // No nebula will come: the stand-in of the first paint fades out, and the stars show on the plain sky.
+      setMapReveal("sky");
       return;
     }
+    // An image asked for as the page opened that this theme does not name will never be taken: free it.
+    dropEarlyGas(STOP_IDS.map((stop) => gasUrl(stop, theme.gas[stop].hash)));
     let alive = true;
     const store: Partial<Record<StopId, THREE.Texture>> = {};
     loaded.current = store;
@@ -339,6 +347,7 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       fetching.add(stop);
       const mine = gen;
       const url = gasUrl(stop, theme.gas[stop].hash);
+      markOnce("rmr-gas-fetch");
       loadGas(url)
         .then((g) => {
           // (the context can be lost a moment before its event arrives)
@@ -400,6 +409,8 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
       chooseShader();
       store[stop] = emptyGas();
       noImage.add(stop);
+      // The stop on screen shows plain sky: the stand-in of the first paint must not stay behind the stars.
+      if (onScreen(stop)) setMapReveal("sky");
       if (stopsShown(useMapStore.getState().sliderT).includes(stop) || !mesh.visible) invalidate();
       settle();
     }
@@ -930,7 +941,12 @@ export function GasField({ data, theme }: { data: MapData; theme: ThemeData }) {
     if (!pair) return;
     // When the nebula first showed, on the page clock. Written once; the perf script reports it. A stop that
     // shows plain sky for want of an image is not the nebula.
-    if (window.__rmr && window.__rmr.gasShownMs === undefined && !(empty.current.has(pair.a) && empty.current.has(pair.b))) window.__rmr.gasShownMs = performance.now();
+    if (window.__rmr && window.__rmr.gasShownMs === undefined && !(empty.current.has(pair.a) && empty.current.has(pair.b))) {
+      window.__rmr.gasShownMs = performance.now();
+      markOnce("rmr-gas-drawn");
+    }
+    // The nebula is in this frame: the canvas may show, over the stand-in it now covers (canvas/Reveal.tsx).
+    if (!(empty.current.has(pair.a) && empty.current.has(pair.b))) setMapReveal("gas");
     const u = material.uniforms;
     // The sharper image stands in for its stop's first image wherever that stop is bound, also as one end of a
     // morph, so nothing changes on screen when the slider starts to move.

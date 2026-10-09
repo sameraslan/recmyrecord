@@ -17,7 +17,8 @@
     "test:e2e": "playwright test",
     "perf": "node scripts/perf/perf.mjs",
     "shots": "node scripts/review-shots.mjs",
-    "theme": "node scripts/theme/build-theme.mjs"
+    "theme": "node scripts/theme/build-theme.mjs",
+    "theme:module": "node scripts/theme/build-module.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.8.1",

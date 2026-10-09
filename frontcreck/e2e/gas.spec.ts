@@ -718,7 +718,10 @@ test('the gas comes back after the WebGL context is lost and restored', async ({
   expect((await page.evaluate(() => window.__rmr!.frames ?? 0)) - f1).toBeLessThanOrEqual(1);
 });
 
-test('without theme data the map still works, with plain sky and no gas requests', async ({ page }, info) => {
+// Until issue 78 this said "no gas requests": the image's address came from theme.json. The page's script now asks
+// for the opening stop's image beside theme.json (its hash is in theme.generated.ts), so that one request is made
+// whatever becomes of theme.json; it is never drawn, and no other image is asked for.
+test('without theme data the map still works, with plain sky and no gas request but the opening one', async ({ page }, info) => {
   test.skip(isPhone(info), 'the gas checks use the desktop framing');
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
@@ -736,7 +739,9 @@ test('without theme data the map still works, with plain sky and no gas requests
   const p = await visibleAlbumPoint(page);
   await page.mouse.click(p.x, p.y);
   await expect.poll(() => page.evaluate(() => window.__rmr!.getState().selected)).not.toBeNull();
-  expect(gasRequests).toEqual([]);
+  expect(gasRequests.map((u) => new URL(u).pathname)).toEqual([gasPath('balanced')]);
+  // plain sky: the stand-in nebula of the first paint has left too
+  await expect(page.locator('.gas-ph')).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 

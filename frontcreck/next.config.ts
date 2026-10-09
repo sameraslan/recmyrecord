@@ -58,6 +58,10 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Inlined into the page's code: the committed theme (whose image hashes are in src/lib/data/theme.generated.ts)
+  // is the one this build serves, so the opening nebula image can be asked for before theme.json is in
+  // (src/lib/data/early.ts). A build that serves another data set (RMR_DATA_DIR) has other images.
+  env: { RMR_EARLY_GAS: dataDir === 'data' ? '1' : '' },
   reactStrictMode: true,
   devIndicators: false,
   poweredByHeader: false,
@@ -89,6 +93,14 @@ const nextConfig: NextConfig = {
           // Only this site's pages load /data (OG images point at the cover hosts or at /covers): blocks hotlinking the atlases.
           { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
         ],
+      },
+      {
+        // The nebula images carry a hash of their own bytes in their names (gas-<stop>.<hash>.webp and
+        // gas-<stop>-sharp.<hash>.webp, written by npm run theme), so a name never stands for other content: they
+        // are kept for a year and never asked about again. After the /data rule, whose Cache-Control this replaces
+        // (the last matching rule wins); theme.json and every other file of /data keep the day.
+        source: '/data/theme/:file(gas-[a-z]+(?:-sharp)?\\.[0-9a-f]{10}\\.webp)',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         // The site's own copies of the Cover Art Archive covers (the pipeline's `covers host`). The same cache

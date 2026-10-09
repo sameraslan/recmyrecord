@@ -31,10 +31,13 @@ export async function coversSettled(page: Page, scope = 'body'): Promise<void> {
 /** Waits until the map has loaded, rendered and exposed its API, and its gas has settled: every started stop's
  * texture is in ('ready': all three on an interactive map, the one shown on Home, About and 404), or there is
  * none to wait for ('off'). After this no late texture can cost a frame inside a test's idle window. After going
- * from Home to the map without a reload, wait for the view to change before calling this. */
+ * from Home to the map without a reload, wait for the view to change before calling this.
+ * It also waits until the stand-in nebula of the first paint has left the document (.gas-ph: it goes once the
+ * canvas has faded in over it, or has faded out itself when there is no nebula), so a screenshot taken after this
+ * never catches the canvas half shown. */
 export async function waitForMap(page: Page): Promise<void> {
   await page.waitForFunction(
-    () => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off'),
+    () => !!window.__rmr?.map && (window.__rmr?.frames ?? 0) > 0 && (window.__rmr?.gas === 'ready' || window.__rmr?.gas === 'off') && !document.querySelector('.gas-ph'),
     null,
     { timeout: 20_000 },
   );

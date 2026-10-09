@@ -1,8 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toSummary } from '@/lib/data/catalog';
 import { themeFor } from '@/lib/data/theme';
 import { useCatalog, usePositions, useThemeLoad } from '@/lib/data/useData';
@@ -11,35 +10,20 @@ import { useAppStore } from '@/lib/store';
 import type { StopId } from '@/lib/types';
 import { albumHref, replaceBy, viewFromPathname, type View } from '@/lib/url-state';
 import { ErrorPanel } from '@/components/ErrorPanel';
+import { MapWhenLoaded, loadMapChunk, noNebula, useMapBoot, useMapCodeFailed, useMapShown } from './boot';
 import { buildMapData } from './data';
+import { DESKTOP_FIT_PADDING, DESKTOP_PADDING, PHONE_FIT_PADDING, PHONE_PADDING, PHONE_SLIDER_COVER_FALLBACK_PX, PHONE_SLIDER_MARGIN_PX } from './framing';
 import { ExploreHere } from './overlays/ExploreHere';
+import { GasPlaceholder } from './overlays/GasPlaceholder';
 import { MapCard } from './overlays/MapCard';
 import { MapHint } from './overlays/MapHint';
 import { NoWebGL } from './overlays/NoWebGL';
 import { SimilaritySlider } from './overlays/SimilaritySlider';
 import { ZoomControls } from './overlays/ZoomControls';
-import { isWebGLAvailable, warmUpWebGL } from './state/webgl';
-import type { MapApi, MapCallbacks, MapInput, MapPadding } from './types';
-
-const MusicMap = dynamic(() => import('./MusicMap'), { ssr: false, loading: () => null });
-
-/** Space kept between framed albums and the top of the phone slider panel. */
-const PHONE_SLIDER_MARGIN_PX = 4;
-/** CSS px the phone slider panel covers from the bottom of the map before it is first measured, and on phone
- * views without it (its 12 px offset plus its 152.5 px height, without a safe-area inset). */
-const PHONE_SLIDER_COVER_FALLBACK_PX = 165;
+import type { MapApi, MapCallbacks, MapInput } from './types';
 
 /** Space kept between a flown-to album and the top of the phone card (bottom sheet). */
 const PHONE_CARD_MARGIN_PX = 16;
-
-/** Album framing: clear of the slider panel (top-left on desktop, bottom on phones, where the bottom is measured). */
-const DESKTOP_PADDING: MapPadding = { top: 262, right: 96, bottom: 90, left: 96 };
-const PHONE_PADDING: MapPadding = { top: 80, right: 60, bottom: PHONE_SLIDER_COVER_FALLBACK_PX + PHONE_SLIDER_MARGIN_PX, left: 60 };
-/** Overview framing of the whole cloud (mockup fitTarget); on phones clear of the bottom slider. */
-// The mockup's fitTarget fits h - 170 and shifts the cloud up 30 px: top 85 - 30, bottom 85 + 30.
-const DESKTOP_FIT_PADDING: MapPadding = { top: 55, right: 40, bottom: 115, left: 40 };
-// Phone: clear of the bottom slider panel (bottom measured).
-const PHONE_FIT_PADDING: MapPadding = { top: 90, right: 40, bottom: PHONE_SLIDER_COVER_FALLBACK_PX + PHONE_SLIDER_MARGIN_PX, left: 40 };
 
 /**
  * CSS px of the map pane the phone slider panel covers from the bottom (pane bottom minus the panel's top), so the
@@ -110,37 +94,12 @@ function keepFocusOnMap(pane: HTMLElement | null): void {
   if (document.activeElement?.closest('.card')) pane?.querySelector<HTMLElement>('canvas.map-canvas')?.focus({ preventScroll: true });
 }
 
-/** True after first paint (two animation frames) plus an idle slot: three.js never competes with it. */
-function useAfterFirstPaint(): boolean {
-  const [ready, setReady] = useState(false);
-  useEffect(() => {
-    let raf2 = 0;
-    let timer = 0;
-    let idle = 0;
-    const go = () => setReady(true);
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        if (typeof window.requestIdleCallback === 'function') idle = window.requestIdleCallback(go, { timeout: 600 });
-        else timer = window.setTimeout(go, 50);
-      });
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      if (idle && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idle);
-      if (timer) window.clearTimeout(timer);
-    };
-  }, []);
-  return ready;
-}
-
 /** The one persistent map (mounted in the root layout), plus its overlays. Routes only change its inputs. */
 export function MapStage() {
   const pathname = usePathname();
   const view = viewFromPathname(pathname);
   const router = useRouter();
   const narrow = useIsNarrow();
-  const painted = useAfterFirstPaint();
   const webgl = useAppStore((s) => s.webgl);
   const stop = useAppStore((s) => s.stop);
   const focus = useAppStore((s) => s.focus);
@@ -152,29 +111,25 @@ export function MapStage() {
   const mapMode = mapModeFor !== null && pathname === `/album/${mapModeFor}`;
   const noAudio = useAppStore((s) => s.noAudio);
 
-  useEffect(() => {
-    // After first paint, like the rest of the map: the probe creates (and releases) a WebGL context. A worker
-    // starts the GPU backend first, so neither the probe nor the renderer blocks the main thread on it.
-    if (!painted) return;
-    const warmUp = new AbortController();
-    void warmUpWebGL({ signal: warmUp.signal }).then(() => {
-      if (!warmUp.signal.aborted) useAppStore.getState().setWebgl(isWebGLAvailable() ? 'ok' : 'unavailable');
-    });
-    // On unmount the worker is terminated.
-    return () => warmUp.abort();
-  }, [painted]);
-
-  const enabled = painted && webgl === 'ok';
-  const { status: catalogStatus, catalog, retry: retryCatalog } = useCatalog(enabled);
-  const { status: positionsStatus, positions, retry: retryPositions } = usePositions(enabled);
-  const mapData = useMemo(() => (catalog && positions ? buildMapData(catalog.albums, positions) : null), [catalog, positions]);
+  // The album list is asked for as the page's script runs; the rest of what the map needs (positions, theme, the
+  // nebula image, the map's code) right after first paint, side by side, or after the album list when a visitor is
+  // at the search field (boot.ts says why). Only drawing waits for the WebGL probe.
+  const started = useMapBoot();
+  const enabled = webgl === 'ok';
+  const { status: catalogStatus, catalog, retry: retryCatalog } = useCatalog();
+  const { status: positionsStatus, positions, retry: retryPositions } = usePositions(started);
+  // No map without WebGL, so no map data either (and none of the controls that stand on it).
+  const mapData = useMemo(() => (enabled && catalog && positions ? buildMapData(catalog.albums, positions) : null), [enabled, catalog, positions]);
+  // The map mounts in a render of its own, after the one the data arrived in: reading the album list and starting
+  // three.js (the renderer, the WebGL context) in one task was a long task of up to 175 ms on a slow connection,
+  // where the album list is the last thing to arrive.
+  const mountData = useDeferredValue(mapData);
   // The theme is optional. Missing, failed or built for another album count, the map goes on with plain sky.
-  const { status: themeStatus, theme: loadedTheme } = useThemeLoad(enabled);
+  const { status: themeStatus, theme: loadedTheme } = useThemeLoad(started);
   const theme = mapData ? themeFor(loadedTheme, mapData.n) : null;
   useEffect(() => {
-    // Tests wait for the gas to settle (e2e/helpers.ts waitForMap); tell them when there is none to wait for.
-    if (!window.__rmr) return;
-    if (themeStatus === 'error' || (mapData !== null && loadedTheme !== null && theme === null)) window.__rmr.gas = 'off';
+    // The theme failed, or is for another album list: no nebula will come (boot.ts noNebula).
+    if (themeStatus === 'error' || (mapData !== null && loadedTheme !== null && theme === null)) noNebula();
   }, [themeStatus, mapData, loadedTheme, theme]);
 
   const interactive = view === 'explore' || (view === 'album' && (!narrow || mapMode));
@@ -346,19 +301,27 @@ export function MapStage() {
     router.push('/map');
   }, [router]);
 
-  const failed = catalogStatus === 'error' || positionsStatus === 'error';
+  // Without WebGL there is no map to miss its data: the no-WebGL message stands alone.
+  const codeFailed = useMapCodeFailed();
+  const failed = webgl !== 'unavailable' && (catalogStatus === 'error' || positionsStatus === 'error' || codeFailed);
+  // The zoom buttons, which need the map, come in with the canvas, never a frame ahead of it.
+  const shown = useMapShown();
+  // No stand-in where no map is coming: behind the no-WebGL message or the error panel.
+  const off = webgl === 'unavailable' || failed;
   return (
     <div
       ref={paneRef}
       className={`map-pane${dimmed ? ' is-dimmed' : ''}`}
       data-view={view}
       data-mapmode={view === 'album' && narrow && mapMode ? 'true' : 'false'}
+      data-shown={shown || off ? '1' : '0'}
       // The phone zoom controls sit above the measured slider panel (styles/map.css).
       style={measuredCover !== null ? ({ '--slider-cover': `${measuredCover}px` } as React.CSSProperties) : undefined}
     >
+      <GasPlaceholder view={view} off={off} />
       <div className="map-host">
-        {enabled && mapData ? (
-          <MusicMap data={mapData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
+        {mountData ? (
+          <MapWhenLoaded data={mountData} theme={theme} input={input} callbacks={callbacks} initialCamera={null} onApi={onApi} />
         ) : null}
       </div>
       {/* Home (mockup .veil): dims the map further round the hero; a click on empty map area opens the map. Always
@@ -371,6 +334,7 @@ export function MapStage() {
           onRetry={() => {
             retryCatalog();
             retryPositions();
+            void loadMapChunk();
           }}
         />
       ) : null}
@@ -381,8 +345,10 @@ export function MapStage() {
             <SimilaritySlider stop={stop} onChange={onStop} noAudio={view === 'album' && noAudio} />
             {mapData && view === 'album' && focus ? <ExploreHere onClick={onExploreHere} /> : null}
             {mapData ? <ZoomControls api={apiRef} /> : null}
-            {/* No hint over an empty map: the data is still loading or failed to load. */}
-            {mapData && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'album' || selected !== null} /> : null}
+            {/* The hint line is in the server HTML, over the stand-in nebula, so it is there from the first paint (it
+             * is the largest text of /map: held back until the map showed, it was the page's largest contentful
+             * paint, half a second late). Not where no map is coming: without WebGL, or when the data failed. */}
+            {webgl !== 'unavailable' && !failed && (view === 'explore' || view === 'album') ? <MapHint hidden={view === 'album' || selected !== null} /> : null}
             {cardShown && selected !== null && catalog ? (
               <MapCard
                 key={selected}
