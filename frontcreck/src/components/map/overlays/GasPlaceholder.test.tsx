@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { act, cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GAS_PLACEHOLDER_BALANCED, THEME_BAKE } from '@/lib/data/theme.generated';
+import { GAS_GRAIN, GAS_PLACEHOLDER_BALANCED, THEME_BAKE } from '@/lib/data/theme.generated';
 import { DEFAULT_STOP } from '@/lib/types';
 import { DESKTOP_FIT_PADDING, PHONE_FIT_PADDING, PHONE_SLIDER_COVER_FALLBACK_PX } from '../framing';
 import { OVERVIEW_COVER_MAX_PX, OVERVIEW_NARROW_CLOSER, OVERVIEW_NARROW_COVER_PX, OVERVIEW_SIDE_PAD_PX } from '../state/bounds';
@@ -96,6 +96,8 @@ describe('the stand-in nebula of the first paint', () => {
     const glow = container.querySelector('.gas-ph')!;
     expect(glow.className).toBe('gas-ph gas-ph--glow');
     expect(glow.querySelector('svg')).toBeNull();
+    // the grain tile comes with the markup, for every kind of stand-in
+    expect((glow as HTMLElement).style.getPropertyValue('--grain')).toBe(`url("${GAS_GRAIN}")`);
     // a wash in the nebula's own two tones, not an invented colour
     expect((glow as HTMLElement).style.getPropertyValue('--warm')).toBe(B.warm.join(' '));
     expect((glow as HTMLElement).style.getPropertyValue('--cool')).toBe(B.cool.join(' '));

@@ -77,11 +77,14 @@ describe('build-module (theme.generated.ts)', () => {
     const shift = (base) => (counts.up * (255 - base) * (GRAIN_UP / 255) - counts.down * base * (GRAIN_DOWN / 255)) / n;
     expect(shift(7)).toBeLessThan(1);
     expect(Math.abs(shift(120))).toBeLessThan(0.35);
-    // The stylesheet holds this tile, at its own size, on the stand-in's own layer.
+    // The generated module holds this tile; the stylesheet lays it at its own size on the stand-in's own layer, and
+    // does not carry it (it would be in the way of the first paint).
     const uri = await grainUri();
-    expect(uri.length).toBeLessThan(2048);
+    expect(uri.length).toBeLessThan(700);
+    expect(fs.readFileSync(path.join(ROOT, 'src/lib/data/theme.generated.ts'), 'utf8')).toContain(`export const GAS_GRAIN = '${uri}';`);
     const css = fs.readFileSync(path.join(ROOT, 'src/styles/map.css'), 'utf8');
-    expect(css).toContain(`.gas-ph::after { content: ""; position: absolute; inset: 0; background: url("${uri}") 0 0 / ${GRAIN_PX}px ${GRAIN_PX}px; }`);
+    expect(css).toContain(`.gas-ph::after { content: ""; position: absolute; inset: 0; background: var(--grain) 0 0 / ${GRAIN_PX}px ${GRAIN_PX}px; }`);
+    expect(css).not.toContain('data:image/png');
   });
 
   it('a stand-in keeps none of its light at its edges and in its corners, all of it in the middle, along a round rim', () => {

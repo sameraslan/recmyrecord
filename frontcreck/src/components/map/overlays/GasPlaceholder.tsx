@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore, type CSSProperties } from 'react';
-import { GAS_PLACEHOLDER_BALANCED, THEME_BAKE } from '@/lib/data/theme.generated';
+import { GAS_GRAIN, GAS_PLACEHOLDER_BALANCED, THEME_BAKE } from '@/lib/data/theme.generated';
 import type { View } from '@/lib/url-state';
 import { DESKTOP_FIT_PADDING, PHONE_FIT_PADDING, PHONE_SLIDER_COVER_FALLBACK_PX } from '../framing';
 import { MAP_REVEAL_FADE_MS, getMapReveal, subscribeMapReveal, type MapReveal } from '../state/reveal';
@@ -56,7 +56,7 @@ export function placeholderLayout(view: View): { kind: 'fit' | 'over' | 'glow'; 
   const [west, south, east, north] = BAKE.gas;
   // The picture is stored upright and <svg> y runs down: north is the top.
   const image = { x: r(west), y: r(-north), width: r(east - west), height: r(north - south) };
-  const vars: Record<string, string> = { '--warm': BAKE.warm.join(' '), '--cool': BAKE.cool.join(' ') };
+  const vars: Record<string, string> = { '--warm': BAKE.warm.join(' '), '--cool': BAKE.cool.join(' '), '--grain': `url("${GAS_GRAIN}")` };
   if (view === 'album') return { kind: 'glow', viewBox: null, image, vars };
   if (view === 'explore') {
     const [x1, x99, medY] = BAKE.span;

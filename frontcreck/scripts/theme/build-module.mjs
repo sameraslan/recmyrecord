@@ -49,7 +49,8 @@ export const PLACEHOLDER_SEE_THROUGH_UNDER = 0.12;
  * and its fading edge has nothing to show. */
 export const PANE = [7, 6, 10];
 /**
- * A fine static grain laid over the stand-in while it is up (styles/map.css `.gas-ph::after`, as a tiled picture).
+ * A fine static grain laid over the stand-in while it is up (styles/map.css `.gas-ph::after`, as a tiled picture;
+ * the tile is GAS_GRAIN in theme.generated.ts, which the stand-in's markup carries).
  * The drawn map has grain of its own (the gas shader adds 1.5 levels of it) and thousands of stars, which hide
  * what a smooth picture shows: the steps of 8-bit levels in a soft gradient, the edges of the soft dark pads behind
  * Home's text and of the hint line's band, and the faint lines a lossy picture leaves when it is enlarged. The
@@ -260,6 +261,8 @@ export async function themeModule(dataDir) {
     ' * views (dust and glow applied), blurred so that its enlargement shows no grid, fading to the pane\'s colour',
     ' * along a round rim.',
     ' * Separate exports, so a page ships only the one it shows. */',
+    '/** The fine static grain laid over the stand-in while it is up (styles/map.css `.gas-ph::after`): a 32 px tile. */',
+    `export const GAS_GRAIN = '${await grainUri()}';`,
     ...T.STOPS.flatMap((s) => [
       `/** ${pictures[s].size.join(' x ')} px, ${pictures[s].bytes.length} bytes. */`,
       `export const GAS_PLACEHOLDER_${s.toUpperCase()} = 'data:image/webp;base64,${pictures[s].bytes.toString('base64')}';`,
