@@ -60,7 +60,7 @@ export const PANE = [7, 6, 10];
  * GRAIN_PX: the side of the tile in px; GRAIN_UP and GRAIN_DOWN: the alpha (of 255) of a white and of a black
  * pixel.
  */
-export const GRAIN_PX = 64;
+export const GRAIN_PX = 32;
 export const GRAIN_UP = 3;
 export const GRAIN_DOWN = 5;
 

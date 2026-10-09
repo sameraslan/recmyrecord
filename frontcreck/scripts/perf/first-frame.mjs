@@ -382,7 +382,10 @@ async function runOnce(base, pageName, vpName, profileName, saveTo) {
       // (a frame is presented a moment after the mark of the script that drew it)
       save('4-nebula', at(info.marks['rmr-gas-drawn']));
       fs.writeFileSync(path.join(saveTo, '5-settled.png'), finalPng);
-      if (frames.length) await filmstrip(frames, Math.min(settledAt ?? last.t, 30_000) + 300, path.join(saveTo, 'filmstrip.jpg'), vpName === 'phone' ? 110 : 260);
+      // To the settled picture: past the frame the nebula was drawn in and the canvas's fade, whatever the frames'
+      // own "settled" says (on Home the nebula is a small part of the frame, and that reading can come early).
+      const end = Math.max(settledAt ?? 0, firstStars?.t ?? 0, (info.marks['rmr-gas-drawn'] ?? info.gasShownMs ?? 0) + 300);
+      if (frames.length) await filmstrip(frames, Math.min(end || last.t, 30_000) + 300, path.join(saveTo, 'filmstrip.jpg'), vpName === 'phone' ? 110 : 260);
     }
     return result;
   } finally {
